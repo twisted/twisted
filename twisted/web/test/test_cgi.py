@@ -99,9 +99,8 @@ class CGITests(unittest.TestCase):
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(source)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(source)
         return cgiFilename
 
 
@@ -200,9 +199,8 @@ class CGITests(unittest.TestCase):
 
     def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(READINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum)
@@ -214,9 +212,8 @@ class CGITests(unittest.TestCase):
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(READINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum,
@@ -231,9 +228,8 @@ class CGITests(unittest.TestCase):
 
     def testReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(READALLINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum,

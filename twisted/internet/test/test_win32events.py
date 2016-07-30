@@ -5,8 +5,6 @@
 Tests for implementations of L{IReactorWin32Events}.
 """
 
-from thread import get_ident
-
 try:
     import win32event
 except ImportError:
@@ -19,6 +17,7 @@ from twisted.python.threadable import isInIOThread
 from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.threadable import getThreadID
 
 
 class Listener(object):
@@ -50,13 +49,13 @@ class Listener(object):
 
 
     def logPrefix(self):
-        self.logThreadID = get_ident()
+        self.logThreadID = getThreadID()
         return 'Listener'
 
 
     def occurred(self):
         self.success = True
-        self.eventThreadID = get_ident()
+        self.eventThreadID = getThreadID()
         self._finished.callback(None)
 
 
@@ -69,7 +68,7 @@ class Listener(object):
 
 
     def connectionLost(self, reason):
-        self.connLostThreadID = get_ident()
+        self.connLostThreadID = getThreadID()
         self._finished.errback(reason)
 
 
@@ -94,7 +93,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         When an event which has been added to the reactor is set, the action
         associated with the event is invoked in the reactor thread.
         """
-        reactorThreadID = get_ident()
+        reactorThreadID = getThreadID()
         reactor = self.buildReactor()
         event = win32event.CreateEvent(None, False, False, None)
         finished = Deferred()
@@ -135,7 +134,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor and the handler's C{connectionLost} method is called in the I/O
         thread and the exception is logged.
         """
-        reactorThreadID = get_ident()
+        reactorThreadID = getThreadID()
         reactor = self.buildReactor()
         event = win32event.CreateEvent(None, False, False, None)
 
@@ -162,7 +161,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor and the handler's C{connectionLost} method is called in the I/O
         thread.
         """
-        reactorThreadID = get_ident()
+        reactorThreadID = getThreadID()
         reactor = self.buildReactor()
         event = win32event.CreateEvent(None, False, False, None)
 
@@ -195,6 +194,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor.addEvent(event, listener, 'occurred')
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
-        self.assertIs(None, listener.connLostThreadID)
+        self.assertIsNone(listener.connLostThreadID)
 
 globals().update(Win32EventsTestsBuilder.makeTestCaseClasses())

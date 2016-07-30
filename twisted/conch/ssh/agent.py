@@ -9,12 +9,15 @@ U{PROTOCOL.agent<http://www.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.
 Maintainer: Paul Swartz
 """
 
+from __future__ import absolute_import, division
+
 import struct
 
 from twisted.conch.ssh.common import NS, getNS, getMP
 from twisted.conch.error import ConchError, MissingKeyStoreError
 from twisted.conch.ssh import keys
 from twisted.internet import defer, protocol
+from twisted.python.compat import itervalues
 
 
 
@@ -26,7 +29,7 @@ class SSHAgentClient(protocol.Protocol):
     """
 
     def __init__(self):
-        self.buf = ''
+        self.buf = b''
         self.deferreds = []
 
 
@@ -39,12 +42,12 @@ class SSHAgentClient(protocol.Protocol):
             if len(self.buf) < 4 + packLen:
                 return
             packet, self.buf = self.buf[4:4 + packLen], self.buf[4 + packLen:]
-            reqType = ord(packet[0])
+            reqType = ord(packet[0:1])
             d = self.deferreds.pop(0)
             if reqType == AGENT_FAILURE:
                 d.errback(ConchError('agent failure'))
             elif reqType == AGENT_SUCCESS:
-                d.callback('')
+                d.callback(b'')
             else:
                 d.callback(packet)
 
@@ -63,7 +66,7 @@ class SSHAgentClient(protocol.Protocol):
             the SSH agent. The list of keys is comprised of (public key blob,
             comment) tuples.
         """
-        d = self.sendRequest(AGENTC_REQUEST_IDENTITIES, '')
+        d = self.sendRequest(AGENTC_REQUEST_IDENTITIES, b'')
         d.addCallback(self._cbRequestIdentities)
         return d
 
@@ -73,8 +76,8 @@ class SSHAgentClient(protocol.Protocol):
         Unpack a collection of identities into a list of tuples comprised of
         public key blobs and comments.
         """
-        if ord(data[0]) != AGENT_IDENTITIES_ANSWER:
-            raise ConchError('unexpected response: %i' % ord(data[0]))
+        if ord(data[0:1]) != AGENT_IDENTITIES_ANSWER:
+            raise ConchError('unexpected response: %i' % ord(data[0:1]))
         numKeys = struct.unpack('!L', data[1:5])[0]
         result = []
         data = data[5:]
@@ -85,7 +88,7 @@ class SSHAgentClient(protocol.Protocol):
         return result
 
 
-    def addIdentity(self, blob, comment = ''):
+    def addIdentity(self, blob, comment = b''):
         """
         Add a private key blob to the agent's collection of keys.
         """
@@ -100,20 +103,20 @@ class SSHAgentClient(protocol.Protocol):
         which corresponds to the public key given by C{blob}.  The private
         key should have been added to the agent already.
 
-        @type blob: C{str}
-        @type data: C{str}
+        @type blob: L{bytes}
+        @type data: L{bytes}
         @return: A L{Deferred} which fires with a signature for given data
             created with the given key.
         """
         req = NS(blob)
         req += NS(data)
-        req += '\000\000\000\000' # flags
+        req += b'\000\000\000\000' # flags
         return self.sendRequest(AGENTC_SIGN_REQUEST, req).addCallback(self._cbSignData)
 
 
     def _cbSignData(self, data):
-        if ord(data[0]) != AGENT_SIGN_RESPONSE:
-            raise ConchError('unexpected data: %i' % ord(data[0]))
+        if ord(data[0:1]) != AGENT_SIGN_RESPONSE:
+            raise ConchError('unexpected data: %i' % ord(data[0:1]))
         signature = getNS(data[1:])[0]
         return signature
 
@@ -131,7 +134,7 @@ class SSHAgentClient(protocol.Protocol):
         """
         Remove all keys from the running agent.
         """
-        return self.sendRequest(AGENTC_REMOVE_ALL_IDENTITIES, '')
+        return self.sendRequest(AGENTC_REMOVE_ALL_IDENTITIES, b'')
 
 
 
@@ -143,7 +146,7 @@ class SSHAgentServer(protocol.Protocol):
     """
 
     def __init__(self):
-        self.buf = ''
+        self.buf = b''
 
 
     def dataReceived(self, data):
@@ -155,14 +158,14 @@ class SSHAgentServer(protocol.Protocol):
             if len(self.buf) < 4 + packLen:
                 return
             packet, self.buf = self.buf[4:4 + packLen], self.buf[4 + packLen:]
-            reqType = ord(packet[0])
+            reqType = ord(packet[0:1])
             reqName = messages.get(reqType, None)
             if not reqName:
-                self.sendResponse(AGENT_FAILURE, '')
+                self.sendResponse(AGENT_FAILURE, b'')
             else:
                 f = getattr(self, 'agentc_%s' % reqName)
                 if getattr(self.factory, 'keys', None) is None:
-                    self.sendResponse(AGENT_FAILURE, '')
+                    self.sendResponse(AGENT_FAILURE, b'')
                     raise MissingKeyStoreError()
                 f(packet[1:])
 
@@ -176,15 +179,15 @@ class SSHAgentServer(protocol.Protocol):
         """
         Return all of the identities that have been added to the server
         """
-        assert data == ''
+        assert data == b''
         numKeys = len(self.factory.keys)
         resp = []
 
         resp.append(struct.pack('!L', numKeys))
-        for key, comment in self.factory.keys.itervalues():
+        for key, comment in itervalues(self.factory.keys):
             resp.append(NS(key.blob())) # yes, wrapped in an NS
             resp.append(NS(comment))
-        self.sendResponse(AGENT_IDENTITIES_ANSWER, ''.join(resp))
+        self.sendResponse(AGENT_IDENTITIES_ANSWER, b''.join(resp))
 
 
     def agentc_SIGN_REQUEST(self, data):
@@ -195,9 +198,9 @@ class SSHAgentServer(protocol.Protocol):
         """
         blob, data = getNS(data)
         if blob not in self.factory.keys:
-            return self.sendResponse(AGENT_FAILURE, '')
+            return self.sendResponse(AGENT_FAILURE, b'')
         signData, data = getNS(data)
-        assert data == '\000\000\000\000'
+        assert data == b'\000\000\000\000'
         self.sendResponse(AGENT_SIGN_RESPONSE, NS(self.factory.keys[blob][0].sign(signData)))
 
 
@@ -210,9 +213,9 @@ class SSHAgentServer(protocol.Protocol):
 
         # need to pre-read the key data so we can get past it to the comment string
         keyType, rest = getNS(data)
-        if keyType == 'ssh-rsa':
+        if keyType == b'ssh-rsa':
             nmp = 6
-        elif keyType == 'ssh-dss':
+        elif keyType == b'ssh-dss':
             nmp = 5
         else:
             raise keys.BadKeyError('unknown blob type: %s' % keyType)
@@ -222,7 +225,7 @@ class SSHAgentServer(protocol.Protocol):
 
         k = keys.Key.fromString(data, type='private_blob') # not wrapped in NS here
         self.factory.keys[k.blob()] = (k, comment)
-        self.sendResponse(AGENT_SUCCESS, '')
+        self.sendResponse(AGENT_SUCCESS, b'')
 
 
     def agentc_REMOVE_IDENTITY(self, data):
@@ -232,16 +235,16 @@ class SSHAgentServer(protocol.Protocol):
         blob, _ = getNS(data)
         k = keys.Key.fromString(blob, type='blob')
         del self.factory.keys[k.blob()]
-        self.sendResponse(AGENT_SUCCESS, '')
+        self.sendResponse(AGENT_SUCCESS, b'')
 
 
     def agentc_REMOVE_ALL_IDENTITIES(self, data):
         """
         Remove all keys from the agent's collection of identities.
         """
-        assert data == ''
+        assert data == b''
         self.factory.keys = {}
-        self.sendResponse(AGENT_SUCCESS, '')
+        self.sendResponse(AGENT_SUCCESS, b'')
 
     # v1 messages that we ignore because we don't keep v1 keys
     # open-ssh sends both v1 and v2 commands, so we have to
@@ -260,7 +263,7 @@ class SSHAgentServer(protocol.Protocol):
         v1 message for removing RSA1 keys; superseded by
         agentc_REMOVE_IDENTITY, which handles different key types.
         """
-        self.sendResponse(AGENT_SUCCESS, '')
+        self.sendResponse(AGENT_SUCCESS, b'')
 
 
     def agentc_REMOVE_ALL_RSA_IDENTITIES(self, data):
@@ -268,7 +271,7 @@ class SSHAgentServer(protocol.Protocol):
         v1 message for removing all RSA1 keys; superseded by
         agentc_REMOVE_ALL_IDENTITIES, which handles different key types.
         """
-        self.sendResponse(AGENT_SUCCESS, '')
+        self.sendResponse(AGENT_SUCCESS, b'')
 
 
 AGENTC_REQUEST_RSA_IDENTITIES   = 1
@@ -291,4 +294,3 @@ messages = {}
 for name, value in locals().copy().items():
     if name[:7] == 'AGENTC_':
         messages[value] = name[7:] # doesn't handle doubles
-

@@ -25,7 +25,7 @@ from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import HTTPClient, Request, HTTPChannel
+from twisted.web.http import HTTPClient, Request, HTTPChannel, _QUEUED_SENTINEL
 
 
 
@@ -134,7 +134,7 @@ class ProxyRequest(Request):
     protocols = {b'http': ProxyClientFactory}
     ports = {b'http': 80}
 
-    def __init__(self, channel, queued, reactor=reactor):
+    def __init__(self, channel, queued=_QUEUED_SENTINEL, reactor=reactor):
         Request.__init__(self, channel, queued)
         self.reactor = reactor
 
@@ -195,7 +195,7 @@ class ReverseProxyRequest(Request):
 
     proxyClientFactoryClass = ProxyClientFactory
 
-    def __init__(self, channel, queued, reactor=reactor):
+    def __init__(self, channel, queued=_QUEUED_SENTINEL, reactor=reactor):
         Request.__init__(self, channel, queued)
         self.reactor = reactor
 

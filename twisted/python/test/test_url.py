@@ -92,11 +92,11 @@ class TestURL(TestCase):
         self.assertTrue(isinstance(u.host, unicode)
                         or u.host is None, repr(u))
         for seg in u.path:
-            self.assertTrue(isinstance(seg, unicode), repr(u))
+            self.assertIsInstance(seg, unicode, repr(u))
         for (k, v) in u.query:
-            self.assertTrue(isinstance(k, unicode), repr(u))
+            self.assertIsInstance(k, unicode, repr(u))
             self.assertTrue(v is None or isinstance(v, unicode), repr(u))
-        self.assertTrue(isinstance(u.fragment, unicode), repr(u))
+        self.assertIsInstance(u.fragment, unicode, repr(u))
 
 
     def assertURL(self, u, scheme, host, path, query,
@@ -277,7 +277,7 @@ class TestURL(TestCase):
         path segment.
         """
         childURL = URL(host=u"www.foo.com").child(u"c")
-        self.assertEqual(childURL.rooted, True)
+        self.assertTrue(childURL.rooted)
         self.assertEqual("http://www.foo.com/c", childURL.asText())
 
 

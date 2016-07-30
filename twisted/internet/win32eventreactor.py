@@ -15,7 +15,7 @@ listeners or connectors are added)::
 
 LIMITATIONS:
  1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
- 2. Process running has some problems (see L{Process} docstring).
+ 2. Process running has some problems (see L{twisted.internet.process} docstring).
 
 
 TODO:
@@ -50,7 +50,7 @@ import sys
 from threading import Thread
 from weakref import WeakKeyDictionary
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Win32 imports
 from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
@@ -78,6 +78,7 @@ from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
 
 
+@implementer(IReactorFDSet, IReactorWin32Events)
 class Win32Reactor(posixbase.PosixReactorBase):
     """
     Reactor that uses Win32 event APIs.
@@ -118,8 +119,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
         will also forget about it.
     @type _closedAndNotReading: C{WeakKeyDictionary}
     """
-    implements(IReactorFDSet, IReactorWin32Events)
-
     dummyEvent = CreateEvent(None, 0, 0, None)
 
     def __init__(self):
@@ -206,11 +205,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return self._reads.keys()
+        return list(self._reads.keys())
 
 
     def getWriters(self):
-        return self._writes.keys()
+        return list(self._writes.keys())
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -226,11 +225,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in self._closedAndReading.keys():
+        for reader in list(self._closedAndReading.keys()):
             ranUserCode = True
             self._runAction('doRead', reader)
 
-        for fd in self._writes.keys():
+        for fd in list(self._writes.keys()):
             ranUserCode = True
             log.callWithLogger(fd, self._runWrite, fd)
 
@@ -246,7 +245,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = self._events.keys() or [self.dummyEvent]
+        handles = list(self._events.keys()) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
@@ -359,18 +358,18 @@ class _ThreadFDWrapper(object):
 
 
 
+@implementer(IReactorWin32Events)
 class _ThreadedWin32EventsMixin(object):
     """
     This mixin implements L{IReactorWin32Events} for another reactor by running
     a L{Win32Reactor} in a separate thread and dispatching work to it.
 
     @ivar _reactor: The L{Win32Reactor} running in the other thread.  This is
-        C{None} until it is actually needed.
+        L{None} until it is actually needed.
 
     @ivar _reactorThread: The L{threading.Thread} which is running the
-        L{Win32Reactor}.  This is C{None} until it is actually needed.
+        L{Win32Reactor}.  This is L{None} until it is actually needed.
     """
-    implements(IReactorWin32Events)
 
     _reactor = None
     _reactorThread = None
@@ -423,7 +422,7 @@ class _ThreadedWin32EventsMixin(object):
 def install():
     threadable.init(1)
     r = Win32Reactor()
-    import main
+    from . import main
     main.installReactor(r)
 
 

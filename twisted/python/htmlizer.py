@@ -7,7 +7,7 @@ HTML rendering of Python source.
 """
 
 import tokenize, cgi, keyword
-import reflect
+from . import reflect
 
 class TokenPrinter:
 
@@ -17,7 +17,9 @@ class TokenPrinter:
     def __init__(self, writer):
         self.writer = writer
 
-    def printtoken(self, type, token, (srow, scol), (erow, ecol), line):
+    def printtoken(self, type, token, sCoordinates, eCoordinates, line):
+        (srow, scol) = sCoordinates
+        (erow, ecol) = eCoordinates
         #print "printtoken(%r,%r,%r,(%r,%r),(%r,%r),%r), row=%r,col=%r" % (
         #    self, type, token, srow,scol, erow,ecol, line,
         #    self.currentLine, self.currentCol)
@@ -85,7 +87,8 @@ def filter(inp, out, writer=HTMLWriter):
 
 def main():
     import sys
-    filter(open(sys.argv[1]), sys.stdout)
+    with open(sys.argv[1]) as f:
+        filter(f, sys.stdout)
 
 if __name__ == '__main__':
    main()

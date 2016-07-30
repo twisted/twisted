@@ -13,7 +13,8 @@ and reasonable handling of Deferreds.
 @author: Jp Calderone
 """
 
-import code, sys, StringIO, tokenize
+import code, sys, tokenize
+from io import BytesIO
 
 from twisted.conch import recvline
 
@@ -21,7 +22,8 @@ from twisted.internet import defer
 from twisted.python.htmlizer import TokenPrinter
 
 class FileWrapper:
-    """Minimal write-file-like object.
+    """
+    Minimal write-file-like object.
 
     Writes are translated into addOutput calls on an object passed to
     __init__.  Newlines are also converted from network to local style.
@@ -207,12 +209,13 @@ class Manhole(recvline.HistoricRecvLine):
         w = self.terminal.lastWrite
         return not w.endswith('\n') and not w.endswith('\x1bE')
 
-    def addOutput(self, bytes, async=False):
+
+    def addOutput(self, data, async=False):
         if async:
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
 
-        self.terminal.write(bytes)
+        self.terminal.write(data)
 
         if async:
             if self._needsNewline():
@@ -227,12 +230,15 @@ class Manhole(recvline.HistoricRecvLine):
 
                 self._deliverBuffer(oldBuffer)
 
+
     def lineReceived(self, line):
         more = self.interpreter.push(line)
         self.pn = bool(more)
         if self._needsNewline():
             self.terminal.nextLine()
         self.terminal.write(self.ps[self.pn])
+
+
 
 class VT102Writer:
     """Colorizer for Python tokens.
@@ -256,9 +262,11 @@ class VT102Writer:
     def __init__(self):
         self.written = []
 
+
     def color(self, type):
         r = self.typeToColor.get(type, '')
         return r
+
 
     def write(self, token, type=None):
         if token and token != '\r':
@@ -269,9 +277,11 @@ class VT102Writer:
             if c:
                 self.written.append(self.normalColor)
 
+
     def __str__(self):
         s = ''.join(self.written)
         return s.strip('\n').splitlines()[-1]
+
 
 def lastColorizedLine(source):
     """Tokenize and colorize the given Python source.
@@ -280,18 +290,22 @@ def lastColorizedLine(source):
     """
     w = VT102Writer()
     p = TokenPrinter(w.write).printtoken
-    s = StringIO.StringIO(source)
+    s = BytesIO(source)
 
     tokenize.tokenize(s.readline, p)
 
     return str(w)
 
+
+
 class ColoredManhole(Manhole):
-    """A REPL which syntax colors input as users type it.
+    """
+    A REPL which syntax colors input as users type it.
     """
 
     def getSource(self):
-        """Return a string containing the currently entered source.
+        """
+        Return a string containing the currently entered source.
 
         This is only the code which will be considered for execution
         next.

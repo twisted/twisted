@@ -208,7 +208,7 @@ class DigestAuthTests(RequestMixin, unittest.TestCase):
     def test_getChallengeWithoutClientIP(self):
         """
         L{DigestCredentialFactory.getChallenge} can issue a challenge even if
-        the L{Request} it is passed returns C{None} from C{getClientIP}.
+        the L{Request} it is passed returns L{None} from C{getClientIP}.
         """
         request = self.makeRequest(b'GET', None)
         challenge = self.credentialFactory.getChallenge(request)

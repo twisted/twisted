@@ -517,6 +517,8 @@ class RunnerTests(unittest.SynchronousTestCase):
         Trial uses pdb if no debugger is specified by `--debugger`
         """
         self.parseOptions(['--debug', 'twisted.trial.test.sample'])
+        pdbrcFile = FilePath("pdbrc")
+        pdbrcFile.touch()
 
         self.runcall_called = False
         def runcall(pdb, suite, result):

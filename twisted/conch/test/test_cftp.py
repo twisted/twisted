@@ -240,7 +240,7 @@ class InMemorySSHChannel(StringTransport, object):
 
 class FilesystemAccessExpectations(object):
     """
-    A test helper used to support expected filesytem access.
+    A test helper used to support expected filesystem access.
     """
 
     def __init__(self):
@@ -251,10 +251,10 @@ class FilesystemAccessExpectations(object):
         """
 
         @param path: Path at which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @param path: Flags with which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @param stream: A stream.
         @type stream: C{File}
@@ -267,10 +267,10 @@ class FilesystemAccessExpectations(object):
         Remove a stream from the memory.
 
         @param path: Path at which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @param path: Flags with which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @return: A stream.
         @rtype: C{File}
@@ -317,7 +317,7 @@ class InMemoryRemoteFile(StringIO):
     def __init__(self, name):
         """
         @param name: Name of this file.
-        @type name: C{str}
+        @type name: L{str}
         """
         self.name = name
         StringIO.__init__(self)
@@ -425,9 +425,9 @@ class StdioClientTests(TestCase):
         a fixed width and height.
 
         @param width: the width in characters
-        @type width: C{int}
+        @type width: L{int}
         @param height: the height in characters
-        @type height: C{int}
+        @type height: L{int}
         """
         # Local import to avoid win32 issues.
         import tty
@@ -543,21 +543,20 @@ class StdioClientTests(TestCase):
         """
         Create a local file and return its path.
 
-        When `path` is C{None}, it will create a new temporary file.
+        When `path` is L{None}, it will create a new temporary file.
 
         @param path: Optional path for the new file.
-        @type path: C{str}
+        @type path: L{str}
 
         @param content: Content to be written in the new file.
-        @type content: C{bytes}
+        @type content: L{bytes}
 
         @return: Path to the newly create file.
         """
         if path is None:
             path = self.mktemp()
-        file = open(path, 'w')
-        file.write(content)
-        file.close()
+        with open(path, 'w') as file:
+            file.write(content)
         return path
 
 
@@ -676,7 +675,7 @@ class StdioClientTests(TestCase):
 
     def test_cmd_PUTMultipleNoRemotePath(self):
         """
-        When a gobbing expression is used local files are transfered with
+        When a gobbing expression is used local files are transferred with
         remote file names based on local names.
         """
         first = self.makeFile()
@@ -715,7 +714,7 @@ class StdioClientTests(TestCase):
 
     def test_cmd_PUTMultipleWithRemotePath(self):
         """
-        When a gobbing expression is used local files are transfered with
+        When a gobbing expression is used local files are transferred with
         remote file names based on local names.
         when a remote folder is requested remote paths are composed from
         remote path and local filename.
@@ -888,16 +887,13 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
 class CFTPClientTestBase(SFTPTestBase):
     def setUp(self):
-        f = open('dsa_test.pub','w')
-        f.write(test_ssh.publicDSA_openssh)
-        f.close()
-        f = open('dsa_test','w')
-        f.write(test_ssh.privateDSA_openssh)
-        f.close()
+        with open('dsa_test.pub','w') as f:
+            f.write(test_ssh.publicDSA_openssh)
+        with open('dsa_test','w') as f:
+            f.write(test_ssh.privateDSA_openssh)
         os.chmod('dsa_test', 33152)
-        f = open('kh_test','w')
-        f.write('127.0.0.1 ' + test_ssh.publicRSA_openssh)
-        f.close()
+        with open('kh_test','w') as f:
+            f.write('127.0.0.1 ' + test_ssh.publicRSA_openssh)
         return SFTPTestBase.setUp(self)
 
     def startServer(self):
@@ -1057,9 +1053,8 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         Assert that the files at C{name1} and C{name2} contain exactly the
         same data.
         """
-        f1 = file(name1).read()
-        f2 = file(name2).read()
-        self.assertEqual(f1, f2, msg)
+        with open(name1) as f1, open(name2) as f2:
+            self.assertEqual(f1.read(), f2.read(), msg)
 
 
     def testGet(self):
@@ -1129,12 +1124,10 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         file.
         """
         # XXX - not actually a unit test
-        f = file(os.path.join(self.testDir, 'shorterFile'), 'w')
-        f.write("a")
-        f.close()
-        f = file(os.path.join(self.testDir, 'longerFile'), 'w')
-        f.write("bb")
-        f.close()
+        with open(os.path.join(self.testDir, 'shorterFile'), 'w') as f:
+            f.write("a")
+        with open(os.path.join(self.testDir, 'longerFile'), 'w') as f:
+            f.write("bb")
         def _checkPut(result):
             self.assertFilesEqual(self.testDir + '/shorterFile',
                                   self.testDir + '/longerFile')
@@ -1152,12 +1145,10 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         # XXX - not actually a unit test
         os.mkdir(os.path.join(self.testDir, 'dir'))
-        f = file(os.path.join(self.testDir, 'dir', 'file'), 'w')
-        f.write("a")
-        f.close()
-        f = file(os.path.join(self.testDir, 'file'), 'w')
-        f.write("bb")
-        f.close()
+        with open(os.path.join(self.testDir, 'dir', 'file'), 'w') as f:
+            f.write("a")
+        with open(os.path.join(self.testDir, 'file'), 'w') as f:
+            f.write("bb")
         def _checkPut(result):
             self.assertFilesEqual(self.testDir + '/dir/file',
                                   self.testDir + '/file')
@@ -1285,7 +1276,8 @@ class OurServerBatchFileTests(CFTPClientTestBase):
 
     def _getBatchOutput(self, f):
         fn = self.mktemp()
-        open(fn, 'w').write(f)
+        with open(fn, 'w') as fp:
+            fp.write(f)
         port = self.server.getHost().port
         cmds = ('-p %i -l testuser '
                     '--known-hosts kh_test '

@@ -292,6 +292,29 @@ class NameTests(unittest.TestCase):
         self.assertRaises(ValueError, name.decode, stream)
 
 
+    def test_equality(self):
+        """
+        L{Name} instances are equal as long as they have the same value for
+        L{Name.name}, regardless of the case.
+        """
+        name1 = dns.Name(b"foo.bar")
+        name2 = dns.Name(b"foo.bar")
+        self.assertEqual(name1, name2)
+
+        name3 = dns.Name(b"fOO.bar")
+        self.assertEqual(name1, name3)
+
+
+    def test_inequality(self):
+        """
+        L{Name} instances are not equal as long as they have different
+        L{Name.name} attributes.
+        """
+        name1 = dns.Name(b"foo.bar")
+        name2 = dns.Name(b"bar.foo")
+        self.assertNotEqual(name1, name2)
+
+
 
 class RoundtripDNSTests(unittest.TestCase):
     """
@@ -2456,7 +2479,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
     def test_name(self):
         """
-        L{dns._OPTHeader.name} is a instance attribute whose value is
+        L{dns._OPTHeader.name} is an instance attribute whose value is
         fixed as the root domain
         """
         self.assertEqual(dns._OPTHeader().name, dns.Name(b''))
@@ -2538,7 +2561,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         L{dns._OPTHeader.dnssecOK} defaults to False.
         """
-        self.assertEqual(dns._OPTHeader().dnssecOK, False)
+        self.assertFalse(dns._OPTHeader().dnssecOK)
 
 
     def test_dnssecOKOverride(self):
@@ -2546,7 +2569,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.dnssecOK} can be overridden in the
         constructor.
         """
-        self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
+        self.assertTrue(dns._OPTHeader(dnssecOK=True).dnssecOK)
 
 
     def test_options(self):
@@ -4440,7 +4463,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         An L(_EDNSMessage} instance created from a byte string containing
         multiple I{OPT} records will discard all the C{OPT} records.
 
-        C{ednsVersion} will be set to C{None}.
+        C{ednsVersion} will be set to L{None}.
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
@@ -4452,7 +4475,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage()
         ednsMessage.fromStr(m.toStr())
 
-        self.assertEqual(ednsMessage.ednsVersion, None)
+        self.assertIsNone(ednsMessage.ednsVersion)
 
 
     def test_fromMessageCopiesSections(self):

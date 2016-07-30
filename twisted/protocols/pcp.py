@@ -6,11 +6,12 @@
 Producer-Consumer Proxy.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import interfaces
 
 
+@implementer(interfaces.IProducer, interfaces.IConsumer)
 class BasicProducerConsumerProxy:
     """
     I can act as a man in the middle between any Producer and Consumer.
@@ -22,8 +23,6 @@ class BasicProducerConsumerProxy:
     @ivar paused: As a Producer, am I paused?
     @type paused: bool
     """
-    implements(interfaces.IProducer, interfaces.IConsumer)
-
     consumer = None
     producer = None
     producerIsStreaming = None

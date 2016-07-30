@@ -3,6 +3,9 @@
 
 """
 Tests for implementations of L{IReactorProcess}.
+
+@var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
+    platforms and native L{str} keys/values on Windows.
 """
 
 from __future__ import division, absolute_import, print_function
@@ -20,7 +23,8 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString, _PY3, xrange, items
+from twisted.python.compat import (networkString, _PY3, xrange, items,
+                                   bytesEnviron)
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -37,11 +41,18 @@ if platform.isWindows():
     resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
+
+    properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 else:
     import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
+
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
 
 
 
@@ -316,11 +327,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # say.  Anyway, this inconsistency between different platforms
                 # is extremely unfortunate and I would remove it if I
                 # could. -exarkun
-                self.assertIs(err.signal, None)
+                self.assertIsNone(err.signal)
                 self.assertEqual(err.exitCode, 1)
             else:
                 self.assertEqual(err.signal, sigNum)
-                self.assertIs(err.exitCode, None)
+                self.assertIsNone(err.exitCode)
 
         exited.addCallback(cbExited)
         exited.addErrback(err)
@@ -337,7 +348,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         Older versions of Twisted installed a SIGCHLD handler on POSIX without
         using the feature exposed by the SA_RESTART flag to sigaction(2).  The
-        most noticable problem this caused was for blocking reads and writes to
+        most noticeable problem this caused was for blocking reads and writes to
         sometimes fail with EINTR.
         """
         reactor = self.buildReactor()
@@ -358,7 +369,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.stdout.read())
+                with f2.stdout:
+                    result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 
@@ -499,7 +511,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         # This will timeout if processExited isn't called:
         self.runReactor(reactor, timeout=30)
-        self.assertEqual(protocol.exited, True)
+        self.assertTrue(protocol.exited)
 
 
     def _changeIDTest(self, which):
@@ -597,7 +609,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
     """
     usePTY = False
 
-    keepStdioOpenProgram = FilePath(__file__).sibling(b'process_helper.py').path
+    keepStdioOpenProgram = b'twisted.internet.test.process_helper'
     if platform.isWindows():
         keepStdioOpenArg = b"windows"
     else:
@@ -622,12 +634,12 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             def childConnectionLost(self, childFD):
                 lost[childFD].callback(None)
 
-        target = FilePath(__file__).sibling(b"process_loseconnection.py")
+        target = b"twisted.internet.test.process_loseconnection"
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Closer(), pyExe,
-            [pyExe, target.path], usePTY=self.usePTY)
+            [pyExe, b"-m", target], env=properEnv, usePTY=self.usePTY)
 
         def cbConnected(transport):
             transport.write(b'2\n')
@@ -680,9 +692,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Ender(), pyExe,
-            [pyExe, self.keepStdioOpenProgram, b"child",
+            [pyExe, b"-m", self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
-            usePTY=self.usePTY)
+            env=properEnv, usePTY=self.usePTY)
 
         def cbEnded(args):
             failure, = args
@@ -728,9 +740,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Waiter(), pyExe,
-            [pyExe, self.keepStdioOpenProgram, b"child",
+            [pyExe, b"-u", b"-m", self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
-            usePTY=self.usePTY)
+            env=properEnv, usePTY=self.usePTY)
 
         def cbExited(args):
             failure, = args
@@ -804,7 +816,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         Arguments given to spawnProcess are passed to the child process as
         originally intended.
         """
-        us = FilePath(__file__).sibling(b"process_cli.py")
+        us = b"twisted.internet.test.process_cli"
 
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
@@ -829,7 +841,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def spawnChild():
             d = succeed(None)
             d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
-                pyExe, [us.path] + args, reactor=reactor))
+                pyExe, [b"-m", us] + args, env=properEnv,
+                reactor=reactor))
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 

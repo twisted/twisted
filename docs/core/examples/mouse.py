@@ -21,13 +21,15 @@ Example using MouseMan protocol with the SerialPort transport.
 # -echo -echoe -echok -echonl -noflsh -xcase -tostop -echoprt -echoctl
 # -echoke
 
+from __future__ import print_function
+
 import sys
 from twisted.python import usage, log
 from twisted.protocols.mice import mouseman
 
 if sys.platform == 'win32':
     # win32 serial does not work yet!
-    raise NotImplementedError, "The SerialPort transport does not currently support Win32"
+    raise NotImplementedError("The SerialPort transport does not currently support Win32")
     from twisted.internet import win32eventreactor
     win32eventreactor.install()
 
@@ -66,10 +68,10 @@ if __name__ == '__main__':
     o = Options()
     try:
         o.parseOptions()
-    except usage.UsageError, errortext:
-        print "%s: %s" % (sys.argv[0], errortext)
-        print "%s: Try --help for usage details." % (sys.argv[0])
-        raise SystemExit, 1
+    except usage.UsageError as errortext:
+        print("%s: %s" % (sys.argv[0], errortext))
+        print("%s: Try --help for usage details." % (sys.argv[0]))
+        raise SystemExit(1)
 
     logFile = sys.stdout
     if o.opts['outfile']:

@@ -10,15 +10,15 @@ import pdb
 import getpass
 import traceback
 import signal
+import warnings
 
 from operator import attrgetter
 
-from twisted import copyright, plugin
+from twisted import copyright, plugin, logger
 from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.log import ILogObserver
 from twisted.python.reflect import qual, namedAny
 
 # Expose the new implementation of installReactor at the old location.
@@ -106,12 +106,11 @@ class CProfileRunner(_BasicProfiler):
         if self.saveStats:
             p.dump_stats(self.profileOutput)
         else:
-            stream = open(self.profileOutput, 'w')
-            s = pstats.Stats(p, stream=stream)
-            s.strip_dirs()
-            s.sort_stats(-1)
-            s.print_stats()
-            stream.close()
+            with open(self.profileOutput, 'w') as stream:
+                s = pstats.Stats(p, stream=stream)
+                s.strip_dirs()
+                s.sort_stats(-1)
+                s.print_stats()
 
 
 
@@ -141,7 +140,8 @@ class AppProfiler(object):
 class AppLogger(object):
     """
     An L{AppLogger} attaches the configured log observer specified on the
-    commandline to a L{ServerOptions} object or the custom L{ILogObserver}.
+    commandline to a L{ServerOptions} object, a custom L{logger.ILogObserver},
+    or a legacy custom {log.ILogObserver}.
 
     @ivar _logfilename: The name of the file to which to log, if other than the
         default.
@@ -151,7 +151,8 @@ class AppLogger(object):
         None.
 
     @ivar _observer: log observer added at C{start} and removed at C{stop}.
-    @type _observer: C{callable}
+    @type _observer: a callable that implements L{logger.ILogObserver} or
+        L{log.ILogObserver}.
     """
     _observer = None
 
@@ -168,24 +169,46 @@ class AppLogger(object):
         Initialize the global logging system for the given application.
 
         If a custom logger was specified on the command line it will be used.
-        If not, and an L{ILogObserver} component has been set on
-        C{application}, then it will be used as the log observer.  Otherwise a
-        log observer will be created based on the command-line options for
-        built-in loggers (e.g.  C{--logfile}).
+        If not, and an L{logger.ILogObserver} or legacy L{log.ILogObserver}
+        component has been set on C{application}, then it will be used as the
+        log observer. Otherwise a log observer will be created based on the
+        command line options for built-in loggers (e.g. C{--logfile}).
 
         @param application: The application on which to check for an
-            L{ILogObserver}.
+            L{logger.ILogObserver} or legacy L{log.ILogObserver}.
         @type application: L{twisted.python.components.Componentized}
         """
         if self._observerFactory is not None:
             observer = self._observerFactory()
         else:
-            observer = application.getComponent(ILogObserver, None)
+            observer = application.getComponent(logger.ILogObserver, None)
+            if observer is None:
+                # If there's no new ILogObserver, try the legacy one
+                observer = application.getComponent(log.ILogObserver, None)
 
         if observer is None:
             observer = self._getLogObserver()
         self._observer = observer
-        log.startLoggingWithObserver(self._observer)
+
+        if logger.ILogObserver.providedBy(self._observer):
+            observers = [self._observer]
+        elif log.ILogObserver.providedBy(self._observer):
+            observers = [logger.LegacyLogObserverWrapper(self._observer)]
+        else:
+            warnings.warn(
+                ("Passing a logger factory which makes log observers which do "
+                 "not implement twisted.logger.ILogObserver or "
+                 "twisted.python.log.ILogObserver to "
+                 "twisted.application.app.AppLogger was deprecated in "
+                 "Twisted 16.2. Please use a factory that produces "
+                 "twisted.logger.ILogObserver (or the legacy "
+                 "twisted.python.log.ILogObserver) implementing objects "
+                 "instead."),
+                DeprecationWarning,
+                stacklevel=2)
+            observers = [logger.LegacyLogObserverWrapper(self._observer)]
+
+        logger.globalLogBeginner.beginLoggingTo(observers)
         self._initialLog()
 
 
@@ -194,10 +217,12 @@ class AppLogger(object):
         Print twistd start log message.
         """
         from twisted.internet import reactor
-        log.msg("twistd %s (%s %s) starting up." % (
-            copyright.version, sys.executable, runtime.shortPythonVersion())
-        )
-        log.msg('reactor class: %s.' % (qual(reactor.__class__),))
+        logger._loggerFor(self).info(
+            "twistd {version} ({exe} {pyVersion}) starting up.",
+            version=copyright.version, exe=sys.executable,
+            pyVersion=runtime.shortPythonVersion())
+        logger._loggerFor(self).info('reactor class: {reactor}.',
+                                     reactor=qual(reactor.__class__))
 
 
     def _getLogObserver(self):
@@ -209,16 +234,16 @@ class AppLogger(object):
             logFile = sys.stdout
         else:
             logFile = logfile.LogFile.fromFullPath(self._logfilename)
-        return log.FileLogObserver(logFile).emit
+        return logger.textFileLogObserver(logFile)
 
 
     def stop(self):
         """
         Remove all log observers previously set up by L{AppLogger.start}.
         """
-        log.msg("Server Shut Down.")
+        logger._loggerFor(self).info("Server Shut Down.")
         if self._observer is not None:
-            log.removeObserver(self._observer)
+            logger.globalLogPublisher.removeObserver(self._observer)
             self._observer = None
 
 
@@ -264,7 +289,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
     @param profiler: object used to run the reactor with profiling.
     @type profiler: L{AppProfiler}
 
-    @param reactor: The reactor to use.  If C{None}, the global reactor will
+    @param reactor: The reactor to use.  If L{None}, the global reactor will
         be used.
     """
     if reactor is None:
@@ -284,12 +309,18 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
         else:
             reactor.run()
     except:
+        close = False
         if config['nodaemon']:
             file = oldstdout
         else:
             file = open("TWISTD-CRASH.log", "a")
-        traceback.print_exc(file=file)
-        file.flush()
+            close = True
+        try:
+            traceback.print_exc(file=file)
+            file.flush()
+        finally:
+            if close:
+                file.close()
 
 
 

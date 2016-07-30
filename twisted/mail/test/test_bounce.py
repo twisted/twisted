@@ -7,7 +7,9 @@
 
 from twisted.trial import unittest
 from twisted.mail import bounce
-import rfc822, cStringIO
+import cStringIO
+import email.message
+import email.parser
 
 class BounceTests(unittest.TestCase):
     """
@@ -23,7 +25,8 @@ Subject: test
 '''), 'moshez@example.com', 'nonexistent@example.org')
         self.assertEqual(from_, '')
         self.assertEqual(to, 'moshez@example.com')
-        mess = rfc822.Message(cStringIO.StringIO(s))
+        emailParser = email.parser.Parser()
+        mess = emailParser.parse(cStringIO.StringIO(s))
         self.assertEqual(mess['To'], 'moshez@example.com')
         self.assertEqual(mess['From'], 'postmaster@example.org')
         self.assertEqual(mess['subject'], 'Returned Mail: see transcript for details')

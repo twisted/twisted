@@ -57,13 +57,13 @@ def get(node, nodeId):
     """
     result = _get(node, nodeId)
     if result: return result
-    raise NodeLookupError, nodeId
+    raise NodeLookupError(nodeId)
 
 def getIfExists(node, nodeId):
     """
     Get a node with the specified C{nodeId} as any of the C{class},
     C{id} or C{pattern} attributes.  If there is no such node, return
-    C{None}.
+    L{None}.
     """
     return _get(node, nodeId)
 

@@ -1,1 +1,0 @@
-The __version__ attribute of former subprojects (conch, mail, names, news, pair, runner, web, and words) is deprecated in preference to the central twisted.__version__.

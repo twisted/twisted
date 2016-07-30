@@ -7,6 +7,8 @@
 Cred plugin for UNIX user accounts.
 """
 
+from __future__ import absolute_import, division
+
 from zope.interface import implementer
 
 from twisted import plugin
@@ -134,4 +136,3 @@ class UNIXCheckerFactory(object):
 
 
 theUnixCheckerFactory = UNIXCheckerFactory()
-

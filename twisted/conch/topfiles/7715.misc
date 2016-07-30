@@ -1,1 +1,0 @@
-Add prime numbers to sshsimpleserver.py to allow RFC4419 key exchange method and update example for latest changes in twisted.conch.checkers.

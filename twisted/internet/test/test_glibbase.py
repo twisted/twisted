@@ -44,7 +44,7 @@ class EnsureNotImportedTests(TestCase):
 
     def test_ensureWhenFailedToImport(self):
         """
-        If the specified modules have been set to C{None} in C{sys.modules},
+        If the specified modules have been set to L{None} in C{sys.modules},
         L{ensureNotImported} does not complain.
         """
         modules = {"m2": None}

@@ -830,7 +830,7 @@ class TunnelTestsMixin(object):
         """
         Verify that the C{stopListening} method of an L{IListeningPort} removes
         that port from the reactor's "readers" set and also that the
-        L{Deferred} returned by that method fires with C{None}.
+        L{Deferred} returned by that method fires with L{None}.
 
         @param port: The port object to stop.
         @type port: L{IListeningPort} provider
@@ -839,7 +839,7 @@ class TunnelTestsMixin(object):
         self.assertNotIn(port, self.reactor.getReaders())
         # An unfortunate implementation detail
         self.reactor.advance(0)
-        self.assertIs(None, self.successResultOf(stopped))
+        self.assertIsNone(self.successResultOf(stopped))
 
 
     def test_stopListeningStopsReading(self):
@@ -872,7 +872,7 @@ class TunnelTestsMixin(object):
         """
         self.port.startListening()
         self._stopPort(self.port)
-        self.assertIs(None, self.protocol.transport)
+        self.assertIsNone(self.protocol.transport)
 
 
     def test_stopListeningWhenStopped(self):
@@ -881,7 +881,7 @@ class TunnelTestsMixin(object):
         immediately if it is called when the port is not listening.
         """
         stopped = self.port.stopListening()
-        self.assertIs(None, self.successResultOf(stopped))
+        self.assertIsNone(self.successResultOf(stopped))
 
 
     def test_multipleStopListening(self):
@@ -893,7 +893,7 @@ class TunnelTestsMixin(object):
         self.port.stopListening()
         second = self.port.stopListening()
         self.reactor.advance(0)
-        self.assertIs(None, self.successResultOf(second))
+        self.assertIsNone(self.successResultOf(second))
 
 
     def test_loseConnection(self):

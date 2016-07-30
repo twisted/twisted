@@ -6,12 +6,13 @@
 Simple Mail Transfer Protocol implementation.
 """
 
-import time, re, base64, types, socket, os, random, rfc822
+import time, re, base64, types, socket, os, random
 import binascii
+import email.utils
 import warnings
 from email.base64MIME import encode as encode_base64
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.copyright import longversion
 from twisted.protocols import basic
@@ -318,7 +319,7 @@ def messageid(uniq=None, N=idGenerator().next):
     """
     datetime = time.strftime('%Y%m%d%H%M%S', time.gmtime())
     pid = os.getpid()
-    rand = random.randrange(2**31L-1)
+    rand = random.randrange(2**31-1)
     if uniq is None:
         uniq = ''
     else:
@@ -334,7 +335,7 @@ def quoteaddr(addr):
     if isinstance(addr, Address):
         return '<%s>' % str(addr)
 
-    res = rfc822.parseaddr(addr)
+    res = email.utils.parseaddr(addr)
 
     if res == (None, None):
         # It didn't parse, use it as-is
@@ -389,7 +390,7 @@ class Address:
         while atl:
             if atl[0] == '<':
                 if atl[-1] != '>':
-                    raise AddressError, "Unbalanced <>"
+                    raise AddressError("Unbalanced <>")
                 atl = atl[1:-1]
             elif atl[0] == '@':
                 atl = atl[1:]
@@ -399,15 +400,15 @@ class Address:
                         # remove it
                         atl = atl[1:]
                     if not atl:
-                        raise AddressError, "Malformed source route"
+                        raise AddressError("Malformed source route")
                     atl = atl[1:] # remove :
                 elif domain:
-                    raise AddressError, "Too many @"
+                    raise AddressError("Too many @")
                 else:
                     # Now in domain
                     domain = ['']
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] !=  '.':
-                raise AddressError, "Parse error at %r of %r" % (atl[0], (addr, atl))
+                raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
             else:
                 if not domain:
                     local.append(atl[0])
@@ -642,7 +643,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         try:
             addr = Address(m.group('path'), self.host)
-        except AddressError, e:
+        except AddressError as e:
             self.sendCode(553, str(e))
             return
 
@@ -680,7 +681,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         try:
             user = User(m.group('path'), self._helo, self, self._from)
-        except AddressError, e:
+        except AddressError as e:
             self.sendCode(553, str(e))
             return
 
@@ -735,7 +736,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 if rcvdhdr:
                     msg.lineReceived(rcvdhdr)
                 msgs.append(msg)
-            except SMTPServerError, e:
+            except SMTPServerError as e:
                 self.sendCode(e.code, e.resp)
                 self.mode = COMMAND
                 self._disconnect(msgs)
@@ -819,7 +820,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
             for message in self.__messages:
                 message.lineReceived(line)
-        except SMTPServerError, e:
+        except SMTPServerError as e:
             self.datafailed = e
             for message in self.__messages:
                 message.connectionLost()
@@ -841,10 +842,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.sendCode(250, 'Delivery in progress')
 
 
-    def _cbAnonymousAuthentication(self, (iface, avatar, logout)):
+    def _cbAnonymousAuthentication(self, result):
         """
         Save the state resulting from a successful anonymous cred login.
         """
+        (iface, avatar, logout) = result
         if issubclass(iface, IMessageDeliveryFactory):
             self.deliveryFactory = avatar
             self.delivery = None
@@ -987,7 +989,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     After the client has connected to the SMTP server, it repeatedly calls
     L{SMTPClient.getMailFrom}, L{SMTPClient.getMailTo} and
     L{SMTPClient.getMailData} and uses this information to send an email.
-    It then calls L{SMTPClient.getMailFrom} again; if it returns C{None}, the
+    It then calls L{SMTPClient.getMailFrom} again; if it returns L{None}, the
     client will disconnect, otherwise it will continue as normal i.e. call
     L{SMTPClient.getMailTo} and L{SMTPClient.getMailData} and send a new email.
     """
@@ -1414,7 +1416,7 @@ class ESMTPClient(SMTPClient):
         @param auth: The Authentication mechanism to register
         @type auth: L{IClientAuthentication} implementor
 
-        @return C{None}
+        @return: L{None}
         """
         self.authenticators.append(auth)
 
@@ -1444,7 +1446,7 @@ class ESMTPClient(SMTPClient):
             server message.
         @type resp: L{bytes}
 
-        @return: C{None}
+        @return: L{None}
         """
         self._expected = SUCCESS
 
@@ -1502,7 +1504,7 @@ class ESMTPClient(SMTPClient):
             are extension identifiers and values are the associated values.
         @type items: L{dict} mapping L{bytes} to L{bytes}
 
-        @return: C{None}
+        @return: L{None}
         """
 
         # has tls        can tls         must tls       result
@@ -1987,9 +1989,8 @@ class LOGINCredentials(_lcredentials):
 
 
 
+@implementer(IClientAuthentication)
 class PLAINAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
 
@@ -2117,8 +2118,8 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
         File-like objects need to support read() and close(). Lines must be
         delimited by '\\n'. If you pass something that doesn't look like a file,
         we try to convert it to a string (so you should be able to pass an
-        L{email.Message} directly, but doing the conversion with
-        L{email.Generator} manually will give you more control over the process).
+        L{email.message} directly, but doing the conversion with
+        L{email.generator} manually will give you more control over the process).
 
     @param senderDomainName: Name by which to identify. If None, try to pick
         something sane (but this depends on external configuration and may not

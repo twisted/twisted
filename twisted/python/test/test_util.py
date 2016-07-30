@@ -23,7 +23,6 @@ from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python import util
-from twisted.python.reflect import fullyQualifiedName
 from twisted.python.filepath import FilePath
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
@@ -248,7 +247,7 @@ class MergeFunctionMetadataTests(unittest.TestCase):
             return bar_object
 
         baz = util.mergeFunctionMetadata(foo, bar)
-        self.assertIdentical(baz(1, 2, (3, 4), quux=10), bar_object)
+        self.assertIs(baz(1, 2, (3, 4), quux=10), bar_object)
 
 
     def test_moduleIsMerged(self):
@@ -844,22 +843,6 @@ class RunAsEffectiveUserTests(unittest.TestCase):
 
 
 
-def _getDeprecationSuppression(f):
-    """
-    Returns a tuple of arguments needed to suppress deprecation warnings from
-    a specified function.
-
-    @param f: function to suppress dperecation warnings for
-    @type f: L{callable}
-
-    @return: tuple to add to C{suppress} attribute
-    """
-    return SUPPRESS(
-        category=DeprecationWarning,
-        message='%s was deprecated' % (fullyQualifiedName(f),))
-
-
-
 class InitGroupsTests(unittest.TestCase):
     """
     Tests for L{util.initgroups}.
@@ -1057,7 +1040,7 @@ class PadToTests(unittest.TestCase):
 
     def test_default(self):
         """
-        C{None} values can be added to a list to cause it to have a certain
+        L{None} values can be added to a list to cause it to have a certain
         length.
         """
         padded = util.padTo(3, [])
@@ -1117,3 +1100,66 @@ class PadToTests(unittest.TestCase):
         items = []
         util.padTo(4, items)
         self.assertEqual([], items)
+
+
+
+class ReplaceIfTests(unittest.TestCase):
+    """
+    Tests for L{util._replaceIf}.
+    """
+
+    def test_replacesIfTrue(self):
+        """
+        L{util._replaceIf} swaps out the body of a function if the conditional
+        is C{True}.
+        """
+        @util._replaceIf(True, lambda: "hi")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "hi")
+        self.assertEqual(test.__name__, "test")
+        self.assertEqual(test.__module__, "twisted.python.test.test_util")
+
+
+    def test_keepsIfFalse(self):
+        """
+        L{util._replaceIf} keeps the original body of the function if the
+        conditional is C{False}.
+        """
+        @util._replaceIf(False, lambda: "hi")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "bye")
+
+
+    def test_multipleReplace(self):
+        """
+        In the case that multiple conditions are true, the first one
+        (to the reader) is chosen by L{util._replaceIf}
+        """
+        @util._replaceIf(True, lambda: "hi")
+        @util._replaceIf(False, lambda: "bar")
+        @util._replaceIf(True, lambda: "baz")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "hi")
+
+
+    def test_boolsOnly(self):
+        """
+        L{util._replaceIf}'s condition argument only accepts bools.
+        """
+        with self.assertRaises(ValueError) as e:
+
+            @util._replaceIf("hi", "there")
+            def test():
+                """
+                Some test function.
+                """
+
+        self.assertEqual(e.exception.args[0],
+                         ("condition argument to _replaceIf requires a bool, "
+                          "not 'hi'"))

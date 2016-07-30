@@ -8,12 +8,15 @@ Telnet protocol implementation.
 @author: Jean-Paul Calderone
 """
 
+from __future__ import absolute_import, division
+
 import struct
 
 from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.python import log
+from twisted.python.compat import _bytesChr as chr, iterbytes
 
 MODE = chr(1)
 EDIT = 1
@@ -154,28 +157,33 @@ LINEMODE_ABORT = chr(238)
 
 class ITelnetProtocol(iinternet.IProtocol):
     def unhandledCommand(command, argument):
-        """A command was received but not understood.
+        """
+        A command was received but not understood.
 
         @param command: the command received.
-        @type command: C{str}, a single character.
+        @type command: L{str}, a single character.
         @param argument: the argument to the received command.
-        @type argument: C{str}, a single character, or None if the command that
+        @type argument: L{str}, a single character, or None if the command that
             was unhandled does not provide an argument.
         """
 
-    def unhandledSubnegotiation(command, bytes):
-        """A subnegotiation command was received but not understood.
+
+    def unhandledSubnegotiation(command, data):
+        """
+        A subnegotiation command was received but not understood.
 
         @param command: the command being subnegotiated. That is, the first
             byte after the SB command.
-        @type command: C{str}, a single character.
-        @param bytes: all other bytes of the subneogation. That is, all but the
+        @type command: L{str}, a single character.
+        @param data: all other bytes of the subneogation. That is, all but the
             first bytes between SB and SE, with IAC un-escaping applied.
-        @type bytes: C{list} of C{str}, each a single character
+        @type data: L{bytes}, each a single character
         """
 
+
     def enableLocal(option):
-        """Enable the given option locally.
+        """
+        Enable the given option locally.
 
         This should enable the given option on this side of the
         telnet connection and return True.  If False is returned,
@@ -183,34 +191,40 @@ class ITelnetProtocol(iinternet.IProtocol):
         will be notified.
 
         @param option: the option to be enabled.
-        @type option: C{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
 
+
     def enableRemote(option):
-        """Indicate whether the peer should be allowed to enable this option.
+        """
+        Indicate whether the peer should be allowed to enable this option.
 
         Returns True if the peer should be allowed to enable this option,
         False otherwise.
 
         @param option: the option to be enabled.
-        @type option: C{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
 
+
     def disableLocal(option):
-        """Disable the given option locally.
+        """
+        Disable the given option locally.
 
         Unlike enableLocal, this method cannot fail.  The option must be
         disabled.
 
         @param option: the option to be disabled.
-        @type option: C{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
 
+
     def disableRemote(option):
-        """Indicate that the peer has disabled this option.
+        """
+        Indicate that the peer has disabled this option.
 
         @param option: the option to be disabled.
-        @type option: C{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
 
 
@@ -282,12 +296,12 @@ class ITelnetTransport(iinternet.ITransport):
         """
 
 
-    def requestNegotiation(about, bytes):
+    def requestNegotiation(about, data):
         """
         Send a subnegotiation request.
 
         @param about: A byte indicating the feature being negotiated.
-        @param bytes: Any number of bytes containing specific information
+        @param data: Any number of L{bytes} containing specific information
         about the negotiation being requested.  No values in this string
         need to be escaped, as this function will escape any value which
         requires it.
@@ -298,18 +312,28 @@ class ITelnetTransport(iinternet.ITransport):
 class TelnetError(Exception):
     pass
 
+
+
 class NegotiationError(TelnetError):
     def __str__(self):
         return self.__class__.__module__ + '.' + self.__class__.__name__ + ':' + repr(self.args[0])
 
+
+
 class OptionRefused(NegotiationError):
     pass
+
+
 
 class AlreadyEnabled(NegotiationError):
     pass
 
+
+
 class AlreadyDisabled(NegotiationError):
     pass
+
+
 
 class AlreadyNegotiating(NegotiationError):
     pass
@@ -321,20 +345,26 @@ class TelnetProtocol(protocol.Protocol):
     def unhandledCommand(self, command, argument):
         pass
 
-    def unhandledSubnegotiation(self, command, bytes):
+
+    def unhandledSubnegotiation(self, command, data):
         pass
+
 
     def enableLocal(self, option):
         pass
 
+
     def enableRemote(self, option):
         pass
+
 
     def disableLocal(self, option):
         pass
 
+
     def disableRemote(self, option):
         pass
+
 
 
 class Telnet(protocol.Protocol):
@@ -381,8 +411,10 @@ class Telnet(protocol.Protocol):
             DO: self.telnet_DO,
             DONT: self.telnet_DONT}
 
-    def _write(self, bytes):
-        self.transport.write(bytes)
+
+    def _write(self, data):
+        self.transport.write(data)
+
 
     class _OptionState:
         """
@@ -411,7 +443,7 @@ class Telnet(protocol.Protocol):
 
             @ivar onResult: When negotiation about this option has been
                 initiated by this side of the connection, a L{Deferred}
-                which will fire with the result of the negotiation.  C{None}
+                which will fire with the result of the negotiation.  L{None}
                 at other times.
             """
             state = 'no'
@@ -421,30 +453,39 @@ class Telnet(protocol.Protocol):
             def __str__(self):
                 return self.state + ('*' * self.negotiating)
 
+
         def __init__(self):
             self.us = self._Perspective()
             self.him = self._Perspective()
 
+
         def __repr__(self):
             return '<_OptionState us=%s him=%s>' % (self.us, self.him)
+
 
     def getOptionState(self, opt):
         return self.options.setdefault(opt, self._OptionState())
 
+
     def _do(self, option):
         self._write(IAC + DO + option)
+
 
     def _dont(self, option):
         self._write(IAC + DONT + option)
 
+
     def _will(self, option):
         self._write(IAC + WILL + option)
+
 
     def _wont(self, option):
         self._write(IAC + WONT + option)
 
+
     def will(self, option):
-        """Indicate our willingness to enable an option.
+        """
+        Indicate our willingness to enable an option.
         """
         s = self.getOptionState(option)
         if s.us.negotiating or s.him.negotiating:
@@ -457,8 +498,10 @@ class Telnet(protocol.Protocol):
             self._will(option)
             return d
 
+
     def wont(self, option):
-        """Indicate we are not willing to enable an option.
+        """
+        Indicate we are not willing to enable an option.
         """
         s = self.getOptionState(option)
         if s.us.negotiating or s.him.negotiating:
@@ -471,6 +514,7 @@ class Telnet(protocol.Protocol):
             self._wont(option)
             return d
 
+
     def do(self, option):
         s = self.getOptionState(option)
         if s.us.negotiating or s.him.negotiating:
@@ -482,6 +526,7 @@ class Telnet(protocol.Protocol):
             s.him.onResult = d = defer.Deferred()
             self._do(option)
             return d
+
 
     def dont(self, option):
         s = self.getOptionState(option)
@@ -496,25 +541,27 @@ class Telnet(protocol.Protocol):
             return d
 
 
-    def requestNegotiation(self, about, bytes):
+    def requestNegotiation(self, about, data):
         """
-        Send a negotiation message for the option C{about} with C{bytes} as the
+        Send a negotiation message for the option C{about} with C{data} as the
         payload.
 
+        @param data: the payload
+        @type data: L{bytes}
         @see: L{ITelnetTransport.requestNegotiation}
         """
-        bytes = bytes.replace(IAC, IAC * 2)
-        self._write(IAC + SB + about + bytes + IAC + SE)
+        data = data.replace(IAC, IAC * 2)
+        self._write(IAC + SB + about + data + IAC + SE)
 
 
     def dataReceived(self, data):
         appDataBuffer = []
 
-        for b in data:
+        for b in iterbytes(data):
             if self.state == 'data':
                 if b == IAC:
                     self.state = 'escaped'
-                elif b == '\r':
+                elif b == b'\r':
                     self.state = 'newline'
                 else:
                     appDataBuffer.append(b)
@@ -528,7 +575,7 @@ class Telnet(protocol.Protocol):
                 elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
                     if appDataBuffer:
-                        self.applicationDataReceived(''.join(appDataBuffer))
+                        self.applicationDataReceived(b''.join(appDataBuffer))
                         del appDataBuffer[:]
                     self.commandReceived(b, None)
                 elif b in (WILL, WONT, DO, DONT):
@@ -541,19 +588,19 @@ class Telnet(protocol.Protocol):
                 command = self.command
                 del self.command
                 if appDataBuffer:
-                    self.applicationDataReceived(''.join(appDataBuffer))
+                    self.applicationDataReceived(b''.join(appDataBuffer))
                     del appDataBuffer[:]
                 self.commandReceived(command, b)
             elif self.state == 'newline':
                 self.state = 'data'
-                if b == '\n':
-                    appDataBuffer.append('\n')
-                elif b == '\0':
-                    appDataBuffer.append('\r')
+                if b == b'\n':
+                    appDataBuffer.append(b'\n')
+                elif b == b'\0':
+                    appDataBuffer.append(b'\r')
                 elif b == IAC:
                     # IAC isn't really allowed after \r, according to the
                     # RFC, but handling it this way is less surprising than
-                    # delivering the IAC to the app as application data. 
+                    # delivering the IAC to the app as application data.
                     # The purpose of the restriction is to allow terminals
                     # to unambiguously interpret the behavior of the CR
                     # after reading only one more byte.  CR LF is supposed
@@ -561,10 +608,10 @@ class Telnet(protocol.Protocol):
                     # CR NUL another (cursor to first column).  Absent the
                     # NUL, it still makes sense to interpret this as CR and
                     # then apply all the usual interpretation to the IAC.
-                    appDataBuffer.append('\r')
+                    appDataBuffer.append(b'\r')
                     self.state = 'escaped'
                 else:
-                    appDataBuffer.append('\r' + b)
+                    appDataBuffer.append(b'\r' + b)
             elif self.state == 'subnegotiation':
                 if b == IAC:
                     self.state = 'subnegotiation-escaped'
@@ -576,7 +623,7 @@ class Telnet(protocol.Protocol):
                     commands = self.commands
                     del self.commands
                     if appDataBuffer:
-                        self.applicationDataReceived(''.join(appDataBuffer))
+                        self.applicationDataReceived(b''.join(appDataBuffer))
                         del appDataBuffer[:]
                     self.negotiate(commands)
                 else:
@@ -586,7 +633,7 @@ class Telnet(protocol.Protocol):
                 raise ValueError("How'd you do this?")
 
         if appDataBuffer:
-            self.applicationDataReceived(''.join(appDataBuffer))
+            self.applicationDataReceived(b''.join(appDataBuffer))
 
 
     def connectionLost(self, reason):
@@ -600,13 +647,17 @@ class Telnet(protocol.Protocol):
                 state.him.onResult = None
                 d.errback(reason)
 
-    def applicationDataReceived(self, bytes):
-        """Called with application-level data.
+
+    def applicationDataReceived(self, data):
+        """
+        Called with application-level data.
         """
 
     def unhandledCommand(self, command, argument):
-        """Called for commands for which no handler is installed.
         """
+        Called for commands for which no handler is installed.
+        """
+
 
     def commandReceived(self, command, argument):
         cmdFunc = self.commandMap.get(command)
@@ -615,21 +666,26 @@ class Telnet(protocol.Protocol):
         else:
             cmdFunc(argument)
 
-    def unhandledSubnegotiation(self, command, bytes):
-        """Called for subnegotiations for which no handler is installed.
+
+    def unhandledSubnegotiation(self, command, data):
+        """
+        Called for subnegotiations for which no handler is installed.
         """
 
-    def negotiate(self, bytes):
-        command, bytes = bytes[0], bytes[1:]
+
+    def negotiate(self, data):
+        command, data = data[0], data[1:]
         cmdFunc = self.negotiationMap.get(command)
         if cmdFunc is None:
-            self.unhandledSubnegotiation(command, bytes)
+            self.unhandledSubnegotiation(command, data)
         else:
-            cmdFunc(bytes)
+            cmdFunc(data)
+
 
     def telnet_WILL(self, option):
         s = self.getOptionState(option)
         self.willMap[s.him.state, s.him.negotiating](self, s, option)
+
 
     def will_no_false(self, state, option):
         # He is unilaterally offering to enable an option.
@@ -638,6 +694,7 @@ class Telnet(protocol.Protocol):
             self._do(option)
         else:
             self._dont(option)
+
 
     def will_no_true(self, state, option):
         # Peer agreed to enable an option in response to our request.
@@ -648,10 +705,12 @@ class Telnet(protocol.Protocol):
         d.callback(True)
         assert self.enableRemote(option), "enableRemote must return True in this context (for option %r)" % (option,)
 
+
     def will_yes_false(self, state, option):
         # He is unilaterally offering to enable an already-enabled option.
         # Ignore this.
         pass
+
 
     def will_yes_true(self, state, option):
         # This is a bogus state.  It is here for completeness.  It will
@@ -661,15 +720,18 @@ class Telnet(protocol.Protocol):
     willMap = {('no', False): will_no_false,   ('no', True): will_no_true,
                ('yes', False): will_yes_false, ('yes', True): will_yes_true}
 
+
     def telnet_WONT(self, option):
         s = self.getOptionState(option)
         self.wontMap[s.him.state, s.him.negotiating](self, s, option)
+
 
     def wont_no_false(self, state, option):
         # He is unilaterally demanding that an already-disabled option be/remain disabled.
         # Ignore this (although we could record it and refuse subsequent enable attempts
         # from our side - he can always refuse them again though, so we won't)
         pass
+
 
     def wont_no_true(self, state, option):
         # Peer refused to enable an option in response to our request.
@@ -678,11 +740,13 @@ class Telnet(protocol.Protocol):
         state.him.onResult = None
         d.errback(OptionRefused(option))
 
+
     def wont_yes_false(self, state, option):
         # Peer is unilaterally demanding that an option be disabled.
         state.him.state = 'no'
         self.disableRemote(option)
         self._dont(option)
+
 
     def wont_yes_true(self, state, option):
         # Peer agreed to disable an option at our request.
@@ -696,9 +760,11 @@ class Telnet(protocol.Protocol):
     wontMap = {('no', False): wont_no_false,   ('no', True): wont_no_true,
                ('yes', False): wont_yes_false, ('yes', True): wont_yes_true}
 
+
     def telnet_DO(self, option):
         s = self.getOptionState(option)
         self.doMap[s.us.state, s.us.negotiating](self, s, option)
+
 
     def do_no_false(self, state, option):
         # Peer is unilaterally requesting that we enable an option.
@@ -707,6 +773,7 @@ class Telnet(protocol.Protocol):
             self._will(option)
         else:
             self._wont(option)
+
 
     def do_no_true(self, state, option):
         # Peer agreed to allow us to enable an option at our request.
@@ -717,10 +784,12 @@ class Telnet(protocol.Protocol):
         d.callback(True)
         self.enableLocal(option)
 
+
     def do_yes_false(self, state, option):
         # Peer is unilaterally requesting us to enable an already-enabled option.
         # Ignore this.
         pass
+
 
     def do_yes_true(self, state, option):
         # This is a bogus state.  It is here for completeness.  It will never be
@@ -730,14 +799,17 @@ class Telnet(protocol.Protocol):
     doMap = {('no', False): do_no_false,   ('no', True): do_no_true,
              ('yes', False): do_yes_false, ('yes', True): do_yes_true}
 
+
     def telnet_DONT(self, option):
         s = self.getOptionState(option)
         self.dontMap[s.us.state, s.us.negotiating](self, s, option)
+
 
     def dont_no_false(self, state, option):
         # Peer is unilaterally demanding us to disable an already-disabled option.
         # Ignore this.
         pass
+
 
     def dont_no_true(self, state, option):
         # Offered option was refused.  Fail the Deferred returned by the
@@ -747,11 +819,13 @@ class Telnet(protocol.Protocol):
         state.us.onResult = None
         d.errback(OptionRefused(option))
 
+
     def dont_yes_false(self, state, option):
         # Peer is unilaterally demanding we disable an option.
         state.us.state = 'no'
         self.disableLocal(option)
         self._wont(option)
+
 
     def dont_yes_true(self, state, option):
         # Peer acknowledged our notice that we will disable an option.
@@ -764,6 +838,7 @@ class Telnet(protocol.Protocol):
 
     dontMap = {('no', False): dont_no_false,   ('no', True): dont_no_true,
                ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
+
 
     def enableLocal(self, option):
         """
@@ -811,20 +886,26 @@ class Telnet(protocol.Protocol):
 
 
 class ProtocolTransportMixin:
-    def write(self, bytes):
-        self.transport.write(bytes.replace('\n', '\r\n'))
+    def write(self, data):
+        self.transport.write(data.replace(b'\n', b'\r\n'))
+
 
     def writeSequence(self, seq):
         self.transport.writeSequence(seq)
 
+
     def loseConnection(self):
         self.transport.loseConnection()
+
 
     def getHost(self):
         return self.transport.getHost()
 
+
     def getPeer(self):
         return self.transport.getPeer()
+
+
 
 class TelnetTransport(Telnet, ProtocolTransportMixin):
     """
@@ -856,6 +937,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
             self.protocolArgs = a
             self.protocolKwArgs = kw
 
+
     def connectionMade(self):
         if self.protocolFactory is not None:
             self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
@@ -868,6 +950,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
                 self.protocol.factory = factory
             self.protocol.makeConnection(self)
 
+
     def connectionLost(self, reason):
         Telnet.connectionLost(self, reason)
         if self.protocol is not None:
@@ -876,29 +959,38 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
             finally:
                 del self.protocol
 
+
     def enableLocal(self, option):
         return self.protocol.enableLocal(option)
+
 
     def enableRemote(self, option):
         return self.protocol.enableRemote(option)
 
+
     def disableLocal(self, option):
         return self.protocol.disableLocal(option)
+
 
     def disableRemote(self, option):
         return self.protocol.disableRemote(option)
 
-    def unhandledSubnegotiation(self, command, bytes):
-        self.protocol.unhandledSubnegotiation(command, bytes)
+
+    def unhandledSubnegotiation(self, command, data):
+        self.protocol.unhandledSubnegotiation(command, data)
+
 
     def unhandledCommand(self, command, argument):
         self.protocol.unhandledCommand(command, argument)
 
-    def applicationDataReceived(self, bytes):
-        self.protocol.dataReceived(bytes)
+
+    def applicationDataReceived(self, data):
+        self.protocol.dataReceived(data)
+
 
     def write(self, data):
-        ProtocolTransportMixin.write(self, data.replace('\xff','\xff\xff'))
+        ProtocolTransportMixin.write(self, data.replace(b'\xff', b'\xff\xff'))
+
 
 
 class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
@@ -908,6 +1000,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.protocolFactory = protocolFactory
         self.protocolArgs = args
         self.protocolKwArgs = kw
+
 
     def connectionMade(self):
         self.transport.negotiationMap[NAWS] = self.telnet_NAWS
@@ -929,6 +1022,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 
         self.protocol.makeConnection(self)
 
+
     def connectionLost(self, reason):
         if self.protocol is not None:
             try:
@@ -936,8 +1030,10 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             finally:
                 del self.protocol
 
+
     def dataReceived(self, data):
         self.protocol.dataReceived(data)
+
 
     def enableLocal(self, opt):
         if opt == ECHO:
@@ -946,6 +1042,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             return True
         else:
             return False
+
 
     def enableRemote(self, opt):
         if opt == LINEMODE:
@@ -958,42 +1055,45 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         else:
             return False
 
-    def telnet_NAWS(self, bytes):
+
+    def telnet_NAWS(self, data):
         # NAWS is client -> server *only*.  self.protocol will
         # therefore be an ITerminalTransport, the `.protocol'
         # attribute of which will be an ITerminalProtocol.  Maybe.
         # You know what, XXX TODO clean this up.
-        if len(bytes) == 4:
-            width, height = struct.unpack('!HH', ''.join(bytes))
+        if len(data) == 4:
+            width, height = struct.unpack('!HH', b''.join(data))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
             log.msg("Wrong number of NAWS bytes")
 
-
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
-    def telnet_LINEMODE(self, bytes):
-        linemodeSubcommand = bytes[0]
+    def telnet_LINEMODE(self, data):
+        linemodeSubcommand = data[0]
         if 0:
             # XXX TODO: This should be enabled to parse linemode subnegotiation.
-            getattr(self, 'linemode_' + self.linemodeSubcommands[linemodeSubcommand])(bytes[1:])
+            getattr(self, 'linemode_' + self.linemodeSubcommands[linemodeSubcommand])(data[1:])
 
-    def linemode_SLC(self, bytes):
-        chunks = zip(*[iter(bytes)]*3)
+
+    def linemode_SLC(self, data):
+        chunks = zip(*[iter(data)]*3)
         for slcFunction, slcValue, slcWhat in chunks:
             # Later, we should parse stuff.
             'SLC', ord(slcFunction), ord(slcValue), ord(slcWhat)
 
+
 from twisted.protocols import basic
 
 class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
-    delimiter = '\n'
+    delimiter = b'\n'
 
     state = 'Discard'
 
     def connectionLost(self, reason):
         basic.LineReceiver.connectionLost(self, reason)
         TelnetProtocol.connectionLost(self, reason)
+
 
     def lineReceived(self, line):
         oldState = self.state
@@ -1004,13 +1104,16 @@ class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
             else:
                 log.msg("Warning: state changed and new state returned")
 
+
     def telnet_Discard(self, line):
         pass
+
 
 from twisted.cred import credentials
 
 class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
-    """A protocol which prompts for credentials and attempts to authenticate them.
+    """
+    A protocol which prompts for credentials and attempts to authenticate them.
 
     Username and password prompts are given (the password is obscured).  When the
     information is collected, it is passed to a portal and an avatar implementing
@@ -1025,8 +1128,10 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
     def __init__(self, portal):
         self.portal = portal
 
+
     def connectionMade(self):
-        self.transport.write("Username: ")
+        self.transport.write(b"Username: ")
+
 
     def connectionLost(self, reason):
         StatefulTelnetProtocol.connectionLost(self, reason)
@@ -1037,11 +1142,13 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
             finally:
                 del self.protocol, self.logout
 
+
     def telnet_User(self, line):
         self.username = line
         self.transport.will(ECHO)
-        self.transport.write("Password: ")
+        self.transport.write(b"Password: ")
         return 'Password'
+
 
     def telnet_Password(self, line):
         username, password = self.username, line
@@ -1054,6 +1161,7 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         self.transport.wont(ECHO).addCallback(login)
         return 'Discard'
 
+
     def _cbLogin(self, ial):
         interface, protocol, logout = ial
         assert interface is ITelnetProtocol
@@ -1064,10 +1172,12 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         protocol.makeConnection(self.transport)
         self.transport.protocol = protocol
 
+
     def _ebLogin(self, failure):
-        self.transport.write("\nAuthentication failed\n")
-        self.transport.write("Username: ")
+        self.transport.write(b"\nAuthentication failed\n")
+        self.transport.write(b"Username: ")
         self.state = "User"
+
 
 __all__ = [
     # Exceptions

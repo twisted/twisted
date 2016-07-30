@@ -7,6 +7,7 @@ and an instance of a Protocol class which has had L{twisted.conch.mixin}'s
 L{BufferingMixin<twisted.conch.mixin.BufferingMixin>} mixed in to perform
 Nagle-like write coalescing.
 """
+from __future__ import print_function
 
 from sys import stdout
 from pprint import pprint
@@ -170,7 +171,7 @@ def main(args=None):
     def cbBenchmark(result):
         pprint(result)
     def ebBenchmark(err):
-        print err.getTraceback()
+        print(err.getTraceback())
     d.addCallbacks(cbBenchmark, ebBenchmark)
     def stopReactor(ign):
         reactor.stop()

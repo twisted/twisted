@@ -8,13 +8,11 @@ Tests for actual functionality belong elsewhere, written in a way that doesn't
 involve launching child processes.
 """
 
-import imp
 from os import devnull, getcwd, chdir
 from sys import executable
 from subprocess import PIPE, Popen
 
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python import reflect
 from twisted.python.modules import getModule
 from twisted.python.filepath import FilePath
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
@@ -39,12 +37,11 @@ def outputFromPythonScript(script, *args):
         from C{stderr}.
     @rtype: L{bytes}
     """
-    nullInput = file(devnull, "rb")
-    nullError = file(devnull, "wb")
-    stdout = Popen([executable, script.path] + list(args),
-                   stdout=PIPE, stderr=nullError, stdin=nullInput).stdout.read()
-    nullInput.close()
-    nullError.close()
+    with open(devnull, "rb") as nullInput, open(devnull, "wb") as nullError:
+        process = Popen(
+            [executable, script.path] + list(args),
+            stdout=PIPE, stderr=nullError, stdin=nullInput)
+        stdout = process.communicate()[0]
     return stdout
 
 
@@ -113,10 +110,6 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         self.assertIn(repr(testDir.path), output)
 
 
-    def test_manhole(self):
-        self.scriptTest("manhole")
-
-
     def test_trial(self):
         self.scriptTest("trial")
 
@@ -144,14 +137,6 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         self.scriptTest("pyhtmlizer")
 
 
-    def test_tap2rpm(self):
-        self.scriptTest("tap2rpm")
-
-
-    def test_tap2deb(self):
-        self.scriptTest("tap2deb")
-
-
 
 class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     """
@@ -160,43 +145,4 @@ class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     generateFor = [('twistd', 'twisted.scripts.twistd.ServerOptions'),
                    ('trial', 'twisted.scripts.trial.Options'),
                    ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
-                   ('tap2rpm', 'twisted.scripts.tap2rpm.MyOptions'),
-                   ('tap2deb', 'twisted.scripts.tap2deb.MyOptions'),
-                   ('manhole', 'twisted.scripts.manhole.MyOptions')
                    ]
-
-
-
-class Tap2DeprecationTests(TestCase):
-    """
-    Contains tests to make sure tap2deb/tap2rpm are marked as deprecated.
-
-    The script need to be triggered using C{reload} as otherwise they
-    are not re-imported for the test. They might have been already
-    imported in previous tests.
-    """
-
-    def test_tap2debDeprecation(self):
-        """
-        L{twisted.scripts.tap2deb} is deprecated since Twisted 15.2.
-        """
-        imp.reload(reflect.namedAny("twisted.scripts.tap2deb"))
-
-        warningsShown = self.flushWarnings([self.test_tap2debDeprecation])
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "tap2deb is deprecated since Twisted 15.2.",
-            warningsShown[0]['message'])
-
-
-    def test_tap2rpmDeprecation(self):
-        """
-        L{twisted.scripts.tap2rpm} is deprecated since Twisted 15.2.
-        """
-        imp.reload(reflect.namedAny("twisted.scripts.tap2rpm"))
-
-        warningsShown = self.flushWarnings([self.test_tap2rpmDeprecation])
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "tap2rpm is deprecated since Twisted 15.2.",
-            warningsShown[0]['message'])

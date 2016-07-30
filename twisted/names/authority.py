@@ -6,15 +6,16 @@
 Authoritative resolvers.
 """
 
+from __future__ import absolute_import, division
+
 import os
 import time
 
-from twisted.names import dns, error
+from twisted.names import dns, error, common
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.python.compat import execfile
 
-import common
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
     """Return a monotonically increasing (across program runs) integer.
@@ -24,25 +25,21 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
     """
     serial = time.strftime('%Y%m%d')
 
-    o = os.umask(0177)
+    o = os.umask(0o177)
     try:
         if not os.path.exists(filename):
-            f = file(filename, 'w')
-            f.write(serial + ' 0')
-            f.close()
+            with open(filename, 'w') as f:
+                f.write(serial + ' 0')
     finally:
         os.umask(o)
 
-    serialFile = file(filename, 'r')
-    lastSerial, ID = serialFile.readline().split()
-    ID = (lastSerial == serial) and (int(ID) + 1) or 0
-    serialFile.close()
-    serialFile = file(filename, 'w')
-    serialFile.write('%s %d' % (serial, ID))
-    serialFile.close()
-    serial = serial + ('%02d' % (ID,))
-    return serial
+    with open(filename, 'r') as serialFile:
+        lastSerial, ID = serialFile.readline().split()
 
+    ID = (lastSerial == serial) and (int(ID) + 1) or 0
+
+    with open(filename, 'w') as serialFile:
+        serialFile.write('%s %d' % (serial, ID))
 
 #class LookupCacherMixin(object):
 #    _cache = None
@@ -58,6 +55,8 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            r = self._meth(name, cls, type, timeout)
 #            self._cache[(name, cls, type)] = r
 #            return r
+    serial = serial + ('%02d' % (ID,))
+    return serial
 
 
 
@@ -67,8 +66,12 @@ class FileAuthority(common.ResolverBase):
 
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
         processing will be done.
+
     @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
         additional section generated during additional processing.
+
+    @ivar soa: A 2-tuple containing the SOA domain name as a L{bytes} and a
+        L{dns.Record_SOA}.
     """
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
@@ -196,7 +199,7 @@ class FileAuthority(common.ResolverBase):
         else:
             if dns._isSubdomainOf(name, self.soa[0]):
                 # We may be the authority and we didn't find it.
-                # XXX: The QNAME may also be a in a delegated child zone. See
+                # XXX: The QNAME may also be in a delegated child zone. See
                 # #6581 and #6580
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             else:
@@ -243,8 +246,8 @@ class PySourceAuthority(FileAuthority):
     def loadFile(self, filename):
         g, l = self.setupConfigNamespace(), {}
         execfile(filename, g, l)
-        if not l.has_key('zone'):
-            raise ValueError, "No zone defined in " + filename
+        if 'zone' not in l:
+            raise ValueError("No zone defined in " + filename)
 
         self.records = {}
         for rr in l['zone']:
@@ -272,7 +275,9 @@ class BindAuthority(FileAuthority):
 
     def loadFile(self, filename):
         self.origin = os.path.basename(filename) + '.' # XXX - this might suck
-        lines = open(filename).readlines()
+
+        with open(filename, 'rb') as f:
+            lines = f.readlines()
         lines = self.stripComments(lines)
         lines = self.collapseContinuations(lines)
         self.parseLines(lines)
@@ -337,7 +342,7 @@ class BindAuthority(FileAuthority):
         if f:
             f(ttl, type, domain, rdata)
         else:
-            raise NotImplementedError, "Record class %r not supported" % cls
+            raise NotImplementedError("Record class %r not supported" % cls)
 
 
     def class_IN(self, ttl, type, domain, rdata):
@@ -347,11 +352,11 @@ class BindAuthority(FileAuthority):
             r.ttl = ttl
             self.records.setdefault(domain.lower(), []).append(r)
 
-            print 'Adding IN Record', domain, ttl, r
+            print('Adding IN Record', domain, ttl, r)
             if type == 'SOA':
                 self.soa = (domain, r)
         else:
-            raise NotImplementedError, "Record type %r not supported" % type
+            raise NotImplementedError("Record type %r not supported" % type)
 
 
     #

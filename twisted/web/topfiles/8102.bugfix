@@ -1,2 +1,0 @@
-twisted.web.http.HTTPChannel now correctly handles non-ascii method name by returning 400. Previously non-ascii method name was causing
-unhandled exceptions.

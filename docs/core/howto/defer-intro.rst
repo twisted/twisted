@@ -58,7 +58,7 @@ Sometimes it leads us to encode the order when we don't need to, as in this exam
     total = 0
     for account in accounts:
         total += account.get_balance()
-    print "Total balance $%s" % (total,)
+    print("Total balance $%s" % (total,))
 
 But that's normally not such a big deal.
 

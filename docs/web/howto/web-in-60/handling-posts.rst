@@ -10,7 +10,7 @@ Handling POSTs
 
 
 
-All of the previous examples have focused on ``GET`` 
+All of the previous examples have focused on ``GET``
 requests. Unlike ``GET`` requests, ``POST`` requests can have
 a request body - extra data after the request headers; for example, data
 representing the contents of an HTML form. Twisted Web makes this data available
@@ -38,11 +38,11 @@ this example uses the ``cgi`` module to `escape user-enteredcontent <http://en.w
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     import cgi
 
 
@@ -57,7 +57,7 @@ respond to ``GET`` requests with a static HTML form:
 
 .. code-block:: python
 
-    
+
     class FormPage(Resource):
         def render_GET(self, request):
             return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
@@ -66,7 +66,7 @@ respond to ``GET`` requests with a static HTML form:
 
 
 This is similar to the resource used in a :doc:`previous installment <dynamic-content>` . However, we'll now add
-one more method to give it a second behavior; this ``render_POST`` 
+one more method to give it a second behavior; this ``render_POST``
 method will allow it to accept ``POST`` requests:
 
 
@@ -75,7 +75,7 @@ method will allow it to accept ``POST`` requests:
 
 .. code-block:: python
 
-    
+
     ...
         def render_POST(self, request):
             return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
@@ -92,7 +92,7 @@ name), which is why we had to extract the first element to pass
 to ``cgi.escape`` . ``request.args`` will be
 populated from form contents whenever a ``POST`` request is
 made with a content type
-of ``application/x-www-form-urlencoded`` 
+of ``application/x-www-form-urlencoded``
 or ``multipart/form-data`` (it's also populated by query
 arguments for any type of request).
 
@@ -107,11 +107,12 @@ Finally, the example just needs the usual site creation and port setup:
 
 .. code-block:: python
 
-    
+
     root = Resource()
     root.putChild("form", FormPage())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
@@ -133,24 +134,25 @@ Here's the complete source for the example:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     import cgi
-    
+
     class FormPage(Resource):
         def render_GET(self, request):
             return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
-    
+
         def render_POST(self, request):
             return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
-    
+
     root = Resource()
     root.putChild("form", FormPage())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 

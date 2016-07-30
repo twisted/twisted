@@ -27,11 +27,12 @@ class ClientTLSContext(ssl.ClientContextFactory):
 class ServerTLSContext:
     isClient = 0
 
-    def __init__(self, filename=certPath):
+    def __init__(self, filename=certPath, method=SSL.TLSv1_METHOD):
         self.filename = filename
+        self._method = method
 
     def getContext(self):
-        ctx = SSL.Context(SSL.TLSv1_METHOD)
+        ctx = SSL.Context(self._method)
         ctx.use_certificate_file(self.filename)
         ctx.use_privatekey_file(self.filename)
         return ctx

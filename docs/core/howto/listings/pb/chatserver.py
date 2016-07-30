@@ -3,7 +3,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.cred import portal, checkers
 from twisted.spread import pb
@@ -19,8 +19,8 @@ class ChatServer:
         self.groups[groupname].addUser(user)
         return self.groups[groupname]
 
+@implementer(portal.IRealm)
 class ChatRealm:
-    implements(portal.IRealm)
     def requestAvatar(self, avatarID, mind, *interfaces):
         assert pb.IPerspective in interfaces
         avatar = User(avatarID)
@@ -49,7 +49,7 @@ class Group(pb.Viewable):
         self.users.append(user)
     def view_send(self, from_user, message):
         if not self.allowMattress and "mattress" in message:
-            raise ValueError, "Don't say that word"
+            raise ValueError("Don't say that word")
         for user in self.users:
             user.send("<%s> says: %s" % (from_user.name, message))
 

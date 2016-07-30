@@ -105,8 +105,15 @@ class STDLibLogObserver(object):
         Format an event and bridge it to Python logging.
         """
         level = event.get("log_level", LogLevel.info)
+        failure = event.get('log_failure')
+        if failure is None:
+            excInfo = None
+        else:
+            excInfo = (
+                failure.type, failure.value, failure.getTracebackObject())
         stdlibLevel = toStdlibLogLevelMapping.get(level, stdlibLogging.INFO)
-        self.logger.log(stdlibLevel, StringifiableFromEvent(event))
+        self.logger.log(
+            stdlibLevel, StringifiableFromEvent(event), exc_info=excInfo)
 
 
 

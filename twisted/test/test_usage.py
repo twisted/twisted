@@ -111,11 +111,11 @@ class TypedTests(unittest.TestCase):
         argV = []
         self.usage.parseOptions(argV)
         self.assertEqual(self.usage.opts['fooint'], 392)
-        self.assert_(isinstance(self.usage.opts['fooint'], int))
+        self.assertIsInstance(self.usage.opts['fooint'], int)
         self.assertEqual(self.usage.opts['foofloat'], 4.23)
-        self.assert_(isinstance(self.usage.opts['foofloat'], float))
-        self.assertEqual(self.usage.opts['eggint'], None)
-        self.assertEqual(self.usage.opts['eggfloat'], None)
+        self.assertIsInstance(self.usage.opts['foofloat'], float)
+        self.assertIsNone(self.usage.opts['eggint'])
+        self.assertIsNone(self.usage.opts['eggfloat'])
 
 
     def test_parsingValues(self):
@@ -126,13 +126,13 @@ class TypedTests(unittest.TestCase):
                 "--eggint 32 --eggfloat 21").split()
         self.usage.parseOptions(argV)
         self.assertEqual(self.usage.opts['fooint'], 912)
-        self.assert_(isinstance(self.usage.opts['fooint'], int))
+        self.assertIsInstance(self.usage.opts['fooint'], int)
         self.assertEqual(self.usage.opts['foofloat'], -823.1)
-        self.assert_(isinstance(self.usage.opts['foofloat'], float))
+        self.assertIsInstance(self.usage.opts['foofloat'], float)
         self.assertEqual(self.usage.opts['eggint'], 32)
-        self.assert_(isinstance(self.usage.opts['eggint'], int))
+        self.assertIsInstance(self.usage.opts['eggint'], int)
         self.assertEqual(self.usage.opts['eggfloat'], 21.)
-        self.assert_(isinstance(self.usage.opts['eggfloat'], float))
+        self.assertIsInstance(self.usage.opts['eggfloat'], float)
 
 
     def test_underscoreOption(self):
@@ -265,10 +265,10 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow', 'inquisition'])
-        self.assertEqual(o['europian-swallow'], True)
+        self.assertTrue(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
-        self.assertEqual(o.subOptions['expect'], False)
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
+        self.assertFalse(o.subOptions['expect'])
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subcommandWithFlagsAndOptions(self):
@@ -277,10 +277,10 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
-        self.assertEqual(o['europian-swallow'], False)
+        self.assertFalse(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
-        self.assertEqual(o.subOptions['expect'], True)
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
+        self.assertTrue(o.subOptions['expect'])
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
     def test_subcommandAliasWithFlagsAndOptions(self):
@@ -289,10 +289,10 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
-        self.assertEqual(o['europian-swallow'], False)
+        self.assertFalse(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
-        self.assertEqual(o.subOptions['expect'], True)
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
+        self.assertTrue(o.subOptions['expect'])
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
     def test_anotherSubcommandWithFlagsAndOptions(self):
@@ -301,11 +301,11 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['holyquest', '--for-grail'])
-        self.assertEqual(o['europian-swallow'], False)
+        self.assertFalse(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'holyquest')
-        self.assertTrue(isinstance(o.subOptions, HolyQuestOptions))
-        self.assertEqual(o.subOptions['horseback'], False)
-        self.assertEqual(o.subOptions['for-grail'], True)
+        self.assertIsInstance(o.subOptions, HolyQuestOptions)
+        self.assertFalse(o.subOptions['horseback'])
+        self.assertTrue(o.subOptions['for-grail'])
 
     def test_noSubcommand(self):
         """
@@ -314,8 +314,8 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow'])
-        self.assertEqual(o['europian-swallow'], True)
-        self.assertEqual(o.subCommand, None)
+        self.assertTrue(o['europian-swallow'])
+        self.assertIsNone(o.subCommand)
         self.assertFalse(hasattr(o, 'subOptions'))
 
     def test_defaultSubcommand(self):
@@ -325,10 +325,10 @@ class SubCommandTests(unittest.TestCase):
         o = SubCommandOptions()
         o.defaultSubCommand = 'inquest'
         o.parseOptions(['--europian-swallow'])
-        self.assertEqual(o['europian-swallow'], True)
+        self.assertTrue(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
-        self.assertEqual(o.subOptions['expect'], False)
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
+        self.assertFalse(o.subOptions['expect'])
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subCommandParseOptionsHasParent(self):
@@ -697,7 +697,7 @@ class OptionsInternalTests(unittest.TestCase):
         class Opts(usage.Options):
             def opt_very_very_long(self):
                 """
-                This is a option method with a very long name, that is going to
+                This is an option method with a very long name, that is going to
                 be aliased.
                 """
 

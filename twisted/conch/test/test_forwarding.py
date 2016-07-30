@@ -5,6 +5,8 @@
 Tests for L{twisted.conch.ssh.forwarding}.
 """
 
+from __future__ import division, absolute_import
+
 from socket import AF_INET6
 
 from twisted.conch.ssh import forwarding
@@ -77,6 +79,6 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         self.successResultOf(sut._channelOpenDeferred)
         # Channel is connected using a forwarding client to the resolved
         # address of the requested host.
-        self.assertTrue(isinstance(sut.client, forwarding.SSHForwardingClient))
+        self.assertIsInstance(sut.client, forwarding.SSHForwardingClient)
         self.assertEqual(
             IPv6Address('TCP', '::1', 1234), sut.client.transport.getPeer())

@@ -28,11 +28,11 @@ class IConchUser(Interface):
         raised.  If a L{ConchError<error.ConchError>} is raised, the .value
         will be the message, and the .data will be the error code.
 
-        @type channelType:  C{str}
-        @type windowSize:   C{int}
-        @type maxPacket:    C{int}
-        @type data:         C{str}
-        @rtype:             subclass of L{SSHChannel}/C{tuple}
+        @type channelType:  L{str}
+        @type windowSize:   L{int}
+        @type maxPacket:    L{int}
+        @type data:         L{str}
+        @rtype:             subclass of L{SSHChannel}/L{tuple}
         """
 
     def lookupSubsystem(subsystem, data):
@@ -319,7 +319,7 @@ class IKnownHostEntry(Interface):
         otherwise.
 
         @param key: The key object to match against.
-        @type key: L{twisted.conch.ssh.Key}
+        @type key: L{twisted.conch.ssh.keys.Key}
         """
 
 

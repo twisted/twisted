@@ -14,6 +14,8 @@ try:
 except ImportError:
     setgroups = getgroups = None
 
+from functools import wraps
+
 from twisted.python.compat import _PY3, unicode
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -105,7 +107,7 @@ class InsensitiveDict:
             return default
 
     def setdefault(self, key, default):
-        """If 'key' doesn't exists, associate it with the 'default' value.
+        """If 'key' doesn't exist, associate it with the 'default' value.
         Return value associated with 'key'."""
         if not self.has_key(key):
             self[key] = default
@@ -587,7 +589,7 @@ else:
         @type uid: C{int}
         @param uid: The UID for which to look up group information.
 
-        @type primaryGid: C{int} or C{NoneType}
+        @type primaryGid: C{int} or L{None}
         @param primaryGid: If provided, an additional GID to include when
             setting the groups.
         """
@@ -602,13 +604,13 @@ def switchUID(uid, gid, euid=False):
     If C{uid} is the same value as L{os.getuid} (or L{os.geteuid}),
     this function will issue a L{UserWarning} and not raise an exception.
 
-    @type uid: C{int} or C{NoneType}
+    @type uid: C{int} or L{None}
     @param uid: the UID (or EUID) to switch the current process to. This
-                parameter will be ignored if the value is C{None}.
+                parameter will be ignored if the value is L{None}.
 
-    @type gid: C{int} or C{NoneType}
+    @type gid: C{int} or L{None}
     @param gid: the GID (or EGID) to switch the current process to. This
-                parameter will be ignored if the value is C{None}.
+                parameter will be ignored if the value is L{None}.
 
     @type euid: C{bool}
     @param euid: if True, set only effective user-id rather than real user-id.
@@ -902,6 +904,37 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
         for a, kw in suppressedWarnings:
             warnings.filterwarnings(*a, **kw)
         return f(*args, **kwargs)
+
+
+
+def _replaceIf(condition, alternative):
+    """
+    If C{condition}, replace this function with C{alternative}.
+
+    @param condition: A L{bool} which says whether this should be replaced.
+
+    @param alternative: An alternative function that will be swapped in instead
+        of the original, if C{condition} is truthy.
+
+    @return: A decorator.
+    """
+    def decorator(func):
+
+        if condition is True:
+            call = alternative
+        elif condition is False:
+            call = func
+        else:
+            raise ValueError(("condition argument to _replaceIf requires a "
+                              "bool, not {}").format(repr(condition)))
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            return call(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
 
 
 

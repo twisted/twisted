@@ -26,17 +26,17 @@ Maintainer: Christopher Armstrong
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 """
 
-from distutils.command import build_scripts, install_data, build_ext
-from distutils.errors import CompileError
-from distutils import core
-from distutils.core import Extension
-import fnmatch
 import os
 import platform
 import sys
 
+from distutils.command import build_scripts, build_ext
+from distutils.errors import CompileError
+from setuptools import setup as _setup
+from setuptools import Extension
+
 from twisted import copyright
-from twisted.python.compat import execfile
+from twisted.python.compat import execfile, _PY3
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -57,36 +57,49 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
-        ],
-    )
+        "Programming Language :: Python :: 3.5",
+    ],
+)
 
 
+_dev = [
+    'pyflakes >= 1.0.0',
+    'twisted-dev-tools >= 0.0.2',
+    'python-subunit',
+    'sphinx >= 1.3.1',
+]
+
+if not _PY3:
+    # These modules do not yet work on Python 3.
+    _dev += [
+        'twistedchecker >= 0.4.0',
+        'pydoctor >= 16.2.0',
+    ]
 
 _EXTRA_OPTIONS = dict(
-    dev=['twistedchecker >= 0.4.0',
-         'pyflakes >= 1.0.0',
-         'twisted-dev-tools >= 0.0.2',
-         'python-subunit',
-         'sphinx >= 1.3.1',
-         'pydoctor >= 15.0.0'],
-    tls=['pyopenssl >= 0.13',
+    dev=_dev,
+    tls=['pyopenssl >= 16.0.0',
          'service_identity',
          'idna >= 0.6'],
     conch=['gmpy',
            'pyasn1',
            'cryptography >= 0.9.1',
+           'appdirs >= 1.4.0',
            ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
-    windows=['pypiwin32']
+    windows=['pypiwin32'],
+    http2=['h2 >= 2.3.0, < 3.0',
+           'priority >= 1.1.0, < 2.0'],
 )
 
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
-    _EXTRA_OPTIONS['serial']
+    _EXTRA_OPTIONS['serial'] +
+    _EXTRA_OPTIONS['http2']
 )
 
 _EXTRAS_REQUIRE = {
@@ -95,6 +108,7 @@ _EXTRAS_REQUIRE = {
     'conch': _EXTRA_OPTIONS['conch'],
     'soap': _EXTRA_OPTIONS['soap'],
     'serial': _EXTRA_OPTIONS['serial'],
+    'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'osx_platform': (
         _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
@@ -129,21 +143,12 @@ def setup(**kw):
     @param conditionalExtensions: Extensions to optionally build.
     @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
-    return core.setup(**get_setup_args(**kw))
+    return _setup(**get_setup_args(**kw))
 
 
 def get_setup_args(**kw):
-    if 'plugins' in kw:
-        py_modules = []
-        for plg in kw['plugins']:
-            py_modules.append("twisted.plugins." + plg)
-        kw.setdefault('py_modules', []).extend(py_modules)
-        del kw['plugins']
-
     if 'cmdclass' not in kw:
-        kw['cmdclass'] = {
-            'install_data': install_data_twisted,
-            'build_scripts': build_scripts_twisted}
+        kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
@@ -180,88 +185,6 @@ def getVersion(base):
     return ns['version'].base()
 
 
-# Names that are excluded from globbing results:
-EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
-                 "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
-
-
-def _filterNames(names):
-    """
-    Given a list of file names, return those names that should be copied.
-    """
-    names = [n for n in names
-             if n not in EXCLUDE_NAMES]
-    # This is needed when building a distro from a working
-    # copy (likely a checkout) rather than a pristine export:
-    for pattern in EXCLUDE_PATTERNS:
-        names = [n for n in names
-                 if (not fnmatch.fnmatch(n, pattern))
-                 and (not n.endswith('.py'))]
-    return names
-
-
-def relativeTo(base, relativee):
-    """
-    Gets 'relativee' relative to 'basepath'.
-
-    i.e.,
-
-    >>> relativeTo('/home/', '/home/radix/')
-    'radix'
-    >>> relativeTo('.', '/home/radix/Projects/Twisted') # curdir is /home/radix
-    'Projects/Twisted'
-
-    The 'relativee' must be a child of 'basepath'.
-    """
-    basepath = os.path.abspath(base)
-    relativee = os.path.abspath(relativee)
-    if relativee.startswith(basepath):
-        relative = relativee[len(basepath):]
-        if relative.startswith(os.sep):
-            relative = relative[1:]
-        return os.path.join(base, relative)
-    raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
-
-
-def getDataFiles(dname, ignore=None, parent=None):
-    """
-    Get all the data files that should be included in this distutils Project.
-
-    'dname' should be the path to the package that you're distributing.
-
-    'ignore' is a list of sub-packages to ignore.  This facilitates
-    disparate package hierarchies.  That's a fancy way of saying that
-    the 'twisted' package doesn't want to include the 'twisted.conch'
-    package, so it will pass ['conch'] as the value.
-
-    'parent' is necessary if you're distributing a subpackage like
-    twisted.conch.  'dname' should point to 'twisted/conch' and 'parent'
-    should point to 'twisted'.  This ensures that your data_files are
-    generated correctly, only using relative paths for the first element
-    of the tuple ('twisted/conch/*').
-    The default 'parent' is the current working directory.
-    """
-    parent = parent or "."
-    ignore = ignore or []
-    result = []
-    for directory, subdirectories, filenames in os.walk(dname):
-        resultfiles = []
-        for exname in EXCLUDE_NAMES:
-            if exname in subdirectories:
-                subdirectories.remove(exname)
-        for ig in ignore:
-            if ig in subdirectories:
-                subdirectories.remove(ig)
-        for filename in _filterNames(filenames):
-            resultfiles.append(filename)
-        if resultfiles:
-            result.append((relativeTo(parent, directory),
-                           [relativeTo(parent,
-                                       os.path.join(directory, filename))
-                            for filename in resultfiles]))
-    return result
-
 
 def getExtensions():
     """
@@ -271,77 +194,54 @@ def getExtensions():
         ConditionalExtension(
             "twisted.test.raiser",
             ["twisted/test/raiser.c"],
-            condition=lambda _: _isCPython),
-
+            condition=lambda _: _isCPython
+        ),
         ConditionalExtension(
             "twisted.internet.iocpreactor.iocpsupport",
             ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
              "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
             libraries=["ws2_32"],
-            condition=lambda _: _isCPython and sys.platform == "win32"),
-
+            condition=lambda _: _isCPython and sys.platform == "win32"
+        ),
         ConditionalExtension(
             "twisted.python._sendmsg",
             sources=["twisted/python/_sendmsg.c"],
-            condition=lambda _: sys.platform != "win32"),
-
+            condition=lambda _: not _PY3 and sys.platform != "win32"
+        ),
         ConditionalExtension(
             "twisted.runner.portmap",
             ["twisted/runner/portmap.c"],
-            condition=lambda builder: builder._check_header("rpc/rpc.h")),
+            condition=(
+                lambda builder: not _PY3 and builder._check_header("rpc/rpc.h")
+            )
+        ),
     ]
 
     return extensions
 
 
 
-def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
-    """
-    Get all packages which are under dname. This is necessary for
-    Python 2.2's distutils. Pretty similar arguments to getDataFiles,
-    including 'parent'.
-    """
-    parent = parent or ""
-    prefix = []
-    if parent:
-        prefix = [parent]
-    bname = os.path.basename(dname)
-    ignore = ignore or []
-    if bname in ignore:
-        return []
-    if results is None:
-        results = []
-    if pkgname is None:
-        pkgname = []
-    subfiles = os.listdir(dname)
-    abssubfiles = [os.path.join(dname, x) for x in subfiles]
-    if '__init__.py' in subfiles:
-        results.append(prefix + pkgname + [bname])
-        for subdir in filter(os.path.isdir, abssubfiles):
-            getPackages(subdir, pkgname=pkgname + [bname],
-                        results=results, ignore=ignore,
-                        parent=parent)
-    res = ['.'.join(result) for result in results]
-    return res
-
-
-def getScripts(basedir=''):
+def getConsoleScripts():
     """
     Returns a list of scripts for Twisted.
     """
-    scriptdir = os.path.join(basedir, 'bin')
-    if not os.path.isdir(scriptdir):
-        # Probably a project-specific tarball, in which case only this
-        # project's bins are included in 'bin'
-        scriptdir = os.path.join(basedir, 'bin')
-        if not os.path.isdir(scriptdir):
-            return []
-    thingies = os.listdir(scriptdir)
-    for specialExclusion in ['.svn', '_preamble.py', '_preamble.pyc']:
-        if specialExclusion in thingies:
-            thingies.remove(specialExclusion)
-    return filter(os.path.isfile,
-                  [os.path.join(scriptdir, x) for x in thingies])
+    scripts = [
+        "cftp = twisted.conch.scripts.cftp:run",
+        "ckeygen = twisted.conch.scripts.ckeygen:run",
+        "conch = twisted.conch.scripts.conch:run",
+        "mailmail = twisted.mail.scripts.mailmail:run",
+        "pyhtmlizer = twisted.scripts.htmlizer:run",
+        "tkconch = twisted.conch.scripts.tkconch:run"
+    ]
+    portedToPython3Scripts = [
+        "trial = twisted.scripts.trial:run",
+        "twist = twisted.application.twist._twist:Twist.main",
+        "twistd = twisted.scripts.twistd:run",
+    ]
+    if _PY3:
+        return portedToPython3Scripts
+    else:
+        return scripts + portedToPython3Scripts
 
 
 ## Helpers and distutil tweaks
@@ -364,18 +264,6 @@ class build_scripts_twisted(build_scripts.build_scripts):
 
 
 
-class install_data_twisted(install_data.install_data):
-    """
-    I make sure data files are installed in the package directory.
-    """
-    def finalize_options(self):
-        self.set_undefined_options('install',
-            ('install_lib', 'install_dir')
-        )
-        install_data.install_data.finalize_options(self)
-
-
-
 class build_ext_twisted(build_ext.build_ext):
     """
     Allow subclasses to easily detect and customize Extensions to
@@ -386,7 +274,7 @@ class build_ext_twisted(build_ext.build_ext):
         """
         Prepare the C{self.extensions} attribute (used by
         L{build_ext.build_ext}) by checking which extensions in
-        L{conditionalExtensions} should be built.  In addition, if we are
+        I{conditionalExtensions} should be built.  In addition, if we are
         building on NT, define the WIN32 macro to 1.
         """
         # always define WIN32 under Windows
@@ -405,8 +293,9 @@ class build_ext_twisted(build_ext.build_ext):
             self.define_macros.append(('_XOPEN_SOURCE', 1))
             self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
 
-        self.extensions = [x for x in self.conditionalExtensions
-                           if x.condition(self)]
+        self.extensions = [
+            x for x in self.conditionalExtensions if x.condition(self)
+        ]
 
         for ext in self.extensions:
             ext.define_macros.extend(self.define_macros)
@@ -431,8 +320,8 @@ class build_ext_twisted(build_ext.build_ext):
     def _compile_helper(self, content):
         conftest = open("conftest.c", "w")
         try:
-            conftest.write(content)
-            conftest.close()
+            with conftest:
+                conftest.write(content)
 
             try:
                 self.compiler.compile(["conftest.c"], output_dir='')

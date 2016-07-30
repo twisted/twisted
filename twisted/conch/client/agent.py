@@ -35,7 +35,7 @@ class SSHAgentClient(agent.SSHAgentClient):
     def getPublicKey(self):
         """
         Return a L{Key} from the first blob in C{self.blobs}, if any, or
-        return C{None}.
+        return L{None}.
         """
         if self.blobs:
             return keys.Key.fromString(self.blobs.pop(0))

@@ -34,7 +34,7 @@ class ICredentials(Interface):
     I check credentials.
 
     Implementors _must_ specify which sub-interfaces of ICredentials
-    to which it conforms, using zope.interface.implements().
+    to which it conforms, using L{zope.interface.declarations.implementer}.
     """
 
 
@@ -293,7 +293,7 @@ class DigestCredentialFactory(object):
         @param opaque: The opaque value from the Digest response
         @param nonce: The nonce value from the Digest response
         @param clientip: The remote IP address of the client making the request
-            or C{None} if the request was submitted over a channel where this
+            or L{None} if the request was submitted over a channel where this
             does not make sense.
 
         @return: C{True} if the opaque was successfully verified.
@@ -404,7 +404,7 @@ class CramMD5Credentials(object):
     @type response: L{bytes}
 
     @ivar username: The username from the response from the client.
-    @type username: L{bytes} or C{None} if not yet provided.
+    @type username: L{bytes} or L{None} if not yet provided.
     """
     username = None
     challenge = b''
@@ -493,7 +493,7 @@ class ISSHPrivateKey(ICredentials):
 
     @ivar signature: The signed data.  This is checked to verify that the user
         owns the private key.
-    @type signature: L{bytes} or C{NoneType}
+    @type signature: L{bytes} or L{None}
     """
 
 

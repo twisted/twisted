@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 from twisted.python import util
 from twisted.spread import pb
@@ -16,7 +17,7 @@ def cbLogin(avatar):
     avatar.callRemote("exception", 10).addCallback(str).addCallback(util.println)
 
 def ebLogin(failure):
-    print failure
+    print(failure)
 
 def main():
     c = checkers.InMemoryUsernamePasswordDatabaseDontUse(user="pass")

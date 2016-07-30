@@ -1,1 +1,0 @@
-twisted.internet.gtkreactor, the GTK+ 1 reactor deprecated since Twisted 10.1, has been removed. This does not affect the GTK2, GLib, GTK3, or GObject-Introspection reactors.

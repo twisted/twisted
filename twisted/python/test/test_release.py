@@ -8,6 +8,8 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
+from __future__ import print_function
+
 import glob
 import operator
 import os
@@ -15,7 +17,6 @@ import sys
 import textwrap
 import tempfile
 import shutil
-import tarfile
 
 from datetime import date
 from io import BytesIO as StringIO
@@ -28,14 +29,16 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
+from subprocess import CalledProcessError
+
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
-    changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
-    DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
-    runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder,
-    GitCommand, SVNCommand, getRepositoryCommand, IVCSCommand)
+    changeAllProjectVersions, VERSION_OFFSET, filePathDelta,
+    APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
+    runCommand, NotWorkingDirectory,
+    ChangeVersionsScript, NewsBuilder, SphinxBuilder,
+    GitCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -75,17 +78,11 @@ else:
     gitSkip = "git is not present."
 
 
-if not skip and which("svn") and which("svnadmin"):
-    svnSkip = skip
-else:
-    svnSkip = "svn is not present."
-
-
 
 class ExternalTempdirTestCase(TestCase):
     """
     A test case which has mkdir make directories outside of the usual spot, so
-    that SVN and Git commands don't interfere with the Twisted checkout.
+    that Git commands don't interfere with the Twisted checkout.
     """
     def mktemp(self):
         """
@@ -97,18 +94,33 @@ class ExternalTempdirTestCase(TestCase):
 
 
 
-def _gitInit(path):
+def _gitConfig(path):
     """
-    Run a git init, and set some config that git requires. This isn't needed in
-    real usage.
+    Set some config in the repo that Git requires to make commits. This isn't
+    needed in real usage, just for tests.
+
+    @param path: The path to the Git repository.
+    @type path: L{FilePath}
     """
-    runCommand(["git", "init", path.path])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.name", '"someone"'])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.email", '"someone@someplace.com"'])
+
+
+
+def _gitInit(path):
+    """
+    Run a git init, and set some config that git requires. This isn't needed in
+    real usage.
+
+    @param path: The path to where the Git repo will be created.
+    @type path: L{FilePath}
+    """
+    runCommand(["git", "init", path.path])
+    _gitConfig(path)
 
 
 
@@ -184,24 +196,6 @@ class StructureAssertingMixin(object):
         if children:
             self.fail("There were extra children in %s: %s"
                       % (root.path, children))
-
-
-    def assertExtractedStructure(self, outputFile, dirDict):
-        """
-        Assert that a tarfile content is equivalent to one described by a dict.
-
-        @param outputFile: The tar file built by L{DistributionBuilder}.
-        @type outputFile: L{FilePath}.
-        @param dirDict: The dict that should describe the contents of the
-            directory. It should be the same structure as the C{dirDict}
-            parameter to L{createStructure}.
-        @type dirDict: C{dict}
-        """
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        extracted = FilePath(self.mktemp())
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.children()[0], dirDict)
 
 
 
@@ -560,18 +554,19 @@ class UtilityTests(ExternalTempdirTestCase):
         value.
         """
         content = 'foo\nhey hey $VER\nbar\n'
-        outf = open('release.replace', 'w')
-        outf.write(content)
-        outf.close()
+        with open('release.replace', 'w') as outf:
+            outf.write(content)
 
         expected = content.replace('$VER', '2.0.0')
         replaceInFile('release.replace', {'$VER': '2.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
         expected = expected.replace('2.0.0', '3.0.0')
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
 
@@ -716,9 +711,77 @@ class APIBuilderTests(ExternalTempdirTestCase):
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
-            '<a href="http://twistedmatrix.com/trac/browser/tags/releases/'
+            '<a href="https://github.com/twisted/twisted/tree/'
             'twisted-1.0.0/twisted">View Source</a>',
             twistedPath.getContent())
+
+        self.assertEqual(stdout.getvalue(), '')
+
+
+    def test_buildWithDeprecated(self):
+        """
+        The templates and System for Twisted includes adding deprecations.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+
+        projectName = "Foobar"
+        packageName = "quux"
+        projectURL = "scheme:project"
+        sourceURL = "scheme:source"
+        docstring = "text in docstring"
+        privateDocstring = "should also appear in output"
+
+        inputPath = FilePath(self.mktemp()).child(packageName)
+        inputPath.makedirs()
+        inputPath.child("__init__.py").setContent(
+            "from twisted.python.deprecate import deprecated\n"
+            "from twisted.python.versions import Version\n"
+            "@deprecated(Version('Twisted', 15, 0, 0), "
+            "'Baz')\n"
+            "def foo():\n"
+            "    '%s'\n"
+            "from twisted.python import deprecate, versions\n"
+            "@deprecate.deprecated(versions.Version('Twisted', 16, 0, 0))\n"
+            "def _bar():\n"
+            "    '%s'\n"
+            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            "class Baz(object):\n"
+            "    pass"
+            "" % (docstring, privateDocstring))
+
+        outputPath = FilePath(self.mktemp())
+
+        builder = APIBuilder()
+        builder.build(projectName, projectURL, sourceURL, inputPath,
+                      outputPath)
+
+        quuxPath = outputPath.child("quux.html")
+        self.assertTrue(
+            quuxPath.exists(),
+            "Package documentation file %r did not exist." % (quuxPath.path,))
+        self.assertIn(
+            docstring, quuxPath.getContent(),
+            "Docstring not in package documentation file.")
+        self.assertIn(
+            'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
+            quuxPath.getContent())
+        self.assertIn(
+            '_bar was deprecated in Twisted 16.0.0.',
+            quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent())
+
+        # There should also be a page for the foo function in quux.
+        self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
+
+        self.assertIn(
+            'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
+            quuxPath.sibling('quux.foo.html').getContent())
+
+        self.assertIn(
+            'Baz was deprecated in Twisted 14.2.3; please use stuff instead.',
+            quuxPath.sibling('quux.Baz.html').getContent())
+
 
         self.assertEqual(stdout.getvalue(), '')
 
@@ -1320,35 +1383,6 @@ class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
         return runCommand(["git", "-C", project.path, "status", "--short"])
 
 
-class NewsBuilderSVNTests(NewsBuilderMixin, ExternalTempdirTestCase):
-    """
-    Tests for L{NewsBuilder} using SVN.
-    """
-    skip = svnSkip
-
-    def _commit(self, project=None):
-        """
-        Make the C{project} directory a valid subversion directory with all
-        files committed.
-        """
-        if project is None:
-            project = self.project
-
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    project.path])
-
-        runCommand(["svn", "add"] + glob.glob(project.path + "/*"))
-        runCommand(["svn", "commit", project.path, "-m", "yay"])
-
-
-    def _getStatus(self, project):
-        return runCommand(["svn", "status", project.path])
-
-
 
 class SphinxBuilderTests(TestCase):
     """
@@ -1436,7 +1470,7 @@ class SphinxBuilderTests(TestCase):
                 3. In the case where it's a path to a C{.html} file, the
                    content looks like an HTML file.
 
-        @return: C{None}
+        @return: L{None}
         """
         # check that file exists
         fpath = fileDir.child(fileName)
@@ -1511,286 +1545,9 @@ class SphinxBuilderTests(TestCase):
         directory.
         """
         # note no fake sphinx project is created
-        self.assertRaises(CommandFailed,
+        self.assertRaises(CalledProcessError,
                           self.builder.build,
                           self.sphinxDir)
-
-
-
-class DistributionBuilderTestBase(StructureAssertingMixin,
-                                  ExternalTempdirTestCase):
-    """
-    Base for tests of L{DistributionBuilder}.
-    """
-
-    def setUp(self):
-        self.rootDir = FilePath(self.mktemp())
-        self.outputDir = FilePath(self.mktemp())
-        self.builder = DistributionBuilder(self.rootDir, self.outputDir)
-
-
-
-class DistributionBuilderTests(DistributionBuilderTestBase):
-
-    def test_twistedDistribution(self):
-        """
-        The Twisted tarball contains everything in the source checkout, with
-        built documentation.
-        """
-        manInput1 = "pretend there's some troff in here or something"
-        structure = {
-            "README.rst": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web": {"websetroot": "SET ROOT"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}},
-                "words": {"__init__.py": "import WORDS"},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG"}},
-            "docs": {
-                "conf.py": testingSphinxConf,
-                "index.rst": "",
-                "core": {"man": {"twistd.1": manInput1}}
-            }
-        }
-
-        def hasManpagesAndSphinx(path):
-            self.assertTrue(path.isdir())
-            self.assertEqual(
-                path.child("core").child("man").child("twistd.1").getContent(),
-                manInput1
-            )
-            return True
-
-        outStructure = {
-            "README.rst": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web": {"websetroot": "SET ROOT"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "web": {"__init__.py": "import WEB",
-                        "topfiles": {"setup.py": "import WEBINSTALL",
-                                     "README": "WEB!"}},
-                "words": {"__init__.py": "import WORDS"},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG"}},
-            "doc": hasManpagesAndSphinx,
-        }
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildTwisted("10.0.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-    test_twistedDistribution.skip = sphinxSkip
-
-
-    def test_excluded(self):
-        """
-        bin/admin and doc/historic are excluded from the Twisted tarball.
-        """
-        structure = {
-            "bin": {"admin": {"blah": "ADMIN"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
-            "doc": {"historic": {"hello": "there"},
-                    "other": "contents"}}
-
-        outStructure = {
-            "bin": {"twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
-            "doc": {"other": "contents"}}
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = self.builder.buildTwisted("10.0.0")
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_setup3(self):
-        """
-        setup3.py is included in the release tarball.
-        """
-        structure = {
-            "setup3.py": "install python 3 version",
-            "bin": {"twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
-            "doc": {"web": {"howto": {"index.html": "hello"}}},
-            }
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = self.builder.buildTwisted("13.2.0")
-        self.assertExtractedStructure(outputFile, structure)
-
-
-
-class BuildAllTarballsTestBase(object):
-    """
-    Tests for L{DistributionBuilder.buildAllTarballs}.
-    """
-
-    def test_buildAllTarballs(self):
-        """
-        L{buildAllTarballs} builds tarballs for Twisted and all of its
-        subprojects based on a Git repository; the resulting tarballs contain
-        no Git metadata.  This involves building documentation, which it will
-        build with the correct API documentation reference base URL.
-        """
-        checkoutPath = self.mktemp()
-        checkout = FilePath(checkoutPath)
-        self.outputDir.remove()
-
-        self._init(checkout)
-
-        structure = {
-            "README.rst": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"words": {"im": "import im"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "topfiles": {"setup.py": "import TOPINSTALL",
-                             "README": "CORE!"},
-                "_version.py": genVersion("twisted", 1, 2, 0),
-                "words": {"__init__.py": "import WORDS",
-                          "_version.py": genVersion("twisted.words", 1, 2, 0),
-                          "topfiles": {"setup.py": "import WORDSINSTALL",
-                                       "README": "WORDS!"}},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG",
-                            "twisted_yay.py": "import YAY"}},
-            "docs": {
-                "conf.py": testingSphinxConf,
-                "index.rst": "",
-            }
-        }
-
-        def smellsLikeSphinxOutput(actual):
-            self.assertTrue(actual.isdir())
-            self.assertIn("index.html", actual.listdir())
-            self.assertIn("objects.inv", actual.listdir())
-            return True
-
-        twistedStructure = {
-            "README.rst": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"twistd": "TWISTD",
-                    "words": {"im": "import im"}},
-            "twisted": {
-                "topfiles": {"setup.py": "import TOPINSTALL",
-                             "README": "CORE!"},
-                "_version.py": genVersion("twisted", 1, 2, 0),
-                "words": {"__init__.py": "import WORDS",
-                          "_version.py": genVersion("twisted.words", 1, 2, 0),
-                          "topfiles": {"setup.py": "import WORDSINSTALL",
-                                       "README": "WORDS!"}},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG",
-                            "twisted_yay.py": "import YAY"}},
-            "doc": smellsLikeSphinxOutput}
-
-        self.createStructure(checkout, structure)
-        childs = [x.path for x in checkout.children()]
-        self._addAndCommit(checkout, childs)
-
-        buildAllTarballs(checkout, self.outputDir)
-        self.assertEqual(
-            set(self.outputDir.children()),
-            set([self.outputDir.child("Twisted-1.2.0.tar.bz2")]))
-
-        self.assertExtractedStructure(
-            self.outputDir.child("Twisted-1.2.0.tar.bz2"),
-            twistedStructure)
-
-
-    def test_buildAllTarballsEnsuresCleanCheckout(self):
-        """
-        L{UncleanWorkingDirectory} is raised by L{buildAllTarballs} when the
-        Git repository provided has uncommitted changes.
-        """
-        checkoutPath = self.mktemp()
-        checkout = FilePath(checkoutPath)
-
-        self._init(checkout)
-
-        checkout.child("foo").setContent("whatever")
-        self.assertRaises(UncleanWorkingDirectory,
-                          buildAllTarballs, checkout, FilePath(self.mktemp()))
-
-
-    def test_buildAllTarballsEnsuresExistingCheckout(self):
-        """
-        L{NotWorkingDirectory} is raised by L{buildAllTarballs} when the
-        checkout passed does not exist or is not a Git repository.
-        """
-        checkout = FilePath(self.mktemp()).child("test")
-        self.assertRaises(NotWorkingDirectory,
-                          buildAllTarballs,
-                          checkout, FilePath(self.mktemp()))
-        checkout.createDirectory()
-        self.assertRaises(NotWorkingDirectory,
-                          buildAllTarballs,
-                          checkout, FilePath(self.mktemp()))
-
-
-
-class BuildAllTarballsGitTestCase(DistributionBuilderTestBase,
-                                  BuildAllTarballsTestBase):
-    """
-    Tests for L{DistributionBuilder.buildAllTarballs} using Git.
-    """
-    skip = gitSkip or sphinxSkip
-
-    def _init(self, directory):
-        _gitInit(directory)
-
-    def _addAndCommit(self, checkout, files):
-        runCommand(["git", "-C", checkout.path, "add", "-f"] + files)
-        runCommand(["git", "-C", checkout.path, "commit", "-m", "yay"])
-
-
-
-class BuildAllTarballsSVNTestCase(DistributionBuilderTestBase,
-                                  BuildAllTarballsTestBase):
-    """
-    Tests for L{DistributionBuilder.buildAllTarballs} using SVN.
-    """
-    skip = svnSkip or sphinxSkip
-
-    def _init(self, directory):
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    directory.path])
-
-    def _addAndCommit(self, checkout, files):
-        runCommand(["svn", "add"] + files)
-        runCommand(["svn", "commit", checkout.path, "-m", "yay"])
 
 
 
@@ -1884,52 +1641,6 @@ class ScriptTests(StructureAssertingMixin, ExternalTempdirTestCase):
                           ["my united.states.of prewhatever"])
 
 
-    def test_buildTarballsScript(self):
-        """
-        L{BuildTarballsScript.main} invokes L{buildAllTarballs} with
-        2 or 3 L{FilePath} instances representing the paths passed to it.
-        """
-        builds = []
-
-        def myBuilder(checkout, destination, template=None):
-            builds.append((checkout, destination, template))
-
-        tarballBuilder = BuildTarballsScript()
-        tarballBuilder.buildAllTarballs = myBuilder
-
-        tarballBuilder.main(["checkoutDir", "destinationDir"])
-        self.assertEqual(
-            builds,
-            [(FilePath("checkoutDir"), FilePath("destinationDir"), None)])
-
-        builds = []
-        tarballBuilder.main(["checkoutDir", "destinationDir", "templatePath"])
-        self.assertEqual(
-            builds,
-            [(FilePath("checkoutDir"), FilePath("destinationDir"),
-              FilePath("templatePath"))])
-
-
-    def test_defaultBuildTarballsScriptBuilder(self):
-        """
-        The default implementation of L{BuildTarballsScript.buildAllTarballs}
-        is L{buildAllTarballs}.
-        """
-        tarballBuilder = BuildTarballsScript()
-        self.assertEqual(tarballBuilder.buildAllTarballs, buildAllTarballs)
-
-
-    def test_badNumberOfArgumentsToBuildTarballs(self):
-        """
-        L{BuildTarballsScript.main} raises SystemExit when the wrong number of
-        arguments are passed.
-        """
-        tarballBuilder = BuildTarballsScript()
-        self.assertRaises(SystemExit, tarballBuilder.main, [])
-        self.assertRaises(SystemExit, tarballBuilder.main,
-                          ["a", "b", "c", "d"])
-
-
     def test_badNumberOfArgumentsToBuildNews(self):
         """
         L{NewsBuilder.main} raises L{SystemExit} when other than 1 argument is
@@ -1967,7 +1678,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        self.assertEqual(None,
+        self.assertIsNone(
                          self.createCommand.ensureIsWorkingDirectory(reposDir))
 
 
@@ -2077,73 +1788,15 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
 
 
 
-class SVNCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
-    """
-    Specific L{CommandsTestMixin} related to Subversion checkouts through
-    L{SVNCommand}.
-    """
-    createCommand = SVNCommand
-    skip = svnSkip
-
-
-    def makeRepository(self, root):
-        """
-        Create a Subversion repository and a checkout at the specified path.
-        Note that due to how Subversion functions, it creates 2 directories and
-        the caller has to use the path returned by this function to access the
-        Subversion checkout.
-
-        @type root: L{FilePath}
-        @params root: The directory to create the Subversion repository and
-            checkout into.
-
-        @return: The path to the Subversion checkout.
-        @rtype: L{FilePath}
-        """
-        repository = root.child('repository')
-        checkout = root.child('checkout')
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-        return checkout
-
-
-    def commitRepository(self, repository):
-        """
-        Add and commit all the files from the specified Subversion checkout.
-
-        @type repository: L{FilePath}
-        @params repository: The Subversion checkout to commit into.
-        """
-        runCommand(["svn", "add"] + glob.glob(repository.path + "/*"))
-        runCommand(["svn", "commit", repository.path, "-m", "hop"])
-
-
-
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
-    Test the L{getRepositoryCommand} to acces the right set of VCS commands
+    Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
-    skip = svnSkip or gitSkip
+    skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
-
-
-    def test_subversion(self):
-        """
-        L{getRepositoryCommand} from a Subversion checkout returns
-        L{SVNCommand}.
-        """
-        repository = self.repos.child('repository')
-        checkout = self.repos.child('checkout')
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-        cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertIs(cmd, SVNCommand)
 
 
     def test_git(self):
@@ -2155,29 +1808,10 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         self.assertIs(cmd, GitCommand)
 
 
-    def test_subversionPreferredOverGit(self):
-        """
-        L{getRepositoryCommand} from a directory which looks like both as a
-        Subversion checkout or a Git directory returns a L{SVNCommand}, which
-        is the currently preferred way of dealing with Twisted release scripts.
-        """
-        _gitInit(self.repos.child("checkout"))
-
-        repository = self.repos.child('repository')
-        checkout = self.repos.child('checkout')
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-
-        cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertTrue(cmd, SVNCommand)
-
-
     def test_unknownRepository(self):
         """
-        L{getRepositoryCommand} from a directory which doesn't look like a
-        Subversion checkout nor a Git repository produce a
-        L{NotWorkingDirectory} exceptions.
+        L{getRepositoryCommand} from a directory which doesn't look like a Git
+        repository produces a L{NotWorkingDirectory} exception.
         """
         self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
                           self.repos)
@@ -2195,8 +1829,266 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
-    def test_svn(self):
+
+class CheckTopfileScriptTests(ExternalTempdirTestCase):
+    """
+    Tests for L{CheckTopfileScript}.
+    """
+    skip = gitSkip
+
+    def setUp(self):
+        self.origin = FilePath(self.mktemp())
+        _gitInit(self.origin)
+        runCommand(["git", "checkout", "-b", "trunk"],
+                   cwd=self.origin.path)
+        self.origin.child("test").setContent(b"test!")
+        runCommand(["git", "add", self.origin.child("test").path],
+                   cwd=self.origin.path)
+        runCommand(["git", "commit", "-m", "initial"],
+                   cwd=self.origin.path)
+
+        self.repo = FilePath(self.mktemp())
+
+        runCommand(["git", "clone", self.origin.path, self.repo.path])
+        _gitConfig(self.repo)
+
+
+    def test_noArgs(self):
         """
-        L{SVNCommand} implements L{IVCSCommand}.
+        Too few arguments returns a failure.
         """
-        self.assertTrue(IVCSCommand.implementedBy(SVNCommand))
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([])
+
+        self.assertEqual(e.exception.args,
+                         ("Must specify one argument: the Twisted checkout",))
+
+    def test_diffFromTrunkNoTopfiles(self):
+        """
+        If there are changes from trunk, then there should also be a topfile.
+        """
+        runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_noChangeFromTrunk(self):
+        """
+        If there are no changes from trunk, then no need to check the topfiles
+        """
+        runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(
+            logs[-1],
+            "On trunk or no diffs from trunk; no need to look at this.")
+
+
+    def test_trunk(self):
+        """
+        Running it on trunk always gives green.
+        """
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(
+            logs[-1],
+            "On trunk or no diffs from trunk; no need to look at this.")
+
+
+    def test_release(self):
+        """
+        Running it on a release branch returns green if there is no topfiles
+        even if there are changes.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Release branch with no topfiles, all good.")
+
+
+    def test_releaseWithTopfiles(self):
+        """
+        Running it on a release branch returns red if there are new topfiles.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1],
+                         "No topfiles should be on the release branch.")
+
+
+    def test_onlyQuotes(self):
+        """
+        Running it on a branch with only a quotefile change gives green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        fun = self.repo.child("docs").child("fun")
+        fun.makedirs()
+        quotes = fun.child("Twisted.Quotes")
+        quotes.setContent(b"Beep boop")
+
+        runCommand(["git", "add", quotes.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "quotes"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Quotes change only; no topfile needed.")
+
+
+    def test_topfileAdded(self):
+        """
+        Running it on a branch with a fragment in the topfiles dir added
+        returns green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+
+
+    def test_topfileButNotFragmentAdded(self):
+        """
+        Running it on a branch with a non-fragment in the topfiles dir does not
+        return green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        notFragment = topfiles.child("1234.txt")
+        notFragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", notFragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "not topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_topfileAddedButWithOtherTopfiles(self):
+        """
+        Running it on a branch with a fragment in the topfiles dir added
+        returns green, even if there are other files in the topfiles dir.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = topfiles.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")

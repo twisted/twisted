@@ -2,6 +2,8 @@
 # See LICENSE for details.
 
 
+from __future__ import print_function
+
 from twisted.internet import defer, protocol, reactor
 from twisted.conch import error
 from twisted.conch.ssh import transport
@@ -79,7 +81,7 @@ class SSHClientTransport(transport.SSHClientTransport):
     def receiveDebug(self, alwaysDisplay, message, lang):
         log.msg('Received Debug Message: %s' % message)
         if alwaysDisplay: # XXX what should happen here?
-            print message
+            print(message)
 
 
     def verifyHostKey(self, pubKey, fingerprint):

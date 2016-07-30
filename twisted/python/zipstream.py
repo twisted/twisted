@@ -17,8 +17,8 @@ _fileHeaderSize = struct.calcsize(zipfile.structFileHeader)
 
 class ChunkingZipFile(zipfile.ZipFile):
     """
-    A C{ZipFile} object which, with L{readfile}, also gives you access to a
-    file-like object for each entry.
+    A L{zipfile.ZipFile} object which, with L{readfile}, also gives you access
+    to a file-like object for each entry.
     """
 
     def readfile(self, name):
@@ -44,10 +44,17 @@ class ChunkingZipFile(zipfile.ZipFile):
         if fheader[zipfile._FH_EXTRA_FIELD_LENGTH]:
             self.fp.read(fheader[zipfile._FH_EXTRA_FIELD_LENGTH])
 
-        if fname != zinfo.orig_filename:
+
+        if zinfo.flag_bits & 0x800:
+            # UTF-8 filename
+            fname_str = fname.decode("utf-8")
+        else:
+            fname_str = fname.decode("cp437")
+
+        if fname_str != zinfo.orig_filename:
             raise zipfile.BadZipfile(
                 'File name in directory "%s" and header "%s" differ.' % (
-                    zinfo.orig_filename, fname))
+                    zinfo.orig_filename, fname_str))
 
         if zinfo.compress_type == zipfile.ZIP_STORED:
             return ZipFileEntry(self, zinfo.compress_size)
@@ -77,11 +84,11 @@ class _FileEntry(object):
 
     @ivar closed: File-like 'closed' attribute; True before this file has been
     closed, False after.
-    @type closed: C{bool}
+    @type closed: L{bool}
 
     @ivar finished: An older, broken synonym for 'closed'.  Do not touch this,
     please.
-    @type finished: C{int}
+    @type finished: L{int}
     """
     def __init__(self, chunkingZipFile, length):
         """
@@ -114,15 +121,15 @@ class _FileEntry(object):
         """
         Read a line.
         """
-        bytes = ""
-        for byte in iter(lambda : self.read(1), ""):
-            bytes += byte
-            if byte == "\n":
+        line = b""
+        for byte in iter(lambda : self.read(1), b""):
+            line += byte
+            if byte == b"\n":
                 break
-        return bytes
+        return line
 
 
-    def next(self):
+    def __next__(self):
         """
         Implement next as file does (like readline, except raises StopIteration
         at EOF)
@@ -131,6 +138,9 @@ class _FileEntry(object):
         if nextline:
             return nextline
         raise StopIteration()
+
+    # Iterators on Python 2 use next(), not __next__()
+    next = __next__
 
 
     def readlines(self):
@@ -154,6 +164,14 @@ class _FileEntry(object):
         return self
 
 
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+
 
 class ZipFileEntry(_FileEntry):
     """
@@ -173,7 +191,7 @@ class ZipFileEntry(_FileEntry):
         if n is None:
             n = self.length - self.readBytes
         if n == 0 or self.finished:
-            return ''
+            return b''
         data = self.chunkingZipFile.fp.read(
             min(n, self.length - self.readBytes))
         self.readBytes += len(data)
@@ -193,7 +211,7 @@ class DeflatedZipFileEntry(_FileEntry):
         self.returnedBytes = 0
         self.readBytes = 0
         self.decomp = zlib.decompressobj(-15)
-        self.buffer = ""
+        self.buffer = b""
 
 
     def tell(self):
@@ -202,18 +220,18 @@ class DeflatedZipFileEntry(_FileEntry):
 
     def read(self, n=None):
         if self.finished:
-            return ""
+            return b""
         if n is None:
             result = [self.buffer,]
             result.append(
                 self.decomp.decompress(
                     self.chunkingZipFile.fp.read(
                         self.length - self.readBytes)))
-            result.append(self.decomp.decompress("Z"))
+            result.append(self.decomp.decompress(b"Z"))
             result.append(self.decomp.flush())
-            self.buffer = ""
+            self.buffer = b""
             self.finished = 1
-            result = "".join(result)
+            result = b"".join(result)
             self.returnedBytes += len(result)
             return result
         else:
@@ -223,10 +241,10 @@ class DeflatedZipFileEntry(_FileEntry):
                 self.readBytes += len(data)
                 if not data:
                     result = (self.buffer
-                              + self.decomp.decompress("Z")
+                              + self.decomp.decompress(b"Z")
                               + self.decomp.flush())
                     self.finished = 1
-                    self.buffer = ""
+                    self.buffer = b""
                     self.returnedBytes += len(result)
                     return result
                 else:
@@ -262,7 +280,7 @@ def countFileChunks(zipinfo, chunksize):
 
     @return: the number of chunks present in the zip file.  (Even an empty file
     counts as one chunk.)
-    @rtype: C{int}
+    @rtype: L{int}
     """
     count, extra = divmod(zipinfo.file_size, chunksize)
     if extra > 0:
@@ -303,17 +321,16 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
             if not os.path.exists(fdir):
                 os.makedirs(fdir)
             if overwrite or not os.path.exists(f):
-                outfile = file(f, 'wb')
                 fp = czf.readfile(entry)
                 if info.file_size == 0:
                     remaining -= 1
                     yield remaining
-                while fp.tell() < info.file_size:
-                    hunk = fp.read(chunksize)
-                    outfile.write(hunk)
-                    remaining -= 1
-                    yield remaining
-                outfile.close()
+                with open(f, 'wb') as outfile:
+                    while fp.tell() < info.file_size:
+                        hunk = fp.read(chunksize)
+                        outfile.write(hunk)
+                        remaining -= 1
+                        yield remaining
             else:
                 remaining -= countFileChunks(info, chunksize)
                 yield remaining

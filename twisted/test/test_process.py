@@ -12,9 +12,12 @@ Test running processes.
     cause spurious failures if this value is pushed too high.  U{Please see
     this ticket for a discussion of how we arrived at its current value.
     <http://twistedmatrix.com/trac/ticket/3404>}
+
+@var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
+    platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import gzip
 import os
@@ -41,13 +44,20 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
-from twisted.python.compat import _PY3, networkString, xrange
-from twisted.python.filepath import FilePath, _asFilesystemBytes
+from twisted.python.compat import _PY3, networkString, xrange, bytesEnviron
+from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
 CONCURRENT_PROCESS_TEST_COUNT = 25
+if not runtime.platform.isWindows():
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
+else:
+    properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 class StubProcessProtocol(protocol.ProcessProtocol):
@@ -317,8 +327,8 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
-        L{error.ProcessTerminated} failure with C{exitCode} set to C{None},
+        Callback C{self.deferred} with L{None} if C{reason} is a
+        L{error.ProcessTerminated} failure with C{exitCode} set to L{None},
         C{signal} set to C{self.signal}, and C{status} holding the status code
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
@@ -364,10 +374,9 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
     """
     Helper class for launching a Python process and getting a result from it.
 
-    @ivar program: A string giving a Python program for the child process to
-    run.
+    @ivar programName: The name of the program to run.
     """
-    program = None
+    programName = None
 
     @classmethod
     def run(cls, reactor, argv, env):
@@ -381,7 +390,8 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         """
         self = cls()
         reactor.spawnProcess(
-            self, pyExe, [pyExe, b"-c", self.program] + argv, env=env)
+            self, pyExe, [pyExe, b"-u", b"-m", self.programName] + argv,
+            env=env)
         return self
 
 
@@ -434,16 +444,12 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
 
 
 
-
 class GetArgumentVector(UtilityProcessProtocol):
     """
     Protocol which will read a serialized argv from a process and
     expose it to interested parties.
     """
-    program = networkString(
-        "from sys import stdout, argv\n"
-        "stdout.write(chr(0).join(argv))\n"
-        "stdout.flush()\n")
+    programName = b"twisted.test.process_getargv"
 
     def parseChunks(self, chunks):
         """
@@ -461,12 +467,7 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
     Protocol which will read a serialized environment dict from a process
     and expose it to interested parties.
     """
-    program = networkString(
-        "from sys import stdout\n"
-        "from os import environ\n"
-        "items = environ.items()\n"
-        "stdout.write(chr(0).join([k + chr(0) + v for k, v in items]))\n"
-        "stdout.flush()\n")
+    programName = b"twisted.test.process_getenv"
 
     def parseChunks(self, chunks):
         """
@@ -493,17 +494,20 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
 
 
 class ProcessTests(unittest.TestCase):
-    """Test running a process."""
-
+    """
+    Test running a process.
+    """
     usePTY = False
 
-    def testStdio(self):
-        """twisted.internet.stdio test."""
-        scriptPath = FilePath(__file__).sibling(b"process_twisted.py").path
+    def test_stdio(self):
+        """
+        L{twisted.internet.stdio} test.
+        """
+        scriptPath = b"twisted.test.process_twisted"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        env = {b"PYTHONPATH": _asFilesystemBytes(os.pathsep.join(sys.path))}
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=env,
+        reactor.spawnProcess(p, pyExe, [pyExe, b'-u', b"-m", scriptPath],
+                             env=properEnv,
                              path=None, usePTY=self.usePTY)
         p.transport.write(b"hello, world")
         p.transport.write(b"abc")
@@ -526,13 +530,14 @@ class ProcessTests(unittest.TestCase):
         """
         finished = defer.Deferred()
         p = TrivialProcessProtocol(finished)
-        scriptPath = FilePath(__file__).sibling(b"process_echoer.py").path
+        scriptPath = b"twisted.test.process_echoer"
         procTrans = reactor.spawnProcess(p, pyExe,
-                                    [pyExe, scriptPath], env=None)
+                                         [pyExe, b'-u', b"-m", scriptPath],
+                                         env=properEnv)
         self.assertTrue(procTrans.pid)
 
         def afterProcessEnd(ignored):
-            self.assertEqual(procTrans.pid, None)
+            self.assertIsNone(procTrans.pid)
 
         p.transport.closeStdin()
         return finished.addCallback(afterProcessEnd)
@@ -543,18 +548,19 @@ class ProcessTests(unittest.TestCase):
         Test running a process: check its output, it exitCode, some property of
         signalProcess.
         """
-        scriptPath = FilePath(__file__).sibling(b"process_tester.py").path
+        scriptPath = b"twisted.test.process_tester"
         d = defer.Deferred()
         p = TestProcessProtocol()
         p.deferred = d
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None)
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
+                             env=properEnv)
         def check(ignored):
             self.assertEqual(p.stages, [1, 2, 3, 4, 5])
             f = p.reason
             f.trap(error.ProcessTerminated)
             self.assertEqual(f.value.exitCode, 23)
             # would .signal be available on non-posix?
-            # self.assertEqual(f.value.signal, None)
+            # self.assertIsNone(f.value.signal)
             self.assertRaises(
                 error.ProcessExitedAlready, p.transport.signalProcess, 'INT')
             try:
@@ -566,25 +572,28 @@ class ProcessTests(unittest.TestCase):
         d.addCallback(check)
         return d
 
-    def testManyProcesses(self):
+
+    def test_manyProcesses(self):
 
         def _check(results, protocols):
             for p in protocols:
-                self.assertEqual(p.stages, [1, 2, 3, 4, 5], "[%d] stages = %s" % (id(p.transport), str(p.stages)))
+                self.assertEqual(p.stages, [1, 2, 3, 4, 5],
+                                 "[%d] stages = %s" % (id(p.transport),
+                                                       str(p.stages)))
                 # test status code
                 f = p.reason
                 f.trap(error.ProcessTerminated)
                 self.assertEqual(f.value.exitCode, 23)
 
-        scriptPath = FilePath(__file__).sibling(b"process_tester.py").path
-        args = [pyExe, b"-u", scriptPath]
+        scriptPath = b"twisted.test.process_tester"
+        args = [pyExe, b'-u', b"-m", scriptPath]
         protocols = []
         deferreds = []
 
         for i in xrange(CONCURRENT_PROCESS_TEST_COUNT):
             p = TestManyProcessProtocol()
             protocols.append(p)
-            reactor.spawnProcess(p, pyExe, args, env=None)
+            reactor.spawnProcess(p, pyExe, args, env=properEnv)
             deferreds.append(p.deferred)
 
         deferredList = defer.DeferredList(deferreds, consumeErrors=True)
@@ -595,14 +604,15 @@ class ProcessTests(unittest.TestCase):
     def test_echo(self):
         """
         A spawning a subprocess which echoes its stdin to its stdout via
-        C{reactor.spawnProcess} will result in that echoed output being
+        L{IReactorProcess.spawnProcess} will result in that echoed output being
         delivered to outReceived.
         """
         finished = defer.Deferred()
         p = EchoProtocol(finished)
 
-        scriptPath = FilePath(__file__).sibling(b"process_echoer.py").path
-        reactor.spawnProcess(p, pyExe, [pyExe, scriptPath], env=None)
+        scriptPath = b"twisted.test.process_echoer"
+        reactor.spawnProcess(p, pyExe, [pyExe, b'-u', b"-m", scriptPath],
+                             env=properEnv)
 
         def asserts(ignored):
             self.assertFalse(p.failure, p.failure)
@@ -616,14 +626,15 @@ class ProcessTests(unittest.TestCase):
         return finished.addCallback(asserts).addErrback(takedownProcess)
 
 
-    def testCommandLine(self):
+    def test_commandLine(self):
         args = [br'a\"b ', br'a\b ', br' a\\"b', br' a\\b', br'"foo bar" "',
                 b'\tab', b'"\\', b'a"b', b"a'b"]
-        scriptPath = FilePath(__file__).sibling(b"process_cmdline.py").path
+        scriptPath = b"twisted.test.process_cmdline"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath] + args,
-                             env=None, path=None)
+        reactor.spawnProcess(p, pyExe,
+                             [pyExe, b"-u", b"-m", scriptPath] + args,
+                             env=properEnv, path=None)
 
         def processEnded(ign):
             self.assertEqual(p.errF.getvalue(), b"")
@@ -688,7 +699,8 @@ class ProcessTests(unittest.TestCase):
     okayUnicode = u"UNICODE"
     encodedValue = b"UNICODE"
 
-    def _deprecatedUnicodeSupportTest(self, processProtocolClass, argv=[], env={}):
+    def _deprecatedUnicodeSupportTest(self, processProtocolClass, argv=[],
+                                      env={}):
         """
         Check that a deprecation warning is emitted when passing unicode to
         spawnProcess for an argv value or an environment key or value.
@@ -713,7 +725,10 @@ class ProcessTests(unittest.TestCase):
             self.okayUnicode.encode(sys.getdefaultencoding()),
             self.encodedValue)
 
-        d = processProtocolClass.run(reactor, argv, env)
+        pEnv = properEnv.copy()
+        pEnv.update(env)
+
+        d = processProtocolClass.run(reactor, argv, pEnv)
 
         warnings = self.flushWarnings([UtilityProcessProtocol.run])
 
@@ -736,9 +751,10 @@ class ProcessTests(unittest.TestCase):
         if it can be encoded with the default system encoding, but that a
         deprecation warning is emitted.
         """
-        d = self._deprecatedUnicodeSupportTest(GetArgumentVector, argv=[self.okayUnicode])
+        d = self._deprecatedUnicodeSupportTest(GetArgumentVector,
+                                               argv=[self.okayUnicode])
         def gotArgVector(argv):
-            self.assertEqual(argv, [b'-c', self.encodedValue])
+            self.assertEqual(argv[1], self.encodedValue)
         d.addCallback(gotArgVector)
         return d
 
@@ -795,13 +811,13 @@ class TestTwoProcessesBase:
         self.verbose = 0
 
     def createProcesses(self, usePTY=0):
-        scriptPath = FilePath(__file__).sibling(b"process_reader.py").path
+        scriptPath = b"twisted.test.process_reader"
         for num in (0,1):
             self.pp[num] = TwoProcessProtocol()
             self.pp[num].num = num
             p = reactor.spawnProcess(self.pp[num], pyExe,
-                                     [pyExe, b"-u", scriptPath],
-                                     env=None, usePTY=usePTY)
+                                     [pyExe, b"-u", b"-m", scriptPath],
+                                     env=properEnv, usePTY=usePTY)
             self.processes[num] = p
 
     def close(self, num):
@@ -815,7 +831,7 @@ class TestTwoProcessesBase:
     def _onClose(self):
         return defer.gatherResults([ p.deferred for p in self.pp ])
 
-    def testClose(self):
+    def test_close(self):
         if self.verbose: print("starting processes")
         self.createProcesses()
         reactor.callLater(1, self.close, 0)
@@ -845,21 +861,21 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         os.kill(p.pid, signal.SIGTERM)
         if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
-    def testKill(self):
+    def test_kill(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=0)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
         return self._onClose()
 
-    def testClosePty(self):
+    def test_closePty(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
-    def testKillPty(self):
+    def test_killPty(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.kill, 0)
@@ -949,26 +965,26 @@ class FDChecker(protocol.ProcessProtocol):
 
 class FDTests(unittest.TestCase):
 
-    def testFD(self):
-        scriptPath = FilePath(__file__).sibling(b"process_fds.py").path
+    def test_FD(self):
+        scriptPath = b"twisted.test.process_fds"
         d = defer.Deferred()
         p = FDChecker(d)
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None,
-                             path=None,
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
+                             env=properEnv,
                              childFDs={0:"w", 1:"r", 2:2,
                                        3:"w", 4:"r", 5:"w"})
         d.addCallback(lambda x : self.assertFalse(p.failed, p.failed))
         return d
 
-    def testLinger(self):
+    def test_linger(self):
         # See what happens when all the pipes close before the process
         # actually stops. This test *requires* SIGCHLD catching to work,
         # as there is no other way to find out the process is done.
-        scriptPath = FilePath(__file__).sibling(b"process_linger.py").path
+        scriptPath = b"twisted.test.process_linger"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None,
-                             path=None,
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
+                             env=properEnv,
                              childFDs={1:"r", 2:2},
                              )
         def processEnded(ign):
@@ -1030,7 +1046,7 @@ class PosixProcessBase(object):
                 "%s not found in /bin or /usr/bin" % (commandName,))
 
 
-    def testNormalTermination(self):
+    def test_normalTermination(self):
         cmd = self.getCommand('true')
 
         d = defer.Deferred()
@@ -1040,7 +1056,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessDone)
             self.assertEqual(p.reason.value.exitCode, 0)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -1060,17 +1076,17 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessTerminated)
             self.assertEqual(p.reason.value.exitCode, 1)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
 
     def _testSignal(self, sig):
-        scriptPath = FilePath(__file__).sibling(b"process_signal.py").path
+        scriptPath = b"twisted.test.process_signal"
         d = defer.Deferred()
         p = SignalProtocol(d, sig)
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None,
-                             usePTY=self.usePTY)
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", "-m", scriptPath],
+                             env=properEnv, usePTY=self.usePTY)
         return d
 
 
@@ -1078,7 +1094,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGHUP signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGHUP}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1089,7 +1105,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGINT signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGINT}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1100,7 +1116,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGKILL signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGKILL}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1111,7 +1127,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGTERM signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGTERM}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1181,7 +1197,7 @@ class PosixProcessBase(object):
         ended = defer.Deferred()
 
         # This script runs until we disconnect its transport.
-        scriptPath = FilePath(__file__).sibling(b"process_echoer.py").path
+        scriptPath = b"twisted.test.process_echoer"
 
         class ErrorInProcessEnded(protocol.ProcessProtocol):
             """
@@ -1197,8 +1213,8 @@ class PosixProcessBase(object):
         # Launch the process.
         reactor.spawnProcess(
             ErrorInProcessEnded(), pyExe,
-            [pyExe, scriptPath],
-            env=None, path=None)
+            [pyExe, b"-u", b"-m", scriptPath],
+            env=properEnv, path=None)
 
         pid = []
         def cbConnected(transport):
@@ -1249,9 +1265,9 @@ class MockOS(object):
     @ivar WNOHANG: dumb value faking C{os.WNOHANG}.
     @type WNOHANG: C{int}
 
-    @ivar raiseFork: if not C{None}, subsequent calls to fork will raise this
+    @ivar raiseFork: if not L{None}, subsequent calls to fork will raise this
         object.
-    @type raiseFork: C{NoneType} or C{Exception}
+    @type raiseFork: L{None} or C{Exception}
 
     @ivar raiseExec: if set, subsequent calls to execvpe will raise an error.
     @type raiseExec: C{bool}
@@ -1275,10 +1291,10 @@ class MockOS(object):
 
     @ivar raiseWaitPid: if set, subsequent calls to waitpid will raise
         the error specified.
-    @type raiseWaitPid: C{None} or a class
+    @type raiseWaitPid: L{None} or a class
 
     @ivar waitChild: if set, subsequent calls to waitpid will return it.
-    @type waitChild: C{None} or a tuple
+    @type waitChild: L{None} or a tuple
 
     @ivar euid: the uid returned by the fake C{os.geteuid}
     @type euid: C{int}
@@ -1297,7 +1313,7 @@ class MockOS(object):
 
     @ivar raiseKill: if set, subsequent call to kill will raise the error
         specified.
-    @type raiseKill: C{None} or an exception instance.
+    @type raiseKill: L{None} or an exception instance.
 
     @ivar readData: data returned by C{os.read}.
     @type readData: C{str}
@@ -1735,7 +1751,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
         else:
@@ -1907,7 +1923,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
             # Check that fd have been closed
@@ -1933,7 +1949,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False, uid=8080)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions,
                 [('fork', False), ('setuid', 0), ('setgid', 0),
@@ -2150,7 +2166,7 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
         return d.addCallback(processEnded)
 
 
-    def testProcess(self):
+    def test_process(self):
         cmd = self.getCommand('gzip')
         s = b"there's no place like home!\n" * 3
         p = Accumulator()
@@ -2163,8 +2179,8 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
         def processEnded(ign):
             f = p.outF
             f.seek(0, 0)
-            gf = gzip.GzipFile(fileobj=f)
-            self.assertEqual(gf.read(), s)
+            with gzip.GzipFile(fileobj=f) as gf:
+                self.assertEqual(gf.read(), s)
         return d.addCallback(processEnded)
 
 
@@ -2181,12 +2197,12 @@ class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
     # testProcess, but not without p.transport.closeStdin
     #  might be solveable: TODO: add test if so
 
-    def testOpeningTTY(self):
-        scriptPath = FilePath(__file__).sibling(b"process_tty.py").path
+    def test_openingTTY(self):
+        scriptPath = b"twisted.test.process_tty"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None,
-                            path=None, usePTY=self.usePTY)
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
+                             env=properEnv, usePTY=self.usePTY)
         p.transport.write(b"hello world!\n")
 
         def processEnded(ign):
@@ -2195,11 +2211,12 @@ class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
             self.assertEqual(
                 p.outF.getvalue(),
                 b"hello world!\r\nhello world!\r\n",
-                "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
+                ("Error message from process_tty "
+                 "follows:\n\n%s\n\n" % (p.outF.getvalue(),)))
         return d.addCallback(processEnded)
 
 
-    def testBadArgs(self):
+    def test_badArgs(self):
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs,
@@ -2215,7 +2232,7 @@ class Win32SignalProtocol(SignalProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
+        Callback C{self.deferred} with L{None} if C{reason} is a
         L{error.ProcessTerminated} failure with C{exitCode} set to 1.
         Otherwise, errback with a C{ValueError} describing the problem.
         """
@@ -2235,12 +2252,12 @@ class Win32ProcessTests(unittest.TestCase):
     Test process programs that are packaged with twisted.
     """
 
-    def testStdinReader(self):
-        scriptPath = FilePath(__file__).sibling(b"process_stdinreader.py").path
+    def test_stdinReader(self):
+        scriptPath = b"twisted.test.process_stdinreader"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None,
-                             path=None)
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
+                             env=properEnv)
         p.transport.write(b"hello, world")
         p.transport.closeStdin()
 
@@ -2250,7 +2267,7 @@ class Win32ProcessTests(unittest.TestCase):
         return d.addCallback(processEnded)
 
 
-    def testBadArgs(self):
+    def test_badArgs(self):
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError,
@@ -2264,10 +2281,11 @@ class Win32ProcessTests(unittest.TestCase):
 
 
     def _testSignal(self, sig):
-        scriptPath = FilePath(__file__).sibling(b"process_signal.py").path
+        scriptPath = b"twisted.test.process_signal"
         d = defer.Deferred()
         p = Win32SignalProtocol(d, sig)
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath], env=None)
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
+                             env=properEnv)
         return d
 
 
@@ -2322,7 +2340,7 @@ class Win32ProcessTests(unittest.TestCase):
         proc = reactor.spawnProcess(p, pyExe, pyArgs)
 
         def cbConnected(transport):
-            self.assertIdentical(transport, proc)
+            self.assertIs(transport, proc)
             # perform a basic validity test on the handles
             win32api.GetHandleInformation(proc.hProcess)
             win32api.GetHandleInformation(proc.hThread)
@@ -2333,9 +2351,9 @@ class Win32ProcessTests(unittest.TestCase):
 
         def checkTerminated(ignored):
             # The attributes on the process object must be reset...
-            self.assertIdentical(proc.pid, None)
-            self.assertIdentical(proc.hProcess, None)
-            self.assertIdentical(proc.hThread, None)
+            self.assertIsNone(proc.pid)
+            self.assertIsNone(proc.hProcess)
+            self.assertIsNone(proc.hThread)
             # ...and the handles must be closed.
             self.assertRaises(win32api.error,
                               win32api.GetHandleInformation, self.hProcess)
@@ -2359,12 +2377,12 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
         Test C{os.environ} (inherited by every subprocess on Windows) that
         contains an ascii-encodable Unicode string. This is different from
         passing Unicode environment explicitly to spawnProcess (which is not
-        supported).
+        supported on Python 2).
         """
         os.environ[self.goodKey] = self.goodValue
         self.addCleanup(operator.delitem, os.environ, self.goodKey)
 
-        p = GetEnvironmentDictionary.run(reactor, [], {})
+        p = GetEnvironmentDictionary.run(reactor, [], properEnv)
         def gotEnvironment(environ):
             self.assertEqual(
                 environ[self.goodKey.encode('ascii')],
@@ -2373,13 +2391,13 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
 
 
 
-class Dumbwin32procPidTests(unittest.TestCase):
+class DumbWin32ProcTests(unittest.TestCase):
     """
-    Simple test for the pid attribute of Process on win32.
+    L{twisted.internet._dumbwin32proc} tests.
     """
-
     def test_pid(self):
         """
+        Simple test for the pid attribute of Process on win32.
         Launch process with mock win32process. The only mock aspect of this
         module is that the pid of the process created will always be 42.
         """
@@ -2403,9 +2421,20 @@ class Dumbwin32procPidTests(unittest.TestCase):
         self.assertEqual("<Process pid=42>", repr(p))
 
         def pidCompleteCb(result):
-            self.assertEqual(None, p.pid)
+            self.assertIsNone(p.pid)
         return d.addCallback(pidCompleteCb)
 
+
+    def test_findShebang(self):
+        """
+        Look for the string after the shebang C{#!}
+        in a file.
+        """
+        from twisted.internet._dumbwin32proc import _findShebang
+        cgiScript = FilePath(b"example.cgi")
+        cgiScript.setContent(b"#!/usr/bin/python")
+        program = _findShebang(cgiScript.path)
+        self.assertEqual(program, "/usr/bin/python")
 
 
 class UtilTests(unittest.TestCase):
@@ -2437,8 +2466,7 @@ class UtilTests(unittest.TestCase):
                            (j(self.bazfoo, "executable"), 0o700),
                            (j(self.bazfoo, "executable.bin"), 0o700),
                            (j(self.bazbar, "executable"), 0)]:
-            f = open(name, "wb")
-            f.close()
+            open(name, "wb").close()
             os.chmod(name, mode)
 
         self.oldPath = os.environ.get('PATH', None)
@@ -2470,7 +2498,7 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(procutils.which("executable"), [])
 
 
-    def testWhich(self):
+    def test_which(self):
         j = os.path.join
         paths = procutils.which("executable")
         expectedPaths = [j(self.foobaz, "executable"),
@@ -2480,7 +2508,7 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(paths, expectedPaths)
 
 
-    def testWhichPathExt(self):
+    def test_whichPathExt(self):
         j = os.path.join
         old = os.environ.get('PATHEXT', None)
         os.environ['PATHEXT'] = os.pathsep.join(('.bin', '.exe', '.sh'))
@@ -2615,7 +2643,7 @@ if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(re
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
-    Dumbwin32procPidTests.skip = skipMessage
+    DumbWin32ProcTests.skip = skipMessage
     Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):

@@ -2,6 +2,7 @@
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 from twisted.conch.ssh import transport, userauth, connection, common, keys, channel
 from twisted.internet import defer, protocol, reactor
@@ -35,11 +36,11 @@ CLIENT_RSA_PRIVATE = 'ssh-keys/client_rsa'
 
 class SimpleTransport(transport.SSHClientTransport):
     def verifyHostKey(self, hostKey, fingerprint):
-        print 'Server host key fingerprint: %s' % fingerprint
+        print('Server host key fingerprint: %s' % fingerprint)
         if SERVER_FINGERPRINT == fingerprint:
             return defer.succeed(True)
         else:
-            print 'Bad host key. Expecting: %s' % SERVER_FINGERPRINT
+            print('Bad host key. Expecting: %s' % SERVER_FINGERPRINT)
             return defer.fail(Exception('Bad server key'))
 
     def connectionSecure(self):
@@ -53,8 +54,8 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         return defer.succeed(getpass.getpass("%s@%s's password: " % (USER, HOST)))
 
     def getGenericAnswers(self, name, instruction, questions):
-        print name
-        print instruction
+        print(name)
+        print(instruction)
         answers = []
         for prompt, echo in questions:
             if echo:
@@ -96,35 +97,35 @@ class TrueChannel(channel.SSHChannel):
     name = 'session' # needed for commands
 
     def openFailed(self, reason):
-        print 'true failed', reason
+        print('true failed', reason)
 
     def channelOpen(self, ignoredData):
         self.conn.sendRequest(self, 'exec', common.NS('true'))
 
     def request_exit_status(self, data):
         status = struct.unpack('>L', data)[0]
-        print 'true status was: %s' % status
+        print('true status was: %s' % status)
         self.loseConnection()
 
 class FalseChannel(channel.SSHChannel):
     name = 'session'
 
     def openFailed(self, reason):
-        print 'false failed', reason
+        print('false failed', reason)
 
     def channelOpen(self, ignoredData):
         self.conn.sendRequest(self, 'exec', common.NS('false'))
 
     def request_exit_status(self, data):
         status = struct.unpack('>L', data)[0]
-        print 'false status was: %s' % status
+        print('false status was: %s' % status)
         self.loseConnection()
 
 class CatChannel(channel.SSHChannel):
     name = 'session'
 
     def openFailed(self, reason):
-        print 'echo failed', reason
+        print('echo failed', reason)
 
     def channelOpen(self, ignoredData):
         self.data = ''
@@ -139,7 +140,7 @@ class CatChannel(channel.SSHChannel):
         self.data += data
 
     def closed(self):
-        print 'got data from cat: %s' % repr(self.data)
+        print('got data from cat: %s' % repr(self.data))
         self.loseConnection()
         reactor.stop()
 

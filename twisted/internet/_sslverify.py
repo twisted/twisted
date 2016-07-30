@@ -8,7 +8,6 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
-from binascii import a2b_base64
 from hashlib import md5
 
 import OpenSSL
@@ -209,7 +208,8 @@ from zope.interface import Interface, implementer
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
 )
 
 from twisted.python import reflect, util
@@ -327,7 +327,7 @@ class DistinguishedName(dict):
 
     A L{DistinguishedName} should be constructed using keyword arguments whose
     keys can be any of the field names above (as a native string), and the
-    values are either Unicode text which is encodable to ASCII, or C{bytes}
+    values are either Unicode text which is encodable to ASCII, or L{bytes}
     limited to the ASCII subset. Any fields passed to the constructor will be
     set as attributes, accessible using both their extended name and their
     shortened acronym. The attribute values will be the ASCII-encoded
@@ -394,7 +394,7 @@ class DistinguishedName(dict):
         """
         Return a multi-line, human-readable representation of this DN.
 
-        @rtype: C{str}
+        @rtype: L{str}
         """
         l = []
         lablen = 0
@@ -449,10 +449,10 @@ class CertBase:
         Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: L{Interface}
+        @type interface: L{zope.interface.interfaces.IInterface}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
-        @rtype: C{interface} or L{NotImplemented}
+        @rtype: L{IOpenSSLTrustRoot} or L{NotImplemented}
         """
         if interface is IOpenSSLTrustRoot:
             return OpenSSLCertificateAuthorities([self.original])
@@ -513,7 +513,7 @@ class Certificate(CertBase):
         """
         Dump this certificate to a PEM-format data string.
 
-        @rtype: C{str}
+        @rtype: L{str}
         """
         return self.dump(crypto.FILETYPE_PEM)
 
@@ -532,11 +532,12 @@ class Certificate(CertBase):
         """
         Get the certificate for the remote end of the given transport.
 
-        @type: L{ISystemHandle}
+        @param transport: an L{ISystemHandle} provider
+
         @rtype: C{Class}
 
         @raise: L{CertificateError}, if the given transport does not have a peer
-        certificate.
+            certificate.
         """
         return _handleattrhelper(Class, transport, 'peer')
     peerFromTransport = classmethod(peerFromTransport)
@@ -551,7 +552,7 @@ class Certificate(CertBase):
         @rtype: C{Class}
 
         @raise: L{CertificateError}, if the given transport does not have a host
-        certificate.
+            certificate.
         """
         return _handleattrhelper(Class, transport, 'host')
     hostFromTransport = classmethod(hostFromTransport)
@@ -574,7 +575,7 @@ class Certificate(CertBase):
         """
         Retrieve the serial number of this certificate.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
         return self.original.get_serial_number()
 
@@ -585,7 +586,9 @@ class Certificate(CertBase):
         algorithm.
 
         @param method: One of C{'md5'} or C{'sha'}.
-        @rtype: C{str}
+
+        @return: The digest of the object, formatted as b":"-delimited hex pairs
+        @rtype: L{bytes}
         """
         return self.original.digest(method)
 
@@ -764,7 +767,7 @@ class PublicKey:
     L{PublicKey} objects.
 
     @note: If constructing a L{PublicKey} manually, be sure to pass only a
-        L{crypto.PKey} that does not contain a private key!
+        L{OpenSSL.crypto.PKey} that does not contain a private key!
 
     @ivar original: The original private key.
     """
@@ -772,7 +775,7 @@ class PublicKey:
     def __init__(self, osslpkey):
         """
         @param osslpkey: The underlying pyOpenSSL key object.
-        @type osslpkey: L{crypto.PKey}
+        @type osslpkey: L{OpenSSL.crypto.PKey}
         """
         self.original = osslpkey
 
@@ -816,20 +819,11 @@ class PublicKey:
         involving certificate requests for computing the hash that was not
         stable in the face of changes to the underlying OpenSSL library.
 
-        The technique currently being used - using Netscape SPKI APIs in
-        OpenSSL - is still somewhat dubious, but due to limitations in both
-        pyOpenSSL and OpenSSL APIs, it is not currently possible to compute a
-        reliable hash of the public key in isolation (i.e. not paired with a
-        specific certificate).
-
         @return: Return a 32-character hexadecimal string uniquely identifying
             this public key, I{for this version of Twisted}.
         @rtype: native L{str}
         """
-        nsspki = crypto.NetscapeSPKI()
-        nsspki.set_pubkey(self.original)
-        encoded = nsspki.b64_encode()
-        raw = a2b_base64(encoded)
+        raw = crypto.dump_publickey(crypto.FILETYPE_ASN1, self.original)
         h = md5()
         h.update(raw)
         return h.hexdigest()
@@ -1169,7 +1163,7 @@ class ClientTLSOptions(object):
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{SSL.Context}
+    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
@@ -1196,8 +1190,8 @@ class ClientTLSOptions(object):
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
 
-        @param ctx: an L{SSL.Context} to use for new connections.
-        @type ctx: L{SSL.Context}.
+        @param ctx: an L{OpenSSL.SSL.Context} to use for new connections.
+        @type ctx: L{OpenSSL.SSL.Context}.
         """
         self._ctx = ctx
         self._hostname = hostname
@@ -1282,7 +1276,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         be a L{Certificate} or the result of L{platformTrust}.  By default it
         is L{platformTrust} and you probably shouldn't adjust it unless you
         really know what you're doing.  Be aware that clients using this
-        interface I{must} verify the server; you cannot explicitly pass C{None}
+        interface I{must} verify the server; you cannot explicitly pass L{None}
         since that just means to use L{platformTrust}.
     @type trustRoot: L{IOpenSSLTrustRoot}
 
@@ -1292,13 +1286,13 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     @type clientCertificate: L{PrivateCertificate}
 
     @param acceptableProtocols: The protocols this peer is willing to speak
-        after the TLS negotation has completed, advertised over both ALPN and
+        after the TLS negotiation has completed, advertised over both ALPN and
         NPN. If this argument is specified, and no overlap can be found with
         the other peer, the connection will fail to be established. If the
         remote peer does not offer NPN or ALPN, the connection will be
         established, but no protocol wil be negotiated. Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: C{list} of C{bytes}
+    @type acceptableProtocols: L{list} of L{bytes}
 
     @param extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to
@@ -1343,6 +1337,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
 
 
+@implementer(IOpenSSLContextFactory)
 class OpenSSLCertificateOptions(object):
     """
     A L{CertificateOptions <twisted.internet.ssl.CertificateOptions>} specifies
@@ -1364,9 +1359,9 @@ class OpenSSLCertificateOptions(object):
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
     _OP_NO_TICKET = getattr(SSL, 'OP_NO_TICKET', 0x00004000)
     _OP_NO_COMPRESSION = getattr(SSL, 'OP_NO_COMPRESSION', 0x00020000)
-    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE ',
+    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE',
                                            0x00400000)
-    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE ', 0x00080000)
+    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
 
 
     @_mutuallyExclusiveArguments([
@@ -1419,9 +1414,9 @@ class OpenSSLCertificateOptions(object):
             List of certificate authority certificate objects to use to verify
             the peer's certificate.  Only used if verify is L{True} and will be
             ignored otherwise.  Since verify is L{False} by default, this is
-            C{None} by default.
+            L{None} by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
+        @type caCerts: L{list} of L{OpenSSL.crypto.X509}
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
             If unspecified, use the underlying default (9).
@@ -1484,13 +1479,13 @@ class OpenSSLCertificateOptions(object):
         @type trustRoot: L{IOpenSSLTrustRoot}
 
         @param acceptableProtocols: The protocols this peer is willing to speak
-            after the TLS negotation has completed, advertised over both ALPN
+            after the TLS negotiation has completed, advertised over both ALPN
             and NPN. If this argument is specified, and no overlap can be found
             with the other peer, the connection will fail to be established.
             If the remote peer does not offer NPN or ALPN, the connection will
             be established, but no protocol wil be negotiated. Protocols
             earlier in the list are preferred over those later in the list.
-        @type acceptableProtocols: C{list} of C{bytes}
+        @type acceptableProtocols: L{list} of L{bytes}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1653,11 +1648,11 @@ class OpenSSLCertificateOptions(object):
             name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
             sessionName = md5(networkString(name)).hexdigest()
 
-            ctx.set_session_id(sessionName)
+            ctx.set_session_id(sessionName.encode('ascii'))
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
-        ctx.set_cipher_list(nativeString(self._cipherString))
+        ctx.set_cipher_list(self._cipherString.encode('ascii'))
 
         if self._ecCurve is not None:
             try:
@@ -1668,51 +1663,10 @@ class OpenSSLCertificateOptions(object):
         if self._acceptableProtocols:
             # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
             # the constructor unless at least one mechanism is supported.
-            self._setUpNextProtocolMechanisms(ctx)
+            _setAcceptableProtocols(ctx, self._acceptableProtocols)
 
         return ctx
 
-
-    def _setUpNextProtocolMechanisms(self, ctx):
-        """
-        Called to set up the C{ctx} for doing NPN and/or ALPN negotiation.
-
-        @param ctx: The context which is set up.
-        @type ctx: L{OpenSSL.SSL.Context}
-        """
-        supported = protocolNegotiationMechanisms()
-
-        if supported & ProtocolNegotiationSupport.NPN:
-            def npnAdvertiseCallback(conn):
-                return self._acceptableProtocols
-
-            ctx.set_npn_advertise_callback(npnAdvertiseCallback)
-            ctx.set_npn_select_callback(self._protoSelectCallback)
-
-        if supported & ProtocolNegotiationSupport.ALPN:
-            ctx.set_alpn_select_callback(self._protoSelectCallback)
-            ctx.set_alpn_protos(self._acceptableProtocols)
-
-
-    def _protoSelectCallback(self, conn, protocols):
-        """
-        NPN client-side and ALPN server-side callback used to select
-        the next protocol. Prefers protocols found earlier in
-        C{_acceptableProtocols}.
-
-        @param conn: The context which is set up.
-        @type conn: L{OpenSSL.SSL.Connection}
-
-        @param conn: Protocols advertised by the other side.
-        @type conn: C{list} of C{bytes}
-        """
-        overlap = set(protocols) & set(self._acceptableProtocols)
-
-        for p in self._acceptableProtocols:
-            if p in overlap:
-                return p
-        else:
-            return b''
 
 OpenSSLCertificateOptions.__getstate__ = deprecated(
         Version("Twisted", 15, 0, 0),
@@ -1778,7 +1732,7 @@ class _OpenSSLECCurve(FancyEqMixin, object):
 
     def addECKeyToContext(self, context):
         """
-        Add an temporary EC key to C{context}.
+        Add a temporary EC key to C{context}.
 
         @param context: The context to add a key to.
         @type context: L{OpenSSL.SSL.Context}
@@ -1837,7 +1791,7 @@ def _expandCipherString(cipherString, method, options):
     ctx = SSL.Context(method)
     ctx.set_options(options)
     try:
-        ctx.set_cipher_list(nativeString(cipherString))
+        ctx.set_cipher_list(cipherString.encode('ascii'))
     except SSL.Error as e:
         if e.args[0][0][2] == 'no cipher match':
             return []
@@ -1937,8 +1891,66 @@ class OpenSSLDiffieHellmanParameters(object):
             exchange.
         @type filePath: L{FilePath <twisted.python.filepath.FilePath>}
 
-        @return: A instance that loads its parameters from C{filePath}.
+        @return: An instance that loads its parameters from C{filePath}.
         @rtype: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
         return cls(filePath)
+
+
+def _setAcceptableProtocols(context, acceptableProtocols):
+    """
+    Called to set up the L{OpenSSL.SSL.Context} for doing NPN and/or ALPN
+    negotiation.
+
+    @param context: The context which is set up.
+    @type context: L{OpenSSL.SSL.Context}
+
+    @param acceptableProtocols: The protocols this peer is willing to speak
+        after the TLS negotiation has completed, advertised over both ALPN and
+        NPN. If this argument is specified, and no overlap can be found with
+        the other peer, the connection will fail to be established. If the
+        remote peer does not offer NPN or ALPN, the connection will be
+        established, but no protocol wil be negotiated. Protocols earlier in
+        the list are preferred over those later in the list.
+    @type acceptableProtocols: L{list} of L{bytes}
+    """
+    def protoSelectCallback(conn, protocols):
+        """
+        NPN client-side and ALPN server-side callback used to select
+        the next protocol. Prefers protocols found earlier in
+        C{_acceptableProtocols}.
+
+        @param conn: The context which is set up.
+        @type conn: L{OpenSSL.SSL.Connection}
+
+        @param conn: Protocols advertised by the other side.
+        @type conn: L{list} of L{bytes}
+        """
+        overlap = set(protocols) & set(acceptableProtocols)
+
+        for p in acceptableProtocols:
+            if p in overlap:
+                return p
+        else:
+            return b''
+
+    # If we don't actually have protocols to negotiate, don't set anything up.
+    # Depending on OpenSSL version, failing some of the selection callbacks can
+    # cause the handshake to fail, which is presumably not what was intended
+    # here.
+    if not acceptableProtocols:
+        return
+
+    supported = protocolNegotiationMechanisms()
+
+    if supported & ProtocolNegotiationSupport.NPN:
+        def npnAdvertiseCallback(conn):
+            return acceptableProtocols
+
+        context.set_npn_advertise_callback(npnAdvertiseCallback)
+        context.set_npn_select_callback(protoSelectCallback)
+
+    if supported & ProtocolNegotiationSupport.ALPN:
+        context.set_alpn_select_callback(protoSelectCallback)
+        context.set_alpn_protos(acceptableProtocols)

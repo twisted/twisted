@@ -58,9 +58,9 @@ class ClientMsgTests(unittest.TestCase):
         account.loginDeferred.callback(None)
 
         def check(result):
-            self.assert_(not account.loginHasFailed, 
+            self.assertFalse(account.loginHasFailed,
                     "Login shouldn't have failed")
-            self.assert_(account.loginCallbackCalled, 
+            self.assertTrue(account.loginCallbackCalled,
                     "We should be logged in")
         d.addCallback(check)
         return d
@@ -76,12 +76,12 @@ class ClientMsgTests(unittest.TestCase):
         account.loginDeferred.errback(Exception())
 
         def err(reason):
-            self.assert_(account.loginHasFailed, "Login should have failed")
-            self.assert_(not account.loginCallbackCalled, 
+            self.assertTrue(account.loginHasFailed, "Login should have failed")
+            self.assertFalse(account.loginCallbackCalled,
                     "We shouldn't be logged in")
-            self.assert_(not ui.clientRegistered, 
+            self.assertTrue(not ui.clientRegistered,
                     "Client shouldn't be registered in the UI")
-        cb = lambda r: self.assert_(False, "Shouldn't get called back")
+        cb = lambda r: self.assertTrue(False, "Shouldn't get called back")
         d.addCallbacks(cb, err)
         return d
 

@@ -95,7 +95,7 @@ class IPositioningBeacon(Interface):
     """
     identifier = Attribute(
         """
-        A unique identifier for this beacon. The type is dependant on the
+        A unique identifier for this beacon. The type is dependent on the
         implementation, but must be immutable.
         """)
 

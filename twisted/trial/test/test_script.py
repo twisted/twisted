@@ -271,15 +271,15 @@ class TestModuleTests(unittest.SynchronousTestCase):
                              localVars)
 
     def test_invalidLine(self):
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               'foo')
 
     def test_invalidDeclaration(self):
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               '-*- foo -*-')
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               '-*- foo: bar; qux -*-')
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               '-*- foo: bar: baz; qux: qax -*-')
 
     def test_variablesFromFile(self):

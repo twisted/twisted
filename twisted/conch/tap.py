@@ -66,9 +66,10 @@ def makeService(config):
     Construct a service for operating a SSH server.
 
     @param config: An L{Options} instance specifying server options, including
-    where server keys are stored and what authentication methods to use.
+        where server keys are stored and what authentication methods to use.
 
-    @return: An L{IService} provider which contains the requested SSH server.
+    @return: A L{twisted.application.service.IService} provider which contains
+        the requested SSH server.
     """
 
     t = factory.OpenSSHFactory()

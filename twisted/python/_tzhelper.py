@@ -34,7 +34,7 @@ class FixedOffsetTimeZone(tzinfo):
         @type offset: L{timedelta}
 
         @param name: A name to be given for this timezone.
-        @type name: L{str} or L{NoneType}
+        @type name: L{str} or L{None}
         """
         self.offset = offset
         self.name = name

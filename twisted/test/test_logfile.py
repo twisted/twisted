@@ -3,6 +3,7 @@
 
 from __future__ import division, absolute_import
 
+import contextlib
 import errno
 import os
 import pickle
@@ -49,16 +50,14 @@ class LogFileTests(unittest.TestCase):
         Log files can be written to, flushed and closed. Closing a log file
         also flushes it.
         """
-        log = logfile.LogFile(self.name, self.dir)
-        log.write("123")
-        log.write("456")
-        log.flush()
-        log.write("7890")
-        log.close()
+        with contextlib.closing(logfile.LogFile(self.name, self.dir)) as log:
+            log.write("123")
+            log.write("456")
+            log.flush()
+            log.write("7890")
 
-        f = open(self.path)
-        self.assertEqual(f.read(), "1234567890")
-        f.close()
+        with open(self.path) as f:
+            self.assertEqual(f.read(), "1234567890")
 
 
     def test_rotation(self):
@@ -67,26 +66,26 @@ class LogFileTests(unittest.TestCase):
         manually rotated.
         """
         # this logfile should rotate every 10 bytes
-        log = logfile.LogFile(self.name, self.dir, rotateLength=10)
+        with contextlib.closing(
+                logfile.LogFile(self.name, self.dir, rotateLength=10)) as log:
 
-        # test automatic rotation
-        log.write("123")
-        log.write("4567890")
-        log.write("1" * 11)
-        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
-        self.assertFalse(os.path.exists("{0}.2".format(self.path)))
-        log.write('')
-        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
-        self.assertTrue(os.path.exists("{0}.2".format(self.path)))
-        self.assertFalse(os.path.exists("{0}.3".format(self.path)))
-        log.write("3")
-        self.assertFalse(os.path.exists("{0}.3".format(self.path)))
+            # test automatic rotation
+            log.write("123")
+            log.write("4567890")
+            log.write("1" * 11)
+            self.assertTrue(os.path.exists("{0}.1".format(self.path)))
+            self.assertFalse(os.path.exists("{0}.2".format(self.path)))
+            log.write('')
+            self.assertTrue(os.path.exists("{0}.1".format(self.path)))
+            self.assertTrue(os.path.exists("{0}.2".format(self.path)))
+            self.assertFalse(os.path.exists("{0}.3".format(self.path)))
+            log.write("3")
+            self.assertFalse(os.path.exists("{0}.3".format(self.path)))
 
-        # test manual rotation
-        log.rotate()
-        self.assertTrue(os.path.exists("{0}.3".format(self.path)))
-        self.assertFalse(os.path.exists("{0}.4".format(self.path)))
-        log.close()
+            # test manual rotation
+            log.rotate()
+            self.assertTrue(os.path.exists("{0}.3".format(self.path)))
+            self.assertFalse(os.path.exists("{0}.4".format(self.path)))
 
         self.assertEqual(log.listLogs(), [1, 2, 3])
 
@@ -95,12 +94,11 @@ class LogFileTests(unittest.TestCase):
         """
         Log files can be written to, closed. Their size is the number of
         bytes written to them. Everything that was written to them can
-        be read, even if the writing happened on seperate occasions,
+        be read, even if the writing happened on separate occasions,
         and even if the log file was closed in between.
         """
-        log = logfile.LogFile(self.name, self.dir)
-        log.write("0123456789")
-        log.close()
+        with contextlib.closing(logfile.LogFile(self.name, self.dir)) as log:
+            log.write("0123456789")
 
         log = logfile.LogFile(self.name, self.dir)
         self.addCleanup(log.close)
@@ -134,15 +132,13 @@ class LogFileTests(unittest.TestCase):
 
         # check reading logs
         self.assertEqual(log.listLogs(), [1])
-        reader = log.getCurrentLog()
-        reader._file.seek(0)
-        self.assertEqual(reader.readLines(), ["ghi\n"])
-        self.assertEqual(reader.readLines(), [])
-        reader.close()
-        reader = log.getLog(1)
-        self.assertEqual(reader.readLines(), ["abc\n", "def\n"])
-        self.assertEqual(reader.readLines(), [])
-        reader.close()
+        with contextlib.closing(log.getCurrentLog()) as reader:
+            reader._file.seek(0)
+            self.assertEqual(reader.readLines(), ["ghi\n"])
+            self.assertEqual(reader.readLines(), [])
+        with contextlib.closing(log.getLog(1)) as reader:
+            self.assertEqual(reader.readLines(), ["abc\n", "def\n"])
+            self.assertEqual(reader.readLines(), [])
 
         # check getting illegal log readers
         self.assertRaises(ValueError, log.getLog, 2)
@@ -151,15 +147,13 @@ class LogFileTests(unittest.TestCase):
         # check that log numbers are higher for older logs
         log.rotate()
         self.assertEqual(log.listLogs(), [1, 2])
-        reader = log.getLog(1)
-        reader._file.seek(0)
-        self.assertEqual(reader.readLines(), ["ghi\n"])
-        self.assertEqual(reader.readLines(), [])
-        reader.close()
-        reader = log.getLog(2)
-        self.assertEqual(reader.readLines(), ["abc\n", "def\n"])
-        self.assertEqual(reader.readLines(), [])
-        reader.close()
+        with contextlib.closing(log.getLog(1)) as reader:
+            reader._file.seek(0)
+            self.assertEqual(reader.readLines(), ["ghi\n"])
+            self.assertEqual(reader.readLines(), [])
+        with contextlib.closing(log.getLog(2)) as reader:
+            self.assertEqual(reader.readLines(), ["abc\n", "def\n"])
+            self.assertEqual(reader.readLines(), [])
 
 
     def test_LogReaderReadsZeroLine(self):
@@ -244,7 +238,7 @@ class LogFileTests(unittest.TestCase):
         log.write("5" * 11)
         with open("{0}.3".format(self.path)) as fp:
             self.assertEqual(fp.read(), "2" * 11)
-        self.assertTrue(not os.path.exists("{0}.4".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.4".format(self.path)))
 
 
     def test_fromFullPath(self):
@@ -266,10 +260,9 @@ class LogFileTests(unittest.TestCase):
         Test the default permission of the log file: if the file exist, it
         should keep the permission.
         """
-        f = open(self.path, "wb")
-        os.chmod(self.path, 0o707)
-        currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
-        f.close()
+        with open(self.path, "wb"):
+            os.chmod(self.path, 0o707)
+            currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         log1 = logfile.LogFile(self.name, self.dir)
         self.assertEqual(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
@@ -295,20 +288,17 @@ class LogFileTests(unittest.TestCase):
         L{logfile.LogFile.reopen} allows to rename the currently used file and
         make L{logfile.LogFile} create a new file.
         """
-        log1 = logfile.LogFile(self.name, self.dir)
-        log1.write("hello1")
-        savePath = os.path.join(self.dir, "save.log")
-        os.rename(self.path, savePath)
-        log1.reopen()
-        log1.write("hello2")
-        log1.close()
+        with contextlib.closing(logfile.LogFile(self.name, self.dir)) as log1:
+            log1.write("hello1")
+            savePath = os.path.join(self.dir, "save.log")
+            os.rename(self.path, savePath)
+            log1.reopen()
+            log1.write("hello2")
 
-        f = open(self.path)
-        self.assertEqual(f.read(), "hello2")
-        f.close()
-        f = open(savePath)
-        self.assertEqual(f.read(), "hello1")
-        f.close()
+        with open(self.path) as f:
+            self.assertEqual(f.read(), "hello2")
+        with open(savePath) as f:
+            self.assertEqual(f.read(), "hello1")
 
     if runtime.platform.isWindows():
         test_reopen.skip = "Can't test reopen on Windows"
@@ -332,11 +322,11 @@ class LogFileTests(unittest.TestCase):
         defaultMode = 0o642
         maxRotatedFiles = 42
 
-        log = logfile.LogFile(self.name, self.dir,
-                              rotateLength, defaultMode,
-                              maxRotatedFiles)
-        log.write("123")
-        log.close()
+        with contextlib.closing(
+                logfile.LogFile(self.name, self.dir,
+                                rotateLength, defaultMode,
+                                maxRotatedFiles)) as log:
+            log.write("123")
 
         copy = pickle.loads(pickle.dumps(log))
         self.addCleanup(copy.close)
@@ -432,16 +422,14 @@ class DailyLogFileTests(unittest.TestCase):
         """
         A daily log file can be written to like an ordinary log file.
         """
-        log = RiggedDailyLogFile(self.name, self.dir)
-        log.write("123")
-        log.write("456")
-        log.flush()
-        log.write("7890")
-        log.close()
+        with contextlib.closing(RiggedDailyLogFile(self.name, self.dir)) as log:
+            log.write("123")
+            log.write("456")
+            log.flush()
+            log.write("7890")
 
-        f = open(self.path)
-        self.assertEqual(f.read(), "1234567890")
-        f.close()
+        with open(self.path) as f:
+            self.assertEqual(f.read(), "1234567890")
 
 
     def test_rotation(self):

@@ -229,7 +229,7 @@ class ADBAPITestBase(object):
             row = transaction.fetchone()
             self.assertTrue(len(row) == 1, "Wrong size row")
             self.assertTrue(row[0] == i, "Value not returned.")
-        self.assertTrue(transaction.fetchone() is None, "Too many rows")
+        self.assertIsNone(transaction.fetchone(), "Too many rows")
         return "done"
 
 

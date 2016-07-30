@@ -5,6 +5,8 @@
 
 """HTML pretty-printing for Python source code."""
 
+from __future__ import print_function
+
 __version__ = '$Revision: 1.8 $'[11:-2]
 
 from twisted.python import htmlizer, usage
@@ -45,8 +47,8 @@ def run():
     options = Options()
     try:
         options.parseOptions()
-    except usage.UsageError, e:
-        print str(e)
+    except usage.UsageError as e:
+        print(str(e))
         sys.exit(1)
     filename = options['filename']
     if options.get('stylesheet') is not None:
@@ -54,16 +56,13 @@ def run():
     else:
         stylesheet = ''
 
-    output = open(filename + '.html', 'w')
-    try:
+    with open(filename + '.html', 'w') as output:
         output.write(header % {
             'title': filename,
             'generator': 'htmlizer/%s' % (copyright.longversion,),
             'alternate': alternateLink % {'source': filename},
             'stylesheet': stylesheet
             })
-        htmlizer.filter(open(filename), output,
-                        htmlizer.SmallerHTMLWriter)
+        with open(filename) as f:
+            htmlizer.filter(f, output, htmlizer.SmallerHTMLWriter)
         output.write(footer)
-    finally:
-        output.close()

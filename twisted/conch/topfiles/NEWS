@@ -1,6 +1,70 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.3.0 (2016-07-05)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 16.2.0 (2016-05-18)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #8279
+
+
+Twisted Conch 16.1.1 (2016-04-08)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 16.1.0 (2016-04-04)
+=================================
+
+Features
+--------
+ - twisted.conch.checkers is now ported to Python 3. (#8225)
+ - twisted.conch.telnet is now ported to Python 3. (#8228)
+ - twisted.conch.manhole_ssh.ConchFactory (used by `twistd manhole`)
+   no longer uses a hardcoded SSH server key, and will generate a
+   persistent one, saving it in your user appdir. If you use
+   ConchFactory, you will now need to provide your own SSH server key.
+   (#8229)
+
+Other
+-----
+ - #8237, #8240
+
+
+Twisted Conch 16.0.0 (2016-03-10)
+=================================
+
+Features
+--------
+ - twisted.conch now uses cryptography instead of PyCrypto for its
+   underlying crypto operations. (#7413)
+ - twisted.conch.ssh.keys is now ported to Python 3. (#7998)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.channel.SSHChannel's getPeer and getHost methods
+   now return an object which provides IAddress instead of an old-
+   style tuple address. (#5999)
+ - twisted.conch.endpoint.SSHCommandClientEndpoint, when
+   authentication is delegated to an SSH agent, no longer leaves the
+   agent connection opened when connection to the server is lost.
+   (#8138)
+
+Other
+-----
+ - #7037, #7715, #8200, #8208
+
+
 Twisted Conch 15.5.0 (2015-11-28)
 =================================
 
@@ -366,7 +430,7 @@ Bugfixes
    intermittent error, crashing at startup with a ZeroDivisionError
    while trying to report progress. (#4463)
  - twisted.conch.ssh.connection.SSHConnection now replies to requests
-   to open an unknown channel with a OPEN_UNKNOWN_CHANNEL_TYPE message
+   to open an unknown channel with an OPEN_UNKNOWN_CHANNEL_TYPE message
    instead of closing the connection. (#4490)
 
 Deprecations and Removals

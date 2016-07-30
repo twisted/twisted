@@ -127,7 +127,7 @@ class IService(Interface):
         @rtype: L{Deferred<defer.Deferred>}
         @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
-            a value can be returned (usually, C{None}).
+            a value can be returned (usually, L{None}).
         """
 
     def startService():
@@ -142,7 +142,7 @@ class IService(Interface):
         @rtype: L{Deferred<defer.Deferred>}
         @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
-            a value can be returned (usually, C{None}).
+            a value can be returned (usually, L{None}).
         """
 
     def privilegedStartService():
@@ -251,7 +251,7 @@ class IServiceCollection(Interface):
         @rtype: L{Deferred<defer.Deferred>}
         @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
-            a value can be returned (usually, C{None}).
+            a value can be returned (usually, L{None}).
         """
 
 
@@ -330,20 +330,20 @@ class IProcess(Interface):
     """
     processName = Attribute(
         """
-        A C{str} giving the name the process should have in ps (or C{None}
+        A C{str} giving the name the process should have in ps (or L{None}
         to leave the name alone).
         """)
 
     uid = Attribute(
         """
         An C{int} giving the user id as which the process should run (or
-        C{None} to leave the UID alone).
+        L{None} to leave the UID alone).
         """)
 
     gid = Attribute(
         """
         An C{int} giving the group id as which the process should run (or
-        C{None} to leave the GID alone).
+        L{None} to leave the GID alone).
         """)
 
 
@@ -354,7 +354,7 @@ class Process:
     Process running parameters.
 
     Sets up uid/gid in the constructor, and has a default
-    of C{None} as C{processName}.
+    of L{None} as C{processName}.
     """
     processName = None
 
@@ -363,10 +363,10 @@ class Process:
         Set uid and gid.
 
         @param uid: The user ID as whom to execute the process.  If
-            this is C{None}, no attempt will be made to change the UID.
+            this is L{None}, no attempt will be made to change the UID.
 
         @param gid: The group ID as whom to execute the process.  If
-            this is C{None}, no attempt will be made to change the GID.
+            this is L{None}, no attempt will be made to change the GID.
         """
         self.uid = uid
         self.gid = gid

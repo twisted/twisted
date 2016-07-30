@@ -358,4 +358,4 @@ class FormatDiscoveryTests(TestCase):
         self.assertEqual(
             "twisted_python_versions_package 1.0.0+r22715",
             version)
-        self.assertTrue(isinstance(version, type("")))
+        self.assertIsInstance(version, type(""))

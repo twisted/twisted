@@ -417,8 +417,8 @@ class XMLFile(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a file.
 
-    @ivar _loadedTemplate: The loaded document, or C{None}, if not loaded.
-    @type _loadedTemplate: a C{list} of Stan objects, or C{None}.
+    @ivar _loadedTemplate: The loaded document, or L{None}, if not loaded.
+    @type _loadedTemplate: a C{list} of Stan objects, or L{None}.
 
     @ivar _path: The L{FilePath}, file object, or filename that is being
         loaded from.
@@ -450,11 +450,8 @@ class XMLFile(object):
         if not isinstance(self._path, FilePath):
             return _flatsaxParse(self._path)
         else:
-            f = self._path.open('r')
-            try:
+            with self._path.open('r') as f:
                 return _flatsaxParse(f)
-            finally:
-                f.close()
 
 
     def __repr__(self):
@@ -534,7 +531,7 @@ def renderElement(request, element,
     @param request: The C{Request} being rendered to.
     @param element: An C{IRenderable} which will be rendered.
     @param doctype: A C{bytes} which will be written as the first line of
-        the request, or C{None} to disable writing of a doctype.  The C{string}
+        the request, or L{None} to disable writing of a doctype.  The C{string}
         should not include a trailing newline and will default to the HTML5
         doctype C{'<!DOCTYPE html>'}.
 

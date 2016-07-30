@@ -9,7 +9,7 @@ from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner
 from twisted.python import failure
 
-from zope.interface import implements
+from zope.interface import implementer
 import errno
 
 from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
@@ -17,13 +17,12 @@ from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
 from twisted.internet.iocpreactor import iocpsupport as _iocp
 
 
-
+@implementer(interfaces.IPushProducer, interfaces.IConsumer,
+             interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
 class FileHandle(_ConsumerMixin, _LogOwner):
     """
     File handle that can read and write asynchronously
     """
-    implements(interfaces.IPushProducer, interfaces.IConsumer,
-               interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
     # read stuff
     maxReadBuffers = 16
     readBufferSize = 4096
@@ -82,8 +81,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             # we filled all buffers, so allocate one more
             elif (size == total_buffer_size and
                   len(self._readBuffers) < self.maxReadBuffers):
-                self._readBuffers.append(_iocp.AllocateReadBuffer(
-                                            self.readBufferSize))
+                self._readBuffers.append(bytearray(self.readBufferSize))
         self._readNextBuffer = 0
         self._readSize = 0
         return self.reading
@@ -311,7 +309,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self.reactor = reactor
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
-        self._readBuffers = [_iocp.AllocateReadBuffer(self.readBufferSize)]
+        self._readBuffers = [bytearray(self.readBufferSize)]
 
 
     def connectionLost(self, reason):
@@ -397,4 +395,3 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
 __all__ = ['FileHandle']
-

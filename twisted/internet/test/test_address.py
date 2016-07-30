@@ -11,10 +11,9 @@ from twisted.trial import unittest
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
+from twisted.python.runtime import platform
 
-try:
-    os.symlink
-except AttributeError:
+if not platform._supportsSymlinks():
     symlinkSkip = "Platform does not support symlinks"
 else:
     symlinkSkip = None
@@ -280,7 +279,8 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
                              UNIXAddress(linkName))
             self.assertEqual(UNIXAddress(linkName),
                              UNIXAddress(self._socketAddress))
-    test_comparisonOfLinkedFiles.skip = symlinkSkip
+    if not unixSkip:
+        test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_hashOfLinkedFiles(self):
@@ -288,18 +288,19 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         UNIXAddress Objects that compare as equal have the same hash value.
         """
         linkName = self.mktemp()
-        self.fd = open(self._socketAddress, 'w')
-        os.symlink(os.path.abspath(self._socketAddress), linkName)
-        self.assertEqual(hash(UNIXAddress(self._socketAddress)),
-                         hash(UNIXAddress(linkName)))
-    test_hashOfLinkedFiles.skip = symlinkSkip
+        with open(self._socketAddress, 'w') as self.fd:
+            os.symlink(os.path.abspath(self._socketAddress), linkName)
+            self.assertEqual(hash(UNIXAddress(self._socketAddress)),
+                            hash(UNIXAddress(linkName)))
+    if not unixSkip:
+        test_hashOfLinkedFiles.skip = symlinkSkip
 
 
 
 class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
                             AddressTestCaseMixin):
     """
-    Tests for L{UNIXAddress} operations involving a C{None} address.
+    Tests for L{UNIXAddress} operations involving a L{None} address.
     """
     skip = unixSkip
     addressArgSpec = (("name", "%r"),)
@@ -312,7 +313,7 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         """
         Create an arbitrary new L{UNIXAddress} instance.  A new instance is
         created for each call, but always for the same address. This builds it
-        with a fixed address of C{None}.
+        with a fixed address of L{None}.
         """
         return UNIXAddress(None)
 
@@ -326,7 +327,7 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
 
     def test_comparisonOfLinkedFiles(self):
         """
-        A UNIXAddress referring to a C{None} address does not compare equal to a
+        A UNIXAddress referring to a L{None} address does not compare equal to a
         UNIXAddress referring to a symlink.
         """
         linkName = self.mktemp()
@@ -336,13 +337,14 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
                                 UNIXAddress(None))
             self.assertNotEqual(UNIXAddress(None),
                                 UNIXAddress(self._socketAddress))
-    test_comparisonOfLinkedFiles.skip = symlinkSkip
+    if not unixSkip:
+        test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_emptyHash(self):
         """
         C{__hash__} can be used to get a hash of an address, even one referring
-        to C{None} rather than a real path.
+        to L{None} rather than a real path.
         """
         addr = self.buildAddress()
         d = {addr: True}

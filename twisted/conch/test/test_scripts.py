@@ -28,7 +28,7 @@ except ImportError:
 else:
     try:
         Tkinter.Tk().destroy()
-    except Tkinter.TclError, e:
+    except Tkinter.TclError as e:
         tkskip = "Can't test Tkinter: " + str(e)
     else:
         tkskip = None

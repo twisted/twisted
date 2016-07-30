@@ -69,8 +69,8 @@ if _PY3:
         Construct a bytes object representing a single byte with the given
         ordinal value.
 
-        @type ordinal: C{int}
-        @rtype: C{bytes}
+        @type ordinal: L{int}
+        @rtype: L{bytes}
         """
         return bytes([ordinal])
 
@@ -81,7 +81,7 @@ if _PY3:
         to an end user.
 
         @param bytes: The bytes to represent.
-        @rtype: C{str}
+        @rtype: L{str}
         """
         return repr(bytes)[1:]
 
@@ -92,7 +92,7 @@ if _PY3:
         presentation to an end user.
 
         @param list: The list of bytes to represent.
-        @rtype: C{str}
+        @rtype: L{str}
         """
         return '[%s]' % (
             ', '.join([_nicebytes(b) for b in list]),)
@@ -104,7 +104,8 @@ else:
 
 def randomSource():
     """
-    Wrapper around L{randbytes.secureRandom} to return 2 random chars.
+    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
+    2 random chars.
     """
     return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
 
@@ -195,7 +196,7 @@ EBADVERSION = 16
 
 class IRecord(Interface):
     """
-    An single entry in a zone of authority.
+    A single entry in a zone of authority.
     """
 
     TYPE = Attribute("An indicator of what kind of record this is.")
@@ -212,7 +213,7 @@ def _nameToLabels(name):
     """
     Split a domain name into its constituent labels.
 
-    @type name: C{str}
+    @type name: L{bytes}
     @param name: A fully qualified domain name (with or without a
         trailing dot).
 
@@ -244,10 +245,10 @@ def _isSubdomainOf(descendantName, ancestorName):
     C{descendantName} is considered a I{subdomain} if its sequence of
     labels ends with the labels of C{ancestorName}.
 
-    @type descendantName: C{bytes}
+    @type descendantName: L{bytes}
     @param descendantName: The DNS subdomain name.
 
-    @type ancestorName: C{bytes}
+    @type ancestorName: L{bytes}
     @param ancestorName: The DNS parent or ancestor domain name.
 
     @return: C{True} if C{descendantName} is equal to or if it is a
@@ -270,15 +271,19 @@ def str2time(s):
         (years).  For example: C{"3S"} indicates an interval of three seconds;
         C{"5D"} indicates an interval of five days.  Alternatively, C{s} may be
         any non-string and it will be returned unmodified.
-    @type s: text string (C{str}) for parsing; anything else for passthrough.
+    @type s: text string (L{bytes} or L{unicode}) for parsing; anything else
+        for passthrough.
 
-    @return: an C{int} giving the interval represented by the string C{s}, or
+    @return: an L{int} giving the interval represented by the string C{s}, or
         whatever C{s} is if it is not a string.
     """
     suffixes = (
         ('S', 1), ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
         ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
     )
+    if _PY3 and isinstance(s, bytes):
+        s = s.decode('ascii')
+
     if isinstance(s, str):
         s = s.upper().strip()
         for (suff, mult) in suffixes:
@@ -312,7 +317,7 @@ class IEncodable(Interface):
         @type strio: File-like object
         @param strio: The stream to which to write bytes
 
-        @type compDict: C{dict} or C{None}
+        @type compDict: C{dict} or L{None}
         @param compDict: A dictionary of backreference addresses that have
         already been written to this stream and that may be used for
         compression.
@@ -326,7 +331,7 @@ class IEncodable(Interface):
         @type strio: File-like object
         @param strio: The stream from which bytes may be read
 
-        @type length: C{int} or C{None}
+        @type length: L{int} or L{None}
         @param length: The number of bytes in this RDATA field.  Most
         implementations can ignore this value.  Only in the case of
         records similar to TXT where the total length is in no way
@@ -405,9 +410,13 @@ class Name:
     I{twistedmatrix.com}.
 
     @ivar name: A byte string giving the name.
-    @type name: C{bytes}
+    @type name: L{bytes}
     """
     def __init__(self, name=b''):
+        """
+        @param name: A name.
+        @type name: L{unicode} or L{bytes}
+        """
         if isinstance(name, unicode):
             name = name.encode('idna')
         if not isinstance(name, bytes):
@@ -491,13 +500,13 @@ class Name:
 
     def __eq__(self, other):
         if isinstance(other, Name):
-            return self.name == other.name
+            return self.name.lower() == other.name.lower()
         return NotImplemented
 
 
     def __ne__(self, other):
         if isinstance(other, Name):
-            return self.name != other.name
+            return self.name.lower() != other.name.lower()
         return NotImplemented
 
 
@@ -520,8 +529,13 @@ class Query:
     Represent a single DNS query.
 
     @ivar name: The name about which this query is requesting information.
+    @type name: L{Name}
+
     @ivar type: The query type.
+    @type type: L{int}
+
     @ivar cls: The query class.
+    @type cls: L{int}
     """
     name = None
     type = None
@@ -529,13 +543,13 @@ class Query:
 
     def __init__(self, name=b'', type=A, cls=IN):
         """
-        @type name: C{bytes}
-        @param name: The name about which to request information.
+        @type name: L{bytes} or L{unicode}
+        @param name: See L{Query.name}
 
-        @type type: C{int}
+        @type type: L{int}
         @param type: The query type.
 
-        @type cls: C{int}
+        @type cls: L{int}
         @param cls: The query class.
         """
         self.name = Name(name)
@@ -588,13 +602,13 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         attribute is a readonly property.
 
     @ivar type: The DNS record type. This is a fixed value of 41
-        (C{dns.OPT} for OPT Record. This attribute is a readonly
+        C{dns.OPT} for OPT Record. This attribute is a readonly
         property.
 
     @see: L{_OPTHeader.__init__} for documentation of other public
         instance attributes.
 
-    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -762,7 +776,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @see: L{_OPTVariableOption.__init__} for documentation of public
         instance attributes.
 
-    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -823,16 +837,23 @@ class RRHeader(tputil.FancyEqMixin):
     """
     A resource record header.
 
-    @cvar fmt: C{str} specifying the byte format of an RR.
+    @cvar fmt: L{str} specifying the byte format of an RR.
 
     @ivar name: The name about which this reply contains information.
-    @ivar type: The query type of the original request.
-    @ivar cls: The query class of the original request.
-    @ivar ttl: The time-to-live for this record.
-    @ivar payload: An object that implements the IEncodable interface
+    @type name: L{Name}
 
-    @ivar auth: A C{bool} indicating whether this C{RRHeader} was parsed from an
-        authoritative message.
+    @ivar type: The query type of the original request.
+    @type type: L{int}
+
+    @ivar cls: The query class of the original request.
+
+    @ivar ttl: The time-to-live for this record.
+    @type ttl: L{int}
+
+    @ivar payload: An object that implements the L{IEncodable} interface
+
+    @ivar auth: A L{bool} indicating whether this C{RRHeader} was parsed from
+        an authoritative message.
     """
     compareAttributes = ('name', 'type', 'cls', 'ttl', 'payload', 'auth')
 
@@ -847,18 +868,19 @@ class RRHeader(tputil.FancyEqMixin):
 
     cachedResponse = None
 
-    def __init__(self, name=b'', type=A, cls=IN, ttl=0, payload=None, auth=False):
+    def __init__(self, name=b'', type=A, cls=IN, ttl=0, payload=None,
+                 auth=False):
         """
-        @type name: C{bytes}
-        @param name: The name about which this reply contains information.
+        @type name: L{bytes} or L{unicode}
+        @param name: See L{RRHeader.name}
 
-        @type type: C{int}
+        @type type: L{int}
         @param type: The query type.
 
-        @type cls: C{int}
+        @type cls: L{int}
         @param cls: The query class.
 
-        @type ttl: C{int}
+        @type ttl: L{int}
         @param ttl: Time to live for this record.
 
         @type payload: An object implementing C{IEncodable}
@@ -921,7 +943,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @type name: L{Name}
     @ivar name: The name associated with this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -932,6 +954,10 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     name = None
 
     def __init__(self, name=b'', ttl=None):
+        """
+        @param name: See L{SimpleRecord.name}
+        @type name: L{bytes} or L{unicode}
+        """
         self.name = Name(name)
         self.ttl = str2time(ttl)
 
@@ -1057,11 +1083,11 @@ class Record_A(tputil.FancyEqMixin):
     """
     An IPv4 host address.
 
-    @type address: C{str}
+    @type address: L{bytes}
     @ivar address: The packed network-order representation of the IPv4 address
         associated with this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -1071,6 +1097,14 @@ class Record_A(tputil.FancyEqMixin):
     address = None
 
     def __init__(self, address='0.0.0.0', ttl=None):
+        """
+        @type address: L{bytes} or L{unicode}
+        @param address: The IPv4 address associated with this record, in
+            quad-dotted notation.
+        """
+        if _PY3 and isinstance(address, bytes):
+            address = address.decode('idna')
+
         address = socket.inet_aton(address)
         self.address = address
         self.ttl = str2time(ttl)
@@ -1114,28 +1148,28 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar rname: A domain-name which specifies the mailbox of the person
         responsible for this zone.
 
-    @type serial: C{int}
+    @type serial: L{int}
     @ivar serial: The unsigned 32 bit version number of the original copy of
         the zone.  Zone transfers preserve this value.  This value wraps and
         should be compared using sequence space arithmetic.
 
-    @type refresh: C{int}
+    @type refresh: L{int}
     @ivar refresh: A 32 bit time interval before the zone should be refreshed.
 
-    @type minimum: C{int}
+    @type minimum: L{int}
     @ivar minimum: The unsigned 32 bit minimum TTL field that should be
         exported with any RR from this zone.
 
-    @type expire: C{int}
+    @type expire: L{int}
     @ivar expire: A 32 bit time value that specifies the upper limit on the
         time interval that can elapse before the zone is no longer
         authoritative.
 
-    @type retry: C{int}
+    @type retry: L{int}
     @ivar retry: A 32 bit time interval that should elapse before a failed
         refresh should be retried.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The default TTL to use for records served from this zone.
     """
     fancybasename = 'SOA'
@@ -1146,6 +1180,13 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def __init__(self, mname=b'', rname=b'', serial=0, refresh=0, retry=0,
                  expire=0, minimum=0, ttl=None):
+        """
+        @param mname: See L{Record_SOA.mname}
+        @type mname: L{bytes} or L{unicode}
+
+        @param rname: See L{Record_SOA.rname}
+        @type rname: L{bytes} or L{unicode}
+        """
         self.mname, self.rname = Name(mname), Name(rname)
         self.serial, self.refresh = str2time(serial), str2time(refresh)
         self.minimum, self.expire = str2time(minimum), str2time(expire)
@@ -1188,7 +1229,7 @@ class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
     This is an experimental record type.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -1223,19 +1264,19 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     This record type is obsolete.  See L{Record_SRV}.
 
-    @type address: C{str}
+    @type address: L{bytes}
     @ivar address: The packed network-order representation of the IPv4 address
         associated with this record.
 
-    @type protocol: C{int}
+    @type protocol: L{int}
     @ivar protocol: The 8 bit IP protocol number for which this service map is
         relevant.
 
-    @type map: C{str}
+    @type map: L{bytes}
     @ivar map: A bitvector indicating the services available at the specified
         address.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -1247,7 +1288,15 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     _address = property(lambda self: socket.inet_ntoa(self.address))
 
-    def __init__(self, address='0.0.0.0', protocol=0, map='', ttl=None):
+    def __init__(self, address='0.0.0.0', protocol=0, map=b'', ttl=None):
+        """
+        @type address: L{bytes} or L{unicode}
+        @param address: The IPv4 address associated with this record, in
+            quad-dotted notation.
+        """
+        if _PY3 and isinstance(address, bytes):
+            address = address.decode('idna')
+
         self.address = socket.inet_aton(address)
         self.protocol, self.map = protocol, map
         self.ttl = str2time(ttl)
@@ -1275,11 +1324,11 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     An IPv6 host address.
 
-    @type address: C{str}
+    @type address: L{bytes}
     @ivar address: The packed network-order representation of the IPv6 address
         associated with this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
@@ -1294,6 +1343,13 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     _address = property(lambda self: socket.inet_ntop(AF_INET6, self.address))
 
     def __init__(self, address='::', ttl=None):
+        """
+        @type address: L{bytes} or L{unicode}
+        @param address: The IPv6 address for this host, in RFC 2373 format.
+        """
+        if _PY3 and isinstance(address, bytes):
+            address = address.decode('idna')
+
         self.address = socket.inet_pton(AF_INET6, address)
         self.ttl = str2time(ttl)
 
@@ -1318,20 +1374,20 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
     This is an experimental record type.
 
-    @type prefixLen: C{int}
+    @type prefixLen: L{int}
     @ivar prefixLen: The length of the suffix.
 
-    @type suffix: C{str}
+    @type suffix: L{bytes}
     @ivar suffix: An IPv6 address suffix in network order.
 
     @type prefix: L{Name}
     @ivar prefix: If specified, a name which will be used as a prefix for other
         A6 records.
 
-    @type bytes: C{int}
+    @type bytes: L{int}
     @ivar bytes: The length of the prefix.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
@@ -1348,6 +1404,16 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     _suffix = property(lambda self: socket.inet_ntop(AF_INET6, self.suffix))
 
     def __init__(self, prefixLen=0, suffix='::', prefix=b'', ttl=None):
+        """
+        @param suffix: An IPv6 address suffix in in RFC 2373 format.
+        @type suffix: L{bytes} or L{unicode}
+
+        @param prefix: An IPv6 address prefix for other A6 records.
+        @type prefix: L{bytes} or L{unicode}
+        """
+        if _PY3 and isinstance(suffix, bytes):
+            suffix = suffix.decode('idna')
+
         self.prefixLen = prefixLen
         self.suffix = socket.inet_pton(AF_INET6, suffix)
         self.prefix = Name(prefix)
@@ -1402,18 +1468,18 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     This is an experimental record type.
 
-    @type priority: C{int}
+    @type priority: L{int}
     @ivar priority: The priority of this target host.  A client MUST attempt to
         contact the target host with the lowest-numbered priority it can reach;
         target hosts with the same priority SHOULD be tried in an order defined
         by the weight field.
 
-    @type weight: C{int}
+    @type weight: L{int}
     @ivar weight: Specifies a relative weight for entries with the same
         priority. Larger weights SHOULD be given a proportionately higher
         probability of being selected.
 
-    @type port: C{int}
+    @type port: L{int}
     @ivar port: The port on this target host of this service.
 
     @type target: L{Name}
@@ -1424,7 +1490,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
         section.  Unless and until permitted by future standards action, name
         compression is not to be used for this field.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
@@ -1437,6 +1503,10 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     showAttributes = ('priority', 'weight', ('target', 'target', '%s'), 'port', 'ttl')
 
     def __init__(self, priority=0, weight=0, port=0, target=b'', ttl=None):
+        """
+        @param target: See L{Record_SRV.target}
+        @type target: L{bytes} or L{unicode}
+        """
         self.priority = int(priority)
         self.weight = int(weight)
         self.port = int(port)
@@ -1467,12 +1537,12 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
 
-    @type order: C{int}
+    @type order: L{int}
     @ivar order: An integer specifying the order in which the NAPTR records
         MUST be processed to ensure the correct ordering of rules.  Low numbers
         are processed before high numbers.
 
-    @type preference: C{int}
+    @type preference: L{int}
     @ivar preference: An integer that specifies the order in which NAPTR
         records with equal "order" values SHOULD be processed, low numbers
         being processed before high numbers.
@@ -1501,7 +1571,7 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
         records depending on the value of the flags field.  This MUST be a
         fully qualified domain-name.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
@@ -1517,8 +1587,12 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
                       ('service', 'service', '%s'), ('regexp', 'regexp', '%s'),
                       ('replacement', 'replacement', '%s'), 'ttl')
 
-    def __init__(self, order=0, preference=0, flags=b'', service=b'', regexp=b'',
-                 replacement=b'', ttl=None):
+    def __init__(self, order=0, preference=0, flags=b'', service=b'',
+                 regexp=b'', replacement=b'', ttl=None):
+        """
+        @param replacement: See L{Record_NAPTR.replacement}
+        @type replacement: L{bytes} or L{unicode}
+        """
         self.order = int(order)
         self.preference = int(preference)
         self.flags = Charstr(flags)
@@ -1562,7 +1636,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Map from a domain name to the name of an AFS cell database server.
 
-    @type subtype: C{int}
+    @type subtype: L{int}
     @ivar subtype: In the case of subtype 1, the host has an AFS version 3.0
         Volume Location Server for the named AFS cell.  In the case of subtype
         2, the host has an authenticated name server holding the cell-root
@@ -1572,7 +1646,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar hostname: The domain name of a host that has a server for the cell
         named by this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
@@ -1585,6 +1659,10 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = ('subtype', ('hostname', 'hostname', '%s'), 'ttl')
 
     def __init__(self, subtype=0, hostname=b'', ttl=None):
+        """
+        @param hostname: See L{Record_AFSDB.hostname}
+        @type hostname: L{bytes} or L{unicode}
+        """
         self.subtype = int(subtype)
         self.hostname = Name(hostname)
         self.ttl = str2time(ttl)
@@ -1619,7 +1697,7 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar txt: A domain name for which TXT RR's exist (indirection through
         which allows information sharing about the contents of this RP record).
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
@@ -1632,6 +1710,13 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     showAttributes = (('mbox', 'mbox', '%s'), ('txt', 'txt', '%s'), 'ttl')
 
     def __init__(self, mbox=b'', txt=b'', ttl=None):
+        """
+        @param mbox: See L{Record_RP.mbox}.
+        @type mbox: L{bytes} or L{unicode}
+
+        @param txt: See L{Record_RP.txt}
+        @type txt: L{bytes} or L{unicode}
+        """
         self.mbox = Name(mbox)
         self.txt = Name(txt)
         self.ttl = str2time(ttl)
@@ -1659,13 +1744,13 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Host information.
 
-    @type cpu: C{str}
+    @type cpu: L{bytes}
     @ivar cpu: Specifies the CPU type.
 
-    @type os: C{str}
+    @type os: L{bytes}
     @ivar os: Specifies the OS.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -1675,7 +1760,7 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (('cpu', _nicebytes), ('os', _nicebytes), 'ttl')
     compareAttributes = ('cpu', 'os', 'ttl')
 
-    def __init__(self, cpu='', os='', ttl=None):
+    def __init__(self, cpu=b'', os=b'', ttl=None):
         self.cpu, self.os = cpu, os
         self.ttl = str2time(ttl)
 
@@ -1723,7 +1808,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
         owner of the MINFO record.  If this domain name names the root, errors
         should be returned to the sender of the message.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -1739,6 +1824,13 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
                       'ttl')
 
     def __init__(self, rmailbx=b'', emailbx=b'', ttl=None):
+        """
+        @param rmailbx: See L{Record_MINFO.rmailbx}.
+        @type rmailbx: L{bytes} or L{unicode}
+
+        @param emailbx: See L{Record_MINFO.rmailbx}.
+        @type emailbx: L{bytes} or L{unicode}
+        """
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
         self.ttl = str2time(ttl)
 
@@ -1764,7 +1856,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Mail exchange.
 
-    @type preference: C{int}
+    @type preference: L{int}
     @ivar preference: Specifies the preference given to this RR among others at
         the same owner.  Lower values are preferred.
 
@@ -1772,7 +1864,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar name: A domain-name which specifies a host willing to act as a mail
         exchange.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
@@ -1783,7 +1875,12 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = ('preference', ('name', 'name', '%s'), 'ttl')
 
     def __init__(self, preference=0, name=b'', ttl=None, **kwargs):
-        self.preference, self.name = int(preference), Name(kwargs.get('exchange', name))
+        """
+        @param name: See L{Record_MX.name}.
+        @type name: L{bytes} or L{unicode}
+        """
+        self.preference = int(preference)
+        self.name = Name(kwargs.get('exchange', name))
         self.ttl = str2time(ttl)
 
     def encode(self, strio, compDict = None):
@@ -1806,10 +1903,10 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Freeform text.
 
-    @type data: C{list} of C{bytes}
+    @type data: L{list} of L{bytes}
     @ivar data: Freeform text which makes up this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
     TYPE = TXT
@@ -1855,10 +1952,10 @@ class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     Encapsulate the wire data for unknown record types so that they can
     pass through the system unchanged.
 
-    @type data: C{bytes}
+    @type data: L{bytes}
     @ivar data: Wire data which makes up this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
 
     @since: 11.1
@@ -1900,10 +1997,10 @@ class Record_SPF(Record_TXT):
     Structurally, freeform text. Semantically, a policy definition, formatted
     as defined in U{rfc 4408<http://www.faqs.org/rfcs/rfc4408.html>}.
 
-    @type data: C{list} of C{str}
+    @type data: L{list} of L{bytes}
     @ivar data: Freeform text which makes up this record.
 
-    @type ttl: C{int}
+    @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
     TYPE = SPF
@@ -2158,13 +2255,13 @@ class Message(tputil.FancyEqMixin):
         """
         Add another query to this Message.
 
-        @type name: C{bytes}
+        @type name: L{bytes}
         @param name: The name to query.
 
-        @type type: C{int}
+        @type type: L{int}
         @param type: Query type
 
-        @type cls: C{int}
+        @type cls: L{int}
         @param cls: Query class
         """
         self.queries.append(Query(name, type, cls))
@@ -2271,10 +2368,10 @@ class Message(tputil.FancyEqMixin):
         """
         Retrieve the L{IRecord} implementation for the given record type.
 
-        @param type: A record type, such as L{A} or L{NS}.
-        @type type: C{int}
+        @param type: A record type, such as C{A} or L{NS}.
+        @type type: L{int}
 
-        @return: An object which implements L{IRecord} or C{None} if none
+        @return: An object which implements L{IRecord} or L{None} if none
             can be found for the given type.
         @rtype: L{types.ClassType}
         """
@@ -2286,7 +2383,7 @@ class Message(tputil.FancyEqMixin):
         Encode this L{Message} into a byte string in the format described by RFC
         1035.
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         strio = BytesIO()
         self.encode(strio)
@@ -2361,10 +2458,10 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
         """
         Construct a new L{_EDNSMessage}
 
-        @see U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
-        @see U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
-        @see U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
-        @see U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
+        @see: U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+        @see: U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
+        @see: U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
+        @see: U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
 
         @param id: A 16 bit identifier assigned by the program that generates
             any kind of query.  This identifier is copied the corresponding
@@ -2413,7 +2510,7 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
 
         @param dnssecOK: DNSSEC OK bit as defined by
             U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
-        @type dnssecOK: C{bool}
+        @type dnssecOK: L{bool}
 
         @param authenticData: A flag indicating in a response that all the data
             included in the answer and authority portion of the response has
@@ -2541,14 +2638,14 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
     @classmethod
     def _fromMessage(cls, message):
         """
-        Construct and return a new L(_EDNSMessage} whose attributes and records
+        Construct and return a new L{_EDNSMessage} whose attributes and records
         are derived from the attributes and records of C{message} (a L{Message}
-        instance)
+        instance).
 
-        If present, an I{OPT} record will be extracted from the C{additional}
+        If present, an C{OPT} record will be extracted from the C{additional}
         section and its attributes and options will be used to set the EDNS
-        specific attributes C{extendedRCODE}, c{ednsVersion}, c{dnssecOK},
-        c{ednsOptions}.
+        specific attributes C{extendedRCODE}, C{ednsVersion}, C{dnssecOK},
+        C{ednsOptions}.
 
         The C{extendedRCODE} will be combined with C{message.rCode} and assigned
         to C{self.rCode}.
@@ -2656,13 +2753,13 @@ class DNSMixin(object):
         """
         Send out a message with the given queries.
 
-        @type queries: C{list} of C{Query} instances
+        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @type timeout: C{int} or C{float}
+        @type timeout: L{int} or C{float}
         @param timeout: How long to wait before giving up
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: Unique key for this request
 
         @type writeMessage: C{callable}
@@ -2776,10 +2873,10 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         """
         Send out a message with the given queries.
 
-        @type address: C{tuple} of C{str} and C{int}
+        @type address: L{tuple} of L{str} and L{int}
         @param address: The address to which to send the query
 
-        @type queries: C{list} of C{Query} instances
+        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
         @rtype: C{Deferred}
@@ -2870,7 +2967,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         """
         Send out a message with the given queries.
 
-        @type queries: C{list} of C{Query} instances
+        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
         @rtype: C{Deferred}

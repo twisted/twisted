@@ -8,7 +8,7 @@ Reactor that uses IO completion ports
 
 import warnings, socket, sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import base, interfaces, main, error
 from twisted.python import log, failure
@@ -45,11 +45,12 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 
 
+@implementer(interfaces.IReactorTCP, interfaces.IReactorUDP,
+             interfaces.IReactorMulticast, interfaces.IReactorProcess,
+             *_extraInterfaces)
 class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
                   _ThreadedWin32EventsMixin):
-    implements(interfaces.IReactorTCP, interfaces.IReactorUDP,
-               interfaces.IReactorMulticast, interfaces.IReactorProcess,
-               *_extraInterfaces)
+
 
     port = None
 
@@ -270,4 +271,3 @@ def install():
 
 
 __all__ = ['IOCPReactor', 'install']
-

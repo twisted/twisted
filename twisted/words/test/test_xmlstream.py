@@ -5,6 +5,8 @@
 Tests for L{twisted.words.xish.xmlstream}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.internet import protocol
 from twisted.python import failure
 from twisted.trial import unittest
@@ -33,8 +35,8 @@ class XmlStreamTests(unittest.TestCase):
         to the transport.
         """
         self.xmlstream.connectionMade()
-        self.xmlstream.send("<root>")
-        self.assertEqual(self.outlist[0], "<root>")
+        self.xmlstream.send(b"<root>")
+        self.assertEqual(self.outlist[0], b"<root>")
 
 
     def test_receiveRoot(self):

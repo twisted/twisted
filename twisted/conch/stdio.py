@@ -29,21 +29,44 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         self.onConnection.callback(None)
         self.onConnection = None
 
-    def write(self, bytes):
-        self.transport.write(bytes)
 
-    def outReceived(self, bytes):
-        self.proto.dataReceived(bytes)
+    def write(self, data):
+        """
+        Write to the terminal.
 
-    def errReceived(self, bytes):
+        @param data: Data to write.
+        @type data: L{bytes}
+        """
+        self.transport.write(data)
+
+
+    def outReceived(self, data):
+        """
+        Receive data from the terminal.
+
+        @param data: Data received.
+        @type data: L{bytes}
+        """
+        self.proto.dataReceived(data)
+
+
+    def errReceived(self, data):
+        """
+        Report an error.
+
+        @param data: Data to include in L{Failure}.
+        @type data: L{bytes}
+        """
         self.transport.loseConnection()
         if self.proto is not None:
-            self.proto.connectionLost(failure.Failure(UnexpectedOutputError(bytes)))
+            self.proto.connectionLost(failure.Failure(UnexpectedOutputError(data)))
             self.proto = None
+
 
     def childConnectionLost(self, childFD):
         if self.proto is not None:
             self.proto.childConnectionLost(childFD)
+
 
     def processEnded(self, reason):
         if self.proto is not None:
@@ -75,12 +98,12 @@ def runWithProtocol(klass):
         reactor.run()
     finally:
         termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
-        os.write(fd, "\r\x1bc\r")
+        os.write(fd, b"\r\x1bc\r")
 
 
 
 def main(argv=None):
-    log.startLogging(file('child.log', 'w'))
+    log.startLogging(open('child.log', 'w'))
 
     if argv is None:
         argv = sys.argv[1:]

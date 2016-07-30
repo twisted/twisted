@@ -99,6 +99,94 @@ implemented like this:
 .. note::
    If you've used ``ClientFactory`` before, keep in mind that the ``connect`` method takes a ``Factory``, not a ``ClientFactory``.
    Even if you pass a ``ClientFactory`` to ``endpoint.connect``, its ``clientConnectionFailed`` and ``clientConnectionLost`` methods will not be called.
+   In particular, clients that extend ``ReconnectingClientFactory`` won't reconnect. The next section describes how to set up reconnecting clients on endpoints.
+
+
+Persistent Client Connections
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:api:`twisted.application.internet.ClientService` can maintain a persistent outgoing connection to a server which can be started and stopped along with your application.
+
+One popular protocol to maintain a long-lived client connection to is IRC, so for an example of ``ClientService``, here's how you would make a long-lived encrypted connection to an IRC server (other details, like how to authenticate, omitted for brevity):
+
+.. code-block:: python
+
+   from twisted.internet.protocol import Factory
+   from twisted.internet.endpoints import clientFromString
+   from twisted.words.protocols.irc import IRCClient
+   from twisted.application.internet import ClientService
+   from twisted.internet import reactor
+
+   myEndpoint = clientFromString(reactor, "tls:example.com:6997")
+   myFactory = Factory.forProtocol(IRCClient)
+
+   myReconnectingService = ClientService(myEndpoint, myFactory)
+
+If you already have a parent service, you can add the reconnecting service as a child service:
+
+.. code-block:: python
+
+   parentService.addService(myReconnectingService)
+
+If you do not have a parent service, you can start and stop the reconnecting service using its ``startService`` and ``stopService`` methods.
+
+``ClientService.stopService`` returns a ``Deferred`` that fires once the current connection closes or the current connection attempt is cancelled.
+
+
+Getting The Active Client
+-------------------------
+
+When maintaining a long-lived connection, it's often useful to be able to get the current connection (if the connection is active) or wait for the next connection (if a connection attempt is currently in progress).
+For example, we might want to pass our ``ClientService`` from the previous example to some code that can send IRC notifications in response to some external event.
+The ``ClientService.whenConnected`` method returns a ``Deferred`` that fires with the next available ``Protocol`` instance.
+You can use it like so:
+
+.. code-block:: python
+
+    waitForConnection = myReconnectingService.whenConnected()
+    def connectedNow(clientForIRC):
+        clientForIRC.say("#bot-test", "hello, world!")
+    waitForConnection.addCallback(connectedNow)
+
+Keep in mind that you may need to wrap this up for your particular application, since when no existing connection is available, the callback is executed just as soon as the connection is established.
+For example, that little snippet is slightly oversimplified: at the time ``connectedNow`` is run, the bot hasn't authenticated or joined the channel yet, so its message will be refused.
+A real-life IRC bot would need to have its own method for waiting until the connection is fully ready for chat before chatting.
+
+Retry Policies
+--------------
+
+``ClientService`` will immediately attempt an outgoing connection when ``startService`` is called.
+If that connection attempt fails for any reason (name resolution, connection refused, network unreachable, and so on), it will retry according to the policy specified in the ``retryPolicy`` constructor argument.
+By default, ``ClientService`` will use an exponential backoff algorithm with a minimum delay of 1 second and a maximum delay of 1 minute, and a jitter of up to 1 additional second to prevent stampeding-herd performance cascades.
+This is a good default, and if you do not have highly specialized requirements, you probably want to use it.
+If you need to tune these parameters, you have two options:
+
+1. You can pass your own timeout policy to ``ClientService``'s constructor.
+   A timeout policy is a callable that takes the number of failed attempts, and computes a delay until the next connection attempt.
+   So, for example, if you are *really really sure* that you want to reconnect *every single second* if the service you are talking to goes down, you can do this:
+
+   .. code-block:: python
+
+      myReconnectingService = ClientService(myEndpoint, myFactory, retryPolicy=lambda ignored: 1)
+
+   Of course, unless you have only one client and only one server and they're both on localhost, this sort of policy is likely to cause massive performance degradation and thundering herd resource contention in the event of your server's failure, so you probably want to take the second option...
+
+2. You can tweak the default exponential backoff policy with a few parameters by passing the result of :api:`twisted.application.internet.backoffPolicy` to the ``retryPolicy`` argument.
+   For example, if you want to make it triple the delay between attempts, but start with a faster connection interval (half a second instead of one second), you could do it like so:
+
+   .. code-block:: python
+
+      myReconnectingService = ClientService(
+          myEndpoint, myFactory,
+          retryPolicy=backoffPolicy(initialDelay=0.5, factor=3.0)
+      )
+
+.. note::
+
+   Before endpoints, reconnecting clients were created as subclasses of ``ReconnectingClientFactory``.
+   These subclasses were required to call ``resetDelay``.
+   One of the many advantages of using endpoints is that these special subclasses are no longer needed.
+   ``ClientService`` accepts ordinary ``IProtocolFactory`` providers.
 
 
 Maximizing the Return on your Endpoint Investment
@@ -265,3 +353,10 @@ systemd
    For example, ``systemd:domain=INET6:index=3``.
 
    See also :doc:`Deploying Twisted with systemd <systemd>`.
+
+PROXY
+  The PROXY protocol is a stream wrapper and can be applied any of the other server endpoints by placing ``haproxy:`` in front of a normal port definition.
+
+  For example, ``haproxy:tcp:port=80:interface=192.168.1.1`` or ``haproxy:ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
+
+  The PROXY protocol provides a way for load balancers and reverse proxies to send down the real IP of a connection's source and destination without relying on X-Forwarded-For headers. A Twisted service using this endpoint wrapper must run behind a service that sends valid PROXY protocol headers. For more on the protocol see `the formal specification <http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>`_. Both version one and two of the protocol are currently supported.

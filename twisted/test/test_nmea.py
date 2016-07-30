@@ -27,7 +27,7 @@ class ResultHarvester:
         l = len(self.results)
         try:
             function(*args, **kwargs)
-        except Exception, e:
+        except Exception as e:
             self.results.append(e)
         if l == len(self.results):
             self.results.append(NotImplementedError())

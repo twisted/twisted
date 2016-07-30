@@ -65,6 +65,8 @@ from zope.interface import implementer, implementer_only, implementedBy
 from twisted.internet import tcp, interfaces
 
 
+
+@implementer(interfaces.IOpenSSLContextFactory)
 class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
 
@@ -75,6 +77,7 @@ class ContextFactory:
         raise NotImplementedError
 
 
+
 class DefaultOpenSSLContextFactory(ContextFactory):
     """
     L{DefaultOpenSSLContextFactory} is a factory for server-side SSL context
@@ -82,7 +85,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
     handshakes and the subsequent connection.
 
     @ivar _contextFactory: A callable which will be used to create new
-        context objects.  This is typically L{SSL.Context}.
+        context objects.  This is typically L{OpenSSL.SSL.Context}.
     """
     _context = None
 
@@ -132,6 +135,8 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         return self._context
 
 
+
+@implementer(interfaces.IOpenSSLContextFactory)
 class ClientContextFactory:
     """A context factory for SSL clients."""
 

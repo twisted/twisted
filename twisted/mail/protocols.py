@@ -13,18 +13,17 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
 from twisted.python import log
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
-
+    
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 
 from twisted.mail import relay
 
-from zope.interface import implements
+from zope.interface import implementer
 
 
 
+@implementer(smtp.IMessageDelivery)
 class DomainDeliveryBase:
     """
     A base class for message delivery using the domains of a mail service.
@@ -37,8 +36,6 @@ class DomainDeliveryBase:
     @ivar protocolName: The protocol being used to deliver the mail.
         Sub-classes should set this appropriately.
     """
-    implements(smtp.IMessageDelivery)
-
     service = None
     protocolName = None
 
@@ -47,7 +44,7 @@ class DomainDeliveryBase:
         @type service: L{MailService}
         @param service: A mail service.
 
-        @type user: L{bytes} or L{NoneType <types.NoneType>}
+        @type user: L{bytes} or L{None}
         @param user: The authenticated SMTP user.
 
         @type host: L{bytes}
@@ -166,8 +163,8 @@ class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
         Initialize the SMTP server.
 
         @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{NoneType <types.NoneType>}, L{IMessageDeliveryFactory}
-            provider or L{NoneType <types.NoneType>})
+            L{None}, L{IMessageDeliveryFactory}
+            provider or L{None})
         @param args: Positional arguments for L{SMTP.__init__}
 
         @type kw: L{dict}
@@ -195,8 +192,8 @@ class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
         Initialize the ESMTP server.
 
         @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{NoneType <types.NoneType>}, L{IMessageDeliveryFactory}
-            provider or L{NoneType <types.NoneType>})
+            L{None}, L{IMessageDeliveryFactory}
+            provider or L{None})
         @param args: Positional arguments for L{ESMTP.__init__}
 
         @type kw: L{dict}
@@ -234,7 +231,7 @@ class SMTPFactory(smtp.SMTPFactory):
         @param service: An email service.
 
         @type portal: L{Portal <twisted.cred.portal.Portal>} or
-            L{NoneType <types.NoneType>}
+            L{None}
         @param portal: A portal to use for authentication.
         """
         smtp.SMTPFactory.__init__(self)
@@ -269,8 +266,8 @@ class ESMTPFactory(SMTPFactory):
     @ivar protocol: A callable which creates a protocol.  The default value is
         L{ESMTP}.
 
-    @type context: L{ContextFactory <twisted.internet.ssl.ContextFactory>} or
-        L{NoneType <types.NoneType>}
+    @type context: L{IOpenSSLContextFactory
+        <twisted.internet.interfaces.IOpenSSLContextFactory>} or L{None}
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 
@@ -457,48 +454,3 @@ class POP3Factory(protocol.ServerFactory):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.service = self.service
         return p
-
-
-
-# It is useful to know, perhaps, that the required file for this to work can
-# be created thusly:
-#
-# openssl req -x509 -newkey rsa:2048 -keyout file.key -out file.crt \
-# -days 365 -nodes
-#
-# And then cat file.key and file.crt together.  The number of days and bits
-# can be changed, of course.
-#
-class SSLContextFactory:
-    """
-    An SSL context factory.
-
-    @ivar filename: See L{__init__}
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 12, 2, 0),
-        "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
-        "twisted.mail.protocols", "SSLContextFactory")
-
-    def __init__(self, filename):
-        """
-        @type filename: L{bytes}
-        @param filename: The name of a file containing a certificate and
-            private key.
-        """
-        self.filename = filename
-
-
-    def getContext(self):
-        """
-        Create an SSL context.
-
-        @rtype: C{OpenSSL.SSL.Context}
-        @return: An SSL context configured with the certificate and private key
-            from the file.
-        """
-        from OpenSSL import SSL
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file(self.filename)
-        ctx.use_privatekey_file(self.filename)
-        return ctx

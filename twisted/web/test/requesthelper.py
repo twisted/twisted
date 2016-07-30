@@ -53,6 +53,9 @@ class DummyChannel:
         def registerProducer(self, producer, streaming):
             self.producers.append((producer, streaming))
 
+        def unregisterProducer(self):
+            pass
+
         def loseConnection(self):
             self.disconnected = True
 
@@ -71,13 +74,59 @@ class DummyChannel:
         pass
 
 
+    def writeHeaders(self, version, code, reason, headers):
+        response_line = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [response_line]
+        headerSequence.extend(
+            name + b': ' + value + b"\r\n" for name, value in headers
+        )
+        headerSequence.append(b"\r\n")
+        self.transport.writeSequence(headerSequence)
+
+
+    def getPeer(self):
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        return self.transport.getHost()
+
+
+    def registerProducer(self, producer, streaming):
+        self.transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        self.transport.unregisterProducer()
+
+
+    def write(self, data):
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        self.transport.writeSequence(iovec)
+
+
+    def loseConnection(self):
+        self.transport.loseConnection()
+
+
+    def endRequest(self):
+        pass
+
+
+    def isSecure(self):
+        return isinstance(self.transport, self.SSL)
+
+
 
 class DummyRequest(object):
     """
     Represents a dummy or fake request. See L{twisted.web.server.Request}.
 
-    @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
-        be called back with C{None} when C{finish} is called or which will be
+    @ivar _finishedDeferreds: L{None} or a C{list} of L{Deferreds} which will
+        be called back with L{None} when C{finish} is called or which will be
         errbacked if C{processingFailed} is called.
 
     @type requestheaders: C{Headers}
@@ -152,7 +201,7 @@ class DummyRequest(object):
         @param name: The name of the request header for which to retrieve the
             value.  Header names are compared case-insensitively.
 
-        @rtype: C{bytes} or L{NoneType}
+        @rtype: C{bytes} or L{None}
         @return: The value of the specified request header.
         """
         return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]
@@ -200,7 +249,7 @@ class DummyRequest(object):
 
     def notifyFinish(self):
         """
-        Return a L{Deferred} which is called back with C{None} when the request
+        Return a L{Deferred} which is called back with L{None} when the request
         is finished.  This will probably only work if you haven't called
         C{finish} yet.
         """
@@ -258,7 +307,7 @@ class DummyRequest(object):
     def getClientIP(self):
         """
         Return the IPv4 address of the client which made this request, if there
-        is one, otherwise C{None}.
+        is one, otherwise L{None}.
         """
         if isinstance(self.client, IPv4Address):
             return self.client.host
