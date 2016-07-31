@@ -34,7 +34,7 @@ matrix:
     - python: 2.7
       env: TOXENV=py27-release
     - python: 3.5
-      env: TOXENV=py27-release
+      env: TOXENV=py35-release
     #
     # OSX 10.10
     #
