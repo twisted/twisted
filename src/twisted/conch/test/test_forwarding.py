@@ -5,6 +5,8 @@
 Tests for L{twisted.conch.ssh.forwarding}.
 """
 
+from __future__ import division, absolute_import
+
 from socket import AF_INET6
 
 from twisted.conch.ssh import forwarding

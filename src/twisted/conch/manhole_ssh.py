@@ -88,7 +88,7 @@ class TerminalUser(avatar.ConchUser, components.Adapter):
     def __init__(self, original, avatarId):
         components.Adapter.__init__(self, original)
         avatar.ConchUser.__init__(self)
-        self.channelLookup['session'] = session.SSHSession
+        self.channelLookup[b'session'] = session.SSHSession
 
 
 

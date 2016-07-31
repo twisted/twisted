@@ -235,7 +235,7 @@ class SRVConnectorTests(unittest.TestCase):
         """
         pickServer calculates running sum of weights and calls randint.
 
-        This excercises the server selection algorithm specified in RFC 2782 by
+        This exercises the server selection algorithm specified in RFC 2782 by
         preparing fake L{random.randint} results and checking the values it was
         called with.
         """

@@ -17,7 +17,7 @@ from .._global import globalLogPublisher
 
 class TestLogger(Logger):
     """
-    L{Logger} with an overriden C{emit} method that keeps track of received
+    L{Logger} with an overridden C{emit} method that keeps track of received
     events.
     """
 

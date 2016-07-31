@@ -523,7 +523,7 @@ class OpenSSHClientMixin:
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
         d = getProcessValue(
-            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+            which('ssh')[0], ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
         def hasPAKT(status):
             if status == 0:
                 opts = '-oPubkeyAcceptedKeyTypes=ssh-dss '
@@ -545,7 +545,7 @@ class OpenSSHClientMixin:
                        ' 127.0.0.1 ' + remoteCommand
             port = self.conchServer.getHost().port
             cmds = (cmdline % port).split()
-            reactor.spawnProcess(process, "ssh", cmds)
+            reactor.spawnProcess(process, which('ssh')[0], cmds)
             return process.deferred
         return d.addCallback(hasPAKT)
 

@@ -201,7 +201,7 @@ def getConnectError(e):
 
     if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
         # Only works in 2.2 in newer. Really that means always; #5978 covers
-        # this and other wierdnesses in this function.
+        # this and other weirdnesses in this function.
         klass = UnknownHostError
     else:
         klass = errnoMapping.get(number, ConnectError)
