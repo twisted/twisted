@@ -32,7 +32,7 @@ class ClassParserTests(unittest.TestCase):
 
     def setUp(self):
         """
-        Create a ident client used in tests.
+        Create an ident client used in tests.
         """
         self.client = ident.IdentClient()
 

@@ -525,8 +525,7 @@ class ResolvConfHandlingTests(unittest.TestCase):
 
     def test_empty(self):
         resolvConf = self.mktemp()
-        fObj = open(resolvConf, 'w')
-        fObj.close()
+        open(resolvConf, 'w').close()
         r = client.Resolver(resolv=resolvConf)
         self.assertEqual(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()

@@ -68,8 +68,6 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
 
 
     def __init__(self, username, onConn):
-        self.ctx = ssl.ClientContextFactory()
-
         self.username = username
         self.onConn = onConn
 
@@ -85,7 +83,7 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
         assert not self.usedUp
         self.usedUp = True
 
-        p = self.protocol(self.ctx)
+        p = self.protocol()
         p.factory = self
         p.greetDeferred = self.onConn
 

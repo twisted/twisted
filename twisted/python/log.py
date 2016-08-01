@@ -509,7 +509,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
         Format the given UTC value as a string representing that time in the
         local timezone.
 
-        By default it's formatted as a ISO8601-like string (ISO8601 date and
+        By default it's formatted as an ISO8601-like string (ISO8601 date and
         ISO8601 time separated by a space). It can be customized using the
         C{timeFormat} attribute, which will be used as input for the underlying
         L{datetime.datetime.strftime} call.

@@ -2479,7 +2479,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
     def test_name(self):
         """
-        L{dns._OPTHeader.name} is a instance attribute whose value is
+        L{dns._OPTHeader.name} is an instance attribute whose value is
         fixed as the root domain
         """
         self.assertEqual(dns._OPTHeader().name, dns.Name(b''))

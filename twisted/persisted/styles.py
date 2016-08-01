@@ -38,8 +38,8 @@ else:
     class _UniversalPicklingError(pickle.PicklingError,
                                   cPickle.PicklingError):
         """
-        An PicklingException catchable by both L{cPickle.PicklingException}
-        and L{pickle.PicklingException} handlers.
+        A PicklingError catchable by both L{cPickle.PicklingError} and
+        L{pickle.PicklingError} handlers.
         """
 
 

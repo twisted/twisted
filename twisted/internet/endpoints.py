@@ -2034,7 +2034,7 @@ class _TLSClientEndpointParser(object):
         Redirects to another function L{_parseClientTLS}; tricks zope.interface
         into believing the interface is correctly implemented, since the
         signature is (C{reactor}, C{*args}, C{**kwargs}).  See
-        L{_parseClientTLS} for an the specific signature description for this
+        L{_parseClientTLS} for the specific signature description for this
         endpoint parser.
 
         @param reactor: The reactor passed to L{clientFromString}.

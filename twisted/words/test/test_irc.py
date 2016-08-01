@@ -1039,7 +1039,7 @@ class CTCPTests(unittest.TestCase):
                        'EOL': irc.CR + irc.LF})
 
         errReply = ("NOTICE nick :%(X)cERRMSG t :"
-                    "No error has occoured.%(X)c%(EOL)s"
+                    "No error has occurred.%(X)c%(EOL)s"
                     % {'X': irc.X_DELIM,
                        'EOL': irc.CR + irc.LF})
 
@@ -1981,7 +1981,7 @@ class ClientMsgTests(unittest.TestCase):
 
     def test_sufficientWidth(self):
         """
-        Messages exactly equal in length to the C{length} paramtere to
+        Messages exactly equal in length to the C{length} parameter to
         L{IRCClient.msg} are sent in a single command.
         """
         msg = 'barbazbo'

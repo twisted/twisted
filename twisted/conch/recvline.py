@@ -15,6 +15,7 @@ from zope.interface import implementer
 from twisted.conch.insults import insults, helper
 
 from twisted.python import log, reflect
+from twisted.python.compat import iterbytes
 
 _counters = {}
 class Logging(object):
@@ -29,13 +30,16 @@ class Logging(object):
         key = reflect.qual(original.__class__)
         count = _counters.get(key, 0)
         _counters[key] = count + 1
-        self._logFile = file(key + '-' + str(count), 'w')
+        self._logFile = open(key + '-' + str(count), 'w')
+
 
     def __str__(self):
         return str(super(Logging, self).__getattribute__('original'))
 
+
     def __repr__(self):
         return repr(super(Logging, self).__getattribute__('original'))
+
 
     def __getattribute__(self, name):
         original = super(Logging, self).__getattribute__('original')
@@ -56,14 +60,16 @@ class TransportSequence(object):
     the server process.
     """
 
-    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
-                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12'):
-        exec('%s = object()' % (keyID,))
+    for keyID in (b'UP_ARROW', b'DOWN_ARROW', b'RIGHT_ARROW', b'LEFT_ARROW',
+                  b'HOME', b'INSERT', b'DELETE', b'END', b'PGUP', b'PGDN',
+                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8', b'F9',
+                  b'F10', b'F11', b'F12'):
+        execBytes = keyID + b" = object()"
+        execStr = execBytes.decode("ascii")
+        exec(execStr)
 
-    TAB = '\t'
-    BACKSPACE = '\x7f'
+    TAB = b'\t'
+    BACKSPACE = b'\x7f'
 
     def __init__(self, *transports):
         assert transports, "Cannot construct a TransportSequence with no transports"
@@ -76,6 +82,8 @@ def %s(self, *a, **kw):
         result = tpt.%s(*a, **kw)
     return result
 """ % (method, method))
+
+
 
 class LocalTerminalBufferMixin(object):
     """A mixin for RecvLine subclasses which records the state of the terminal.
@@ -94,8 +102,11 @@ class LocalTerminalBufferMixin(object):
         return super(LocalTerminalBufferMixin, self).makeConnection(
             TransportSequence(transport, self.terminalCopy))
 
+
     def __str__(self):
         return str(self.terminalCopy)
+
+
 
 class RecvLine(insults.TerminalProtocol):
     """L{TerminalProtocol} which adds line editing features.
@@ -116,9 +127,9 @@ class RecvLine(insults.TerminalProtocol):
 
     TABSTOP = 4
 
-    ps = ('>>> ', '... ')
+    ps = (b'>>> ', b'... ')
     pn = 0
-    _printableChars = set(string.printable)
+    _printableChars = string.printable.encode("ascii")
 
     def connectionMade(self):
         # A list containing the characters making up the current line
@@ -137,8 +148,8 @@ class RecvLine(insults.TerminalProtocol):
 
             # Both of these should not be necessary, but figuring out
             # which is necessary is a huge hassle.
-            '\r': self.handle_RETURN,
-            '\n': self.handle_RETURN,
+            b'\r': self.handle_RETURN,
+            b'\n': self.handle_RETURN,
 
             t.BACKSPACE: self.handle_BACKSPACE,
             t.DELETE: self.handle_DELETE,
@@ -147,6 +158,7 @@ class RecvLine(insults.TerminalProtocol):
             t.END: self.handle_END}
 
         self.initializeScreen()
+
 
     def initializeScreen(self):
         # Hmm, state sucks.  Oh well.
@@ -164,24 +176,29 @@ class RecvLine(insults.TerminalProtocol):
         # self.setTypeoverMode()
         self.setInsertMode()
 
+
     def currentLineBuffer(self):
-        s = ''.join(self.lineBuffer)
+        s = b''.join(self.lineBuffer)
         return s[:self.lineBufferIndex], s[self.lineBufferIndex:]
+
 
     def setInsertMode(self):
         self.mode = 'insert'
         self.terminal.setModes([insults.modes.IRM])
 
+
     def setTypeoverMode(self):
         self.mode = 'typeover'
         self.terminal.resetModes([insults.modes.IRM])
+
 
     def drawInputLine(self):
         """
         Write a line containing the current input prompt and the current line
         buffer at the current cursor position.
         """
-        self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+        self.terminal.write(self.ps[self.pn] + b''.join(self.lineBuffer))
+
 
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new
@@ -192,8 +209,10 @@ class RecvLine(insults.TerminalProtocol):
         self.height = height
         self.drawInputLine()
 
+
     def unhandledControlSequence(self, seq):
         pass
+
 
     def keystrokeReceived(self, keyID, modifier):
         m = self.keyHandlers.get(keyID)
@@ -204,6 +223,7 @@ class RecvLine(insults.TerminalProtocol):
         else:
             log.msg("Received unhandled keyID: %r" % (keyID,))
 
+
     def characterReceived(self, ch, moreCharactersComing):
         if self.mode == 'insert':
             self.lineBuffer.insert(self.lineBufferIndex, ch)
@@ -212,32 +232,38 @@ class RecvLine(insults.TerminalProtocol):
         self.lineBufferIndex += 1
         self.terminal.write(ch)
 
+
     def handle_TAB(self):
         n = self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)
         self.terminal.cursorForward(n)
         self.lineBufferIndex += n
         self.lineBuffer.extend(' ' * n)
 
+
     def handle_LEFT(self):
         if self.lineBufferIndex > 0:
             self.lineBufferIndex -= 1
             self.terminal.cursorBackward()
+
 
     def handle_RIGHT(self):
         if self.lineBufferIndex < len(self.lineBuffer):
             self.lineBufferIndex += 1
             self.terminal.cursorForward()
 
+
     def handle_HOME(self):
         if self.lineBufferIndex:
             self.terminal.cursorBackward(self.lineBufferIndex)
             self.lineBufferIndex = 0
+
 
     def handle_END(self):
         offset = len(self.lineBuffer) - self.lineBufferIndex
         if offset:
             self.terminal.cursorForward(offset)
             self.lineBufferIndex = len(self.lineBuffer)
+
 
     def handle_BACKSPACE(self):
         if self.lineBufferIndex > 0:
@@ -246,17 +272,20 @@ class RecvLine(insults.TerminalProtocol):
             self.terminal.cursorBackward()
             self.terminal.deleteCharacter()
 
+
     def handle_DELETE(self):
         if self.lineBufferIndex < len(self.lineBuffer):
             del self.lineBuffer[self.lineBufferIndex]
             self.terminal.deleteCharacter()
 
+
     def handle_RETURN(self):
-        line = ''.join(self.lineBuffer)
+        line = b''.join(self.lineBuffer)
         self.lineBuffer = []
         self.lineBufferIndex = 0
         self.terminal.nextLine()
         self.lineReceived(line)
+
 
     def handle_INSERT(self):
         assert self.mode in ('typeover', 'insert')
@@ -265,11 +294,15 @@ class RecvLine(insults.TerminalProtocol):
         else:
             self.setTypeoverMode()
 
+
     def lineReceived(self, line):
         pass
 
+
+
 class HistoricRecvLine(RecvLine):
-    """L{TerminalProtocol} which adds both basic line-editing features and input history.
+    """
+    L{TerminalProtocol} which adds both basic line-editing features and input history.
 
     Everything supported by L{RecvLine} is also supported by this class.  In addition, the
     up and down arrows traverse the input history.  Each received line is automatically
@@ -285,15 +318,18 @@ class HistoricRecvLine(RecvLine):
         self.keyHandlers.update({t.UP_ARROW: self.handle_UP,
                                  t.DOWN_ARROW: self.handle_DOWN})
 
+
     def currentHistoryBuffer(self):
         b = tuple(self.historyLines)
         return b[:self.historyPosition], b[self.historyPosition:]
 
+
     def _deliverBuffer(self, buf):
         if buf:
-            for ch in buf[:-1]:
+            for ch in iterbytes(buf[:-1]):
                 self.characterReceived(ch, True)
-            self.characterReceived(buf[-1], False)
+            self.characterReceived(buf[-1:], False)
+
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
@@ -306,6 +342,7 @@ class HistoricRecvLine(RecvLine):
             self.lineBuffer = []
 
             self._deliverBuffer(self.historyLines[self.historyPosition])
+
 
     def handle_DOWN(self):
         if self.historyPosition < len(self.historyLines) - 1:
@@ -324,8 +361,9 @@ class HistoricRecvLine(RecvLine):
             self.lineBuffer = []
             self.lineBufferIndex = 0
 
+
     def handle_RETURN(self):
         if self.lineBuffer:
-            self.historyLines.append(''.join(self.lineBuffer))
+            self.historyLines.append(b''.join(self.lineBuffer))
         self.historyPosition = len(self.historyLines)
         return RecvLine.handle_RETURN(self)

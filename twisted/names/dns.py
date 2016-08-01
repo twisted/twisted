@@ -196,7 +196,7 @@ EBADVERSION = 16
 
 class IRecord(Interface):
     """
-    An single entry in a zone of authority.
+    A single entry in a zone of authority.
     """
 
     TYPE = Attribute("An indicator of what kind of record this is.")

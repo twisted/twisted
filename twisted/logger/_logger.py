@@ -134,7 +134,7 @@ class Logger(object):
 
     def failure(self, format, failure=None, level=LogLevel.critical, **kwargs):
         """
-        Log an failure and emit a traceback.
+        Log a failure and emit a traceback.
 
         For example::
 

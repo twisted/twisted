@@ -258,7 +258,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
     def eventWithFailure(self, **values):
         """
-        Create an new-style event with a captured failure.
+        Create a new-style event with a captured failure.
 
         @param values: Additional values to include in the event.
         @type values: L{dict}
@@ -370,7 +370,7 @@ class PublishToNewObserverTests(unittest.TestCase):
 
     def test_message(self):
         """
-        An published old-style event should format as text in the same way as
+        A published old-style event should format as text in the same way as
         the given C{textFromEventDict} callable would format it.
         """
         def textFromEventDict(event):

@@ -45,6 +45,7 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
+from twisted.python.compat import iterbytes, _bytesChr as chr
 from twisted.conch.ssh import address, service, common, _kex
 from twisted.test import proto_helpers
 
@@ -217,7 +218,7 @@ class MockService(service.SSHService):
     @ivar started: True if this service has been started.
     @ivar stopped: True if this service has been stopped.
     """
-    name = "MockService"
+    name = b"MockService"
     started = False
     stopped = False
     protocolMessages = {0xff: "MSG_TEST", 71: "MSG_fiction"}
@@ -254,7 +255,7 @@ class MockFactory(factory.SSHFactory):
     A mocked-up factory based on twisted.conch.ssh.factory.SSHFactory.
     """
     services = {
-        'ssh-userauth': MockService}
+        b'ssh-userauth': MockService}
 
 
     def getPublicKeys(self):
@@ -462,7 +463,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.makeConnection(self.transport)
         self.finishKeyExchange(proto)
         self.transport.clear()
-        message = ord(b'A')
+        message = ord('A')
         payload = b'BCDEFG'
         proto.sendPacket(message, payload)
         value = self.transport.value()
@@ -939,7 +940,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.transport.loseConnection = stubLoseConnection
         self.proto.loseConnection()
         self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[0][1][3],
+        self.assertEqual(self.packets[0][1][3:4],
                          chr(transport.DISCONNECT_CONNECTION_LOST))
 
 
@@ -954,12 +955,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             def stubLoseConnection():
                 disconnected[0] = True
             self.transport.loseConnection = stubLoseConnection
-            for c in version + b'\r\n':
+            for c in iterbytes(version + b'\r\n'):
                 self.proto.dataReceived(c)
             self.assertTrue(disconnected[0])
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(
-                self.packets[0][1][3],
+                self.packets[0][1][3:4],
                 chr(transport.DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED))
         testBad(b'SSH-1.5-OpenSSH')
         testBad(b'SSH-3.0-Twisted')
@@ -975,7 +976,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         data = (b"""here's some stuff beforehand
 here's some other stuff
 """ + proto.ourVersionString + b"\r\n")
-        [proto.dataReceived(c) for c in data]
+        [proto.dataReceived(c) for c in iterbytes(data)]
         self.assertTrue(proto.gotVersion)
         self.assertEqual(proto.otherVersionString, proto.ourVersionString)
 
@@ -1027,7 +1028,7 @@ here's some other stuff
             self.assertIsNone(self.proto.getPacket())
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-            self.assertEqual(self.packets[0][1][3], chr(error))
+            self.assertEqual(self.packets[0][1][3:4], chr(error))
 
         testBad(b'\xff' * 8) # big packet
         testBad(b'\x00\x00\x00\x05\x00BCDE') # length not modulo blocksize
@@ -1056,7 +1057,7 @@ here's some other stuff
         def checkUnimplemented(seqnum=seqnum):
             self.assertEqual(self.packets[0][0],
                              transport.MSG_UNIMPLEMENTED)
-            self.assertEqual(self.packets[0][1][3], chr(seqnum))
+            self.assertEqual(self.packets[0][1][3:4], chr(seqnum))
             self.proto.packets = []
             seqnum += 1
 
@@ -1148,7 +1149,7 @@ class ServerAndClientSSHTransportBaseCase:
         if kind is None:
             kind = transport.DISCONNECT_PROTOCOL_ERROR
         self.assertEqual(self.packets[-1][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[-1][1][3], chr(kind))
+        self.assertEqual(self.packets[-1][1][3:4], chr(kind))
 
 
     def connectModifiedProtocol(self, protoModification,
@@ -1438,7 +1439,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.sessionID, b'CD')
         self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
         newKeys = [self.proto._getKey(c, b'AB', b'EF')
-                   for c in b'ABCDEF']
+                   for c in iterbytes(b'ABCDEF')]
         self.assertEqual(
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
@@ -1477,7 +1478,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_SERVICE_REQUEST(common.NS(b'ssh-userauth'))
         self.assertEqual(self.packets, [(transport.MSG_SERVICE_ACCEPT,
                                          common.NS(b'ssh-userauth'))])
-        self.assertEqual(self.proto.service.name, 'MockService')
+        self.assertEqual(self.proto.service.name, b'MockService')
 
 
     def test_disconnectNEWKEYSData(self):
@@ -1810,7 +1811,8 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.simulateKeyExchange(b'AB', b'EF')
         self.assertEqual(self.proto.sessionID, b'CD')
         self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
-        newKeys = [self.proto._getKey(c, b'AB', b'EF') for c in b'ABCDEF']
+        newKeys = [self.proto._getKey(c, b'AB', b'EF')
+                   for c in iterbytes(b'ABCDEF')]
         self.assertEqual(self.proto.nextEncryptions.keys,
                           (newKeys[0], newKeys[2], newKeys[1], newKeys[3],
                            newKeys[4], newKeys[5]))
@@ -2022,7 +2024,7 @@ class GetMACTests(unittest.TestCase):
         Generate a new shared secret to be used with the tests.
 
         @return: A new secret.
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         return insecureRandom(64)
 
@@ -2035,7 +2037,7 @@ class GetMACTests(unittest.TestCase):
         attribute set to the value of the key supplied.
 
         @param hmacName: Identifier of HMAC algorithm.
-        @type hmacName: C{bytes}
+        @type hmacName: L{bytes}
 
         @param hashProcessor: Callable for the hash algorithm.
         @type hashProcessor: C{callable}
@@ -2052,8 +2054,8 @@ class GetMACTests(unittest.TestCase):
         params = self.ciphers._getMAC(hmacName, secret)
 
         key = secret[:digestSize] + b'\x00' * blockPadSize
-        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in key)
-        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in key)
+        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in iterbytes(key))
+        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in iterbytes(key))
         self.assertEqual(
             (hashProcessor, innerPad, outerPad, digestSize), params)
         self.assertEqual(key, params.key)
@@ -2355,10 +2357,10 @@ class RandomNumberTests(unittest.TestCase):
         L{_getRandomNumber} returns an integer constructed directly from the
         bytes returned by the random byte generator passed to it.
         """
-        def random(bytes):
+        def random(data):
             # The number of bytes requested will be the value of each byte
             # we return.
-            return chr(bytes) * bytes
+            return chr(data) * data
         self.assertEqual(
             transport._getRandomNumber(random, 32),
             4 << 24 | 4 << 16 | 4 << 8 | 4)
@@ -2381,8 +2383,8 @@ class RandomNumberTests(unittest.TestCase):
         discarded and another attempt is made to produce a larger value.
         """
         results = [chr(0), chr(1), chr(127)]
-        def random(bytes):
-            return results.pop(0) * bytes
+        def random(data):
+            return results.pop(0) * data
         self.assertEqual(
             transport._generateX(random, 8),
             127)
@@ -2396,8 +2398,8 @@ class RandomNumberTests(unittest.TestCase):
         value.
         """
         results = [chr(255), chr(64)]
-        def random(bytes):
-            return results.pop(0) * bytes
+        def random(data):
+            return results.pop(0) * data
         self.assertEqual(
             transport._generateX(random, 8),
             64)

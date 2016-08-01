@@ -29,9 +29,9 @@ from zope.interface import implementer, Interface
 from twisted.python import log, reflect
 
 # sibling imports
-from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from jelly import Jellyable, Unjellyable, _newDummyLike
-from jelly import setInstanceState, getInstanceState
+from .jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
+from .jelly import Jellyable, Unjellyable, _newDummyLike
+from .jelly import setInstanceState, getInstanceState
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
@@ -160,7 +160,7 @@ class ViewPoint(Referenceable):
     While L{Viewable} objects will be converted to ViewPoints by default
     when they are returned from or sent as arguments to a remote
     method, any object may be manually proxied as well. (XXX: Now that
-    this class is no longer named C{Proxy}, this is the only occourance
+    this class is no longer named C{Proxy}, this is the only occurrence
     of the term 'proxied' in this docstring, and may be unclear.)
 
     This can be useful when dealing with L{pb.IPerspective}s, L{Copyable}s,

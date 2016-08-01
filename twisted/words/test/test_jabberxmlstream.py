@@ -1282,7 +1282,7 @@ class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
 
     def setUp(self):
         """
-        Set up a server factory with a authenticator factory function.
+        Set up a server factory with an authenticator factory function.
         """
         class TestAuthenticator(object):
             def __init__(self):

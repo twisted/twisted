@@ -1,6 +1,6 @@
 # Read username, output from factory interfacing to OS, drop connections
 
-from twisted.internet import protocol, reactor, defer, utils
+from twisted.internet import protocol, reactor, defer, utils, endpoints
 from twisted.protocols import basic
 
 class FingerProtocol(basic.LineReceiver):
@@ -22,5 +22,6 @@ class FingerFactory(protocol.ServerFactory):
     def getUser(self, user):
         return utils.getProcessOutput("finger", [user])
 
-reactor.listenTCP(1079, FingerFactory())
+fingerEndpoint = endpoints.serverFromString(reactor, "tcp:1079")
+fingerEndpoint.listen(FingerFactory())
 reactor.run()

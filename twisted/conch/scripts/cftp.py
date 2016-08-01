@@ -291,7 +291,7 @@ class StdioClient(basic.LineReceiver):
         else:
             local = os.path.split(remote)[1]
         log.msg((remote, local))
-        lf = file(local, 'w', 0)
+        lf = open(local, 'w', 0)
         path = os.path.join(self.currentDirectory, remote)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -313,7 +313,7 @@ class StdioClient(basic.LineReceiver):
         if not files:
             return
         f = files.pop(0)[0]
-        lf = file(os.path.join(local, os.path.split(f)[1]), 'w', 0)
+        lf = open(os.path.join(local, os.path.split(f)[1]), 'w', 0)
         path = os.path.join(self.currentDirectory, f)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -897,7 +897,7 @@ class SSHSession(channel.SSHChannel):
         if self.conn.options['batchfile']:
             fn = self.conn.options['batchfile']
             if fn != '-':
-                f = file(fn)
+                f = open(fn)
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
     def extReceived(self, t, data):
