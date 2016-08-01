@@ -404,8 +404,8 @@ class ReconnectingClientFactory(ClientFactory):
 
         self.delay = min(self.delay * self.factor, self.maxDelay)
         if self.jitter:
-            self.delay = random.normalvariate(self.delay,
-                                              self.delay * self.jitter)
+            self.delay = max(
+                random.normalvariate(self.delay, self.delay * self.jitter), 0)
 
         if self.noisy:
             log.msg("%s will retry in %d seconds" % (connector, self.delay,))
