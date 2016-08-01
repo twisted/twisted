@@ -7,15 +7,7 @@ from __future__ import division, absolute_import
 import os
 import sys
 import time
-import imp
 import warnings
-
-from twisted.python import compat
-
-if compat._PY3:
-    _threadModule = "_thread"
-else:
-    _threadModule = "thread"
 
 
 
@@ -207,7 +199,8 @@ class Platform:
         @rtype: C{bool}
         """
         try:
-            return imp.find_module(_threadModule)[0] is None
+            import threading
+            return threading is not None # shh pyflakes
         except ImportError:
             return False
 
