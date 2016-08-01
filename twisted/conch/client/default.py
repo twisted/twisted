@@ -161,7 +161,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         userauth.SSHUserAuthClient.serviceStarted(self)
 
     def _getPassword(self, prompt):
-        with self._replace_stdout_stdin():
+        with self._replaceStdoutStdin():
             try:
                 p=getpass.getpass(prompt)
                 return p
@@ -255,7 +255,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
-        with self._replace_stdout_stdin():
+        with self._replaceStdoutStdin():
             if name:
                 print(name.decode("UTF8"))
             if instruction:
@@ -270,7 +270,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 
     @classmethod
-    def _open_tty(cls):
+    def _openTty(cls):
         """
         Open /dev/tty as two streams one in read, one in write mode,
         and return them.
@@ -285,13 +285,13 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     @classmethod
     @contextlib.contextmanager
-    def _replace_stdout_stdin(cls):
+    def _replaceStdoutStdin(cls):
         """
         Contextmanager that replaces stdout and stdin with /dev/tty
         and resets them when it is done.
         """
         oldout, oldin = sys.stdout, sys.stdin
-        sys.stdin, sys.stdout = cls._open_tty()
+        sys.stdin, sys.stdout = cls._openTty()
         try:
             yield
         finally:
