@@ -8,6 +8,7 @@ Test code for basic Factory classes.
 from __future__ import division, absolute_import
 
 import pickle
+import random
 
 from twisted.trial.unittest import TestCase
 
@@ -89,6 +90,34 @@ class ReconnectingFactoryTests(TestCase):
         # make sure we never attempted to retry
         self.assertFalse(f.connector.attemptedRetry)
         self.assertFalse(f.clock.getDelayedCalls())
+
+
+    def test_jitteredDelayIsNonNegative(self):
+        """
+        Reconnection delay should not be negative.
+        """
+        class FakeClock:
+            def callLater(self, _seconds, _f, *args, **kw):
+                pass
+
+        # Let's not mess with other tests involving randomness.
+        original = random.getstate()
+
+        # Values picked for demonstration.
+        seed = 405410
+        jitter = 0.21
+
+        random.seed(seed)
+        self.assertTrue(random.normalvariate(1, 1 * jitter) < 0)
+
+        random.seed(seed)
+        f = ReconnectingClientFactory()
+        f.jitter = jitter
+        f.clock = FakeClock()
+        f.clientConnectionLost(FakeConnector(), None)
+        self.assertTrue(f.delay >= 0)
+
+        random.setstate(original)
 
 
     def test_serializeUnused(self):
