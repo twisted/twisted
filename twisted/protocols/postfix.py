@@ -13,7 +13,13 @@ try:
 except ImportError:
     # Python 3
     from collections import UserDict
-import urllib
+
+try:
+    # Python 2
+    from urllib import quote as _quote, unquote as _unquote
+except ImportError:
+    # Python 3
+    from urllib.parse import quote as _quote, unquote as _unquote
 
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -23,10 +29,14 @@ from twisted.python import log
 # urllib's quote functions just happen to match
 # the postfix semantics.
 def quote(s):
-    return urllib.quote(s)
+    return networkString(_quote(s))
+
+
 
 def unquote(s):
-    return urllib.unquote(s)
+    return networkString(_unquote(nativeString(s)))
+
+
 
 class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
     """Postfix mail transport agent TCP map protocol implementation.
