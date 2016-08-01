@@ -7,7 +7,12 @@ Postfix mail transport agent related protocols.
 """
 
 import sys
-import UserDict
+try:
+    # Python 2
+    from UserDict import UserDict
+except ImportError:
+    # Python 3
+    from collections import UserDict
 import urllib
 
 from twisted.protocols import basic
@@ -93,7 +98,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
 
 class PostfixTCPMapDictServerFactory(protocol.ServerFactory,
-                                     UserDict.UserDict):
+                                     UserDict):
     """An in-memory dictionary factory for PostfixTCPMapServer."""
 
     protocol = PostfixTCPMapServer
