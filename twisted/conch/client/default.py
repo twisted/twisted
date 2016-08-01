@@ -26,7 +26,7 @@ from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 
 from twisted.conch.client import agent
 
-import os, sys, getpass
+import os, sys, getpass, contextlib
 
 if _PY3:
     import io
@@ -161,16 +161,13 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         userauth.SSHUserAuthClient.serviceStarted(self)
 
     def _getPassword(self, prompt):
-        try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin, sys.stdout = self._open_tty()
-            p=getpass.getpass(prompt)
-            return p
-        except (KeyboardInterrupt, IOError):
-            print()
-            raise ConchError('PEBKAC')
-        finally:
-            sys.stdout, sys.stdin=oldout,oldin
+        with self._replace_stdout_stdin():
+            try:
+                p=getpass.getpass(prompt)
+                return p
+            except (KeyboardInterrupt, IOError):
+                print()
+                raise ConchError('PEBKAC')
 
     def getPassword(self, prompt = None):
         if prompt:
@@ -258,9 +255,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
-        try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin, sys.stdout = self._open_tty()
+        with self._replace_stdout_stdin():
             if name:
                 print(name.decode("UTF8"))
             if instruction:
@@ -271,8 +266,6 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                     responses.append(raw_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
-        finally:
-            sys.stdout,sys.stdin=oldout,oldin
         return defer.succeed(responses)
 
 
@@ -288,3 +281,20 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             stdin = io.TextIOWrapper(stdin)
             stdout = io.TextIOWrapper(stdout)
         return stdin, stdout
+
+
+    @classmethod
+    @contextlib.contextmanager
+    def _replace_stdout_stdin(cls):
+        """
+        Contextmanager that replaces stdout and stdin with /dev/tty
+        and resets them when it is done.
+        """
+        oldout, oldin = sys.stdout, sys.stdin
+        sys.stdin, sys.stdout = cls._open_tty()
+        try:
+            yield
+        finally:
+            sys.stdout.close()
+            sys.stdin.close()
+            sys.stdout, sys.stdin = oldout, oldin
