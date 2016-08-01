@@ -61,7 +61,9 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def sendCode(self, code, message=b''):
-        "Send an SMTP-like code with a message."
+        """
+        Send an SMTP-like code with a message.
+        """
         self.sendLine(intToBytes(code) + b' ' + message)
 
 
