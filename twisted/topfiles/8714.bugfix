@@ -1,0 +1,1 @@
+Jittering the delay of ReconnectingClientFactory should no longer result in negative delays and AssertionErrors. The bug was very unlikely to manifest itself with the default jitter value but quite possible with larger values.
