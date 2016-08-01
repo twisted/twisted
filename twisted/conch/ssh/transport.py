@@ -1255,6 +1255,7 @@ class SSHServerTransport(SSHTransportBase):
         #Get the raw client public key.
         pktPub, packet = getNS(packet)
 
+
         #Get the host's public and private keys
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
@@ -1276,10 +1277,10 @@ class SSHServerTransport(SSHTransportBase):
         encPub = self.ecPub.public_numbers().encode_point()
 
         #Take the provided public key and transform it into a format for the cryptography module
-        self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
+        theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
     
         #We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
-        sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), self.theirECPub)), 16))
+        sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
 
         # Finish update and digest
         h = _kex.getHashProcessor(self.kexAlg)()
@@ -1616,6 +1617,7 @@ class SSHClientTransport(SSHTransportBase):
         @return: A deferred firing when key exchange is complete.
         """
 
+
         # Get the host public key, the raw ECDH public key bytes and the signature
         hostKey, f, signature, packet = getNS(packet, 3)
 
@@ -1630,26 +1632,27 @@ class SSHClientTransport(SSHTransportBase):
 
     def _continue_KEX_ECDH_REPLY(self, ignored, hostKey, pktPub, signature):
         #Save off the host public key.
-        self.theirECHost = hostKey
+        theirECHost = hostKey
 
         #Take the provided public key and transform it into a format for the cryptography module
-        self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
+        theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
 
         #We need to convert to hex, so we can convert to an int so we can make a multiple precision int.
-        sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), self.theirECPub)), 16))
+        sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
 
         h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(self.otherKexInitPayload))
-        h.update(NS(self.theirECHost))
+        h.update(NS(theirECHost))
         h.update(NS(self.ecPub.public_numbers().encode_point()))
         h.update(NS(pktPub))
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        if not keys.Key.fromString(self.theirECHost).verify(signature, exchangeHash):
+        if not keys.Key.fromString(theirECHost).verify(signature, exchangeHash):
+
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                 b'bad signature')
             return

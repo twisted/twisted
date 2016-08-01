@@ -46,19 +46,19 @@ from twisted.python.versions import Version
 
 # Curve lookup table
 curveTable = {
-        b'nistp256' : ec.SECP256R1(),
-        b'nistp384' : ec.SECP384R1(),
-        b'nistp521' : ec.SECP521R1(),
-        b'nistk163' : ec.SECT163K1(),
-        b'nistp192' : ec.SECP192R1(), 
-        b'nistp224' : ec.SECP224R1(),
-        b'nistk233' : ec.SECT233K1(),
-        b'nistb233' : ec.SECT233R1(),
-        b'nistk283' : ec.SECT283K1(),
-        b'nistk409' : ec.SECT409K1(),
-        b'nistb409' : ec.SECT409R1(),
-        b'nistt571' : ec.SECT571K1()
-        }
+    b'nistp256' : ec.SECP256R1(),
+    b'nistp384' : ec.SECP384R1(),
+    b'nistp521' : ec.SECP521R1(),
+    b'nistk163' : ec.SECT163K1(),
+    b'nistp192' : ec.SECP192R1(),
+    b'nistp224' : ec.SECP224R1(),
+    b'nistk233' : ec.SECT233K1(),
+    b'nistb233' : ec.SECT233R1(),
+    b'nistk283' : ec.SECT283K1(),
+    b'nistk409' : ec.SECT409K1(),
+    b'nistb409' : ec.SECT409R1(),
+    b'nistt571' : ec.SECT571K1()
+    }
 
 # The ASN.1 encoded key files use OID instead of common names.
 # Same order as curveTable
@@ -180,19 +180,6 @@ class Key(object):
             integer q
             integer g
             integer y
-
-        EC keys::
-            version  1
-            fieldID 
-                    fieldType: ansi-X9-62 fieldType
-                    parameters 
-            curve
-                    octet string a
-                    octet string b
-                    bit string (optional) seed
-            octet string base
-            integer order
-            integer (optional) cofactor
 
         @type blob: L{bytes}
         @param blob: The key data.
@@ -688,33 +675,27 @@ class Key(object):
         """
         Return a pretty representation of this object.
         """
-        if self.type() == 'EC':
-            if self.isPublic():
-                return self._keyObject.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
-            else:
-                return self._keyObject.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption())
-        else:
-            lines = [
-                '<%s %s (%s bits)' % (
-                    nativeString(self.type()),
-                    self.isPublic() and 'Public Key' or 'Private Key',
-                    self._keyObject.key_size)]
-            for k, v in sorted(self.data().items()):
-                if _PY3 and isinstance(k, bytes):
-                    k = k.decode('ascii')
-                lines.append('attr %s:' % (k,))
-                by = common.MP(v)[4:]
-                while by:
-                    m = by[:15]
-                    by = by[15:]
-                    o = ''
-                    for c in iterbytes(m):
-                        o = o + '%02x:' % (ord(c),)
-                    if len(m) < 15:
-                        o = o[:-1]
-                    lines.append('\t' + o)
-            lines[-1] = lines[-1] + '>'
-            return '\n'.join(lines)
+        lines = [
+            '<%s %s (%s bits)' % (
+                nativeString(self.type()),
+                self.isPublic() and 'Public Key' or 'Private Key',
+                self._keyObject.key_size)]
+        for k, v in sorted(self.data().items()):
+            if _PY3 and isinstance(k, bytes):
+                k = k.decode('ascii')
+            lines.append('attr %s:' % (k,))
+            by = common.MP(v)[4:]
+            while by:
+                m = by[:15]
+                by = by[15:]
+                o = ''
+                for c in iterbytes(m):
+                    o = o + '%02x:' % (ord(c),)
+                if len(m) < 15:
+                    o = o[:-1]
+                lines.append('\t' + o)
+        lines[-1] = lines[-1] + '>'
+        return '\n'.join(lines)
 
 
     @property
@@ -878,12 +859,6 @@ class Key(object):
                 'unknown type of object: %r' % (self._keyObject,))
 
 
-    def getECKeyName(self):
-        if hasattr(self, 'ecKeyName'):
-            return self.ecKeyName
-        else:
-            return None
-
     def sshType(self):
         """
         Get the type of the object we wrap as defined in the SSH protocol,
@@ -893,7 +868,7 @@ class Key(object):
         @return: The key type format.
         @rtype: L{bytes}
         """
-        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss', 'EC': self.getECKeyName()}[self.type()]
+        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()]
 
 
     def size(self):
@@ -1044,10 +1019,6 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-        # No support for EC keys yet.
-        if self.type() == 'EC':
-            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
@@ -1071,10 +1042,6 @@ class Key(object):
         @rtype: L{bytes}
         """
         
-        # No support for EC keys yet.
-        if self.type() == 'EC':
-            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-
         data = self.data()
         if self.isPublic():
             b64Data = base64.encodestring(self.blob()).replace(b'\n', b'')
@@ -1191,11 +1158,6 @@ class Key(object):
             elif self.type() == 'DSA':
                 values = (data['p'], data['q'], data['g'], data['y'],
                           data['x'])
-            # I assume this is what's needed
-            # But commented out because it hasn't been tested yet.
-            elif self.type() == 'EC':
-                raise UnsupportedAlgorithm("toString() does not support Elliptic Curves yet.")
-                #values = (data['curve'], data['curve'][-8:], data['p'], data['x'])
             return common.NS(self.sshType()) + b''.join(map(common.MP, values))
 
 
