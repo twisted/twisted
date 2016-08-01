@@ -277,7 +277,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 
     @classmethod
-    def _open_tty(self):
+    def _open_tty(cls):
         """
         Open /dev/tty as two streams one in read, one in write mode,
         and return them.
