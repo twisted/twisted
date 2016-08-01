@@ -17,6 +17,7 @@ if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.client.options import ConchOptions
     from twisted.conch.client import default
     from twisted.conch.ssh.keys import Key
+    skip = None
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.client.default."
 
@@ -33,7 +34,7 @@ if platform.isWindows():
         "genericAnswers and getPassword does not work on Windows."
         " Should be fixed as part of fixing bug 6409 and 6410")
 else:
-    windowsSkip = None
+    windowsSkip = skip
 
 
 class SSHUserAuthClientTests(TestCase):
