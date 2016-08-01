@@ -14,7 +14,8 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 from __future__ import print_function
 
 from twisted.python import log
-from twisted.python.compat import nativeString, raw_input, _PY3
+from twisted.python.compat import (
+    nativeString, raw_input, _PY3, _b64decodebytes as decodebytes)
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -25,7 +26,7 @@ from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 
 from twisted.conch.client import agent
 
-import os, sys, base64, getpass
+import os, sys, getpass
 
 if _PY3:
     import io
@@ -114,7 +115,7 @@ def isInKnownHosts(host, pubKey, options):
             if hostKeyType != keyType: # incorrect type of key
                 continue
             try:
-                decodedKey = base64.decodestring(encodedKey)
+                decodedKey = decodebytes(encodedKey)
             except:
                 continue
             if decodedKey == pubKey:
