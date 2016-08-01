@@ -5,8 +5,8 @@
 """
 Handling of RSA and DSA keys.
 
-@ivar curveTable: a look up table for translating NIST standard curve names to Cryptograpy instances.
-@ivar oidTable: a table to translate OID values to Cryptography instances.
+@var curveTable: a look up table for translating NIST standard curve names to Cryptograpy instances.
+@var oidTable: a table to translate OID values to Cryptography instances.
 """
 
 from __future__ import absolute_import, division
