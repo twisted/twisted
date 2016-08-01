@@ -1617,7 +1617,6 @@ class SSHClientTransport(SSHTransportBase):
         @return: A deferred firing when key exchange is complete.
         """
 
-
         # Get the host public key, the raw ECDH public key bytes and the signature
         hostKey, f, signature, packet = getNS(packet, 3)
 

@@ -38,7 +38,7 @@ else:
         class SSHFactory:
             pass
 
-from hashlib import md5, sha1, sha256, sha512
+from hashlib import md5, sha1, sha256, sha384, sha512
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -1410,6 +1410,28 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
               + f + common.NS(signature)),
              (transport.MSG_NEWKEYS, b'')])
 
+    def test_checkBadCurveName(self):
+        """
+        Test that if the server receives a KEX_DH_GEX_REQUEST_OLD message
+        and the key exchange algorithm is not set, we raise a ConchError.
+        """
+        self.proto.kexAlg = b'bad-curve'
+        kexInitPacket = b'\x00' * 16 + (
+            b''.join([common.NS(x) for x in
+                      [b','.join(y) for y in
+                       [self.proto.kexAlg,
+                        self.proto.supportedPublicKeys,
+                        self.proto.supportedCiphers,
+                        self.proto.supportedCiphers,
+                        self.proto.supportedMACs,
+                        self.proto.supportedMACs,
+                        self.proto.supportedCompressions,
+                        self.proto.supportedCompressions,
+                        self.proto.supportedLanguages,
+                        self.proto.supportedLanguages]]])) + (
+                            b'\xff\x00\x00\x00\x00')
+
+        self.assertRaises(AttributeError, self.proto._ssh_KEX_ECDH_INIT, kexInitPacket)
 
     def test_KEXDH_INIT_GROUP1(self):
         """
@@ -1432,6 +1454,24 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         Test that _keySetup sets up the next encryption keys.
         """
         self.proto.kexAlg = b'diffie-hellman-group1-sha1'
+        self.proto.nextEncryptions = MockCipher()
+        self.simulateKeyExchange(b'AB', b'CD')
+        self.assertEqual(self.proto.sessionID, b'CD')
+        self.simulateKeyExchange(b'AB', b'EF')
+        self.assertEqual(self.proto.sessionID, b'CD')
+        self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
+        newKeys = [self.proto._getKey(c, b'AB', b'EF')
+                   for c in iterbytes(b'ABCDEF')]
+        self.assertEqual(
+            self.proto.nextEncryptions.keys,
+            (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
+             newKeys[4]))
+
+    def test_ECDH_keySetup(self):
+        """
+        Test that _keySetup sets up the next encryption keys.
+        """
+        self.proto.kexAlg = b'ecdh-sha2-nistp256'
         self.proto.nextEncryptions = MockCipher()
         self.simulateKeyExchange(b'AB', b'CD')
         self.assertEqual(self.proto.sessionID, b'CD')
@@ -1740,7 +1780,6 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(
             self.packets, [(transport.MSG_KEXDH_INIT, self.proto.e)])
 
-
     def test_KEXINIT_group14(self):
         """
         KEXINIT messages requesting diffie-hellman-group14-sha1 result in
@@ -1755,7 +1794,6 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         KEXDH_INIT responses.
         """
         self.assertKexInitResponseForDH(b'diffie-hellman-group1-sha1')
-
 
     def test_KEXINIT_badKexAlg(self):
         """
@@ -2070,6 +2108,16 @@ class GetMACTests(unittest.TestCase):
         """
         self.assertGetMAC(
             b"hmac-sha2-512", sha512, digestSize=64, blockPadSize=64)
+
+        def test_hmacsha2384(self):
+            """
+            When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
+            algorithm name it returns a tuple of (sha384 digest object, inner pad,
+            outer pad, sha384 digest size) with a C{key} attribute set to the
+            value of the key supplied.
+            """
+            self.assertGetMAC(
+                b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=64)
 
 
     def test_hmacsha2256(self):
