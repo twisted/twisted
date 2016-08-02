@@ -274,11 +274,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         responses = []
         with self._replaceStdoutStdin():
             if name:
-                print(name.decode("UTF8"))
+                print(name.decode("utf-8"))
             if instruction:
-                print(instruction.decode("UTF8"))
+                print(instruction.decode("utf-8"))
             for prompt, echo in prompts:
-                prompt = prompt.decode("UTF8")
+                prompt = prompt.decode("utf-8")
                 if echo:
                     responses.append(raw_input(prompt))
                 else:
