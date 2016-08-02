@@ -291,6 +291,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         """
         Open /dev/tty as two streams one in read, one in write mode,
         and return them.
+
+        @return: File objects for reading and writing to /dev/tty,
+                 standard input and standard output.
+        @rtype: A L{tuple} of L{io.TextIOWrapper} on Python 3.
+                A L{tuple} of binary files on Python 2.
         """
         stdin = open("/dev/tty", "rb")
         stdout = open("/dev/tty", "wb")
