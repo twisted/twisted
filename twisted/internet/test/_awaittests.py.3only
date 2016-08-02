@@ -18,6 +18,14 @@ class AwaitTests(TestCase):
     """
     Tests for using Deferreds in conjunction with PEP-492.
     """
+    def test_awaitReturnsIterable(self):
+        """
+        C{Deferred.__await__} returns an iterable.
+        """
+        d = Deferred()
+        awaitedDeferred = d.__await__()
+        self.assertEqual(awaitedDeferred, iter(awaitedDeferred))
+
 
     def test_ensureDeferred(self):
         """
