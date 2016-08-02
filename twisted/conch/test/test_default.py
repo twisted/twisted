@@ -43,6 +43,7 @@ if not sys.stdout.isatty():
     ttySkip = "sys.stdout is not an interactive tty"
 
 
+
 class SSHUserAuthClientTests(TestCase):
     """
     Tests for L{SSHUserAuthClient}.
@@ -193,9 +194,8 @@ class SSHUserAuthClientTests(TestCase):
 
     def test_getPassword(self):
         """
-        Verify that the getPassword function in L{SSHUserAuthClient}
-        works, when prompt is sent, and fetching the password from the
-        user succeeds.
+        Get the password using
+        L{twisted.conch.client.default.SSHUserAuthClient.getPassword}
         """
         class FakeTransport:
             def __init__(self, host):
@@ -222,9 +222,9 @@ class SSHUserAuthClientTests(TestCase):
 
     def test_getPasswordPrompt(self):
         """
-        Verify that the getPassword function in L{SSHUserAuthClient}
-        works, when prompt is sent, and fetching the password from the
-        user succeeds.
+        Get the password using
+        L{twisted.conch.client.default.SSHUserAuthClient.getPassword}
+        using a different prompt.
         """
         options = ConchOptions()
         client = SSHUserAuthClient(b"user",  options, None)
@@ -244,9 +244,9 @@ class SSHUserAuthClientTests(TestCase):
 
     def test_getPasswordConchError(self):
         """
-        Verify that the getPassword function in L{SSHUserAuthClient}
-        fails it's deferred if the underlying _getPassword function
-        raises a ConchError
+        Get the password using
+        L{twisted.conch.client.default.SSHUserAuthClient.getPassword}
+        and trigger a {twisted.conch.error import ConchError}.
         """
         options = ConchOptions()
         client = SSHUserAuthClient(b"user",  options, None)
@@ -269,8 +269,7 @@ class SSHUserAuthClientTests(TestCase):
 
     def test_getGenericAnswers(self):
         """
-        Verify that the getGenericAnswers function in L{SSHUserAuthClient}
-        works.
+        L{twisted.conch.client.default.SSHUserAuthClient.getGenericAnswers}
         """
         options = ConchOptions()
         client = SSHUserAuthClient(b"user",  options, None)
