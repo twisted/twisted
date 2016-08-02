@@ -20,6 +20,9 @@ try:
 except ImportError:
     cryptography = None
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
+
 if pyasn1 is not None and cryptography is not None:
     dependencySkip = None
     from twisted.conch.ssh import transport, keys, factory
@@ -1410,28 +1413,14 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
               + f + common.NS(signature)),
              (transport.MSG_NEWKEYS, b'')])
 
+
     def test_checkBadCurveName(self):
         """
         Test that if the server receives a KEX_DH_GEX_REQUEST_OLD message
         and the key exchange algorithm is not set, we raise a ConchError.
         """
         self.proto.kexAlg = b'bad-curve'
-        kexInitPacket = b'\x00' * 16 + (
-            b''.join([common.NS(x) for x in
-                      [b','.join(y) for y in
-                       [self.proto.kexAlg,
-                        self.proto.supportedPublicKeys,
-                        self.proto.supportedCiphers,
-                        self.proto.supportedCiphers,
-                        self.proto.supportedMACs,
-                        self.proto.supportedMACs,
-                        self.proto.supportedCompressions,
-                        self.proto.supportedCompressions,
-                        self.proto.supportedLanguages,
-                        self.proto.supportedLanguages]]])) + (
-                            b'\xff\x00\x00\x00\x00')
-
-        self.assertRaises(AttributeError, self.proto._ssh_KEX_ECDH_INIT, kexInitPacket)
+        self.assertRaises(AttributeError, self.proto._ssh_KEX_ECDH_INIT, common.NS(b'unused-key'))
 
     def test_KEXDH_INIT_GROUP1(self):
         """
@@ -1466,6 +1455,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
              newKeys[4]))
+
 
     def test_ECDH_keySetup(self):
         """
@@ -1780,6 +1770,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(
             self.packets, [(transport.MSG_KEXDH_INIT, self.proto.e)])
 
+
     def test_KEXINIT_group14(self):
         """
         KEXINIT messages requesting diffie-hellman-group14-sha1 result in
@@ -1794,6 +1785,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         KEXDH_INIT responses.
         """
         self.assertKexInitResponseForDH(b'diffie-hellman-group1-sha1')
+
 
     def test_KEXINIT_badKexAlg(self):
         """
@@ -1914,6 +1906,46 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         self.test_KEXDH_REPLY()
         self.proto._continueKEXDH_REPLY(None, self.blob, 3, b"bad signature")
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
+    def test_disconnectKEX_ECDH_REPLYBadSignature(self):
+        """
+        Test that KEX_ECDH_REPLY disconnects if the signature is bad.
+        """
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b'ecdh-sha2-nistp256') +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+
+        self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
+
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPub = self.proto.ecPriv.public_key()
+
+        # Generate the private key
+        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        # Get the public key
+        thisPub = thisPriv.public_key()
+        encPub = thisPub.public_numbers().encode_point()
+        self.proto.curve = ec.SECP256R1()
+
+        self.proto.kexAlg = b'ecdh-sha2-nistp256'
+
+        self.proto._ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+                                       common.NS(encPub) + common.NS(b'bad-signature'))
+
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
 
