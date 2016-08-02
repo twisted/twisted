@@ -662,8 +662,7 @@ class Deferred:
 
 
     def __await__(self):
-        awaiter = _MakeDeferredAwaitable(self)
-        return awaiter.__await__()
+        return _MakeDeferredAwaitable(self)
 
 
 
@@ -685,7 +684,8 @@ class _MakeDeferredAwaitable(object):
             raise StopIteration(self.result)
         return self.d
 
-    def __await__(self):
+
+    def __iter__(self):
         return self
 
 
