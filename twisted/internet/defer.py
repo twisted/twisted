@@ -674,10 +674,8 @@ class _MakeDeferredAwaitable(object):
 
     def __init__(self, d):
         self.d = d
-        self.d.addBoth(self._setResult)
+        self.d.addBoth(lambda x: setattr(self, "result", x))
 
-    def _setResult(self, value):
-        self.result = value
 
     def __next__(self):
         if self.result is not _NO_RESULT:
