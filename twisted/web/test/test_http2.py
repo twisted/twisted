@@ -2079,6 +2079,64 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         return d.addCallback(validate)
 
 
+    def test_dataAndRstStream(self):
+        """
+        When a DATA frame is received at the same time as RST_STREAM,
+        Twisted does not send WINDOW_UPDATE frames for the stream.
+        """
+        frameFactory = FrameFactory()
+        transport = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        # Send the request, but instead of the last frame send a RST_STREAM
+        # frame instead.
+        frames = buildRequestFrames(
+            headers=self.postRequestHeaders,
+            data=self.postRequestData,
+            frameFactory=frameFactory
+        )
+        del frames[-1]
+        frames.append(
+            frameFactory.buildRstStreamFrame(
+                streamID=1, errorCode=h2.errors.INTERNAL_ERROR
+            )
+        )
+
+        requestBytes = frameFactory.clientConnectionPreface()
+        requestBytes += b''.join(f.serialize() for f in frames)
+        a.makeConnection(transport)
+
+        # Feed all the bytes at once. This is important: if they arrive slowly,
+        # Twisted doesn't have any problems.
+        a.dataReceived(requestBytes)
+
+        # Check the frames we got. We expect WINDOW_UPDATE frames only for the
+        # connection, because Twisted knew the stream was going to be reset.
+        frames = framesFromBytes(transport.value())
+
+        # Check that the only WINDOW_UPDATE frames came for the connection.
+        windowUpdateFrames = (
+            f for f in frames
+            if isinstance(f, hyperframe.frame.WindowUpdateFrame)
+        )
+        self.assertTrue(
+            all(frame.stream_id == 0 for frame in windowUpdateFrames)
+        )
+
+        # While we're here: we shouldn't have received HEADERS or DATA for this
+        # either.
+        headersFrames = [
+            f for f in frames if isinstance(f, hyperframe.frame.HeadersFrame)
+        ]
+        dataFrames = [
+            f for f in frames if isinstance(f, hyperframe.frame.DataFrame)
+        ]
+        self.assertFalse(headersFrames)
+        self.assertFalse(dataFrames)
+
+
+
 class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
