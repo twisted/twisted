@@ -92,8 +92,10 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
 
 def isInKnownHosts(host, pubKey, options):
     """
-    checks to see if host is in the known_hosts file for the user.
-    returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
+    Checks to see if host is in the known_hosts file for the user.
+
+    @return: 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
+    @rtype: L{int}
     """
     keyType = common.getNS(pubKey)[0]
     retVal = 0
