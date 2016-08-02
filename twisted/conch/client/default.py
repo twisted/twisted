@@ -161,6 +161,14 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         userauth.SSHUserAuthClient.serviceStarted(self)
 
     def _getPassword(self, prompt):
+        """
+        Prompt for a password using L{getpass.getpass}.
+
+        @param prompt: Written on tty to ask for the input.
+        @type prompt: L{str}
+        @return: The input.
+        @rtype: L{str}
+        """
         with self._replaceStdoutStdin():
             try:
                 p=getpass.getpass(prompt)
