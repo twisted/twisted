@@ -295,7 +295,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         and return them.
 
         @return: File objects for reading and writing to /dev/tty,
-                 standard input and standard output.
+                 corresponding to standard input and standard output.
         @rtype: A L{tuple} of L{io.TextIOWrapper} on Python 3.
                 A L{tuple} of binary files on Python 2.
         """
