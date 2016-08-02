@@ -36,6 +36,12 @@ if platform.isWindows():
 else:
     windowsSkip = skip
 
+ttySkip = None
+if not sys.stdin.isatty():
+    ttySkip = "sys.stdin is not an interactive tty"
+if not sys.stdout.isatty():
+    ttySkip = "sys.stdout is not an interactive tty"
+
 
 class SSHUserAuthClientTests(TestCase):
     """
@@ -211,7 +217,8 @@ class SSHUserAuthClientTests(TestCase):
         d = client.getPassword()
         d.addCallback(self.assertEqual, b'bad password')
         return d
-    test_getPassword.skip = windowsSkip
+
+    test_getPassword.skip = windowsSkip or ttySkip
 
 
     def test_getPasswordPrompt(self):
@@ -232,7 +239,8 @@ class SSHUserAuthClientTests(TestCase):
         d = client.getPassword(prompt)
         d.addCallback(self.assertEqual, b'bad password')
         return d
-    test_getPasswordPrompt.skip = windowsSkip
+
+    test_getPasswordPrompt.skip = windowsSkip or ttySkip
 
 
     def test_getPasswordConchError(self):
@@ -256,7 +264,8 @@ class SSHUserAuthClientTests(TestCase):
                 [stdout, stdin], [sys.stdout, sys.stdin])
             return fail
         self.assertFailure(d, ConchError)
-    test_getPasswordConchError.skip = windowsSkip
+
+    test_getPasswordConchError.skip = windowsSkip or ttySkip
 
 
     def test_getGenericAnswers(self):
@@ -284,4 +293,5 @@ class SSHUserAuthClientTests(TestCase):
         d.addCallback(
             self.assertListEqual, ["getpass", "raw_input"])
         return d
-    test_getGenericAnswers.skip = windowsSkip
+
+    test_getGenericAnswers.skip = windowsSkip or ttySkip
