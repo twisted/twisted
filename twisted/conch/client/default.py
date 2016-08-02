@@ -178,7 +178,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         """
         with self._replaceStdoutStdin():
             try:
-                p=getpass.getpass(prompt)
+                p = getpass.getpass(prompt)
                 return p
             except (KeyboardInterrupt, IOError):
                 print()
