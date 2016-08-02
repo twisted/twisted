@@ -869,7 +869,7 @@ class RawInputTests(unittest.TestCase):
     """
     def test_raw_input(self):
         """
-        Verify that raw_input exists and that it works.
+        L{twisted.python.compat.raw_input}
         """
         class FakeStdin:
             def readline(self):
