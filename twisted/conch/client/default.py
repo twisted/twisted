@@ -189,7 +189,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if prompt:
             prompt = nativeString(prompt)
         else:
-            prompt = "%s@%s's password: " % (nativeString(self.user), self.transport.transport.getPeer().host)
+            prompt = ("%s@%s's password: " %
+                (nativeString(self.user), self.transport.transport.getPeer().host))
         try:
             # We don't know the encoding the other side is using,
             # signaling that is not part of the SSH protocol. But
