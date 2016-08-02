@@ -14,8 +14,6 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 from __future__ import print_function
 
 from twisted.python import log
-from twisted.python.compat import (
-    nativeString, raw_input, _PY3, _b64decodebytes as decodebytes)
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -26,10 +24,7 @@ from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 
 from twisted.conch.client import agent
 
-import os, sys, getpass, contextlib
-
-if _PY3:
-    import io
+import os, sys, base64, getpass
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).
@@ -115,7 +110,7 @@ def isInKnownHosts(host, pubKey, options):
             if hostKeyType != keyType: # incorrect type of key
                 continue
             try:
-                decodedKey = decodebytes(encodedKey)
+                decodedKey = base64.decodestring(encodedKey)
             except:
                 continue
             if decodedKey == pubKey:
@@ -161,25 +156,21 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         userauth.SSHUserAuthClient.serviceStarted(self)
 
     def _getPassword(self, prompt):
-        with self._replaceStdoutStdin():
-            try:
-                p=getpass.getpass(prompt)
-                return p
-            except (KeyboardInterrupt, IOError):
-                print()
-                raise ConchError('PEBKAC')
+        try:
+            oldout, oldin = sys.stdout, sys.stdin
+            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            p=getpass.getpass(prompt)
+            sys.stdout,sys.stdin=oldout,oldin
+            return p
+        except (KeyboardInterrupt, IOError):
+            print()
+            raise ConchError('PEBKAC')
 
     def getPassword(self, prompt = None):
-        if prompt:
-            prompt = nativeString(prompt)
-        else:
-            prompt = "%s@%s's password: " % (nativeString(self.user), self.transport.transport.getPeer().host)
+        if not prompt:
+            prompt = "%s@%s's password: " % (self.user, self.transport.transport.getPeer().host)
         try:
-            # We don't know the encoding the other side is using,
-            # signaling that is not part of the SSH protocol. But
-            # using our defaultencoding is better than just going for
-            # ASCII.
-            p = self._getPassword(prompt).encode(sys.getdefaultencoding())
+            p = self._getPassword(prompt)
             return defer.succeed(p)
         except ConchError:
             return defer.fail()
@@ -218,7 +209,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         data, if one is available.
 
         @type publicKey: L{Key}
-        @type signData: L{bytes}
+        @type signData: L{str}
         """
         if not self.usedFiles: # agent key
             return self.keyAgent.signData(publicKey.blob(), signData)
@@ -239,10 +230,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.succeed(keys.Key.fromFile(file))
         except keys.EncryptedKeyError:
             for i in range(3):
-                prompt = "Enter passphrase for key '%s': " % self.usedFiles[-1]
+                prompt = "Enter passphrase for key '%s': " % \
+                    self.usedFiles[-1]
                 try:
-                    p = self._getPassword(prompt).encode(
-                        sys.getfilesystemencoding())
+                    p = self._getPassword(prompt)
                     return defer.succeed(keys.Key.fromFile(file, passphrase=p))
                 except (keys.BadKeyError, ConchError):
                     pass
@@ -255,46 +246,18 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
-        with self._replaceStdoutStdin():
+        try:
+            oldout, oldin = sys.stdout, sys.stdin
+            sys.stdin = sys.stdout = open('/dev/tty','r+')
             if name:
-                print(name.decode("UTF8"))
+                print(name)
             if instruction:
-                print(instruction.decode("UTF8"))
+                print(instruction)
             for prompt, echo in prompts:
-                prompt = prompt.decode("UTF8")
                 if echo:
                     responses.append(raw_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
-        return defer.succeed(responses)
-
-
-    @classmethod
-    def _openTty(cls):
-        """
-        Open /dev/tty as two streams one in read, one in write mode,
-        and return them.
-        """
-        stdin = open("/dev/tty", "rb")
-        stdout = open("/dev/tty", "wb")
-        if _PY3:
-            stdin = io.TextIOWrapper(stdin)
-            stdout = io.TextIOWrapper(stdout)
-        return stdin, stdout
-
-
-    @classmethod
-    @contextlib.contextmanager
-    def _replaceStdoutStdin(cls):
-        """
-        Contextmanager that replaces stdout and stdin with /dev/tty
-        and resets them when it is done.
-        """
-        oldout, oldin = sys.stdout, sys.stdin
-        sys.stdin, sys.stdout = cls._openTty()
-        try:
-            yield
         finally:
-            sys.stdout.close()
-            sys.stdin.close()
-            sys.stdout, sys.stdin = oldout, oldin
+            sys.stdout,sys.stdin=oldout,oldin
+        return defer.succeed(responses)

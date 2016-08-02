@@ -758,10 +758,8 @@ def _coercedUnicode(s):
 
 if _PY3:
     unichr = chr
-    raw_input = input
 else:
     unichr = unichr
-    raw_input = raw_input
 
 
 
@@ -801,5 +799,4 @@ __all__ = [
     "_coercedUnicode",
     "intern",
     "unichr",
-    "raw_input",
 ]

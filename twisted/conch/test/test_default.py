@@ -4,37 +4,21 @@
 """
 Tests for L{twisted.conch.client.default}.
 """
-
-from __future__ import absolute_import, division
-
-import sys
-
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.client.agent import SSHAgentClient
     from twisted.conch.client.default import SSHUserAuthClient
     from twisted.conch.client.options import ConchOptions
-    from twisted.conch.client import default
     from twisted.conch.ssh.keys import Key
-    skip = None
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.client.default."
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
-from twisted.conch.error import ConchError
 from twisted.conch.test import keydata
 from twisted.test.proto_helpers import StringTransport
-from twisted.python.compat import nativeString
-from twisted.python.runtime import platform
 
-if platform.isWindows():
-    windowsSkip = (
-        "genericAnswers and getPassword does not work on Windows."
-        " Should be fixed as part of fixing bug 6409 and 6410")
-else:
-    windowsSkip = skip
 
 
 class SSHUserAuthClientTests(TestCase):
@@ -59,18 +43,18 @@ class SSHUserAuthClientTests(TestCase):
         When connected to an agent, L{SSHUserAuthClient} can use it to
         request signatures of particular data with a particular L{Key}.
         """
-        client = SSHUserAuthClient(b"user", ConchOptions(), None)
+        client = SSHUserAuthClient("user", ConchOptions(), None)
         agent = SSHAgentClient()
         transport = StringTransport()
         agent.makeConnection(transport)
         client.keyAgent = agent
-        cleartext = b"Sign here"
+        cleartext = "Sign here"
         client.signData(self.rsaPublic, cleartext)
         self.assertEqual(
             transport.value(),
-            b"\x00\x00\x00\x8b\r\x00\x00\x00u" + self.rsaPublic.blob() +
-            b"\x00\x00\x00\t" + cleartext +
-            b"\x00\x00\x00\x00")
+            "\x00\x00\x00\x8b\r\x00\x00\x00u" + self.rsaPublic.blob() +
+            "\x00\x00\x00\t" + cleartext +
+            "\x00\x00\x00\x00")
 
 
     def test_agentGetPublicKey(self):
@@ -96,7 +80,7 @@ class SSHUserAuthClientTests(TestCase):
         """
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient("user",  options, None)
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
@@ -110,7 +94,7 @@ class SSHUserAuthClientTests(TestCase):
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
         agent = SSHAgentClient()
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient("user",  options, None)
         client.keyAgent = agent
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
@@ -128,8 +112,8 @@ class SSHUserAuthClientTests(TestCase):
         dsaFile = self.tmpdir.child('id_dsa')
         dsaFile.setContent(keydata.privateDSA_openssh)
         options.identitys = [self.rsaFile.path, dsaFile.path]
-        self.tmpdir.child('id_rsa.pub').setContent(b'not a key!')
-        client = SSHUserAuthClient(b"user",  options, None)
+        self.tmpdir.child('id_rsa.pub').setContent('not a key!')
+        client = SSHUserAuthClient("user",  options, None)
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, Key.fromString(keydata.publicDSA_openssh))
@@ -145,7 +129,7 @@ class SSHUserAuthClientTests(TestCase):
         rsaPrivate = Key.fromString(keydata.privateRSA_openssh)
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient("user",  options, None)
         # Populate the list of used files
         client.getPublicKey()
 
@@ -163,19 +147,19 @@ class SSHUserAuthClientTests(TestCase):
         encrypted.
         """
         rsaPrivate = Key.fromString(keydata.privateRSA_openssh)
-        passphrase = b'this is the passphrase'
+        passphrase = 'this is the passphrase'
         self.rsaFile.setContent(rsaPrivate.toString('openssh', passphrase))
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient(b"user",  options, None)
+        client = SSHUserAuthClient("user",  options, None)
         # Populate the list of used files
         client.getPublicKey()
 
         def _getPassword(prompt):
-            self.assertEqual(
-                prompt,
-                "Enter passphrase for key '%s': " % (self.rsaFile.path,))
-            return nativeString(passphrase)
+            self.assertEqual(prompt,
+                              "Enter passphrase for key '%s': " % (
+                              self.rsaFile.path,))
+            return passphrase
 
         def _cbGetPrivateKey(key):
             self.assertFalse(key.isPublic())
@@ -183,105 +167,3 @@ class SSHUserAuthClientTests(TestCase):
 
         self.patch(client, '_getPassword', _getPassword)
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
-
-
-    def test_getPassword(self):
-        """
-        Verify that the getPassword function in L{SSHUserAuthClient}
-        works, when prompt is sent, and fetching the password from the
-        user succeeds.
-
-        """
-        class FakeTransport:
-            def __init__(self, host):
-                self.transport = self
-                self.host = host
-            def getPeer(self):
-                return self
-
-        options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
-        client.transport = FakeTransport("127.0.0.1")
-
-        def getpass(prompt):
-            self.assertEqual(prompt, "user@127.0.0.1's password: ")
-            return 'bad password'
-
-        self.patch(default.getpass, 'getpass', getpass)
-        d = client.getPassword()
-        d.addCallback(self.assertEqual, b'bad password')
-        return d
-    test_getPassword.skip = windowsSkip
-
-
-    def test_getPasswordPrompt(self):
-        """
-        Verify that the getPassword function in L{SSHUserAuthClient}
-        works, when prompt is sent, and fetching the password from the
-        user succeeds.
-        """
-        options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
-        prompt = b"Give up your password"
-
-        def getpass(p):
-            self.assertEqual(p, nativeString(prompt))
-            return 'bad password'
-
-        self.patch(default.getpass, 'getpass', getpass)
-        d = client.getPassword(prompt)
-        d.addCallback(self.assertEqual, b'bad password')
-        return d
-    test_getPasswordPrompt.skip = windowsSkip
-
-
-    def test_getPasswordConchError(self):
-        """
-        Verify that the getPassword function in L{SSHUserAuthClient}
-        fails it's deferred if the underlying _getPassword function
-        raises a ConchError
-        """
-        options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
-
-        def getpass(prompt):
-            raise KeyboardInterrupt("User pressed CTRL-C")
-
-        self.patch(default.getpass, 'getpass', getpass)
-        stdout, stdin = sys.stdout, sys.stdin
-        d = client.getPassword(b'?')
-        @d.addErrback
-        def check_sys(fail):
-            self.assertEqual(
-                [stdout, stdin], [sys.stdout, sys.stdin])
-            return fail
-        self.assertFailure(d, ConchError)
-    test_getPasswordConchError.skip = windowsSkip
-
-
-    def test_getGenericAnswers(self):
-        """
-        Verify that the getGenericAnswers function in L{SSHUserAuthClient}
-        works.
-        """
-        options = ConchOptions()
-        client = SSHUserAuthClient(b"user",  options, None)
-
-        def getpass(prompt):
-            self.assertEqual(prompt, "pass prompt")
-            return "getpass"
-
-        self.patch(default.getpass, 'getpass', getpass)
-
-        def raw_input(prompt):
-            self.assertEqual(prompt, "raw_input prompt")
-            return "raw_input"
-
-        self.patch(default, 'raw_input', raw_input)
-        d =client.getGenericAnswers(
-            b"Name", b"Instruction", [
-                (b"pass prompt", False), (b"raw_input prompt", True)])
-        d.addCallback(
-            self.assertListEqual, ["getpass", "raw_input"])
-        return d
-    test_getGenericAnswers.skip = windowsSkip

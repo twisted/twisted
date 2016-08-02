@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input
+    _coercedUnicode, unichr,
 )
 from twisted.python.filepath import FilePath
 
@@ -861,27 +861,3 @@ class UnichrTests(unittest.TestCase):
         unichar exists and returns a unicode string with the given code point.
         """
         self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
-
-
-class RawInputTests(unittest.TestCase):
-    """
-    Tests for L{raw_input}
-    """
-    def test_raw_input(self):
-        """
-        Verify that raw_input exists and that it works.
-        """
-        class FakeStdin:
-            def readline(self):
-                return "User input\n"
-
-        class FakeStdout:
-            data = ""
-            def write(self, data):
-                self.data += data
-
-        self.patch(sys, "stdin", FakeStdin())
-        stdout = FakeStdout()
-        self.patch(sys, "stdout", stdout)
-        self.assertEqual(raw_input("Prompt"), "User input")
-        self.assertEqual(stdout.data, "Prompt")
