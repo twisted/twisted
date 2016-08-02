@@ -196,7 +196,6 @@ class SSHUserAuthClientTests(TestCase):
         Verify that the getPassword function in L{SSHUserAuthClient}
         works, when prompt is sent, and fetching the password from the
         user succeeds.
-
         """
         class FakeTransport:
             def __init__(self, host):
@@ -287,7 +286,7 @@ class SSHUserAuthClientTests(TestCase):
             return "raw_input"
 
         self.patch(default, 'raw_input', raw_input)
-        d =client.getGenericAnswers(
+        d = client.getGenericAnswers(
             b"Name", b"Instruction", [
                 (b"pass prompt", False), (b"raw_input prompt", True)])
         d.addCallback(
