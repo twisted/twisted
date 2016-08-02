@@ -89,8 +89,10 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
     return kh.verifyHostKey(ui, actualHost, host, actualKey)
 
 
+
 def isInKnownHosts(host, pubKey, options):
-    """checks to see if host is in the known_hosts file for the user.
+    """
+    checks to see if host is in the known_hosts file for the user.
     returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
     """
     keyType = common.getNS(pubKey)[0]
@@ -136,6 +138,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not options.identitys:
             options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
 
+
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
             log.msg('using agent')
@@ -146,10 +149,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         else:
             userauth.SSHUserAuthClient.serviceStarted(self)
 
+
     def serviceStopped(self):
         if self.keyAgent:
             self.keyAgent.transport.loseConnection()
             self.keyAgent = None
+
 
     def _setAgent(self, a):
         self.keyAgent = a
@@ -157,8 +162,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         d.addBoth(self._ebSetAgent)
         return d
 
+
     def _ebSetAgent(self, f):
         userauth.SSHUserAuthClient.serviceStarted(self)
+
 
     def _getPassword(self, prompt):
         """
@@ -176,6 +183,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             except (KeyboardInterrupt, IOError):
                 print()
                 raise ConchError('PEBKAC')
+
 
     def getPassword(self, prompt = None):
         if prompt:
