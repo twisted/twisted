@@ -34,7 +34,6 @@ else:
             A skipped test to show that this was not ran because the Python is
             too old.
             """
-            pass
 
 
 
