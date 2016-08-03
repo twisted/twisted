@@ -8,7 +8,6 @@ Handling of RSA and DSA keys.
 
 from __future__ import absolute_import, division
 
-import base64
 import binascii
 import itertools
 import warnings
@@ -36,7 +35,9 @@ from pyasn1.codec.ber import encoder as berEncoder
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, long, izip, nativeString, _PY3
+from twisted.python.compat import (
+    iterbytes, long, izip, nativeString, _PY3,
+    _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version
 
@@ -230,7 +231,7 @@ class Key(object):
         @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the blob type is unknown.
         """
-        blob = base64.decodestring(data.split()[1])
+        blob = decodebytes(data.split()[1])
         return cls._fromString_BLOB(blob)
 
 
@@ -302,7 +303,7 @@ class Key(object):
             ba = md5(passphrase + iv[:8]).digest()
             bb = md5(ba + passphrase + iv[:8]).digest()
             decKey = (ba + bb)[:keySize]
-            b64Data = base64.decodestring(b''.join(lines[3:-1]))
+            b64Data = decodebytes(b''.join(lines[3:-1]))
 
             decryptor = Cipher(
                 algorithmClass(decKey),
@@ -315,7 +316,7 @@ class Key(object):
             keyData = keyData[:-removeLen]
         else:
             b64Data = b''.join(lines[1:-1])
-            keyData = base64.decodestring(b64Data)
+            keyData = decodebytes(b64Data)
 
         try:
             decodedKey = berDecoder.decode(keyData)[0]
@@ -383,7 +384,7 @@ class Key(object):
         @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the key type is unknown
         """
-        sexp = sexpy.parse(base64.decodestring(data[1:-1]))
+        sexp = sexpy.parse(decodebytes(data[1:-1]))
         assert sexp[0] == b'public-key'
         kd = {}
         for name, data in sexp[1][1:]:
@@ -1007,7 +1008,7 @@ class Key(object):
         """
         data = self.data()
         if self.isPublic():
-            b64Data = base64.encodestring(self.blob()).replace(b'\n', b'')
+            b64Data = encodebytes(self.blob()).replace(b'\n', b'')
             if not extra:
                 extra = b''
             return (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
@@ -1046,7 +1047,7 @@ class Key(object):
 
                 asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
 
-            b64Data = base64.encodestring(asn1Data).replace(b'\n', b'')
+            b64Data = encodebytes(asn1Data).replace(b'\n', b'')
             lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
             lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
                                    b' PRIVATE KEY-----')))
@@ -1077,7 +1078,7 @@ class Key(object):
                                         [b'y', common.MP(data['y'])[4:]]]]])
             else:
                 raise BadKeyError("unknown key type %s" % (type,))
-            return (b'{' + base64.encodestring(keyData).replace(b'\n', b'') +
+            return (b'{' + encodebytes(keyData).replace(b'\n', b'') +
                     b'}')
         else:
             if type == 'RSA':
