@@ -20,13 +20,12 @@ try:
 except ImportError:
     cryptography = None
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import ec
-
 if pyasn1 is not None and cryptography is not None:
     dependencySkip = None
     from twisted.conch.ssh import transport, keys, factory
     from twisted.conch.test import keydata
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import ec
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
