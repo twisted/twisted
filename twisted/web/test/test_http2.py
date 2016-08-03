@@ -2116,13 +2116,11 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         frames = framesFromBytes(transport.value())
 
         # Check that the only WINDOW_UPDATE frames came for the connection.
-        windowUpdateFrames = (
-            f for f in frames
+        windowUpdateFrameIDs = [
+            f.stream_id for f in frames
             if isinstance(f, hyperframe.frame.WindowUpdateFrame)
-        )
-        self.assertTrue(
-            all(frame.stream_id == 0 for frame in windowUpdateFrames)
-        )
+        ]
+        self.assertEqual([0, 0, 0], windowUpdateFrameIDs)
 
         # While we're here: we shouldn't have received HEADERS or DATA for this
         # either.
