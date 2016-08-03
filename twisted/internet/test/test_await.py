@@ -19,11 +19,14 @@ if sys.version_info > (3, 5):
     _g = {}
     execfile(_path.path, _g)
     AwaitTests = _g["AwaitTests"]
-
 else:
     from twisted.trial.unittest import TestCase
 
     class AwaitTests(TestCase):
+        """
+        A dummy class to show that this test file was discovered but the tests
+        are unable to be ran in this version of Python.
+        """
         skip = "async/await is not available before Python 3.5"
 
         def test_notAvailable(self):
@@ -32,5 +35,7 @@ else:
             too old.
             """
             pass
+
+
 
 __all__ = ["AwaitTests"]
