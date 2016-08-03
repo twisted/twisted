@@ -10,7 +10,7 @@ from __future__ import absolute_import, division
 
 import sys
 
-if sys.version_info > (3, 5):
+if sys.version_info >= (3, 5, 0):
     from twisted.python.compat import execfile
     from twisted.python.filepath import FilePath
 
