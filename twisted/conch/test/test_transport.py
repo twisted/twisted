@@ -1421,6 +1421,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.kexAlg = b'bad-curve'
         self.assertRaises(AttributeError, self.proto._ssh_KEX_ECDH_INIT, common.NS(b'unused-key'))
 
+
     def test_KEXDH_INIT_GROUP1(self):
         """
         KEXDH_INIT messages are processed when the
