@@ -30,6 +30,8 @@ matrix:
     # on starting separate jobs.
     - python: 2.7
       env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+    - python: 3.5
+      env: TOXENV=pyflakes3
     #
     # OSX 10.10
     #

@@ -31,8 +31,7 @@ Only necessary while parts of Twisted are unported.
     Python 3.
 """
 
-from __future__ import division
-
+from __future__ import absolute_import, division
 
 modules = [
     "twisted.__init__",
@@ -413,6 +412,7 @@ testModules = [
     "twisted.cred.test.test_strcred",
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
+    "twisted.internet.test.test_await",
     "twisted.internet.test.test_base",
     "twisted.internet.test.test_baseprocess",
     "twisted.internet.test.test_core",
@@ -614,6 +614,7 @@ testModules = [
 ]
 
 
+
 testDataFiles = [
     "twisted.conch.test.keydata",
     "twisted.conch.test.loopback",
@@ -649,6 +650,9 @@ testDataFiles = [
     "twisted.test.stdio_test_producer",
     "twisted.test.stdio_test_write",
     "twisted.test.stdio_test_writeseq",
+    "twisted.trial.test.mockcustomsuite",
+    "twisted.trial.test.mockcustomsuite2",
+    "twisted.trial.test.mockcustomsuite3",
     "twisted.trial.test.mockdoctest",
     "twisted.trial.test.moduleself",
     "twisted.trial.test.moduletest",
@@ -658,10 +662,8 @@ testDataFiles = [
     "twisted.trial.test.sample",
     "twisted.trial.test.scripttest",
     "twisted.trial.test.weird",
-    "twisted.trial.test.mockcustomsuite",
-    "twisted.trial.test.mockcustomsuite2",
-    "twisted.trial.test.mockcustomsuite3",
 ]
+
 
 
 almostModules = [
