@@ -695,6 +695,22 @@ class RequestTests(unittest.TestCase):
         self.assertIs(session1, session2)
 
 
+    def test_retrieveExistingSession(self):
+        """
+        L{Request.getSession} retrieves an existing session if the relevant
+        cookie is set in the incoming request.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        mySession = server.Session("special-id", site)
+        site.sessions[mySession.uid] = mySession
+        request.received_cookies['TWISTED_SESSION'] = mySession.uid
+        self.assertIs(request.getSession(), mySession)
+
+
 
 class GzipEncoderTests(unittest.TestCase):
 
