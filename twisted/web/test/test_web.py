@@ -637,16 +637,16 @@ class RequestTests(unittest.TestCase):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         request = server.Request(d, 1)
-        request.site = server.Site('/')
+        request.site = server.Site(resource.Resource())
         request.sitepath = []
         secureSession = request.getSession()
         self.assertIsNotNone(secureSession)
         self.addCleanup(secureSession.expire)
-        self.assertEqual(request.cookies[0].split("=")[0],
-                         "TWISTED_SECURE_SESSION")
+        self.assertEqual(request.cookies[0].split(b"=")[0],
+                         b"TWISTED_SECURE_SESSION")
         session = request.getSession(forceNotSecure=True)
         self.assertIsNotNone(session)
-        self.assertEqual(request.cookies[1].split("=")[0], "TWISTED_SESSION")
+        self.assertEqual(request.cookies[1].split(b"=")[0], b"TWISTED_SESSION")
         self.addCleanup(session.expire)
         self.assertNotEqual(session.uid, secureSession.uid)
 
@@ -700,9 +700,9 @@ class RequestTests(unittest.TestCase):
         request = server.Request(d, 1)
         request.site = site
         request.sitepath = []
-        mySession = server.Session("special-id", site)
+        mySession = server.Session(b"special-id", site)
         site.sessions[mySession.uid] = mySession
-        request.received_cookies['TWISTED_SESSION'] = mySession.uid
+        request.received_cookies[b'TWISTED_SESSION'] = mySession.uid
         self.assertIs(request.getSession(), mySession)
 
 
@@ -716,14 +716,13 @@ class RequestTests(unittest.TestCase):
         request = server.Request(d, 1)
         request.site = site
         request.sitepath = []
-        request.received_cookies['TWISTED_SESSION'] = "does-not-exist"
+        request.received_cookies[b'TWISTED_SESSION'] = b"does-not-exist"
         session = request.getSession()
         self.assertIsNotNone(session)
         self.addCleanup(session.expire)
-        self.assertTrue(request.cookies[0].startswith('TWISTED_SESSION='))
+        self.assertTrue(request.cookies[0].startswith(b'TWISTED_SESSION='))
         # It should be a new session ID.
-        self.assertNotIn("does-not-exist",
-                         request.cookies[0])
+        self.assertNotIn(b"does-not-exist", request.cookies[0])
 
 
 
