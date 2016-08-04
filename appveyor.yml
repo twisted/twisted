@@ -48,6 +48,16 @@ install:
   - "SET PATH=%PYTHON_HOME%;%PYTHON_HOME%\\Scripts;%PATH%"
   - "SET LIB=%PYTHON_HOME%\\lib;%LIB%"
 
+  # The following line is inspired by http://nedbatchelder.com/blog/201509/appveyor.html
+  # Tox has an internal mapping of where to find python.exe.  Unfortunately,
+  # this internal mapping is not the same as the Appveyor build host, which has
+  # to install separate python.exe in different directories for 32-bit and 64-bit.
+  # We write out a .bat file which invokes the correct python.exe.  tox will invoke
+  # this .at file.  This issue becomes important because linking to python.lib
+  # will fail without this.
+  - "python -c \"import os; open('python{0}.bat'.format(os.environ['PYTHON_VERSION']), 'w').write('@{0}\\\\python \\x25*\\n'.format(os.environ['PYTHON_HOME']))\""
+  - "type python*.bat"
+
   # Get some information about the build environment.
   # Uncomment them. Left here so that you don't have to search the net for
   # how to run such command on Windows :)
