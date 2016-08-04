@@ -431,17 +431,17 @@ class Request(Copyable, http.Request, components.Componentized):
         secure = self.isSecure() and not forceNotSecure
 
         if not secure:
-            cookieString = 'TWISTED_SESSION'
+            cookieString = b"TWISTED_SESSION"
             sessionAttribute = "_insecureSession"
         else:
-            cookieString = 'TWISTED_SECURE_SESSION'
+            cookieString = b"TWISTED_SECURE_SESSION"
             sessionAttribute = "_secureSession"
 
         session = getattr(self, sessionAttribute)
 
         # Session management
         if not session:
-            cookiename = "_".join([cookieString] + self.sitepath)
+            cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
@@ -451,7 +451,7 @@ class Request(Copyable, http.Request, components.Componentized):
             # if it still hasn't been set, fix it up.
             if not session:
                 session = self.site.makeSession()
-                self.addCookie(cookiename, session.uid, path='/',
+                self.addCookie(cookiename, session.uid, path=b"/",
                                secure=secure)
 
         session.touch()
