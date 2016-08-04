@@ -632,24 +632,22 @@ class RequestTests(unittest.TestCase):
     def test_sessionDifferentFromSecureSession(self):
         """
         L{Request.session} and L{Request.secure_session} should be two separate
-        sessions with unique ids.
+        sessions with unique ids and different cookies.
         """
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         request = server.Request(d, 1)
         request.site = server.Site('/')
         request.sitepath = []
-        session = request.getSession(forceNotSecure=True)
-        self.addCleanup(session.expire)
         secureSession = request.getSession()
+        self.assertIsNotNone(secureSession)
         self.addCleanup(secureSession.expire)
-
-
-        # Check that the sessions are not None
-        self.assertTrue(session != None)
-        self.assertTrue(secureSession != None)
-
-        # Check that the sessions are different
+        self.assertEqual(request.cookies[0].split("=")[0],
+                         "TWISTED_SECURE_SESSION")
+        session = request.getSession(forceNotSecure=True)
+        self.assertIsNotNone(session)
+        self.assertEqual(request.cookies[1].split("=")[0], "TWISTED_SESSION")
+        self.addCleanup(session.expire)
         self.assertNotEqual(session.uid, secureSession.uid)
 
 
