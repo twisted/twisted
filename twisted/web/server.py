@@ -21,6 +21,7 @@ except ImportError:
             string.decode('charmap'), *args, **kwargs).encode('charmap')
 
 import zlib
+from binascii import hexlify
 
 from zope.interface import implementer
 
@@ -93,6 +94,12 @@ class Request(Copyable, http.Request, components.Componentized):
     @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
         value to send in responses if no other value is set.  L{None} disables
         the default.
+
+    @ivar _insecureSession: The L{Session} object representing state that will
+        be transmitted over plain-text HTTP.
+
+    @ivar _secureSession: The L{Session} object representing the state that
+        will be transmitted only over HTTPS.
     """
 
     defaultContentType = b"text/html"
@@ -386,27 +393,74 @@ class Request(Copyable, http.Request, components.Componentized):
 
     ### these calls remain local
 
-    session = None
+    _secureSession = None
+    _insecureSession = None
+
+    @property
+    def session(self):
+        """
+        If a session has already been created or looked up with
+        L{Request.getSession}, this will return that object.  (This will always
+        be the session that matches the security of the request; so if
+        C{forceNotSecure} is used on a secure request, this will not return
+        that session.)
+
+        @return: the session attribute
+        @rtype: L{Session} or L{None}
+        """
+        if self.isSecure():
+            return self._secureSession
+        else:
+            return self._insecureSession
 
 
-    def getSession(self, sessionInterface=None):
+    def getSession(self, sessionInterface=None, forceNotSecure=False):
+        """
+        Check if there is a session cookie, and if not, create it.
+
+        By default, the cookie with be secure for HTTPS requests and not secure
+        for HTTP requests.  If for some reason you need access to the insecure
+        cookie from a secure request you can set C{forceNotSecure = True}.
+
+        @param forceNotSecure: Should we retrieve a session that will be
+            transmitted over HTTP, even if this L{Request} was delivered over
+            HTTPS?
+        @type forceNotSecure: L{bool}
+        """
+        # Make sure we aren't creating a secure session on a non-secure page
+        secure = self.isSecure() and not forceNotSecure
+
+        if not secure:
+            cookieString = b"TWISTED_SESSION"
+            sessionAttribute = "_insecureSession"
+        else:
+            cookieString = b"TWISTED_SECURE_SESSION"
+            sessionAttribute = "_secureSession"
+
+        session = getattr(self, sessionAttribute)
+
         # Session management
-        if not self.session:
-            cookiename = b"_".join([b'TWISTED_SESSION'] + self.sitepath)
+        if not session:
+            cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
-                    self.session = self.site.getSession(sessionCookie)
+                    session = self.site.getSession(sessionCookie)
                 except KeyError:
                     pass
             # if it still hasn't been set, fix it up.
-            if not self.session:
-                self.session = self.site.makeSession()
-                self.addCookie(cookiename, self.session.uid, path=b'/')
-        self.session.touch()
+            if not session:
+                session = self.site.makeSession()
+                self.addCookie(cookiename, session.uid, path=b"/",
+                               secure=secure)
+
+        session.touch()
+        setattr(self, sessionAttribute, session)
+
         if sessionInterface:
-            return self.session.getComponent(sessionInterface)
-        return self.session
+            return session.getComponent(sessionInterface)
+
+        return session
 
 
     def _prePathURL(self, prepath):
@@ -634,6 +688,7 @@ class Site(http.HTTPFactory):
     displayTracebacks = True
     sessionFactory = Session
     sessionCheckTime = 1800
+    _entropy = os.urandom
 
     def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
@@ -668,13 +723,8 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
-        from binascii import hexlify
-        from hashlib import md5
-        import random
         self.counter = self.counter + 1
-        return hexlify(md5(networkString(
-                "%s_%s" % (str(random.random()), str(self.counter)))
-                   ).digest())
+        return hexlify(self._entropy(32))
 
 
     def makeSession(self):

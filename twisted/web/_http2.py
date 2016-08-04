@@ -686,7 +686,23 @@ class H2Connection(Protocol, TimeoutMixin):
         @type increment: L{int}
         """
         # TODO: Consider whether we want some kind of consolidating logic here.
-        self.conn.increment_flow_control_window(increment, stream_id=streamID)
+        try:
+            self.conn.increment_flow_control_window(
+                increment, stream_id=streamID
+            )
+        except h2.exceptions.StreamClosedError:
+            # The stream got reset and we haven't worked it out yet. The stream
+            # window doesn't matter now as all the data that can possibly be
+            # received on the stream already has been. We still want to
+            # increment the connection window though: the data received on this
+            # stream counted against the connection flow control window, and if
+            # we don't expand the window this becomes a DoS vector that leads
+            # to us eventually preventing the client from sending any more data
+            # to us.
+            # NOTE: This branch may become unneeded in the future if
+            # https://github.com/python-hyper/hyper-h2/issues/228 happens.
+            pass
+
         self.conn.increment_flow_control_window(increment, stream_id=None)
         self.transport.write(self.conn.data_to_send())
 

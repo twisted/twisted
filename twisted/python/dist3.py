@@ -31,8 +31,7 @@ Only necessary while parts of Twisted are unported.
     Python 3.
 """
 
-from __future__ import division
-
+from __future__ import absolute_import, division
 
 modules = [
     "twisted.__init__",
@@ -58,6 +57,7 @@ modules = [
     "twisted.conch.client.__init__",
     "twisted.conch.client.default",
     "twisted.conch.client.knownhosts",
+    "twisted.conch.endpoints",
     "twisted.conch.error",
     "twisted.conch.interfaces",
     "twisted.conch.insults.__init__",
@@ -122,6 +122,7 @@ modules = [
     "twisted.internet._posixstdio",
     "twisted.internet._posixserialport",
     "twisted.internet._signals",
+    "twisted.internet._sslverify",
     "twisted.internet._win32serialport",
     "twisted.internet._win32stdio",
     "twisted.internet.abstract",
@@ -196,6 +197,7 @@ modules = [
     "twisted.names.error",
     "twisted.names.hosts",
     "twisted.names.resolve",
+    "twisted.names.root",
     "twisted.names.secondary",
     "twisted.names.server",
     "twisted.names.srvconnect",
@@ -232,6 +234,7 @@ modules = [
     "twisted.protocols.__init__",
     "twisted.protocols.amp",
     "twisted.protocols.basic",
+    "twisted.protocols.loopback",
     "twisted.protocols.policies",
     "twisted.protocols.telnet",
     "twisted.protocols.test.__init__",
@@ -251,6 +254,7 @@ modules = [
     "twisted.protocols.postfix",
     "twisted.protocols.socks",
     "twisted.protocols.tls",
+    "twisted.protocols.wire",
     "twisted.python.__init__",
     "twisted.python._appdirs",
     "twisted.python._inotify",
@@ -271,6 +275,7 @@ modules = [
     "twisted.python.filepath",
     "twisted.python.lockfile",
     "twisted.python.log",
+    "twisted.python.logfile",
     "twisted.python.htmlizer",
     "twisted.python.modules",
     "twisted.python.monkey",
@@ -316,6 +321,7 @@ modules = [
     "twisted._threads._threadworker",
     "twisted._threads.test.__init__",
     "twisted.trial.__init__",
+    "twisted.trial.__main__",
     "twisted.trial._asyncrunner",
     "twisted.trial._asynctest",
     "twisted.trial._synctest",
@@ -387,6 +393,7 @@ testModules = [
     "twisted.conch.test.test_channel",
     "twisted.conch.test.test_checkers",
     "twisted.conch.test.test_connection",
+    "twisted.conch.test.test_endpoints",
     "twisted.conch.test.test_default",
     "twisted.conch.test.test_filetransfer",
     "twisted.conch.test.test_forwarding",
@@ -413,6 +420,7 @@ testModules = [
     "twisted.cred.test.test_strcred",
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
+    "twisted.internet.test.test_await",
     "twisted.internet.test.test_base",
     "twisted.internet.test.test_baseprocess",
     "twisted.internet.test.test_core",
@@ -614,6 +622,7 @@ testModules = [
 ]
 
 
+
 testDataFiles = [
     "twisted.conch.test.keydata",
     "twisted.conch.test.loopback",
@@ -649,6 +658,9 @@ testDataFiles = [
     "twisted.test.stdio_test_producer",
     "twisted.test.stdio_test_write",
     "twisted.test.stdio_test_writeseq",
+    "twisted.trial.test.mockcustomsuite",
+    "twisted.trial.test.mockcustomsuite2",
+    "twisted.trial.test.mockcustomsuite3",
     "twisted.trial.test.mockdoctest",
     "twisted.trial.test.moduleself",
     "twisted.trial.test.moduletest",
@@ -658,10 +670,8 @@ testDataFiles = [
     "twisted.trial.test.sample",
     "twisted.trial.test.scripttest",
     "twisted.trial.test.weird",
-    "twisted.trial.test.mockcustomsuite",
-    "twisted.trial.test.mockcustomsuite2",
-    "twisted.trial.test.mockcustomsuite3",
 ]
+
 
 
 almostModules = [
@@ -669,24 +679,6 @@ almostModules = [
     "twisted.conch.client.agent",
     # twisted.conch.client.default has tests that depend on
     "twisted.conch.client.options",
-    # twisted.conch.test.test_text and twisted.conch.test.test_window
-    # need these conch modules.  They need more work to get full
-    # Python 3 test coverage
-    "twisted.conch.insults.helper",
-    "twisted.conch.insults.insults",
-    # Required for Trial
-    "twisted.python.logfile",
-    # Missing test coverage, see #6156:
-    "twisted.internet._sslverify",
-    # twisted.names.client semi-depends on twisted.names.root, but only on
-    # Windows really:
-    "twisted.names.root",
-    # Missing test coverage:
-    "twisted.protocols.loopback",
-    # Echo is ported for twisted.application tests:
-    "twisted.protocols.wire",
-    # Required for Trial
-    "twisted.python.logfile",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
