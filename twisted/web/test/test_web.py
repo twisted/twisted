@@ -629,6 +629,102 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
+    def test_sessionDifferentFromSecureSession(self):
+        """
+        L{Request.session} and L{Request.secure_session} should be two separate
+        sessions with unique ids and different cookies.
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        request.sitepath = []
+        secureSession = request.getSession()
+        self.assertIsNotNone(secureSession)
+        self.addCleanup(secureSession.expire)
+        self.assertEqual(request.cookies[0].split(b"=")[0],
+                         b"TWISTED_SECURE_SESSION")
+        session = request.getSession(forceNotSecure=True)
+        self.assertIsNotNone(session)
+        self.assertEqual(request.cookies[1].split(b"=")[0], b"TWISTED_SESSION")
+        self.addCleanup(session.expire)
+        self.assertNotEqual(session.uid, secureSession.uid)
+
+
+    def test_sessionAttribute(self):
+        """
+        On a L{Request}, the C{session} attribute retrieves the associated
+        L{Session} only if it has been initialized.  If the request is secure,
+        it retrieves the secure session.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        self.assertIs(request.session, None)
+        insecureSession = request.getSession(forceNotSecure=True)
+        self.addCleanup(insecureSession.expire)
+        self.assertIs(request.session, None)
+        secureSession = request.getSession()
+        self.addCleanup(secureSession.expire)
+        self.assertIsNot(secureSession, None)
+        self.assertIsNot(secureSession, insecureSession)
+        self.assertIs(request.session, secureSession)
+
+
+    def test_sessionCaching(self):
+        """
+        L{Request.getSession} creates the session object only once per request;
+        if it is called twice it returns the identical result.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        session1 = request.getSession()
+        self.addCleanup(session1.expire)
+        session2 = request.getSession()
+        self.assertIs(session1, session2)
+
+
+    def test_retrieveExistingSession(self):
+        """
+        L{Request.getSession} retrieves an existing session if the relevant
+        cookie is set in the incoming request.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        mySession = server.Session(b"special-id", site)
+        site.sessions[mySession.uid] = mySession
+        request.received_cookies[b'TWISTED_SESSION'] = mySession.uid
+        self.assertIs(request.getSession(), mySession)
+
+
+    def test_retrieveNonExistentSession(self):
+        """
+        L{Request.getSession} generates a new session if the relevant cookie is
+        set in the incoming request.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        request.received_cookies[b'TWISTED_SESSION'] = b"does-not-exist"
+        session = request.getSession()
+        self.assertIsNotNone(session)
+        self.addCleanup(session.expire)
+        self.assertTrue(request.cookies[0].startswith(b'TWISTED_SESSION='))
+        # It should be a new session ID.
+        self.assertNotIn(b"does-not-exist", request.cookies[0])
+
+
 
 class GzipEncoderTests(unittest.TestCase):
 
