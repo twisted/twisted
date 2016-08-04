@@ -679,6 +679,22 @@ class RequestTests(unittest.TestCase):
         self.assertIs(request.session, secureSession)
 
 
+    def test_sessionCaching(self):
+        """
+        L{Request.getSession} creates the session object only once per request;
+        if it is called twice it returns the identical result.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        session1 = request.getSession()
+        self.addCleanup(session1.expire)
+        session2 = request.getSession()
+        self.assertIs(session1, session2)
+
+
 
 class GzipEncoderTests(unittest.TestCase):
 
