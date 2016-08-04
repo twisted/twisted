@@ -12,7 +12,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -134,6 +134,32 @@ class SiteTest(unittest.TestCase):
 
         self.assertIsInstance(session, server.Session)
         self.assertIsInstance(session.uid, bytes)
+
+
+    def test_sessionUIDGeneration(self):
+        """
+        L{site.getSession} generates L{Session} objects with distinct UIDs from
+        a secure source of entropy.
+        """
+        site = server.Site(resource.Resource())
+        # Ensure that we _would_ use the unpredictable random source if the
+        # test didn't stub it.
+        self.assertIdentical(site._entropy, os.urandom)
+
+        def predictableEntropy(n):
+            predictableEntropy.x += 1
+            return (unichr(predictableEntropy.x) * n).encode("charmap")
+        predictableEntropy.x = 0
+        self.patch(site, "_entropy", predictableEntropy)
+        a = self.getAutoExpiringSession(site)
+        b = self.getAutoExpiringSession(site)
+        self.assertEqual(a.uid, b"01" * 0x20)
+        self.assertEqual(b.uid, b"02" * 0x20)
+        # This functionality is silly (the value is no longer used in session
+        # generation), but 'counter' was a public attribute since time
+        # immemorial so we should make sure if anyone was using it to get site
+        # metrics or something it keeps working.
+        self.assertEqual(site.counter, 2)
 
 
     def test_getSessionExistent(self):
