@@ -40,6 +40,10 @@ environment:
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-coverage-windows,codecov-publish
+    #- PYTHON_HOME: "C:\\PYTHON35-x64"
+    #  PYTHON_VERSION: "3.5"
+    #  PYTHON_ARCH: "64"
+    #  TOXENV: 'py35-tests-windows'
 
 
 install:
