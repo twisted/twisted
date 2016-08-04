@@ -21,6 +21,7 @@ except ImportError:
             string.decode('charmap'), *args, **kwargs).encode('charmap')
 
 import zlib
+from binascii import hexlify
 
 from zope.interface import implementer
 
@@ -634,6 +635,7 @@ class Site(http.HTTPFactory):
     displayTracebacks = True
     sessionFactory = Session
     sessionCheckTime = 1800
+    _entropy = os.urandom
 
     def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
@@ -668,13 +670,8 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
-        from binascii import hexlify
-        from hashlib import md5
-        import random
         self.counter = self.counter + 1
-        return hexlify(md5(networkString(
-                "%s_%s" % (str(random.random()), str(self.counter)))
-                   ).digest())
+        return hexlify(self._entropy(32))
 
 
     def makeSession(self):
