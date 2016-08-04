@@ -95,7 +95,17 @@ class Request(Copyable, http.Request, components.Componentized):
         value to send in responses if no other value is set.  L{None} disables
         the default.
 
-    @ivar session: This stores a session available to HTTP and HTTPS requests.
+    @ivar session: If a session has already been created or looked up with
+        L{Request.getSession}, this will return that object.  (This will always
+        be the session that matches the security of the request; so if
+        C{forceNotSecure} is used on a secure request, this will not return
+        that session.)
+
+    @ivar _insecureSession: The L{Session} object representing state that will
+        be transmitted over plain-text HTTP.
+
+    @ivar _secureSession: The L{Session} object representing the state that
+        will be transmitted only over HTTPS.
     """
 
     defaultContentType = b"text/html"
