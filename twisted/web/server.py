@@ -388,37 +388,49 @@ class Request(Copyable, http.Request, components.Componentized):
 
     ### these calls remain local
 
-    session = None
     _secureSession = None
+    _insecureSession = None
+
+    @property
+    def session(self):
+        """
+        This L{Request}'s session, if it has already been initialized by
+        L{getSession}.
+        """
+        if self.isSecure():
+            return self._secureSession
+        else:
+            return self._insecureSession
+
 
     def getSession(self, sessionInterface=None, forceNotSecure=False):
         """
         Check if there is a session cookie, and if not, create it.
 
         By default, the cookie with be secure for HTTPS requests and not secure
-        for HTTP requests. If for some reason you need access to the insecure
+        for HTTP requests.  If for some reason you need access to the insecure
         cookie from a secure session you can set L{forceNotSecure} = True.
+
+        @param forceNotSecure: Should we retrieve a session that will be
+            transmitted over HTTP, even if this L{Request} was delivered over
+            HTTPS?
+        @type forceNotSecure: L{bool}
         """
         # Make sure we aren't creating a secure session on a non-secure page
-        cookieString = ''
-        session = None
-
-        secure = self.isSecure()
-
-        if secure and forceNotSecure:
-            secure = False
+        secure = self.isSecure() and not forceNotSecure
 
         if not secure:
             cookieString = 'TWISTED_SESSION'
-            session = self.session
-
+            sessionAttribute = "_insecureSession"
         else:
             cookieString = 'TWISTED_SECURE_SESSION'
-            session = self._secureSession
+            sessionAttribute = "_secureSession"
+
+        session = getattr(self, sessionAttribute)
 
         # Session management
         if not session:
-            cookiename = string.join([cookieString] + self.sitepath, "_")
+            cookiename = "_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
@@ -432,12 +444,7 @@ class Request(Copyable, http.Request, components.Componentized):
                                secure=secure)
 
         session.touch()
-
-        # Save the session to the proper place
-        if not secure:
-            self.session = session
-        else:
-            self._secureSession = session
+        setattr(self, sessionAttribute, session)
 
         if sessionInterface:
             return session.getComponent(sessionInterface)
