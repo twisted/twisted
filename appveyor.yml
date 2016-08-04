@@ -55,6 +55,9 @@ install:
   # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
   # - ps: echo $env:PYTHON $env:TOXENV
   # Check that we have the expected version and architecture for Python
+  - "python -c \"import sys; print(sys.prefix)\""
+  - "python -c \"import sys; print(sys.exec_prefix)\""
+  - "python -c \"import sys; print(sys.executable)\""
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
