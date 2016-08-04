@@ -42,6 +42,9 @@ class SimpleResource(resource.Resource):
         self._contentType = contentType
 
 
+    def unregisterProducer(self):
+        self.go = 0
+
     def render(self, request):
         if self._contentType is not None:
             request.responseHeaders.setRawHeaders(
@@ -729,7 +732,28 @@ class GzipEncoderTests(unittest.TestCase):
         self.assertEqual(b"Some data",
                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
 
+    def test_sessionDifferentFromSecureSession(self):
+        """
+        L{Request.session} and L{Request.secure_session} should be two separate
+        sessions with unique ids.
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        request.site = server.Site('/')
+        request.sitepath = []
+        session = request.getSession(forceNotSecure=True)
+        secure_session = request.getSession()
 
+        # Check that the sessions are not None
+        self.assertTrue(session != None)
+        self.assertTrue(secure_session != None)
+
+        # Check that the sessions are different
+        self.assertNotEqual(session.uid, secure_session.uid)
+
+        session.expire()
+        secure_session.expire()
 
 class RootResource(resource.Resource):
     isLeaf=0
