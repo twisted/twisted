@@ -218,7 +218,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         else:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                untilConcludes(os.write, statusPipe, "0")
+                untilConcludes(os.write, statusPipe, b"0")
                 untilConcludes(os.close, statusPipe)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
@@ -342,7 +342,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @rtype: C{int}
         """
         data = untilConcludes(os.read, readPipe, 100)
-        if data != "0":
+        if data != b"0":
             msg = ("An error has occurred: '%s'\nPlease look at log "
                    "file for more information.\n" % (data[2:],))
             untilConcludes(sys.__stderr__.write, msg)
