@@ -632,6 +632,53 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
+    def test_sessionDifferentFromSecureSession(self):
+        """
+        L{Request.session} and L{Request.secure_session} should be two separate
+        sessions with unique ids.
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        request.site = server.Site('/')
+        request.sitepath = []
+        session = request.getSession(forceNotSecure=True)
+        self.addCleanup(session.expire)
+        secureSession = request.getSession()
+        self.addCleanup(secureSession.expire)
+
+
+        # Check that the sessions are not None
+        self.assertTrue(session != None)
+        self.assertTrue(secureSession != None)
+
+        # Check that the sessions are different
+        self.assertNotEqual(session.uid, secureSession.uid)
+
+
+    def test_sessionAttribute(self):
+        """
+        On a L{Request}, the C{session} attribute retrieves the associated
+        L{Session} only if it has been initialized.  If the request is secure,
+        it retrieves the secure session.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        self.assertIs(request.session, None)
+        insecureSession = request.getSession(forceNotSecure=True)
+        self.addCleanup(insecureSession.expire)
+        self.assertIs(request.session, None)
+        secureSession = request.getSession()
+        self.addCleanup(secureSession.expire)
+        self.assertIsNot(secureSession, None)
+        self.assertIsNot(secureSession, insecureSession)
+        self.assertIs(request.session, secureSession)
+
+
 
 class GzipEncoderTests(unittest.TestCase):
 
@@ -757,53 +804,6 @@ class GzipEncoderTests(unittest.TestCase):
         body = data[data.find(b"\r\n\r\n") + 4:]
         self.assertEqual(b"Some data",
                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
-
-
-    def test_sessionDifferentFromSecureSession(self):
-        """
-        L{Request.session} and L{Request.secure_session} should be two separate
-        sessions with unique ids.
-        """
-        d = DummyChannel()
-        d.transport = DummyChannel.SSL()
-        request = server.Request(d, 1)
-        request.site = server.Site('/')
-        request.sitepath = []
-        session = request.getSession(forceNotSecure=True)
-        self.addCleanup(session.expire)
-        secureSession = request.getSession()
-        self.addCleanup(secureSession.expire)
-
-
-        # Check that the sessions are not None
-        self.assertTrue(session != None)
-        self.assertTrue(secureSession != None)
-
-        # Check that the sessions are different
-        self.assertNotEqual(session.uid, secureSession.uid)
-
-
-    def test_sessionAttribute(self):
-        """
-        On a L{Request}, the C{session} attribute retrieves the associated
-        L{Session} only if it has been initialized.  If the request is secure,
-        it retrieves the secure session.
-        """
-        site = server.Site(resource.Resource())
-        d = DummyChannel()
-        d.transport = DummyChannel.SSL()
-        request = server.Request(d, 1)
-        request.site = site
-        request.sitepath = []
-        self.assertIs(request.session, None)
-        insecureSession = request.getSession(forceNotSecure=True)
-        self.addCleanup(insecureSession.expire)
-        self.assertIs(request.session, None)
-        secureSession = request.getSession()
-        self.addCleanup(secureSession.expire)
-        self.assertIsNot(secureSession, None)
-        self.assertIsNot(secureSession, insecureSession)
-        self.assertIs(request.session, secureSession)
 
 
 
