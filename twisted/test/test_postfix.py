@@ -13,13 +13,13 @@ from twisted.test.proto_helpers import StringTransport
 class PostfixTCPMapQuoteTests(unittest.TestCase):
     data = [
         # (raw, quoted, [aliasQuotedForms]),
-        ('foo', 'foo'),
-        ('foo bar', 'foo%20bar'),
-        ('foo\tbar', 'foo%09bar'),
-        ('foo\nbar', 'foo%0Abar', 'foo%0abar'),
-        ('foo\r\nbar', 'foo%0D%0Abar', 'foo%0D%0abar', 'foo%0d%0Abar', 'foo%0d%0abar'),
-        ('foo ', 'foo%20'),
-        (' foo', '%20foo'),
+        (b'foo', b'foo'),
+        (b'foo bar', b'foo%20bar'),
+        (b'foo\tbar', b'foo%09bar'),
+        (b'foo\nbar', b'foo%0Abar', b'foo%0abar'),
+        (b'foo\r\nbar', b'foo%0D%0Abar', b'foo%0D%0abar', b'foo%0d%0Abar', b'foo%0d%0abar'),
+        (b'foo ', b'foo%20'),
+        (b' foo', b'%20foo'),
         ]
 
     def testData(self):
@@ -91,18 +91,18 @@ class PostfixTCPMapServerTestCase:
 
 class ValidTests(PostfixTCPMapServerTestCase, unittest.TestCase):
     data = {
-        'foo': 'ThisIs Foo',
-        'bar': ' bar really is found\r\n',
+        b'foo': b'ThisIs Foo',
+        b'bar': b' bar really is found\r\n',
         }
     chat = [
-        ('get', "400 Command 'get' takes 1 parameters.\n"),
-        ('get foo bar', "500 \n"),
-        ('put', "400 Command 'put' takes 2 parameters.\n"),
-        ('put foo', "400 Command 'put' takes 2 parameters.\n"),
-        ('put foo bar baz', "500 put is not implemented yet.\n"),
-        ('put foo bar', '500 put is not implemented yet.\n'),
-        ('get foo', '200 ThisIs%20Foo\n'),
-        ('get bar', '200 %20bar%20really%20is%20found%0D%0A\n'),
-        ('get baz', '500 \n'),
-        ('foo', '400 unknown command\n'),
+        (b'get', b"400 Command 'get' takes 1 parameters.\n"),
+        (b'get foo bar', b"500 \n"),
+        (b'put', b"400 Command 'put' takes 2 parameters.\n"),
+        (b'put foo', b"400 Command 'put' takes 2 parameters.\n"),
+        (b'put foo bar baz', b"500 put is not implemented yet.\n"),
+        (b'put foo bar', b'500 put is not implemented yet.\n'),
+        (b'get foo', b'200 ThisIs%20Foo\n'),
+        (b'get bar', b'200 %20bar%20really%20is%20found%0D%0A\n'),
+        (b'get baz', b'500 \n'),
+        (b'foo', b'400 unknown command\n'),
         ]
