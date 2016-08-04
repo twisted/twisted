@@ -42,9 +42,6 @@ class SimpleResource(resource.Resource):
         self._contentType = contentType
 
 
-    def unregisterProducer(self):
-        self.go = 0
-
     def render(self, request):
         if self._contentType is not None:
             request.responseHeaders.setRawHeaders(
