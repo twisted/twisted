@@ -1070,4 +1070,4 @@ class TrialMainDoesNothingTests(unittest.SynchronousTestCase):
         If we import L{twisted.trial.__main__}, it should do nothing.
         """
         # We shouldn't suddenly drop into a script when we import this!
-        from twisted.trial import __main__
+        __import__('twisted.trial.__main__')
