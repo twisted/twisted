@@ -708,6 +708,26 @@ class RequestTests(unittest.TestCase):
         self.assertIs(request.getSession(), mySession)
 
 
+    def test_retrieveNonExistentSession(self):
+        """
+        L{Request.getSession} generates a new session if the relevant cookie is
+        set in the incoming request.
+        """
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+        request.received_cookies['TWISTED_SESSION'] = "does-not-exist"
+        session = request.getSession()
+        self.assertIsNotNone(session)
+        self.addCleanup(session.expire)
+        self.assertTrue(request.cookies[0].startswith('TWISTED_SESSION='))
+        # It should be a new session ID.
+        self.assertNotIn("does-not-exist",
+                         request.cookies[0])
+
+
 
 class GzipEncoderTests(unittest.TestCase):
 
