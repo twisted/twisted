@@ -410,7 +410,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         By default, the cookie with be secure for HTTPS requests and not secure
         for HTTP requests.  If for some reason you need access to the insecure
-        cookie from a secure session you can set L{forceNotSecure} = True.
+        cookie from a secure request you can set C{forceNotSecure = True}.
 
         @param forceNotSecure: Should we retrieve a session that will be
             transmitted over HTTP, even if this L{Request} was delivered over
