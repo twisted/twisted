@@ -31,7 +31,9 @@ environment:
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
-    - PYTHON: C:\Python27-x64
+    - PYTHON_HOME: C:\\Python27-x64
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
       TOXENV: py27-coverage-windows,codecov-publish
 
 
@@ -40,6 +42,12 @@ install:
   - "choco install win32-openssh -confirm"
   - cmd: "SET PATH=%PATH%;C:\\Program Files\\OpenSSH-Win64"
 
+  # Prepend newly installed Python to the PATH of this build (this cannot be
+  # done from inside the powershell script as it would require to restart
+  # the parent CMD process).
+  - "SET PATH=%PYTHON_HOME%;%PYTHON_HOME%\\Scripts;%PATH%"
+  - "SET LIB=%PYTHON_HOME%\\lib;%LIB%"
+
   # Get some information about the build environment.
   # Uncomment them. Left here so that you don't have to search the net for
   # how to run such command on Windows :)
@@ -47,11 +55,11 @@ install:
   # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
   # - ps: echo $env:PYTHON $env:TOXENV
   # Check that we have the expected version and architecture for Python
-  - "%PYTHON%\\python --version"
-  - "%PYTHON%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
+  - "python --version"
+  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # The build system itself is handled by tox.
-  - "%PYTHON%\\Scripts\\pip install tox"
+  - "python -m pip install tox"
 
 test_script:
-  - "%PYTHON%\\python -m tox -e %TOXENV%"
+  - "python -m tox -e %TOXENV%"
