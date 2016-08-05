@@ -1372,7 +1372,10 @@ class HTTP11ClientProtocolTests(TestCase):
         method will be invoked with a L{ResponseFailed} failure containing a
         L{ConnectionAborted} exception.
         """
-        transport = StringTransport()
+        # We need to set StringTransport to lenient mode because we'll call
+        # resumeProducing on it after the connection is aborted. That's ok:
+        # for real transports nothing will happen.
+        transport = StringTransport(lenient=True)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
