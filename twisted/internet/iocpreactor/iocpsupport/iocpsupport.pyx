@@ -59,8 +59,8 @@ cdef extern from 'python.h':
     PyObject** PySequence_Fast_ITEMS(object o)
     PyObject* PySequence_ITEM(PyObject *o, Py_ssize_t i)
     Py_ssize_t PySequence_Fast_GET_SIZE(object o)
-    Py_ssize_t PyUnicode_AsWideChar(object o, LPCWSTR u, Py_ssize_t size) 
-    object PyUnicode_FromWideChar(LPCWSTR u, Py_ssize_t size) 
+    Py_ssize_t PyUnicode_AsWideChar(object o, LPCWSTR u, Py_ssize_t size)
+    object PyUnicode_FromWideChar(LPCWSTR u, Py_ssize_t size)
 
 cdef extern from '':
     struct sockaddr:
@@ -266,7 +266,7 @@ cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef Py_ssize_t rc
     host, port = addr
 
-    if PY_MAJOR_VERSION < 3: 
+    if PY_MAJOR_VERSION < 3:
         if (isinstance(host, str)):
             host = unicode(host, "utf-8")
 
