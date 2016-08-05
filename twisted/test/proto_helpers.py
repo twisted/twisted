@@ -142,6 +142,13 @@ class StringTransport:
     @ivar io: A L{io.BytesIO} which holds the data which has been written to
         this transport since the last call to L{clear}.  Use L{value} instead
         of accessing this directly.
+
+    @ivar lenient: A L{bool} that controls whether L{StringTransport} will
+        throw errors if production is resumed after the connection has been
+        lost. By default L{StringTransport} enforces that C{resumeProducing}
+        cannot be called after the connection is lost, but real transports
+        don't do that. Defaults to C{False}.
+    @type lenient: L{bool}
     """
 
     disconnecting = False
@@ -154,13 +161,14 @@ class StringTransport:
 
     producerState = 'producing'
 
-    def __init__(self, hostAddress=None, peerAddress=None):
+    def __init__(self, hostAddress=None, peerAddress=None, lenient=False):
         self.clear()
         if hostAddress is not None:
             self.hostAddr = hostAddress
         if peerAddress is not None:
             self.peerAddr = peerAddress
         self.connected = True
+        self.lenient = lenient
 
     def clear(self):
         """
@@ -242,7 +250,7 @@ class StringTransport:
 
     # IPushProducer
     def _checkState(self):
-        if self.disconnecting:
+        if self.disconnecting and not self.lenient:
             raise RuntimeError(
                 "Cannot resume producing after loseConnection")
         if self.producerState == 'stopped':
