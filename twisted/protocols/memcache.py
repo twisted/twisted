@@ -72,7 +72,7 @@ class Command(object):
     @type _deferred: L{Deferred}
 
     @ivar command: name of the command sent to the server.
-    @type command: C{bytes}
+    @type command: L{bytes}
     """
 
     def __init__(self, command, **kwargs):
@@ -80,7 +80,7 @@ class Command(object):
         Create a command.
 
         @param command: the name of the command.
-        @type command: C{bytes}
+        @type command: L{bytes}
 
         @param kwargs: this values will be stored as attributes of the object
             for future use
@@ -111,25 +111,25 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
     MemCache protocol: connect to a memcached server to store/retrieve values.
 
     @ivar persistentTimeOut: the timeout period used to wait for a response.
-    @type persistentTimeOut: C{int}
+    @type persistentTimeOut: L{int}
 
     @ivar _current: current list of requests waiting for an answer from the
         server.
-    @type _current: C{deque} of L{Command}
+    @type _current: L{deque} of L{Command}
 
     @ivar _lenExpected: amount of data expected in raw mode, when reading for
         a value.
-    @type _lenExpected: C{int}
+    @type _lenExpected: L{int}
 
     @ivar _getBuffer: current buffer of data, used to store temporary data
         when reading in raw mode.
-    @type _getBuffer: C{list}
+    @type _getBuffer: L{list}
 
     @ivar _bufferLength: the total amount of bytes in C{_getBuffer}.
-    @type _bufferLength: C{int}
+    @type _bufferLength: L{int}
 
     @ivar _disconnected: indicate if the connectionLost has been called or not.
-    @type _disconnected: C{bool}
+    @type _disconnected: L{bool}
     """
     MAX_KEY_LENGTH = 250
     _disconnected = False
@@ -140,7 +140,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
         @param timeOut: the timeout to wait before detecting that the
             connection is dead and close it. It's expressed in seconds.
-        @type timeOut: C{int}
+        @type timeOut: L{int}
         """
         self._current = deque()
         self._lenExpected = None
@@ -378,10 +378,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         C{key} must be consistent with an int. Return the new value.
 
         @param key: the key to modify.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: the value to increment.
-        @type val: C{int}
+        @type val: L{int}
 
         @return: a deferred with will be called back with the new value
             associated with the key (after the increment).
@@ -397,10 +397,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         0 if negative.
 
         @param key: the key to modify.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: the value to decrement.
-        @type val: C{int}
+        @type val: L{int}
 
         @return: a deferred with will be called back with the new value
             associated with the key (after the decrement).
@@ -432,17 +432,17 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Replace the given C{key}. It must already exist in the server.
 
         @param key: the key to replace.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: the new value associated with the key.
-        @type val: C{bytes}
+        @type val: L{bytes}
 
         @param flags: the flags to store with the key.
-        @type flags: C{int}
+        @type flags: L{int}
 
         @param expireTime: if different from 0, the relative time in seconds
             when the key will be deleted from the store.
-        @type expireTime: C{int}
+        @type expireTime: L{int}
 
         @return: a deferred that will fire with C{True} if the operation has
             succeeded, and C{False} with the key didn't previously exist.
@@ -456,17 +456,17 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Add the given C{key}. It must not exist in the server.
 
         @param key: the key to add.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: the value associated with the key.
-        @type val: C{bytes}
+        @type val: L{bytes}
 
         @param flags: the flags to store with the key.
-        @type flags: C{int}
+        @type flags: L{int}
 
         @param expireTime: if different from 0, the relative time in seconds
             when the key will be deleted from the store.
-        @type expireTime: C{int}
+        @type expireTime: L{int}
 
         @return: a deferred that will fire with C{True} if the operation has
             succeeded, and C{False} with the key already exists.
@@ -480,17 +480,17 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Set the given C{key}.
 
         @param key: the key to set.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: the value associated with the key.
-        @type val: C{bytes}
+        @type val: L{bytes}
 
         @param flags: the flags to store with the key.
-        @type flags: C{int}
+        @type flags: L{int}
 
         @param expireTime: if different from 0, the relative time in seconds
             when the key will be deleted from the store.
-        @type expireTime: C{int}
+        @type expireTime: L{int}
 
         @return: a deferred that will fire with C{True} if the operation has
             succeeded.
@@ -506,20 +506,20 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         hasn't been modified since last time you fetched it.
 
         @param key: The key to set.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: The value associated with the key.
-        @type val: C{bytes}
+        @type val: L{bytes}
 
         @param cas: Unique 64-bit value returned by previous call of C{get}.
-        @type cas: C{bytes}
+        @type cas: L{bytes}
 
         @param flags: The flags to store with the key.
-        @type flags: C{int}
+        @type flags: L{int}
 
         @param expireTime: If different from 0, the relative time in seconds
             when the key will be deleted from the store.
-        @type expireTime: C{int}
+        @type expireTime: L{int}
 
         @return: A deferred that will fire with C{True} if the operation has
             succeeded, C{False} otherwise.
@@ -561,11 +561,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Append given data to the value of an existing key.
 
         @param key: The key to modify.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: The value to append to the current value associated with
             the key.
-        @type val: C{bytes}
+        @type val: L{bytes}
 
         @return: A deferred that will fire with C{True} if the operation has
             succeeded, C{False} otherwise.
@@ -580,11 +580,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Prepend given data to the value of an existing key.
 
         @param key: The key to modify.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param val: The value to prepend to the current value associated with
             the key.
-        @type val: C{bytes}
+        @type val: L{bytes}
 
         @return: A deferred that will fire with C{True} if the operation has
             succeeded, C{False} otherwise.
@@ -603,11 +603,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         using the corresponding method.
 
         @param key: The key to retrieve.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @param withIdentifier: If set to C{True}, retrieve the current
             identifier along with the value and the flags.
-        @type withIdentifier: C{bool}
+        @type withIdentifier: L{bool}
 
         @return: A deferred that will fire with the tuple (flags, value) if
             C{withIdentifier} is C{False}, or (flags, cas identifier, value)
@@ -627,11 +627,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         issuing C{checkAndSet} update later, using the corresponding method.
 
         @param keys: The keys to retrieve.
-        @type keys: C{list} of C{bytes}
+        @type keys: L{list} of L{bytes}
 
         @param withIdentifier: If set to C{True}, retrieve the identifiers
             along with the values and the flags.
-        @type withIdentifier: C{bool}
+        @type withIdentifier: L{bool}
 
         @return: A deferred that will fire with a dictionary with the elements
             of C{keys} as keys and the tuples (flags, value) as values if
@@ -685,7 +685,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             specification.
         @type arg: L{None} or L{bytes}
 
-        @return: a deferred that will fire with a C{dict} of the available
+        @return: a deferred that will fire with a L{dict} of the available
             statistics.
         @rtype: L{Deferred}
         """
@@ -722,7 +722,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Delete an existing C{key}.
 
         @param key: the key to delete.
-        @type key: C{bytes}
+        @type key: L{bytes}
 
         @return: a deferred that will be called back with C{True} if the key
             was successfully deleted, or C{False} if not.
