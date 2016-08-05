@@ -25,12 +25,15 @@ See U{http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt} for
 more information about the protocol.
 """
 
+from __future__ import absolute_import, division
+
 from collections import deque
 
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
 from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
+from twisted.python.compat import iteritems
 
 
 
@@ -69,7 +72,7 @@ class Command(object):
     @type _deferred: L{Deferred}
 
     @ivar command: name of the command sent to the server.
-    @type command: C{str}
+    @type command: C{bytes}
     """
 
     def __init__(self, command, **kwargs):
@@ -77,7 +80,7 @@ class Command(object):
         Create a command.
 
         @param command: the name of the command.
-        @type command: C{str}
+        @type command: C{bytes}
 
         @param kwargs: this values will be stored as attributes of the object
             for future use
@@ -189,7 +192,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._getBuffer.append(data)
         self._bufferLength += len(data)
         if self._bufferLength >= self._lenExpected + 2:
-            data = "".join(self._getBuffer)
+            data = b"".join(self._getBuffer)
             buf = data[:self._lenExpected]
             rem = data[self._lenExpected + 2:]
             val = buf
@@ -225,19 +228,18 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         This the end token to a get or a stat operation.
         """
         cmd = self._current.popleft()
-        if cmd.command == "get":
+        if cmd.command == b"get":
             if cmd.multiple:
-                values = dict([(key, val[::2]) for key, val in
-                               cmd.values.iteritems()])
+                values = {key: val[::2] for key, val in iteritems(cmd.values)}
                 cmd.success(values)
             else:
                 cmd.success((cmd.flags, cmd.value))
-        elif cmd.command == "gets":
+        elif cmd.command == b"gets":
             if cmd.multiple:
                 cmd.success(cmd.values)
             else:
                 cmd.success((cmd.flags, cmd.cas, cmd.value))
-        elif cmd.command == "stats":
+        elif cmd.command == b"stats":
             cmd.success(cmd.values)
 
 
@@ -253,9 +255,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Prepare the reading a value after a get.
         """
         cmd = self._current[0]
-        if cmd.command == "get":
+        if cmd.command == b"get":
             key, flags, length = line.split()
-            cas = ""
+            cas = b""
         else:
             key, flags, length, cas = line.split()
         self._lenExpected = int(length)
@@ -279,7 +281,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Reception of one stat line.
         """
         cmd = self._current[0]
-        key, val = line.split(" ", 1)
+        key, val = line.split(b" ", 1)
         cmd.values[key] = val
 
 
@@ -299,20 +301,22 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd.fail(NoSuchCommand())
 
 
-    def cmd_CLIENT_ERROR(self, errText):
+    def cmd_CLIENT_ERROR(self, errBytes):
         """
         An invalid input as been sent.
         """
-        log.err("Invalid input: %s" % (errText,))
+        errText = errBytes.decode("ascii")
+        log.err(u"Invalid input: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ClientError(errText))
 
 
-    def cmd_SERVER_ERROR(self, errText):
+    def cmd_SERVER_ERROR(self, errBytes):
         """
         An error has happened server-side.
         """
-        log.err("Server error: %s" % (errText,))
+        errText = errBytes.decode("ascii")
+        log.err(u"Server error: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ServerError(errText))
 
@@ -343,19 +347,19 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Receive line commands from the server.
         """
         self.resetTimeout()
-        token = line.split(" ", 1)[0]
+        token = line.split(b" ", 1)[0]
         # First manage standard commands without space
-        cmd = getattr(self, "cmd_%s" % (token,), None)
+        cmd = getattr(self, u"cmd_" + token.decode("ascii"), None)
         if cmd is not None:
-            args = line.split(" ", 1)[1:]
+            args = line.split(b" ", 1)[1:]
             if args:
                 cmd(args[0])
             else:
                 cmd()
         else:
             # Then manage commands with space in it
-            line = line.replace(" ", "_")
-            cmd = getattr(self, "cmd_%s" % (line,), None)
+            line = line.replace(b" ", b"_")
+            cmd = getattr(self, u"cmd_" + line.decode("ascii"), None)
             if cmd is not None:
                 cmd()
             else:
@@ -374,7 +378,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         C{key} must be consistent with an int. Return the new value.
 
         @param key: the key to modify.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: the value to increment.
         @type val: C{int}
@@ -383,7 +387,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             associated with the key (after the increment).
         @rtype: L{Deferred}
         """
-        return self._incrdecr("incr", key, val)
+        return self._incrdecr(b"incr", key, val)
 
 
     def decrement(self, key, val=1):
@@ -393,7 +397,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         0 if negative.
 
         @param key: the key to modify.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: the value to decrement.
         @type val: C{int}
@@ -402,7 +406,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             associated with the key (after the decrement).
         @rtype: L{Deferred}
         """
-        return self._incrdecr("decr", key, val)
+        return self._incrdecr(b"decr", key, val)
 
 
     def _incrdecr(self, cmd, key, val):
@@ -411,12 +415,12 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         if self._disconnected:
             return fail(RuntimeError("not connected"))
-        if not isinstance(key, str):
+        if not isinstance(key, bytes):
             return fail(ClientError(
-                "Invalid type for key: %s, expecting a string" % (type(key),)))
+                "Invalid type for key: %s, expecting bytes" % (type(key),)))
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
-        fullcmd = "%s %s %d" % (cmd, key, int(val))
+        fullcmd = b" ".join([cmd, key, str(int(val)).encode("ascii")])
         self.sendLine(fullcmd)
         cmdObj = Command(cmd, key=key)
         self._current.append(cmdObj)
@@ -428,10 +432,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Replace the given C{key}. It must already exist in the server.
 
         @param key: the key to replace.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: the new value associated with the key.
-        @type val: C{str}
+        @type val: C{bytes}
 
         @param flags: the flags to store with the key.
         @type flags: C{int}
@@ -444,7 +448,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             succeeded, and C{False} with the key didn't previously exist.
         @rtype: L{Deferred}
         """
-        return self._set("replace", key, val, flags, expireTime, "")
+        return self._set(b"replace", key, val, flags, expireTime, b"")
 
 
     def add(self, key, val, flags=0, expireTime=0):
@@ -452,10 +456,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Add the given C{key}. It must not exist in the server.
 
         @param key: the key to add.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: the value associated with the key.
-        @type val: C{str}
+        @type val: C{bytes}
 
         @param flags: the flags to store with the key.
         @type flags: C{int}
@@ -468,7 +472,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             succeeded, and C{False} with the key already exists.
         @rtype: L{Deferred}
         """
-        return self._set("add", key, val, flags, expireTime, "")
+        return self._set(b"add", key, val, flags, expireTime, b"")
 
 
     def set(self, key, val, flags=0, expireTime=0):
@@ -476,10 +480,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Set the given C{key}.
 
         @param key: the key to set.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: the value associated with the key.
-        @type val: C{str}
+        @type val: C{bytes}
 
         @param flags: the flags to store with the key.
         @type flags: C{int}
@@ -492,7 +496,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             succeeded.
         @rtype: L{Deferred}
         """
-        return self._set("set", key, val, flags, expireTime, "")
+        return self._set(b"set", key, val, flags, expireTime, b"")
 
 
     def checkAndSet(self, key, val, cas, flags=0, expireTime=0):
@@ -502,13 +506,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         hasn't been modified since last time you fetched it.
 
         @param key: The key to set.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: The value associated with the key.
-        @type val: C{str}
+        @type val: C{bytes}
 
         @param cas: Unique 64-bit value returned by previous call of C{get}.
-        @type cas: C{str}
+        @type cas: C{bytes}
 
         @param flags: The flags to store with the key.
         @type flags: C{int}
@@ -521,7 +525,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             succeeded, C{False} otherwise.
         @rtype: L{Deferred}
         """
-        return self._set("cas", key, val, flags, expireTime, cas)
+        return self._set(b"cas", key, val, flags, expireTime, cas)
 
 
     def _set(self, cmd, key, val, flags, expireTime, cas):
@@ -530,20 +534,21 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         if self._disconnected:
             return fail(RuntimeError("not connected"))
-        if not isinstance(key, str):
+        if not isinstance(key, bytes):
             return fail(ClientError(
-                "Invalid type for key: %s, expecting a string" % (type(key),)))
+                "Invalid type for key: %s, expecting bytes" % (type(key),)))
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
-        if not isinstance(val, str):
+        if not isinstance(val, bytes):
             return fail(ClientError(
-                "Invalid type for value: %s, expecting a string" %
+                "Invalid type for value: %s, expecting bytes" %
                 (type(val),)))
         if cas:
-            cas = " " + cas
+            cas = b" " + cas
         length = len(val)
-        fullcmd = "%s %s %d %d %d%s" % (
-            cmd, key, flags, expireTime, length, cas)
+        fullcmd = b" ".join([
+            cmd, key,
+            ("%d %d %d" % (flags, expireTime, length)).encode("ascii")]) + cas
         self.sendLine(fullcmd)
         self.sendLine(val)
         cmdObj = Command(cmd, key=key, flags=flags, length=length)
@@ -556,18 +561,18 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Append given data to the value of an existing key.
 
         @param key: The key to modify.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: The value to append to the current value associated with
             the key.
-        @type val: C{str}
+        @type val: C{bytes}
 
         @return: A deferred that will fire with C{True} if the operation has
             succeeded, C{False} otherwise.
         @rtype: L{Deferred}
         """
         # Even if flags and expTime values are ignored, we have to pass them
-        return self._set("append", key, val, 0, 0, "")
+        return self._set(b"append", key, val, 0, 0, b"")
 
 
     def prepend(self, key, val):
@@ -575,18 +580,18 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Prepend given data to the value of an existing key.
 
         @param key: The key to modify.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param val: The value to prepend to the current value associated with
             the key.
-        @type val: C{str}
+        @type val: C{bytes}
 
         @return: A deferred that will fire with C{True} if the operation has
             succeeded, C{False} otherwise.
         @rtype: L{Deferred}
         """
         # Even if flags and expTime values are ignored, we have to pass them
-        return self._set("prepend", key, val, 0, 0, "")
+        return self._set(b"prepend", key, val, 0, 0, b"")
 
 
     def get(self, key, withIdentifier=False):
@@ -598,7 +603,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         using the corresponding method.
 
         @param key: The key to retrieve.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @param withIdentifier: If set to C{True}, retrieve the current
             identifier along with the value and the flags.
@@ -622,7 +627,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         issuing C{checkAndSet} update later, using the corresponding method.
 
         @param keys: The keys to retrieve.
-        @type keys: C{list} of C{str}
+        @type keys: C{list} of C{bytes}
 
         @param withIdentifier: If set to C{True}, retrieve the identifiers
             along with the values and the flags.
@@ -640,6 +645,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         return self._get(keys, withIdentifier, True)
 
+
     def _get(self, keys, withIdentifier, multiple):
         """
         Helper method for C{get} and C{getMultiple}.
@@ -647,25 +653,27 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         if self._disconnected:
             return fail(RuntimeError("not connected"))
         for key in keys:
-            if not isinstance(key, str):
+            if not isinstance(key, bytes):
                 return fail(ClientError(
-                    "Invalid type for key: %s, expecting a string" % (type(key),)))
+                    "Invalid type for key: %s, expecting bytes" %
+                    (type(key),)))
             if len(key) > self.MAX_KEY_LENGTH:
                 return fail(ClientError("Key too long"))
         if withIdentifier:
-            cmd = "gets"
+            cmd = b"gets"
         else:
-            cmd = "get"
-        fullcmd = "%s %s" % (cmd, " ".join(keys))
+            cmd = b"get"
+        fullcmd = b" ".join([cmd] + keys)
         self.sendLine(fullcmd)
         if multiple:
-            values = dict([(key, (0, "", None)) for key in keys])
+            values = dict([(key, (0, b"", None)) for key in keys])
             cmdObj = Command(cmd, keys=keys, values=values, multiple=True)
         else:
-            cmdObj = Command(cmd, key=keys[0], value=None, flags=0, cas="",
+            cmdObj = Command(cmd, key=keys[0], value=None, flags=0, cas=b"",
                              multiple=False)
         self._current.append(cmdObj)
         return cmdObj._deferred
+
 
     def stats(self, arg=None):
         """
@@ -675,20 +683,20 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             with the I{stats} command.  The interpretation of this value by
             the server is left undefined by the memcache protocol
             specification.
-        @type arg: L{None} or L{str}
+        @type arg: L{None} or L{bytes}
 
         @return: a deferred that will fire with a C{dict} of the available
             statistics.
         @rtype: L{Deferred}
         """
         if arg:
-            cmd = "stats " + arg
+            cmd = b"stats " + arg
         else:
-            cmd = "stats"
+            cmd = b"stats"
         if self._disconnected:
             return fail(RuntimeError("not connected"))
         self.sendLine(cmd)
-        cmdObj = Command("stats", values={})
+        cmdObj = Command(b"stats", values={})
         self._current.append(cmdObj)
         return cmdObj._deferred
 
@@ -703,8 +711,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         if self._disconnected:
             return fail(RuntimeError("not connected"))
-        self.sendLine("version")
-        cmdObj = Command("version")
+        self.sendLine(b"version")
+        cmdObj = Command(b"version")
         self._current.append(cmdObj)
         return cmdObj._deferred
 
@@ -714,7 +722,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Delete an existing C{key}.
 
         @param key: the key to delete.
-        @type key: C{str}
+        @type key: C{bytes}
 
         @return: a deferred that will be called back with C{True} if the key
             was successfully deleted, or C{False} if not.
@@ -722,11 +730,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         if self._disconnected:
             return fail(RuntimeError("not connected"))
-        if not isinstance(key, str):
+        if not isinstance(key, bytes):
             return fail(ClientError(
-                "Invalid type for key: %s, expecting a string" % (type(key),)))
-        self.sendLine("delete %s" % key)
-        cmdObj = Command("delete", key=key)
+                "Invalid type for key: %s, expecting bytes" % (type(key),)))
+        self.sendLine(b"delete " + key)
+        cmdObj = Command(b"delete", key=key)
         self._current.append(cmdObj)
         return cmdObj._deferred
 
@@ -741,8 +749,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         if self._disconnected:
             return fail(RuntimeError("not connected"))
-        self.sendLine("flush_all")
-        cmdObj = Command("flush_all")
+        self.sendLine(b"flush_all")
+        cmdObj = Command(b"flush_all")
         self._current.append(cmdObj)
         return cmdObj._deferred
 

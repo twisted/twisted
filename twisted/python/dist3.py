@@ -246,6 +246,7 @@ modules = [
     "twisted.protocols.haproxy.test.__init__",
     "twisted.protocols.htb",
     "twisted.protocols.loopback",
+    "twisted.protocols.memcache",
     "twisted.protocols.pcp",
     "twisted.protocols.policies",
     "twisted.protocols.portforward",
