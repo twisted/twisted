@@ -61,14 +61,16 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def dataReceived(self, rbuffer):
         """
         @param rbuffer: Data received.
-        @type rbuffer: L{bytes}
+        @type rbuffer: L{bytes} or L{bytearrary}
         """
         # XXX: some day, we'll have protocols that can handle raw buffers
-        if not isinstance(rbuffer, bytes):
-            if _PY3:
-                rbuffer = bytes(rbuffer, "utf-8")
-            else:
-                rbuffer = bytes(rbuffer)
+        if isinstance(rbuffer, bytes):
+            pass
+        elif isinstance(rbuffer, bytearray):
+            rbuffer = bytes(rbuffer)
+        else:
+            raise TypeError("data must be bytes or bytearray, not " +
+                            type(rbuffer))
 
         self.protocol.dataReceived(rbuffer)
 
