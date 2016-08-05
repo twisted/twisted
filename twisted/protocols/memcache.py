@@ -33,7 +33,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
 from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
-from twisted.python.compat import iteritems
+from twisted.python.compat import iteritems, nativeString, networkString
 
 
 
@@ -309,8 +309,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         An invalid input as been sent.
         """
-        errText = errBytes.decode("ascii")
-        log.err(u"Invalid input: " + errText)
+        errText = nativeString(errBytes)
+        log.err("Invalid input: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ClientError(errText))
 
@@ -319,7 +319,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         An error has happened server-side.
         """
-        errText = errBytes.decode("ascii")
+        errText = nativeString(errBytes)
         log.err(u"Server error: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ServerError(errText))
@@ -353,7 +353,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self.resetTimeout()
         token = line.split(b" ", 1)[0]
         # First manage standard commands without space
-        cmd = getattr(self, u"cmd_" + token.decode("ascii"), None)
+        cmd = getattr(self, "cmd_" + nativeString(token), None)
         if cmd is not None:
             args = line.split(b" ", 1)[1:]
             if args:
@@ -363,7 +363,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         else:
             # Then manage commands with space in it
             line = line.replace(b" ", b"_")
-            cmd = getattr(self, u"cmd_" + line.decode("ascii"), None)
+            cmd = getattr(self, "cmd_" + nativeString(line), None)
             if cmd is not None:
                 cmd()
             else:
@@ -424,7 +424,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
                 "Invalid type for key: %s, expecting bytes" % (type(key),)))
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
-        fullcmd = b" ".join([cmd, key, str(int(val)).encode("ascii")])
+        fullcmd = b" ".join([cmd, key, networkString(str(int(val)))])
         self.sendLine(fullcmd)
         cmdObj = Command(cmd, key=key)
         self._current.append(cmdObj)
@@ -552,7 +552,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         length = len(val)
         fullcmd = b" ".join([
             cmd, key,
-            ("%d %d %d" % (flags, expireTime, length)).encode("ascii")]) + cas
+            networkString("%d %d %d" % (flags, expireTime, length))]) + cas
         self.sendLine(fullcmd)
         self.sendLine(val)
         cmdObj = Command(cmd, key=key, flags=flags, length=length)
