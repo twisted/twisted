@@ -241,6 +241,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
                 cmd.success((cmd.flags, cmd.cas, cmd.value))
         elif cmd.command == b"stats":
             cmd.success(cmd.values)
+        else:
+            raise RuntimeError(
+                "Unexpected END response to %s command" %
+                (nativeString(cmd.command),))
 
 
     def cmd_NOT_FOUND(self):

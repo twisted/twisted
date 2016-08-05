@@ -299,6 +299,18 @@ class MemCacheTests(CommandMixin, TestCase):
             b"VALUE egg 0 %d\r\n%s\r\nEND\r\n" % (len(s), s))
 
 
+    def test_invalidEndResponse(self):
+        """
+        If an END is received in response to an operation that isn't C{get},
+        C{gets}, or C{stats}, an error is raised in
+        L{MemCacheProtocol.dataReceived}.
+        """
+        self.proto.set(b"key", b"value")
+        self.assertRaises(
+            RuntimeError, self.proto.dataReceived,
+            b"END\r\n")
+
+
     def test_timeOut(self):
         """
         Test the timeout on outgoing requests: when timeout is detected, all
