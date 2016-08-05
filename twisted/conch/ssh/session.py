@@ -82,7 +82,7 @@ class SSHSession(channel.SSHChannel):
         if not self.session:
             self.session = ISession(self.avatar)
         term, windowSize, modes = parseRequest_pty_req(data)
-        log.msg('pty request: %s %s' % (term, windowSize))
+        log.msg('pty request: %r %r' % (term, windowSize))
         try:
             self.session.getPty(term, windowSize, modes)
         except:

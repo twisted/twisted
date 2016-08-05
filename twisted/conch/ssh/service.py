@@ -29,7 +29,7 @@ class SSHService(log.Logger):
         """
 
     def logPrefix(self):
-        return "SSHService %s on %s" % (self.name,
+        return "SSHService %r on %s" % (self.name,
                 self.transport.transport.logPrefix())
 
     def packetReceived(self, messageNum, packet):
