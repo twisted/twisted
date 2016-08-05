@@ -321,6 +321,7 @@ modules = [
     "twisted._threads._threadworker",
     "twisted._threads.test.__init__",
     "twisted.trial.__init__",
+    "twisted.trial.__main__",
     "twisted.trial._asyncrunner",
     "twisted.trial._asynctest",
     "twisted.trial._synctest",
