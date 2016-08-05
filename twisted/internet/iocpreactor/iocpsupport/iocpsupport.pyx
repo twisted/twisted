@@ -260,7 +260,7 @@ cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
 
 cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef unsigned short port
-    cdef WCHAR hostStr[256]
+    cdef WCHAR hostStr[256] # slightly larger than longest valid DNS hostname
     cdef Py_ssize_t hostStrWcharLen = (sizeof(hostStr) / sizeof(WCHAR)) - 1
     cdef int addrlen = sizeof(sockaddr_in)
     cdef Py_ssize_t rc
