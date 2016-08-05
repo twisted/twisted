@@ -17,11 +17,8 @@ class Maildir(pb.Referenceable):
     def getFolderMessage(self, folder, name):
         if '/' in name:
             raise IOError("can only open files in '%s' directory'" % folder)
-        fp = open(os.path.join(self.directory, 'new', name))
-        try:
+        with open(os.path.join(self.directory, 'new', name)) as fp:
             return fp.read()
-        finally:
-            fp.close()
 
     def deleteFolderMessage(self, folder, name):
         if '/' in name:

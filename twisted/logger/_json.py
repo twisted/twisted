@@ -52,7 +52,7 @@ def asBytes(obj):
     bytes.  This function converts _all_ native strings within a
     JSON-deserialized object to bytes.
 
-    @param obj: A object to convert to bytes.
+    @param obj: An object to convert to bytes.
     @type obj: L{object}
 
     @return: A string of UTF-8 bytes.

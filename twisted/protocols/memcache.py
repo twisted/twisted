@@ -292,7 +292,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
     def cmd_ERROR(self):
         """
-        An non-existent command has been sent.
+        A non-existent command has been sent.
         """
         log.err("Non-existent command sent.")
         cmd = self._current.popleft()

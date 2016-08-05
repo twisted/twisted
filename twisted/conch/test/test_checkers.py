@@ -358,7 +358,7 @@ class SSHProtocolCheckerTests(TestCase):
 
     def test_registerCheckerWithInterface(self):
         """
-        If a apecific interface is passed into
+        If a specific interface is passed into
         L{SSHProtocolChecker.registerChecker}, that interface should be
         registered instead of what the checker specifies in
         credentialIntefaces.

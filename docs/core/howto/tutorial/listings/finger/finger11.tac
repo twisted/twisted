@@ -2,7 +2,7 @@
 # Use deferreds, to minimize synchronicity assumptions
 # Write application. Save in 'finger.tpy'
 
-from twisted.application import internet, service
+from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -30,5 +30,5 @@ class FingerFactory(protocol.ServerFactory):
 
 application = service.Application('finger', uid=1, gid=1)
 factory = FingerFactory(moshez='Happy and well')
-internet.TCPServer(79, factory).setServiceParent(
+strports.service("tcp:79", factory, reactor=reactor).setServiceParent(
     service.IServiceCollection(application))

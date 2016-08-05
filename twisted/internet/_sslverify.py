@@ -8,7 +8,6 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
-from binascii import a2b_base64
 from hashlib import md5
 
 import OpenSSL
@@ -328,7 +327,7 @@ class DistinguishedName(dict):
 
     A L{DistinguishedName} should be constructed using keyword arguments whose
     keys can be any of the field names above (as a native string), and the
-    values are either Unicode text which is encodable to ASCII, or C{bytes}
+    values are either Unicode text which is encodable to ASCII, or L{bytes}
     limited to the ASCII subset. Any fields passed to the constructor will be
     set as attributes, accessible using both their extended name and their
     shortened acronym. The attribute values will be the ASCII-encoded
@@ -395,7 +394,7 @@ class DistinguishedName(dict):
         """
         Return a multi-line, human-readable representation of this DN.
 
-        @rtype: C{str}
+        @rtype: L{str}
         """
         l = []
         lablen = 0
@@ -453,7 +452,7 @@ class CertBase:
         @type interface: L{zope.interface.interfaces.IInterface}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
-        @rtype: C{interface} or L{NotImplemented}
+        @rtype: L{IOpenSSLTrustRoot} or L{NotImplemented}
         """
         if interface is IOpenSSLTrustRoot:
             return OpenSSLCertificateAuthorities([self.original])
@@ -514,7 +513,7 @@ class Certificate(CertBase):
         """
         Dump this certificate to a PEM-format data string.
 
-        @rtype: C{str}
+        @rtype: L{str}
         """
         return self.dump(crypto.FILETYPE_PEM)
 
@@ -533,11 +532,12 @@ class Certificate(CertBase):
         """
         Get the certificate for the remote end of the given transport.
 
-        @type: L{ISystemHandle}
+        @param transport: an L{ISystemHandle} provider
+
         @rtype: C{Class}
 
         @raise: L{CertificateError}, if the given transport does not have a peer
-        certificate.
+            certificate.
         """
         return _handleattrhelper(Class, transport, 'peer')
     peerFromTransport = classmethod(peerFromTransport)
@@ -552,7 +552,7 @@ class Certificate(CertBase):
         @rtype: C{Class}
 
         @raise: L{CertificateError}, if the given transport does not have a host
-        certificate.
+            certificate.
         """
         return _handleattrhelper(Class, transport, 'host')
     hostFromTransport = classmethod(hostFromTransport)
@@ -575,7 +575,7 @@ class Certificate(CertBase):
         """
         Retrieve the serial number of this certificate.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
         return self.original.get_serial_number()
 
@@ -586,7 +586,9 @@ class Certificate(CertBase):
         algorithm.
 
         @param method: One of C{'md5'} or C{'sha'}.
-        @rtype: C{str}
+
+        @return: The digest of the object, formatted as b":"-delimited hex pairs
+        @rtype: L{bytes}
         """
         return self.original.digest(method)
 
@@ -817,20 +819,11 @@ class PublicKey:
         involving certificate requests for computing the hash that was not
         stable in the face of changes to the underlying OpenSSL library.
 
-        The technique currently being used - using Netscape SPKI APIs in
-        OpenSSL - is still somewhat dubious, but due to limitations in both
-        pyOpenSSL and OpenSSL APIs, it is not currently possible to compute a
-        reliable hash of the public key in isolation (i.e. not paired with a
-        specific certificate).
-
         @return: Return a 32-character hexadecimal string uniquely identifying
             this public key, I{for this version of Twisted}.
         @rtype: native L{str}
         """
-        nsspki = crypto.NetscapeSPKI()
-        nsspki.set_pubkey(self.original)
-        encoded = nsspki.b64_encode()
-        raw = a2b_base64(encoded)
+        raw = crypto.dump_publickey(crypto.FILETYPE_ASN1, self.original)
         h = md5()
         h.update(raw)
         return h.hexdigest()
@@ -1299,7 +1292,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         remote peer does not offer NPN or ALPN, the connection will be
         established, but no protocol wil be negotiated. Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: C{list} of C{bytes}
+    @type acceptableProtocols: L{list} of L{bytes}
 
     @param extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to
@@ -1423,7 +1416,7 @@ class OpenSSLCertificateOptions(object):
             ignored otherwise.  Since verify is L{False} by default, this is
             L{None} by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
+        @type caCerts: L{list} of L{OpenSSL.crypto.X509}
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
             If unspecified, use the underlying default (9).
@@ -1492,7 +1485,7 @@ class OpenSSLCertificateOptions(object):
             If the remote peer does not offer NPN or ALPN, the connection will
             be established, but no protocol wil be negotiated. Protocols
             earlier in the list are preferred over those later in the list.
-        @type acceptableProtocols: C{list} of C{bytes}
+        @type acceptableProtocols: L{list} of L{bytes}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1655,11 +1648,11 @@ class OpenSSLCertificateOptions(object):
             name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
             sessionName = md5(networkString(name)).hexdigest()
 
-            ctx.set_session_id(sessionName)
+            ctx.set_session_id(sessionName.encode('ascii'))
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
-        ctx.set_cipher_list(nativeString(self._cipherString))
+        ctx.set_cipher_list(self._cipherString.encode('ascii'))
 
         if self._ecCurve is not None:
             try:
@@ -1739,7 +1732,7 @@ class _OpenSSLECCurve(FancyEqMixin, object):
 
     def addECKeyToContext(self, context):
         """
-        Add an temporary EC key to C{context}.
+        Add a temporary EC key to C{context}.
 
         @param context: The context to add a key to.
         @type context: L{OpenSSL.SSL.Context}
@@ -1798,7 +1791,7 @@ def _expandCipherString(cipherString, method, options):
     ctx = SSL.Context(method)
     ctx.set_options(options)
     try:
-        ctx.set_cipher_list(nativeString(cipherString))
+        ctx.set_cipher_list(cipherString.encode('ascii'))
     except SSL.Error as e:
         if e.args[0][0][2] == 'no cipher match':
             return []
@@ -1898,7 +1891,7 @@ class OpenSSLDiffieHellmanParameters(object):
             exchange.
         @type filePath: L{FilePath <twisted.python.filepath.FilePath>}
 
-        @return: A instance that loads its parameters from C{filePath}.
+        @return: An instance that loads its parameters from C{filePath}.
         @rtype: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
@@ -1920,7 +1913,7 @@ def _setAcceptableProtocols(context, acceptableProtocols):
         remote peer does not offer NPN or ALPN, the connection will be
         established, but no protocol wil be negotiated. Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: C{list} of C{bytes}
+    @type acceptableProtocols: L{list} of L{bytes}
     """
     def protoSelectCallback(conn, protocols):
         """
@@ -1932,7 +1925,7 @@ def _setAcceptableProtocols(context, acceptableProtocols):
         @type conn: L{OpenSSL.SSL.Connection}
 
         @param conn: Protocols advertised by the other side.
-        @type conn: C{list} of C{bytes}
+        @type conn: L{list} of L{bytes}
         """
         overlap = set(protocols) & set(acceptableProtocols)
 

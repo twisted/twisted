@@ -281,7 +281,7 @@ class PBFailureTests(PBConnTestCase):
 
     def test_unjellyableFailure(self):
         """
-        An non-jellyable L{pb.Error} subclass raised by a remote method is
+        A non-jellyable L{pb.Error} subclass raised by a remote method is
         turned into a Failure with a type set to the FQPN of the exception
         type.
         """

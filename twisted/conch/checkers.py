@@ -224,15 +224,16 @@ class SSHPublicKeyDatabase:
                     lines = runAsEffectiveUser(ouid, ogid, filepath.open)
                 else:
                     raise
-            for l in lines:
-                l2 = l.split()
-                if len(l2) < 2:
-                    continue
-                try:
-                    if _b64decodebytes(l2[1]) == credentials.blob:
-                        return True
-                except binascii.Error:
-                    continue
+            with lines:
+                for l in lines:
+                    l2 = l.split()
+                    if len(l2) < 2:
+                        continue
+                    try:
+                        if _b64decodebytes(l2[1]) == credentials.blob:
+                            return True
+                    except binascii.Error:
+                        continue
         return False
 
     def _ebRequestAvatarId(self, f):

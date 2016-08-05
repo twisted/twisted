@@ -202,7 +202,7 @@ def excInfoOrFailureToExcInfo(err):
         C{exception_type, exception_object, traceback_object}.
     """
     if isinstance(err, Failure):
-        # Unwrap the Failure into a exc_info tuple.
+        # Unwrap the Failure into an exc_info tuple.
         err = (err.type, err.value, err.getTracebackObject())
     return err
 

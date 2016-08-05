@@ -13,10 +13,10 @@ import socket, sys, traceback, io, codecs
 from twisted.trial import unittest
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
-    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode,
-    unichr,
+    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
+    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
+    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
+    _coercedUnicode, unichr, raw_input
 )
 from twisted.python.filepath import FilePath
 
@@ -315,6 +315,22 @@ class PY3Tests(unittest.SynchronousTestCase):
         """
         if sys.version.startswith("3."):
             self.assertTrue(_PY3)
+
+
+
+class PYPYTest(unittest.SynchronousTestCase):
+    """
+    Identification of PyPy.
+    """
+
+    def test_PYPY(self):
+        """
+        On PyPy, L{_PYPY} is True.
+        """
+        if 'PyPy' in sys.version:
+            self.assertTrue(_PYPY)
+        else:
+            self.assertFalse(_PYPY)
 
 
 
@@ -845,3 +861,27 @@ class UnichrTests(unittest.TestCase):
         unichar exists and returns a unicode string with the given code point.
         """
         self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
+
+
+class RawInputTests(unittest.TestCase):
+    """
+    Tests for L{raw_input}
+    """
+    def test_raw_input(self):
+        """
+        L{twisted.python.compat.raw_input}
+        """
+        class FakeStdin:
+            def readline(self):
+                return "User input\n"
+
+        class FakeStdout:
+            data = ""
+            def write(self, data):
+                self.data += data
+
+        self.patch(sys, "stdin", FakeStdin())
+        stdout = FakeStdout()
+        self.patch(sys, "stdout", stdout)
+        self.assertEqual(raw_input("Prompt"), "User input")
+        self.assertEqual(stdout.data, "Prompt")

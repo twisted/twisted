@@ -2290,7 +2290,7 @@ class AbortConnectionMixin(object):
     """
     Unit tests for L{ITransport.abortConnection}.
     """
-    # Override in subclasses, should be a EndpointCreator instance:
+    # Override in subclasses, should be an EndpointCreator instance:
     endpoints = None
 
     def runAbortTest(self, clientClass, serverClass,

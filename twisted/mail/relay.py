@@ -76,12 +76,10 @@ class DomainQueuer:
         """
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
-        try:
+        with envelopeFile:
             log.msg('Queueing mail %r -> %r' % (str(user.orig),
                 str(user.dest)))
             pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
-        finally:
-            envelopeFile.close()
         return smtpMessage
 
 

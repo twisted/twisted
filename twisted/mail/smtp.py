@@ -6,8 +6,9 @@
 Simple Mail Transfer Protocol implementation.
 """
 
-import time, re, base64, types, socket, os, random, rfc822
+import time, re, base64, types, socket, os, random
 import binascii
+import email.utils
 import warnings
 from email.base64MIME import encode as encode_base64
 
@@ -334,7 +335,7 @@ def quoteaddr(addr):
     if isinstance(addr, Address):
         return '<%s>' % str(addr)
 
-    res = rfc822.parseaddr(addr)
+    res = email.utils.parseaddr(addr)
 
     if res == (None, None):
         # It didn't parse, use it as-is

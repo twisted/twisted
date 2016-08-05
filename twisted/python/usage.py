@@ -25,7 +25,7 @@ import textwrap
 
 # Sibling Imports
 from twisted.python import reflect, util
-
+from twisted.python.compat import _PY3
 
 class UsageError(Exception):
     pass
@@ -968,12 +968,20 @@ def flagFunction(method, name=None):
     @return: If the method is a flag handler, return C{True}.  Otherwise return
         C{False}.
     """
-    reqArgs = len(inspect.getargspec(method).args)
-    if reqArgs > 2:
-        raise UsageError('Invalid Option function for %s' %
-                         (name or method.__name__))
-    if reqArgs == 2:
-        return False
+    if _PY3:
+        reqArgs = len(inspect.signature(method).parameters)
+        if reqArgs > 1:
+            raise UsageError('Invalid Option function for %s' %
+                             (name or method.__name__))
+        if reqArgs == 1:
+            return False
+    else:
+        reqArgs = len(inspect.getargspec(method).args)
+        if reqArgs > 2:
+            raise UsageError('Invalid Option function for %s' %
+                             (name or method.__name__))
+        if reqArgs == 2:
+            return False
     return True
 
 

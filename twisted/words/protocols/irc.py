@@ -34,7 +34,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import errno, os, random, re, stat, struct, sys, time, types, traceback
+import errno, os, random, re, stat, struct, sys, time, traceback
 import operator
 import string, socket
 import textwrap
@@ -2310,7 +2310,7 @@ class IRCClient(basic.LineReceiver):
         # when faced with an ERRMSG query (not a reply).
         nick = user.split('!')[0]
         self.ctcpMakeReply(nick, [('ERRMSG',
-                                   "%s :No error has occoured." % data)])
+                                   "%s :No error has occurred." % data)])
 
     def ctcpQuery_TIME(self, user, channel, data):
         if data is not None:
@@ -2782,7 +2782,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     connected = 0
 
     def __init__(self, file):
-        if type(file) is types.StringType:
+        if type(file) is str:
             self.file = open(file, 'r')
 
     def connectionMade(self):
@@ -3750,7 +3750,7 @@ def ctcpStringify(messages):
     coded_messages = []
     for (tag, data) in messages:
         if data:
-            if not isinstance(data, types.StringType):
+            if not isinstance(data, str):
                 try:
                     # data as list-of-strings
                     data = " ".join(map(str, data))
@@ -3850,8 +3850,8 @@ RPL_LUSERUNKNOWN = '253'
 RPL_LUSERCHANNELS = '254'
 RPL_LUSERME = '255'
 RPL_ADMINME = '256'
-RPL_ADMINLOC = '257'
-RPL_ADMINLOC = '258'
+RPL_ADMINLOC1 = '257'
+RPL_ADMINLOC2 = '258'
 RPL_ADMINEMAIL = '259'
 RPL_TRYAGAIN = '263'
 ERR_NOSUCHNICK = '401'
@@ -3868,6 +3868,9 @@ ERR_NOTEXTTOSEND = '412'
 ERR_NOTOPLEVEL = '413'
 ERR_WILDTOPLEVEL = '414'
 ERR_BADMASK = '415'
+# Defined in errata.
+# https://www.rfc-editor.org/errata_search.php?rfc=2812&eid=2822
+ERR_TOOMANYMATCHES = '416'
 ERR_UNKNOWNCOMMAND = '421'
 ERR_NOMOTD = '422'
 ERR_NOADMININFO = '423'
@@ -3992,8 +3995,8 @@ symbolic_to_numeric = {
     "RPL_LUSERCHANNELS": '254',
     "RPL_LUSERME": '255',
     "RPL_ADMINME": '256',
-    "RPL_ADMINLOC": '257',
-    "RPL_ADMINLOC": '258',
+    "RPL_ADMINLOC1": '257',
+    "RPL_ADMINLOC2": '258',
     "RPL_ADMINEMAIL": '259',
     "RPL_TRYAGAIN": '263',
     "ERR_NOSUCHNICK": '401',
@@ -4010,6 +4013,7 @@ symbolic_to_numeric = {
     "ERR_NOTOPLEVEL": '413',
     "ERR_WILDTOPLEVEL": '414',
     "ERR_BADMASK": '415',
+    "ERR_TOOMANYMATCHES": '416',
     "ERR_UNKNOWNCOMMAND": '421',
     "ERR_NOMOTD": '422',
     "ERR_NOADMININFO": '423',

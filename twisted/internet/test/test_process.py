@@ -369,7 +369,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.stdout.read())
+                with f2.stdout:
+                    result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 

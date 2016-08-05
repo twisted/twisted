@@ -18,7 +18,7 @@ Deferreds
 ---------
 
 Twisted uses the :api:`twisted.internet.defer.Deferred <Deferred>` object to manage the callback sequence.
-The client application attaches a series of functions to the deferred to be called in order when the results of the asynchronous request are available (this series of functions is known as a series of **callbacks**, or a **callback chain**), together with a series of functions to be called if there is an error in the asynchronous request (known as a series of **errbacks** or an**errback chain**).
+The client application attaches a series of functions to the deferred to be called in order when the results of the asynchronous request are available (this series of functions is known as a series of **callbacks**, or a **callback chain**), together with a series of functions to be called if there is an error in the asynchronous request (known as a series of **errbacks** or an **errback chain**).
 The asynchronous library code calls the first callback when the result is available, or the first errback when an error occurs, and the ``Deferred`` object then hands the results of each callback or errback function to the next function in the chain.
 
 

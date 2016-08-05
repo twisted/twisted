@@ -905,9 +905,8 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         # Download a range of different size files
         for size in range(100000, 110000, 500):
-            fObj = file(os.path.join(self.directory, '%d.txt' % (size,)), 'wb')
-            fObj.write('x' * size)
-            fObj.close()
+            with open(os.path.join(self.directory, '%d.txt' % (size,)), 'wb') as fObj:
+                fObj.write('x' * size)
 
             self._download('RETR %d.txt' % (size,), chainDeferred=d)
             def checkDownload(download, size=size):

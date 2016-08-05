@@ -86,9 +86,8 @@ class DirDBM:
         
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        f = _open(path, "rb")
-        s = f.read()
-        f.close()
+        with _open(path, "rb") as f:
+            s = f.read()
         return s
     
     def _writeFile(self, path, data):
@@ -96,10 +95,9 @@ class DirDBM:
         
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        f = _open(path, "wb")
-        f.write(data)
-        f.flush()
-        f.close()
+        with _open(path, "wb") as f:
+            f.write(data)
+            f.flush()
     
     def __len__(self):
         """

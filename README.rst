@@ -4,6 +4,7 @@ Twisted 16.3.0
 |pypi|
 |coverage|
 |travis|
+|appveyor|
 
 .. code::
 
@@ -26,7 +27,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.conch``: SSHv2 and Telnet clients and servers and terminal emulators
 - ``twisted.words``: Clients and servers for IRC, XMPP, and other IM protocols
 - ``twisted.mail``: IMAPv4, POP3, SMTP clients and servers
-- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS recievers
+- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS receivers
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
@@ -110,3 +111,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis https://travis-ci.org/twisted/twisted
+
+.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
+.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted

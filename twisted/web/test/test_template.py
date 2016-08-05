@@ -354,7 +354,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_missingTemplateLoader(self):
         """
-        Rendering a Element without a loader attribute raises the appropriate
+        Rendering an Element without a loader attribute raises the appropriate
         exception.
         """
         return self.assertFlatteningRaises(Element(), MissingTemplateLoader)
@@ -545,7 +545,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_elementContainingDynamicElement(self):
         """
-        Directives in the document factory of a Element returned from a render
+        Directives in the document factory of an Element returned from a render
         method of another Element are satisfied from the correct object: the
         "inner" Element.
         """

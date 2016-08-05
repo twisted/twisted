@@ -309,12 +309,18 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
         else:
             reactor.run()
     except:
+        close = False
         if config['nodaemon']:
             file = oldstdout
         else:
             file = open("TWISTD-CRASH.log", "a")
-        traceback.print_exc(file=file)
-        file.flush()
+            close = True
+        try:
+            traceback.print_exc(file=file)
+            file.flush()
+        finally:
+            if close:
+                file.close()
 
 
 

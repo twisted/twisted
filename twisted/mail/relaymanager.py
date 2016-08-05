@@ -11,7 +11,7 @@ sends mail to a smart host.  The smart host finds the mail exchange server for
 the recipient and sends on the message.
 """
 
-import rfc822
+import email.utils
 import os
 import time
 
@@ -768,7 +768,7 @@ class SmartHostSMTPRelayingManager:
         exchanges = {}
         for msg in nextMessages:
             from_, to = self.queue.getEnvelope(msg)
-            name, addr = rfc822.parseaddr(to)
+            name, addr = email.utils.parseaddr(to)
             parts = addr.split('@', 1)
             if len(parts) != 2:
                 log.err("Illegal message destination: " + to)

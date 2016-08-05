@@ -115,7 +115,7 @@ def run():
             if options['logfile'] == '-':
                 f = sys.stdout
             else:
-                f = file(options['logfile'], 'a+')
+                f = open(options['logfile'], 'a+')
         else:
             f = sys.stderr
         realout = sys.stdout

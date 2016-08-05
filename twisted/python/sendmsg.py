@@ -53,9 +53,9 @@ def sendmsg(socket, data, ancillary=[], flags=0):
 
 def recvmsg(socket, maxSize=8192, cmsgSize=4096, flags=0):
     """
-    Recieve a message on a socket.
+    Receive a message on a socket.
 
-    @param socket: The socket to recieve the message on.
+    @param socket: The socket to receive the message on.
     @type socket: L{socket.socket}
 
     @param maxSize: The maximum number of bytes to receive from the socket using

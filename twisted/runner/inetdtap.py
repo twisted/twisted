@@ -62,7 +62,8 @@ class RPCServer(internet.TCPServer):
 def makeService(config):
     s = appservice.MultiService()
     conf = inetdconf.InetdConf()
-    conf.parseFile(open(config['file']))
+    with open(config['file']) as f:
+        conf.parseFile(f)
 
     for service in conf.services:
         protocol = service.protocol

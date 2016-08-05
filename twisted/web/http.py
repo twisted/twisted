@@ -2297,7 +2297,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     def dataReceived(self, data):
         """
-        A override of L{IProtocol.dataReceived} that checks what protocol we're
+        An override of L{IProtocol.dataReceived} that checks what protocol we're
         using.
         """
         if self._negotiatedProtocol is None:

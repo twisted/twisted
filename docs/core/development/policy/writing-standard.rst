@@ -311,7 +311,7 @@ that they will see the document do. For example:
       backend;
     - creating an anonymous access read-only SFTP server using a proxy
       backend connecting to an HTTP server; and
-    - creating a anonymous access read and write SFTP server using a
+    - creating an anonymous access read and write SFTP server using a
       filesystem backend.
     
     

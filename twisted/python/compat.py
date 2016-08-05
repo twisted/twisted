@@ -25,6 +25,7 @@ from __future__ import absolute_import, division
 
 import inspect
 import os
+import platform
 import socket
 import string
 import struct
@@ -39,6 +40,29 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+if platform.python_implementation() == 'PyPy':
+    _PYPY = True
+else:
+    _PYPY = False
+
+def _shouldEnableNewStyle():
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 
 def currentframe(n=0):
@@ -714,7 +738,7 @@ def _coercedUnicode(s):
     Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
     instead. This function mimics the behavior for Python 2. It will decode the
     byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
-    passing a byte string. Unicode strings are return as-is.
+    passing a byte string. Unicode strings are returned as-is.
 
     @param s: The string to coerce.
     @type s: L{bytes} or L{unicode}
@@ -734,8 +758,10 @@ def _coercedUnicode(s):
 
 if _PY3:
     unichr = chr
+    raw_input = input
 else:
     unichr = unichr
+    raw_input = raw_input
 
 
 
@@ -775,4 +801,5 @@ __all__ = [
     "_coercedUnicode",
     "intern",
     "unichr",
+    "raw_input",
 ]
