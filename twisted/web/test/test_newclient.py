@@ -2614,7 +2614,7 @@ class ResponseTests(TestCase):
     def test_transportResumed(self):
         """
         L{Response.deliverBody} resumes the HTTP connection's transport
-        before passing it to the consumer's C{makeConnection} method.
+        after passing it to the consumer's C{makeConnection} method.
         """
         transportState = []
         class ListConsumer(Protocol):
@@ -2627,7 +2627,8 @@ class ResponseTests(TestCase):
         response = justTransportResponse(transport)
         self.assertEqual(transport.producerState, u'paused')
         response.deliverBody(protocol)
-        self.assertEqual(transportState, [u'producing'])
+        self.assertEqual(transportState, [u'paused'])
+        self.assertEqual(transport.producerState, u'producing')
 
 
     def test_bodyDataFinishedBeforeStartProducing(self):
