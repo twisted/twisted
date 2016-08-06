@@ -14,6 +14,7 @@ from os.path import expanduser
 
 from zope.interface import Interface, implementer
 
+from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone, ProcessTerminated
@@ -155,7 +156,7 @@ class _CommandChannel(SSHChannel):
         issue an C{"exec"} request to run the command.
         """
         command = self.conn.sendRequest(
-            self, 'exec', NS(self._command), wantReply=True)
+            self, b'exec', NS(self._command), wantReply=True)
         command.addCallbacks(self._execSuccess, self._execFailure)
 
 
@@ -432,7 +433,7 @@ class _CommandTransport(SSHClientTransport):
             L{KnownHostsFile.verifyHostKey}.
         """
         hostname = self.creator.hostname
-        ip = self.transport.getPeer().host
+        ip = networkString(self.transport.getPeer().host)
 
         self._state = b'SECURING'
         d = self.creator.knownHosts.verifyHostKey(
@@ -754,7 +755,7 @@ class _NewConnectionHelper(object):
         For use as the opener argument to L{ConsoleUI}.
         """
         try:
-            return self.tty.open("r+")
+            return self.tty.open("rb+")
         except:
             # Give back a file-like object from which can be read a byte string
             # that KnownHostsFile recognizes as rejecting some option (b"no").
@@ -783,7 +784,8 @@ class _NewConnectionHelper(object):
         protocol = _CommandTransport(self)
         ready = protocol.connectionReady
 
-        sshClient = TCP4ClientEndpoint(self.reactor, self.hostname, self.port)
+        sshClient = TCP4ClientEndpoint(
+            self.reactor, nativeString(self.hostname), self.port)
 
         d = connectProtocol(sshClient, protocol)
         d.addCallback(lambda ignored: ready)
