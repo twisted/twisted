@@ -30,6 +30,9 @@ git fetch origin trunk:refs/remotes/origin/trunk
 mkdir -p build/
 twistedchecker -f parseable $target > build/twistedchecker-branch.report
 
+echo 'NOTICE: TypeError: compile() traceback are a known'
+echo 'See: https://github.com/twisted/twistedchecker/issues/118'
+
 # Make sure repo is producing the diff with prefix so that the output of
 # `git diff` can be parsed by diff_cover.
 git config diff.noprefix false
