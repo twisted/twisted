@@ -34,7 +34,7 @@ from twisted import plugin, logger
 from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.usage import UsageError
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
                                 textFromEventDict)
@@ -833,9 +833,24 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
             args.extend((chroot, rundir, nodaemon, umask, pidfile))
 
         # Sanity check
-        self.assertEqual(
-            inspect.getargspec(self.runner.setupEnvironment),
-            inspect.getargspec(fakeSetupEnvironment))
+        if _PY3:
+            setupEnvironmentParameters = \
+                inspect.signature(self.runner.setupEnvironment).parameters
+            fakeSetupEnvironmentParameters = \
+                inspect.signature(fakeSetupEnvironment).parameters
+
+            # inspect.signature() does not return "self" in the signature of
+            # a class method, so we need to omit  it when comparing the
+            # the signature of a plain method
+            fakeSetupEnvironmentParameters = fakeSetupEnvironmentParameters.copy()
+            fakeSetupEnvironmentParameters.pop("self")
+
+            self.assertEqual(setupEnvironmentParameters,
+                fakeSetupEnvironmentParameters)
+        else:
+            self.assertEqual(
+                inspect.getargspec(self.runner.setupEnvironment),
+                inspect.getargspec(fakeSetupEnvironment))
 
         self.patch(UnixApplicationRunner, 'setupEnvironment',
                    fakeSetupEnvironment)
