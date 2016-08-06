@@ -145,7 +145,7 @@ class Port(abstract.FileHandle):
                     (errno.errorcode.get(rc, 'unknown error'), rc))
         else:
             try:
-                self.protocol.datagramReceived(str(evt.buff[:data]),
+                self.protocol.datagramReceived(bytes(evt.buff[:data]),
                     _iocp.makesockaddr(evt.addr_buff))
             except:
                 log.err()
