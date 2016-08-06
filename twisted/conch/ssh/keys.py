@@ -12,7 +12,7 @@ import binascii
 import itertools
 import warnings
 
-from hashlib import md5
+from hashlib import md5, sha256
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
