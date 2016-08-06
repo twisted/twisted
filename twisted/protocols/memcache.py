@@ -305,22 +305,22 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd.fail(NoSuchCommand())
 
 
-    def cmd_CLIENT_ERROR(self, errBytes):
+    def cmd_CLIENT_ERROR(self, errText):
         """
         An invalid input as been sent.
         """
-        errText = nativeString(errBytes)
+        errText = nativeString(errText)
         log.err("Invalid input: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ClientError(errText))
 
 
-    def cmd_SERVER_ERROR(self, errBytes):
+    def cmd_SERVER_ERROR(self, errText):
         """
         An error has happened server-side.
         """
-        errText = nativeString(errBytes)
-        log.err(u"Server error: " + errText)
+        errText = nativeString(errText)
+        log.err("Server error: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ServerError(errText))
 
