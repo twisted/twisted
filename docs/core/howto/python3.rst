@@ -19,7 +19,7 @@ document covers Twisted-specific issues in porting your code to Python
 3.
 
 Only some parts of Twisted have been ported, and therefore only a subset of modules are installed under Python 3.
-You can see the full list of ported modules in :api:`twisted.python.dist3 <twisted.python.dist3>`.
+You can see the full list of ported modules in :api:`twisted.python._python3_port <twisted.python._python3_port>`.
 
 
 API Differences

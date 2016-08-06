@@ -142,7 +142,7 @@ In case of local names conflicts due to import, use the ``as`` syntax, for examp
 
 The encoding must always be ASCII, so no coding cookie is necessary.
 
-Python 3 compatible modules must be listed in the relevant sections of ``twisted.python.dist3``.
+Python 3 compatible modules must be listed in the relevant sections of ``twisted.python._python3_port``.
 
 
 Packages

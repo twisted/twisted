@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.python.dist3}.
+Tests for L{twisted.python._python3_port}.
 """
 
 from __future__ import absolute_import, division
@@ -11,7 +11,7 @@ import os
 import twisted
 
 from twisted.trial.unittest import TestCase
-from twisted.python.dist3 import modulesToInstall, testDataFiles
+from twisted.python._python3_port import modulesToInstall, testDataFiles
 
 
 class ModulesToInstallTests(TestCase):
@@ -23,7 +23,8 @@ class ModulesToInstallTests(TestCase):
         L{modulesToInstall} includes some obvious module names.
         """
         self.assertIn("twisted.internet.reactor", modulesToInstall)
-        self.assertIn("twisted.python.test.test_dist3", modulesToInstall)
+        self.assertIn(
+            "twisted.python.test.test_python3_port", modulesToInstall)
 
 
     def test_exist(self):

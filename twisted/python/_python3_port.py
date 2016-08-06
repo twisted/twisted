@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.python.test.test_dist3 -*-
+# -*- test-case-name: twisted.python.test.test_python3_port -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -6,6 +6,9 @@
 Support for installing Twisted on Python 3.
 
 Only necessary while parts of Twisted are unported.
+
+This is a helper for L{twisted.python.dist} to know what to install on
+Python3.
 
 @var modules: A list of modules that have been ported,
     e.g. "twisted.python.versions"; a package name (e.g. "twisted.python")
@@ -269,7 +272,7 @@ modules = [
     "twisted.python.context",
     "twisted.python.deprecate",
     "twisted.python.dist",
-    "twisted.python.dist3",
+    "twisted.python._python3_port",
     "twisted.python.failure",
     "twisted.python.fakepwd",
     "twisted.python.filepath",
@@ -491,7 +494,7 @@ testModules = [
     "twisted.python.test.test_constants",
     "twisted.python.test.test_deprecate",
     "twisted.python.test.test_dist",
-    "twisted.python.test.test_dist3",
+    "twisted.python.test.test_python3_port",
     "twisted.python.test.test_inotify",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
