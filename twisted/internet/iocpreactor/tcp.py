@@ -290,7 +290,7 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         self.reactor.removeActiveHandle(self)
 
 
-    def cbConnect(self, rc, bytes, evt):
+    def cbConnect(self, rc, data, evt):
         if rc:
             rc = connectExErrors.get(rc, rc)
             self.failIfNotConnected(error.getConnectError((rc,
@@ -548,7 +548,7 @@ class Port(_SocketCloser, _LogOwner):
         return self._addressType('TCP', host, port)
 
 
-    def cbAccept(self, rc, bytes, evt):
+    def cbAccept(self, rc, data, evt):
         self.handleAccept(rc, evt)
         if not (self.disconnecting or self.disconnected):
             self.doAccept()
