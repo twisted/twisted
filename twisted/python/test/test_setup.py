@@ -13,9 +13,10 @@ from setuptools.dist import Distribution
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import _setup
+from twisted.python import _setup, dist3
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
+    BuildPy3,
     get_setup_args,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
@@ -284,3 +285,56 @@ class WithPlatformTests(TestCase):
         says we're not running on CPython.
         """
         self.assertFalse(_setup._checkCPython(platform=fakeOtherPlatform))
+
+
+
+class BuildPy3Tests(TestCase):
+    """
+    Tests for L{BuildPy3}.
+    """
+
+    def test_find_package_modules(self):
+        """
+        Will filter the found modules including only the modules listed in
+        L{twisted.python.dist3}.
+        """
+        distribution = Distribution()
+        distribution.script_name = 'setup.py'
+        distribution.script_args = 'build_py'
+        builder = BuildPy3(distribution)
+
+        # Rig the dist3 data so that we can reduce the scope of this test and
+        # reduce the risk of getting false failures, while doing a minimum
+        # level of patching.
+        self.patch(
+            dist3,
+            'modulesToInstall',
+            [
+                "twisted.spread.banana",
+                "twisted.test.__init__",
+                "twisted.test.iosim",
+                "twisted.test.test_abstract",
+                ],
+            )
+        self.patch(
+            dist3,
+            'testDataFiles',
+            [
+                "twisted.python.test.pullpipe",
+                "twisted.test.mock_win32process",
+                ],
+            )
+
+        # We are in twisted/_trial_temp so the files are in our parent.
+        result = builder.find_package_modules(
+            'twisted.test', '../twisted/test')
+
+        self.assertEqual([
+            ('twisted.test', 'test_abstract',
+                '../twisted/test/test_abstract.py'),
+            ('twisted.test', '__init__', '../twisted/test/__init__.py'),
+            ('twisted.test', 'iosim', '../twisted/test/iosim.py'),
+            ('twisted.test', 'mock_win32process',
+                '../twisted/test/mock_win32process.py')],
+            result,
+            )

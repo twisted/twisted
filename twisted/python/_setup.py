@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Distutils/Setuptools convenience functionality.
+Setuptools convenience functionality.
 
 Since Twisted is not yet fully ported to Python3, it uses
 L{twisted.python.dist3} to know what to install on Python3.
@@ -23,6 +23,9 @@ L{twisted.python.dist3} to know what to install on Python3.
 
 @var _PLATFORM_INDEPENDENT: A list of all optional cross-platform dependencies,
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
+
+@var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
+    process.
 """
 
 import os
@@ -31,13 +34,12 @@ import sys
 
 from distutils.command import build_ext
 from distutils.errors import CompileError
-from setuptools import setup as _setup
 from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
 
 from twisted import copyright
+from twisted.python import dist3
 from twisted.python.compat import _PY3
-from twisted.python.dist3 import modulesToInstall, testDataFiles
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -183,15 +185,6 @@ _EXTENSIONS = [
 
 
 
-def setup():
-    """
-    An alternative to distutils' setup() which is specially designed
-    for Twisted subprojects.
-    """
-    return _setup(**get_setup_args())
-
-
-
 def get_setup_args():
     """
     @return: The keyword arguments to be used the the setup method.
@@ -218,7 +211,7 @@ def get_setup_args():
 
     if sys.version_info[0] >= 3:
         requirements = ["zope.interface >= 4.0.2"]
-        command_classes['build_py'] = PickyBuildPy
+        command_classes['build_py'] = BuildPy3
     else:
         requirements = ["zope.interface >= 3.6.0"]
 
@@ -238,7 +231,7 @@ def get_setup_args():
 
 
 
-class PickyBuildPy(build_py):
+class BuildPy3(build_py):
     """
     A version of build_py that doesn't install the modules that aren't yet
     ported to Python 3.
@@ -246,9 +239,9 @@ class PickyBuildPy(build_py):
     def find_package_modules(self, package, package_dir):
         modules = [
             module for module
-            in super(build_py, self).find_package_modules(package, package_dir)
-            if ".".join([module[0], module[1]]) in modulesToInstall or
-               ".".join([module[0], module[1]]) in testDataFiles]
+            in build_py.find_package_modules(self, package, package_dir)
+            if ".".join([module[0], module[1]]) in dist3.modulesToInstall or
+               ".".join([module[0], module[1]]) in dist3.testDataFiles]
         return modules
 
 
