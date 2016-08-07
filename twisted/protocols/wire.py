@@ -14,7 +14,6 @@ import struct
 from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces
-from twisted.python.compat import _PY3
 
 
 
@@ -123,12 +122,3 @@ class Time(protocol.Protocol):
 
 
 __all__ = ["Echo", "Discard", "Chargen", "QOTD", "Who", "Daytime", "Time"]
-
-
-if _PY3:
-    __all3__ = ["Echo"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
