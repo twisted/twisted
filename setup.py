@@ -13,12 +13,12 @@ import setuptools
 
 
 # Tell Twisted not to enforce zope.interface requirement on import, since
-# we're going to have to import twisted.python.dist and can rely on
+# we're going to have to import twisted.python._setup and can rely on
 # setuptools to install dependencies.
 setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
 
 if __name__ == "__main__":
-    from twisted.python.dist import setup
+    from twisted.python._setup import setup
     try:
         if os.path.exists('twisted'):
             sys.path.insert(0, '.')

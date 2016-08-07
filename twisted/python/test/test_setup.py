@@ -13,9 +13,9 @@ from setuptools.dist import Distribution
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import dist
+from twisted.python import _setup
 from twisted.python.compat import _PY3
-from twisted.python.dist import (
+from twisted.python._setup import (
     get_setup_args,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
@@ -37,7 +37,7 @@ class SetupTests(TestCase):
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: False)
-        self.patch(dist, '_EXTENSIONS', [good_ext, bad_ext])
+        self.patch(_setup, '_EXTENSIONS', [good_ext, bad_ext])
         args = get_setup_args()
         # ext_modules should be set even though it's not used.  See comment
         # in get_setup_args
@@ -56,7 +56,7 @@ class SetupTests(TestCase):
         """
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
-        self.patch(dist, '_EXTENSIONS', [ext])
+        self.patch(_setup, '_EXTENSIONS', [ext])
         args = get_setup_args()
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
@@ -275,7 +275,7 @@ class WithPlatformTests(TestCase):
         L{_checkCPython} returns C{True} when C{platform.python_implementation}
         says we're running on CPython.
         """
-        self.assertTrue(dist._checkCPython(platform=fakeCPythonPlatform))
+        self.assertTrue(_setup._checkCPython(platform=fakeCPythonPlatform))
 
 
     def test_other(self):
@@ -283,4 +283,4 @@ class WithPlatformTests(TestCase):
         L{_checkCPython} returns C{False} when C{platform.python_implementation}
         says we're not running on CPython.
         """
-        self.assertFalse(dist._checkCPython(platform=fakeOtherPlatform))
+        self.assertFalse(_setup._checkCPython(platform=fakeOtherPlatform))
