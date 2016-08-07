@@ -17,6 +17,7 @@ from twisted.internet.task import react
 from txgithub.api import GithubApi
 
 
+# Some placeholder to mark a parameter as required.
 required = object()
 
 
