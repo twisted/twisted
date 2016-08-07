@@ -1668,7 +1668,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
-             ('fork', True), ('write', -2, '0'), ('unlink', 'twistd.pid')])
+             ('fork', True), ('write', -2, b'0'), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
 
 
@@ -1678,7 +1678,7 @@ class DaemonizeTests(unittest.TestCase):
         status pipe and then exit the process.
         """
         self.mockos.child = False
-        self.mockos.readData = "0"
+        self.mockos.readData = b"0"
         with AlternateReactor(FakeDaemonizingReactor()):
             self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
@@ -1708,7 +1708,7 @@ class DaemonizeTests(unittest.TestCase):
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
              ('fork', True), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
-        self.assertEqual([(-2, '0'), (-2, '0')], written)
+        self.assertEqual([(-2, b'0'), (-2, b'0')], written)
 
 
     def test_successInParentEINTR(self):
@@ -1722,7 +1722,7 @@ class DaemonizeTests(unittest.TestCase):
             read.append((fd, size))
             if len(read) == 1:
                 raise IOError(errno.EINTR)
-            return "0"
+            return b"0"
 
         self.mockos.read = raisingRead
         self.mockos.child = False
@@ -1767,7 +1767,7 @@ class DaemonizeTests(unittest.TestCase):
         with non-zero status code.
         """
         self.mockos.child = False
-        self.mockos.readData = "1: An identified error"
+        self.mockos.readData = b"1: An identified error"
         errorIO = NativeStringIO()
         self.patch(sys, '__stderr__', errorIO)
         with AlternateReactor(FakeDaemonizingReactor()):
