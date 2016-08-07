@@ -324,17 +324,24 @@ class BuildPy3Tests(TestCase):
                 "twisted.test.mock_win32process",
                 ],
             )
+        # We are in _trial_temp which can be at PWD/_trial_temp when executed
+        # outside of tox or some tox temporary folder.
+        # When running under tox we use TOX_INI_DIR to find where the source
+        # code is located.
+        basePath = os.environ.get('TOX_INI_DIR', '../')
+        packageDir = os.path.join(basePath, 'twisted', 'test')
 
-        # We are in twisted/_trial_temp so the files are in our parent.
-        result = builder.find_package_modules(
-            'twisted.test', '../twisted/test')
+        result = builder.find_package_modules('twisted.test', packageDir)
 
         self.assertEqual([
             ('twisted.test', 'test_abstract',
-                '../twisted/test/test_abstract.py'),
-            ('twisted.test', '__init__', '../twisted/test/__init__.py'),
-            ('twisted.test', 'iosim', '../twisted/test/iosim.py'),
+                os.path.join(packageDir, 'test_abstract.py')),
+            ('twisted.test', '__init__',
+                os.path.join(packageDir, '__init__.py')),
+            ('twisted.test', 'iosim',
+                os.path.join(packageDir, 'iosim.py')),
             ('twisted.test', 'mock_win32process',
-                '../twisted/test/mock_win32process.py')],
+                 os.path.join(packageDir, 'mock_win32process.py')),
+            ],
             result,
             )
