@@ -335,7 +335,7 @@ class BuildPy3Tests(TestCase):
 
         result = builder.find_package_modules('twisted.test', packageDir)
 
-        self.assertItemsEqual([
+        self.assertEqual(sorted([
             ('twisted.test', 'test_abstract',
                 os.path.join(packageDir, 'test_abstract.py')),
             ('twisted.test', '__init__',
@@ -344,6 +344,6 @@ class BuildPy3Tests(TestCase):
                 os.path.join(packageDir, 'iosim.py')),
             ('twisted.test', 'mock_win32process',
                  os.path.join(packageDir, 'mock_win32process.py')),
-            ],
-            result,
+            ]),
+            sorted(result),
             )
