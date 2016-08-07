@@ -1755,7 +1755,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
-             ('fork', True), ('write', -2, '1 Something is wrong'),
+             ('fork', True), ('write', -2, b'1 Something is wrong'),
              ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
 
@@ -1834,7 +1834,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
-             ('fork', True), ('write', -2, '1 ' + 'x' * 98),
+             ('fork', True), ('write', -2, b'1 ' + b'x' * 98),
              ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
 

@@ -9,7 +9,7 @@ import os
 import sys
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, _bytesRepr)
+from twisted.python.compat import (_bytesRepr, intToBytes, networkString)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -211,7 +211,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
             if statusPipe is not None:
                 # Limit the total length to the passed string to 100
                 strippedError = str(ex)[:98]
-                untilConcludes(os.write, statusPipe, "1 %s" % (strippedError,))
+                untilConcludes(os.write, statusPipe,
+                               networkString("1 %s" % (strippedError,)))
                 untilConcludes(os.close, statusPipe)
             self.removePID(self.config['pidfile'])
             raise
