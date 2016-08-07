@@ -1767,7 +1767,7 @@ class DaemonizeTests(unittest.TestCase):
         with non-zero status code.
         """
         self.mockos.child = False
-        self.mockos.readData = "1: An identified error"
+        self.mockos.readData = b"1: An identified error"
         errorIO = NativeStringIO()
         self.patch(sys, '__stderr__', errorIO)
         with AlternateReactor(FakeDaemonizingReactor()):
