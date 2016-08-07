@@ -328,12 +328,14 @@ class BuildPy3Tests(TestCase):
         # outside of tox or some tox temporary folder.
         # When running under tox we use TOX_INI_DIR to find where the source
         # code is located.
-        basePath = os.environ.get('TOX_INI_DIR', '../')
+        basePath = os.environ.get('PWD', '../')
+        # Overwrite the path if we are running with tox.
+        basePath = os.environ.get('TOX_INI_DIR', basePath)
         packageDir = os.path.join(basePath, 'twisted', 'test')
 
         result = builder.find_package_modules('twisted.test', packageDir)
 
-        self.assertEqual([
+        self.assertItemsEqual([
             ('twisted.test', 'test_abstract',
                 os.path.join(packageDir, 'test_abstract.py')),
             ('twisted.test', '__init__',
