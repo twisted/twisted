@@ -13,6 +13,7 @@ import itertools
 import warnings
 
 from hashlib import md5, sha256
+import base64
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -782,7 +783,7 @@ class Key(object):
         return Key(self._keyObject.public_key())
 
 
-    def fingerprint(self):
+    def fingerprint(self, hash_function=sha256):
         """
         Get the user presentation of the fingerprint of this L{Key}.  As
         described by U{RFC 4716 section
@@ -802,9 +803,13 @@ class Key(object):
 
         @rtype: L{str}
         """
-        return nativeString(
-            b':'.join([binascii.hexlify(x)
-                       for x in iterbytes(md5(self.blob()).digest())]))
+        fingerprint_digest=hash_function(self.blob()).digest()
+        if hash_function==sha256:
+            return nativeString(base64.b64encode(fingerprint_digest))
+        else:
+            return nativeString(
+                b':'.join([binascii.hexlify(x)
+                           for x in iterbytes(fingerprint_digest)]))
 
 
     def type(self):
