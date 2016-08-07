@@ -1,0 +1,1 @@
+SSH key fingerprints are now base64 encoded SHA256 hashes by default.
