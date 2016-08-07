@@ -4,6 +4,7 @@ __version__ = '$Revision: 1.3 $'[11:-2]
 
 from twisted.trial import unittest
 from twisted.protocols import htb
+from .test_pcp import DummyConsumer
 
 class DummyClock:
     time = 0
@@ -82,8 +83,6 @@ class BucketNestingTests(TestBucketBase):
 
 
 # TODO: Test the Transport stuff?
-
-from .test_pcp import DummyConsumer
 
 class ConsumerShaperTests(TestBucketBase):
     def setUp(self):
