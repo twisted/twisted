@@ -10,6 +10,8 @@ sudo: false
 env:
   global:
     - TRIAL_REPORTER=text
+    # OAUTH_TOKEN
+    - secure: YcQB4WSZ5rgC+5OmYEwjrGbZWQwpuy0P7ko3VivMvXqXvyQsFLEsSmA/8lappP0vdKFOHMEmFebfR6ccp6hbsg0AKlJ3LGuJ3fD7HYiytg18f8Y8EYn78DD7GeH2TU+vMVnHcL8f4oI/UhUlYrMAqkMADkJGcsq5CNjXA0Wjgs0=
 
 matrix:
   include:
@@ -66,16 +68,16 @@ cache:
     - $HOME/.cache/pip
 
 install:
-  - ./.travis/install.sh tox
+  - ./.travis/install.sh tox txgithub
 
-# FIXME: https://twistedmatrix.com/trac/ticket/8373
-# By default, Travis only clones one branch.
-# Some tests require the presence of the `trunk` branch so here we are, also
-# fetching `trunk` for each test.
 before_script:
-  - git remote set-branches --add origin trunk
-  - git fetch origin trunk
+  - ./.travis/before_script.sh
 
-# Run tox from the created virtualenv.
 script:
-  - ./.travis/run.sh
+  - ./.travis/script.sh
+
+after_success:
+    - ./.travis/after_success.sh
+
+after_failure:
+    - ./.travis/after_failure.sh
