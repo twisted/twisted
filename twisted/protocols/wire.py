@@ -44,7 +44,7 @@ class Chargen(protocol.Protocol):
     """
     Generate repeating noise (RFC 864).
     """
-    noise = r'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
+    noise = b'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
 
     def connectionMade(self):
         self.transport.registerProducer(self, 0)
@@ -77,7 +77,7 @@ class QOTD(protocol.Protocol):
         """
         Return a quote. May be overrriden in subclasses.
         """
-        return "An apple a day keeps the doctor away.\r\n"
+        return b"An apple a day keeps the doctor away.\r\n"
 
 
 
@@ -95,7 +95,7 @@ class Who(protocol.Protocol):
         """
         Return active users. Override in subclasses.
         """
-        return "root\r\n"
+        return b"root\r\n"
 
 
 
