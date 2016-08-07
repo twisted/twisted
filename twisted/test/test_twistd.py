@@ -1786,8 +1786,8 @@ class DaemonizeTests(unittest.TestCase):
         message to C{stderr} and exits with non-zero status code.
         """
         self.assertErrorInParentBehavior(
-            readData=b"1: An identified error",
-            errorMessage=("An error has occurred: b' An identified error'\n"
+            readData=b"1 An identified error",
+            errorMessage=("An error has occurred: b'An identified error'\n"
                           "Please look at log file for more information.\n"),
             mockOSActions=[
                 ('chdir', '.'), ('umask', 0o077), ('fork', True),
@@ -1802,9 +1802,9 @@ class DaemonizeTests(unittest.TestCase):
         message to C{stderr} and exits with non-zero status code.
         """
         self.assertErrorInParentBehavior(
-            readData=b"1: An identified error \xff",
+            readData=b"1 An identified error \xff",
             errorMessage=(
-                "An error has occurred: b' An identified error \\xff'\n"
+                "An error has occurred: b'An identified error \\xff'\n"
                 "Please look at log file for more information.\n"
             ),
             mockOSActions=[
