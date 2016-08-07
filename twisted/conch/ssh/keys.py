@@ -789,12 +789,17 @@ class Key(object):
         described by U{RFC 4716 section
         4<http://tools.ietf.org/html/rfc4716#section-4>}::
 
-            The fingerprint of a public key consists of the output of the MD5
-            message-digest algorithm [RFC1321].  The input to the algorithm is
-            the public key data as specified by [RFC4253].  (...)  The output
-            of the (MD5) algorithm is presented to the user as a sequence of 16
-            octets printed as hexadecimal with lowercase letters and separated
-            by colons.
+            The fingerprint of a public key consists of the output of the
+            message-digest algorithm for the given hash function(sha256 or MD5).
+            The input to the algorithm is the public key data as specified by [RFC4253].
+            The output of sha256 (default)[RFC4634] algorithm is presented to the
+            user in the form of base64 encoded sha256 hashes.
+            The output of the MD5[RFC1321] algorithm is presented to the user as
+            a sequence of 16 octets printed as hexadecimal with lowercase letters
+            and separated by colons.
+
+        @param hash_function: algorithm used for fingerprint generation.
+            Default is sha256, also supports MD5
 
         @since: 8.2
 
