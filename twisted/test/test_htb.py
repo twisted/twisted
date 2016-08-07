@@ -83,7 +83,7 @@ class BucketNestingTests(TestBucketBase):
 
 # TODO: Test the Transport stuff?
 
-from test_pcp import DummyConsumer
+from .test_pcp import DummyConsumer
 
 class ConsumerShaperTests(TestBucketBase):
     def setUp(self):
