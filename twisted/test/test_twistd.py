@@ -1760,27 +1760,59 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(self.mockos.closed, [-3, -2])
 
 
-    def test_errorInParent(self):
+    def assertErrorInParentBehavior(self, readData, errorMessage,
+                                    mockOSActions):
         """
-        When the child writes an error message to the status pipe during
-        daemonization, the parent writes the message to C{stderr} and exits
-        with non-zero status code.
+        Make L{os.read} appear to return C{readData}, and assert that
+        L{UnixApplicationRunner.postApplication} writes
+        C{errorMessage} to standard error and executes the calls
+        against L{os} functions specified in C{mockOSActions}.
         """
         self.mockos.child = False
-        self.mockos.readData = b"1: An identified error"
+        self.mockos.readData = readData
         errorIO = NativeStringIO()
         self.patch(sys, '__stderr__', errorIO)
         with AlternateReactor(FakeDaemonizingReactor()):
             self.assertRaises(SystemError, self.runner.postApplication)
-        self.assertEqual(
-            errorIO.getvalue(),
-            "An error has occurred: ' An identified error'\n"
-            "Please look at log file for more information.\n")
-        self.assertEqual(
-            self.mockos.actions,
-            [('chdir', '.'), ('umask', 0o077), ('fork', True),
-             ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid')])
+        self.assertEqual(errorIO.getvalue(), errorMessage)
+        self.assertEqual(self.mockos.actions, mockOSActions)
         self.assertEqual(self.mockos.closed, [-1])
+
+
+    def test_errorInParent(self):
+        """
+        When the child writes an error message to the status pipe
+        during daemonization, the parent writes the repr of the
+        message to C{stderr} and exits with non-zero status code.
+        """
+        self.assertErrorInParentBehavior(
+            readData=b"1: An identified error",
+            errorMessage=("An error has occurred: b' An identified error'\n"
+                          "Please look at log file for more information.\n"),
+            mockOSActions=[
+                ('chdir', '.'), ('umask', 0o077), ('fork', True),
+                ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid'),
+            ],
+        )
+
+    def test_nonASCIIErrorInParent(self):
+        """
+        When the child writes a non-ASCII error message to the status
+        pipe during daemonization, the parent writes the repr of the
+        message to C{stderr} and exits with non-zero status code.
+        """
+        self.assertErrorInParentBehavior(
+            readData=b"1: An identified error \xff",
+            errorMessage=(
+                "An error has occurred: b' An identified error \\xff'\n"
+                "Please look at log file for more information.\n"
+            ),
+            mockOSActions=[
+                ('chdir', '.'), ('umask', 0o077), ('fork', True),
+                ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid'),
+            ],
+        )
+
 
 
     def test_errorMessageTruncated(self):

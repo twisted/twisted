@@ -9,7 +9,7 @@ import os
 import sys
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, nativeString)
+from twisted.python.compat import (intToBytes, _bytesRepr)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -342,10 +342,10 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @rtype: C{int}
         """
         data = untilConcludes(os.read, readPipe, 100)
-        datastr = nativeString(data)
+        dataRepr = _bytesRepr(data[2:])
         if data != b"0":
-            msg = ("An error has occurred: '%s'\nPlease look at log "
-                   "file for more information.\n" % (datastr[2:],))
+            msg = ("An error has occurred: %s\nPlease look at log "
+                   "file for more information.\n" % (dataRepr,))
             untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0
