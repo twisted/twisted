@@ -273,7 +273,7 @@ class _PollableWritePipe(_PollableResource):
                 self.writeConnectionLost()
                 return 0
             try:
-                win32file.WriteFile(self.writePipe, '', None)
+                win32file.WriteFile(self.writePipe, b'', None)
             except pywintypes.error:
                 self.writeConnectionLost()
                 return numBytesWritten
