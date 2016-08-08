@@ -12,5 +12,5 @@ python admin/ci_github_commit_status.py \
     --commit=$TRAVIS_COMMIT \
     --state='success' \
     --target-url=$JOB_URL \
-    --description='Job done' \
-    --context="continuous-integration/travis-ci/job/$TOXENV"
+    --description='Job done.' \
+    --context="travis/$TOXENV"

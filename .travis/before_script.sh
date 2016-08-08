@@ -19,5 +19,5 @@ python admin/ci_github_commit_status.py \
     --commit=$TRAVIS_COMMIT \
     --state='pending' \
     --target-url=$JOB_URL \
-    --description='Waiting for job results' \
-    --context="continuous-integration/travis-ci/job/$TOXENV"
+    --description='Job in progress.' \
+    --context="travis/$TOXENV"

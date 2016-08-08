@@ -12,5 +12,5 @@ python admin/ci_github_commit_status.py \
     --commit=$TRAVIS_COMMIT \
     --state='failure' \
     --target-url=$JOB_URL \
-    --description='Job failed' \
-    --context="continuous-integration/travis-ci/job/$TOXENV"
+    --description='Job failed.' \
+    --context="travis/$TOXENV"

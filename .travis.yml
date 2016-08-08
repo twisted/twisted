@@ -10,7 +10,8 @@ sudo: false
 env:
   global:
     - TRIAL_REPORTER=text
-    # OAUTH_TOKEN
+    # OAUTH_TOKEN for GitHub
+    # https://github.com/organizations/twisted/settings/applications/396817
     - secure: YcQB4WSZ5rgC+5OmYEwjrGbZWQwpuy0P7ko3VivMvXqXvyQsFLEsSmA/8lappP0vdKFOHMEmFebfR6ccp6hbsg0AKlJ3LGuJ3fD7HYiytg18f8Y8EYn78DD7GeH2TU+vMVnHcL8f4oI/UhUlYrMAqkMADkJGcsq5CNjXA0Wjgs0=
 
 matrix:
