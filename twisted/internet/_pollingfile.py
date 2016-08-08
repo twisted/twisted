@@ -130,7 +130,7 @@ class _PollableReadPipe(_PollableResource):
                 finished = 1
                 break
 
-        dataBuf = ''.join(fullDataRead)
+        dataBuf = b''.join(fullDataRead)
         if dataBuf:
             self.receivedCallback(dataBuf)
         if finished:
