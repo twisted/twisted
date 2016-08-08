@@ -18,6 +18,7 @@ Maintainer: Glyph Lefkowitz
 
 from __future__ import division, absolute_import, print_function
 
+import collections
 import traceback
 import types
 import warnings
@@ -239,7 +240,7 @@ class Deferred:
     """
 
     called = False
-    paused = 0
+    paused = False
     _debugInfo = None
     _suppressAlreadyCalled = False
 
@@ -278,7 +279,7 @@ class Deferred:
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks = []
+        self.callbacks = collections.deque()
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
@@ -544,7 +545,7 @@ class Deferred:
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain = [self]
+        chain = collections.deque([self])
 
         while chain:
             current = chain[-1]
@@ -558,7 +559,7 @@ class Deferred:
             finished = True
             current._chainedTo = None
             while current.callbacks:
-                item = current.callbacks.pop(0)
+                item = current.callbacks.popleft()
                 callback, args, kw = item[
                     isinstance(current.result, failure.Failure)]
                 args = args or ()
@@ -661,30 +662,14 @@ class Deferred:
     __repr__ = __str__
 
 
-    def __await__(self):
-        return _MakeDeferredAwaitable(self)
-
-
-
-class _MakeDeferredAwaitable(object):
-    """
-    A subgenerator which is created by L{Deferred.__await__}.
-    """
-    result = _NO_RESULT
-
-    def __init__(self, d):
-        self.d = d
-        self.d.addBoth(lambda x: setattr(self, "result", x))
-
-
-    def __next__(self):
-        if self.result is not _NO_RESULT:
-            raise StopIteration(self.result)
-        return self.d
-
-
     def __iter__(self):
-        return self
+
+        if getattr(self, "result", _NO_RESULT) is _NO_RESULT:
+            yield self
+        return self.result
+
+    # For PEP492/async + await
+    __await__ = __iter__
 
 
 
