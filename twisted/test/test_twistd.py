@@ -1736,16 +1736,17 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual([(-1, 100), (-1, 100)], read)
 
 
-    def test_error(self):
-        """
-        If an error happens during daemonization, the child process writes the
-        exception error to the status pipe.
-        """
 
+    def assertErrorWritten(self, raised, reported):
+        """
+        Assert L{UnixApplicationRunner.postApplication} writes
+        C{reported} to its status pipe if the service raises an
+        exception whose message is C{raised}.
+        """
         class FakeService(service.Service):
 
             def startService(self):
-                raise RuntimeError("Something is wrong")
+                raise RuntimeError(raised)
 
         errorService = FakeService()
         errorService.setServiceParent(self.runner.application)
@@ -1755,9 +1756,31 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
-             ('fork', True), ('write', -2, b'1 Something is wrong'),
+             ('fork', True), ('write', -2, reported),
              ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
+
+
+
+    def test_error(self):
+        """
+        If an error happens during daemonization, the child process writes the
+        exception error to the status pipe.
+        """
+        self.assertErrorWritten(raised="Something is wrong",
+                                reported=b'1 Something is wrong')
+
+
+
+    def test_unicodeError(self):
+        """
+        If an error happens during daemonization, and that error's
+        message is Unicode, the child encodes the message as ascii
+        with backslash Unicode code points.
+        """
+        self.assertErrorWritten(raised=u"\u2022",
+                                reported=b'1 \\u2022')
+
 
 
     def assertErrorInParentBehavior(self, readData, errorMessage,

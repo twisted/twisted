@@ -1,0 +1,1 @@
+Add helper to create bytes reprs that always begin with b.  twistd on UNIX platforms can report non-ASCII errors on Python 2 and all errors on Python 3 encountered during daemonization.
