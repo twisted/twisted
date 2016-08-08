@@ -213,7 +213,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
 
         @return: The formatted message, suitable for writing to the
             status pipe.
-        @rytpe: L{bytes}
+        @rtype: L{bytes}
         """
         # On Python 2 this will encode Unicode messages with the ascii
         # codec and the backslashreplace error handler.
