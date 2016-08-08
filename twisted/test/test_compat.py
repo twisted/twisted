@@ -887,6 +887,7 @@ class RawInputTests(unittest.TestCase):
         self.assertEqual(stdout.data, "Prompt")
 
 
+
 class FutureBytesReprTests(unittest.TestCase):
     """
     Tests for L{twisted.python.compat._bytesRepr}.
@@ -900,6 +901,7 @@ class FutureBytesReprTests(unittest.TestCase):
         """
         exc = self.assertRaises(TypeError, _bytesRepr, ["not bytes"])
         self.assertEquals(str(exc), "Expected bytes not ['not bytes']")
+
 
     def test_bytesReprPrefix(self):
         """
