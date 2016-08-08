@@ -10,8 +10,7 @@ import sys
 import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, _bytesRepr,
-                                   networkString, _PY3)
+from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
