@@ -36,8 +36,17 @@ def add(fd, path, mask):
     """
     Add a watch for the given path to the inotify file descriptor, and return
     the watch descriptor.
+
+    @param fd: The file descriptor returned by C{libc.inotify_init}.
+    @type fd: L{int}
+
+    @param path: The path to watch via inotify.
+    @type path: L{twisted.python.filepath.FilePath}
+
+    @param mask: Bitmask specifying the events that inotify should monitor.
+    @type mask: L{int}
     """
-    wd = libc.inotify_add_watch(fd, path, mask)
+    wd = libc.inotify_add_watch(fd, path.asBytesMode().path, mask)
     if wd < 0:
         raise INotifyError("Failed to add watch on '%r' - (%r)" % (path, wd))
     return wd

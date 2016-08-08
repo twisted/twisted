@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -5,7 +6,6 @@
 Test cases for L{twisted.logger._format}.
 """
 
-import sys
 from itertools import count
 import json
 
@@ -48,10 +48,11 @@ class FlatFormattingTests(unittest.TestCase):
                 "attribute: {object.attribute} "
                 "numrepr: {number!r} "
                 "numstr: {number!s} "
-                "strrepr: {string!r}"
+                "strrepr: {string!r} "
+                "unistr: {unistr!s}"
             ),
             callme=lambda: next(counter), object=Ephemeral(),
-            number=7, string="hello",
+            number=7, string="hello", unistr=u"ö"
         )
 
         flattenEvent(event1)
@@ -67,7 +68,8 @@ class FlatFormattingTests(unittest.TestCase):
                 "attribute: value "
                 "numrepr: 7 "
                 "numstr: 7 "
-                "strrepr: 'hello'"
+                "strrepr: 'hello' "
+                u"unistr: ö"
             )
         )
 
@@ -146,13 +148,10 @@ class FlatFormattingTests(unittest.TestCase):
         try:
             self.assertEqual(keyFromFormat("{}"), "!:")
         except ValueError:
-            if sys.version_info[:2] == (2, 6):
-                # In python 2.6, an empty field name causes Formatter.parse to
-                # raise ValueError.
-                pass
-            else:
-                # In Python 2.7, it's allowed, so this exception is unexpected.
-                raise
+            # In python 2.6, an empty field name causes Formatter.parse to
+            # raise ValueError.
+            # In Python 2.7, it's allowed, so this exception is unexpected.
+            raise
 
         # Just a name
         self.assertEqual(keyFromFormat("{foo}"), "foo!:")
@@ -181,7 +180,7 @@ class FlatFormattingTests(unittest.TestCase):
         """
         The same format field used twice in one event is rendered twice.
 
-        @param event: An event to flatten.  If C{None}, create a new event.
+        @param event: An event to flatten.  If L{None}, create a new event.
         @return: C{event} or the event created.
         """
         if event is None:

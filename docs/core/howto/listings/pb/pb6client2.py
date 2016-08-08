@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
@@ -18,8 +20,8 @@ def main():
     reactor.run()
 
 def connected(perspective):
-    print "got perspective2 ref:", perspective
-    print "asking it to foo(14)"
+    print("got perspective2 ref:", perspective)
+    print("asking it to foo(14)")
     perspective.callRemote("foo", 14)
 
 main()

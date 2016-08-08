@@ -38,7 +38,7 @@ class DigestCredentialFactory(object):
         @param request: The L{IRequest} to with access was denied and for the
             response to which this challenge is being generated.
 
-        @return: The C{dict} that can be used to generate a WWW-Authenticate
+        @return: The L{dict} that can be used to generate a WWW-Authenticate
             header.
         """
         return self.digest.getChallenge(request.getClientIP())
@@ -46,8 +46,8 @@ class DigestCredentialFactory(object):
 
     def decode(self, response, request):
         """
-        Create a L{twisted.cred.digest.DigestedCredentials} object from the
-        given response and request.
+        Create a L{twisted.cred.credentials.DigestedCredentials} object
+        from the given response and request.
 
         @see: L{ICredentialFactory.decode}
         """

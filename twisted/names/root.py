@@ -95,9 +95,9 @@ class Resolver(common.ResolverBase):
 
         @param filter: A flag indicating whether to filter the results.  If
             C{True}, the returned L{Deferred} will fire with a three-tuple of
-            lists of L{RRHeaders} (like the return value of the I{lookup*}
-            methods of L{IResolver}.  IF C{False}, the result will be a
-            L{Message} instance.
+            lists of L{twisted.names.dns.RRHeader} (like the return value of
+            the I{lookup*} methods of L{IResolver}.  IF C{False}, the result
+            will be a L{Message} instance.
         @type filter: L{bool}
 
         @return: A L{Deferred} which fires with the response or a timeout
@@ -145,8 +145,8 @@ class Resolver(common.ResolverBase):
             abandoned.
 
         @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{RRHeaders} giving the response, or with a L{Failure} if there is
-            a timeout or response error.
+            L{twisted.names.dns.RRHeader} giving the response, or with a
+            L{Failure} if there is a timeout or response error.
         """
         # Stop now if we've hit the query limit.
         if queriesLeft <= 0:
@@ -179,8 +179,8 @@ class Resolver(common.ResolverBase):
             abandoned.
 
         @return: A L{Failure} indicating a response error, a three-tuple of
-            lists of L{RRHeaders} giving the response to C{query} or a
-            L{Deferred} which will fire with one of those.
+            lists of L{twisted.names.dns.RRHeader} giving the response to
+            C{query} or a L{Deferred} which will fire with one of those.
         """
         if response.rCode != dns.OK:
             return Failure(self.exceptionForCode(response.rCode)(response))

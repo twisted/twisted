@@ -54,9 +54,8 @@ class MakeServiceTests(TestCase):
         Create a file with two users.
         """
         self.filename = self.mktemp()
-        f = open(self.filename, 'wb+')
-        f.write(':'.join(self.usernamePassword))
-        f.close()
+        with open(self.filename, 'wb+') as f:
+            f.write(':'.join(self.usernamePassword))
         self.options = tap.Options()
 
 

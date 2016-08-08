@@ -21,6 +21,7 @@ from twisted.internet import defer, task
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+from twisted.python.compat import _bytesChr as chr
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.common import NS
@@ -129,14 +130,14 @@ class FakeTransport(transport.SSHTransportBase):
         a sent packet.
     @type packets: C{list}
     @param lostConnecion: True if loseConnection has been called on us.
-    @type lostConnection: C{bool}
+    @type lostConnection: L{bool}
     """
 
     class Service(object):
         """
         A mock service, representing the other service offered by the server.
         """
-        name = 'nancy'
+        name = b'nancy'
 
 
         def serviceStarted(self):
@@ -153,7 +154,7 @@ class FakeTransport(transport.SSHTransportBase):
             """
             Return our fake service.
             """
-            if service == 'none':
+            if service == b'none':
                 return FakeTransport.Service
 
 
@@ -599,7 +600,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         Test that client is initialized properly.
         """
         self.assertEqual(self.authClient.user, b'foo')
-        self.assertEqual(self.authClient.instance.name, 'nancy')
+        self.assertEqual(self.authClient.instance.name, b'nancy')
         self.assertEqual(self.authClient.transport.packets,
                 [(userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy')
                     + NS(b'none'))])
@@ -660,7 +661,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         authClient.serviceStarted()
         authClient.tryAuth(b'publickey')
         authClient.transport.packets = []
-        self.assertIs(authClient.ssh_USERAUTH_PK_OK(b''), None)
+        self.assertIsNone(authClient.ssh_USERAUTH_PK_OK(b''))
         self.assertEqual(authClient.transport.packets, [
                 (userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy') +
                  NS(b'none'))])
@@ -777,7 +778,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         """
         authClient = userauth.SSHUserAuthClient(b'foo',
                                                 FakeTransport.Service())
-        self.assertIs(authClient.getPublicKey(), None)
+        self.assertIsNone(authClient.getPublicKey())
         def check(result):
             result.trap(NotImplementedError)
             d = authClient.getPassword()
@@ -801,7 +802,7 @@ class LoopbackTests(unittest.TestCase):
 
     class Factory:
         class Service:
-            name = 'TestService'
+            name = b'TestService'
 
 
             def serviceStarted(self):
@@ -855,7 +856,7 @@ class LoopbackTests(unittest.TestCase):
         client.serviceStarted()
 
         def check(ignored):
-            self.assertEqual(server.transport.service.name, 'TestService')
+            self.assertEqual(server.transport.service.name, b'TestService')
         return d.addCallback(check)
 
 

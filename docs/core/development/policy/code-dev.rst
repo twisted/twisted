@@ -277,4 +277,9 @@ you are interested in this, you are on your own.  See `stdeb <http://github.com/
 this.
 
 
+Travis CI integration
+---------------------
 
+Travis CI is configured to run a subset of the official Buildbot builders for each push to a PR or to ``trunk``
+
+The tests are executed using ``tox-travis``. See the ``tox.ini`` file for the actual configuration.

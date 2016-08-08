@@ -52,7 +52,7 @@ def asBytes(obj):
     bytes.  This function converts _all_ native strings within a
     JSON-deserialized object to bytes.
 
-    @param obj: A object to convert to bytes.
+    @param obj: An object to convert to bytes.
     @type obj: L{object}
 
     @return: A string of UTF-8 bytes.
@@ -80,6 +80,8 @@ def failureFromJSON(failureDict):
     @return: L{Failure}
     @rtype: L{Failure}
     """
+    # InstanceType() is only available in Python 2 and lower.
+    # __new__ is only available in Python 3 and higher.
     newFailure = getattr(Failure, "__new__", None)
     if newFailure is None:
         failureDict = asBytes(failureDict)
@@ -257,7 +259,7 @@ def eventsFromJSONLogFile(inFile, recordSeparator=None, bufferSize=4096):
     @type inFile: iterable of lines
 
     @param recordSeparator: The expected record separator.
-        If C{None}, attempt to automatically detect the record separator from
+        If L{None}, attempt to automatically detect the record separator from
         one of C{u"\\x1e"} or C{u""}.
     @type recordSeparator: L{unicode}
 

@@ -70,9 +70,9 @@ class Port(base.BasePort):
         whether this port is listening on an IPv4 address or an IPv6 address.
 
     @ivar _realPortNumber: Actual port number being listened on. The
-        value will be C{None} until this L{Port} is listening.
+        value will be L{None} until this L{Port} is listening.
 
-    @ivar _preexistingSocket: If not C{None}, a L{socket.socket} instance which
+    @ivar _preexistingSocket: If not L{None}, a L{socket.socket} instance which
         was created and initialized outside of the reactor and will be used to
         listen for connections (instead of a new socket being created by this
         L{Port}).
@@ -88,7 +88,7 @@ class Port(base.BasePort):
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """
         @param port: A port number on which to listen.
-        @type port: C{int}
+        @type port: L{int}
 
         @param proto: A C{DatagramProtocol} instance which will be
             connected to the given C{port}.
@@ -96,14 +96,14 @@ class Port(base.BasePort):
 
         @param interface: The local IPv4 or IPv6 address to which to bind;
             defaults to '', ie all IPv4 addresses.
-        @type interface: C{str}
+        @type interface: L{str}
 
         @param maxPacketSize: The maximum packet size to accept.
-        @type maxPacketSize: C{int}
+        @type maxPacketSize: L{int}
 
         @param reactor: A reactor which will notify this C{Port} when
             its socket is ready for reading or writing. Defaults to
-            C{None}, ie the default global reactor.
+            L{None}, ie the default global reactor.
         @type reactor: L{interfaces.IReactorFDSet}
         """
         base.BasePort.__init__(self, reactor)
@@ -125,24 +125,24 @@ class Port(base.BasePort):
 
         @param reactor: A reactor which will notify this L{Port} when
             its socket is ready for reading or writing. Defaults to
-            C{None}, ie the default global reactor.
+            L{None}, ie the default global reactor.
         @type reactor: L{interfaces.IReactorFDSet}
 
         @param fd: An integer file descriptor associated with a listening
             socket.  The socket must be in non-blocking mode.  Any additional
             attributes desired, such as I{FD_CLOEXEC}, must also be set already.
-        @type fd: C{int}
+        @type fd: L{int}
 
         @param addressFamily: The address family (sometimes called I{domain}) of
             the existing socket.  For example, L{socket.AF_INET}.
-        @param addressFamily: C{int}
+        @param addressFamily: L{int}
 
         @param protocol: A C{DatagramProtocol} instance which will be
             connected to the C{port}.
         @type proto: L{twisted.internet.protocol.DatagramProtocol}
 
         @param maxPacketSize: The maximum packet size to accept.
-        @type maxPacketSize: C{int}
+        @type maxPacketSize: L{int}
 
         @return: A new instance of C{cls} wrapping the socket given by C{fd}.
         @rtype: L{Port}
@@ -254,13 +254,13 @@ class Port(base.BasePort):
         """
         Write a datagram.
 
-        @type datagram: C{str}
+        @type datagram: L{bytes}
         @param datagram: The datagram to be sent.
 
-        @type addr: C{tuple} containing C{str} as first element and C{int} as
-            second element, or C{None}
+        @type addr: L{tuple} containing L{str} as first element and L{int} as
+            second element, or L{None}
         @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
-            I{integer port number}); can be C{None} in connected mode.
+            I{integer port number}); can be L{None} in connected mode.
         """
         if self._connectedAddr:
             assert addr in (None, self._connectedAddr)
@@ -309,8 +309,22 @@ class Port(base.BasePort):
                 else:
                     raise
 
+
     def writeSequence(self, seq, addr):
-        self.write("".join(seq), addr)
+        """
+        Write a datagram constructed from an iterable of L{bytes}.
+
+        @param seq: The data that will make up the complete datagram to be
+            written.
+        @type seq: an iterable of L{bytes}
+
+        @type addr: L{tuple} containing L{str} as first element and L{int} as
+            second element, or L{None}
+        @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
+            I{integer port number}); can be L{None} in connected mode.
+        """
+        self.write(b"".join(seq), addr)
+
 
     def connect(self, host, port):
         """
@@ -324,10 +338,12 @@ class Port(base.BasePort):
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
+
     def _loseConnection(self):
         self.stopReading()
         if self.connected: # actually means if we are *listening*
             self.reactor.callLater(0, self.connectionLost)
+
 
     def stopListening(self):
         if self.connected:
@@ -337,9 +353,11 @@ class Port(base.BasePort):
         self._loseConnection()
         return result
 
+
     def loseConnection(self):
         warnings.warn("Please use stopListening() to disconnect port", DeprecationWarning, stacklevel=2)
         self.stopListening()
+
 
     def connectionLost(self, reason=None):
         """
@@ -363,6 +381,7 @@ class Port(base.BasePort):
         """
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s (UDP)" % logPrefix
+
 
     def _setAddressFamily(self):
         """
@@ -430,35 +449,44 @@ class MulticastMixin:
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
         return socket.inet_ntoa(struct.pack("@i", i))
 
+
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._setInterface)
+
 
     def _setInterface(self, addr):
         i = socket.inet_aton(addr)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
         return 1
 
+
     def getLoopbackMode(self):
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
+
 
     def setLoopbackMode(self, mode):
         mode = struct.pack("b", operator.truth(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
+
     def getTTL(self):
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
+
 
     def setTTL(self, ttl):
         ttl = struct.pack("B", ttl)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
+
     def joinGroup(self, addr, interface=""):
         """Join a multicast group. Returns Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
 
+
     def _joinAddr1(self, addr, interface, join):
         return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
+
 
     def _joinAddr2(self, interface, addr, join):
         addr = socket.inet_aton(addr)
@@ -472,9 +500,11 @@ class MulticastMixin:
         except socket.error as e:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
+
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
+
 
 
 @implementer(interfaces.IMulticastTransport)
@@ -490,6 +520,7 @@ class MulticastPort(MulticastMixin, Port):
         """
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
+
 
     def createInternetSocket(self):
         skt = Port.createInternetSocket(self)

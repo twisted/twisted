@@ -179,7 +179,7 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
 
     @param format: A user-provided format to interpolate warning values into, or
         L{DEPRECATION_WARNING_FORMAT
-        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
+        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given.
     @type format: C{str}
 
@@ -218,7 +218,7 @@ def getDeprecationWarningString(callableThing, version, format=None,
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
         or L{DEPRECATION_WARNING_FORMAT
-        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
+        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given
 
     @param callableThing: A callable to be deprecated.
@@ -418,7 +418,7 @@ class _InternalState(object):
     can easily access its own attributes, bypassing its logic for delegating to
     another object that it's proxying for.
 
-    @ivar proxy: a L{ModuleProxy}
+    @ivar proxy: a L{_ModuleProxy}
     """
     def __init__(self, proxy):
         object.__setattr__(self, 'proxy', proxy)
@@ -655,12 +655,12 @@ def warnAboutFunction(offender, warningString):
 
 def _passed(argspec, positional, keyword):
     """
-    Take an L{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
+    Take an I{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
 
     @param argspec: The argument specification for the function to inspect.
-    @type argspec: L{inspect.ArgSpec}
+    @type argspec: I{inspect.ArgSpec}
 
     @param positional: The positional arguments that were passed.
     @type positional: L{tuple}

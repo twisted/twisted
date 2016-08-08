@@ -7,6 +7,7 @@ Test cases for twisted.protocols package.
 
 from twisted.trial import unittest
 from twisted.protocols import wire, portforward
+from twisted.python.compat import iterbytes
 from twisted.internet import reactor, defer, address, protocol
 from twisted.test import proto_helpers
 
@@ -23,12 +24,12 @@ class WireTests(unittest.TestCase):
         t = proto_helpers.StringTransport()
         a = wire.Echo()
         a.makeConnection(t)
-        a.dataReceived("hello")
-        a.dataReceived("world")
-        a.dataReceived("how")
-        a.dataReceived("are")
-        a.dataReceived("you")
-        self.assertEqual(t.value(), "helloworldhowareyou")
+        a.dataReceived(b"hello")
+        a.dataReceived(b"world")
+        a.dataReceived(b"how")
+        a.dataReceived(b"are")
+        a.dataReceived(b"you")
+        self.assertEqual(t.value(), b"helloworldhowareyou")
 
 
     def test_who(self):
@@ -38,7 +39,7 @@ class WireTests(unittest.TestCase):
         t = proto_helpers.StringTransport()
         a = wire.Who()
         a.makeConnection(t)
-        self.assertEqual(t.value(), "root\r\n")
+        self.assertEqual(t.value(), b"root\r\n")
 
 
     def test_QOTD(self):
@@ -49,7 +50,7 @@ class WireTests(unittest.TestCase):
         a = wire.QOTD()
         a.makeConnection(t)
         self.assertEqual(t.value(),
-                          "An apple a day keeps the doctor away.\r\n")
+                          b"An apple a day keeps the doctor away.\r\n")
 
 
     def test_discard(self):
@@ -59,12 +60,12 @@ class WireTests(unittest.TestCase):
         t = proto_helpers.StringTransport()
         a = wire.Discard()
         a.makeConnection(t)
-        a.dataReceived("hello")
-        a.dataReceived("world")
-        a.dataReceived("how")
-        a.dataReceived("are")
-        a.dataReceived("you")
-        self.assertEqual(t.value(), "")
+        a.dataReceived(b"hello")
+        a.dataReceived(b"world")
+        a.dataReceived(b"how")
+        a.dataReceived(b"are")
+        a.dataReceived(b"you")
+        self.assertEqual(t.value(), b"")
 
 
 
@@ -165,15 +166,15 @@ class PortforwardingTests(unittest.TestCase):
         d = defer.Deferred()
 
         def testDataReceived(data):
-            received.extend(data)
+            received.extend(iterbytes(data))
             if len(received) >= nBytes:
-                self.assertEqual(''.join(received), 'x' * nBytes)
+                self.assertEqual(b''.join(received), b'x' * nBytes)
                 d.callback(None)
 
         self.clientProtocol.dataReceived = testDataReceived
 
         def testConnectionMade():
-            self.clientProtocol.transport.write('x' * nBytes)
+            self.clientProtocol.transport.write(b'x' * nBytes)
 
         self.clientProtocol.connectionMade = testConnectionMade
 
@@ -215,8 +216,8 @@ class PortforwardingTests(unittest.TestCase):
         client.makeConnection(clientTransport)
 
         # check that the producers are registered
-        self.assertIdentical(clientTransport.producer, serverTransport)
-        self.assertIdentical(serverTransport.producer, clientTransport)
+        self.assertIs(clientTransport.producer, serverTransport)
+        self.assertIs(serverTransport.producer, clientTransport)
         # check the streaming attribute in both transports
         self.assertTrue(clientTransport.streaming)
         self.assertTrue(serverTransport.streaming)

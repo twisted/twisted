@@ -1,0 +1,1 @@
+twisted.python.filepath.AbstractFilePath.getContent() returns bytes.  The docstring was updated to clarify this.

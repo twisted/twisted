@@ -1,0 +1,81 @@
+#
+# This is the Travis-CI configuration.
+#
+# The actual dependency installation and test execution is done via tox as a
+# way to share the same process between Travis-CI and Buildbot.
+#
+language: python
+sudo: false
+
+env:
+  global:
+    - TRIAL_REPORTER=text
+
+matrix:
+  include:
+    - python: 2.7
+      env: TOXENV=py27-coverage-posix,codecov-publish
+    # FIXME: https://twistedmatrix.com/trac/ticket/8633
+    # Coverage should also be reported for nomodules tests so that we also
+    # get report for those conditional branches.
+    - python: 2.7
+      env: TOXENV=py27-nomodules-posix
+    - python: 3.3
+      env: TOXENV=py33-coverage-posix,codecov-publish
+    - python: 3.4
+      env: TOXENV=py34-coverage-posix,codecov-publish
+    - python: 3.5
+      env: TOXENV=py35-coverage-posix,codecov-publish
+    # For now all non-trial tests are in a single job to reduce the time spent
+    # on starting separate jobs.
+    - python: 2.7
+      env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+    - python: 3.5
+      env: TOXENV=pyflakes3
+    # Twistedchecker is running as a separate job so that we can ignore if it
+    # fails.
+    - python: 2.7
+      env: TOXENV=txchecker-travis
+    #
+    # OSX 10.10
+    #
+    - language: generic
+      os: osx
+      # 7.1 is OS X 10.10.x
+      # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
+      osx_image: xcode7.1
+      python: 2.7
+      env: TOXENV=py27-coverage-posix,codecov-publish
+
+  allow_failures:
+    # For now, OSX run on Travis-CI has a few failures.
+    - os: osx
+    # twistedchecker job was introduce as an experimental job.
+    # Once it is stable we can enforce it
+    - env: TOXENV=txchecker-travis
+
+
+addons:
+  apt:
+    packages:
+    - libssl-dev
+    - libssl1.0.0
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+install:
+  - ./.travis/install.sh tox
+
+# FIXME: https://twistedmatrix.com/trac/ticket/8373
+# By default, Travis only clones one branch.
+# Some tests require the presence of the `trunk` branch so here we are, also
+# fetching `trunk` for each test.
+before_script:
+  - git remote set-branches --add origin trunk
+  - git fetch origin trunk
+
+# Run tox from the created virtualenv.
+script:
+  - ./.travis/run.sh

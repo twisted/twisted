@@ -90,7 +90,7 @@ def makeService(options):
     """
     Create a manhole server service.
 
-    @type options: C{dict}
+    @type options: L{dict}
     @param options: A mapping describing the configuration of
     the desired service.  Recognized key/value pairs are::
 
@@ -156,8 +156,8 @@ def makeService(options):
 
         sshKey = keys._getPersistentRSAKey(keyLocation,
                                            int(options['sshKeySize']))
-        sshFactory.publicKeys["ssh-rsa"] = sshKey
-        sshFactory.privateKeys["ssh-rsa"] = sshKey
+        sshFactory.publicKeys[b"ssh-rsa"] = sshKey
+        sshFactory.privateKeys[b"ssh-rsa"] = sshKey
 
         sshService = strports.service(options['sshPort'], sshFactory)
         sshService.setServiceParent(svc)

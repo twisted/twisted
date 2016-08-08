@@ -11,7 +11,6 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 from __future__ import division, absolute_import
 
 # System Imports
-import types
 import socket
 import sys
 import operator
@@ -98,7 +97,7 @@ _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 if _PY3:
     _portNameType = str
 else:
-    _portNameType = types.StringTypes
+    _portNameType = (str, unicode)
 
 
 
@@ -350,7 +349,7 @@ class _BaseBaseClient(object):
     @ivar _stopReadingAndWriting: Subclasses must implement in order to remove
         this transport from its reactor's notifications in response to a
         terminated connection attempt.
-    @type _stopReadingAndWriting: 0-argument callable returning C{None}
+    @type _stopReadingAndWriting: 0-argument callable returning L{None}
 
     @ivar _closeSocket: Subclasses must implement in order to close the socket
         in response to a terminated connection attempt.
@@ -359,7 +358,7 @@ class _BaseBaseClient(object):
     @ivar _collectSocketDetails: Clean up references to the attached socket in
         its underlying OS resource (such as a file descriptor or file handle),
         as part of post connection-failure cleanup.
-    @type _collectSocketDetails: 0-argument callable returning C{None}.
+    @type _collectSocketDetails: 0-argument callable returning L{None}.
 
     @ivar reactor: The class pointed to by C{_commonConnection} should set this
         attribute in its constructor.
@@ -377,7 +376,7 @@ class _BaseBaseClient(object):
         the socket connect attempt is made.
 
         @param whenDone: A 0-argument callable to invoke once the connection is
-            set up.  This is C{None} if the connection could not be prepared
+            set up.  This is L{None} if the connection could not be prepared
             due to a previous error.
 
         @param skt: The socket object to use to perform the connection.
@@ -409,7 +408,7 @@ class _BaseBaseClient(object):
             historical reasons, it's not used anywhere except for L{Client}
             itself.
 
-        @return: C{None}
+        @return: L{None}
         """
         if self._requiresResolution:
             d = self.reactor.resolve(self.addr[0])
@@ -483,7 +482,7 @@ class _BaseBaseClient(object):
 
 class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
     """
-    A base class for client TCP (and similiar) sockets.
+    A base class for client TCP (and similar) sockets.
 
     @ivar realAddress: The address object that will be used for socket.connect;
         this address is an address tuple (the number of elements dependent upon
@@ -888,7 +887,7 @@ class Port(base.BasePort, _SocketCloser):
         when the TLS implementation re-uses this class it overrides the value
         with C{"TLS"}.  Only used for logging.
 
-    @ivar _preexistingSocket: If not C{None}, a L{socket.socket} instance which
+    @ivar _preexistingSocket: If not L{None}, a L{socket.socket} instance which
         was created and initialized outside of the reactor and will be used to
         listen for connections (instead of a new socket being created by this
         L{Port}).

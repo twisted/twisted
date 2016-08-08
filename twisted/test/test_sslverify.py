@@ -28,8 +28,6 @@ else:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
-    if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
-        skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -383,35 +381,6 @@ class WritingProtocol(protocol.Protocol):
 
 
 
-if not skipSSL:
-    class ALPNOnlyOptions(sslverify.OpenSSLCertificateOptions):
-        """
-        An OpenSSLCertificateOptions subclass that only sets ALPN.
-        """
-        def _setUpNextProtocolMechanisms(self, ctx):
-            """
-            Only set up ALPN.
-            """
-            ctx.set_alpn_select_callback(self._protoSelectCallback)
-            ctx.set_alpn_protos(self._acceptableProtocols)
-
-
-    class NPNOnlyOptions(sslverify.OpenSSLCertificateOptions):
-        """
-        An OpenSSLCertificateOptions subclass that only sets NPN.
-        """
-        def _setUpNextProtocolMechanisms(self, ctx):
-            """
-            Only set NPN.
-            """
-            def npnAdvertiseCallback(conn):
-                return self._acceptableProtocols
-
-            ctx.set_npn_advertise_callback(npnAdvertiseCallback)
-            ctx.set_npn_select_callback(self._protoSelectCallback)
-
-
-
 class FakeContext(object):
     """
     Introspectable fake of an C{OpenSSL.SSL.Context}.
@@ -423,7 +392,7 @@ class FakeContext(object):
 
     @ivar _method: See C{method} parameter of L{__init__}.
 
-    @ivar _options: C{int} of C{OR}ed values from calls of L{set_options}.
+    @ivar _options: L{int} of C{OR}ed values from calls of L{set_options}.
 
     @ivar _certificate: Set by L{use_certificate}.
 
@@ -435,7 +404,7 @@ class FakeContext(object):
 
     @ivar _sessionID: Set by L{set_session_id}.
 
-    @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
+    @ivar _extraCertChain: Accumulated L{list} of all extra certificates added
         by L{add_extra_chain_cert}.
 
     @ivar _cipherList: Set by L{set_cipher_list}.
@@ -778,7 +747,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(opts._cipherString, ctx._cipherList)
+        self.assertEqual(opts._cipherString.encode('ascii'), ctx._cipherList)
 
 
     def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
@@ -812,7 +781,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(u'sentinel', ctx._cipherList)
+        self.assertEqual(b'sentinel', ctx._cipherList)
 
 
     def test_basicSecurityOptionsAreSet(self):
@@ -881,7 +850,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
             privateKey=self.sKey,
             certificate=self.sCert,
         )
-        self.assertIs(None, opts._ecCurve)
+        self.assertIsNone(opts._ecCurve)
 
 
     def test_ecNeverBreaksGetContext(self):
@@ -1049,8 +1018,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
             fixBrokenPeers=True,
             enableSessionTickets=True)
         context = firstOpts.getContext()
-        self.assertIdentical(context, firstOpts._context)
-        self.assertNotIdentical(context, None)
+        self.assertIs(context, firstOpts._context)
+        self.assertIsNotNone(context)
         state = firstOpts.__getstate__()
         self.assertNotIn("_context", state)
 
@@ -1059,15 +1028,15 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
         self.assertEqual(opts.method, SSL.SSLv23_METHOD)
-        self.assertEqual(opts.verify, True)
+        self.assertTrue(opts.verify)
         self.assertEqual(opts.caCerts, [self.sCert])
         self.assertEqual(opts.verifyDepth, 2)
-        self.assertEqual(opts.requireCertificate, False)
-        self.assertEqual(opts.verifyOnce, False)
-        self.assertEqual(opts.enableSingleUseKeys, False)
-        self.assertEqual(opts.enableSessions, False)
-        self.assertEqual(opts.fixBrokenPeers, True)
-        self.assertEqual(opts.enableSessionTickets, True)
+        self.assertFalse(opts.requireCertificate)
+        self.assertFalse(opts.verifyOnce)
+        self.assertFalse(opts.enableSingleUseKeys)
+        self.assertFalse(opts.enableSessions)
+        self.assertTrue(opts.fixBrokenPeers)
+        self.assertTrue(opts.enableSessionTickets)
 
     test_certificateOptionsSerialization.suppress = [
         util.suppress(category = DeprecationWarning,
@@ -1416,7 +1385,7 @@ class TrustRootTests(unittest.TestCase):
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
-        self.assertIs(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
 
@@ -1455,7 +1424,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @param serverContextSetup: a 1-argument callable invoked with the
             L{OpenSSL.SSL.Context} after it's produced.
         @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
-            returning L{NoneType}.
+            returning L{None}.
 
         @param validCertificate: Is the server's certificate valid?  L{True} if
             so, L{False} otherwise.
@@ -1613,8 +1582,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_validHostnameInvalidCertificate(self):
@@ -1676,8 +1645,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_clientPresentsCertificate(self):
@@ -1699,8 +1668,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_clientPresentsBadCertificate(self):
@@ -1772,8 +1741,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
     if skipSNI is not None:
         test_hostnameEncoding.skip = skipSNI
@@ -1798,7 +1767,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 cert.get_subject().commonName = name
                 return cert
         conn = Connection()
-        self.assertIdentical(
+        self.assertIs(
             sslverify.simpleVerifyHostname(conn, u'something.example.com'),
             None
         )
@@ -1842,7 +1811,7 @@ def negotiateProtocol(serverProtocols,
     @param clientProtocols: The protocols the client is willing to negotiate.
     @param clientOptions: The type of C{OpenSSLCertificateOptions} class to
         use for the client. Defaults to C{OpenSSLCertificateOptions}.
-    @return: A C{typle} of: the negotiated protocol and the reason the
+    @return: A L{tuple} of the negotiated protocol and the reason the
         connection was lost.
     """
     caCertificate, serverCertificate = certificatesForAuthorityAndServer()
@@ -1899,7 +1868,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=protocols,
         )
         self.assertEqual(negotiatedProtocol, b'h2')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNDifferent(self):
@@ -1914,7 +1883,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=serverProtocols,
         )
         self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNNoAdvertise(self):
@@ -1927,8 +1896,8 @@ class NPNOrALPNTests(unittest.TestCase):
             clientProtocols=protocols,
             serverProtocols=[],
         )
-        self.assertEqual(negotiatedProtocol, None)
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNNoOverlap(self):
@@ -1942,23 +1911,8 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=clientProtocols,
             clientProtocols=serverProtocols,
         )
-        self.assertEqual(negotiatedProtocol, None)
+        self.assertIsNone(negotiatedProtocol)
         self.assertEqual(lostReason.type, SSL.Error)
-
-
-    def test_NPNRespectsClientPreference(self):
-        """
-        When NPN is used, the client's protocol preference is preferred.
-        """
-        serverProtocols = [b'http/1.1', b'h2']
-        clientProtocols = [b'h2', b'http/1.1']
-        negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
-            clientOptions=NPNOnlyOptions
-        )
-        self.assertEqual(negotiatedProtocol, b'h2')
-        self.assertEqual(lostReason, None)
 
 
 
@@ -1988,21 +1942,6 @@ class ALPNTests(unittest.TestCase):
             sslverify.ProtocolNegotiationSupport.ALPN in
             supportedProtocols
         )
-
-
-    def test_ALPNRespectsServerPreference(self):
-        """
-        When ALPN is used, the server's protocol preference is preferred.
-        """
-        serverProtocols = [b'http/1.1', b'h2']
-        clientProtocols = [b'h2', b'http/1.1']
-        negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
-            clientOptions=ALPNOnlyOptions
-        )
-        self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertEqual(lostReason, None)
 
 
 
@@ -2044,7 +1983,7 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
 
     def test_NegotiatedProtocolReturnsNone(self):
         """
-        negotiatedProtocol return C{None} even when NPN/ALPN aren't supported.
+        negotiatedProtocol return L{None} even when NPN/ALPN aren't supported.
         This works because, as neither are supported, negotiation isn't even
         attempted.
         """
@@ -2054,8 +1993,8 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
             clientProtocols=clientProtocols,
             serverProtocols=serverProtocols,
         )
-        self.assertEqual(negotiatedProtocol, None)
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
 
@@ -2189,7 +2128,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # This connection should succeed
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootSelfSignedServerCertificate(self):
@@ -2214,7 +2153,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=selfSigned.original,
         )
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootCertificateAuthorityTrustsConnection(self):
@@ -2235,7 +2174,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=serverCert.original,
         )
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootFromCertificatesUntrusted(self):

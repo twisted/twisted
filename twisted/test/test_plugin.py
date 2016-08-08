@@ -141,7 +141,7 @@ class PluginTests(unittest.TestCase):
 
         # Note, not the preferred way to get a plugin by its interface.
         p1 = [p for p in dropin.plugins if ITestPlugin in p.provided][0]
-        self.assertIdentical(p1.dropin, dropin)
+        self.assertIs(p1.dropin, dropin)
         self.assertEqual(p1.name, "TestPlugin")
 
         # Check the content of the description comes from the plugin module
@@ -152,13 +152,13 @@ class PluginTests(unittest.TestCase):
         self.assertEqual(p1.provided, [ITestPlugin, plugin.IPlugin])
         realPlugin = p1.load()
         # The plugin should match the class present in sys.modules
-        self.assertIdentical(
+        self.assertIs(
             realPlugin,
             sys.modules['mypackage.%s' % (self.originalPlugin,)].TestPlugin)
 
         # And it should also match if we import it classicly
         import mypackage.testplugin as tp
-        self.assertIdentical(realPlugin, tp.TestPlugin)
+        self.assertIs(realPlugin, tp.TestPlugin)
 
     test_cache = _withCacheness(test_cache)
 

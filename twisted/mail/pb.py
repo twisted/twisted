@@ -17,11 +17,8 @@ class Maildir(pb.Referenceable):
     def getFolderMessage(self, folder, name):
         if '/' in name:
             raise IOError("can only open files in '%s' directory'" % folder)
-        fp = open(os.path.join(self.directory, 'new', name))
-        try:
+        with open(os.path.join(self.directory, 'new', name)) as fp:
             return fp.read()
-        finally:
-            fp.close()
 
     def deleteFolderMessage(self, folder, name):
         if '/' in name:
@@ -98,10 +95,10 @@ class MaildirBroker(pb.Broker):
             self.sendAnswer(requestID, collection)
 
     def getCollection(self, name, domain, password):
-        if not self.domains.has_key(domain):
+        if domain not in self.domains:
             return
         domain = self.domains[domain]
-        if (domain.dbm.has_key(name) and
+        if (name in domain.dbm and
             domain.dbm[name] == password):
             return MaildirCollection(domain.userDirectory(name))
 

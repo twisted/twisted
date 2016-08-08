@@ -12,7 +12,7 @@ import StringIO
 from hashlib import md5
 from email.Message import Message
 from email.Generator import Generator
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.news.nntp import NNTPError
 from twisted.mail import smtp
@@ -279,6 +279,7 @@ class _ModerationMixin:
 
 
 
+@implementer(INewsStorage)
 class PickleStorage(_ModerationMixin):
     """
     A trivial NewsStorage implementation using pickles
@@ -286,9 +287,6 @@ class PickleStorage(_ModerationMixin):
     Contains numerous flaws and is generally unsuitable for any
     real applications.  Consider yourself warned!
     """
-
-    implements(INewsStorage)
-
     sharedDBs = {}
 
     def __init__(self, filename, groups=None, moderators=(),
@@ -326,7 +324,7 @@ class PickleStorage(_ModerationMixin):
                 high = max(self.db[i].keys()) + 1
             else:
                 low = high = 0
-            if self.db['moderators'].has_key(i):
+            if i in self.db['moderators']:
                 flags = 'm'
             else:
                 flags = 'y'
@@ -375,7 +373,7 @@ class PickleStorage(_ModerationMixin):
 
 
     def xoverRequest(self, group, low, high):
-        if not self.db.has_key(group):
+        if group not in self.db:
             return defer.succeed([])
         r = []
         for i in self.db[group].keys():
@@ -385,7 +383,7 @@ class PickleStorage(_ModerationMixin):
 
 
     def xhdrRequest(self, group, low, high, header):
-        if not self.db.has_key(group):
+        if group not in self.db:
             return defer.succeed([])
         r = []
         for i in self.db[group].keys():
@@ -395,13 +393,13 @@ class PickleStorage(_ModerationMixin):
 
 
     def listGroupRequest(self, group):
-        if self.db.has_key(group):
+        if group in self.db:
             return defer.succeed((group, self.db[group].keys()))
         else:
             return defer.fail(None)
 
     def groupRequest(self, group):
-        if self.db.has_key(group):
+        if group in self.db:
             if len(self.db[group].keys()):
                 num = len(self.db[group].keys())
                 low = min(self.db[group].keys())
@@ -426,8 +424,8 @@ class PickleStorage(_ModerationMixin):
         if id is not None:
             raise NotImplementedError
 
-        if self.db.has_key(group):
-            if self.db[group].has_key(index):
+        if group in self.db:
+            if index in self.db[group]:
                 a = self.db[group][index]
                 return defer.succeed((
                     index,
@@ -441,8 +439,8 @@ class PickleStorage(_ModerationMixin):
 
 
     def headRequest(self, group, index):
-        if self.db.has_key(group):
-            if self.db[group].has_key(index):
+        if group in self.db:
+            if index in self.db[group]:
                 a = self.db[group][index]
                 return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders()))
             else:
@@ -452,8 +450,8 @@ class PickleStorage(_ModerationMixin):
 
 
     def bodyRequest(self, group, index):
-        if self.db.has_key(group):
-            if self.db[group].has_key(index):
+        if group in self.db:
+            if index in self.db[group]:
                 a = self.db[group][index]
                 return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
             else:
@@ -463,9 +461,8 @@ class PickleStorage(_ModerationMixin):
 
 
     def flush(self):
-        f = open(self.datafile, 'w')
-        pickle.dump(self.db, f)
-        f.close()
+        with open(self.datafile, 'w') as f:
+            pickle.dump(self.db, f)
 
 
     def load(self, filename, groups = None, moderators = ()):
@@ -473,7 +470,8 @@ class PickleStorage(_ModerationMixin):
             self.db = PickleStorage.sharedDBs[filename]
         else:
             try:
-                self.db = pickle.load(open(filename))
+                with open(filename) as f:
+                    self.db = pickle.load(f)
                 PickleStorage.sharedDBs[filename] = self.db
             except IOError:
                 self.db = PickleStorage.sharedDBs[filename] = {}
@@ -498,13 +496,11 @@ class Group:
         self.articles = {}
 
 
+@implementer(INewsStorage)
 class NewsShelf(_ModerationMixin):
     """
     A NewStorage implementation using Twisted's dirdbm persistence module.
     """
-
-    implements(INewsStorage)
-
     def __init__(self, mailhost, path, sender=None):
         """
         @param mailhost: A C{str} giving the mail exchange host which will
@@ -622,7 +618,7 @@ class NewsShelf(_ModerationMixin):
 
 
     def xoverRequest(self, group, low, high):
-        if not self.dbm['groups'].has_key(group):
+        if group not in self.dbm['groups']:
             return defer.succeed([])
 
         if low is None:
@@ -631,7 +627,7 @@ class NewsShelf(_ModerationMixin):
             high = self.dbm['groups'][group].maxArticle
         r = []
         for i in range(low, high + 1):
-            if self.dbm['groups'][group].articles.has_key(i):
+            if i in self.dbm['groups'][group].articles:
                 r.append([str(i)] + self.dbm['groups'][group].articles[i].overview())
         return defer.succeed(r)
 
@@ -652,7 +648,7 @@ class NewsShelf(_ModerationMixin):
 
 
     def listGroupRequest(self, group):
-        if self.dbm['groups'].has_key(group):
+        if group in self.dbm['groups']:
             return defer.succeed((group, self.dbm['groups'][group].articles.keys()))
         return defer.fail(NewsServerError("No such group: " + group))
 
@@ -732,13 +728,11 @@ class NewsShelf(_ModerationMixin):
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
 
+@implementer(INewsStorage)
 class NewsStorageAugmentation:
     """
     A NewsStorage implementation using Twisted's asynchronous DB-API
     """
-
-    implements(INewsStorage)
-
     schema = """
 
     CREATE TABLE groups (
@@ -1031,7 +1025,8 @@ class NewsStorageAugmentation:
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: result[0]
         ).addCallback(
-            lambda (index, id, body): (index, id, StringIO.StringIO(body))
+            # result is a tuple of (index, id, body)
+            lambda result: (result[0], result[1], StringIO.StringIO(result[2]))
         )
 
 ####

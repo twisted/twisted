@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.python import log
 from twisted.application import app, service, internet
 from twisted import copyright
@@ -18,8 +20,8 @@ class ServerOptions(app.ServerOptions):
     def opt_version(self):
         """Print version information and exit.
         """
-        print 'twistd (the Twisted Windows runner) %s' % copyright.version
-        print copyright.copyright
+        print('twistd (the Twisted Windows runner) %s' % copyright.version)
+        print(copyright.copyright)
         sys.exit()
 
 

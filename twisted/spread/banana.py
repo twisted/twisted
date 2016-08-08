@@ -12,11 +12,13 @@ for more details.
 @author: Glyph Lefkowitz
 """
 
-import copy, cStringIO, struct
+import copy, struct
+from io import BytesIO
 
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
+from twisted.python.compat import iterbytes, long, _bytesChr as chr
 from twisted.python.reflect import fullyQualifiedName
 
 class BananaError(Exception):
@@ -34,18 +36,18 @@ def int2b128(integer, stream):
 
 def b1282int(st):
     """
-    Convert an integer represented as a base 128 string into an C{int} or
-    C{long}.
+    Convert an integer represented as a base 128 string into an L{int} or
+    L{long}.
 
-    @param st: The integer encoded in a string.
-    @type st: C{str}
+    @param st: The integer encoded in a byte string.
+    @type st: L{bytes}
 
-    @return: The integer value extracted from the string.
-    @rtype: C{int} or C{long}
+    @return: The integer value extracted from the byte string.
+    @rtype: L{int} or L{long}
     """
     e = 1
     i = 0
-    for char in st:
+    for char in iterbytes(st):
         n = ord(char)
         i += (n * e)
         e <<= 7
@@ -74,7 +76,7 @@ def setPrefixLimit(limit):
     The prefix length limit determines how many bytes of prefix a banana
     decoder will allow before rejecting a potential object as too large.
 
-    @type limit: C{int}
+    @type limit: L{int}
     @param limit: The number of bytes of prefix for banana to allow when
     decoding.
     """
@@ -121,9 +123,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         Called after protocol negotiation.
         """
 
+
     def _selectDialect(self, dialect):
         self.currentDialect = dialect
         self.connectionReady()
+
 
     def callExpressionReceived(self, obj):
         if self.currentDialect:
@@ -166,7 +170,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         else:
             self.callExpressionReceived(item)
 
-    buffer = ''
+    buffer = b''
 
     def dataReceived(self, chunk):
         buffer = self.buffer + chunk
@@ -176,7 +180,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             assert self.buffer != buffer, "This ain't right: %s %s" % (repr(self.buffer), repr(buffer))
             self.buffer = buffer
             pos = 0
-            for ch in buffer:
+            for ch in iterbytes(buffer):
                 if ch >= HIGH_BIT_SET:
                     break
                 pos = pos + 1
@@ -185,7 +189,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     raise BananaError("Security precaution: more than %d bytes of prefix" % (self.prefixLimit,))
                 return
             num = buffer[:pos]
-            typebyte = buffer[pos]
+            typebyte = buffer[pos:pos+1]
             rest = buffer[pos+1:]
             if len(num) > self.prefixLimit:
                 raise BananaError("Security precaution: longer than %d bytes worth of prefix" % (self.prefixLimit,))
@@ -241,7 +245,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
                 item = listStack.pop()[1]
                 gotItem(item)
-        self.buffer = ''
+        self.buffer = b''
 
 
     def expressionReceived(self, lst):
@@ -252,52 +256,54 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
     outgoingVocabulary = {
         # Jelly Data Types
-        'None'           :  1,
-        'class'          :  2,
-        'dereference'    :  3,
-        'reference'      :  4,
-        'dictionary'     :  5,
-        'function'       :  6,
-        'instance'       :  7,
-        'list'           :  8,
-        'module'         :  9,
-        'persistent'     : 10,
-        'tuple'          : 11,
-        'unpersistable'  : 12,
+        b'None'           :  1,
+        b'class'          :  2,
+        b'dereference'    :  3,
+        b'reference'      :  4,
+        b'dictionary'     :  5,
+        b'function'       :  6,
+        b'instance'       :  7,
+        b'list'           :  8,
+        b'module'         :  9,
+        b'persistent'     : 10,
+        b'tuple'          : 11,
+        b'unpersistable'  : 12,
 
         # PB Data Types
-        'copy'           : 13,
-        'cache'          : 14,
-        'cached'         : 15,
-        'remote'         : 16,
-        'local'          : 17,
-        'lcache'         : 18,
+        b'copy'           : 13,
+        b'cache'          : 14,
+        b'cached'         : 15,
+        b'remote'         : 16,
+        b'local'          : 17,
+        b'lcache'         : 18,
 
         # PB Protocol Messages
-        'version'        : 19,
-        'login'          : 20,
-        'password'       : 21,
-        'challenge'      : 22,
-        'logged_in'      : 23,
-        'not_logged_in'  : 24,
-        'cachemessage'   : 25,
-        'message'        : 26,
-        'answer'         : 27,
-        'error'          : 28,
-        'decref'         : 29,
-        'decache'        : 30,
-        'uncache'        : 31,
+        b'version'        : 19,
+        b'login'          : 20,
+        b'password'       : 21,
+        b'challenge'      : 22,
+        b'logged_in'      : 23,
+        b'not_logged_in'  : 24,
+        b'cachemessage'   : 25,
+        b'message'        : 26,
+        b'answer'         : 27,
+        b'error'          : 28,
+        b'decref'         : 29,
+        b'decache'        : 30,
+        b'uncache'        : 31,
         }
 
     incomingVocabulary = {}
     for k, v in outgoingVocabulary.items():
         incomingVocabulary[v] = k
 
+
     def __init__(self, isClient=1):
         self.listStack = []
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
         self.isClient = isClient
+
 
     def sendEncoded(self, obj):
         """
@@ -308,12 +314,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         @raise BananaError: If the given object is not an instance of one of
             the types supported by Banana.
 
-        @return: C{None}
+        @return: L{None}
         """
-        io = cStringIO.StringIO()
-        self._encode(obj, io.write)
-        value = io.getvalue()
+        encodeStream = BytesIO()
+        self._encode(obj, encodeStream.write)
+        value = encodeStream.getvalue()
         self.transport.write(value)
+
 
     def _encode(self, obj, write):
         if isinstance(obj, (list, tuple)):
@@ -343,16 +350,16 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         elif isinstance(obj, float):
             write(FLOAT)
             write(struct.pack("!d", obj))
-        elif isinstance(obj, str):
+        elif isinstance(obj, bytes):
             # TODO: an API for extending banana...
-            if self.currentDialect == "pb" and obj in self.outgoingSymbols:
+            if self.currentDialect == b"pb" and obj in self.outgoingSymbols:
                 symbolID = self.outgoingSymbols[obj]
                 int2b128(symbolID, write)
                 write(VOCAB)
             else:
                 if len(obj) > SIZE_LIMIT:
                     raise BananaError(
-                        "string is too long to send (%d)" % (len(obj),))
+                        "byte string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)
@@ -369,10 +376,10 @@ _i._selectDialect("none")
 
 def encode(lst):
     """Encode a list s-expression."""
-    io = cStringIO.StringIO()
-    _i.transport = io
+    encodeStream = BytesIO()
+    _i.transport = encodeStream
     _i.sendEncoded(lst)
-    return io.getvalue()
+    return encodeStream.getvalue()
 
 
 def decode(st):
@@ -384,6 +391,6 @@ def decode(st):
     try:
         _i.dataReceived(st)
     finally:
-        _i.buffer = ''
+        _i.buffer = b''
         del _i.expressionReceived
     return l[0]

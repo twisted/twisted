@@ -69,13 +69,13 @@ later.
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     from twisted.cred.portal import IRealm
     from twisted.web.static import File
     
+    @implementer(IRealm)
     class PublicHTMLRealm(object):
-        implements(IRealm)
 
 
 
@@ -266,7 +266,7 @@ conventional style):
     
     cache()
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     from twisted.cred.portal import IRealm, Portal
     from twisted.cred.checkers import FilePasswordDB
@@ -274,9 +274,8 @@ conventional style):
     from twisted.web.resource import IResource
     from twisted.web.guard import HTTPAuthSessionWrapper, DigestCredentialFactory
     
+    @implementer(IRealm)
     class PublicHTMLRealm(object):
-        implements(IRealm)
-    
         def requestAvatar(self, avatarId, mind, *interfaces):
             if IResource in interfaces:
                 return (IResource, File("/home/%s/public_html" % (avatarId,)), lambda: None)

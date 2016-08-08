@@ -115,11 +115,8 @@ def _importFromFile(fn, moduleName=None):
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
     if moduleName in sys.modules:
         return sys.modules[moduleName]
-    fd = open(fn, 'r')
-    try:
+    with open(fn, 'r') as fd:
         module = imp.load_source(moduleName, fn, fd)
-    finally:
-        fd.close()
     return module
 
 

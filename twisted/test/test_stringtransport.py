@@ -43,8 +43,8 @@ class StringTransportTests(TestCase):
         producer = object()
         streaming = object()
         self.transport.registerProducer(producer, streaming)
-        self.assertIdentical(self.transport.producer, producer)
-        self.assertIdentical(self.transport.streaming, streaming)
+        self.assertIs(self.transport.producer, producer)
+        self.assertIs(self.transport.streaming, streaming)
 
 
     def test_disallowedRegisterProducer(self):
@@ -56,7 +56,7 @@ class StringTransportTests(TestCase):
         self.transport.registerProducer(producer, True)
         self.assertRaises(
             RuntimeError, self.transport.registerProducer, object(), False)
-        self.assertIdentical(self.transport.producer, producer)
+        self.assertIs(self.transport.producer, producer)
         self.assertTrue(self.transport.streaming)
 
 
@@ -70,9 +70,9 @@ class StringTransportTests(TestCase):
         newProducer = object()
         self.transport.registerProducer(oldProducer, False)
         self.transport.unregisterProducer()
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
         self.transport.registerProducer(newProducer, True)
-        self.assertIdentical(self.transport.producer, newProducer)
+        self.assertIs(self.transport.producer, newProducer)
         self.assertTrue(self.transport.streaming)
 
 
@@ -171,7 +171,7 @@ class StringTransportTests(TestCase):
         value is returned from L{StringTransport.getHost}.
         """
         address = object()
-        self.assertIdentical(StringTransport(address).getHost(), address)
+        self.assertIs(StringTransport(address).getHost(), address)
 
 
     def test_specifiedPeerAddress(self):
@@ -180,7 +180,7 @@ class StringTransportTests(TestCase):
         value is returned from L{StringTransport.getPeer}.
         """        
         address = object()
-        self.assertIdentical(
+        self.assertIs(
             StringTransport(peerAddress=address).getPeer(), address)
 
 
@@ -248,11 +248,11 @@ class ReactorTests(TestCase):
             verifyObject(IAddress, address)
             self.assertEqual(address.host, "test.example.com")
             self.assertEqual(address.port, 8321)
-        connector = memoryReactor.connectUNIX("/fake/path", ClientFactory())
+        connector = memoryReactor.connectUNIX(b"/fake/path", ClientFactory())
         verifyObject(IConnector, connector)
         address = connector.getDestination()
         verifyObject(IAddress, address)
-        self.assertEqual(address.name, "/fake/path")
+        self.assertEqual(address.name, b"/fake/path")
 
 
     def test_listenDefaultHost(self):
@@ -272,11 +272,11 @@ class ReactorTests(TestCase):
             verifyObject(IAddress, address)
             self.assertEqual(address.host, '0.0.0.0')
             self.assertEqual(address.port, 8242)
-        port = memoryReactor.listenUNIX("/path/to/socket", Factory())
+        port = memoryReactor.listenUNIX(b"/path/to/socket", Factory())
         verifyObject(IListeningPort, port)
         address = port.getHost()
         verifyObject(IAddress, address)
-        self.assertEqual(address.name, "/path/to/socket")
+        self.assertEqual(address.name, b"/path/to/socket")
 
 
     def test_readers(self):

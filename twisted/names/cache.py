@@ -98,7 +98,7 @@ class CacheResolver(common.ResolverBase):
             matching result of the query (answers, authority and additional).
 
         @param cacheTime: The time (seconds since epoch) at which the entry is
-            considered to have been added to the cache. If C{None} is given,
+            considered to have been added to the cache. If L{None} is given,
             the current time is used.
         """
         if self.verbose > 1:

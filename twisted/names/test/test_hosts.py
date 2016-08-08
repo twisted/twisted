@@ -42,12 +42,12 @@ class SearchHostsFileTests(TestCase, GoodTempPathMixin):
     def test_notFoundAddress(self):
         """
         If there is no address information for the hostname passed to
-        L{searchFileFor}, C{None} is returned.
+        L{searchFileFor}, L{None} is returned.
         """
         hosts = self.path()
         hosts.setContent(
             b"10.2.3.4 foo.example.com\n")
-        self.assertIs(None, searchFileFor(hosts.path, b"bar.example.com"))
+        self.assertIsNone(searchFileFor(hosts.path, b"bar.example.com"))
 
 
     def test_firstAddress(self):

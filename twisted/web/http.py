@@ -104,7 +104,12 @@ from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
 from twisted.web.http_headers import Headers
 
-H2_ENABLED = False
+try:
+    from twisted.web._http2 import H2Connection
+    H2_ENABLED = True
+except ImportError:
+    H2Connection = None
+    H2_ENABLED = False
 
 from twisted.web._responses import (
     SWITCHING,
@@ -440,7 +445,7 @@ class HTTPClient(basic.LineReceiver):
         Parse the status line and headers for an HTTP request.
 
         @param line: Part of an HTTP request header. Request bodies are parsed
-            in L{rawDataReceived}.
+            in L{HTTPClient.rawDataReceived}.
         @type line: C{bytes}
         """
         if self.firstLine:
@@ -655,7 +660,7 @@ class Request:
         This method is not intended for users.
 
         @param length: The length of the request body, as indicated by the
-            request headers.  C{None} if the request headers do not indicate a
+            request headers.  L{None} if the request headers do not indicate a
             length.
         """
         if length is not None and length < 100000:
@@ -818,8 +823,8 @@ class Request:
         @type key: C{bytes}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{bytes} or C{NoneType}
-        @return: The value of the specified header, or C{None} if that header
+        @rtype: C{bytes} or L{None}
+        @return: The value of the specified header, or L{None} if that header
             was not present in the request.
         """
         value = self.requestHeaders.getRawHeaders(key)
@@ -841,7 +846,7 @@ class Request:
         @rtype: L{Deferred}
 
         @return: A L{Deferred} which will be triggered when the request is
-            finished -- with a C{None} value if the request finishes
+            finished -- with a L{None} value if the request finishes
             successfully or with an error if the request is interrupted by an
             error (for example, the client closing the connection prematurely).
         """
@@ -870,7 +875,8 @@ class Request:
             self.channel.write(b"0\r\n\r\n")
 
         # log request
-        if hasattr(self.channel, "factory"):
+        if (hasattr(self.channel, "factory") and
+                self.channel.factory is not None):
             self.channel.factory.log(self)
 
         self.finished = 1
@@ -1105,7 +1111,7 @@ class Request:
                 modifiedSince = stringToDatetime(firstPart)
             except ValueError:
                 return None
-            if modifiedSince >= when:
+            if modifiedSince >= self.lastModified:
                 self.setResponseCode(NOT_MODIFIED)
                 return CACHED
         return None
@@ -1445,7 +1451,7 @@ class _IdentityTransferDecoder(object):
         @raise _DataLoss: If the content length is known and fewer than that
             many bytes have been delivered.
 
-        @return: C{None}
+        @return: L{None}
         """
         finishCallback = self.finishCallback
         self.dataCallback = self.finishCallback = None
@@ -1618,7 +1624,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     @ivar MAX_LENGTH: Maximum length for initial request line and each line
         from the header.
 
-    @ivar _transferDecoder: C{None} or a decoder instance if the request body
+    @ivar _transferDecoder: L{None} or a decoder instance if the request body
         uses the I{chunked} Transfer-Encoding.
     @type _transferDecoder: L{_ChunkedTransferDecoder}
 
@@ -1992,7 +1998,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param data: The data chunk to write to the stream.
         @type data: L{bytes}
 
-        @return: C{None}
+        @return: L{None}
         """
         self.transport.write(data)
 
@@ -2004,7 +2010,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param iovec: A list of byte strings to write to the stream.
         @type data: L{list} of L{bytes}
 
-        @return: C{None}
+        @return: L{None}
         """
         self.transport.writeSequence(iovec)
 
@@ -2033,7 +2039,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         on the network, but if this response has not yet been written to the
         network will not write anything.
 
-        @return: C{None}
+        @return: L{None}
         """
         return self.transport.loseConnection()
 
@@ -2063,7 +2069,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @raise RuntimeError: If a producer is already registered.
 
-        @return: C{None}
+        @return: L{None}
         """
         return self.transport.registerProducer(producer, streaming)
 
@@ -2072,7 +2078,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         Stop consuming data from a producer, without disconnecting.
 
-        @return: C{None}
+        @return: L{None}
         """
         return self.transport.unregisterProducer()
 
@@ -2214,7 +2220,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     @ivar _negotiatedProtocol: The protocol negotiated with ALPN or NPN, if
         any.
     @type _negotiatedProtocol: Either a bytestring containing the ALPN token
-        for the negotiated protocol, or C{None} if no protocol has yet been
+        for the negotiated protocol, or L{None} if no protocol has yet been
         negotiated.
 
     @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
@@ -2228,25 +2234,31 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _site: A reference to the creating L{twisted.web.server.Site} object.
     @type _site: L{twisted.web.server.Site}
+
+    @ivar _factory: A reference to the creating L{HTTPFactory} object.
+    @type _factory: L{HTTPFactory}
+
+    @ivar _timeOut: A timeout value to pass to the backing channel.
+    @type _timeOut: L{int} or L{None}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
+    _factory = None
     _site = None
+    _timeOut = None
 
 
     @property
     def factory(self):
         """
-        @see: L{HTTPChannel.factory}
+        @see: L{_genericHTTPChannelProtocolFactory}
         """
         return self._channel.factory
 
 
     @factory.setter
     def factory(self, value):
-        """
-        @see: L{HTTPChannel.factory}
-        """
+        self._factory = value
         self._channel.factory = value
 
 
@@ -2272,9 +2284,20 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._channel.site = value
 
 
+    @property
+    def timeOut(self):
+        return self._channel.timeOut
+
+
+    @timeOut.setter
+    def timeOut(self, value):
+        self._timeOut = value
+        self._channel.timeOut = value
+
+
     def dataReceived(self, data):
         """
-        A override of L{IProtocol.dataReceived} that checks what protocol we're
+        An override of L{IProtocol.dataReceived} that checks what protocol we're
         using.
         """
         if self._negotiatedProtocol is None:
@@ -2288,7 +2311,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 negotiatedProtocol = b'http/1.1'
 
             if negotiatedProtocol == b'h2':
-                assert H2_ENABLED, "Cannot negotiate HTTP/2 without support."
+                if not H2_ENABLED:
+                    raise ValueError("Neogitated HTTP/2 without support.")
+
+                transport = self._channel.transport
+                self._channel = H2Connection()
+                self._channel.requestFactory = self._requestFactory
+                self._channel.site = self._site
+                self._channel.factory = self._factory
+                self._channel.timeOut = self._timeOut
+                self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert negotiatedProtocol == b'http/1.1', \

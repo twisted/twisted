@@ -622,11 +622,11 @@ class LoopTests(unittest.TestCase):
         for (a, b, c, d) in L:
             self.assertEqual(a, "a")
             self.assertEqual(b, "b")
-            self.assertEqual(c, None)
+            self.assertIsNone(c)
             self.assertEqual(d, "d")
 
         lc.stop()
-        self.assertIdentical(theResult[0], lc)
+        self.assertIs(theResult[0], lc)
 
         # Make sure it isn't planning to do anything further.
         self.assertFalse(clock.calls)
@@ -651,7 +651,7 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(len(L), 2,
                           "got %d iterations, not 2" % (len(L),))
         lc.stop()
-        self.assertIdentical(theResult[0], lc)
+        self.assertIs(theResult[0], lc)
 
         self.assertFalse(clock.calls)
 
@@ -895,7 +895,7 @@ class DeferLaterTests(unittest.TestCase):
 
         clock = task.Clock()
         d = task.deferLater(clock, 3, callable, 'foo', bar='bar')
-        d.addCallback(self.assertIdentical, flag)
+        d.addCallback(self.assertIs, flag)
         clock.advance(2)
         self.assertEqual(results, [])
         clock.advance(1)
@@ -1153,7 +1153,7 @@ class ReactTests(unittest.SynchronousTestCase):
             installReactor(reactor)
             exitError = self.assertRaises(SystemExit, task.react, main, [])
             self.assertEqual(0, exitError.code)
-        self.assertIdentical(reactor, self.passedReactor)
+        self.assertIs(reactor, self.passedReactor)
 
 
     def test_exitWithDefinedCode(self):

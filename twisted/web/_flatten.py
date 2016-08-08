@@ -117,10 +117,10 @@ def escapedCDATA(data):
     """
     Escape CDATA for inclusion in a document.
 
-    @type data: C{str} or C{unicode}
+    @type data: L{str} or L{unicode}
     @param data: The string to escape.
 
-    @rtype: C{str}
+    @rtype: L{str}
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
@@ -134,7 +134,7 @@ def escapedComment(data):
     """
     Escape a comment for inclusion in a document.
 
-    @type data: C{str} or C{unicode}
+    @type data: L{str} or L{unicode}
     @param data: The string to escape.
 
     @rtype: C{str}
@@ -174,17 +174,17 @@ def _flattenElement(request, root, write, slotData, renderFactory,
         L{IRenderable.render}.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
-        L{GeneratorType}, L{Deferred}, or an object that implements
+        L{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
+        L{types.GeneratorType}, L{Deferred}, or an object that implements
         L{IRenderable}.
 
     @param write: A callable which will be invoked with each L{bytes} produced
         by flattening C{root}.
 
-    @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
+    @param slotData: A L{list} of L{dict} mapping L{str} slot names to data
         with which those slots will be replaced.
 
-    @param renderFactory: If not C{None}, an object that provides
+    @param renderFactory: If not L{None}, an object that provides
         L{IRenderable}.
 
     @param dataEscaper: A 1-argument callable which takes L{bytes} or
@@ -294,7 +294,7 @@ def _flattenTree(request, root, write):
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
         L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
-        L{list}, L{GeneratorType}, L{Deferred}, or something providing
+        L{list}, L{types.GeneratorType}, L{Deferred}, or something providing
         L{IRenderable}.
 
     @param write: A callable which will be invoked with each L{bytes} produced
@@ -334,11 +334,11 @@ def _writeFlattenedData(state, write, result):
     """
     Take strings from an iterator and pass them to a writer function.
 
-    @param state: An iterator of C{str} and L{Deferred}.  C{str} instances will
+    @param state: An iterator of L{str} and L{Deferred}.  L{str} instances will
         be passed to C{write}.  L{Deferred} instances will be waited on before
         resuming iteration of C{state}.
 
-    @param write: A callable which will be invoked with each C{str}
+    @param write: A callable which will be invoked with each L{str}
         produced by iterating C{state}.
 
     @param result: A L{Deferred} which will be called back when C{state} has
@@ -346,7 +346,7 @@ def _writeFlattenedData(state, write, result):
         an exception in a generator passed to C{state} or an errback from a
         L{Deferred} from state occurs.
 
-    @return: C{None}
+    @return: L{None}
     """
     while True:
         try:
@@ -377,7 +377,7 @@ def flatten(request, root, write):
 
     @param root: An object to be made flatter.  This may be of type L{unicode},
         L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
-        L{list}, L{GeneratorType}, L{Deferred}, or something that provides
+        L{list}, L{types.GeneratorType}, L{Deferred}, or something that provides
         L{IRenderable}.
 
     @param write: A callable which will be invoked with each L{bytes} produced

@@ -12,9 +12,8 @@ class _BaseSentence(object):
     A base sentence class for a particular protocol.
 
     Using this base class, specific sentence classes can almost automatically
-    be created for a particular protocol (except for the documentation of
-    course) if that protocol implements the L{IPositioningSentenceProducer}
-    interface. To do this, fill the ALLOWED_ATTRIBUTES class attribute using
+    be created for a particular protocol.
+    To do this, fill the ALLOWED_ATTRIBUTES class attribute using
     the C{getSentenceAttributes} class method of the producer::
 
         class FooSentence(BaseSentence):
@@ -44,7 +43,7 @@ class _BaseSentence(object):
         Initializes a sentence with parsed sentence data.
 
         @param sentenceData: The parsed sentence data.
-        @type sentenceData: C{dict} (C{str} -> C{str} or C{NoneType})
+        @type sentenceData: C{dict} (C{str} -> C{str} or L{None})
         """
         self._sentenceData = sentenceData
 

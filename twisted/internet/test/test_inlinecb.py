@@ -28,7 +28,7 @@ class StopIterationReturnTests(TestCase):
 
     def test_returnWithValue(self):
         """
-        If the C{return} statement has a value it is propogated back to the
+        If the C{return} statement has a value it is propagated back to the
         L{Deferred} that the C{inlineCallbacks} function returned.
         """
         environ = {"inlineCallbacks": inlineCallbacks}

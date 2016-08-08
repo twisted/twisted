@@ -517,6 +517,8 @@ class RunnerTests(unittest.SynchronousTestCase):
         Trial uses pdb if no debugger is specified by `--debugger`
         """
         self.parseOptions(['--debug', 'twisted.trial.test.sample'])
+        pdbrcFile = FilePath("pdbrc")
+        pdbrcFile.touch()
 
         self.runcall_called = False
         def runcall(pdb, suite, result):
@@ -1055,3 +1057,17 @@ class QualifiedNameWalkerTests(unittest.SynchronousTestCase):
                          [("walker.texas.ranger", []),
                           ("walker.texas", ["ranger"]),
                           ("walker", ["texas", "ranger"])])
+
+
+
+class TrialMainDoesNothingTests(unittest.SynchronousTestCase):
+    """
+    Importing L{twisted.trial.__main__} will not run the script
+    unless it is actually C{__main__}.
+    """
+    def test_importDoesNothing(self):
+        """
+        If we import L{twisted.trial.__main__}, it should do nothing.
+        """
+        # We shouldn't suddenly drop into a script when we import this!
+        __import__('twisted.trial.__main__')

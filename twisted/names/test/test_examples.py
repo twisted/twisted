@@ -81,9 +81,8 @@ class ExampleTestBase(object):
         """
         The example scripts start with the standard shebang line.
         """
-        self.assertEqual(
-            self.examplePath.open().readline().rstrip(),
-            b'#!/usr/bin/env python')
+        with self.examplePath.open() as f:
+            self.assertEqual(f.readline().rstrip(), b'#!/usr/bin/env python')
 
 
     def test_usageConsistency(self):

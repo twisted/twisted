@@ -732,14 +732,14 @@ class ClientServiceTests(SynchronousTestCase):
         """
         clock = Clock()
         cq, service = self.makeReconnector(clock=clock, fireImmediately=False)
-        self.assertEquals(len(cq.connectQueue), 1)
+        self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].callback(None)
-        self.assertEquals(len(cq.connectQueue), 1)
+        self.assertEqual(len(cq.connectQueue), 1)
         self.assertIdentical(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[0])
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
         clock.advance(AT_LEAST_ONE_ATTEMPT)
-        self.assertEquals(len(cq.connectQueue), 2)
+        self.assertEqual(len(cq.connectQueue), 2)
         cq.connectQueue[1].callback(None)
         self.assertIdentical(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[1])

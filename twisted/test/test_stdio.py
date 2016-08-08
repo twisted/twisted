@@ -49,13 +49,13 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     something when it exits.
 
     @ivar onConnection: A L{defer.Deferred} which will be called back with
-    C{None} when the connection to the child process is established.
+    L{None} when the connection to the child process is established.
 
     @ivar onCompletion: A L{defer.Deferred} which will be errbacked with the
     failure associated with the child process exiting when it exits.
 
     @ivar onDataReceived: A L{defer.Deferred} which will be called back with
-    this instance whenever C{childDataReceived} is called, or C{None} to
+    this instance whenever C{childDataReceived} is called, or L{None} to
     suppress these callbacks.
 
     @ivar data: A C{dict} mapping file descriptors to strings containing all
@@ -76,7 +76,7 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     def childDataReceived(self, name, bytes):
         """
         Record all bytes received from the child process in the C{data}
-        dictionary.  Fire C{onDataReceived} if it is not C{None}.
+        dictionary.  Fire C{onDataReceived} if it is not L{None}.
         """
         self.data[name] = self.data.get(name, b'') + bytes
         if self.onDataReceived is not None:

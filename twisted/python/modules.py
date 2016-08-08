@@ -49,11 +49,14 @@ the modules outside the standard library's python-files directory::
     for modinfo in iterModules():
         if (modinfo.pathEntry.filePath.path != stdlibdir
             and not modinfo.isPackage()):
-            print 'unpackaged: %s: %s' % (
-                modinfo.name, modinfo.filePath.path)
+            print('unpackaged: %s: %s' % (
+                modinfo.name, modinfo.filePath.path))
+
+@var theSystemPath: The very top of the Python object space.
+@type: L{PythonPath}
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 __metaclass__ = type
 

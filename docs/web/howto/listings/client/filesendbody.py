@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from StringIO import StringIO
 
 from twisted.internet import reactor
@@ -16,7 +18,7 @@ d = agent.request(
     body)
 
 def cbResponse(ignored):
-    print 'Response received'
+    print('Response received')
 d.addCallback(cbResponse)
 
 def cbShutdown(ignored):

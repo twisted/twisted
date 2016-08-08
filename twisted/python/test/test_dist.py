@@ -15,6 +15,7 @@ from setuptools.dist import Distribution
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
+from twisted.python.compat import _PY3
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
                                  build_scripts_twisted, _EXTRAS_REQUIRE)
 from twisted.python.filepath import FilePath
@@ -93,6 +94,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
         self.assertIn('osx_platform', _EXTRAS_REQUIRE)
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
+        self.assertIn('http2', _EXTRAS_REQUIRE)
 
 
     def test_extrasRequiresDevDeps(self):
@@ -101,12 +103,13 @@ class OptionalDependenciesTests(TestCase):
         the tools required for Twisted development.
         """
         deps = _EXTRAS_REQUIRE['dev']
-        self.assertIn('twistedchecker >= 0.4.0', deps)
         self.assertIn('pyflakes >= 1.0.0', deps)
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
         self.assertIn('sphinx >= 1.3.1', deps)
-        self.assertIn('pydoctor >= 15.0.0', deps)
+        if not _PY3:
+            self.assertIn('twistedchecker >= 0.4.0', deps)
+            self.assertIn('pydoctor >= 16.2.0', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
@@ -116,7 +119,7 @@ class OptionalDependenciesTests(TestCase):
         work for both clients and servers.
         """
         deps = _EXTRAS_REQUIRE['tls']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
 
@@ -156,6 +159,16 @@ class OptionalDependenciesTests(TestCase):
         )
 
 
+    def test_extrasRequiresHttp2Deps(self):
+        """
+        L{_EXTRAS_REQUIRE}'s C{http2} extra contains setuptools requirements
+        for the packages required to make Twisted HTTP/2 support work.
+        """
+        deps = _EXTRAS_REQUIRE['http2']
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
+
+
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{all_non_platform} extra contains setuptools
@@ -163,7 +176,7 @@ class OptionalDependenciesTests(TestCase):
         all supported operating systems.
         """
         deps = _EXTRAS_REQUIRE['all_non_platform']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
@@ -172,6 +185,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
     def test_extrasRequiresOsxPlatformDeps(self):
@@ -181,7 +196,7 @@ class OptionalDependenciesTests(TestCase):
         Mac OS X platform.
         """
         deps = _EXTRAS_REQUIRE['osx_platform']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
@@ -189,6 +204,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc', deps)
 
 
@@ -199,7 +216,7 @@ class OptionalDependenciesTests(TestCase):
         Microsoft Windows platform.
         """
         deps = _EXTRAS_REQUIRE['windows_platform']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
@@ -207,6 +224,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
 
 
@@ -225,70 +244,12 @@ class GetVersionTests(TestCase):
         Test that getting the version of core reads from the
         [base]/_version.py file.
         """
-        f = open(os.path.join(self.dirname, "_version.py"), "w")
-        f.write("""
+        with open(os.path.join(self.dirname, "_version.py"), "w") as f:
+            f.write("""
 from twisted.python import versions
 version = versions.Version("twisted", 0, 1, 2)
 """)
-        f.close()
         self.assertEqual(dist.getVersion(base=self.dirname), "0.1.2")
-
-
-
-class GetScriptsTests(TestCase):
-    """
-    Tests for L{dist.getScripts} which returns the scripts which should be
-    included in the distribution of a project.
-    """
-
-    def test_excludedPreamble(self):
-        """
-        L{dist.getScripts} includes neither C{"_preamble.py"} nor
-        C{"_preamble.pyc"}.
-        """
-        basedir = FilePath(self.mktemp())
-        bin = basedir.child('bin')
-        bin.makedirs()
-        bin.child('_preamble.py').setContent('some preamble code\n')
-        bin.child('_preamble.pyc').setContent('some preamble byte code\n')
-        bin.child('program').setContent('good program code\n')
-        scripts = dist.getScripts(basedir=basedir.path)
-        self.assertEqual(scripts, [bin.child('program').path])
-
-
-    def test_scriptsInRelease(self):
-        """
-        getScripts should return the scripts associated with a project
-        in the context of a released subproject tarball.
-        """
-        basedir = self.mktemp()
-        os.mkdir(basedir)
-        os.mkdir(os.path.join(basedir, 'bin'))
-        f = open(os.path.join(basedir, 'bin', 'exy'), 'w')
-        f.write('yay')
-        f.close()
-        scripts = dist.getScripts(basedir=basedir)
-        self.assertEqual(len(scripts), 1)
-        self.assertEqual(os.path.basename(scripts[0]), 'exy')
-
-
-    def test_getScriptsTopLevel(self):
-        """
-        getScripts returns scripts that are (only) in the top level bin
-        directory.
-        """
-        basedir = FilePath(self.mktemp())
-        basedir.createDirectory()
-        bindir = basedir.child("bin")
-        bindir.createDirectory()
-        included = bindir.child("included")
-        included.setContent("yay included")
-        subdir = bindir.child("subdir")
-        subdir.createDirectory()
-        subdir.child("not-included").setContent("not included")
-
-        scripts = dist.getScripts(basedir=basedir.path)
-        self.assertEqual(scripts, [included.path])
 
 
 
@@ -381,7 +342,7 @@ class BuildScriptsTests(TestCase):
         self.patch(os, "name", "twisted")
         built = self.buildScripts()
         for name in ['script1', 'script2.py', 'shell.sh']:
-            self.assertTrue(name in built)
+            self.assertIn(name, built)
 
 
     def test_windows(self):
@@ -392,7 +353,7 @@ class BuildScriptsTests(TestCase):
         self.patch(os, "name", "nt")
         built = self.buildScripts()
         for name in ['script1.py', 'script2.py', 'shell.sh.py']:
-            self.assertTrue(name in built)
+            self.assertIn(name, built)
 
 
 

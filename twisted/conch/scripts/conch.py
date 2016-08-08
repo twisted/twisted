@@ -8,6 +8,8 @@
 
 #""" Implementation module for the `conch` command.
 #"""
+from __future__ import print_function
+
 from twisted.conch.client import connect, default, options
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
@@ -105,7 +107,7 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print 'ERROR: %s' % u
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     if options['log']:
@@ -113,7 +115,7 @@ def run():
             if options['logfile'] == '-':
                 f = sys.stdout
             else:
-                f = file(options['logfile'], 'a+')
+                f = open(options['logfile'], 'a+')
         else:
             f = sys.stderr
         realout = sys.stdout
@@ -141,7 +143,7 @@ def run():
         if (options['command'] and options['tty']) or not options['notty']:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
     if sys.stdout.isatty() and not options['command']:
-        print 'Connection to %s closed.' % options['host']
+        print('Connection to %s closed.' % options['host'])
     sys.exit(exitStatus)
 
 def handleError():
@@ -303,7 +305,7 @@ class SSHConnection(connection.SSHConnection):
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         log.msg(self.remoteForwards)
         log.msg(remoteHP)
-        if self.remoteForwards.has_key(remoteHP[1]):
+        if remoteHP[1] in self.remoteForwards:
             connectHP = self.remoteForwards[remoteHP[1]]
             log.msg('connect forwarding %s' % (connectHP,))
             return SSHConnectForwardingChannel(connectHP,

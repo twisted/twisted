@@ -231,11 +231,11 @@ class ContextGeneratingMixin:
     @type serverBase: C{str}
 
     @ivar clientCtxFactory: a generated context factory to be used in
-        C{reactor.connectSSL}.
+        L{IReactorSSL.connectSSL}.
     @type clientCtxFactory: L{ssl.DefaultOpenSSLContextFactory}
 
     @ivar serverCtxFactory: a generated context factory to be used in
-        C{reactor.listenSSL}.
+        L{IReactorSSL.listenSSL}.
     @type serverCtxFactory: L{ssl.DefaultOpenSSLContextFactory}
     """
 

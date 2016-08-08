@@ -57,23 +57,29 @@ class SimpleConfFile:
         If file is None and self.defaultFilename is set, it will open
         defaultFilename and use it.
         """
+        close = False
         if file is None and self.defaultFilename:
             file = open(self.defaultFilename,'r')
-            
-        for line in file.readlines():
-            # Strip out comments
-            comment = line.find(self.commentChar)
-            if comment != -1:
-                line = line[:comment]
+            close = True
 
-            # Strip whitespace
-            line = line.strip()
+        try:
+            for line in file.readlines():
+                # Strip out comments
+                comment = line.find(self.commentChar)
+                if comment != -1:
+                    line = line[:comment]
 
-            # Skip empty lines (and lines which only contain comments)
-            if not line:
-                continue
+                # Strip whitespace
+                line = line.strip()
 
-            self.parseLine(line)
+                # Skip empty lines (and lines which only contain comments)
+                if not line:
+                    continue
+
+                self.parseLine(line)
+        finally:
+            if close:
+                file.close()
 
     def parseLine(self, line):
         """Override this.

@@ -68,9 +68,8 @@ def loadLocalVariables(filename):
 
     See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
     """
-    f = open(filename, "r")
-    lines = [f.readline(), f.readline()]
-    f.close()
+    with open(filename, "r") as f:
+        lines = [f.readline(), f.readline()]
     for line in lines:
         try:
             return _parseLocalVariables(line)
@@ -527,15 +526,15 @@ def _wrappedPdb():
         namedModule('readline')
     except ImportError:
         print("readline module not available")
-        sys.exc_clear()
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
             try:
-                rcFile = file(path, 'r')
+                rcFile = open(path, 'r')
             except IOError:
-                sys.exc_clear()
+                pass
             else:
-                dbg.rcLines.extend(rcFile.readlines())
+                with rcFile:
+                    dbg.rcLines.extend(rcFile.readlines())
     return dbg
 
 

@@ -20,7 +20,7 @@ aFormatter = Formatter()
 class KeyFlattener(object):
     """
     A L{KeyFlattener} computes keys for the things within curly braces in
-    PEP-3101-style format strings as parsed by L{Formatter.parse}.
+    PEP-3101-style format strings as parsed by L{string.Formatter.parse}.
     """
 
     def __init__(self):
@@ -111,7 +111,7 @@ def flattenEvent(event):
         if conversion == "r":
             conversionFunction = repr
         else:  # Above: if conversion is not "r", it's "s"
-            conversionFunction = str
+            conversionFunction = unicode
 
         if callit:
             fieldValue = fieldValue()

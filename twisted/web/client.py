@@ -37,7 +37,8 @@ from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
-from twisted.internet.interfaces import IProtocol
+from twisted.internet.abstract import isIPv6Address
+from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
@@ -618,7 +619,7 @@ class URI(object):
         @type uri: C{bytes}
         @param uri: URI to parse.
 
-        @type defaultPort: C{int} or C{None}
+        @type defaultPort: C{int} or L{None}
         @param defaultPort: An alternate value to use as the port if the URI
             does not include one.
 
@@ -719,7 +720,7 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
         and C{kwargs} to produce the getter
 
     @param contextFactory: Context factory to use when creating a secure
-        connection, defaulting to C{None}
+        connection, defaulting to L{None}
 
     @return: The factory created by C{factoryFactory}
     """
@@ -910,6 +911,7 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 
 
 
+@implementer(IOpenSSLContextFactory)
 class _ContextFactoryWithContext(object):
     """
     A L{_ContextFactoryWithContext} is like a
@@ -934,9 +936,8 @@ class _ContextFactoryWithContext(object):
         Return the context created by
         L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
 
-        @return: An old-style context factory.
-        @rtype: object with C{getContext} method, like
-            L{twisted.internet.ssl.ContextFactory}.
+        @return: A context.
+        @rtype context: L{OpenSSL.SSL.Context}
         """
         return self._context
 
@@ -975,9 +976,8 @@ class _DeprecatedToCurrentPolicyForHTTPS(object):
         @param port: The port part of the URI.
         @type port: L{int}
 
-        @return: An old-style context factory.
-        @rtype: object with C{getContext} method, like
-            L{twisted.internet.ssl.ContextFactory}.
+        @return: A context factory.
+        @rtype: L{IOpenSSLContextFactory}
         """
         context = self._webContextFactory.getContext(hostname, port)
         return _ContextFactoryWithContext(context)
@@ -1352,6 +1352,8 @@ class _AgentBase(object):
         Compute the string to use for the value of the I{Host} header, based on
         the given scheme, host name, and port number.
         """
+        if (isIPv6Address(nativeString(host))):
+            host = b'[' + host + b']'
         if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
         return host + b":" + intToBytes(port)
@@ -1392,11 +1394,11 @@ class _StandardEndpointFactory(object):
     @ivar _policyForHTTPS: A web context factory which will be used to create
         SSL context objects for any SSL connections the agent needs to make.
 
-    @ivar _connectTimeout: If not C{None}, the timeout passed to
+    @ivar _connectTimeout: If not L{None}, the timeout passed to
         L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the
         connection timeout.
 
-    @ivar _bindAddress: If not C{None}, the address passed to
+    @ivar _bindAddress: If not L{None}, the address passed to
         L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the local
         address to bind to.
     """
@@ -1500,7 +1502,7 @@ class Agent(_AgentBase):
         @param bindAddress: The local address for client sockets to bind to.
         @type bindAddress: L{bytes}
 
-        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+        @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be
             created.
         @type pool: L{HTTPConnectionPool}
@@ -1532,7 +1534,7 @@ class Agent(_AgentBase):
             HTTP client will connect with.
         @type endpointFactory: an L{IAgentEndpointFactory} provider.
 
-        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+        @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be
             created.
         @type pool: L{HTTPConnectionPool}
@@ -1555,7 +1557,7 @@ class Agent(_AgentBase):
             HTTP client will connect with.
         @type endpointFactory: an L{IAgentEndpointFactory} provider.
 
-        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+        @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be
             created.
         @type pool: L{HTTPConnectionPool}

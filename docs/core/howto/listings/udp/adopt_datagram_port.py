@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import socket
 
 from twisted.internet.protocol import DatagramProtocol

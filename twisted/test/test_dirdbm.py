@@ -51,8 +51,8 @@ class DirDbmTests(unittest.TestCase):
 
         # check they exist
         for k, v in self.items:
-            assert d.has_key(k), "has_key() failed"
-            assert d[k] == v, "database has wrong value"
+            self.assertIn(k, d)
+            self.assertEqual(d[k], v)
 
         # check non existent key
         try:
@@ -91,7 +91,7 @@ class DirDbmTests(unittest.TestCase):
         # delete items
         for k, v in self.items:
             del d[k]
-            assert not d.has_key(k), "has_key() even though we deleted it"
+            self.assertNotIn(k, d, "key is still in database, even though we deleted it")
         assert len(d.keys()) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
@@ -109,27 +109,23 @@ class DirDbmTests(unittest.TestCase):
         # of this test. Thus we keep the range of acceptability to 3 seconds time.
         # -warner
         self.dbm["k"] = "v"
-        self.assert_(abs(time.time() - self.dbm.getModificationTime("k")) <= 3)
+        self.assertTrue(abs(time.time() - self.dbm.getModificationTime("k")) <= 3)
 
 
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash"""
         k = self.dbm._encode("key1")
-        f = open(os.path.join(self.path, k + ".rpl"), "wb")
-        f.write("value")
-        f.close()
+        with open(os.path.join(self.path, k + ".rpl"), "wb") as f:
+            f.write("value")
 
         k2 = self.dbm._encode("key2")
-        f = open(os.path.join(self.path, k2), "wb")
-        f.write("correct")
-        f.close()
-        f = open(os.path.join(self.path, k2 + ".rpl"), "wb")
-        f.write("wrong")
-        f.close()
+        with open(os.path.join(self.path, k2), "wb") as f:
+            f.write("correct")
+        with open(os.path.join(self.path, k2 + ".rpl"), "wb") as f:
+            f.write("wrong")
 
-        f = open(os.path.join(self.path, "aa.new"), "wb")
-        f.write("deleted")
-        f.close()
+        with open(os.path.join(self.path, "aa.new"), "wb") as f:
+            f.write("deleted")
 
         dbm = dirdbm.DirDBM(self.path)
         assert dbm["key1"] == "value"

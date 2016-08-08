@@ -12,7 +12,7 @@ from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
-from twisted.python import log, runtime
+from twisted.python import filepath, log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
 from twisted.conch.avatar import ConchUser
@@ -161,11 +161,11 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
     def __init__(self, port, data):
         """
-        @type port: C{int}
+        @type port: L{int}
         @param port: The port on which the third-party server is listening.
         (it is assumed that the server is running on localhost).
 
-        @type data: C{str}
+        @type data: L{str}
         @param data: This is sent to the third-party server. Must end with '\n'
         in order to trigger a disconnect.
         """
@@ -296,13 +296,18 @@ class ConchServerSetupMixin:
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
-        open('rsa_test','w').write(privateRSA_openssh)
-        open('rsa_test.pub','w').write(publicRSA_openssh)
-        open('dsa_test.pub','w').write(publicDSA_openssh)
-        open('dsa_test','w').write(privateDSA_openssh)
+        with open('rsa_test','w') as f:
+            f.write(privateRSA_openssh)
+        with open('rsa_test.pub','w') as f:
+            f.write(publicRSA_openssh)
+        with open('dsa_test.pub','w') as f:
+            f.write(publicDSA_openssh)
+        with open('dsa_test','w') as f:
+            f.write(privateDSA_openssh)
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
-        open('kh_test','w').write('127.0.0.1 '+publicRSA_openssh)
+        with open('kh_test','w') as f:
+            f.write('127.0.0.1 '+publicRSA_openssh)
 
 
     def _getFreePort(self):
@@ -518,7 +523,7 @@ class OpenSSHClientMixin:
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
         d = getProcessValue(
-            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+            which('ssh')[0], ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
         def hasPAKT(status):
             if status == 0:
                 opts = '-oPubkeyAcceptedKeyTypes=ssh-dss '
@@ -540,7 +545,7 @@ class OpenSSHClientMixin:
                        ' 127.0.0.1 ' + remoteCommand
             port = self.conchServer.getHost().port
             cmds = (cmdline % port).split()
-            reactor.spawnProcess(process, "ssh", cmds)
+            reactor.spawnProcess(process, which('ssh')[0], cmds)
             return process.deferred
         return d.addCallback(hasPAKT)
 
@@ -559,7 +564,7 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         forces the exclusive use of the key exchange algorithm specified by
         keyExchangeAlgo
 
-        @type keyExchangeAlgo: C{str}
+        @type keyExchangeAlgo: L{str}
         @param keyExchangeAlgo: The key exchange algorithm to use
 
         @return: L{defer.Deferred}
@@ -640,11 +645,14 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
     if runtime.platformType == 'win32':
         skip = "can't run cmdline client on win32"
 
-    def execute(self, remoteCommand, process, sshArgs=''):
+    def execute(self, remoteCommand, process, sshArgs='', conchArgs=None):
         """
         As for L{OpenSSHClientTestCase.execute}, except it runs the 'conch'
         command line tool, not 'ssh'.
         """
+        if conchArgs is None:
+            conchArgs = []
+
         process.deferred = defer.Deferred()
         port = self.conchServer.getHost().port
         cmd = ('-p %i -l testuser '
@@ -655,9 +663,30 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
                '-i dsa_test '
                '-v ') % port + sshArgs + \
                ' 127.0.0.1 ' + remoteCommand
-        cmds = _makeArgs(cmd.split())
+        cmds = _makeArgs(conchArgs + cmd.split())
         log.msg(str(cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(process, sys.executable, cmds, env=env)
         return process.deferred
+
+
+    def test_runWithLogFile(self):
+        """
+        It can store logs to a local file.
+        """
+        def cb_check_log(result):
+            logContent = logPath.getContent()
+            self.assertIn('Log opened.', logContent)
+
+        logPath = filepath.FilePath(self.mktemp())
+
+        d = self.execute(
+            remoteCommand='echo goodbye',
+            process=ConchTestOpenSSHProcess(),
+            conchArgs=['--log', '--logfile', logPath.path]
+            )
+
+        d.addCallback(self.assertEqual, 'goodbye\n')
+        d.addCallback(cb_check_log)
+        return d

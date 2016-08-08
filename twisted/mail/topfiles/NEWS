@@ -1,6 +1,12 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 16.3.0 (2016-07-05)
+================================
+
+No significant changes have been made for this release.
+
+
 Twisted Mail 16.2.0 (2016-05-18)
 ================================
 
@@ -410,9 +416,9 @@ Features
 Fixes
 -----
  - Handle empty passwords in SMTP auth. (#2521)
- - Fix IMAP4Client's parsing of literals which are not preceeded by whitespace.
+ - Fix IMAP4Client's parsing of literals which are not preceded by whitespace.
    (#2700)
- - Handle MX lookup suceeding without answers. (#2807)
+ - Handle MX lookup succeeding without answers. (#2807)
  - Fix issues with aliases(5) process support. (#2729)
 
 Misc

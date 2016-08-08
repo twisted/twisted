@@ -61,11 +61,10 @@ class UtilTests(unittest.TestCase):
         """
         event = dict(log_trace=[])
 
-        o1 = lambda e: None
-        o2 = lambda e: None
-        o3 = lambda e: None
-        o4 = lambda e: None
-        o5 = lambda e: None
+        def noOp(e):
+            pass
+
+        o1, o2, o3, o4, o5 = noOp, noOp, noOp, noOp, noOp
 
         o1.name = "root/o1"
         o2.name = "root/p1/o2"

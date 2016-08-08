@@ -9,6 +9,8 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
+from __future__ import print_function
+
 import os
 
 
@@ -43,7 +45,7 @@ def sh(command, null=True, prompt=False):
     ask before running it.  If the command returns something other
     than 0, I'll raise C{CommandFailed(command)}.
     """
-    print "--$", command
+    print("--$", command)
 
     if prompt:
         if raw_input("run ?? ").startswith('n'):

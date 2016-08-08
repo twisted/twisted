@@ -4,9 +4,13 @@
 """
 Tests for L{twisted.words.protocols.jabber.client}
 """
+
+from __future__ import absolute_import, division
+
 from hashlib import sha1
 
 from twisted.internet import defer
+from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
@@ -94,7 +98,7 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         super(IQAuthInitializerTests, self).setUp()
         self.init = client.IQAuthInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
-        self.authenticator.password = 'secret'
+        self.authenticator.password = u'secret'
 
 
     def testPlainText(self):
@@ -193,8 +197,8 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             signalling success.
             """
             self.assertEqual('user', unicode(iq.query.username))
-            self.assertEqual(sha1('12345secret').hexdigest(),
-                              unicode(iq.query.digest).encode('utf-8'))
+            self.assertEqual(sha1(b'12345secret').hexdigest(),
+                              unicode(iq.query.digest))
             self.assertEqual('resource', unicode(iq.query.resource))
 
             # Send server response
@@ -308,7 +312,7 @@ class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             response = xmlstream.toResponse(iq, 'result')
             response.addElement((NS_BIND, 'bind'))
             response.bind.addElement('jid',
-                                     content='user@example.com/other resource')
+                                     content=u'user@example.com/other resource')
             self.pipe.source.send(response)
 
         def cb(result):
@@ -403,10 +407,10 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         # test list of initializers
         version, tls, sasl, bind, session = xs.initializers
 
-        self.assert_(isinstance(tls, xmlstream.TLSInitiatingInitializer))
-        self.assert_(isinstance(sasl, SASLInitiatingInitializer))
-        self.assert_(isinstance(bind, client.BindInitializer))
-        self.assert_(isinstance(session, client.SessionInitializer))
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIsInstance(sasl, SASLInitiatingInitializer)
+        self.assertIsInstance(bind, client.BindInitializer)
+        self.assertIsInstance(session, client.SessionInitializer)
 
         self.assertFalse(tls.required)
         self.assertTrue(sasl.required)

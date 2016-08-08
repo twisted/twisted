@@ -28,7 +28,7 @@ def searchFileForAll(hostsFile, name):
     @param name: The name to search for.
     @type name: C{str}
 
-    @return: C{None} if the name is not found in the file, otherwise a
+    @return: L{None} if the name is not found in the file, otherwise a
         C{str} giving the address in the file associated with the name.
     """
     results = []
@@ -62,7 +62,7 @@ def searchFileFor(file, name):
     @param name: The name to search for.
     @type name: C{str}
 
-    @return: C{None} if the name is not found in the file, otherwise a
+    @return: L{None} if the name is not found in the file, otherwise a
         C{str} giving the address in the file associated with the name.
     """
     addresses = searchFileForAll(FilePath(file), name)

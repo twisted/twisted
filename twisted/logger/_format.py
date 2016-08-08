@@ -119,9 +119,9 @@ def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
     @type then: L{float}
 
     @param timeFormat: A time format.
-    @type timeFormat: L{unicode} or C{None}
+    @type timeFormat: L{unicode} or L{None}
 
-    @param default: Text to return if C{when} or C{timeFormat} is C{None}.
+    @param default: Text to return if C{when} or C{timeFormat} is L{None}.
     @type default: L{unicode}
 
     @return: A formatted time.
@@ -184,8 +184,8 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     @type formatTime: L{callable} that takes an C{event} argument and returns
         a L{unicode}
 
-    @return: A formatted event, or C{None} if no output is appropriate.
-    @rtype: L{unicode} or C{None}
+    @return: A formatted event, or L{None} if no output is appropriate.
+    @rtype: L{unicode} or L{None}
     """
     eventText = formatEvent(event)
     if not eventText:

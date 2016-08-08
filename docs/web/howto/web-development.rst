@@ -37,7 +37,7 @@ like:
 
 .. code-block:: python
 
-    
+
     from mypackage import toplevel
     resource = toplevel.Resource(file="foo/bar", color="blue")
 
@@ -52,7 +52,7 @@ into a directory, and then running:
 
 .. code-block:: console
 
-    
+
     % twistd web --path=/directory
 
 
@@ -66,14 +66,15 @@ You can also write a Python script like:
 
 .. code-block:: python
 
-    
+
     #!/usr/bin/env python
-    
+
     from twisted.web import server
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
     from mypackage import toplevel
-    
-    reactor.listenTCP(8080,
+
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
+    endpoint.listen(
         server.Site(toplevel.Resource(file="foo/bar", color="blue")))
     reactor.run()
 
@@ -100,7 +101,7 @@ using the ``twisted-web`` Debian package, and will drop in:
 
 .. code-block:: console
 
-    
+
     % cat > /etc/local.d/99addmypackage.py
     from mypackage import toplevel
     default.putChild("mypackage", toplevel.Resource(file="foo/bar", color="blue"))
@@ -138,7 +139,7 @@ the file-system.
 We have ``.rpy`` s because they are useful and necessary.
 But using them incorrectly leads to horribly unmaintainable
 applications.  The best way to ensure you are using them correctly is
-to not use them at all, until you are on your *final* 
+to not use them at all, until you are on your *final*
 deployment stages.  You should then find your ``.rpy`` files
 will be less than 10 lines, because you will not *have* more
 than 10 lines to write.

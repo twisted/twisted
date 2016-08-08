@@ -461,7 +461,7 @@ class CollectWarningsTests(SynchronousTestCase):
         """
         If the dictionary passed to L{_setWarningRegistryToNone} changes size
         partway through the process, C{_setWarningRegistryToNone} continues to
-        set C{__warningregistry__} to C{None} on the rest of the values anyway.
+        set C{__warningregistry__} to L{None} on the rest of the values anyway.
 
 
         This might be caused by C{sys.modules} containing something that's not

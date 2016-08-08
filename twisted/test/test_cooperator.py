@@ -273,17 +273,17 @@ class CooperatorTests(unittest.TestCase):
 
         # Remove first task; scheduled call should still be going:
         task1.stop()
-        self.assertEqual(calls[0].cancelled, False)
+        self.assertFalse(calls[0].cancelled)
         self.assertEqual(coop._delayedCall, calls[0])
 
         # Remove second task; scheduled call should be cancelled:
         task2.stop()
-        self.assertEqual(calls[0].cancelled, True)
-        self.assertEqual(coop._delayedCall, None)
+        self.assertTrue(calls[0].cancelled)
+        self.assertIsNone(coop._delayedCall)
 
         # Add another task; scheduled call will be recreated:
         coop.cooperate(iter([1, 2]))
-        self.assertEqual(calls[0].cancelled, False)
+        self.assertFalse(calls[0].cancelled)
         self.assertEqual(coop._delayedCall, calls[0])
 
 
@@ -509,7 +509,7 @@ class RunStateTests(unittest.TestCase):
         self.deferNext()
         self.scheduler.pump()
         self.assertEqual(len(self.work), 1)
-        self.assertTrue(isinstance(self.work[0], defer.Deferred))
+        self.assertIsInstance(self.work[0], defer.Deferred)
         self.scheduler.pump()
         self.assertEqual(len(self.work), 1)
         self.task.pause()
@@ -561,8 +561,8 @@ class RunStateTests(unittest.TestCase):
         self.assertEqual(len(results1), 1)
         self.assertEqual(len(results2), 1)
 
-        self.assertIdentical(results1[0], self.task._iterator)
-        self.assertIdentical(results2[0], self.task._iterator)
+        self.assertIs(results1[0], self.task._iterator)
+        self.assertIs(results2[0], self.task._iterator)
 
         self.assertEqual(final1, [1])
         self.assertEqual(final2, [2])

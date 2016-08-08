@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from cookielib import CookieJar
 
 from twisted.internet import reactor
@@ -5,11 +7,11 @@ from twisted.python import log
 from twisted.web.client import Agent, CookieAgent
 
 def displayCookies(response, cookieJar):
-    print 'Received response'
-    print response
-    print 'Cookies:', len(cookieJar)
+    print('Received response')
+    print(response)
+    print('Cookies:', len(cookieJar))
     for cookie in cookieJar:
-        print cookie
+        print(cookie)
 
 def main():
     cookieJar = CookieJar()

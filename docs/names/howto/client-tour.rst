@@ -238,7 +238,7 @@ Here's an example of how to use the :api:`twisted.names.dns.DNSDatagramProtocol 
        return d
 
    def printResult(res):
-       print 'ANSWERS: ', [a.payload for a in res.answers]
+       print('ANSWERS: ', [a.payload for a in res.answers])
 
    task.react(main)
 

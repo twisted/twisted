@@ -56,8 +56,8 @@ class IRequest(Interface):
         @type key: C{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{str} or C{NoneType}
-        @return: The value of the specified header, or C{None} if that header
+        @rtype: C{str} or L{None}
+        @return: The value of the specified header, or L{None} if that header
             was not present in the request.
         """
 
@@ -102,9 +102,9 @@ class IRequest(Interface):
         """
         Return the IP address of the client who submitted this request.
 
-        @returns: the client IP address or C{None} if the request was submitted
+        @returns: the client IP address or L{None} if the request was submitted
             over a transport where IP addresses do not make sense.
-        @rtype: L{str} or C{NoneType}
+        @rtype: L{str} or L{None}
         """
 
 
@@ -115,7 +115,7 @@ class IRequest(Interface):
 
         This method is B{deprecated}.  See L{getClientIP} instead.
 
-        @rtype: C{NoneType} or L{str}
+        @rtype: L{None} or L{str}
         @return: The canonical hostname of the client, as determined by
             performing a name lookup on the IP address of the client.
         """
@@ -441,7 +441,7 @@ class IBodyProducer(IPushProducer):
         L{IConsumer<twisted.internet.interfaces.IConsumer>} provider.
 
         @return: A L{Deferred<twisted.internet.defer.Deferred>} which fires with
-            C{None} when all bytes have been produced or with a
+            L{None} when all bytes have been produced or with a
             L{Failure<twisted.python.failure.Failure>} if there is any problem
             before all bytes have been produced.
         """
@@ -482,7 +482,7 @@ class IRenderable(Interface):
         """
         Get the document for this L{IRenderable}.
 
-        @type request: L{IRequest} provider or C{NoneType}
+        @type request: L{IRequest} provider or L{None}
         @param request: The request in response to which this method is being
             invoked.
 
@@ -543,7 +543,7 @@ class IResponse(Interface):
 
 
     previousResponse = Attribute(
-        "The previous L{IResponse} from a redirect, or C{None} if there was no "
+        "The previous L{IResponse} from a redirect, or L{None} if there was no "
         "previous response. This can be used to walk the response or request "
         "history for redirections.")
 
@@ -639,7 +639,7 @@ class IClientRequest(Interface):
 
 
     absoluteURI = Attribute(
-        "The absolute URI of the requested resource, as L{bytes}; or C{None} "
+        "The absolute URI of the requested resource, as L{bytes}; or L{None} "
         "if the absolute URI cannot be determined.")
 
 
@@ -702,15 +702,15 @@ class IAgent(Interface):
             schemes most likely to be supported but others may be as well.
         @type uri: L{bytes}
 
-        @param headers: The headers to send with the request (or C{None} to
+        @param headers: The headers to send with the request (or L{None} to
             send no extra headers).  An implementation may add its own headers
             to this (for example for client identification or content
             negotiation).
-        @type headers: L{Headers} or L{NoneType}
+        @type headers: L{Headers} or L{None}
 
         @param bodyProducer: An object which can generate bytes to make up the
             body of this request (for example, the properly encoded contents of
-            a file for a file upload).  Or, C{None} if the request is to have
+            a file for a file upload).  Or, L{None} if the request is to have
             no body.
         @type bodyProducer: L{IBodyProducer} provider
 

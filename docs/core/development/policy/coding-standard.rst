@@ -281,7 +281,16 @@ For example:
 
 
 Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
-Please note that pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+When you are referring to a type, you should use `L{}`, whether it's in the stdlib , in Twisted or somewhere else.
+
+`NoneType` is an exception and we are referring it just as `L{None}`.
+
+Pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+For the API doc `C{something}` means "I made up a new word, and I want it to be monospaced, like it's an identifier in code and not an English noun"
+
+`L{something}` means "I am referring to the previously-defined concept/package/module/class/function/method/attribute identified as `something`"
 
 Additionally, to accommodate emacs users, single quotes of the type of the docstring's triple-quote should be escaped.
 This will prevent font-lock from accidentally fontifying large portions of the file as a string.
@@ -622,7 +631,7 @@ C Code
 C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.3/3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, OS X, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
-If creating new C extension modules, using `cffi <https://cffi.readthedocs.org/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
+If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
 Consider optimizing for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
 
 

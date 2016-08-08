@@ -1,15 +1,20 @@
-Twisted 16.2.0
+Twisted 16.3.0
 ==============
 
 |pypi|
 |coverage|
+|travis|
+|appveyor|
 
 .. code::
 
-    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
+    <tomprince> [...] that made me think of (infinity,1)-groupoids and motivic and crystalline cohomology. :)
+    <@glyph> tomprince: NO IDEA IF THOSE ARE REAL WORDS
+    <tomprince> They are.
+    <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
 
 
-For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.3.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -22,7 +27,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.conch``: SSHv2 and Telnet clients and servers and terminal emulators
 - ``twisted.words``: Clients and servers for IRC, XMPP, and other IM protocols
 - ``twisted.mail``: IMAPv4, POP3, SMTP clients and servers
-- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS recievers
+- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS receivers
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
@@ -103,3 +108,9 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
+.. _travis https://travis-ci.org/twisted/twisted
+
+.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
+.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted

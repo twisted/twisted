@@ -34,7 +34,7 @@ from twisted import plugin, logger
 from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.usage import UsageError
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
                                 textFromEventDict)
@@ -50,6 +50,7 @@ try:
 except ImportError:
     _twistd_unix = None
 else:
+    from twisted.scripts._twistd_unix import checkPID
     from twisted.scripts._twistd_unix import UnixApplicationRunner
     from twisted.scripts._twistd_unix import UnixAppLogger
 
@@ -170,7 +171,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
 class ServerOptionsTests(unittest.TestCase):
     """
-    Non-platform-specific tests for the pltaform-specific ServerOptions class.
+    Non-platform-specific tests for the platform-specific ServerOptions class.
     """
     def test_subCommands(self):
         """
@@ -210,7 +211,7 @@ class ServerOptionsTests(unittest.TestCase):
         for subCommand, expectedCommand in zip(subCommands, expectedOrder):
             name, shortcut, parserClass, documentation = subCommand
             self.assertEqual(name, expectedCommand.tapname)
-            self.assertEqual(shortcut, None)
+            self.assertIsNone(shortcut)
             self.assertEqual(parserClass(), expectedCommand._options),
             self.assertEqual(documentation, expectedCommand.description)
 
@@ -264,7 +265,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         config.subCommand = 'ueoa'
         config.postOptions()
-        self.assertEqual(config['no_save'], True)
+        self.assertTrue(config['no_save'])
 
 
     def test_postOptionsNoSubCommandSavesAsUsual(self):
@@ -273,7 +274,7 @@ class ServerOptionsTests(unittest.TestCase):
         """
         config = twistd.ServerOptions()
         config.postOptions()
-        self.assertEqual(config['no_save'], False)
+        self.assertFalse(config['no_save'])
 
 
     def test_listAllProfilers(self):
@@ -289,10 +290,10 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_defaultUmask(self):
         """
-        The default value for the C{umask} option is C{None}.
+        The default value for the C{umask} option is L{None}.
         """
         config = twistd.ServerOptions()
-        self.assertEqual(config['umask'], None)
+        self.assertIsNone(config['umask'])
 
 
     def test_umask(self):
@@ -355,6 +356,63 @@ class ServerOptionsTests(unittest.TestCase):
                     "imported: module 'twisted.test.test_twistd' "
                     "has no attribute 'FOOBAR'"))
         self.assertNotIn('\n', e.args[0])
+
+
+
+class CheckPIDTests(unittest.TestCase):
+    """
+    Tests for L{checkPID}.
+    """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
+
+
+    def test_notExists(self):
+        """
+        Nonexistent PID file is not an error.
+        """
+        self.patch(os.path, "exists", lambda _: False)
+        checkPID("non-existent PID file")
+
+
+    def test_nonNumeric(self):
+        """
+        Non-numeric content in a PID file causes a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write("non-numeric")
+        e = self.assertRaises(SystemExit, checkPID, pidfile)
+        self.assertIn("non-numeric value", e.code)
+
+
+    def test_anotherRunning(self):
+        """
+        Another running twistd server causes a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write("42")
+        def kill(pid, sig):
+            pass
+        self.patch(os, "kill", kill)
+        e = self.assertRaises(SystemExit, checkPID, pidfile)
+        self.assertIn("Another twistd server", e.code)
+
+
+
+    def test_stale(self):
+        """
+        Stale PID file is removed without causing a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write(str(os.getpid() + 1))
+        def kill(pid, sig):
+            raise OSError(errno.ESRCH, "fake")
+        self.patch(os, "kill", kill)
+        checkPID(pidfile)
+        self.assertFalse(os.path.exists(pidfile))
 
 
 
@@ -456,11 +514,11 @@ class ApplicationRunnerTests(unittest.TestCase):
         arunner = CrippledApplicationRunner(self.config)
         arunner.run()
 
-        self.assertIdentical(
+        self.assertIs(
             self.serviceMaker.options, self.config.subOptions,
             "ServiceMaker.makeService needs to be passed the correct "
             "sub Command object.")
-        self.assertIdentical(
+        self.assertIs(
             self.serviceMaker.service,
             service.IService(arunner.application).services[0],
             "ServiceMaker.makeService's result needs to be set as a child "
@@ -643,7 +701,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_chroot(self):
         """
         L{UnixApplicationRunner.setupEnvironment} changes the root of the
-        filesystem if passed a non-C{None} value for the C{chroot} parameter.
+        filesystem if passed a non-L{None} value for the C{chroot} parameter.
         """
         self.runner.setupEnvironment("/foo/bar", ".", True, None, None)
         self.assertEqual(self.root, "/foo/bar")
@@ -652,10 +710,10 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_noChroot(self):
         """
         L{UnixApplicationRunner.setupEnvironment} does not change the root of
-        the filesystem if passed C{None} for the C{chroot} parameter.
+        the filesystem if passed L{None} for the C{chroot} parameter.
         """
         self.runner.setupEnvironment(None, ".", True, None, None)
-        self.assertIdentical(self.root, self.unset)
+        self.assertIs(self.root, self.unset)
 
 
     def test_changeWorkingDirectory(self):
@@ -725,17 +783,17 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_noDaemonizeNoUmask(self):
         """
         L{UnixApplicationRunner.setupEnvironment} doesn't change the process
-        umask if C{None} is passed for the C{umask} parameter and C{True} is
+        umask if L{None} is passed for the C{umask} parameter and C{True} is
         passed for the C{nodaemon} parameter.
         """
         self.runner.setupEnvironment(None, ".", True, None, None)
-        self.assertIdentical(self.mask, self.unset)
+        self.assertIs(self.mask, self.unset)
 
 
     def test_daemonizedNoUmask(self):
         """
         L{UnixApplicationRunner.setupEnvironment} changes the process umask to
-        C{0077} if C{None} is passed for the C{umask} parameter and C{False} is
+        C{0077} if L{None} is passed for the C{umask} parameter and C{False} is
         passed for the C{nodaemon} parameter.
         """
         with AlternateReactor(FakeDaemonizingReactor()):
@@ -775,9 +833,24 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
             args.extend((chroot, rundir, nodaemon, umask, pidfile))
 
         # Sanity check
-        self.assertEqual(
-            inspect.getargspec(self.runner.setupEnvironment),
-            inspect.getargspec(fakeSetupEnvironment))
+        if _PY3:
+            setupEnvironmentParameters = \
+                inspect.signature(self.runner.setupEnvironment).parameters
+            fakeSetupEnvironmentParameters = \
+                inspect.signature(fakeSetupEnvironment).parameters
+
+            # inspect.signature() does not return "self" in the signature of
+            # a class method, so we need to omit  it when comparing the
+            # the signature of a plain method
+            fakeSetupEnvironmentParameters = fakeSetupEnvironmentParameters.copy()
+            fakeSetupEnvironmentParameters.pop("self")
+
+            self.assertEqual(setupEnvironmentParameters,
+                fakeSetupEnvironmentParameters)
+        else:
+            self.assertEqual(
+                inspect.getargspec(self.runner.setupEnvironment),
+                inspect.getargspec(fakeSetupEnvironment))
 
         self.patch(UnixApplicationRunner, 'setupEnvironment',
                    fakeSetupEnvironment)
@@ -992,7 +1065,7 @@ class AppProfilingTests(unittest.TestCase):
 
         oldStdout = sys.stdout
         self.assertRaises(RuntimeError, profiler.run, reactor)
-        self.assertIdentical(sys.stdout, oldStdout)
+        self.assertIs(sys.stdout, oldStdout)
 
     if profile is None:
         test_profilePrintStatsError.skip = "profile module not available"
@@ -1337,13 +1410,13 @@ class AppLoggerTests(unittest.TestCase):
         logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
-        self.assertIdentical(logFiles[0], sys.stdout)
+        self.assertIs(logFiles[0], sys.stdout)
 
         logger = app.AppLogger({"logfile": ""})
         logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 2)
-        self.assertIdentical(logFiles[1], sys.stdout)
+        self.assertIs(logFiles[1], sys.stdout)
 
 
     def test_getLogObserverFile(self):
@@ -1381,7 +1454,7 @@ class AppLoggerTests(unittest.TestCase):
         self.assertEqual(removed, [observer])
         logger.stop()
         self.assertEqual(removed, [observer])
-        self.assertIdentical(logger._observer, None)
+        self.assertIsNone(logger._observer)
 
 
     def test_legacyObservers(self):
@@ -1475,12 +1548,12 @@ class UnixAppLoggerTests(unittest.TestCase):
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
         logger._getLogObserver()
         self.assertEqual(len(logFiles), 1)
-        self.assertIdentical(logFiles[0], sys.stdout)
+        self.assertIs(logFiles[0], sys.stdout)
 
         logger = UnixAppLogger({"logfile": "", "nodaemon": True})
         logger._getLogObserver()
         self.assertEqual(len(logFiles), 2)
-        self.assertIdentical(logFiles[1], sys.stdout)
+        self.assertIs(logFiles[1], sys.stdout)
 
 
     def test_getLogObserverStdoutDaemon(self):
@@ -1595,7 +1668,7 @@ class DaemonizeTests(unittest.TestCase):
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
-             ('fork', True), ('write', -2, '0'), ('unlink', 'twistd.pid')])
+             ('fork', True), ('write', -2, b'0'), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
 
 
@@ -1605,7 +1678,7 @@ class DaemonizeTests(unittest.TestCase):
         status pipe and then exit the process.
         """
         self.mockos.child = False
-        self.mockos.readData = "0"
+        self.mockos.readData = b"0"
         with AlternateReactor(FakeDaemonizingReactor()):
             self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
@@ -1635,7 +1708,7 @@ class DaemonizeTests(unittest.TestCase):
             [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
              ('fork', True), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
-        self.assertEqual([(-2, '0'), (-2, '0')], written)
+        self.assertEqual([(-2, b'0'), (-2, b'0')], written)
 
 
     def test_successInParentEINTR(self):
@@ -1649,7 +1722,7 @@ class DaemonizeTests(unittest.TestCase):
             read.append((fd, size))
             if len(read) == 1:
                 raise IOError(errno.EINTR)
-            return "0"
+            return b"0"
 
         self.mockos.read = raisingRead
         self.mockos.child = False
@@ -1694,7 +1767,7 @@ class DaemonizeTests(unittest.TestCase):
         with non-zero status code.
         """
         self.mockos.child = False
-        self.mockos.readData = "1: An identified error"
+        self.mockos.readData = b"1: An identified error"
         errorIO = NativeStringIO()
         self.patch(sys, '__stderr__', errorIO)
         with AlternateReactor(FakeDaemonizingReactor()):

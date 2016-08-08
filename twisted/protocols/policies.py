@@ -264,7 +264,9 @@ class ThrottlingFactory(WrappingFactory):
 
     def callLater(self, period, func):
         """
-        Wrapper around L{reactor.callLater} for test purpose.
+        Wrapper around
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        for test purpose.
         """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
@@ -420,11 +422,11 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     @type connectionCount: C{int}
     @ivar connectionCount: number of current connections.
-    @type connectionLimit: C{int} or C{None}
+    @type connectionLimit: C{int} or L{None}
     @cvar connectionLimit: maximum number of connections.
-    @type overflowProtocol: L{Protocol} or C{None}
+    @type overflowProtocol: L{Protocol} or L{None}
     @cvar overflowProtocol: Protocol to use for new connections when
-        connectionLimit is exceeded.  If C{None} (the default value), excess
+        connectionLimit is exceeded.  If L{None} (the default value), excess
         connections will be closed immediately.
     """
     connectionCount = 0
@@ -465,7 +467,7 @@ class TimeoutProtocol(ProtocolWrapper):
         """
         Constructor.
 
-        @param factory: An L{IFactory}.
+        @param factory: An L{protocol.Factory}.
         @param wrappedProtocol: A L{Protocol} to wrapp.
         @param timeoutPeriod: Number of seconds to wait for activity before
             timing out.
@@ -481,7 +483,7 @@ class TimeoutProtocol(ProtocolWrapper):
 
         This will cancel any existing timeouts.
 
-        @param timeoutPeriod: If not C{None}, change the timeout period.
+        @param timeoutPeriod: If not L{None}, change the timeout period.
             Otherwise, use the existing value.
         """
         self.cancelTimeout()
@@ -536,7 +538,7 @@ class TimeoutProtocol(ProtocolWrapper):
         """
         This method is called when the timeout is triggered.
 
-        By default it calls L{loseConnection}.  Override this if you want
+        By default it calls I{loseConnection}.  Override this if you want
         something else to happen.
         """
         self.loseConnection()
@@ -562,7 +564,9 @@ class TimeoutFactory(WrappingFactory):
 
     def callLater(self, period, func):
         """
-        Wrapper around L{reactor.callLater} for test purpose.
+        Wrapper around
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        for test purpose.
         """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
@@ -575,7 +579,7 @@ class TrafficLoggingProtocol(ProtocolWrapper):
                  number=0):
         """
         @param factory: factory which created this protocol.
-        @type factory: C{protocol.Factory}.
+        @type factory: L{protocol.Factory}.
         @param wrappedProtocol: the underlying protocol.
         @type wrappedProtocol: C{protocol.Protocol}.
         @param logfile: file opened for writing used to write log messages.
@@ -647,7 +651,7 @@ class TrafficLoggingFactory(WrappingFactory):
 
 
     def open(self, name):
-        return file(name, 'w')
+        return open(name, 'w')
 
 
     def buildProtocol(self, addr):
@@ -681,7 +685,9 @@ class TimeoutMixin:
 
     def callLater(self, period, func):
         """
-        Wrapper around L{reactor.callLater} for test purpose.
+        Wrapper around
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        for test purpose.
         """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
@@ -706,9 +712,9 @@ class TimeoutMixin:
         """
         Change the timeout period
 
-        @type period: C{int} or C{NoneType}
+        @type period: C{int} or L{None}
         @param period: The period, in seconds, to change the timeout to, or
-        C{None} to disable the timeout.
+        L{None} to disable the timeout.
         """
         prev = self.timeOut
         self.timeOut = period
