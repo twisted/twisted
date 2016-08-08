@@ -2125,9 +2125,6 @@ def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
 
 
 
-
-
-
 class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single
