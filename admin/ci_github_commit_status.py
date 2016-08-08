@@ -11,7 +11,6 @@ import os
 import sys
 
 from twisted.python import usage
-from twisted.internet import defer
 from twisted.internet.task import react
 
 from txgithub.api import GithubApi
@@ -19,6 +18,7 @@ from txgithub.api import GithubApi
 
 # Some placeholder to mark a parameter as required.
 required = object()
+
 
 
 class Options(usage.Options):
@@ -39,6 +39,7 @@ class Options(usage.Options):
             'A string label to differentiate this status from the status of '
             'other systems'],
         ]
+
 
 
 def postStatus(reactor, options):
@@ -81,15 +82,19 @@ def postStatus(reactor, options):
     deferred.addErrback(eb_failure)
     return deferred
 
+
+
 def run(reactor, *argv):
     options = Options()
     try:
         options.parseOptions(argv[1:])
-    except usage.UsageError, errortext:
-        print('%s: %s' % (argv[0], errortext))
-        print('%s: Try --help for usage details.' % (argv[0]))
+    except usage.UsageError as error:
+        print(error)
+        print('Try --help for usage details.')
         sys.exit(1)
 
     return postStatus(reactor, options)
+
+
 
 react(run, sys.argv)
