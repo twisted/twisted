@@ -115,7 +115,7 @@ class DictClient(basic.LineReceiver):
 
     def lineReceived(self, line):
         try:
-            line = line.decode("UTF-8")
+            line = line.decode("utf-8")
         except UnicodeError: # garbage received, skip
             return
         if self.mode == "text": # we are receiving textual data
