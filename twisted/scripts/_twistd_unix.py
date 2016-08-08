@@ -199,14 +199,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.oldstderr = sys.stderr
 
 
-    def _formatException(self, exception):
+    def _formatChildException(self, exception):
         """
         Format the C{exception} in preparation for writing to the
         status pipe.  This does the right thing on Python 2 if the
         exception's message is Unicode, and in all cases limits the
-        length of the message, prior to encoding, to 100 codepoints.
+        length of the message afte* encoding to 100 bytes.
 
-        This means the return message may be longer than 100 bytes.
+        This means the returned message may be truncated in the middle
+        of a unicode escape.
 
         @type exception: L{Exception}
         @param exception: The exception to format.
@@ -219,16 +220,22 @@ class UnixApplicationRunner(app.ApplicationRunner):
         # codec and the backslashreplace error handler.
         exceptionLine = traceback.format_exception_only(exception.__class__,
                                                         exception)[-1]
-        # remove exception name
-        exceptionMessage = exceptionLine.split(': ', 1)[-1]
-        # remove the trailing newline and limit the total length to
-        # the passed string to 100
-        truncatedMessage = exceptionMessage.strip()[:98]
-        formattedMessage = '1 %s' % truncatedMessage
-        # On Python 3, ensure the message
+        # remove the trailing newline
+        formattedMessage = '1 %s' % exceptionLine.strip()
+        # On Python 3, encode the message the same way Python 2's
+        # format_exception_only does
         if _PY3:
-            return formattedMessage.encode('ascii', 'backslashreplace')
-        return formattedMessage
+            formattedMessage = formattedMessage.encode('ascii',
+                                                       'backslashreplace')
+        # By this point, the message has been encoded, if appropriate,
+        # with backslashreplace on both Python 2 and Python 3.
+        # Truncating the encoded message won't make it completely
+        # unreadable, and the reader should print out the repr of the
+        # message it receives anyway.  What it will do, however, is
+        # ensure that only 100 bytes are written to the status pipe,
+        # ensuring that the child doesn't block because the pipe's
+        # full.  This assumes PIPE_BUF > 100!
+        return formattedMessage[:100]
 
 
     def postApplication(self):
@@ -242,7 +249,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         except Exception as ex:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                message = self._formatException(ex)
+                message = self._formatChildException(ex)
                 untilConcludes(os.write, statusPipe, message)
                 untilConcludes(os.close, statusPipe)
             self.removePID(self.config['pidfile'])

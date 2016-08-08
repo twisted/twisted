@@ -1768,7 +1768,7 @@ class DaemonizeTests(unittest.TestCase):
         exception error to the status pipe.
         """
         self.assertErrorWritten(raised="Something is wrong",
-                                reported=b'1 Something is wrong')
+                                reported=b'1 RuntimeError: Something is wrong')
 
 
 
@@ -1779,7 +1779,7 @@ class DaemonizeTests(unittest.TestCase):
         with backslash Unicode code points.
         """
         self.assertErrorWritten(raised=u"\u2022",
-                                reported=b'1 \\u2022')
+                                reported=b'1 RuntimeError: \\u2022')
 
 
 
@@ -1809,9 +1809,10 @@ class DaemonizeTests(unittest.TestCase):
         message to C{stderr} and exits with non-zero status code.
         """
         self.assertErrorInParentBehavior(
-            readData=b"1 An identified error",
-            errorMessage=("An error has occurred: b'An identified error'\n"
-                          "Please look at log file for more information.\n"),
+            readData=b"1 Exception: An identified error",
+            errorMessage=(
+                "An error has occurred: b'Exception: An identified error'\n"
+                "Please look at log file for more information.\n"),
             mockOSActions=[
                 ('chdir', '.'), ('umask', 0o077), ('fork', True),
                 ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid'),
@@ -1822,12 +1823,12 @@ class DaemonizeTests(unittest.TestCase):
         """
         When the child writes a non-ASCII error message to the status
         pipe during daemonization, the parent writes the repr of the
-        message to C{stderr} and exits with non-zero status code.
+        message to C{stderr} and exits with a non-zero status code.
         """
         self.assertErrorInParentBehavior(
-            readData=b"1 An identified error \xff",
+            readData=b"1 Exception: \xff",
             errorMessage=(
-                "An error has occurred: b'An identified error \\xff'\n"
+                "An error has occurred: b'Exception: \\xff'\n"
                 "Please look at log file for more information.\n"
             ),
             mockOSActions=[
@@ -1837,29 +1838,51 @@ class DaemonizeTests(unittest.TestCase):
         )
 
 
+    def test_errorInParentWithTruncatedUnicode(self):
+        """
+        When the child writes a non-ASCII error message to the status
+        pipe during daemonization, and that message is too longer, the
+        parent writes the repr of the truncated message to C{stderr}
+        and exits with a non-zero status code.
+        """
+        truncatedMessage = b'1 RuntimeError: ' + b'\\u2022' * 14
+        # the escape sequence will appear to be escaped twice, because
+        # we're getting the repr
+        reportedMessage = "b'RuntimeError: {}'".format(r'\\u2022' * 14)
+        self.assertErrorInParentBehavior(
+            readData=truncatedMessage,
+            errorMessage=(
+                "An error has occurred: {}\n"
+                "Please look at log file for more information.\n".format(
+                    reportedMessage)
+            ),
+            mockOSActions=[
+                ('chdir', '.'), ('umask', 0o077), ('fork', True),
+                ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid'),
+            ],
+        )
+
 
     def test_errorMessageTruncated(self):
         """
-        If an error in daemonize gives a too big error message, it's truncated
-        by the child.
+        If an error occurs during daemonization and its message is too
+        long, it's truncated by the child.
         """
+        self.assertErrorWritten(
+            raised="x" * 200,
+            reported=b'1 RuntimeError: ' + b'x' * 84)
 
-        class FakeService(service.Service):
 
-            def startService(self):
-                raise RuntimeError("x" * 200)
-
-        errorService = FakeService()
-        errorService.setServiceParent(self.runner.application)
-
-        with AlternateReactor(FakeDaemonizingReactor()):
-            self.assertRaises(RuntimeError, self.runner.postApplication)
-        self.assertEqual(
-            self.mockos.actions,
-            [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
-             ('fork', True), ('write', -2, b'1 ' + b'x' * 98),
-             ('unlink', 'twistd.pid')])
-        self.assertEqual(self.mockos.closed, [-3, -2])
+    def test_unicodeErrorMessageTruncated(self):
+        """
+        If an error occurs during daemonization and its message is
+        unicode and too long, it's truncated by the child, even if
+        this splits a unicode escape sequence.
+        """
+        self.assertErrorWritten(
+            raised=u"\u2022" * 30,
+            reported=b'1 RuntimeError: ' + b'\\u2022' * 14,
+        )
 
 
     def test_hooksCalled(self):
