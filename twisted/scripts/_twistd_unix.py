@@ -7,9 +7,11 @@ from __future__ import absolute_import, division, print_function
 import errno
 import os
 import sys
+import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import (intToBytes, nativeString)
+from twisted.python.compat import (intToBytes, _bytesRepr,
+                                   networkString, _PY3)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -198,6 +200,38 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.oldstderr = sys.stderr
 
 
+    def _formatException(self, exception):
+        """
+        Format the C{exception} in preparation for writing to the
+        status pipe.  This does the right thing on Python 2 if the
+        exception's message is Unicode, and in all cases limits the
+        length of the message, prior to encoding, to 100 codepoints.
+
+        This means the return message may be longer than 100 bytes.
+
+        @type exception: L{Exception}
+        @param exception: The exception to format.
+
+        @return: The formatted message, suitable for writing to the
+            status pipe.
+        @rytpe: L{bytes}
+        """
+        # On Python 2 this will encode Unicode messages with the ascii
+        # codec and the backslashreplace error handler.
+        exceptionLine = traceback.format_exception_only(exception.__class__,
+                                                        exception)[-1]
+        # remove exception name
+        exceptionMessage = exceptionLine.split(': ', 1)[-1]
+        # remove the trailing newline and limit the total length to
+        # the passed string to 100
+        truncatedMessage = exceptionMessage.strip()[:98]
+        formattedMessage = '1 %s' % truncatedMessage
+        # On Python 3, ensure the message
+        if _PY3:
+            return formattedMessage.encode('ascii', 'backslashreplace')
+        return formattedMessage
+
+
     def postApplication(self):
         """
         To be called after the application is created: start the application
@@ -209,9 +243,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
         except Exception as ex:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                # Limit the total length to the passed string to 100
-                strippedError = str(ex)[:98]
-                untilConcludes(os.write, statusPipe, "1 %s" % (strippedError,))
+                message = self._formatException(ex)
+                untilConcludes(os.write, statusPipe, message)
                 untilConcludes(os.close, statusPipe)
             self.removePID(self.config['pidfile'])
             raise
@@ -342,10 +375,10 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @rtype: C{int}
         """
         data = untilConcludes(os.read, readPipe, 100)
-        datastr = nativeString(data)
+        dataRepr = _bytesRepr(data[2:])
         if data != b"0":
-            msg = ("An error has occurred: '%s'\nPlease look at log "
-                   "file for more information.\n" % (datastr[2:],))
+            msg = ("An error has occurred: %s\nPlease look at log "
+                   "file for more information.\n" % (dataRepr,))
             untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0
