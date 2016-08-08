@@ -10,6 +10,7 @@ select() - this is pretty much only useful on Windows.
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.python.compat import unicode
 
 
 MIN_TIMEOUT = 0.000000001
