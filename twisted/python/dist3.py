@@ -547,6 +547,7 @@ testModules = [
     "twisted.test.test_sslverify",
     "twisted.test.test_stdio",
     "twisted.test.test_strports",
+    "twisted.test.test_stringtransport",
     "twisted.test.test_task",
     "twisted.test.test_tcp",
     "twisted.test.test_tcp_internals",
