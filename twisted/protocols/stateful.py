@@ -6,10 +6,7 @@
 
 from twisted.internet import protocol
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import BytesIO
 
 class StatefulProtocol(protocol.Protocol):
     """A Protocol that stores state for you.
@@ -23,7 +20,7 @@ class StatefulProtocol(protocol.Protocol):
 
     def makeConnection(self, transport):
         protocol.Protocol.makeConnection(self, transport)
-        self._sful_data = self.getInitialState(), StringIO(), 0
+        self._sful_data = self.getInitialState(), BytesIO(), 0
 
     def getInitialState(self):
         raise NotImplementedError
