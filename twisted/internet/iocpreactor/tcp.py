@@ -61,7 +61,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def dataReceived(self, rbuffer):
         """
         @param rbuffer: Data received.
-        @type rbuffer: L{bytes} or L{bytearrary}
+        @type rbuffer: L{bytes} or C{bytearrary}
         """
         # XXX: some day, we'll have protocols that can handle raw buffers
         if isinstance(rbuffer, bytes):
