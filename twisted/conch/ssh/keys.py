@@ -63,7 +63,7 @@ class EncryptedKeyError(Exception):
 
 class UnsupportedHashFunction(Exception):
     """
-    Raises when a hash function other than md5, sha256 is presented to 
+    Raises when a hash function other than md5, sha256 is presented to
     fingerprint
     """
 
@@ -793,21 +793,19 @@ class Key(object):
 
     def fingerprint(self, fingerPrintformat='md5-hex'):
         """
-        Get the user presentation of the fingerprint of this L{Key}.  As
-        described by U{RFC 4716 section
-        4<http://tools.ietf.org/html/rfc4716#section-4>}::
+        The fingerprint of a public key consists of the output of the
+        message-digest algorithm for the given hash function(sha256 or MD5).
+        The input to the algorithm is the public key data as specified by [RFC4253].
 
-            The fingerprint of a public key consists of the output of the
-            message-digest algorithm for the given hash function(sha256 or MD5).
-            The input to the algorithm is the public key data as specified by [RFC4253].
-            The output of sha256 (default)[RFC4634] algorithm is presented to the
-            user in the form of base64 encoded sha256 hashes.
-            The output of the MD5[RFC1321] algorithm is presented to the user as
-            a sequence of 16 octets printed as hexadecimal with lowercase letters
-            and separated by colons.
+        The output of sha256[RFC4634] algorithm is presented to the
+        user in the form of base64 encoded sha256 hashes.
 
-        @param hash_function: algorithm used for fingerprint generation.
-            Default is sha256, also supports MD5
+        The output of the MD5[RFC1321](default) algorithm is presented to the user as
+        a sequence of 16 octets printed as hexadecimal with lowercase letters
+        and separated by colons.
+
+        @param fingerPrintformat: Format for fingerprint generation. Consists
+            hash function and representation format. Default is C{md5-hex}
 
         @since: 8.2
 
