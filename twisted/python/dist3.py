@@ -372,10 +372,12 @@ modules = [
     "twisted.web.vhost",
     "twisted.web.wsgi",
     "twisted.web.xmlrpc",
+    "twisted.words.__init__",
     "twisted.words.im.__init__",
     "twisted.words.im.basechat",
     "twisted.words.im.basesupport",
     "twisted.words.im.locals",
+    "twisted.words.protocols.__init__",
     "twisted.words.protocols.jabber.__init__",
     "twisted.words.protocols.jabber.client",
     "twisted.words.protocols.jabber.component",
@@ -394,6 +396,7 @@ modules = [
     "twisted.words.xish.xmlstream",
     "twisted.words.xish.xpath",
     "twisted.words.xish.xpathparser",
+    "twisted.words.xmpproutertap",
 ]
 
 
@@ -654,6 +657,7 @@ testModules = [
     "twisted.words.test.test_jabberxmppstringprep",
     "twisted.words.test.test_xishutil",
     "twisted.words.test.test_xmlstream",
+    "twisted.words.test.test_xmpproutertap",
     "twisted.words.test.test_xpath",
 ]
 
