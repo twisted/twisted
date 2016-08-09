@@ -248,11 +248,11 @@ class ReactorTests(TestCase):
             verifyObject(IAddress, address)
             self.assertEqual(address.host, "test.example.com")
             self.assertEqual(address.port, 8321)
-        connector = memoryReactor.connectUNIX("/fake/path", ClientFactory())
+        connector = memoryReactor.connectUNIX(b"/fake/path", ClientFactory())
         verifyObject(IConnector, connector)
         address = connector.getDestination()
         verifyObject(IAddress, address)
-        self.assertEqual(address.name, "/fake/path")
+        self.assertEqual(address.name, b"/fake/path")
 
 
     def test_listenDefaultHost(self):
@@ -272,11 +272,11 @@ class ReactorTests(TestCase):
             verifyObject(IAddress, address)
             self.assertEqual(address.host, '0.0.0.0')
             self.assertEqual(address.port, 8242)
-        port = memoryReactor.listenUNIX("/path/to/socket", Factory())
+        port = memoryReactor.listenUNIX(b"/path/to/socket", Factory())
         verifyObject(IListeningPort, port)
         address = port.getHost()
         verifyObject(IAddress, address)
-        self.assertEqual(address.name, "/path/to/socket")
+        self.assertEqual(address.name, b"/path/to/socket")
 
 
     def test_readers(self):
