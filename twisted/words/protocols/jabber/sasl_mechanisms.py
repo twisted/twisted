@@ -82,9 +82,9 @@ class Plain(object):
 
 
     def getInitialResponse(self):
-        return b"%s\x00%s\x00%s" % (self.authzid.encode('utf-8'),
-                                    self.authcid.encode('utf-8'),
-                                    self.password.encode('utf-8'))
+        return (self.authzid.encode('utf-8') + b"\x00" +
+                self.authcid.encode('utf-8') + b"\x00" +
+                self.password.encode('utf-8'))
 
 
 
