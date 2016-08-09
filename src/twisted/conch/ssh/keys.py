@@ -783,7 +783,7 @@ class Key(object):
         return Key(self._keyObject.public_key())
 
 
-    def fingerprint(self, hash_function=sha256):
+    def fingerprint(self, fingerPrintformat='md5-hex'):
         """
         Get the user presentation of the fingerprint of this L{Key}.  As
         described by U{RFC 4716 section
@@ -808,10 +808,13 @@ class Key(object):
 
         @rtype: L{str}
         """
-        fingerprint_digest=hash_function(self.blob()).digest()
-        if hash_function==sha256:
+        hashFunction_dispatcher = {'md5' : md5, 'sha256' : sha256}
+        hashFunction_string = fingerPrintformat.split("-")[0]
+        fingerprint_digest = hashFunction_dispatcher[hashFunction_string](
+            self.blob()).digest()
+        if hashFunction_string == 'sha256':
             return nativeString(base64.b64encode(fingerprint_digest))
-        else:
+        elif hashFunction_string == 'md5':
             return nativeString(
                 b':'.join([binascii.hexlify(x)
                            for x in iterbytes(fingerprint_digest)]))
