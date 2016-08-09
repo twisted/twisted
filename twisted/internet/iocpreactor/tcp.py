@@ -63,10 +63,10 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         @param rbuffer: Data received.
         @type rbuffer: L{bytes} or C{bytearrary}
         """
-        # XXX: some day, we'll have protocols that can handle raw buffers
         if isinstance(rbuffer, bytes):
             pass
         elif isinstance(rbuffer, bytearray):
+            # XXX: some day, we'll have protocols that can handle raw buffers
             rbuffer = bytes(rbuffer)
         else:
             raise TypeError("data must be bytes or bytearray, not " +
