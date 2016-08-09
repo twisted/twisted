@@ -123,12 +123,12 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         evt = _iocp.Event(self._cbRead, self)
 
         evt.buff = buff = self._readBuffers
-        rc, data = self.readFromHandle(buff, evt)
+        rc, numBytesRead = self.readFromHandle(buff, evt)
 
         if not rc or rc == ERROR_IO_PENDING:
             self._readScheduledInOS = True
         else:
-            self._handleRead(rc, data, evt)
+            self._handleRead(rc, numBytesRead, evt)
 
 
     def readFromHandle(self, bufflist, evt):
@@ -188,12 +188,12 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self.doWrite()
 
 
-    def _cbWrite(self, rc, data, evt):
-        if self._handleWrite(rc, data, evt):
+    def _cbWrite(self, rc, numBytesWritten, evt):
+        if self._handleWrite(rc, numBytesWritten, evt):
             self.doWrite()
 
 
-    def _handleWrite(self, rc, data, evt):
+    def _handleWrite(self, rc, numBytesWritten, evt):
         """
         Returns false if we should stop writing for now
         """
@@ -207,7 +207,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                                     (errno.errorcode.get(rc, 'unknown'), rc))))
             return False
         else:
-            self.offset += data
+            self.offset += numBytesWritten
             # If there is nothing left to send,
             if self.offset == len(self.dataBuffer) and not self._tempDataLen:
                 self.dataBuffer = b""
