@@ -2040,7 +2040,7 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
     """
     Inspect the function signature of C{obj}'s constructor,
     and get a list of which arguments should be displayed.
-    This is a helper function for C{_compactRepr).
+    This is a helper function for C{_compactRepr}.
 
     @param obj: The instance whose repr is being generated.
     @param alwaysShow: A L{list} of field names which should always be shown.
