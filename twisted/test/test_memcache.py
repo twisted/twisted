@@ -5,8 +5,6 @@
 Test the memcache client protocol.
 """
 
-from twisted.python.compat import networkString
-
 from twisted.internet.error import ConnectionDone
 
 from twisted.protocols.memcache import MemCacheProtocol, NoSuchCommand
@@ -282,10 +280,9 @@ class MemCacheTests(CommandMixin, TestCase):
         C{get} command, an error is raised in L{MemCacheProtocol.dataReceived}.
         """
         self.proto.get(b"foo")
-        s = "spamegg"
         self.assertRaises(
             RuntimeError, self.proto.dataReceived,
-            networkString("VALUE bar 0 %d\r\n%s\r\nEND\r\n" % (len(s), s)))
+            b"VALUE bar 0 7\r\nspamegg\r\nEND\r\n")
 
 
     def test_invalidMultipleGetResponse(self):
@@ -295,10 +292,9 @@ class MemCacheTests(CommandMixin, TestCase):
         L{MemCacheProtocol.dataReceived}.
         """
         self.proto.getMultiple([b"foo", b"bar"])
-        s = "spamegg"
         self.assertRaises(
             RuntimeError, self.proto.dataReceived,
-            networkString("VALUE egg 0 %d\r\n%s\r\nEND\r\n" % (len(s), s)))
+            b"VALUE egg 0 7\r\nspamegg\r\nEND\r\n")
 
 
     def test_invalidEndResponse(self):
