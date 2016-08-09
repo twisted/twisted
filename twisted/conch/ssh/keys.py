@@ -61,6 +61,14 @@ class EncryptedKeyError(Exception):
 
 
 
+class UnsupportedHashFunction(Exception):
+    """
+    Raises when a hash function other than md5, sha256 is presented to 
+    fingerprint
+    """
+
+
+
 class Key(object):
     """
     An object representing a key.  A key can be either a public or
@@ -810,8 +818,13 @@ class Key(object):
         """
         hashFunction_dispatcher = {'md5' : md5, 'sha256' : sha256}
         hashFunction_string = fingerPrintformat.split("-")[0]
-        fingerprint_digest = hashFunction_dispatcher[hashFunction_string](
-            self.blob()).digest()
+
+        try:
+            fingerprint_digest = hashFunction_dispatcher[hashFunction_string](
+                self.blob()).digest()
+        except KeyError:
+            raise UnsupportedHashFunction(
+                "unsupported hash function: %s" % hashFunction_string)
         if hashFunction_string == 'sha256':
             return nativeString(base64.b64encode(fingerprint_digest))
         elif hashFunction_string == 'md5':
