@@ -655,6 +655,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Helper method for C{get} and C{getMultiple}.
         """
+        keys = list(keys)
         if self._disconnected:
             return fail(RuntimeError("not connected"))
         for key in keys:

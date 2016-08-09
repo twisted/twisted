@@ -651,6 +651,18 @@ class MemCacheTests(CommandMixin, TestCase):
             {b'bar': (0, b'2345', b'spam'), b'foo': (0, b'1234', b'egg')})
 
 
+    def test_getsMultipleIterableKeys(self):
+        """
+        L{MemCacheProtocol.getMultiple} accepts any iterable of keys.
+        """
+        return self._test(
+            self.proto.getMultiple(iter([b"foo", b"bar"]), True),
+            b"gets foo bar\r\n",
+            b"VALUE foo 0 3 1234\r\negg\r\n"
+            b"VALUE bar 0 4 2345\r\nspam\r\nEND\r\n",
+            {b'bar': (0, b'2345', b'spam'), b'foo': (0, b'1234', b'egg')})
+
+
     def test_getsMultipleWithEmpty(self):
         """
         When getting a non-available key with L{MemCacheProtocol.getMultiple}
