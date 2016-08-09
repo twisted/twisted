@@ -38,6 +38,7 @@ include twisted/internet/test/fake_CAs/*
 include twisted/mail/test/rfc822.message
 
 # Some extras
+recursive-include twisted *.3only
 recursive-include twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
 
 # Docs
