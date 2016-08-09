@@ -33,7 +33,8 @@ from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
 from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
-from twisted.python.compat import iteritems, nativeString, networkString
+from twisted.python.compat import (
+    intToBytes, iteritems, nativeString, networkString)
 
 
 
@@ -424,7 +425,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
                 "Invalid type for key: %s, expecting bytes" % (type(key),)))
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
-        fullcmd = b" ".join([cmd, key, networkString(str(int(val)))])
+        fullcmd = b" ".join([cmd, key, intToBytes(int(val))])
         self.sendLine(fullcmd)
         cmdObj = Command(cmd, key=key)
         self._current.append(cmdObj)
