@@ -310,7 +310,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         An invalid input as been sent.
         """
-        errText = nativeString(errText)
+        errText = repr(errText)
         log.err("Invalid input: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ClientError(errText))
@@ -320,7 +320,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         An error has happened server-side.
         """
-        errText = nativeString(errText)
+        errText = repr(errText)
         log.err("Server error: " + errText)
         cmd = self._current.popleft()
         cmd.fail(ServerError(errText))

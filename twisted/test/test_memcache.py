@@ -5,6 +5,8 @@
 Test the memcache client protocol.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.internet.error import ConnectionDone
 
 from twisted.protocols.memcache import MemCacheProtocol, NoSuchCommand
@@ -507,7 +509,7 @@ class MemCacheTests(CommandMixin, TestCase):
         self.assertFailure(d, ClientError)
 
         def check(err):
-            self.assertEqual(str(err), "We don't like egg and spam")
+            self.assertEqual(str(err), repr(b"We don't like egg and spam"))
 
         d.addCallback(check)
         self.proto.dataReceived(b"CLIENT_ERROR We don't like egg and spam\r\n")
@@ -527,7 +529,7 @@ class MemCacheTests(CommandMixin, TestCase):
         self.assertFailure(d, ServerError)
 
         def check(err):
-            self.assertEqual(str(err), "zomg")
+            self.assertEqual(str(err), repr(b"zomg"))
 
         d.addCallback(check)
         self.proto.dataReceived(b"SERVER_ERROR zomg\r\n")
