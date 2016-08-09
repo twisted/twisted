@@ -1,1 +1,1 @@
-_twistd_unix now reports the name and encoded message of an exception raised during daemonization on Python 2 and 3.  Add helper to create bytes reprs that always begin with b.
+_twistd_unix now reports the name and encoded message of an exception raised during daemonization on Python 2 and 3.
