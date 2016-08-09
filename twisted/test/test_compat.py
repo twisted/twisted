@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input
+    _coercedUnicode, unichr, raw_input, _bytesRepr
 )
 from twisted.python.filepath import FilePath
 
@@ -885,3 +885,27 @@ class RawInputTests(unittest.TestCase):
         self.patch(sys, "stdout", stdout)
         self.assertEqual(raw_input("Prompt"), "User input")
         self.assertEqual(stdout.data, "Prompt")
+
+
+
+class FutureBytesReprTests(unittest.TestCase):
+    """
+    Tests for L{twisted.python.compat._bytesRepr}.
+    """
+
+    def test_bytesReprNotBytes(self):
+        """
+        L{twisted.python.compat._bytesRepr} raises a
+        L{TypeError} when called any object that is not an instance of
+        L{bytes}.
+        """
+        exc = self.assertRaises(TypeError, _bytesRepr, ["not bytes"])
+        self.assertEquals(str(exc), "Expected bytes not ['not bytes']")
+
+
+    def test_bytesReprPrefix(self):
+        """
+        L{twisted.python.compat._bytesRepr} always prepends
+        ``b`` to the returned repr on both Python 2 and 3.
+        """
+        self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
