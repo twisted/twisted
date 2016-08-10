@@ -277,7 +277,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self._connectWrapped = _connectWrapped
 
-
     def getHandle(self):
         """
         Return the L{OpenSSL.SSL.Connection} object being used to encrypt and
@@ -812,7 +811,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
     noisy = False  # disable unnecessary logging.
 
-    def __init__(self, contextFactory, isClient, wrappedFactory):
+    def __init__(self, contextFactory, isClient, wrappedFactory, sni=None):
         """
         Create a L{TLSMemoryBIOFactory}.
 
@@ -856,6 +855,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         @type wrappedFactory: L{twisted.internet.interfaces.IProtocolFactory}
         """
         WrappingFactory.__init__(self, wrappedFactory)
+        self._sni      = sni
         if isClient:
             creatorInterface = IOpenSSLClientConnectionCreator
         else:
@@ -915,10 +915,13 @@ class TLSMemoryBIOFactory(WrappingFactory):
             connection = connectionCreator.clientConnectionForTLS(tlsProtocol)
             self._applyProtocolNegotiation(connection)
             connection.set_connect_state()
+            if self.factory._sni is not None:
+                try:
+                    self._tlsConnection.set_tlsext_host_name(self.factory._sni)
+                except AttributeError:
+                    pass
         else:
             connection = connectionCreator.serverConnectionForTLS(tlsProtocol)
             self._applyProtocolNegotiation(connection)
             connection.set_accept_state()
         return connection
-
-

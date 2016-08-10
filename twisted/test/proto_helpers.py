@@ -645,7 +645,7 @@ class MemoryReactor(object):
 
 
     def connectSSL(self, host, port, factory, contextFactory,
-                   timeout=30, bindAddress=None):
+                   timeout=30, bindAddress=None, sni=None):
         """
         Fake L{IReactorSSL.connectSSL}, that logs the call and returns an
         L{IConnector}.
@@ -800,7 +800,7 @@ class RaisingMemoryReactor(object):
 
 
     def connectSSL(self, host, port, factory, contextFactory,
-                   timeout=30, bindAddress=None):
+                   timeout=30, bindAddress=None, sni=None):
         """
         Fake L{IReactorSSL.connectSSL}, that raises L{_connectException}.
         """

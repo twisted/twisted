@@ -673,7 +673,7 @@ class IReactorTCP(Interface):
 
 class IReactorSSL(Interface):
 
-    def connectSSL(host, port, factory, contextFactory, timeout=30, bindAddress=None):
+    def connectSSL(host, port, factory, contextFactory, timeout=30, bindAddress=None, sni=None):
         """
         Connect a client Protocol to a remote SSL socket.
 
@@ -690,6 +690,9 @@ class IReactorSSL(Interface):
 
         @param bindAddress: a (host, port) tuple of local address to bind to,
                             or L{None}.
+
+        @param sni: a host name to include as the Server Name Indication field
+                    during the TLS handshake.
 
         @return: An object which provides L{IConnector}.
         """

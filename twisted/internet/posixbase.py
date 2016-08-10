@@ -485,9 +485,9 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     # IReactorSSL (sometimes, not implemented)
 
-    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None, sni=None):
         if tls is not None:
-            tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, True, factory)
+            tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, True, factory, sni=sni)
             return self.connectTCP(host, port, tlsFactory, timeout, bindAddress)
         elif ssl is not None:
             c = ssl.Connector(
