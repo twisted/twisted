@@ -1,0 +1,1 @@
+twisted.web.twcgi.CGIScript will now not pass the "Proxy" header to CGI scripts, as a mitigation to CVE-2016-1000111.
