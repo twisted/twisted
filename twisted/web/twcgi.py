@@ -116,7 +116,7 @@ class CGIScript(resource.Resource):
         # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
             envname = title.replace('-', '_').upper()
-            if title not in ('content-type', 'content-length', 'proxy'):
+            if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
             env[envname] = header
         # Propagate our environment
