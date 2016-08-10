@@ -9,8 +9,6 @@ import sys
 import os
 import json
 
-from io import BytesIO
-
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, error
 from twisted.python import util, failure, log
