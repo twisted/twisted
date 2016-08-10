@@ -203,7 +203,7 @@ class ServicesConf(SimpleConfFile):
     def parseFields(self, name, portAndProtocol, *aliases):
         try:
             port, protocol = portAndProtocol.split('/')
-            port = long(port)
+            port = int(port)
         except:
             raise InvalidServicesConfError(
                 'Invalid port/protocol: %s' % (repr(portAndProtocol),))
@@ -233,7 +233,7 @@ class RPCServicesConf(SimpleConfFile):
 
     def parseFields(self, name, port, *aliases):
         try:
-            port = long(port)
+            port = int(port)
         except:
             raise InvalidRPCServicesConfError(
                 'Invalid port: %s' % (repr(port),))
