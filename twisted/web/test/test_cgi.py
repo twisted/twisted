@@ -183,8 +183,9 @@ class CGITests(unittest.TestCase):
 
         def checkResponse(response):
             headers = json.loads(response)
-            self.assertEqual(headers.keys(), ["HTTP_HOST", "HTTP_CONNECTION",
-                                              "HTTP_X_INNOCENT_HEADER"])
+            self.assertEqual(
+                set(headers.keys()),
+                {"HTTP_HOST", "HTTP_CONNECTION", "HTTP_X_INNOCENT_HEADER"})
 
         d.addCallback(client.readBody)
         d.addCallback(checkResponse)
