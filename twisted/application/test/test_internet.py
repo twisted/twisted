@@ -829,3 +829,57 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(a, CancelledError)
         self.failureResultOf(b, CancelledError)
 
+
+    def test_onNewConnectionCalledWhenServiceStarts(self):
+      """
+      The C{onNewConnection} callable is called when the
+      L{ClientService.startService} is called.
+      """
+      newConnections = [0]
+      def onNewConnection(_proto):
+          newConnections[0] += 1
+
+      cq, service = self.makeReconnector(onNewConnection=onNewConnection)
+      self.assertEqual(newConnections[0], 1)
+
+    def test_onNewConnectionCalledWithProtocol(self):
+      """
+      The C{onNewConnection} callable is passed the connected protocol instance.
+      """
+
+      class NewProtocol(Protocol, object):
+        """
+        A protocol for new connections.
+        """
+
+      newProtocols = []
+      def onNewConnection(proto):
+          newProtocols.append(proto)
+
+      cq, service = self.makeReconnector(
+          onNewConnection=onNewConnection,
+          protocolType=NewProtocol
+      )
+      self.assertIsInstance(newProtocols[0], NewProtocol)
+
+    def test_onNewConnectionReturningADeferred(self):
+      """
+      The C{onNewConnection} callable returns a deferred and calls to
+      L{ClientService.whenConnected} wait until it fires.
+      """
+
+      newProtocols = []
+      newProtocolDeferred = Deferred()
+
+      def onNewConnection(proto):
+          newProtocols.append(proto)
+          return newProtocolDeferred
+
+      cq, service = self.makeReconnector(onNewConnection=onNewConnection)
+
+      whenConnectedDeferred = service.whenConnected()
+      self.assertNoResult(whenConnectedDeferred)
+
+      newProtocolDeferred.callback(None)
+
+      self.assertEquals(self.successResultOf(whenConnectedDeferred), newProtocols[0])

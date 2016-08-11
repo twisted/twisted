@@ -543,7 +543,7 @@ class ClientService(service.Service, object):
 
     _log = Logger()
 
-    def __init__(self, endpoint, factory, retryPolicy=None, clock=None):
+    def __init__(self, endpoint, factory, retryPolicy=None, clock=None, onNewConnection=None):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -563,6 +563,11 @@ class ClientService(service.Service, object):
             this attribute will not be serialized, and the default value (the
             reactor) will be restored when deserialized.
         @type clock: L{IReactorTime}
+
+        @param onNewConnection: A single argument L{callable} that may return a
+            Deferred. It will be called with the L{protocol <interfaces.IProtocol>}
+            after a new connection is made.
+        @type onNewConnection: L{callable}
         """
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
@@ -580,6 +585,7 @@ class ClientService(service.Service, object):
 
         self._currentConnection = None
         self._awaitingConnected = []
+        self._onNewConnection = onNewConnection
 
 
     def whenConnected(self):
@@ -630,7 +636,15 @@ class ClientService(service.Service, object):
                 self._failedAttempts = 0
                 self._loseConnection = protocol.transport.loseConnection
                 self._lostDeferred = thisLostDeferred
-                self._currentConnection = protocol._protocol
+                if self._onNewConnection is not None:
+                    d = self._onNewConnection(protocol._protocol)
+                    d.addCallback(unawaitConnection, protocol._protocol)
+                    return d
+                else:
+                    unawaitConnection(None, protocol._protocol)
+
+            def unawaitConnection(_, protocol):
+                self._currentConnection = protocol
                 self._unawait(self._currentConnection)
 
             def clientDisconnect(reason):
