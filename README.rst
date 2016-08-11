@@ -1,4 +1,4 @@
-Twisted 16.3.0
+Twisted 16.4.0pre1
 ==============
 
 |pypi|
@@ -14,7 +14,7 @@ Twisted 16.3.0
     <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
 
 
-For information on what's new in Twisted 16.3.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.4.0pre1, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
