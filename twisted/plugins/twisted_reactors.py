@@ -21,15 +21,19 @@ epoll = Reactor(
 kqueue = Reactor(
     'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
 
-asyncio = Reactor(
+__all__ = [
+    "default", "select", "poll", "epoll", "kqueue",
+]
+
+if _PY3:
+    asyncio = Reactor(
         'asyncio', 'twisted.internet.asyncioreactor',
         'asyncio integration reactor')
 
-__all__ = [
-    "default", "select", "poll", "epoll", "kqueue", "asyncio",
-]
-
-if not _PY3:
+    __all__.extend([
+        "asyncio"
+    ])
+else:
     wx = Reactor(
         'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
     gi = Reactor(
