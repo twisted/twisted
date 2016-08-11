@@ -37,7 +37,7 @@ environment:
 
     TRIAL_REPORTER: text
 
-  # Only use pre-installed Python versions, which Appveyor may upgrade to
+  # Pre-installed Python versions are used, which Appveyor may upgrade to
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
@@ -46,12 +46,12 @@ environment:
       PYTHON_ARCH: "64"
       TWISTED_REACTOR: select
       TOXENV: py27-coverage-windows,codecov-publish
+
     - PYTHON_HOME: C:\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-coverage-windows,codecov-publish
       TWISTED_REACTOR: iocp
-
 
 
 matrix:
