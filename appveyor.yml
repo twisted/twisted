@@ -38,7 +38,7 @@ environment:
   matrix:
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
-      PYTHON_VERSION: "2.7"
+      TWISTED_REACTOR: select
       TOXENV: py27-coverage-windows,codecov-publish
     - PYTHON_HOME: C:\Python27-x64
       PYTHON_VERSION: "2.7"
@@ -75,12 +75,6 @@ install:
   - "python -c \"import os; open('python{0}.bat'.format(os.environ['PYTHON_VERSION']), 'w').write('@{0}\\\\python \\x25*\\n'.format(os.environ['PYTHON_HOME']))\""
   - "type python*.bat"
 
-  # Get some information about the build environment.
-  # Uncomment them. Left here so that you don't have to search the net for
-  # how to run such command on Windows :)
-  # - ps: "ls \"C:/\""
-  # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
-  # - ps: echo $env:PYTHON $env:TOXENV
   # Check that we have the expected version and architecture for Python
   - "python -c \"import sys; print(sys.prefix)\""
   - "python -c \"import sys; print(sys.exec_prefix)\""
