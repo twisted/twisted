@@ -13,7 +13,7 @@ from StringIO import StringIO
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import Key, BadKeyError
+    from twisted.conch.ssh.keys import Key, BadKeyError, BadFingerprintFormat
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint, _saveKey)
 else:
@@ -67,9 +67,13 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename})
+        printFingerprint({'filename': filename, 'fingerPrintformat': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
-            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
+            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n'+
+            '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
+        self.assertRaises(BadFingerprintFormat, printFingerprint,
+            {'filename': filename, 'fingerPrintformat':'sha-base64'})
 
 
     def test_saveKey(self):
@@ -97,6 +101,48 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             Key.fromString(base.child('id_rsa.pub').getContent()),
             key.public())
+
+
+    def test_saveKeysha256(self):
+        """
+        L{_saveKey} will generate key fingerprint in C{sha256-base64} format
+        if explicitly specified.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_rsa').path
+        key = Key.fromString(privateRSA_openssh)
+        _saveKey(key, {'filename': filename, 'pass': 'passphrase',
+            'fingerPrintformat': 'sha256-base64'})
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint is:\n"
+            "ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=\n" % (
+                filename,
+                filename))
+        self.assertEqual(
+            key.fromString(
+                base.child('id_rsa').getContent(), None, 'passphrase'),
+            key)
+        self.assertEqual(
+            Key.fromString(base.child('id_rsa.pub').getContent()),
+            key.public())
+
+
+    def test_saveKeyBadFingerPrintformat(self):
+        """
+        L{_saveKey} raises C{keys.BadFingerprintFormat} for formats other
+        than C{md5-hex} and C{sha256-base64}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_rsa').path
+        key = Key.fromString(privateRSA_openssh)
+        self.assertRaises(BadFingerprintFormat, _saveKey,
+            key, {'filename': filename, 'pass': 'passphrase',
+            'fingerPrintformat': 'sha-base64'})
 
 
     def test_saveKeyEmptyPassphrase(self):

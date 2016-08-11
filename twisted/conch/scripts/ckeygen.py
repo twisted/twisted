@@ -113,6 +113,8 @@ def generateDSAkey(options):
 
 
 def printFingerprint(options):
+    if not options.has_key('fingerPrintformat'):
+        options['fingerPrintformat'] = 'md5-hex'
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
@@ -122,9 +124,9 @@ def printFingerprint(options):
         key = keys.Key.fromFile(options['filename'])
         print('%s %s %s' % (
             key.size(),
-            key.fingerprint(),
+            key.fingerprint(options['fingerPrintformat']),
             os.path.basename(options['filename'])))
-    except:
+    except keys.BadKeyError:
         sys.exit('bad key')
 
 
@@ -203,6 +205,8 @@ def _saveKey(key, options):
     @type options: L{dict}
     """
     keyTypeName = key.type().lower()
+    if not options.has_key('fingerPrintformat'):
+        options['fingerPrintformat'] = 'md5-hex'
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
         newPath = raw_input(
@@ -239,7 +243,7 @@ def _saveKey(key, options):
     print('Your identification has been saved in %s' % (options['filename'],))
     print('Your public key has been saved in %s.pub' % (options['filename'],))
     print('The key fingerprint is:')
-    print(key.fingerprint())
+    print(key.fingerprint(options['fingerPrintformat']))
 
 
 
