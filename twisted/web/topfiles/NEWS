@@ -1,6 +1,45 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 16.4.0pre1 (2016-08-11)
+===================================
+
+Features
+--------
+ - Twisted web HTTP/2 servers now time out HTTP/2 connections in the
+   same manner as HTTP/1.1 connections. (#8480)
+
+Bugfixes
+--------
+ - A bug in twisted.web.server.Site.makeSession which may lead to
+   predictable session IDs was fixed.  Session IDs are now generated
+   securely using `os.urandom`. (#3460)
+ - twisted.web.server.Request.getSession will now, for a request sent
+   over HTTPS, set a "Secure" cookie, preventing the secure session
+   from being sent over plain-text HTTP. (#3461)
+ - If called multiple times, twisted.web.http.Request.setLastModified
+   now correctly observes the greatest supplied value. (#3807)
+ - The HTTP server now correctly times connections out. (broken in
+   16.2) (#8481)
+ - Twisted's HTTP/2 support no longer throws priority exceptions when
+   WINDOW_UDPATE frames are received after a response has been
+   completed. (#8558)
+ - twisted.web.twcgi.CGIScript will now not pass the "Proxy" header to
+   CGI scripts, as a mitigation to CVE-2016-1000111. (#8623)
+ - Twisted Web's HTTP/2 server can now tolerate streams being reset by
+   the client midway through a data upload without throwing
+   exceptions. (#8682)
+ - twisted.web.http.Request now swallows header writes on reset HTTP/2
+   streams, rather than erroring out. (#8685)
+ - twisted.web's HTTP/2 server now tolerates receiving WINDOW_UPDATE
+   frames for streams for which it has no outstanding data to send.
+   (#8695)
+
+Other
+-----
+ - #8519, #8530, #8629, #8707
+
+
 Twisted Web 16.3.0 (2016-07-05)
 ===============================
 
