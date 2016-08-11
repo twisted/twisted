@@ -16,8 +16,10 @@ class MyProtocol:
         assert self.expecting, 'Got a packet when not expecting anymore.'
         expectData, expectKw = self.expecting.pop(0)
 
-        expectKwKeys = expectKw.keys(); expectKwKeys.sort()
-        kwKeys = kw.keys(); kwKeys.sort()
+        expectKwKeys = expectKw.keys()
+        expectKwKeys = list(sorted(expectKwKeys))
+        kwKeys = kw.keys()
+        kwKeys = list(sorted(kwKeys))
         assert expectKwKeys == kwKeys, "Expected %r, got %r" % (expectKwKeys, kwKeys)
 
         for k in expectKwKeys:
