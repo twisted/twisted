@@ -671,8 +671,8 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         """
         for reader in list(self._readers):
             self._doReadOrWrite(reader, reader, self._POLL_IN)
-        for reader in list(self._writers):
-            self._doReadOrWrite(reader, reader, self._POLL_OUT)
+        for writer in list(self._writers):
+            self._doReadOrWrite(writer, writer, self._POLL_OUT)
 
 
     def addReader(self, reader):
