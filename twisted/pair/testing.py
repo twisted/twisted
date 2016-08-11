@@ -20,6 +20,7 @@ from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.tuntap import (
     _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelFlags)
+from twisted.python.compat import nativeString
 
 
 # The number of bytes in the "protocol information" header that may be present
@@ -87,18 +88,18 @@ def _ip(src, dst, payload):
     """
     ipHeader = (
         # Version and header length, 4 bits each
-        '\x45'
+        b'\x45'
         # Differentiated services field
-        '\x00'
+        b'\x00'
         # Total length
         + _H(20 + len(payload))
-        + '\x00\x01\x00\x00\x40\x11'
+        + b'\x00\x01\x00\x00\x40\x11'
         # Checksum
         + _H(0)
         # Source address
-        + socket.inet_pton(socket.AF_INET, src)
+        + socket.inet_pton(socket.AF_INET, nativeString(src))
         # Destination address
-        + socket.inet_pton(socket.AF_INET, dst))
+        + socket.inet_pton(socket.AF_INET, nativeString(dst)))
 
     # Total all of the 16-bit integers in the header
     checksumStep1 = sum(struct.unpack('!10H', ipHeader))
@@ -228,7 +229,7 @@ class Tunnel(object):
         # TAP devices also include ethernet framing.
         if self.tunnelMode & TunnelFlags.IFF_TAP.value:
             datagram = _ethernet(
-                src='\x00' * 6, dst='\xff' * 6, protocol=_IPv4,
+                src=b'\x00' * 6, dst=b'\xff' * 6, protocol=_IPv4,
                 payload=datagram)
 
         self.readBuffer.append(datagram)
@@ -457,7 +458,7 @@ class MemoryIOSystem(object):
         name, mode = struct.unpack('%dsH' % (_IFNAMSIZ,), args)
         tunnel.tunnelMode = mode
         tunnel.requestedName = name
-        tunnel.name = name[:_IFNAMSIZ - 3] + "123"
+        tunnel.name = name[:_IFNAMSIZ - 3] + b"123"
 
         return struct.pack('%dsH' % (_IFNAMSIZ,), tunnel.name, mode)
 
