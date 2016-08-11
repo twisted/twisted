@@ -768,6 +768,9 @@ def _maybeMBCS(s):
 
     @return: The string, decoded using MBCS if needed.
     @rtype: L{unicode}
+
+    @raises UnicodeDecodeError: If passed a byte string that cannot be decoded
+        using MBCS.
     """
     assert sys.platform == "win32", "only reasonable on Windows"
     assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
