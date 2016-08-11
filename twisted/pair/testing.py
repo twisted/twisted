@@ -309,7 +309,7 @@ def _privileged(original):
     """
     @wraps(original)
     def permissionChecker(self, *args, **kwargs):
-        if original.func_name not in self.permissions:
+        if original.__name__ not in self.permissions:
             raise IOError(EPERM, "Operation not permitted")
         return original(self, *args, **kwargs)
     return permissionChecker
