@@ -171,6 +171,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               self._readOrWrite, writer,
                                               False)
             self._writers[writer] = fd
+        except OSError as e:
+            # The kqueuereactor will raise this if there is a broken pipe
+            self._unregisterFDInAsyncio(fd)
         except IOError as e:
             self._unregisterFDInAsyncio(fd)
             if e.errno == errno.EPERM:
@@ -296,11 +299,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
                          cancel, reset, seconds=self.seconds)
         self._delayedCalls.add(dc)
         return dc
-
-
-    def callWhenRunning(self, f, *args, **kwargs):
-        g = lambda: f(*args, **kwargs)
-        self._asyncioEventloop.call_soon_threadsafe(g)
 
 
     def callFromThread(self, f, *args, **kwargs):
