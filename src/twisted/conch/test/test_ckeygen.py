@@ -13,7 +13,7 @@ from StringIO import StringIO
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import Key, BadKeyError, BadFingerprintFormat
+    from twisted.conch.ssh.keys import Key, BadKeyError, BadFingerPrintFormat
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint, _saveKey)
 else:
@@ -67,13 +67,13 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename})
-        printFingerprint({'filename': filename, 'fingerPrintformat': 'sha256-base64'})
+        printFingerprint({'filename': filename, 'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
             '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n'+
             '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
-        self.assertRaises(BadFingerprintFormat, printFingerprint,
-            {'filename': filename, 'fingerPrintformat':'sha-base64'})
+        self.assertRaises(BadFingerPrintFormat, printFingerprint,
+            {'filename': filename, 'format':'sha-base64'})
 
 
     def test_saveKey(self):
@@ -113,7 +113,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-            'fingerPrintformat': 'sha256-base64'})
+            'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -140,9 +140,9 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
-        self.assertRaises(BadFingerprintFormat, _saveKey,
+        self.assertRaises(BadFingerPrintFormat, _saveKey,
             key, {'filename': filename, 'pass': 'passphrase',
-            'fingerPrintformat': 'sha-base64'})
+            'format': 'sha-base64'})
 
 
     def test_saveKeyEmptyPassphrase(self):
