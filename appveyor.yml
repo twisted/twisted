@@ -1,8 +1,13 @@
 #
+# Definition for running tests on AppVeyor.
+#
+# Read each comment for details as this is one big hack on top of
+# another hack.
+#
 # Some help for Python on AppVeyor:
 # * https://packaging.python.org/appveyor/
 # * https://ci.appveyor.com/tools/validate-yaml
-
+#
 version: '{branch}-{build}'
 
 # No need for Python.
@@ -32,18 +37,28 @@ environment:
 
     TRIAL_REPORTER: text
 
-  # Only use pre-installed Python versions, which Appveyor may upgrade to
+  # Pre-installed Python versions are used, which Appveyor may upgrade to
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
-    - PYTHON_HOME: C:\\Python27-x64
+    - PYTHON_HOME: C:\Python27-x64
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      TWISTED_REACTOR: select
+      TOXENV: py27-coverage-windows,codecov-publish
+
+    - PYTHON_HOME: C:\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-coverage-windows,codecov-publish
-    #- PYTHON_HOME: "C:\\PYTHON35-x64"
-    #  PYTHON_VERSION: "3.5"
-    #  PYTHON_ARCH: "64"
-    #  TOXENV: 'py35-tests-windows'
+      TWISTED_REACTOR: iocp
+
+
+matrix:
+  allow_failures:
+    # FIXME: https://twistedmatrix.com/trac/ticket/8679
+    # For now iocp reactor tests are failing.
+    - TWISTED_REACTOR: iocp
 
 
 install:
@@ -67,12 +82,6 @@ install:
   - "python -c \"import os; open('python{0}.bat'.format(os.environ['PYTHON_VERSION']), 'w').write('@{0}\\\\python \\x25*\\n'.format(os.environ['PYTHON_HOME']))\""
   - "type python*.bat"
 
-  # Get some information about the build environment.
-  # Uncomment them. Left here so that you don't have to search the net for
-  # how to run such command on Windows :)
-  # - ps: "ls \"C:/\""
-  # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
-  # - ps: echo $env:PYTHON $env:TOXENV
   # Check that we have the expected version and architecture for Python
   - "python -c \"import sys; print(sys.prefix)\""
   - "python -c \"import sys; print(sys.exec_prefix)\""
