@@ -1,0 +1,1 @@
+twisted.protocols.amp now handles floats on Python 3. Previously, sending a float would raise a ValueError.
