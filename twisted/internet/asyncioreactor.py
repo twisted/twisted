@@ -28,8 +28,10 @@ except ImportError:
 
 class _DCHandle(object):
     """
-    Wrapper for L{asyncio.Handle} to be used by
-    L{twisted.internet.base.DelayedCall}.
+    Wraps ephemeral L{asyncio.Handle} instances.  Callbacks can close
+    over this and use it as a mutable reference to asyncio C{Handles}.
+
+    @ivar handle: The current L{asyncio.Handle}
     """
     def __init__(self, handle):
         self.handle = handle
