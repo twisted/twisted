@@ -1657,9 +1657,9 @@ class SSHClientTransport(SSHTransportBase):
                                  iterbytes(md5(hostKey).digest())])
         d = self.verifyHostKey(hostKey, fingerprint)
         d.addCallback(_continue_KEX_ECDH_REPLY, hostKey, pubKey, signature)
-    #    d.addErrback(
-    #        lambda unused: self.sendDisconnect(
-    #            DISCONNECT_HOST_KEY_NOT_VERIFIABLE, b'bad host key'))
+        d.addErrback(
+            lambda unused: self.sendDisconnect(
+                DISCONNECT_HOST_KEY_NOT_VERIFIABLE, b'bad host key'))
         return d
 
 
