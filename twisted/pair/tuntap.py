@@ -71,7 +71,7 @@ class TunnelFlags(Flags):
 
 
 @implementer(interfaces.IAddress)
-class TunnelAddress(FancyStrMixin, object, FancyEqMixin):
+class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
     """
     A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
     """
@@ -290,7 +290,7 @@ class TuntapPort(abstract.FileDescriptor):
         config = struct.pack("%dsH" % (_IFNAMSIZ,), name, mode.value)
         fileno = self._system.open(_TUN_KO_PATH, flags)
         result = self._system.ioctl(fileno, _TUNSETIFF, config)
-        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip('\x00'))
+        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip(b'\x00'))
 
 
     def _bindSocket(self):
