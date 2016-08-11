@@ -1593,7 +1593,7 @@ class SSHClientTransport(SSHTransportBase):
                     self._dhMaximalGroupSize,
                     ))
 
-    def _ssh_KEX_ECDH_REPLY(self, packet):
+    def ssh_KEX_ECDH_REPLY(self, packet):
         """
         Called to handle a reply to a ECDH exchange message(KEX_ECDH_INIT).
 
@@ -1711,7 +1711,7 @@ class SSHClientTransport(SSHTransportBase):
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
         elif _kex.isEllipticCurve(self.kexAlg):
-            return self._ssh_KEX_ECDH_REPLY(packet)
+            return self.ssh_KEX_ECDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)

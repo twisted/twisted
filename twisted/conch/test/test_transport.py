@@ -1943,7 +1943,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
 
-        self.proto._ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+        self.proto.ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
                                        common.NS(encPub) + common.NS(b'bad-signature'))
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
