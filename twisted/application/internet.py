@@ -343,7 +343,7 @@ class StreamServerEndpointService(service.Service, object):
     @since: 10.2
     """
 
-    _raiseSynchronously = None
+    _raiseSynchronously = False
 
     def __init__(self, endpoint, factory):
         self.endpoint = endpoint
@@ -366,6 +366,7 @@ class StreamServerEndpointService(service.Service, object):
         self._waitingForPort.addErrback(handleIt)
         if raisedNow:
             raisedNow[0].raiseException()
+        self._raiseSynchronously = False
 
 
     def startService(self):
