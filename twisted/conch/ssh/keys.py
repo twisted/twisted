@@ -61,7 +61,7 @@ class EncryptedKeyError(Exception):
 
 
 
-class BadFingerprintFormat(Exception):
+class BadFingerPrintFormat(Exception):
     """
     Raises when a fingerprint format other than C{md5-hex} or C{sha256-base64}
     is presented to fingerprint.
@@ -791,20 +791,23 @@ class Key(object):
         return Key(self._keyObject.public_key())
 
 
-    def fingerprint(self, fingerPrintformat='md5-hex'):
+    def fingerprint(self, format='md5-hex'):
         """
         The fingerprint of a public key consists of the output of the
-        message-digest algorithm for the given hash function(sha256 or MD5).
+        message-digest algorithm in the specified format.
+        Supported formats inclide C{md5-hex} and C{sha256-base64}
         The input to the algorithm is the public key data as specified by [RFC4253].
 
         The output of sha256[RFC4634] algorithm is presented to the
         user in the form of base64 encoded sha256 hashes.
+        Example: C{US5jTUa0kgX5ZxdqaGF0yGRu8EgKXHNmoT8jHKo1StM=}
 
         The output of the MD5[RFC1321](default) algorithm is presented to the user as
         a sequence of 16 octets printed as hexadecimal with lowercase letters
         and separated by colons.
+        Example: C{c1:b1:30:29:d7:b8:de:6c:97:77:10:d7:46:41:63:87}
 
-        @param fingerPrintformat: Format for fingerprint generation. Consists
+        @param format: Format for fingerprint generation. Consists
             hash function and representation format. Default is C{md5-hex}
 
         @since: 8.2
@@ -817,15 +820,15 @@ class Key(object):
         hashFunction = {'md5-hex' : md5, 'sha256-base64' : sha256}
 
         try:
-            fingerprint = hashFunction[fingerPrintformat](
+            fingerprint = hashFunction[format](
                 self.blob()).digest()
         except KeyError:
-            raise BadFingerprintFormat(
-                "unsupported fingerprint format: %s" % fingerPrintformat)
+            raise BadFingerPrintFormat(
+                "unsupported fingerprint format: %s" % format)
 
-        if fingerPrintformat == 'sha256-base64':
+        if format == 'sha256-base64':
             return nativeString(base64.b64encode(fingerprint))
-        elif fingerPrintformat == 'md5-hex':
+        else:
             return nativeString(
                 b':'.join([binascii.hexlify(x)
                            for x in iterbytes(fingerprint)]))
