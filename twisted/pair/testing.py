@@ -487,7 +487,8 @@ class MemoryIOSystem(object):
             src=srcIP, dst=address[0], payload=_udp(
                 src=srcPort, dst=address[1], payload=datagram))
 
-        self._openFiles.values()[0].addToReadBuffer(serialized)
+        openFiles = list(self._openFiles.values())
+        openFiles[0].addToReadBuffer(serialized)
 
         return (srcIP, srcPort)
 
