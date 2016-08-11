@@ -61,10 +61,10 @@ class EncryptedKeyError(Exception):
 
 
 
-class UnsupportedHashFunction(Exception):
+class BadFingerprintFormat(Exception):
     """
-    Raises when a hash function other than md5, sha256 is presented to
-    fingerprint
+    Raises when a fingerprint format other than C{md5-hex} or C{sha256-base64}
+    is presented to fingerprint.
     """
 
 
@@ -814,21 +814,21 @@ class Key(object):
 
         @rtype: L{str}
         """
-        hashFunction_dispatcher = {'md5' : md5, 'sha256' : sha256}
-        hashFunction_string = fingerPrintformat.split("-")[0]
+        hashFunction = {'md5-hex' : md5, 'sha256-base64' : sha256}
 
         try:
-            fingerprint_digest = hashFunction_dispatcher[hashFunction_string](
+            fingerprint = hashFunction[fingerPrintformat](
                 self.blob()).digest()
         except KeyError:
-            raise UnsupportedHashFunction(
-                "unsupported hash function: %s" % hashFunction_string)
-        if hashFunction_string == 'sha256':
-            return nativeString(base64.b64encode(fingerprint_digest))
-        elif hashFunction_string == 'md5':
+            raise BadFingerprintFormat(
+                "unsupported fingerprint format: %s" % fingerPrintformat)
+
+        if fingerPrintformat == 'sha256-base64':
+            return nativeString(base64.b64encode(fingerprint))
+        elif fingerPrintformat == 'md5-hex':
             return nativeString(
                 b':'.join([binascii.hexlify(x)
-                           for x in iterbytes(fingerprint_digest)]))
+                           for x in iterbytes(fingerprint)]))
 
 
     def type(self):
