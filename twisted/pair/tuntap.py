@@ -71,7 +71,7 @@ class TunnelFlags(Flags):
 
 
 @implementer(interfaces.IAddress)
-class TunnelAddress(FancyStrMixin, object, FancyEqMixin):
+class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
     """
     A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
     """
