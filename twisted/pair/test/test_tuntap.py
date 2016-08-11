@@ -16,7 +16,7 @@ from collections import deque
 from itertools import cycle
 from signal import SIGINT
 
-from twisted.python.compat import intToBytes
+from twisted.python.compat import intToBytes, _PY3
 from twisted.python.reflect import ObjectNotFound, namedAny
 
 try:
@@ -1145,12 +1145,20 @@ class TunnelTestsMixin(object):
         tunnel type and interface and the protocol associated with the port.
         """
         self.port.startListening()
-        expected = "<%s listening on %s/%s>" % (
-            fullyQualifiedName(self.protocol.__class__),
-            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-            self.system.getTunnel(self.port).name)
+        if _PY3:
+            self.assertRegex(str(self.port),
+                             fullyQualifiedName(self.protocol.__class__))
 
-        self.assertEqual(expected, str(self.port))
+            expected = " listening on %s/%s>" % (
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+                self.system.getTunnel(self.port).name)
+            self.assertTrue(str(self.port).find(expected) != -1)
+        else:
+            expected = "<%s listening on %s/%s>" % (
+                fullyQualifiedName(self.protocol.__class__),
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+                self.system.getTunnel(self.port).name)
+            self.assertEqual(expected, str(self.port))
 
 
     def test_unlisteningString(self):
@@ -1158,11 +1166,19 @@ class TunnelTestsMixin(object):
         The string representation of a L{TuntapPort} instance includes the
         tunnel type and interface and the protocol associated with the port.
         """
-        expected = "<%s not listening on %s/%s>" % (
-            fullyQualifiedName(self.protocol.__class__),
-            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
+        if _PY3:
+            self.assertRegex(str(self.port),
+                             fullyQualifiedName(self.protocol.__class__))
 
-        self.assertEqual(expected, str(self.port))
+            expected = " not listening on %s/%s>" % (
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+                self.name)
+            self.assertTrue(str(self.port).find(expected) != -1)
+        else:
+            expected = "<%s not listening on %s/%s>" % (
+                fullyQualifiedName(self.protocol.__class__),
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
+            self.assertEqual(expected, str(self.port))
 
 
     def test_logPrefix(self):
@@ -1215,9 +1231,14 @@ class TunnelAddressTests(SynchronousTestCase):
         The string representation of a L{TunnelAddress} instance includes the
         class name and the values of the C{type} and C{name} attributes.
         """
-        self.assertEqual(
-            "<TunnelAddress type=IFF_TUN name='device'>",
-            repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
+        if _PY3:
+            self.assertRegex(
+                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")),
+                "TunnelAddress type=IFF_TUN name=b'device'>")
+        else:
+            self.assertEqual(
+                "<TunnelAddress type=IFF_TUN name='device'>",
+                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
 
 
 
