@@ -1,8 +1,13 @@
 #
+# Definition for running tests on AppVeyor.
+#
+# Read each comment for details as this is one big hack on top of
+# another hack.
+#
 # Some help for Python on AppVeyor:
 # * https://packaging.python.org/appveyor/
 # * https://ci.appveyor.com/tools/validate-yaml
-
+#
 version: '{branch}-{build}'
 
 # No need for Python.
@@ -38,6 +43,7 @@ environment:
   matrix:
     - PYTHON_HOME: C:\Python27-x64
       PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
       TWISTED_REACTOR: select
       TOXENV: py27-coverage-windows,codecov-publish
     - PYTHON_HOME: C:\Python27-x64
