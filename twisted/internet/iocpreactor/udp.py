@@ -218,7 +218,7 @@ class Port(abstract.FileHandle):
 
 
     def writeSequence(self, seq, addr):
-        self.write("".join(seq), addr)
+        self.write(b"".join(seq), addr)
 
 
     def connect(self, host, port):
