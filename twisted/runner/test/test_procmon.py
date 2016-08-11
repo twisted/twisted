@@ -159,7 +159,7 @@ class ProcmonTests(unittest.TestCase):
                           {"foo": (["arg1", "arg2"], 1, 2, {})})
         self.pm.startService()
         self.reactor.advance(0)
-        self.assertEqual(self.pm.protocols.keys(), ["foo"])
+        self.assertEqual(list(self.pm.protocols.keys()), ["foo"])
 
 
     def test_addProcessDuplicateKeyError(self):
