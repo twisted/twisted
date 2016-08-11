@@ -38,7 +38,6 @@ environment:
   matrix:
     - PYTHON_HOME: C:\Python27-x64
       PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
       TWISTED_REACTOR: select
       TOXENV: py27-coverage-windows,codecov-publish
     - PYTHON_HOME: C:\Python27-x64
