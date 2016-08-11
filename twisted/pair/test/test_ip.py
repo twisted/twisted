@@ -30,7 +30,7 @@ class IPTests(unittest.TestCase):
         proto = ip.IPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
             'dest': '1.2.3.4',
             'source': '5.6.7.8',
@@ -49,15 +49,17 @@ class IPTests(unittest.TestCase):
             ])
         proto.addProto(0x0F, p1)
 
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x05\x06\x07\x08" + "\x01\x02\x03\x04" + "foobar",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x05\x06\x07\x08"
+                               + b"\x01\x02\x03\x04"
+                               + b"foobar",
                                partial=0,
                                dest='dummy',
                                source='dummy',
@@ -71,7 +73,7 @@ class IPTests(unittest.TestCase):
         proto = ip.IPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
             'dest': '1.2.3.4',
             'source': '5.6.7.8',
@@ -87,7 +89,7 @@ class IPTests(unittest.TestCase):
             'ttl': 0xC0,
             }),
 
-            ('quux', {
+            (b'quux', {
             'partial': 1,
             'dest': '5.4.3.2',
             'source': '6.7.8.9',
@@ -105,29 +107,33 @@ class IPTests(unittest.TestCase):
 
             ])
         proto.addProto(0x0F, p1)
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x05\x06\x07\x08" + "\x01\x02\x03\x04" + "foobar",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x05\x06\x07\x08"
+                               + b"\x01\x02\x03\x04"
+                               + b"foobar",
                                partial=0,
                                dest='dummy',
                                source='dummy',
                                protocol='dummy',
                                )
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x06\x07\x08\x09" + "\x05\x04\x03\x02" + "quux",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x06\x07\x08\x09"
+                               + b"\x05\x04\x03\x02"
+                               + b"quux",
                                partial=1,
                                dest='dummy',
                                source='dummy',
@@ -142,7 +148,7 @@ class IPTests(unittest.TestCase):
         proto = ip.IPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
             'dest': '1.2.3.4',
             'source': '5.6.7.8',
@@ -162,7 +168,7 @@ class IPTests(unittest.TestCase):
 
         p2 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
             'dest': '1.2.3.4',
             'source': '5.6.7.8',
@@ -183,15 +189,17 @@ class IPTests(unittest.TestCase):
         proto.addProto(0x0F, p1)
         proto.addProto(0x0F, p2)
 
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x05\x06\x07\x08" + "\x01\x02\x03\x04" + "foobar",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x05\x06\x07\x08"
+                               + b"\x01\x02\x03\x04"
+                               + b"foobar",
                                partial=0,
                                dest='dummy',
                                source='dummy',
@@ -208,15 +216,17 @@ class IPTests(unittest.TestCase):
         p1 = MyProtocol([])
         proto.addProto(1, p1)
 
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x05\x06\x07\x08" + "\x01\x02\x03\x04" + "foobar",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x05\x06\x07\x08"
+                               + b"\x01\x02\x03\x04"
+                               + b"foobar",
                                partial=0,
                                dest='dummy',
                                source='dummy',
@@ -227,7 +237,7 @@ class IPTests(unittest.TestCase):
         proto = ip.IPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
             'dest': '1.2.3.4',
             'source': '5.6.7.8',
@@ -243,7 +253,7 @@ class IPTests(unittest.TestCase):
             'ttl': 0xC0,
             }),
 
-            ('quux', {
+            (b'quux', {
             'partial': 1,
             'dest': '5.4.3.2',
             'source': '6.7.8.9',
@@ -264,7 +274,7 @@ class IPTests(unittest.TestCase):
 
         p2 = MyProtocol([
 
-            ('quux', {
+            (b'quux', {
             'partial': 1,
             'dest': '5.4.3.2',
             'source': '6.7.8.9',
@@ -280,7 +290,7 @@ class IPTests(unittest.TestCase):
             'ttl': 0xC0,
             }),
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
             'dest': '1.2.3.4',
             'source': '5.6.7.8',
@@ -300,57 +310,65 @@ class IPTests(unittest.TestCase):
             ])
         proto.addProto(0x0A, p2)
 
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0A" #protocol
-                               + "FE" #checksum
-                               + "\x06\x07\x08\x09" + "\x05\x04\x03\x02" + "quux",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0A" #protocol
+                               + b"FE" #checksum
+                               + b"\x06\x07\x08\x09"
+                               + b"\x05\x04\x03\x02"
+                               + b"quux",
                                partial=1,
                                dest='dummy',
                                source='dummy',
                                protocol='dummy',
                                )
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x05\x06\x07\x08" + "\x01\x02\x03\x04" + "foobar",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x05\x06\x07\x08"
+                               + b"\x01\x02\x03\x04"
+                               + b"foobar",
                                partial=0,
                                dest='dummy',
                                source='dummy',
                                protocol='dummy',
                                )
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0F" #protocol
-                               + "FE" #checksum
-                               + "\x06\x07\x08\x09" + "\x05\x04\x03\x02" + "quux",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0F" #protocol
+                               + b"FE" #checksum
+                               + b"\x06\x07\x08\x09"
+                               + b"\x05\x04\x03\x02"
+                               + b"quux",
                                partial=1,
                                dest='dummy',
                                source='dummy',
                                protocol='dummy',
                                )
-        proto.datagramReceived("\x54" #ihl version
-                               + "\x07" #tos
-                               + "\x00\x1a" #tot_len
-                               + "\xDE\xAD" #id
-                               + "\xBE\xEF" #frag_off
-                               + "\xC0" #ttl
-                               + "\x0A" #protocol
-                               + "FE" #checksum
-                               + "\x05\x06\x07\x08" + "\x01\x02\x03\x04" + "foobar",
+        proto.datagramReceived(b"\x54" #ihl version
+                               + b"\x07" #tos
+                               + b"\x00\x1a" #tot_len
+                               + b"\xDE\xAD" #id
+                               + b"\xBE\xEF" #frag_off
+                               + b"\xC0" #ttl
+                               + b"\x0A" #protocol
+                               + b"FE" #checksum
+                               + b"\x05\x06\x07\x08"
+                               + b"\x01\x02\x03\x04"
+                               + b"foobar",
                                partial=0,
                                dest='dummy',
                                source='dummy',
