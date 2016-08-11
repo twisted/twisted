@@ -19,7 +19,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.python.compat import intToBytes, networkString
+from twisted.python.compat import intToBytes, networkString, _PY3
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -1707,9 +1707,14 @@ class LoadMimeTypesTests(TestCase):
         # Checking mimetypes.inited doesn't always work, because
         # something, somewhere, calls mimetypes.init. Yay global
         # mutable state :)
-        args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
-        defaultInit = defaults[args.index("init")]
-        self.assertIdentical(defaultInit, mimetypes.init)
+        if _PY3:
+            signature = inspect.signature(static.loadMimeTypes)
+            self.assertIs(signature.parameters["init"].default,
+                          mimetypes.init)
+        else:
+            args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
+            defaultInit = defaults[args.index("init")]
+            self.assertIs(defaultInit, mimetypes.init)
 
 
 class StaticDeprecationTests(TestCase):

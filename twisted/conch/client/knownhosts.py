@@ -14,6 +14,7 @@ import hmac
 from binascii import Error as DecodeError, b2a_base64, a2b_base64
 from contextlib import closing
 from hashlib import sha1
+import sys
 
 from zope.interface import implementer
 
@@ -483,13 +484,14 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
-                proceed = ui.prompt(
+                prompt = (
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
                     "RSA key fingerprint is %s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
                     (nativeString(hostname), nativeString(ip),
                      key.fingerprint()))
+                proceed = ui.prompt(prompt.encode(sys.getdefaultencoding()))
                 return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)
 
@@ -597,12 +599,12 @@ class ConsoleUI(object):
                 f.write(text)
                 while True:
                     answer = f.readline().strip().lower()
-                    if answer == 'yes':
+                    if answer == b'yes':
                         return True
-                    elif answer == 'no':
+                    elif answer == b'no':
                         return False
                     else:
-                        f.write("Please type 'yes' or 'no': ")
+                        f.write(b"Please type 'yes' or 'no': ")
         return d.addCallback(body)
 
 
