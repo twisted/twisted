@@ -1,0 +1,1 @@
+twisted.cred.credentials.UsernameHashedPassword is now deprecated.
