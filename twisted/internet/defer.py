@@ -666,7 +666,7 @@ class Deferred:
 
         if getattr(self, "result", _NO_RESULT) is _NO_RESULT:
             yield self
-        return self.result
+        raise StopIteration(self.result)
 
     # For PEP492/async + await
     __await__ = __iter__
