@@ -374,10 +374,6 @@ class StandardInputOutputTests(unittest.TestCase):
         onConnLost.addCallback(cbLost)
         return onConnLost
 
-    if reactor.__class__.__name__ == "AsyncioSelectorReactor":
-        test_normalFileStandardOut.skip = (
-            "This fails on the asyncio reactor on epoll for some reason.")
-
     if platform.isWindows():
         test_normalFileStandardOut.skip = (
             "StandardIO does not accept stdout as an argument to Windows.  "
