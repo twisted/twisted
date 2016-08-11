@@ -1,0 +1,1 @@
+twisted.internet.asyncioreactor has been added, a Twisted reactor that shares the asyncio eventloop, available on Python 3.4+. It can be used by passing --reactor=asyncio to twistd and similar utilities.
