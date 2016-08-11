@@ -8,9 +8,9 @@ Implementation module for the I{mailmail} command.
 
 from __future__ import print_function
 
+import email.utils
 import os
 import sys
-import rfc822
 import getpass
 from ConfigParser import ConfigParser
 
@@ -21,6 +21,7 @@ except:
 
 from twisted.copyright import version
 from twisted.internet import reactor
+from twisted.logger import Logger, textFileLogObserver
 from twisted.mail import smtp
 
 GLOBAL_CFG = "/etc/mailmail"
@@ -37,8 +38,9 @@ Subject: Failed Message Delivery
 The Twisted sendmail application.
 """
 
-def log(message, *args):
-    sys.stderr.write(str(message) % args + '\n')
+logObserver = textFileLogObserver(sys.stderr)
+log = Logger(observer=logObserver)
+
 
 class Options:
     """
@@ -148,12 +150,12 @@ def parseOptions(argv):
         hdr = hdrs[0].lower()
         if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
             o.to.extend([
-                a[1] for a in rfc822.AddressList(hdrs[1]).addresslist
+                email.utils.parseaddr(hdrs[1])[1]
             ])
             if hdr == 'bcc':
                 write = 0
         elif hdr == 'from':
-            o.sender = rfc822.parseaddr(hdrs[1])[1]
+            o.sender = email.utils.parseaddr(hdrs[1])[1]
 
         if hdr in requiredHeaders:
             requiredHeaders[hdr].append(hdrs[1])
@@ -256,13 +258,17 @@ def loadConfig(path):
         if p.has_section(section):
             for (mode, L) in (('allow', a), ('deny', d)):
                 if p.has_option(section, mode) and p.get(section, mode):
-                    for id in p.get(section, mode).split(','):
+                    for sectionID in p.get(section, mode).split(','):
                         try:
-                            id = int(id)
+                            sectionID = int(sectionID)
                         except ValueError:
-                            log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
+                            log.error(
+                                "Illegal {prefix}ID in "
+                                "[{section}] section: {sectionID}",
+                                prefix=section[0].upper(),
+                                section=section, sectionID=sectionID)
                         else:
-                            L.append(id)
+                            L.append(sectionID)
             order = p.get(section, 'order')
             order = map(str.split, map(str.lower, order.split(',')))
             if order[0] == 'allow':
@@ -274,7 +280,8 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                log("Illegal entry in [identity] section: %s", up)
+                log.error("Illegal entry in [identity] section: {section}",
+                          section=up)
                 continue
             p.identities[host] = parts
 
@@ -344,7 +351,7 @@ def run():
     lConf = loadConfig(LOCAL_CFG)
 
     if deny(gConf) or deny(lConf):
-        log("Permission denied")
+        log.error("Permission denied")
         return
 
     host = lConf.smarthost or gConf.smarthost or SMARTHOST
