@@ -38,6 +38,12 @@ environment:
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-coverage-windows,codecov-publish
+      TWISTED_REACTOR: "select"
+    - PYTHON_HOME: C:\\Python27-x64
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      TOXENV: py27-coverage-windows,codecov-publish
+      TWISTED_REACTOR: "iocp"
     - PYTHON_HOME: C:\\PYTHON35-x64
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
@@ -52,6 +58,9 @@ matrix:
     # Some tests are still failing on Python 3.
     # These tests will be fixed in separate tickets.
     - PYTHON_VERSION: "3.5"
+    # Some IOCP tests are failing on Appveyor:
+    # https://twistedmatrix.com/trac/ticket/8679
+    - TWISTED_REACTOR: "iocp"
 
 install:
   # Install OpenSSH through chocolatey
