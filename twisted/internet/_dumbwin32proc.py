@@ -6,7 +6,7 @@
 http://isometri.cc/strips/gates_in_the_head
 """
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 
@@ -28,6 +28,7 @@ PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
+from twisted.python.compat import items, _PY3, _maybeMBCS
 from twisted.python.win32 import quoteArguments
 
 from twisted.internet import error
@@ -52,6 +53,7 @@ class _Reaper(_pollingfile._PollableResource):
         self.deactivate()
         self.proc.processEnded(exitCode)
         return 0
+
 
 
 def _findShebang(filename):
@@ -80,6 +82,8 @@ def _findShebang(filename):
             exe = f.readline(1024).strip('\n')
             return exe
 
+
+
 def _invalidWin32App(pywinerr):
     """
     Determine if a pywintypes.error is telling us that the given process is
@@ -99,7 +103,8 @@ def _invalidWin32App(pywinerr):
 
 @implementer(IProcessTransport, IConsumer, IProducer)
 class Process(_pollingfile._PollingTimer, BaseProcess):
-    """A process that integrates with the Twisted event loop.
+    """
+    A process that integrates with the Twisted event loop.
 
     If your subprocess is a python program, you need to:
 
@@ -171,7 +176,16 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         env = os.environ.copy()
         env.update(environment or {})
 
+        if _PY3:
+            # Make sure all the arguments are Unicode.
+            args = [_maybeMBCS(x) for x in args]
+
         cmdline = quoteArguments(args)
+
+        if _PY3:
+            # The command, too, needs to be Unicode, if it is a value.
+            command = _maybeMBCS(command) if command else command
+
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
@@ -186,8 +200,13 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                               'all must be unicode',):
                     raise
                 newenv = {}
-                for key, value in env.items():
-                    newenv[unicode(key)] = unicode(value)
+                for key, value in items(env):
+
+                    key = _maybeMBCS(key)
+                    value = _maybeMBCS(value)
+
+                    newenv[key] = value
+
                 env = newenv
                 doCreate()
         except pywintypes.error as pwte:
@@ -267,7 +286,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{str}
+        @type data: C{bytes}
         """
         self.stdin.write(data)
 
@@ -276,7 +295,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{list} of C{str}
+        @type data: C{list} of C{bytes}
         """
         self.stdin.writeSequence(seq)
 
@@ -293,7 +312,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         @type fd: C{int}
 
         @param data: The bytes to write.
-        @type data: C{str}
+        @type data: C{bytes}
 
         @return: L{None}
 
