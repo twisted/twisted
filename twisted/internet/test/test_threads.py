@@ -183,7 +183,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.fireSystemEvent("shutdown")
 
         if reactor.__class__.__name__ == "AsyncioSelectorReactor":
-            self.assertIs(reactor.threadpool, None)
+            self.assertIsNone(reactor.threadpool)
         else:
             gc.collect()
             self.assertIsNone(threadPoolRef())
