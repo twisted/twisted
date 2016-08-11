@@ -1,0 +1,1 @@
+twisted.web.http.Request now swallows header writes on reset HTTP/2 streams, rather than erroring out.

@@ -30,6 +30,12 @@ matrix:
     # on starting separate jobs.
     - python: 2.7
       env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+    - python: 3.5
+      env: TOXENV=pyflakes3
+    # Twistedchecker is running as a separate job so that we can ignore if it
+    # fails.
+    - python: 2.7
+      env: TOXENV=txchecker-travis
     #
     # OSX 10.10
     #
@@ -44,6 +50,9 @@ matrix:
   allow_failures:
     # For now, OSX run on Travis-CI has a few failures.
     - os: osx
+    # twistedchecker job was introduce as an experimental job.
+    # Once it is stable we can enforce it
+    - env: TOXENV=txchecker-travis
 
 
 addons:

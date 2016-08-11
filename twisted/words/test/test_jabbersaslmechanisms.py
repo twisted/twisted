@@ -9,6 +9,7 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
+from twisted.python.compat import networkString
 from twisted.words.protocols.jabber import sasl_mechanisms
 
 class PlainTests(unittest.TestCase):
@@ -130,7 +131,7 @@ class DigestMD5Tests(unittest.TestCase):
         """
         charset = 'utf-8'
         nonce = b'OA6MG9tEQGm2hh'
-        nc = b'%08x' % (1,)
+        nc = networkString('%08x' % (1,))
         cnonce = b'OA6MHXh6VqTrRk'
 
         username = u'\u0418chris'

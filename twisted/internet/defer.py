@@ -661,6 +661,64 @@ class Deferred:
     __repr__ = __str__
 
 
+    def __await__(self):
+        return _MakeDeferredAwaitable(self)
+
+
+
+class _MakeDeferredAwaitable(object):
+    """
+    A subgenerator which is created by L{Deferred.__await__}.
+    """
+    result = _NO_RESULT
+
+    def __init__(self, d):
+        self.d = d
+        self.d.addBoth(lambda x: setattr(self, "result", x))
+
+
+    def __next__(self):
+        if self.result is not _NO_RESULT:
+            raise StopIteration(self.result)
+        return self.d
+
+
+    def __iter__(self):
+        return self
+
+
+
+def ensureDeferred(coro):
+    """
+    Transform a coroutine that uses L{Deferred}s into a L{Deferred} itself.
+
+    Coroutine functions return a coroutine object, similar to how generators
+    work. This function turns that coroutine into a Deferred, meaning that it
+    can be used in regular Twisted code. For example::
+
+        import treq
+        from twisted.internet.defer import ensureDeferred
+        from twisted.internet.task import react
+
+        async def crawl(pages):
+            results = {}
+            for page in pages:
+                results[page] = await treq.content(await treq.get(page))
+            return results
+
+        def main(reactor):
+            pages = [
+                "http://localhost:8080"
+            ]
+            d = ensureDeferred(crawl(pages))
+            d.addCallback(print)
+            return d
+
+        react(main)
+    """
+    return _inlineCallbacks(None, coro, Deferred())
+
+
 
 class DebugInfo:
     """
@@ -1648,10 +1706,9 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         return d
 
 
-
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred",
+           "maybeDeferred", "ensureDeferred",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
