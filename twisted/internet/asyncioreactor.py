@@ -171,9 +171,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               self._readOrWrite, writer,
                                               False)
             self._writers[writer] = fd
-        except OSError as e:
-            # The kqueuereactor will raise this if there is a broken pipe
-            self._unregisterFDInAsyncio(fd)
         except IOError as e:
             self._unregisterFDInAsyncio(fd)
             if e.errno == errno.EPERM:
@@ -183,6 +180,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 self._continuousPolling.addWriter(writer)
             else:
                 raise
+        except OSError as e:
+            # The kqueuereactor will raise this if there is a broken pipe
+            self._unregisterFDInAsyncio(fd)
 
 
     def removeReader(self, reader):
