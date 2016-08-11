@@ -651,6 +651,9 @@ def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
     L{bytes}.
+
+    This function is POSIX only; environment variables are always text strings
+    on Windows.
     """
     if not _PY3:
         # On py2, nothing to do.
@@ -756,10 +759,57 @@ def _coercedUnicode(s):
 
 
 
+def _maybeMBCS(s):
+    """
+    Convert the string C{s} to a L{unicode} string, if required.
+
+    @param s: The string to convert.
+    @type s: L{bytes} or L{unicode}
+
+    @return: The string, decoded using MBCS if needed.
+    @rtype: L{unicode}
+
+    @raises UnicodeDecodeError: If passed a byte string that cannot be decoded
+        using MBCS.
+    """
+    assert sys.platform == "win32", "only reasonable on Windows"
+    assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
+
+    if isinstance(s, bytes):
+        return s.decode('mbcs')
+    return s
+
+
+
 if _PY3:
     unichr = chr
+    raw_input = input
 else:
     unichr = unichr
+    raw_input = raw_input
+
+
+
+def _bytesRepr(bytestring):
+    """
+    Provide a repr for a byte string that begins with 'b' on both
+    Python 2 and 3.
+
+    @param bytestring: The string to repr.
+    @type bytestring: L{bytes}
+
+    @raise TypeError: The input is not L{bytes}.
+
+    @return: The repr with a leading 'b'.
+    @rtype: L{bytes}
+    """
+    if not isinstance(bytestring, bytes):
+        raise TypeError("Expected bytes not %r" % (bytestring,))
+
+    if _PY3:
+        return repr(bytestring)
+    else:
+        return 'b' + repr(bytestring)
 
 
 
@@ -797,6 +847,9 @@ __all__ = [
     "_b64decodebytes",
     "_bytesChr",
     "_coercedUnicode",
+    "_bytesRepr",
     "intern",
     "unichr",
+    "raw_input",
+    "_maybeMBCS",
 ]

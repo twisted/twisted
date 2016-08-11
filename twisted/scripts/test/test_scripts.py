@@ -77,7 +77,7 @@ class ScriptTestsMixin:
         from twisted.copyright import version
         scriptVersion = outputFromPythonScript(script, '--version')
 
-        self.assertIn(str(version), scriptVersion)
+        self.assertIn(str(version), str(scriptVersion))
 
 
 
@@ -128,9 +128,9 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         testDir = FilePath(self.mktemp())
         testDir.makedirs()
         chdir(testDir.path)
-        testDir.child("foo.py").setContent("")
+        testDir.child("foo.py").setContent(b"")
         output = outputFromPythonScript(script, 'foo')
-        self.assertIn("PASSED", output)
+        self.assertIn(b"PASSED", output)
 
 
     def test_pyhtmlizer(self):
