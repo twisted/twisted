@@ -735,7 +735,7 @@ class SSHTransportBase(protocol.Protocol):
         @type messageNum: L{int}
         @param messageNum: The message number.
 
-        @type payload: C{bytes}
+        @type payload: L{bytes}
         @param payload: The message payload.
         """
         if messageNum < 50 and messageNum in messages:
@@ -875,11 +875,11 @@ class SSHTransportBase(protocol.Protocol):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                 b"couldn't match all kex parts")
             return
-        log.msg('kex alg, key alg: %s %s' % (self.kexAlg, self.keyAlg))
-        log.msg('outgoing: %s %s %s' % (self.nextEncryptions.outCipType,
+        log.msg('kex alg, key alg: %r %r' % (self.kexAlg, self.keyAlg))
+        log.msg('outgoing: %r %r %r' % (self.nextEncryptions.outCipType,
                                         self.nextEncryptions.outMACType,
                                         self.outgoingCompressionType))
-        log.msg('incoming: %s %s %s' % (self.nextEncryptions.inCipType,
+        log.msg('incoming: %r %r %r' % (self.nextEncryptions.inCipType,
                                         self.nextEncryptions.inMACType,
                                         self.incomingCompressionType))
 
@@ -958,7 +958,7 @@ class SSHTransportBase(protocol.Protocol):
         @type service: C{SSHService}
         @param service: The service to attach.
         """
-        log.msg('starting service %s' % (service.name,))
+        log.msg('starting service %r' % (service.name,))
         if self.service:
             self.service.serviceStopped()
         self.service = service

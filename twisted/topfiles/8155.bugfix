@@ -1,0 +1,1 @@
+twistd can now properly daemonize on Linux/Unix when run under Python3 and will not hang indefinitely.

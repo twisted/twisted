@@ -8,10 +8,13 @@ An implementation of the OpenSSH known_hosts database.
 @since: 8.2
 """
 
+from __future__ import absolute_import, division
+
 import hmac
-from binascii import Error as DecodeError, b2a_base64
+from binascii import Error as DecodeError, b2a_base64, a2b_base64
 from contextlib import closing
 from hashlib import sha1
+import sys
 
 from zope.interface import implementer
 
@@ -22,6 +25,7 @@ from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError
+from twisted.python.compat import nativeString
 
 
 def _b64encode(s):
@@ -58,11 +62,11 @@ def _extractCommon(string):
     splitkey = keyAndComment.split(None, 1)
     if len(splitkey) == 2:
         keyString, comment = splitkey
-        comment = comment.rstrip("\n")
+        comment = comment.rstrip(b"\n")
     else:
         keyString = splitkey[0]
         comment = None
-    key = Key.fromString(keyString.decode('base64'))
+    key = Key.fromString(a2b_base64(keyString))
     return hostnames, keyType, key, comment
 
 
@@ -73,13 +77,13 @@ class _BaseEntry(object):
     represent keys and key types the same way.
 
     @ivar keyType: The type of the key; either ssh-dss or ssh-rsa.
-    @type keyType: L{str}
+    @type keyType: L{bytes}
 
     @ivar publicKey: The server public key indicated by this line.
     @type publicKey: L{twisted.conch.ssh.keys.Key}
 
     @ivar comment: Trailing garbage after the key line.
-    @type comment: L{str}
+    @type comment: L{bytes}
     """
 
     def __init__(self, keyType, publicKey, comment):
@@ -110,7 +114,7 @@ class PlainEntry(_BaseEntry):
     file.
 
     @ivar _hostnames: the list of all host-names associated with this entry.
-    @type _hostnames: L{list} of L{str}
+    @type _hostnames: L{list} of L{bytes}
     """
 
     def __init__(self, hostnames, keyType, publicKey, comment):
@@ -126,7 +130,7 @@ class PlainEntry(_BaseEntry):
         @param string: a space-separated string formatted like "hostname
         key-type base64-key-data comment".
 
-        @type string: L{str}
+        @type string: L{bytes}
 
         @raise DecodeError: if the key is not valid encoded as valid base64.
 
@@ -142,7 +146,7 @@ class PlainEntry(_BaseEntry):
         @rtype: L{PlainEntry}
         """
         hostnames, keyType, key, comment = _extractCommon(string)
-        self = cls(hostnames.split(","), keyType, key, comment)
+        self = cls(hostnames.split(b","), keyType, key, comment)
         return self
 
     fromString = classmethod(fromString)
@@ -154,7 +158,7 @@ class PlainEntry(_BaseEntry):
 
         @param hostname: A hostname or IP address literal to check against this
             entry.
-        @type hostname: L{str}
+        @type hostname: L{bytes}
 
         @return: C{True} if this entry is for the given hostname or IP address,
             C{False} otherwise.
@@ -172,12 +176,12 @@ class PlainEntry(_BaseEntry):
             information.
         @rtype: L{bytes}
         """
-        fields = [','.join(self._hostnames),
+        fields = [b','.join(self._hostnames),
                   self.keyType,
                   _b64encode(self.publicKey.blob())]
         if self.comment is not None:
             fields.append(self.comment)
-        return ' '.join(fields)
+        return b' '.join(fields)
 
 
 
@@ -218,7 +222,7 @@ class UnparsedEntry(object):
             used to initialize this entry but without a trailing newline.
         @rtype: L{bytes}
         """
-        return self._string.rstrip("\n")
+        return self._string.rstrip(b"\n")
 
 
 
@@ -255,7 +259,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
     known_hosts file as opposed to a plaintext one.
     """
 
-    MAGIC = '|1|'
+    MAGIC = b'|1|'
 
     compareAttributes = (
         "_hostSalt", "_hostHash", "keyType", "publicKey", "comment")
@@ -289,11 +293,11 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             information from C{string}.
         """
         stuff, keyType, key, comment = _extractCommon(string)
-        saltAndHash = stuff[len(cls.MAGIC):].split("|")
+        saltAndHash = stuff[len(cls.MAGIC):].split(b"|")
         if len(saltAndHash) != 2:
             raise InvalidEntry()
         hostSalt, hostHash = saltAndHash
-        self = cls(hostSalt.decode("base64"), hostHash.decode("base64"),
+        self = cls(a2b_base64(hostSalt), a2b_base64(hostHash),
                    keyType, key, comment)
         return self
 
@@ -325,13 +329,13 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             hashed.
         @rtype: L{bytes}
         """
-        fields = [self.MAGIC + '|'.join([_b64encode(self._hostSalt),
-                                         _b64encode(self._hostHash)]),
+        fields = [self.MAGIC + b'|'.join([_b64encode(self._hostSalt),
+                                          _b64encode(self._hostHash)]),
                   self.keyType,
                   _b64encode(self.publicKey.blob())]
         if self.comment is not None:
             fields.append(self.comment)
-        return ' '.join(fields)
+        return b' '.join(fields)
 
 
 
@@ -467,7 +471,7 @@ class KnownHostsFile(object):
                 if not self.hasHostKey(ip, key):
                     ui.warn("Warning: Permanently added the %s host key for "
                             "IP address '%s' to the list of known hosts." %
-                            (key.type(), ip))
+                            (key.type(), nativeString(ip)))
                     self.addHostKey(ip, key)
                     self.save()
                 return result
@@ -480,12 +484,14 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
-                proceed = ui.prompt(
+                prompt = (
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
                     "RSA key fingerprint is %s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (hostname, ip, key.fingerprint()))
+                    (nativeString(hostname), nativeString(ip),
+                     key.fingerprint()))
+                proceed = ui.prompt(prompt.encode(sys.getdefaultencoding()))
                 return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)
 
@@ -508,7 +514,7 @@ class KnownHostsFile(object):
         @rtype: L{HashedEntry}
         """
         salt = secureRandom(20)
-        keyType = "ssh-" + key.type().lower()
+        keyType = key.sshType()
         entry = HashedEntry(salt, _hmacedString(salt, hostname),
                             keyType, key, None)
         self._added.append(entry)
@@ -524,15 +530,15 @@ class KnownHostsFile(object):
             p.makedirs()
 
         if self._clobber:
-            mode = "w"
+            mode = "wb"
         else:
-            mode = "a"
+            mode = "ab"
 
         with self._savePath.open(mode) as hostsFileObj:
             if self._added:
                 hostsFileObj.write(
-                    "\n".join([entry.toString() for entry in self._added]) +
-                    "\n")
+                    b"\n".join([entry.toString() for entry in self._added]) +
+                    b"\n")
                 self._added = []
         self._clobber = False
 
@@ -593,12 +599,12 @@ class ConsoleUI(object):
                 f.write(text)
                 while True:
                     answer = f.readline().strip().lower()
-                    if answer == 'yes':
+                    if answer == b'yes':
                         return True
-                    elif answer == 'no':
+                    elif answer == b'no':
                         return False
                     else:
-                        f.write("Please type 'yes' or 'no': ")
+                        f.write(b"Please type 'yes' or 'no': ")
         return d.addCallback(body)
 
 

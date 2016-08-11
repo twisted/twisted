@@ -12,7 +12,7 @@ import inspect
 
 from twisted.python.reflect import namedAny, fullyQualifiedName
 from twisted.python.modules import getModule
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _shouldEnableNewStyle
 from twisted.trial import unittest
 from twisted.python import _oldstyle
 
@@ -20,7 +20,7 @@ _skip = None
 
 if _PY3:
     _skip = "Not relevant on Python 3."
-elif not _oldstyle._shouldEnableNewStyle():
+elif not _shouldEnableNewStyle():
     _skip = "Not running with TWISTED_NEWSTYLE=1"
 
 
@@ -58,9 +58,13 @@ class OldStyleDecoratorTests(unittest.TestCase):
         L{_oldstyle._oldStyle} wraps an old-style class and returns a new-style
         class that has the same functions, attributes, etc.
         """
-        self.assertEqual(type(SomeOldStyleClass), types.ClassType)
-        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
+        class SomeClassThatUsesOldStyle(SomeOldStyleClass):
+            pass
+
+        self.assertEqual(type(SomeClassThatUsesOldStyle), types.ClassType)
+        updatedClass = _oldstyle._oldStyle(SomeClassThatUsesOldStyle)
         self.assertEqual(type(updatedClass), type)
+        self.assertEqual(updatedClass.__bases__, (SomeOldStyleClass, object))
         self.assertEqual(updatedClass().func(), "hi")
         self.assertEqual(updatedClass().bar, "baz")
 
@@ -141,6 +145,7 @@ class NewStyleOnly(object):
                     oldStyleClasses.append(fullyQualifiedName(val))
 
         if oldStyleClasses:
+            self.todo = "Not all classes are made new-style yet. See #8243."
             raise unittest.FailTest(
                 "Old-style classes in {module}: {val}".format(
                     module=self.module,

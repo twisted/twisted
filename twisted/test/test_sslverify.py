@@ -392,7 +392,7 @@ class FakeContext(object):
 
     @ivar _method: See C{method} parameter of L{__init__}.
 
-    @ivar _options: C{int} of C{OR}ed values from calls of L{set_options}.
+    @ivar _options: L{int} of C{OR}ed values from calls of L{set_options}.
 
     @ivar _certificate: Set by L{use_certificate}.
 
@@ -404,7 +404,7 @@ class FakeContext(object):
 
     @ivar _sessionID: Set by L{set_session_id}.
 
-    @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
+    @ivar _extraCertChain: Accumulated L{list} of all extra certificates added
         by L{add_extra_chain_cert}.
 
     @ivar _cipherList: Set by L{set_cipher_list}.
@@ -747,7 +747,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(opts._cipherString, ctx._cipherList)
+        self.assertEqual(opts._cipherString.encode('ascii'), ctx._cipherList)
 
 
     def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
@@ -781,7 +781,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(u'sentinel', ctx._cipherList)
+        self.assertEqual(b'sentinel', ctx._cipherList)
 
 
     def test_basicSecurityOptionsAreSet(self):
@@ -1811,7 +1811,7 @@ def negotiateProtocol(serverProtocols,
     @param clientProtocols: The protocols the client is willing to negotiate.
     @param clientOptions: The type of C{OpenSSLCertificateOptions} class to
         use for the client. Defaults to C{OpenSSLCertificateOptions}.
-    @return: A C{typle} of: the negotiated protocol and the reason the
+    @return: A L{tuple} of the negotiated protocol and the reason the
         connection was lost.
     """
     caCertificate, serverCertificate = certificatesForAuthorityAndServer()

@@ -93,8 +93,8 @@ class IQTests(unittest.TestCase):
         self.iq.send()
         idBytes = self.iq['id'].encode('utf-8')
         self.assertIn(self.xmlstream.transport.value(), [
-                      b"<iq type='get' id='%s'/>" % idBytes,
-                      b"<iq id='%s' type='get'/>" % idBytes
+                      b"<iq type='get' id='" + idBytes + b"'/>",
+                      b"<iq id='" + idBytes + b"' type='get'/>"
                       ])
 
 

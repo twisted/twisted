@@ -2036,6 +2036,43 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
+def _getDisplayableArguments(obj, alwaysShow, fieldNames):
+    """
+    Inspect the function signature of C{obj}'s constructor,
+    and get a list of which arguments should be displayed.
+    This is a helper function for C{_compactRepr}.
+
+    @param obj: The instance whose repr is being generated.
+    @param alwaysShow: A L{list} of field names which should always be shown.
+    @param fieldNames: A L{list} of field attribute names which should be shown
+        if they have non-default values.
+    @return: A L{list} of displayable arguments.
+    """
+    displayableArgs = []
+    if _PY3:
+        # Get the argument names and values from the constructor.
+        signature = inspect.signature(obj.__class__.__init__)
+        for name in fieldNames:
+            defaultValue = signature.parameters[name].default
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                displayableArgs.append(' %s=%r' % (name, fieldValue))
+    else:
+        # Get the argument names and values from the constructor.
+        argspec = inspect.getargspec(obj.__class__.__init__)
+        # Reverse the args and defaults to avoid mapping positional arguments
+        # which don't have a default.
+        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        for name in fieldNames:
+            defaultValue = defaults.get(name)
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                displayableArgs.append(' %s=%r' % (name, fieldValue))
+
+    return displayableArgs
+
+
+
 def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
                  sectionNames=None):
     """
@@ -2071,18 +2108,8 @@ def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
         if name in alwaysShow or getattr(obj, name, False) == True:
             setFlags.append(name)
 
-    out = ['<', obj.__class__.__name__]
-
-    # Get the argument names and values from the constructor.
-    argspec = inspect.getargspec(obj.__class__.__init__)
-    # Reverse the args and defaults to avoid mapping positional arguments
-    # which don't have a default.
-    defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-    for name in fieldNames:
-        defaultValue = defaults.get(name)
-        fieldValue = getattr(obj, name, defaultValue)
-        if (name in alwaysShow) or (fieldValue != defaultValue):
-            out.append(' %s=%r' % (name, fieldValue))
+    displayableArgs = _getDisplayableArguments(obj, alwaysShow, fieldNames)
+    out = ['<', obj.__class__.__name__] + displayableArgs
 
     if setFlags:
         out.append(' flags=%s' % (','.join(setFlags),))
