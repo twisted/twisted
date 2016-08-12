@@ -1825,6 +1825,53 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
         return d
 
+if _PY3:
+
+    def futureToDeferred(future):
+        """
+        Adapt an L{asyncio.future} to a L{Deferred}.
+
+        @param future: The Future to adapt.
+        @type future: L{asyncio.Future}
+
+        @return: A Deferred which will fire when the Future fires.
+        @rtype: L{Deferred}
+        """
+        import asyncio
+
+        d = Deferred()
+
+        def _adapt(result):
+            try:
+                d.callback(result.result())
+            except:
+                d.errback(failure.Failure(result.exception()))
+
+        asyncio.ensure_future(future).add_done_callback(_adapt)
+        return d
+
+
+    def deferredToFuture(loop, deferred):
+        """
+        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+
+        @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
+        @type loop: L{asyncio.AbstractEventLoop} or similar
+
+        @param deferred: The Deferred to adapt.
+        @type deferred: L{Deferred}
+
+        @return: A Future which will fire when the Deferred fires.
+        @rtype: L{asyncio.Future}
+        """
+        import asyncio
+
+        f = asyncio.Future(loop=loop)
+        deferred.addCallback(f.set_result)
+        deferred.addErrback(lambda e: f.set_exception(e.value))
+        return f
+
+
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
@@ -1834,3 +1881,6 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]
+
+if _PY3:
+    __all__.extend(["futureToDeferred", "deferredToFuture"])
