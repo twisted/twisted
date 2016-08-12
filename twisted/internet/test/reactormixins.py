@@ -28,6 +28,7 @@ from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.python.compat import _PY3
 
 
 # Access private APIs.
@@ -146,6 +147,11 @@ class ReactorBuilder:
                 "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.gireactor.GIReactor",
                 "twisted.internet.gtk3reactor.Gtk3Reactor"])
+
+        if _PY3:
+            _reactors.append(
+                "twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
         else:
