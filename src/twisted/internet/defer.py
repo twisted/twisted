@@ -26,7 +26,7 @@ from functools import wraps
 from incremental import Version
 
 # Twisted imports
-from twisted.python.compat import cmp, comparable
+from twisted.python.compat import cmp, comparable, _PY34PLUS
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
@@ -1827,7 +1827,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 
-if _PY3:
+if _PY34PLUS:
 
     def futureToDeferred(future):
         """
@@ -1885,5 +1885,5 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]
 
-if _PY3:
+if _PY34PLUS:
     __all__.extend(["futureToDeferred", "deferredToFuture"])
