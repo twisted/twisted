@@ -133,7 +133,10 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
             # portSocket.  If it was shutdown, the exception would be
             # EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.accept)
-            self.assertEqual(exc.args[0], errno.EAGAIN)
+            if platform.isWindows() and _PY3:
+                self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
+            else:
+                self.assertEqual(exc.args[0], errno.EAGAIN)
         d.addCallback(stopped)
         d.addErrback(err, "Failed to accept on original port.")
 
@@ -249,7 +252,10 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
             # Should still be possible to recv on portSocket.  If
             # it was shutdown, the exception would be EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.recvfrom, 1)
-            self.assertEqual(exc.args[0], errno.EAGAIN)
+            if platform.isWindows() and _PY3:
+                self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
+            else:
+                self.assertEqual(exc.args[0], errno.EAGAIN)
         d.addCallback(stopped)
         d.addErrback(err, "Failed to read on original port.")
 
