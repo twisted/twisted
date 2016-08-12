@@ -20,6 +20,8 @@ from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
+from twisted.python.compat import _PY3
+from twisted.python.runtime import platform
 
 
 
@@ -79,7 +81,10 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         exc = self.assertRaises(
             socket.error,
             reactor.adoptStreamPort, fileno, socket.AF_INET, ServerFactory())
-        self.assertEqual(exc.args[0], errno.EBADF)
+        if platform.isWindows() and _PY3:
+            self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
+        else:
+            self.assertEqual(exc.args[0], errno.EBADF)
 
 
     def test_invalidAddressFamily(self):
@@ -193,7 +198,10 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
             socket.error,
             reactor.adoptDatagramPort, fileno, socket.AF_INET,
             DatagramProtocol())
-        self.assertEqual(exc.args[0], errno.EBADF)
+        if platform.isWindows() and _PY3:
+            self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
+        else:
+            self.assertEqual(exc.args[0], errno.EBADF)
 
 
     def test_invalidAddressFamily(self):
