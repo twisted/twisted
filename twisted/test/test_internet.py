@@ -23,7 +23,7 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, passthru
 if not _PY3:
     from twisted.python import util
 
@@ -686,6 +686,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(call.getTime(), 105)
         finally:
             reactor.seconds = oseconds
+        call.cancel()
 
 
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
@@ -701,6 +702,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(call.seconds(), 100)
         finally:
             reactor.seconds = oseconds
+        call.cancel()
 
 
     def test_callLater(self):
@@ -712,6 +714,17 @@ class TimeTests(unittest.TestCase):
         reactor.callLater(0, d.callback, None)
         d.addCallback(self.assertEqual, None)
         return d
+
+
+    def test_callLaterReset(self):
+        """
+        A L{DelayedCall} that is reset will be scheduled at the new time.
+        """
+        call = reactor.callLater(2, passthru, passthru)
+        self.addCleanup(call.cancel)
+        origTime = call.time
+        call.reset(1)
+        self.assertNotEqual(call.time, origTime)
 
 
     def test_cancelDelayedCall(self):
@@ -828,6 +841,7 @@ class TimeTests(unittest.TestCase):
         self.assertEqual(dc.getTime(), 5)
         dc.reset(3)
         self.assertEqual(dc.getTime(), 13)
+
 
 
 class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):

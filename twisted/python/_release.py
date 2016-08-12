@@ -35,6 +35,7 @@ VERSION_OFFSET = 2000
 TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     "https://docs.python.org/2/objects.inv",
+    "https://docs.python.org/3/objects.inv",
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://python-hyper.org/h2/en/stable/objects.inv",
     "https://python-hyper.org/priority/en/stable/objects.inv",
