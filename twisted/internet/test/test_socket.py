@@ -96,6 +96,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
 
         port = socket.socket()
+        port.bind(("127.0.0.1", 0))
         port.listen(1)
         self.addCleanup(port.close)
 
@@ -119,6 +120,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         portSocket = socket.socket()
         self.addCleanup(portSocket.close)
 
+        portSocket.bind(("127.0.0.1", 0))
         portSocket.listen(1)
         portSocket.setblocking(False)
 
@@ -236,6 +238,7 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
         portSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(portSocket.close)
 
+        portSocket.bind(("127.0.0.1", 0))
         portSocket.setblocking(False)
 
         # The file descriptor is duplicated by adoptDatagramPort
