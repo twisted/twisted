@@ -98,25 +98,25 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
             timeout = MAX_TIMEOUT
         else:
             timeout = min(MAX_TIMEOUT, int(1000*timeout))
-        rc, bytes, key, evt = self.port.getEvent(timeout)
+        rc, numBytes, key, evt = self.port.getEvent(timeout)
         while 1:
             if rc == WAIT_TIMEOUT:
                 break
             if key != KEY_WAKEUP:
                 assert key == KEY_NORMAL
                 log.callWithLogger(evt.owner, self._callEventCallback,
-                                   rc, bytes, evt)
+                                   rc, numBytes, evt)
                 processed_events += 1
             if processed_events >= EVENTS_PER_LOOP:
                 break
-            rc, bytes, key, evt = self.port.getEvent(0)
+            rc, numBytes, key, evt = self.port.getEvent(0)
 
 
-    def _callEventCallback(self, rc, bytes, evt):
+    def _callEventCallback(self, rc, numBytes, evt):
         owner = evt.owner
         why = None
         try:
-            evt.callback(rc, bytes, evt)
+            evt.callback(rc, numBytes, evt)
             handfn = getattr(owner, 'getFileHandle', None)
             if not handfn:
                 why = _NO_GETHANDLE

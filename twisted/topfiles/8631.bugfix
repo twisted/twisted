@@ -1,0 +1,1 @@
+twisted.internet.test.test_iocp and twisted.internet.test.test_tcp have been fixed to work under Python 3 with the Windows IOCP reactor
