@@ -112,7 +112,7 @@ class KeyGenTests(TestCase):
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
-            "The key fingerprint is:\n"
+            "The key fingerprint in md5-hex is:\n"
             "3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af\n" % (
                 filename,
                 filename))
@@ -140,7 +140,7 @@ class KeyGenTests(TestCase):
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
-            "The key fingerprint is:\n"
+            "The key fingerprint in sha256-base64 is:\n"
             "ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=\n" % (
                 filename,
                 filename))
