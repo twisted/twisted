@@ -828,7 +828,7 @@ class Key(object):
                 for x in iterbytes(hashFunction[format](self.blob()).digest())]))
         else:
             raise BadFingerPrintFormat(
-                "unsupported fingerprint format: %s" % format)
+                'Unsupported fingerprint format: %s' % (format,))
 
 
     def type(self):

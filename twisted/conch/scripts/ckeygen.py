@@ -113,7 +113,6 @@ def generateDSAkey(options):
 
 
 def printFingerprint(options):
-    options.setdefault('format', 'md5-hex')
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
@@ -204,7 +203,6 @@ def _saveKey(key, options):
     @type options: L{dict}
     """
     keyTypeName = key.type().lower()
-    options.setdefault('format', 'md5-hex')
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
         newPath = raw_input(
