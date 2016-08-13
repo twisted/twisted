@@ -394,7 +394,7 @@ class ThreadedNameResolver(object):
 
 
 
-class AddressInformation(object, FancyEqMixin):
+class AddressInformation(FancyEqMixin, object):
     """
     A container for the results of
     L{INameResolver.getAddressInformation}.
