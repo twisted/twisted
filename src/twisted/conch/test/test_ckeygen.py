@@ -67,13 +67,35 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename})
+        self.assertEqual(
+            self.stdout.getvalue(),
+            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
+
+
+    def test_printFingerprintsha256(self):
+        """
+        L{printFigerprint} will print key fingerprint in C{sha256-base64}
+        format if explicitly specified.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename, 'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
-            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n'+
             '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
+
+
+    def test_printFingerprintBadFingerPrintFormat(self):
+        """
+        L{printFigerprint} raises C{keys.BadFingerprintFormat} for formats
+        other than C{md5-hex} and C{sha256-base64}.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(publicRSA_openssh)
         self.assertRaises(BadFingerPrintFormat, printFingerprint,
             {'filename': filename, 'format':'sha-base64'})
+        self.assertRaises(BadFingerPrintFormat, printFingerprint,
+            {'filename': filename, 'format':'md5-base64'})
 
 
     def test_saveKey(self):
