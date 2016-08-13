@@ -621,7 +621,7 @@ class ReactorBase(object):
     _stopped = True
     installed = False
     usingThreads = False
-    resolver = BlockingResolver()
+    _resolver = None
 
     __name__ = "twisted.internet.reactor"
 
@@ -659,11 +659,30 @@ class ReactorBase(object):
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement installWaker")
 
+
     def installResolver(self, resolver):
-        resolver = INameResolver(resolver)
         oldResolver = self.resolver
         self.resolver = resolver
         return oldResolver
+
+
+    @property
+    def resolver(self):
+        """
+        Reader for resolver property.
+        """
+        if self._resolver is None:
+            return BlockingResolver()
+        return self._resolver
+
+
+    @resolver.setter
+    def resolver(self, newResolver):
+        """
+        Setter for resolver property.
+        """
+        self._resolver = INameResolver(newResolver)
+
 
     def wakeUp(self):
         """
