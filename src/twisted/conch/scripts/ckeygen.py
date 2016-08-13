@@ -33,10 +33,10 @@ class GeneralOptions(usage.Options):
                      ['type', 't', None, 'Specify type of key to create.'],
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
-                     ['pass', 'P', None, 'Provide old passphrase.']]
+                     ['pass', 'P', None, 'Provide old passphrase.'],
+                     ['fingerprint', 'l', 'md5-hex', 'Show fingerprint of key file.']]
 
-    optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
-                ['changepass', 'p', 'Change passphrase of private key file.'],
+    optFlags = [['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
                 ['no-passphrase', None, "Create the key with no passphrase."],
                 ['showpub', 'y', 'Read private key file and print public key.']]
