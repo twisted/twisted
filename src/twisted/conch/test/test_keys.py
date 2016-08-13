@@ -564,13 +564,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(rsa1 != None)
 
 
-    def test_fingerprint(self):
+    def test_fingerprintdefault(self):
         """
-        Test that the fingerprint method works correctly.
+        Test that the fingerprint method returns fingerprint in
+        C{md5-hex} format by default.
         """
         self.assertEqual(keys.Key(self.rsaObj).fingerprint(),
             '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
         self.assertEqual(keys.Key(self.dsaObj).fingerprint(),
+            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
+
+
+    def test_fingerprint_md5_hex(self):
+        """
+        fingerprint method generates key fingerprint in C{md5-hex}
+        format if explicitly specified.
+        """
+        self.assertEqual(keys.Key(self.rsaObj).fingerprint('md5-hex'),
+            '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+        self.assertEqual(keys.Key(self.dsaObj).fingerprint('md5-hex'),
             '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
 
 
@@ -587,8 +599,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_fingerprintBadFormat(self):
         """
-        A C{BadFingerPrintFormat} error is raised when format other than
-        C{md5-hex} or C{sha256-base64} is supplied.
+        A C{BadFingerPrintFormat} error is raised when unsupported
+        formats are requested.
         """
         self.assertRaisesRegexp(keys.BadFingerPrintFormat,
             'Unsupported fingerprint format: sha256-base',
