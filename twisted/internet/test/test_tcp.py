@@ -454,7 +454,7 @@ class FakeResolver(object):
         self.names = names
 
 
-    def getHostByName(self, name, timeout):
+    def getHostByName(self, name, timeout=(1, 3, 11, 45)):
         """
         Return the address mapped to C{name} if it exists, or raise a
         C{DNSLookupError}.
