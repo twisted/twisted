@@ -171,18 +171,18 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               self._readOrWrite, writer,
                                               False)
             self._writers[writer] = fd
-        except IOError as e:
+        except PermissionError:
             self._unregisterFDInAsyncio(fd)
-            if e.errno == errno.EPERM:
-                # epoll(7) doesn't support certain file descriptors,
-                # e.g. filesystem files, so for those we just poll
-                # continuously:
-                self._continuousPolling.addWriter(writer)
-            else:
-                raise
-        except BrokenPipeError as e:
+            # epoll(7) doesn't support certain file descriptors,
+            # e.g. filesystem files, so for those we just poll
+            # continuously:
+            self._continuousPolling.addWriter(writer)
+        except BrokenPipeError:
             # The kqueuereactor will raise this if there is a broken pipe
             self._unregisterFDInAsyncio(fd)
+        except:
+            self._unregisterFDInAsyncio(fd)
+            raise
 
 
     def removeReader(self, reader):
