@@ -819,19 +819,16 @@ class Key(object):
         """
         hashFunction = {'md5-hex' : md5, 'sha256-base64' : sha256}
 
-        try:
-            fingerprint = hashFunction[format](
-                self.blob()).digest()
-        except KeyError:
-            raise BadFingerPrintFormat(
-                "unsupported fingerprint format: %s" % format)
-
         if format == 'sha256-base64':
-            return nativeString(base64.b64encode(fingerprint))
-        else:
+            return nativeString(base64.b64encode(
+                hashFunction[format](self.blob()).digest()))
+        elif format == 'md5-hex':
             return nativeString(
                 b':'.join([binascii.hexlify(x)
-                           for x in iterbytes(fingerprint)]))
+                for x in iterbytes(hashFunction[format](self.blob()).digest())]))
+        else:
+            raise BadFingerPrintFormat(
+                "unsupported fingerprint format: %s" % format)
 
 
     def type(self):
