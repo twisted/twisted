@@ -180,7 +180,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 self._continuousPolling.addWriter(writer)
             else:
                 raise
-        except OSError as e:
+        except BrokenPipeError as e:
             # The kqueuereactor will raise this if there is a broken pipe
             self._unregisterFDInAsyncio(fd)
 
