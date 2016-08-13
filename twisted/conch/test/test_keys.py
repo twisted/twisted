@@ -590,10 +590,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         A C{BadFingerPrintFormat} error is raised when format other than
         C{md5-hex} or C{sha256-base64} is supplied.
         """
-        self.assertRaises(keys.BadFingerPrintFormat,
+        self.assertRaisesRegexp(keys.BadFingerPrintFormat,
+            'Unsupported fingerprint format: sha256-base',
             keys.Key(self.rsaObj).fingerprint,'sha256-base')
-        self.assertRaises(keys.BadFingerPrintFormat,
-            keys.Key(self.dsaObj).fingerprint, 'md5-base')
 
 
     def test_type(self):

@@ -92,10 +92,9 @@ class KeyGenTests(TestCase):
         """
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
-        self.assertRaises(BadFingerPrintFormat, printFingerprint,
+        self.assertRaisesRegexp(BadFingerPrintFormat,
+            'Unsupported fingerprint format: sha-base64', printFingerprint,
             {'filename': filename, 'format':'sha-base64'})
-        self.assertRaises(BadFingerPrintFormat, printFingerprint,
-            {'filename': filename, 'format':'md5-base64'})
 
 
     def test_saveKey(self):
@@ -162,7 +161,8 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
-        self.assertRaises(BadFingerPrintFormat, _saveKey,
+        self.assertRaisesRegexp(BadFingerPrintFormat,
+            'Unsupported fingerprint format: sha-base64', _saveKey,
             key, {'filename': filename, 'pass': 'passphrase',
             'format': 'sha-base64'})
 
