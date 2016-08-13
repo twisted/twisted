@@ -87,8 +87,8 @@ class KeyGenTests(TestCase):
 
     def test_printFingerprintBadFingerPrintFormat(self):
         """
-        L{printFigerprint} raises C{keys.BadFingerprintFormat} for formats
-        other than C{md5-hex} and C{sha256-base64}.
+        L{printFigerprint} raises C{keys.BadFingerprintFormat} when unsupported
+        formats are requested.
         """
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
@@ -154,8 +154,8 @@ class KeyGenTests(TestCase):
 
     def test_saveKeyBadFingerPrintformat(self):
         """
-        L{_saveKey} raises C{keys.BadFingerprintFormat} for formats other
-        than C{md5-hex} and C{sha256-base64}.
+        L{_saveKey} raises C{keys.BadFingerprintFormat} when unsupported
+        formats are requested.
         """
         base = FilePath(self.mktemp())
         base.makedirs()

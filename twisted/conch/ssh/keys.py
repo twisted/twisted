@@ -63,8 +63,7 @@ class EncryptedKeyError(Exception):
 
 class BadFingerPrintFormat(Exception):
     """
-    Raises when a fingerprint format other than C{md5-hex} or C{sha256-base64}
-    is presented to fingerprint.
+    Raises when unsupported fingerprint formats are presented to fingerprint.
     """
 
 
