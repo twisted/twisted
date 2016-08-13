@@ -66,7 +66,7 @@ class KeyGenTests(TestCase):
         """
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
-        printFingerprint({'filename': filename})
+        printFingerprint({'filename': filename, 'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
             '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
@@ -107,7 +107,7 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(key, {'filename': filename, 'pass': 'passphrase'})
+        _saveKey(key, {'filename': filename, 'pass': 'passphrase', 'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -176,7 +176,7 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(key, {'filename': filename, 'no-passphrase': True})
+        _saveKey(key, {'filename': filename, 'no-passphrase': True, 'format':'md5-hex'})
         self.assertEqual(
             key.fromString(
                 base.child('id_rsa').getContent(), None, b''),
@@ -194,7 +194,7 @@ class KeyGenTests(TestCase):
 
         self.patch(__builtin__, 'raw_input', lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(key, {'filename': None, 'no-passphrase': True})
+        _saveKey(key, {'filename': None, 'no-passphrase': True, 'format': 'md5-hex'})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
