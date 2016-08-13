@@ -17,9 +17,13 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
+from twisted.python.util import FancyEqMixin
+from twisted.python.compat import set
+from twisted.python.components import registerAdapter
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
+from twisted.internet.interfaces import INameResolver
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
 from twisted.python.compat import unicode, iteritems
@@ -209,6 +213,51 @@ class DelayedCall:
         return "".join(L)
 
 
+@implementer(INameResolver)
+class _ResolverComplexifier(object):
+    """
+    L{_ResolverComplexifier} adapts an L{IResolverSimple} provider to
+    L{INameResolver}.
+    """
+    def __init__(self, resolver):
+        """
+        @param resolver: A resolver which will be adapted to the new
+            L{INameResolver} interface.
+        @type resolver: A provider of L{IResolverSimple}.
+        """
+        self._resolver = resolver
+
+
+    def getAddressInformation(self, name, service, *args):
+        # In this case of a complexified IResolverSimple,
+        # getHostByName and getAddressInformation should - for
+        # consistency - both return the same single IP address. (IPv4
+        # or IPv6 depending on the behaviour of gethostbyname)
+
+        # getAddressInformation will return that IP address as part of
+        # an AddressInformation instance whose type, protocol and
+        # canonicalName are fixed.
+
+        # XXX: I don't fully understand the motivation behind
+        # _ResolverComplexifier or why lookup the address with
+        # getHostByName and then pass the address to getaddrinfo?
+        # -rwall
+        d = self._resolver.getHostByName(name)
+        def cbResolved(address):
+            family = socket.getaddrinfo(address, 0)[0][0]
+            return [
+                AddressInformation(
+                    family,
+                    socket.SOCK_STREAM,
+                    socket.IPPROTO_TCP,
+                    "",
+                    (address, service))]
+        d.addCallback(cbResolved)
+        return d
+
+registerAdapter(_ResolverComplexifier, IResolverSimple, INameResolver)
+
+
 
 @implementer(IResolverSimple)
 class ThreadedResolver(object):
@@ -275,6 +324,110 @@ class ThreadedResolver(object):
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
         lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
         return userDeferred
+
+
+
+@implementer(INameResolver)
+class ThreadedNameResolver(object):
+    """
+    L{ThreadedNameResolver} uses a reactor, a threadpool, and
+    L{socket.getaddrinfo} to perform name lookups without blocking the
+    reactor thread.  It also supports timeouts indepedently from
+    whatever timeout logic L{socket.getaddrinfo} might have.
+
+    @ivar reactor: The reactor the threadpool of which will be used to call
+        L{socket.getaddrinfo} and the I/O thread of which the result will be
+        delivered.
+    """
+
+    def __init__(self, reactor):
+        self.reactor = reactor
+        self._runningQueries = {}
+
+
+    def getAddressInformation(self, name, service, family=None, socktype=None,
+                              proto=None, flags=None, timeout=60):
+
+        query = (name, service, family, socktype, proto, flags)
+
+        userDeferred = defer.Deferred()
+
+        lookupDeferred = threads.deferToThreadPool(
+            self.reactor, self.reactor.getThreadPool(),
+            socket.getaddrinfo, *query)
+
+        cancelCall = self.reactor.callLater(
+            timeout, self._cleanup, query, lookupDeferred)
+
+        self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
+
+        lookupDeferred.addBoth(self._checkTimeout, query, lookupDeferred)
+
+        return userDeferred
+
+
+    def _fail(self, query, err):
+        return failure.Failure(
+            error.DNSLookupError(
+                "Query failure. query: %r, message: %s" % (query, err)))
+
+
+    def _cleanup(self, query, lookupDeferred):
+        userDeferred, cancelCall = self._runningQueries[lookupDeferred]
+        del self._runningQueries[lookupDeferred]
+        userDeferred.errback(self._fail(query, "timeout error"))
+
+
+    def _checkTimeout(self, result, query, lookupDeferred):
+        try:
+            userDeferred, cancelCall = self._runningQueries[lookupDeferred]
+        except KeyError:
+            pass
+        else:
+            del self._runningQueries[lookupDeferred]
+            cancelCall.cancel()
+
+            if isinstance(result, failure.Failure):
+                userDeferred.errback(self._fail(query, result.getErrorMessage()))
+            else:
+                userDeferred.callback([AddressInformation(*r) for r in result])
+
+
+
+class AddressInformation(object, FancyEqMixin):
+    """
+    A container for the results of
+    L{INameResolver.getAddressInformation}.
+    """
+    compareAttributes = ('family', 'type', 'protocol', 'canonicalName', 'address')
+
+    def __init__(self, family, type, protocol, canonicalName, address):
+        """
+        @param family: The address family.
+        @type family: One of the address family constants from the
+            socket module.  For example, L{socket.AF_INET}.
+
+        @param type: The address socket type.
+        @type type: One of the socket type constants from the socket
+            module.  For example, L{socket.SOCK_STREAM}.
+
+        @param protocol: The address socket protocol.
+        @type protocol: One of the protocol constants from the socket
+            module.  For example, L{socket.IPPROTO_TCP}.
+
+        @param canonicalName: A string representing the canonical name
+            of the host if AI_CANONNAME is part of the flags argument;
+            else canonname will be empty.
+        @type canonicalName: C{str}
+
+        @param address: The IP address of the specified name.
+        @type address: C{str}
+        """
+        self.family = family
+        self.type = type
+        self.protocol = protocol
+        self.canonicalName = canonicalName
+        self.address = address
 
 
 
@@ -507,7 +660,7 @@ class ReactorBase(object):
             reflect.qual(self.__class__) + " did not implement installWaker")
 
     def installResolver(self, resolver):
-        assert IResolverSimple.providedBy(resolver)
+        resolver = INameResolver(resolver)
         oldResolver = self.resolver
         self.resolver = resolver
         return oldResolver
@@ -567,7 +720,15 @@ class ReactorBase(object):
             return defer.succeed('0.0.0.0')
         if abstract.isIPAddress(name):
             return defer.succeed(name)
-        return self.resolver.getHostByName(name, timeout)
+        d = self.resolver.getAddressInformation(name, 0)
+        def cbGotInfo(addresses):
+            for info in addresses:
+                if info.family == socket.AF_INET:
+                    return info.address[0]
+            # XXX Test me
+        d.addCallback(cbGotInfo)
+        return d
+
 
     # Installation.
 
