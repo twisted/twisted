@@ -2,7 +2,7 @@
 set -e
 set -x
 
-if [[ "$(uname -s)" == "Darwin" ]]; then
+if [ -f ~/.venv/bin/activate ]; then
     # Initialize the virtualenv created at install time.
     source ~/.venv/bin/activate
 fi

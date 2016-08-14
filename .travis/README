@@ -1,0 +1,6 @@
+Here are the helper scripts for running the test on Travis-CI.
+
+The `install.sh` script will make sure that if required we have a valid Python environment in ~/.venv.
+All the other scripts should try to active the environment.
+
+There is a script for each step of a build lifecycle.
