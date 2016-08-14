@@ -580,9 +580,11 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         fingerprint method generates key fingerprint in C{md5-hex}
         format if explicitly specified.
         """
-        self.assertEqual(keys.Key(self.rsaObj).fingerprint('md5-hex'),
+        self.assertEqual(
+            keys.Key(self.rsaObj).fingerprint('md5-hex'),
             '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
-        self.assertEqual(keys.Key(self.dsaObj).fingerprint('md5-hex'),
+        self.assertEqual(
+            keys.Key(self.dsaObj).fingerprint('md5-hex'),
             '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
 
 
@@ -591,9 +593,11 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         fingerprint method generates key fingerprint in C{sha256-base64}
         format if explicitly specified.
         """
-        self.assertEqual(keys.Key(self.rsaObj).fingerprint('sha256-base64'),
+        self.assertEqual(
+            keys.Key(self.rsaObj).fingerprint('sha256-base64'),
             'ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=')
-        self.assertEqual(keys.Key(self.dsaObj).fingerprint('sha256-base64'),
+        self.assertEqual(
+            keys.Key(self.dsaObj).fingerprint('sha256-base64'),
             'Wz5o2YbKyxOEcJn1au/UaALSVruUzfz0vaLI1xiIGyY=')
 
 
