@@ -24,6 +24,9 @@ try:
 except ImportError:
     raise ImportError("Requires asyncio.")
 
+# As per ImportError above, this module is never imported on python 2, but
+# pyflakes still runs on python 2, so let's tell it where the errors come from.
+from builtins import PermissionError, BrokenPipeError
 
 
 class _DCHandle(object):
@@ -171,18 +174,18 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               self._readOrWrite, writer,
                                               False)
             self._writers[writer] = fd
-        except IOError as e:
+        except PermissionError:
             self._unregisterFDInAsyncio(fd)
-            if e.errno == errno.EPERM:
-                # epoll(7) doesn't support certain file descriptors,
-                # e.g. filesystem files, so for those we just poll
-                # continuously:
-                self._continuousPolling.addWriter(writer)
-            else:
-                raise
-        except OSError as e:
+            # epoll(7) doesn't support certain file descriptors,
+            # e.g. filesystem files, so for those we just poll
+            # continuously:
+            self._continuousPolling.addWriter(writer)
+        except BrokenPipeError:
             # The kqueuereactor will raise this if there is a broken pipe
             self._unregisterFDInAsyncio(fd)
+        except:
+            self._unregisterFDInAsyncio(fd)
+            raise
 
 
     def removeReader(self, reader):
