@@ -34,7 +34,7 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase.'],
-                     ['fingerprint', 'l', 'md5-hex', 'Show fingerprint of key file.']]
+                     ['format', 'l', 'md5-hex', 'Fingerprint format of key file.']]
 
     optFlags = [['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
@@ -63,7 +63,7 @@ def run():
             generateDSAkey(options)
         else:
             sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
-    elif options['fingerprint']:
+    elif options['format']:
         printFingerprint(options)
     elif options['changepass']:
         changePassPhrase(options)
