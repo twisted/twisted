@@ -602,9 +602,10 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         A C{BadFingerPrintFormat} error is raised when unsupported
         formats are requested.
         """
-        self.assertRaisesRegexp(keys.BadFingerPrintFormat,
-            'Unsupported fingerprint format: sha256-base',
+        exception = self.assertRaises(keys.BadFingerPrintFormat,
             keys.Key(self.rsaObj).fingerprint,'sha256-base')
+        self.assertEqual('Unsupported fingerprint format: sha256-base',
+            exception.message)
 
 
     def test_type(self):
