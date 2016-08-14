@@ -34,7 +34,7 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase.'],
-                     ['format', 'l', 'md5-hex', 'Fingerprint format of key file.']]
+                     ['fingerprint', 'l', 'sha256-base64', 'Fingerprint format of key file.']]
 
     optFlags = [['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
@@ -63,7 +63,7 @@ def run():
             generateDSAkey(options)
         else:
             sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
-    elif options['format']:
+    elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
         changePassPhrase(options)
@@ -122,7 +122,7 @@ def printFingerprint(options):
         key = keys.Key.fromFile(options['filename'])
         print('%s %s %s' % (
             key.size(),
-            key.fingerprint(options['format']),
+            key.fingerprint(options['fingerprint']),
             os.path.basename(options['filename'])))
     except keys.BadKeyError:
         sys.exit('bad key')
@@ -238,8 +238,8 @@ def _saveKey(key, options):
 
     print('Your identification has been saved in %s' % (options['filename'],))
     print('Your public key has been saved in %s.pub' % (options['filename'],))
-    print('The key fingerprint in %s is:' % (options['format'],))
-    print(key.fingerprint(options['format']))
+    print('The key fingerprint in %s is:' % (options['fingerprint'],))
+    print(key.fingerprint(options['fingerprint']))
 
 
 
