@@ -20,6 +20,8 @@ from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
+from twisted.python.compat import _PY3
+from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
 
 
@@ -1138,10 +1140,11 @@ class ProperlyCloseFilesMixin:
         Return the errno expected to result from writing to a closed
         platform socket handle.
         """
-        # These platforms have been seen to give EBADF:
-        #
-        #  Linux 2.4.26, Linux 2.6.15, OS X 10.4, FreeBSD 5.4
-        #  Windows 2000 SP 4, Windows XP SP 2
+        # Windows and Python 3: returns WSAENOTSOCK
+        # Windows and Python 2: returns EBADF
+        # Linux, FreeBSD, Mac OS X: returns EBADF
+        if platform.isWindows() and _PY3:
+            return errno.WSAENOTSOCK
         return errno.EBADF
 
 
