@@ -1,50 +1,50 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 16.3.1pre1 (2016-08-10)
-====================================
+Twisted Core 16.3.1 (2016-08-15)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Conch 16.3.1pre1 (2016-08-10)
-=====================================
+Twisted Conch 16.3.1 (2016-08-15)
+=================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 16.3.1pre1 (2016-08-10)
-====================================
+Twisted Mail 16.3.1 (2016-08-15)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Names 16.3.1pre1 (2016-08-10)
-=====================================
+Twisted Names 16.3.1 (2016-08-15)
+=================================
 
 No significant changes have been made for this release.
 
 
-Twisted News 16.3.1pre1 (2016-08-10)
-====================================
+Twisted News 16.3.1 (2016-08-15)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 16.3.1pre1 (2016-08-10)
-====================================
+Twisted Pair 16.3.1 (2016-08-15)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 16.3.1pre1 (2016-08-10)
-======================================
+Twisted Runner 16.3.1 (2016-08-15)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 16.3.1pre1 (2016-08-10)
-===================================
+Twisted Web 16.3.1 (2016-08-15)
+===============================
 
 Bugfixes
 --------
@@ -61,8 +61,8 @@ Bugfixes
    CGI scripts, as a mitigation to CVE-2016-1000111. (#8623)
 
 
-Twisted Words 16.3.1pre1 (2016-08-10)
-=====================================
+Twisted Words 16.3.1 (2016-08-15)
+=================================
 
 No significant changes have been made for this release.
 
