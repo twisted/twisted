@@ -13,7 +13,7 @@ from .versions import Version
 from .deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
-    Version("Twisted", 16, 0, 0),
+    Version("Twisted", 16, 5, 0),
     "Please use constantly from PyPI instead.",
     "twisted.python", "constants")
 
