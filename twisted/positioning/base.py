@@ -12,7 +12,8 @@ from __future__ import absolute_import, division
 from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
-from twisted.python.constants import Names, NamedConstant
+from constantly import Names, NamedConstant
+
 from twisted.python.util import FancyEqMixin
 from twisted.positioning import ipositioning
 
