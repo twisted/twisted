@@ -1858,8 +1858,9 @@ class OpenSSLAcceptableCiphers(object):
 # - disable NULL authentication, MD5 MACs and DSS for security reasons.
 #
 defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
-    "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
-    "DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
+    "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:"
+    "ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:"
+    "!aNULL:!MD5:!DSS"
 )
 _defaultCurveName = u"prime256v1"
 
