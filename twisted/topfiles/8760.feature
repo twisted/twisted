@@ -1,1 +1,1 @@
-Client and server TLS connections now support ChaCha20 ciphers when available from OpenSSL.
+twisted.internet.ssl.CertificateOptions, and by extension the default client TLS endpoint and the default server SSL endpoint which use it, now support ChaCha20-based cipher suites when the OpenSSL on the system supports them.
