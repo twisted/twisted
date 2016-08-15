@@ -41,6 +41,13 @@ else:
 
 
 
+if _PY3:
+    unichr = chr
+else:
+    unichr = unichr
+
+
+
 def currentframe(n=0):
     """
     In Python 3, L{inspect.currentframe} does not take a stack-level argument.
