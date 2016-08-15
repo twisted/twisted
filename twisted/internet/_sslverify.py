@@ -1853,7 +1853,9 @@ class OpenSSLAcceptableCiphers(object):
 # The general intent is:
 # - Prefer cipher suites that offer perfect forward secrecy (DHE/ECDHE),
 # - prefer ECDHE over DHE for better performance,
-# - prefer any AES-GCM over any AES-CBC for better performance and security,
+# - prefer any AES-GCM and ChaCha20 over any AES-CBC for better performance and
+#   security,
+# - prefer AES-GCM to ChaCha20 because AES hardware support is common,
 # - use 3DES as fallback which is secure but slow,
 # - disable NULL authentication, MD5 MACs and DSS for security reasons.
 #
