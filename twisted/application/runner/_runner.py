@@ -15,7 +15,8 @@ from sys import stderr
 from signal import SIGTERM
 from os import getpid, kill
 
-from twisted.python.constants import Names, NamedConstant
+from constantly import Names, NamedConstant
+
 from twisted.logger import (
     globalLogBeginner, textFileLogObserver,
     FilteringLogObserver, LogLevelFilterPredicate,
