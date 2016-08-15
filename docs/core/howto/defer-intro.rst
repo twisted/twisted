@@ -58,7 +58,7 @@ Sometimes it leads us to encode the order when we don't need to, as in this exam
     total = 0
     for account in accounts:
         total += account.get_balance()
-    print "Total balance $%s" % (total,)
+    print("Total balance $%s" % (total,))
 
 But that's normally not such a big deal.
 
@@ -390,6 +390,67 @@ With ``inlineCallbacks``, we can rewrite this as:
 Our exception handling is simplified because we can use Python's familiar ``try`` / ``except`` syntax for handling ``ConnectionError``\ s.
 
 
+Coroutines with async/await
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    Only available on Python 3.5 and higher.
+
+    .. versionadded:: 16.4
+
+On Python 3.5 and higher, the :pep:`492` ("Coroutines with async and await syntax") "await" functionality can be used with Deferreds by the use of :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>`.
+It is similar to ``inlineCallbacks``, except that it uses the ``await`` keyword instead of ``yield``, the ``return`` keyword instead of ``returnValue``, and is a function rather than a decorator.
+
+Calling a coroutine (that is, the result of a function defined by ``async def funcname():``) with :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` will allow you to "await" on Deferreds inside it, and will return a standard Deferred.
+You can mix and match code which uses regular Deferreds, ``inlineCallbacks``, and ``ensureDeferred`` freely.
+
+Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
+If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``ensureDeferred`` returns for you.
+Calling ``return`` will cause the Deferred that ``ensureDeferred`` returned for you to fire with a result.
+
+.. code-block:: python3
+
+   import json
+   from twisted.internet.defer import ensureDeferred
+   from twisted.logger import Logger
+   log = Logger()
+
+   async def getUsers():
+       try:
+           return json.loads(await makeRequest("GET", "/users"))
+       except ConnectionError:
+           log.failure("makeRequest failed due to connection error")
+           return []
+
+   def do():
+       d = ensureDeferred(getUsers())
+       d.addCallback(print)
+       return d
+
+
+When writing coroutines, you do not need to use :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
+For example:
+
+.. code-block:: python3
+
+    async def foo():
+        res = await someFunctionThatReturnsADeferred()
+        return res
+
+    async def bar():
+        baz = await someOtherDeferredFunction()
+        fooResult = await foo()
+        return baz + fooResult
+
+    def myDeferredReturningFunction():
+        coro = bar()
+        return ensureDeferred(coro)
+
+
+Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` to return a Deferred.
+
+
 Conclusion
 ----------
 
@@ -403,6 +464,7 @@ You have been introduced to asynchronous code and have seen how to use :api:`twi
 - Wrap multiple asynchronous operations with one error handler
 - Do something after an asynchronous operation, regardless of whether it succeeded or failed
 - Write code without callbacks using ``inlineCallbacks``
+- Write coroutines that interact with Deferreds using ``ensureDeferred``
 
 These are very basic uses of :api:`twisted.internet.defer.Deferred <Deferred>`.
 For detailed information about how they work, how to combine multiple Deferreds, and how to write code that mixes synchronous and asynchronous APIs, see the :doc:`Deferred reference <defer>`.

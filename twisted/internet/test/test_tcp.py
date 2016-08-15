@@ -213,7 +213,7 @@ class FakeProtocol(Protocol):
     """
     def dataReceived(self, data):
         """
-        Return something other than C{None} to trigger a deprecation warning for
+        Return something other than L{None} to trigger a deprecation warning for
         that behavior.
         """
         return ()
@@ -542,7 +542,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
     def test_buildProtocolReturnsNone(self):
         """
-        When the factory's C{buildProtocol} returns C{None} the connection is
+        When the factory's C{buildProtocol} returns L{None} the connection is
         gracefully closed.
         """
         connectionLost = Deferred()
@@ -1102,8 +1102,7 @@ class TCPPortTestsMixin(object):
         try:
             connect(client, (port.getHost().host, port.getHost().port))
         except socket.error as e:
-            errnum, message = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         self.runReactor(reactor)
 
@@ -1185,8 +1184,7 @@ class TCPPortTestsMixin(object):
         try:
             connect(client, (port.getHost().host, port.getHost().port))
         except socket.error as e:
-            errnum, message = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
         self.runReactor(reactor)
         return factory.address
 
@@ -2290,7 +2288,7 @@ class AbortConnectionMixin(object):
     """
     Unit tests for L{ITransport.abortConnection}.
     """
-    # Override in subclasses, should be a EndpointCreator instance:
+    # Override in subclasses, should be an EndpointCreator instance:
     endpoints = None
 
     def runAbortTest(self, clientClass, serverClass,

@@ -14,6 +14,7 @@ from os.path import expanduser
 
 from zope.interface import Interface, implementer
 
+from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone, ProcessTerminated
@@ -155,7 +156,7 @@ class _CommandChannel(SSHChannel):
         issue an C{"exec"} request to run the command.
         """
         command = self.conn.sendRequest(
-            self, 'exec', NS(self._command), wantReply=True)
+            self, b'exec', NS(self._command), wantReply=True)
         command.addCallbacks(self._execSuccess, self._execFailure)
 
 
@@ -289,9 +290,9 @@ class _UserAuth(SSHUserAuthClient):
         delegating to an authentication agent if there is one.
 
         @return: The public part of a key pair that could be used to
-            authenticate with the server, or C{None} if there are no more public
+            authenticate with the server, or L{None} if there are no more public
             keys to try.
-        @rtype: L{twisted.conch.ssh.keys.Key} or L{types.NoneType}
+        @rtype: L{twisted.conch.ssh.keys.Key} or L{None}
         """
         if self.agent is not None:
             return self.agent.getPublicKey()
@@ -309,7 +310,7 @@ class _UserAuth(SSHUserAuthClient):
         data, if one is available.
 
         @type publicKey: L{Key}
-        @type signData: C{str}
+        @type signData: L{str}
         """
         if self.agent is not None:
             return self.agent.signData(publicKey.blob(), signData)
@@ -333,7 +334,7 @@ class _UserAuth(SSHUserAuthClient):
         """
         Get the password to use for authentication.
 
-        @return: A L{Deferred} which fires with the password, or C{None} if the
+        @return: A L{Deferred} which fires with the password, or L{None} if the
             password was not specified.
         """
         if self.password is None:
@@ -391,7 +392,7 @@ class _CommandTransport(SSHClientTransport):
     authentication agent if it is told where it can connect to one.
 
     @ivar _userauth: The L{_UserAuth} instance which is in charge of the
-        overall authentication process or C{None} if the SSH connection has not
+        overall authentication process or L{None} if the SSH connection has not
         reach yet the C{user-auth} service.
     @type _userauth: L{_UserAuth}
     """
@@ -432,7 +433,7 @@ class _CommandTransport(SSHClientTransport):
             L{KnownHostsFile.verifyHostKey}.
         """
         hostname = self.creator.hostname
-        ip = self.transport.getPeer().host
+        ip = networkString(self.transport.getPeer().host)
 
         self._state = b'SECURING'
         d = self.creator.knownHosts.verifyHostKey(
@@ -564,13 +565,13 @@ class SSHCommandClientEndpoint(object):
         @type port: L{int}
 
         @param keys: Private keys with which to authenticate to the SSH server,
-            if key authentication is to be attempted (otherwise C{None}).
+            if key authentication is to be attempted (otherwise L{None}).
         @type keys: L{list} of L{Key}
 
         @param password: The password with which to authenticate to the SSH
             server, if password authentication is to be attempted (otherwise
-            C{None}).
-        @type password: L{bytes} or L{types.NoneType}
+            L{None}).
+        @type password: L{bytes} or L{None}
 
         @param agentEndpoint: An L{IStreamClientEndpoint} provider which may be
             used to connect to an SSH agent, if one is to be used to help with
@@ -582,10 +583,10 @@ class SSHCommandClientEndpoint(object):
         @type knownHosts: L{KnownHostsFile}
 
         @param ui: An object for interacting with users to make decisions about
-            whether to accept the server host keys.  If C{None}, a L{ConsoleUI}
+            whether to accept the server host keys.  If L{None}, a L{ConsoleUI}
             connected to /dev/tty will be used; if /dev/tty is unavailable, an
             object which answers C{b"no"} to all prompts will be used.
-        @type ui: L{NoneType} or L{ConsoleUI}
+        @type ui: L{None} or L{ConsoleUI}
 
         @return: A new instance of C{cls} (probably
             L{SSHCommandClientEndpoint}).
@@ -722,7 +723,7 @@ class _NewConnectionHelper(object):
                  password, agentEndpoint, knownHosts, ui,
                  tty=FilePath(b"/dev/tty")):
         """
-        @param tty: The path of the tty device to use in case C{ui} is C{None}.
+        @param tty: The path of the tty device to use in case C{ui} is L{None}.
         @type tty: L{FilePath}
 
         @see: L{SSHCommandClientEndpoint.newConnection}
@@ -754,7 +755,7 @@ class _NewConnectionHelper(object):
         For use as the opener argument to L{ConsoleUI}.
         """
         try:
-            return self.tty.open("r+")
+            return self.tty.open("rb+")
         except:
             # Give back a file-like object from which can be read a byte string
             # that KnownHostsFile recognizes as rejecting some option (b"no").
@@ -783,7 +784,8 @@ class _NewConnectionHelper(object):
         protocol = _CommandTransport(self)
         ready = protocol.connectionReady
 
-        sshClient = TCP4ClientEndpoint(self.reactor, self.hostname, self.port)
+        sshClient = TCP4ClientEndpoint(
+            self.reactor, nativeString(self.hostname), self.port)
 
         d = connectProtocol(sshClient, protocol)
         d.addCallback(lambda ignored: ready)
@@ -802,7 +804,7 @@ class _NewConnectionHelper(object):
         @type immediate: L{bool}.
         """
         if immediate:
-            # We're assuming the underlying connection is a ITCPTransport,
+            # We're assuming the underlying connection is an ITCPTransport,
             # which is what the current implementation is restricted to:
             connection.transport.transport.abortConnection()
         else:

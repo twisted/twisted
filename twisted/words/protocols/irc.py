@@ -34,7 +34,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import errno, os, random, re, stat, struct, sys, time, types, traceback
+import errno, os, random, re, stat, struct, sys, time, traceback
 import operator
 import string, socket
 import textwrap
@@ -45,6 +45,7 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
+from twisted.python.compat import xrange
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -191,7 +192,7 @@ def parseModes(modes, params, paramModes=('', '')):
     The mode string is parsed into two lists of mode changes (added and
     removed), with each mode change represented as C{(mode, param)} where mode
     is the mode character, and param is the parameter passed for that mode, or
-    C{None} if no parameter is required.
+    L{None} if no parameter is required.
 
     @type modes: C{str}
     @param modes: Modes string to parse.
@@ -527,7 +528,7 @@ class IRC(protocol.Protocol):
         @type channel: C{str} or C{unicode}
         @param channel: The channel for which this is the topic.
 
-        @type topic: C{str} or C{unicode} or C{None}
+        @type topic: C{str} or C{unicode} or L{None}
         @param topic: The topic string, unquoted, or None if there is no topic.
 
         @type author: C{str} or C{unicode}
@@ -785,7 +786,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         @type params: C{iterable} of C{str}
 
         @type valueProcessor: C{callable} taking {str}
-        @param valueProcessor: Callable to process argument values, or C{None}
+        @param valueProcessor: Callable to process argument values, or L{None}
             to perform no processing
 
         @rtype: C{list} of C{(str, object)}
@@ -890,7 +891,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         """
         Get a server supported feature's value.
 
-        A feature with the value C{None} is equivalent to the feature being
+        A feature with the value L{None} is equivalent to the feature being
         unsupported.
 
         @type feature: C{str}
@@ -1110,21 +1111,21 @@ class IRCClient(basic.LineReceiver):
      - NickServ cooperation.  (a mix-in?)
 
     @ivar nickname: Nickname the client will use.
-    @ivar password: Password used to log on to the server.  May be C{None}.
+    @ivar password: Password used to log on to the server.  May be L{None}.
     @ivar realname: Supplied to the server during login as the "Real name"
-        or "ircname".  May be C{None}.
+        or "ircname".  May be L{None}.
     @ivar username: Supplied to the server during login as the "User name".
-        May be C{None}
+        May be L{None}
 
-    @ivar userinfo: Sent in reply to a C{USERINFO} CTCP query.  If C{None}, no
+    @ivar userinfo: Sent in reply to a C{USERINFO} CTCP query.  If L{None}, no
         USERINFO reply will be sent.
         "This is used to transmit a string which is settable by
         the user (and never should be set by the client)."
-    @ivar fingerReply: Sent in reply to a C{FINGER} CTCP query.  If C{None}, no
+    @ivar fingerReply: Sent in reply to a C{FINGER} CTCP query.  If L{None}, no
         FINGER reply will be sent.
     @type fingerReply: Callable or String
 
-    @ivar versionName: CTCP VERSION reply, client name.  If C{None}, no VERSION
+    @ivar versionName: CTCP VERSION reply, client name.  If L{None}, no VERSION
         reply will be sent.
     @type versionName: C{str}, or None.
     @ivar versionNum: CTCP VERSION reply, client version.
@@ -1133,10 +1134,10 @@ class IRCClient(basic.LineReceiver):
     @type versionEnv: C{str}, or None.
 
     @ivar sourceURL: CTCP SOURCE reply, a URL where the source code of this
-        client may be found.  If C{None}, no SOURCE reply will be sent.
+        client may be found.  If L{None}, no SOURCE reply will be sent.
 
     @ivar lineRate: Minimum delay between lines sent to the server.  If
-        C{None}, no delay will be imposed.
+        L{None}, no delay will be imposed.
     @type lineRate: Number of Seconds.
 
     @ivar motd: Either L{None} or, between receipt of I{RPL_MOTDSTART} and
@@ -1162,17 +1163,17 @@ class IRCClient(basic.LineReceiver):
 
     @type hostname: C{str}
     @ivar hostname: Host name of the IRC server the client is connected to.
-        Initially the host name is C{None} and later is set to the host name
+        Initially the host name is L{None} and later is set to the host name
         from which the I{RPL_WELCOME} message is received.
 
     @type _heartbeat: L{task.LoopingCall}
     @ivar _heartbeat: Looping call to perform the keepalive by calling
         L{IRCClient._sendHeartbeat} every L{heartbeatInterval} seconds, or
-        C{None} if there is no heartbeat.
+        L{None} if there is no heartbeat.
 
     @type heartbeatInterval: C{float}
     @ivar heartbeatInterval: Interval, in seconds, to send I{PING} messages to
-        the server as a form of keepalive, defaults to 120 seconds. Use C{None}
+        the server as a form of keepalive, defaults to 120 seconds. Use L{None}
         to disable the heartbeat.
     """
     hostname = None
@@ -1718,7 +1719,7 @@ class IRCClient(basic.LineReceiver):
         @type message: C{str}
 
         @param length: Maximum number of octets to send in a single
-            command, including the IRC protocol framing. If C{None} is given
+            command, including the IRC protocol framing. If L{None} is given
             then L{IRCClient._safeMaximumLineLength} is used to determine a
             value.
         @type length: C{int}
@@ -2309,7 +2310,7 @@ class IRCClient(basic.LineReceiver):
         # when faced with an ERRMSG query (not a reply).
         nick = user.split('!')[0]
         self.ctcpMakeReply(nick, [('ERRMSG',
-                                   "%s :No error has occoured." % data)])
+                                   "%s :No error has occurred." % data)])
 
     def ctcpQuery_TIME(self, user, channel, data):
         if data is not None:
@@ -2514,7 +2515,7 @@ class IRCClient(basic.LineReceiver):
         Send one or more C{extended messages} as a CTCP reply.
 
         @type messages: a list of extended messages.  An extended
-        message is a (tag, data) tuple, where 'data' may be C{None}.
+        message is a (tag, data) tuple, where 'data' may be L{None}.
         """
         self.notice(user, ctcpStringify(messages))
 
@@ -2525,7 +2526,7 @@ class IRCClient(basic.LineReceiver):
         Send one or more C{extended messages} as a CTCP query.
 
         @type messages: a list of extended messages.  An extended
-        message is a (tag, data) tuple, where 'data' may be C{None}.
+        message is a (tag, data) tuple, where 'data' may be L{None}.
         """
         self.msg(user, ctcpStringify(messages))
 
@@ -2781,7 +2782,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     connected = 0
 
     def __init__(self, file):
-        if type(file) is types.StringType:
+        if type(file) is str:
             self.file = open(file, 'r')
 
     def connectionMade(self):
@@ -2909,7 +2910,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
         (To be honest, fromUser is the only thing that's currently
         used here. targetUserOrChannel is potentially useful, while
-        the 'data' argument is soley for informational purposes.)
+        the 'data' argument is solely for informational purposes.)
         """
         self.client = client
         if queryData:
@@ -3377,10 +3378,10 @@ class _FormattingParser(_CommandDispatcherMixin):
         calling L{emit}.
 
     @type foreground: L{_ForegroundColorAttr}
-    @ivar foreground: Current foreground color attribute, or C{None}.
+    @ivar foreground: Current foreground color attribute, or L{None}.
 
     @type background: L{_BackgroundColorAttr}
-    @ivar background: Current background color attribute, or C{None}.
+    @ivar background: Current background color attribute, or L{None}.
 
     @ivar _result: Current parse result.
     """
@@ -3603,7 +3604,7 @@ def assembleFormattedText(formatted):
 
     @rtype: C{str}
     @return: String containing mIRC control sequences that mimic those
-        specified by L{formatted}.
+        specified by I{formatted}.
 
     @since: 13.1
     """
@@ -3741,7 +3742,7 @@ def ctcpDequote(s):
 def ctcpStringify(messages):
     """
     @type messages: a list of extended messages.  An extended
-    message is a (tag, data) tuple, where 'data' may be C{None}, a
+    message is a (tag, data) tuple, where 'data' may be L{None}, a
     string, or a list of strings to be joined with whitespace.
 
     @returns: String
@@ -3749,7 +3750,7 @@ def ctcpStringify(messages):
     coded_messages = []
     for (tag, data) in messages:
         if data:
-            if not isinstance(data, types.StringType):
+            if not isinstance(data, str):
                 try:
                     # data as list-of-strings
                     data = " ".join(map(str, data))
@@ -3849,8 +3850,8 @@ RPL_LUSERUNKNOWN = '253'
 RPL_LUSERCHANNELS = '254'
 RPL_LUSERME = '255'
 RPL_ADMINME = '256'
-RPL_ADMINLOC = '257'
-RPL_ADMINLOC = '258'
+RPL_ADMINLOC1 = '257'
+RPL_ADMINLOC2 = '258'
 RPL_ADMINEMAIL = '259'
 RPL_TRYAGAIN = '263'
 ERR_NOSUCHNICK = '401'
@@ -3867,6 +3868,9 @@ ERR_NOTEXTTOSEND = '412'
 ERR_NOTOPLEVEL = '413'
 ERR_WILDTOPLEVEL = '414'
 ERR_BADMASK = '415'
+# Defined in errata.
+# https://www.rfc-editor.org/errata_search.php?rfc=2812&eid=2822
+ERR_TOOMANYMATCHES = '416'
 ERR_UNKNOWNCOMMAND = '421'
 ERR_NOMOTD = '422'
 ERR_NOADMININFO = '423'
@@ -3991,8 +3995,8 @@ symbolic_to_numeric = {
     "RPL_LUSERCHANNELS": '254',
     "RPL_LUSERME": '255',
     "RPL_ADMINME": '256',
-    "RPL_ADMINLOC": '257',
-    "RPL_ADMINLOC": '258',
+    "RPL_ADMINLOC1": '257',
+    "RPL_ADMINLOC2": '258',
     "RPL_ADMINEMAIL": '259',
     "RPL_TRYAGAIN": '263',
     "ERR_NOSUCHNICK": '401',
@@ -4009,6 +4013,7 @@ symbolic_to_numeric = {
     "ERR_NOTOPLEVEL": '413',
     "ERR_WILDTOPLEVEL": '414',
     "ERR_BADMASK": '415',
+    "ERR_TOOMANYMATCHES": '416',
     "ERR_UNKNOWNCOMMAND": '421',
     "ERR_NOMOTD": '422',
     "ERR_NOADMININFO": '423',

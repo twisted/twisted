@@ -124,7 +124,7 @@ class _ConstantsTestsMixin(object):
         getattr(container, constantName)
 
         second = container._enumerants
-        self.assertIdentical(first, second)
+        self.assertIs(first, second)
 
 
 
@@ -195,7 +195,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         Constants can be looked up by name using L{Names.lookupByName}.
         """
         method = self.METHOD.lookupByName("GET")
-        self.assertIdentical(self.METHOD.GET, method)
+        self.assertIs(self.METHOD.GET, method)
 
 
     def test_notLookupMissingByName(self):
@@ -222,7 +222,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         Repeated access of an attribute associated with a L{NamedConstant}
         value in a L{Names} subclass results in the same object.
         """
-        self.assertIdentical(self.METHOD.GET, self.METHOD.GET)
+        self.assertIs(self.METHOD.GET, self.METHOD.GET)
 
 
     def test_iterconstants(self):
@@ -243,10 +243,10 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         constants accessible using attributes.
         """
         constants = list(self.METHOD.iterconstants())
-        self.assertIdentical(self.METHOD.GET, constants[0])
-        self.assertIdentical(self.METHOD.PUT, constants[1])
-        self.assertIdentical(self.METHOD.POST, constants[2])
-        self.assertIdentical(self.METHOD.DELETE, constants[3])
+        self.assertIs(self.METHOD.GET, constants[0])
+        self.assertIs(self.METHOD.PUT, constants[1])
+        self.assertIs(self.METHOD.POST, constants[2])
+        self.assertIs(self.METHOD.DELETE, constants[3])
 
 
     def test_iterconstantsIdentity(self):
@@ -256,10 +256,10 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         """
         constants = list(self.METHOD.iterconstants())
         again = list(self.METHOD.iterconstants())
-        self.assertIdentical(again[0], constants[0])
-        self.assertIdentical(again[1], constants[1])
-        self.assertIdentical(again[2], constants[2])
-        self.assertIdentical(again[3], constants[3])
+        self.assertIs(again[0], constants[0])
+        self.assertIs(again[1], constants[1])
+        self.assertIs(again[2], constants[2])
+        self.assertIs(again[3], constants[3])
 
 
     def test_initializedOnce(self):
@@ -278,7 +278,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         class Another(object):
             something = self.METHOD.GET
 
-        self.assertIdentical(self.METHOD.GET, Another.something)
+        self.assertIs(self.METHOD.GET, Another.something)
 
 
     def test_asForeignClassAttributeViaInstance(self):
@@ -290,7 +290,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
         class Another(object):
             something = self.METHOD.GET
 
-        self.assertIdentical(self.METHOD.GET, Another().something)
+        self.assertIs(self.METHOD.GET, Another().something)
 
 
     def test_notAsAlternateContainerAttribute(self):
@@ -369,7 +369,7 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         Constants can be looked up by name using L{Values.lookupByName}.
         """
         method = self.STATUS.lookupByName("OK")
-        self.assertIdentical(self.STATUS.OK, method)
+        self.assertIs(self.STATUS.OK, method)
 
 
     def test_notLookupMissingByName(self):
@@ -388,7 +388,7 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         argument passed to L{ValueConstant}, using L{Values.lookupByValue}.
         """
         status = self.STATUS.lookupByValue("200")
-        self.assertIdentical(self.STATUS.OK, status)
+        self.assertIs(self.STATUS.OK, status)
 
 
     def test_lookupDuplicateByValue(self):
@@ -403,7 +403,7 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
             KEX_DH_GEX_REQUEST_OLD = ValueConstant(30)
             KEXDH_INIT = ValueConstant(30)
 
-        self.assertIdentical(
+        self.assertIs(
             TRANSPORT_MESSAGE.lookupByValue(30),
             TRANSPORT_MESSAGE.KEX_DH_GEX_REQUEST_OLD)
 
@@ -431,7 +431,7 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         Repeated access of an attribute associated with a L{ValueConstant}
         value in a L{Values} subclass results in the same object.
         """
-        self.assertIdentical(self.STATUS.OK, self.STATUS.OK)
+        self.assertIs(self.STATUS.OK, self.STATUS.OK)
 
 
     def test_iterconstants(self):
@@ -451,8 +451,8 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         the constants accessible using attributes.
         """
         constants = list(self.STATUS.iterconstants())
-        self.assertIdentical(self.STATUS.OK, constants[0])
-        self.assertIdentical(self.STATUS.NOT_FOUND, constants[1])
+        self.assertIs(self.STATUS.OK, constants[0])
+        self.assertIs(self.STATUS.NOT_FOUND, constants[1])
 
 
     def test_iterconstantsIdentity(self):
@@ -462,8 +462,8 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
         """
         constants = list(self.STATUS.iterconstants())
         again = list(self.STATUS.iterconstants())
-        self.assertIdentical(again[0], constants[0])
-        self.assertIdentical(again[1], constants[1])
+        self.assertIs(again[0], constants[0])
+        self.assertIs(again[1], constants[1])
 
 
     def test_initializedOnce(self):
@@ -551,7 +551,7 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         Constants can be looked up by name using L{Flags.lookupByName}.
         """
         flag = self.FXF.lookupByName("READ")
-        self.assertIdentical(self.FXF.READ, flag)
+        self.assertIs(self.FXF.READ, flag)
 
 
     def test_notLookupMissingByName(self):
@@ -571,19 +571,19 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         definition or explicitly by the argument passed to L{FlagConstant}.
         """
         flag = self.FXF.lookupByValue(0x01)
-        self.assertIdentical(flag, self.FXF.READ)
+        self.assertIs(flag, self.FXF.READ)
 
         flag = self.FXF.lookupByValue(0x02)
-        self.assertIdentical(flag, self.FXF.WRITE)
+        self.assertIs(flag, self.FXF.WRITE)
 
         flag = self.FXF.lookupByValue(0x04)
-        self.assertIdentical(flag, self.FXF.APPEND)
+        self.assertIs(flag, self.FXF.APPEND)
 
         flag = self.FXF.lookupByValue(0x20)
-        self.assertIdentical(flag, self.FXF.EXCLUSIVE)
+        self.assertIs(flag, self.FXF.EXCLUSIVE)
 
         flag = self.FXF.lookupByValue(0x40)
-        self.assertIdentical(flag, self.FXF.TEXT)
+        self.assertIs(flag, self.FXF.TEXT)
 
 
     def test_lookupDuplicateByValue(self):
@@ -598,7 +598,7 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
             #  xntp 3.4 compatibility names
             MOD_OFFSET = FlagConstant(0x0001)
 
-        self.assertIdentical(TIMEX.lookupByValue(0x0001), TIMEX.ADJ_OFFSET)
+        self.assertIs(TIMEX.lookupByValue(0x0001), TIMEX.ADJ_OFFSET)
 
 
     def test_notLookupMissingByValue(self):
@@ -622,7 +622,7 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         Repeated access of an attribute associated with a L{FlagConstant} value
         in a L{Flags} subclass results in the same object.
         """
-        self.assertIdentical(self.FXF.READ, self.FXF.READ)
+        self.assertIs(self.FXF.READ, self.FXF.READ)
 
 
     def test_iterconstants(self):
@@ -643,11 +643,11 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         constants accessible using attributes.
         """
         constants = list(self.FXF.iterconstants())
-        self.assertIdentical(self.FXF.READ, constants[0])
-        self.assertIdentical(self.FXF.WRITE, constants[1])
-        self.assertIdentical(self.FXF.APPEND, constants[2])
-        self.assertIdentical(self.FXF.EXCLUSIVE, constants[3])
-        self.assertIdentical(self.FXF.TEXT, constants[4])
+        self.assertIs(self.FXF.READ, constants[0])
+        self.assertIs(self.FXF.WRITE, constants[1])
+        self.assertIs(self.FXF.APPEND, constants[2])
+        self.assertIs(self.FXF.EXCLUSIVE, constants[3])
+        self.assertIs(self.FXF.TEXT, constants[4])
 
 
     def test_iterconstantsIdentity(self):
@@ -657,11 +657,11 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         """
         constants = list(self.FXF.iterconstants())
         again = list(self.FXF.iterconstants())
-        self.assertIdentical(again[0], constants[0])
-        self.assertIdentical(again[1], constants[1])
-        self.assertIdentical(again[2], constants[2])
-        self.assertIdentical(again[3], constants[3])
-        self.assertIdentical(again[4], constants[4])
+        self.assertIs(again[0], constants[0])
+        self.assertIs(again[1], constants[1])
+        self.assertIs(again[2], constants[2])
+        self.assertIs(again[3], constants[3])
+        self.assertIs(again[4], constants[4])
 
 
     def test_initializedOnce(self):

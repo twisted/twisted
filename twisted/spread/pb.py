@@ -555,7 +555,7 @@ class Broker(banana.Banana):
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
         """
-        if isinstance(sexp, types.ListType):
+        if isinstance(sexp, list):
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
@@ -685,7 +685,7 @@ class Broker(banana.Banana):
         Get a local object for a locally unique ID.
 
         @return: An object previously stored with L{registerReference} or
-            C{None} if there is no object which corresponds to the given
+            L{None} if there is no object which corresponds to the given
             identifier.
         """
         lob = self.localObjects.get(luid)
@@ -739,7 +739,7 @@ class Broker(banana.Banana):
         return RemoteReference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance, incref=0):
-        """Returns an ID that says what this instance is cached as remotely, or C{None} if it's not.
+        """Returns an ID that says what this instance is cached as remotely, or L{None} if it's not.
         """
 
         puid = instance.processUniqueID()
@@ -1157,7 +1157,8 @@ class PBClientFactory(protocol.ClientFactory):
         return root.callRemote("login", username).addCallback(
             self._cbResponse, password, client)
 
-    def _cbResponse(self, (challenge, challenger), password, client):
+    def _cbResponse(self, result, password, client):
+        (challenge, challenger) = result
         return challenger.callRemote("respond", respond(challenge, password), client)
 
 
@@ -1316,11 +1317,12 @@ class _JellyableAvatarMixin:
     Helper class for code which deals with avatars which PB must be capable of
     sending to a peer.
     """
-    def _cbLogin(self, (interface, avatar, logout)):
+    def _cbLogin(self, result):
         """
         Ensure that the avatar to be returned to the client is jellyable and
         set up disconnection notification to call the realm's logout object.
         """
+        (interface, avatar, logout) = result
         if not IJellyable.providedBy(avatar):
             avatar = AsReferenceable(avatar, "perspective")
 
@@ -1412,7 +1414,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
 
 
 __all__ = [
-    # Everything from flavors is exposed publically here.
+    # Everything from flavors is exposed publicly here.
     'IPBRoot', 'Serializable', 'Referenceable', 'NoSuchMethod', 'Root',
     'ViewPoint', 'Viewable', 'Copyable', 'Jellyable', 'Cacheable',
     'RemoteCopy', 'RemoteCache', 'RemoteCacheObserver', 'copyTags',

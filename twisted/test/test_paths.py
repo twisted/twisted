@@ -8,7 +8,6 @@ Test cases covering L{twisted.python.filepath}.
 from __future__ import division, absolute_import
 
 import os, time, pickle, errno, stat
-import contextlib
 from pprint import pformat
 
 from twisted.python.compat import _PY3, unicode
@@ -67,19 +66,14 @@ class AbstractFilePathTests(BytesTestCase):
         self.all = [cmn]
         os.mkdir(cmn)
         self.subdir(b"sub1")
-        f = self.subfile(b"file1")
-        f.write(self.f1content)
-        f.close()
-        f = self.subfile(b"sub1", b"file2")
-        f.write(self.f2content)
-        f.close()
+        with self.subfile(b"file1") as f:
+            f.write(self.f1content)
+        with self.subfile(b"sub1", b"file2") as f:
+            f.write(self.f2content)
         self.subdir(b'sub3')
-        f = self.subfile(b"sub3", b"file3.ext1")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext2")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext3")
-        f.close()
+        self.subfile(b"sub3", b"file3.ext1").close()
+        self.subfile(b"sub3", b"file3.ext2").close()
+        self.subfile(b"sub3", b"file3.ext3").close()
         self.path = filepath.FilePath(cmn)
         self.root = filepath.FilePath(b"/")
 
@@ -146,9 +140,9 @@ class AbstractFilePathTests(BytesTestCase):
                         "This directory does exist.")
         self.assertTrue(sub1.isdir(),
                         "It's a directory.")
-        self.assertTrue(not sub1.isfile(),
+        self.assertFalse(sub1.isfile(),
                         "It's a directory.")
-        self.assertTrue(not sub1.islink(),
+        self.assertFalse(sub1.islink(),
                         "It's a directory.")
         self.assertEqual(sub1.listdir(),
                              [b'file2'])
@@ -167,10 +161,10 @@ class AbstractFilePathTests(BytesTestCase):
         Make sure that we can read existent non-empty files.
         """
         f1 = self.path.child(b'file1')
-        with contextlib.closing(f1.open()) as f:
+        with f1.open() as f:
             self.assertEqual(f.read(), self.f1content)
         f2 = self.path.child(b'sub1').child(b'file2')
-        with contextlib.closing(f2.open()) as f:
+        with f2.open() as f:
             self.assertEqual(f.read(), self.f2content)
 
 
@@ -196,8 +190,8 @@ class AbstractFilePathTests(BytesTestCase):
         dictoid[f1prime] = 4
         self.assertEqual(dictoid[f1], 4)
         self.assertEqual(list(dictoid.keys()), [f1])
-        self.assertTrue(list(dictoid.keys())[0] is f1)
-        self.assertFalse(list(dictoid.keys())[0] is f1prime) # sanity check
+        self.assertIs(list(dictoid.keys())[0], f1)
+        self.assertIsNot(list(dictoid.keys())[0], f1prime) # sanity check
         dictoid[f2] = 5
         self.assertEqual(dictoid[f2], 5)
         self.assertEqual(len(dictoid), 2)
@@ -338,6 +332,14 @@ class ExplodingFile:
         Mark the file as having been closed.
         """
         self.closed = True
+
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
 
 
@@ -798,17 +800,17 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(abs(p.getmtime() - time.time()) // 20, 0)
         self.assertEqual(abs(p.getctime() - time.time()) // 20, 0)
         self.assertEqual(abs(p.getatime() - time.time()) // 20, 0)
-        self.assertEqual(p.exists(), True)
-        self.assertEqual(p.exists(), True)
+        self.assertTrue(p.exists())
+        self.assertTrue(p.exists())
         # OOB removal: FilePath.remove() will automatically restat
         os.remove(p.path)
         # test caching
-        self.assertEqual(p.exists(), True)
+        self.assertTrue(p.exists())
         p.restat(reraise=False)
-        self.assertEqual(p.exists(), False)
-        self.assertEqual(p.islink(), False)
-        self.assertEqual(p.isdir(), False)
-        self.assertEqual(p.isfile(), False)
+        self.assertFalse(p.exists())
+        self.assertFalse(p.islink())
+        self.assertFalse(p.isdir())
+        self.assertFalse(p.isfile())
 
     def testPersist(self):
         newpath = pickle.loads(pickle.dumps(self.path))
@@ -1049,12 +1051,12 @@ class FilePathTests(AbstractFilePathTests):
         # Both a sanity check (make sure the file status looks right) and an
         # enticement for stat-caching logic to kick in and remember that these
         # exist / don't exist.
-        self.assertEqual(fp.exists(), True)
-        self.assertEqual(fp2.exists(), False)
+        self.assertTrue(fp.exists())
+        self.assertFalse(fp2.exists())
 
         fp.moveTo(fp2)
-        self.assertEqual(fp.exists(), False)
-        self.assertEqual(fp2.exists(), True)
+        self.assertFalse(fp.exists())
+        self.assertTrue(fp2.exists())
 
 
     def test_moveToExistsCacheCrossMount(self):
@@ -1192,12 +1194,12 @@ class FilePathTests(AbstractFilePathTests):
         Windows platforms.)
         """
         path = filepath.FilePath(self.mktemp())
-        f = path.create()
-        self.assertTrue("b" in f.mode)
-        f.write(b"\n")
-        f.close()
-        read = open(path.path, "rb").read()
-        self.assertEqual(read, b"\n")
+        with path.create() as f:
+            self.assertIn("b", f.mode)
+            f.write(b"\n")
+        with open(path.path, "rb") as fp:
+            read = fp.read()
+            self.assertEqual(read, b"\n")
 
 
     def testOpen(self):
@@ -1208,78 +1210,69 @@ class FilePathTests(AbstractFilePathTests):
 
         # Opening a file for writing when it does not exist is okay
         writer = self.path.child(b'writer')
-        f = writer.open('w')
-        f.write(b'abc\ndef')
-        f.close()
+        with writer.open('w') as f:
+            f.write(b'abc\ndef')
 
         # Make sure those bytes ended up there - and test opening a file for
         # reading when it does exist at the same time
-        f = writer.open()
-        self.assertEqual(f.read(), b'abc\ndef')
-        f.close()
+        with writer.open() as f:
+            self.assertEqual(f.read(), b'abc\ndef')
 
         # Re-opening that file in write mode should erase whatever was there.
-        f = writer.open('w')
-        f.close()
-        f = writer.open()
-        self.assertEqual(f.read(), b'')
-        f.close()
+        writer.open('w').close()
+        with writer.open() as f:
+            self.assertEqual(f.read(), b'')
 
         # Put some bytes in a file so we can test that appending does not
         # destroy them.
         appender = self.path.child(b'appender')
-        f = appender.open('w')
-        f.write(b'abc')
-        f.close()
+        with appender.open('w') as f:
+            f.write(b'abc')
 
-        f = appender.open('a')
-        f.write(b'def')
-        f.close()
+        with appender.open('a') as f:
+            f.write(b'def')
 
-        f = appender.open('r')
-        self.assertEqual(f.read(), b'abcdef')
-        f.close()
+        with appender.open('r') as f:
+            self.assertEqual(f.read(), b'abcdef')
 
         # read/write should let us do both without erasing those bytes
-        f = appender.open('r+')
-        self.assertEqual(f.read(), b'abcdef')
-        # ANSI C *requires* an fseek or an fgetpos between an fread and an
-        # fwrite or an fwrite and a fread.  We can't reliable get Python to
-        # invoke fgetpos, so we seek to a 0 byte offset from the current
-        # position instead.  Also, Python sucks for making this seek
-        # relative to 1 instead of a symbolic constant representing the
-        # current file position.
-        f.seek(0, 1)
-        # Put in some new bytes for us to test for later.
-        f.write(b'ghi')
-        f.close()
+        with appender.open('r+') as f:
+            self.assertEqual(f.read(), b'abcdef')
+            # ANSI C *requires* an fseek or an fgetpos between an fread and an
+            # fwrite or an fwrite and an fread.  We can't reliably get Python to
+            # invoke fgetpos, so we seek to a 0 byte offset from the current
+            # position instead.  Also, Python sucks for making this seek
+            # relative to 1 instead of a symbolic constant representing the
+            # current file position.
+            f.seek(0, 1)
+            # Put in some new bytes for us to test for later.
+            f.write(b'ghi')
 
         # Make sure those new bytes really showed up
-        f = appender.open('r')
-        self.assertEqual(f.read(), b'abcdefghi')
-        f.close()
+        with appender.open('r') as f:
+            self.assertEqual(f.read(), b'abcdefghi')
 
         # write/read should let us do both, but erase anything that's there
         # already.
-        f = appender.open('w+')
-        self.assertEqual(f.read(), b'')
-        f.seek(0, 1) # Don't forget this!
-        f.write(b'123')
-        f.close()
+        with appender.open('w+') as f:
+            self.assertEqual(f.read(), b'')
+            f.seek(0, 1) # Don't forget this!
+            f.write(b'123')
 
         # super append mode should let us read and write and also position the
         # cursor at the end of the file, without erasing everything.
-        f = appender.open('a+')
+        with appender.open('a+') as f:
 
-        # The order of these lines may seem surprising, but it is necessary.
-        # The cursor is not at the end of the file until after the first write.
-        f.write(b'456')
-        f.seek(0, 1) # Asinine.
-        self.assertEqual(f.read(), b'')
+            # The order of these lines may seem surprising, but it is
+            # necessary. The cursor is not at the end of the file until after
+            # the first write.
 
-        f.seek(0, 0)
-        self.assertEqual(f.read(), b'123456')
-        f.close()
+            f.write(b'456')
+            f.seek(0, 1) # Asinine.
+            self.assertEqual(f.read(), b'')
+
+            f.seek(0, 0)
+            self.assertEqual(f.read(), b'123456')
 
         # Opening a file exclusively must fail if that file exists already.
         nonexistent.requireCreate(True)
@@ -1299,9 +1292,8 @@ class FilePathTests(AbstractFilePathTests):
         See http://bugs.python.org/issue7686 for details about the bug.
         """
         writer = self.path.child(b'explicit-binary')
-        file = writer.open('wb')
-        file.write(b'abc\ndef')
-        file.close()
+        with writer.open('wb') as file:
+            file.write(b'abc\ndef')
         self.assertTrue(writer.exists)
 
 
@@ -1316,9 +1308,8 @@ class FilePathTests(AbstractFilePathTests):
         See http://bugs.python.org/issue7686 for details about the bug.
         """
         writer = self.path.child(b'multiple-binary')
-        file = writer.open('wbb')
-        file.write(b'abc\ndef')
-        file.close()
+        with writer.open('wbb') as file:
+            file.write(b'abc\ndef')
         self.assertTrue(writer.exists)
 
 
@@ -1328,10 +1319,10 @@ class FilePathTests(AbstractFilePathTests):
         an operation has occurred in the mean time.
         """
         fp = filepath.FilePath(self.mktemp())
-        self.assertEqual(fp.exists(), False)
+        self.assertFalse(fp.exists())
 
         fp.makedirs()
-        self.assertEqual(fp.exists(), True)
+        self.assertTrue(fp.exists())
 
 
     def test_makedirsMakesDirectoriesRecursively(self):
@@ -1434,9 +1425,8 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.getsize(), 5)
 
         # Someone else comes along and changes the file.
-        fObj = open(fp.path, 'wb')
-        fObj.write(b"12345678")
-        fObj.close()
+        with open(fp.path, 'wb') as fObj:
+            fObj.write(b"12345678")
 
         # Sanity check for caching: size should still be 5.
         self.assertEqual(fp.getsize(), 5)
@@ -1444,7 +1434,7 @@ class FilePathTests(AbstractFilePathTests):
 
         # This path should look like we don't know what status it's in, not that
         # we know that it didn't exist when last we checked.
-        self.assertEqual(fp.statinfo, None)
+        self.assertIsNone(fp.statinfo)
         self.assertEqual(fp.getsize(), 8)
 
 
@@ -1503,7 +1493,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
-        self.assertEqual(fp.statinfo, None)
+        self.assertIsNone(fp.statinfo)
 
 
     def test_filePathNotDeprecated(self):

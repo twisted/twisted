@@ -5,6 +5,7 @@
 Demonstration of how L{twisted.internet._threadedselect} might be used (this is
 not an example showing the best way to integrate Twisted with pygame).
 """
+from __future__ import print_function
 
 # import Twisted and install
 from twisted.internet import _threadedselect
@@ -36,12 +37,12 @@ def postTwistedEvent(func):
     eventmodule.post(eventmodule.Event(TWISTEDEVENT, iterateTwisted=func))
 
 def helloWorld():
-    print "hello, world"
+    print("hello, world")
     reactor.callLater(1, helloWorld)
 reactor.callLater(1, helloWorld)
 
 def twoSecondsPassed():
-    print "two seconds passed"
+    print("two seconds passed")
 reactor.callLater(2, twoSecondsPassed)
 
 def eventIterator():

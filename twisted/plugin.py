@@ -87,7 +87,7 @@ class CachedDropin(object):
     @ivar moduleName: The fully qualified name of the plugin module this
         represents.
 
-    @type description: C{str} or C{NoneType}
+    @type description: C{str} or L{None}
     @ivar description: A brief explanation of this collection of plugins
         (probably the plugin module's docstring).
 

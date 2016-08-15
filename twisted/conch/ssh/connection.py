@@ -8,6 +8,7 @@ allows access to the shell and port-forwarding.
 
 Maintainer: Paul Swartz
 """
+from __future__ import division, absolute_import
 
 import struct
 
@@ -15,6 +16,8 @@ from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
 from twisted.python import log
+from twisted.python.compat import (
+    networkString, nativeString, long, _bytesChr as chr)
 
 class SSHConnection(service.SSHService):
     """
@@ -22,21 +25,21 @@ class SSHConnection(service.SSHService):
     multiplex multiple channels over the single SSH connection.
 
     @ivar localChannelID: the next number to use as a local channel ID.
-    @type localChannelID: C{int}
-    @ivar channels: a C{dict} mapping a local channel ID to C{SSHChannel}
+    @type localChannelID: L{int}
+    @ivar channels: a L{dict} mapping a local channel ID to C{SSHChannel}
         subclasses.
-    @type channels: C{dict}
-    @ivar localToRemoteChannel: a C{dict} mapping a local channel ID to a
+    @type channels: L{dict}
+    @ivar localToRemoteChannel: a L{dict} mapping a local channel ID to a
         remote channel ID.
-    @type localToRemoteChannel: C{dict}
-    @ivar channelsToRemoteChannel: a C{dict} mapping a C{SSHChannel} subclass
+    @type localToRemoteChannel: L{dict}
+    @ivar channelsToRemoteChannel: a L{dict} mapping a C{SSHChannel} subclass
         to remote channel ID.
-    @type channelsToRemoteChannel: C{dict}
-    @ivar deferreds: a C{dict} mapping a local channel ID to a C{list} of
+    @type channelsToRemoteChannel: L{dict}
+    @ivar deferreds: a L{dict} mapping a local channel ID to a C{list} of
         C{Deferreds} for outstanding channel requests.  Also, the 'global'
         key stores the C{list} of pending global request C{Deferred}s.
     """
-    name = 'ssh-connection'
+    name = b'ssh-connection'
 
     def __init__(self):
         self.localChannelID = 0 # this is the current # to use for channel ID
@@ -59,7 +62,8 @@ class SSHConnection(service.SSHService):
         """
         Called when the connection is stopped.
         """
-        map(self.channelClosed, self.channels.values())
+        for channel in list(self.channels.values()):
+            self.channelClosed(channel)
         self._cleanupGlobalDeferreds()
 
 
@@ -85,11 +89,11 @@ class SSHConnection(service.SSHService):
         This dispatches to self.gotGlobalRequest.
         """
         requestType, rest = common.getNS(packet)
-        wantReply, rest = ord(rest[0]), rest[1:]
+        wantReply, rest = ord(rest[0:1]), rest[1:]
         ret = self.gotGlobalRequest(requestType, rest)
         if wantReply:
             reply = MSG_REQUEST_FAILURE
-            data = ''
+            data = b''
             if ret:
                 reply = MSG_REQUEST_SUCCESS
                 if isinstance(ret, (tuple, list)):
@@ -156,7 +160,7 @@ class SSHConnection(service.SSHService):
             self.transport.sendPacket(
                 MSG_CHANNEL_OPEN_FAILURE,
                 struct.pack('>2L', senderChannel, reason) +
-                common.NS(textualInfo) + common.NS(''))
+                common.NS(networkString(textualInfo)) + common.NS(b''))
 
     def ssh_CHANNEL_OPEN_CONFIRMATION(self, packet):
         """
@@ -309,7 +313,7 @@ class SSHConnection(service.SSHService):
         """
         localChannel = struct.unpack('>L', packet[:4])[0]
         requestType, rest = common.getNS(packet[4:])
-        wantReply = ord(rest[0])
+        wantReply = ord(rest[0:1])
         channel = self.channels[localChannel]
         d = defer.maybeDeferred(log.callWithLogger, channel,
                 channel.requestReceived, requestType, rest[1:])
@@ -326,10 +330,10 @@ class SSHConnection(service.SSHService):
 
         @param result: the value returned from the channel's requestReceived()
             method.  If it's False, the request failed.
-        @type result: C{bool}
+        @type result: L{bool}
         @param localChannel: the local channel ID of the channel to which the
             request was made.
-        @type localChannel: C{int}
+        @type localChannel: L{int}
         @raises ConchError: if the result is False.
         """
         if not result:
@@ -345,7 +349,7 @@ class SSHConnection(service.SSHService):
         @param result: a Failure, but it's not used.
         @param localChannel: the local channel ID of the channel to which the
             request was made.
-        @type localChannel: C{int}
+        @type localChannel: L{int}
         """
         self.transport.sendPacket(MSG_CHANNEL_FAILURE, struct.pack('>L',
                                 self.localToRemoteChannel[localChannel]))
@@ -385,26 +389,26 @@ class SSHConnection(service.SSHService):
         Send a global request for this connection.  Current this is only used
         for remote->local TCP forwarding.
 
-        @type request:      C{str}
-        @type data:         C{str}
-        @type wantReply:    C{bool}
-        @rtype              C{Deferred}/C{None}
+        @type request:      L{bytes}
+        @type data:         L{bytes}
+        @type wantReply:    L{bool}
+        @rtype              C{Deferred}/L{None}
         """
         self.transport.sendPacket(MSG_GLOBAL_REQUEST,
                                   common.NS(request)
-                                  + (wantReply and '\xff' or '\x00')
+                                  + (wantReply and b'\xff' or b'\x00')
                                   + data)
         if wantReply:
             d = defer.Deferred()
             self.deferreds['global'].append(d)
             return d
 
-    def openChannel(self, channel, extra=''):
+    def openChannel(self, channel, extra=b''):
         """
         Open a new channel on this connection.
 
         @type channel:  subclass of C{SSHChannel}
-        @type extra:    C{str}
+        @type extra:    L{bytes}
         """
         log.msg('opening channel %s with %s %s'%(self.localChannelID,
                 channel.localWindowSize, channel.localMaxPacket))
@@ -421,14 +425,14 @@ class SSHConnection(service.SSHService):
         Send a request to a channel.
 
         @type channel:      subclass of C{SSHChannel}
-        @type requestType:  C{str}
-        @type data:         C{str}
-        @type wantReply:    C{bool}
-        @rtype              C{Deferred}/C{None}
+        @type requestType:  L{bytes}
+        @type data:         L{bytes}
+        @type wantReply:    L{bool}
+        @rtype              C{Deferred}/L{None}
         """
         if channel.localClosed:
             return
-        log.msg('sending request %s' % requestType)
+        log.msg('sending request %r' % (requestType))
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
                                     self.channelsToRemoteChannel[channel])
                                   + common.NS(requestType)+chr(wantReply)
@@ -444,7 +448,7 @@ class SSHConnection(service.SSHService):
         normally need to be called as it is managed automatically.
 
         @type channel:      subclass of L{SSHChannel}
-        @type bytesToAdd:   C{int}
+        @type bytesToAdd:   L{int}
         """
         if channel.localClosed:
             return # we're already closed
@@ -461,7 +465,7 @@ class SSHConnection(service.SSHService):
         channel.write(data) as it manages the window automatically.
 
         @type channel:  subclass of L{SSHChannel}
-        @type data:     C{str}
+        @type data:     L{bytes}
         """
         if channel.localClosed:
             return # we're already closed
@@ -476,8 +480,8 @@ class SSHConnection(service.SSHService):
         the window automatically.
 
         @type channel:  subclass of L{SSHChannel}
-        @type dataType: C{int}
-        @type data:     C{str}
+        @type dataType: L{int}
+        @type data:     L{bytes}
         """
         if channel.localClosed:
             return # we're already closed
@@ -528,13 +532,13 @@ class SSHConnection(service.SSHService):
         find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.
         The method is called with arguments of windowSize, maxPacket, data.
 
-        @type channelType:  C{str}
-        @type windowSize:   C{int}
-        @type maxPacket:    C{int}
-        @type data:         C{str}
-        @rtype:             subclass of L{SSHChannel}/C{tuple}
+        @type channelType:  L{bytes}
+        @type windowSize:   L{int}
+        @type maxPacket:    L{int}
+        @type data:         L{bytes}
+        @rtype:             subclass of L{SSHChannel}/L{tuple}
         """
-        log.msg('got channel %s request' % channelType)
+        log.msg('got channel %r request' % (channelType))
         if hasattr(self.transport, "avatar"): # this is a server!
             chan = self.transport.avatar.lookupChannel(channelType,
                                                        windowSize,
@@ -542,7 +546,8 @@ class SSHConnection(service.SSHService):
                                                        data)
         else:
             channelType = channelType.translate(TRANSLATE_TABLE)
-            f = getattr(self, 'channel_%s' % channelType, None)
+            attr = 'channel_%s' % nativeString(channelType)
+            f = getattr(self, attr, None)
             if f is not None:
                 chan = f(windowSize, maxPacket, data)
             else:
@@ -568,15 +573,15 @@ class SSHConnection(service.SSHService):
         If this method cannot be found, this method returns 0.  Otherwise, it
         returns the return value of that method.
 
-        @type requestType:  C{str}
-        @type data:         C{str}
-        @rtype:             C{int}/C{tuple}
+        @type requestType:  L{bytes}
+        @type data:         L{bytes}
+        @rtype:             L{int}/L{tuple}
         """
         log.msg('got global %s request' % requestType)
         if hasattr(self.transport, 'avatar'): # this is a server!
             return self.transport.avatar.gotGlobalRequest(requestType, data)
 
-        requestType = requestType.replace('-','_')
+        requestType = nativeString(requestType.replace(b'-',b'_'))
         f = getattr(self, 'global_%s' % requestType, None)
         if not f:
             return 0
@@ -630,7 +635,7 @@ for name, value in locals().copy().items():
         messages[value] = name # doesn't handle doubles
 
 import string
-alphanums = string.letters + string.digits
-TRANSLATE_TABLE = ''.join([chr(i) in alphanums and chr(i) or '_'
+alphanums = networkString(string.ascii_letters + string.digits)
+TRANSLATE_TABLE = b''.join([chr(i) in alphanums and chr(i) or b'_'
     for i in range(256)])
 SSHConnection.protocolMessages = messages

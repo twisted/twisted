@@ -30,7 +30,7 @@ class MemoryDatagramTransport(object):
     @ivar _sentPackets: A C{list} of two-tuples of the datagrams passed to
         C{write} and the addresses to which they are destined.
 
-    @ivar _connectedTo: C{None} if this transport is unconnected, otherwise an
+    @ivar _connectedTo: L{None} if this transport is unconnected, otherwise an
         address to which all traffic is supposedly sent.
 
     @ivar _maxPacketSize: An C{int} giving the maximum length of a datagram

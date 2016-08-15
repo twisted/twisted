@@ -58,7 +58,7 @@ class BytesHeadersTests(TestCase):
 
     def test_getRawHeadersNoDefault(self):
         """
-        L{Headers.getRawHeaders} returns C{None} if the header is not found and
+        L{Headers.getRawHeaders} returns L{None} if the header is not found and
         no default is specified.
         """
         self.assertIsNone(Headers().getRawHeaders(b"test"))
@@ -241,7 +241,7 @@ class BytesHeadersTests(TestCase):
 
     def test_copy(self):
         """
-        L{Headers.copy} creates a new independant copy of an existing
+        L{Headers.copy} creates a new independent copy of an existing
         L{Headers} instance, allowing future modifications without impacts
         between the copies.
         """
@@ -357,7 +357,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_getRawHeadersNoDefault(self):
         """
-        L{Headers.getRawHeaders} returns C{None} if the header is not found and
+        L{Headers.getRawHeaders} returns L{None} if the header is not found and
         no default is specified.
         """
         self.assertIsNone(Headers().getRawHeaders(u"test"))
@@ -540,7 +540,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_copy(self):
         """
-        L{Headers.copy} creates a new independant copy of an existing
+        L{Headers.copy} creates a new independent copy of an existing
         L{Headers} instance, allowing future modifications without impacts
         between the copies.
         """

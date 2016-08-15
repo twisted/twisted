@@ -84,7 +84,7 @@ class ModuleProxyTests(SynchronousTestCase):
         if a non-existent attribute is accessed.
         """
         proxy = self._makeProxy(SOME_ATTRIBUTE='hello')
-        self.assertIdentical(proxy.SOME_ATTRIBUTE, 'hello')
+        self.assertIs(proxy.SOME_ATTRIBUTE, 'hello')
         self.assertRaises(AttributeError, getattr, proxy, 'DOES_NOT_EXIST')
 
 
@@ -180,7 +180,7 @@ class DeprecatedAttributeTests(SynchronousTestCase):
         addStackLevel()
         warningsShown = self.flushWarnings([
             self.test_deprecatedAttributeHelper])
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             self._getWarningString(name))
@@ -207,7 +207,7 @@ class DeprecatedAttributeTests(SynchronousTestCase):
 
         warningsShown = self.flushWarnings([self.test_deprecatedAttribute])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             self._getWarningString(name))
@@ -241,7 +241,7 @@ class DeprecatedAttributeTests(SynchronousTestCase):
             self._testModuleName,
             'second')
 
-        self.assertIdentical(proxy, sys.modules[self._testModuleName])
+        self.assertIs(proxy, sys.modules[self._testModuleName])
 
 
 

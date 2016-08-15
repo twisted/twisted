@@ -5,6 +5,8 @@
 Test ssh/channel.py.
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface.verify import verifyObject
 
 try:
@@ -20,7 +22,7 @@ except ImportError:
     skipTest = 'Conch SSH not supported.'
     SSHService = object
 from twisted.trial import unittest
-
+from twisted.python.compat import intToBytes
 
 
 class MockConnection(SSHService):
@@ -28,11 +30,11 @@ class MockConnection(SSHService):
     A mock for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
 
-    @ivar data: a C{dict} mapping channel id #s to lists of data sent by that
+    @ivar data: a L{dict} mapping channel id #s to lists of data sent by that
         channel.
-    @ivar extData: a C{dict} mapping channel id #s to lists of 2-tuples
+    @ivar extData: a L{dict} mapping channel id #s to lists of 2-tuples
         (extended data type, data) sent by that channel.
-    @ivar closes: a C{dict} mapping channel id #s to True if that channel sent
+    @ivar closes: a L{dict} mapping channel id #s to True if that channel sent
         a close message.
     """
 
@@ -41,11 +43,13 @@ class MockConnection(SSHService):
         self.extData = {}
         self.closes = {}
 
+
     def logPrefix(self):
         """
         Return our logging prefix.
         """
         return "MockConnection"
+
 
     def sendData(self, channel, data):
         """
@@ -53,11 +57,13 @@ class MockConnection(SSHService):
         """
         self.data.setdefault(channel, []).append(data)
 
+
     def sendExtendedData(self, channel, type, data):
         """
         Record the sent extended data.
         """
         self.extData.setdefault(channel, []).append((type, data))
+
 
     def sendClose(self, channel):
         """
@@ -104,7 +110,7 @@ class ChannelTests(unittest.TestCase):
         self.conn = MockConnection()
         self.channel = channel.SSHChannel(conn=self.conn,
                 remoteMaxPacket=10)
-        self.channel.name = 'channel'
+        self.channel.name = b'channel'
 
 
     def test_interface(self):
@@ -131,8 +137,8 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(c.remoteWindowLeft, 0)
         self.assertEqual(c.remoteMaxPacket, 0)
         self.assertEqual(c.conn, self.conn)
-        self.assertEqual(c.data, None)
-        self.assertEqual(c.avatar, None)
+        self.assertIsNone(c.data)
+        self.assertIsNone(c.avatar)
 
         c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)
         self.assertEqual(c2.localWindowSize, 1)
@@ -144,13 +150,32 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(c2.data, 6)
         self.assertEqual(c2.avatar, 7)
 
+
     def test_str(self):
         """
         Test that str(SSHChannel) works gives the channel name and local and
         remote windows at a glance..
         """
-        self.assertEqual(str(self.channel), '<SSHChannel channel (lw 131072 '
-                'rw 0)>')
+        self.assertEqual(
+                str(self.channel), '<SSHChannel channel (lw 131072 rw 0)>')
+        self.assertEqual(
+                str(channel.SSHChannel(localWindow=1)),
+                '<SSHChannel None (lw 1 rw 0)>')
+
+
+    def test_bytes(self):
+        """
+        Test that bytes(SSHChannel) works, gives the channel name and
+        local and remote windows at a glance..
+
+        """
+        self.assertEqual(
+            self.channel.__bytes__(),
+            b'<SSHChannel channel (lw 131072 rw 0)>')
+        self.assertEqual(
+            channel.SSHChannel(localWindow=1).__bytes__(),
+            b'<SSHChannel None (lw 1 rw 0)>')
+
 
     def test_logPrefix(self):
         """
@@ -159,6 +184,7 @@ class ChannelTests(unittest.TestCase):
         """
         self.assertEqual(self.channel.logPrefix(), 'SSHChannel channel '
                 '(unknown) on MockConnection')
+
 
     def test_addWindowBytes(self):
         """
@@ -169,35 +195,37 @@ class ChannelTests(unittest.TestCase):
         def stubStartWriting():
             cb[0] = True
         self.channel.startWriting = stubStartWriting
-        self.channel.write('test')
-        self.channel.writeExtended(1, 'test')
+        self.channel.write(b'test')
+        self.channel.writeExtended(1, b'test')
         self.channel.addWindowBytes(50)
         self.assertEqual(self.channel.remoteWindowLeft, 50 - 4 - 4)
         self.assertTrue(self.channel.areWriting)
         self.assertTrue(cb[0])
-        self.assertEqual(self.channel.buf, '')
-        self.assertEqual(self.conn.data[self.channel], ['test'])
+        self.assertEqual(self.channel.buf, b'')
+        self.assertEqual(self.conn.data[self.channel], [b'test'])
         self.assertEqual(self.channel.extBuf, [])
-        self.assertEqual(self.conn.extData[self.channel], [(1, 'test')])
+        self.assertEqual(self.conn.extData[self.channel], [(1, b'test')])
 
         cb[0] = False
         self.channel.addWindowBytes(20)
         self.assertFalse(cb[0])
 
-        self.channel.write('a'*80)
+        self.channel.write(b'a'*80)
         self.channel.loseConnection()
         self.channel.addWindowBytes(20)
         self.assertFalse(cb[0])
+
 
     def test_requestReceived(self):
         """
         Test that requestReceived handles requests by dispatching them to
         request_* methods.
         """
-        self.channel.request_test_method = lambda data: data == ''
-        self.assertTrue(self.channel.requestReceived('test-method', ''))
-        self.assertFalse(self.channel.requestReceived('test-method', 'a'))
-        self.assertFalse(self.channel.requestReceived('bad-method', ''))
+        self.channel.request_test_method = lambda data: data == b''
+        self.assertTrue(self.channel.requestReceived(b'test-method', b''))
+        self.assertFalse(self.channel.requestReceived(b'test-method', b'a'))
+        self.assertFalse(self.channel.requestReceived(b'bad-method', b''))
+
 
     def test_closeReceieved(self):
         """
@@ -206,6 +234,7 @@ class ChannelTests(unittest.TestCase):
         self.assertFalse(self.channel.closing)
         self.channel.closeReceived()
         self.assertTrue(self.channel.closing)
+
 
     def test_write(self):
         """
@@ -218,28 +247,29 @@ class ChannelTests(unittest.TestCase):
             cb[0] = True
         # no window to start with
         self.channel.stopWriting = stubStopWriting
-        self.channel.write('d')
-        self.channel.write('a')
+        self.channel.write(b'd')
+        self.channel.write(b'a')
         self.assertFalse(self.channel.areWriting)
         self.assertTrue(cb[0])
         # regular write
         self.channel.addWindowBytes(20)
-        self.channel.write('ta')
+        self.channel.write(b'ta')
         data = self.conn.data[self.channel]
-        self.assertEqual(data, ['da', 'ta'])
+        self.assertEqual(data, [b'da', b'ta'])
         self.assertEqual(self.channel.remoteWindowLeft, 16)
         # larger than max packet
-        self.channel.write('12345678901')
-        self.assertEqual(data, ['da', 'ta', '1234567890', '1'])
+        self.channel.write(b'12345678901')
+        self.assertEqual(data, [b'da', b'ta', b'1234567890', b'1'])
         self.assertEqual(self.channel.remoteWindowLeft, 5)
         # running out of window
         cb[0] = False
-        self.channel.write('123456')
+        self.channel.write(b'123456')
         self.assertFalse(self.channel.areWriting)
         self.assertTrue(cb[0])
-        self.assertEqual(data, ['da', 'ta', '1234567890', '1', '12345'])
-        self.assertEqual(self.channel.buf, '6')
+        self.assertEqual(data, [b'da', b'ta', b'1234567890', b'1', b'12345'])
+        self.assertEqual(self.channel.buf, b'6')
         self.assertEqual(self.channel.remoteWindowLeft, 0)
+
 
     def test_writeExtended(self):
         """
@@ -252,51 +282,53 @@ class ChannelTests(unittest.TestCase):
             cb[0] = True
         # no window to start with
         self.channel.stopWriting = stubStopWriting
-        self.channel.writeExtended(1, 'd')
-        self.channel.writeExtended(1, 'a')
-        self.channel.writeExtended(2, 't')
+        self.channel.writeExtended(1, b'd')
+        self.channel.writeExtended(1, b'a')
+        self.channel.writeExtended(2, b't')
         self.assertFalse(self.channel.areWriting)
         self.assertTrue(cb[0])
         # regular write
         self.channel.addWindowBytes(20)
-        self.channel.writeExtended(2, 'a')
+        self.channel.writeExtended(2, b'a')
         data = self.conn.extData[self.channel]
-        self.assertEqual(data, [(1, 'da'), (2, 't'), (2, 'a')])
+        self.assertEqual(data, [(1, b'da'), (2, b't'), (2, b'a')])
         self.assertEqual(self.channel.remoteWindowLeft, 16)
         # larger than max packet
-        self.channel.writeExtended(3, '12345678901')
-        self.assertEqual(data, [(1, 'da'), (2, 't'), (2, 'a'),
-            (3, '1234567890'), (3, '1')])
+        self.channel.writeExtended(3, b'12345678901')
+        self.assertEqual(data, [(1, b'da'), (2, b't'), (2, b'a'),
+            (3, b'1234567890'), (3, b'1')])
         self.assertEqual(self.channel.remoteWindowLeft, 5)
         # running out of window
         cb[0] = False
-        self.channel.writeExtended(4, '123456')
+        self.channel.writeExtended(4, b'123456')
         self.assertFalse(self.channel.areWriting)
         self.assertTrue(cb[0])
-        self.assertEqual(data, [(1, 'da'), (2, 't'), (2, 'a'),
-            (3, '1234567890'), (3, '1'), (4, '12345')])
-        self.assertEqual(self.channel.extBuf, [[4, '6']])
+        self.assertEqual(data, [(1, b'da'), (2, b't'), (2, b'a'),
+            (3, b'1234567890'), (3, b'1'), (4, b'12345')])
+        self.assertEqual(self.channel.extBuf, [[4, b'6']])
         self.assertEqual(self.channel.remoteWindowLeft, 0)
+
 
     def test_writeSequence(self):
         """
         Test that writeSequence is equivalent to write(''.join(sequece)).
         """
         self.channel.addWindowBytes(20)
-        self.channel.writeSequence(map(str, range(10)))
-        self.assertEqual(self.conn.data[self.channel], ['0123456789'])
+        self.channel.writeSequence(map(intToBytes, range(10)))
+        self.assertEqual(self.conn.data[self.channel], [b'0123456789'])
+
 
     def test_loseConnection(self):
         """
         Tesyt that loseConnection() doesn't close the channel until all
         the data is sent.
         """
-        self.channel.write('data')
-        self.channel.writeExtended(1, 'datadata')
+        self.channel.write(b'data')
+        self.channel.writeExtended(1, b'datadata')
         self.channel.loseConnection()
-        self.assertEqual(self.conn.closes.get(self.channel), None)
+        self.assertIsNone(self.conn.closes.get(self.channel))
         self.channel.addWindowBytes(4) # send regular data
-        self.assertEqual(self.conn.closes.get(self.channel), None)
+        self.assertIsNone(self.conn.closes.get(self.channel))
         self.channel.addWindowBytes(8) # send extended data
         self.assertTrue(self.conn.closes.get(self.channel))
 

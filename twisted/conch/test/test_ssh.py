@@ -5,6 +5,8 @@
 Tests for L{twisted.conch.ssh}.
 """
 
+from __future__ import division, absolute_import
+
 import struct
 
 try:
@@ -28,7 +30,7 @@ from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
 from twisted.trial import unittest
 
-from twisted.conch.test.test_recvline import LoopbackRelay
+from twisted.conch.test.loopback import LoopbackRelay
 
 
 
@@ -76,9 +78,10 @@ class ConchTestAvatar(avatar.ConchUser):
         avatar.ConchUser.__init__(self)
         self.listeners = {}
         self.globalRequests = {}
-        self.channelLookup.update({'session': session.SSHSession,
-                        'direct-tcpip':forwarding.openConnectForwardingClient})
-        self.subsystemLookup.update({'crazy': CrazySubsystem})
+        self.channelLookup.update(
+            {b'session': session.SSHSession,
+             b'direct-tcpip':forwarding.openConnectForwardingClient})
+        self.subsystemLookup.update({b'crazy': CrazySubsystem})
 
 
     def global_foo(self, data):
@@ -88,7 +91,7 @@ class ConchTestAvatar(avatar.ConchUser):
 
     def global_foo_2(self, data):
         self.globalRequests['foo_2'] = data
-        return 1, 'data'
+        return 1, b'data'
 
 
     def global_tcpip_forward(self, data):
@@ -154,27 +157,27 @@ class ConchSessionForTestAvatar(object):
         log.msg('opening shell')
         self.proto = proto
         EchoTransport(proto)
-        self.cmd = 'shell'
+        self.cmd = b'shell'
 
 
     def execCommand(self, proto, cmd):
         self.cmd = cmd
         self.proto = proto
         f = cmd.split()[0]
-        if f == 'false':
+        if f == b'false':
             t = FalseTransport(proto)
             # Avoid disconnecting this immediately.  If the channel is closed
             # before execCommand even returns the caller gets confused.
             reactor.callLater(0, t.loseConnection)
-        elif f == 'echo':
+        elif f == b'echo':
             t = EchoTransport(proto)
             t.write(cmd[5:])
             t.loseConnection()
-        elif f == 'secho':
+        elif f == b'secho':
             t = SuperEchoTransport(proto)
             t.write(cmd[6:])
             t.loseConnection()
-        elif f == 'eecho':
+        elif f == b'eecho':
             t = ErrEchoTransport(proto)
             t.write(cmd[6:])
             t.loseConnection()
@@ -249,8 +252,8 @@ class EchoTransport:
     def write(self, data):
         log.msg(repr(data))
         self.proto.outReceived(data)
-        self.proto.outReceived('\r\n')
-        if '\x00' in data: # mimic 'exit' for the shell test
+        self.proto.outReceived(b'\r\n')
+        if b'\x00' in data: # mimic 'exit' for the shell test
             self.loseConnection()
 
     def loseConnection(self):
@@ -270,7 +273,7 @@ class ErrEchoTransport:
 
     def write(self, data):
         self.proto.errReceived(data)
-        self.proto.errReceived('\r\n')
+        self.proto.errReceived(b'\r\n')
 
     def loseConnection(self):
         if self.closed: return
@@ -289,9 +292,9 @@ class SuperEchoTransport:
 
     def write(self, data):
         self.proto.outReceived(data)
-        self.proto.outReceived('\r\n')
+        self.proto.outReceived(b'\r\n')
         self.proto.errReceived(data)
-        self.proto.errReceived('\r\n')
+        self.proto.errReceived(b'\r\n')
 
     def loseConnection(self):
         if self.closed: return
@@ -311,7 +314,7 @@ if cryptography is not None and pyasn1 is not None:
         credentialInterfaces = checkers.IUsernamePassword,
 
         def requestAvatarId(self, credentials):
-            if credentials.username == 'testuser' and credentials.password == 'testpass':
+            if credentials.username == b'testuser' and credentials.password == b'testpass':
                 return defer.succeed(credentials.username)
             return defer.fail(Exception("Bad credentials"))
 
@@ -319,7 +322,7 @@ if cryptography is not None and pyasn1 is not None:
     class ConchTestSSHChecker(checkers.SSHProtocolChecker):
 
         def areDone(self, avatarId):
-            if avatarId != 'testuser' or len(self.successfulCredentials[avatarId]) < 2:
+            if avatarId != b'testuser' or len(self.successfulCredentials[avatarId]) < 2:
                 return False
             return True
 
@@ -327,8 +330,8 @@ if cryptography is not None and pyasn1 is not None:
         noisy = 0
 
         services = {
-            'ssh-userauth':userauth.SSHUserAuthServer,
-            'ssh-connection':connection.SSHConnection
+            b'ssh-userauth':userauth.SSHUserAuthServer,
+            b'ssh-connection':connection.SSHConnection
         }
 
         def buildProtocol(self, addr):
@@ -344,14 +347,14 @@ if cryptography is not None and pyasn1 is not None:
 
         def getPublicKeys(self):
             return {
-                'ssh-rsa': keys.Key.fromString(publicRSA_openssh),
-                'ssh-dss': keys.Key.fromString(publicDSA_openssh)
+                b'ssh-rsa': keys.Key.fromString(publicRSA_openssh),
+                b'ssh-dss': keys.Key.fromString(publicDSA_openssh)
             }
 
         def getPrivateKeys(self):
             return {
-                'ssh-rsa': keys.Key.fromString(privateRSA_openssh),
-                'ssh-dss': keys.Key.fromString(privateDSA_openssh)
+                b'ssh-rsa': keys.Key.fromString(privateRSA_openssh),
+                b'ssh-dss': keys.Key.fromString(privateDSA_openssh)
             }
 
         def getPrimes(self):
@@ -360,7 +363,7 @@ if cryptography is not None and pyasn1 is not None:
             diffie-hellman-group-exchange-sha1 key exchange.
 
             @return: The primes and generators.
-            @rtype: C{dict} mapping the key size to a C{list} of
+            @rtype: L{dict} mapping the key size to a C{list} of
                 C{(generator, prime)} tupple.
             """
             # In these tests, we hardwire the prime values to those defined by
@@ -369,7 +372,8 @@ if cryptography is not None and pyasn1 is not None:
             # See OpenSSHFactory.getPrimes.
             return {
                 2048: [
-                    _kex.getDHGeneratorAndPrime('diffie-hellman-group14-sha1')]
+                    _kex.getDHGeneratorAndPrime(
+                        b'diffie-hellman-group14-sha1')]
             }
 
         def getService(self, trans, name):
@@ -429,13 +433,13 @@ if cryptography is not None and pyasn1 is not None:
         def verifyHostKey(self, key, fp):
             keyMatch = key == keys.Key.fromString(publicRSA_openssh).blob()
             fingerprintMatch = (
-                fp == '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+                fp == b'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
             if keyMatch and fingerprintMatch:
                 return defer.succeed(1)
             return defer.fail(Exception("Key or fingerprint mismatch"))
 
         def connectionSecure(self):
-            self.requestService(ConchTestClientAuth('testuser',
+            self.requestService(ConchTestClientAuth(b'testuser',
                 ConchTestClientConnection(self._channelFactory)))
 
 
@@ -448,12 +452,12 @@ if cryptography is not None and pyasn1 is not None:
         def ssh_USERAUTH_SUCCESS(self, packet):
             if not self.canSucceedPassword and self.canSucceedPublicKey:
                 raise unittest.FailTest(
-                    'got USERAUTH_SUCESS before password and publickey')
+                    'got USERAUTH_SUCCESS before password and publickey')
             userauth.SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
         def getPassword(self):
             self.canSucceedPassword = 1
-            return defer.succeed('testpass')
+            return defer.succeed(b'testpass')
 
         def getPrivateKey(self):
             self.canSucceedPublicKey = 1
@@ -468,7 +472,7 @@ if cryptography is not None and pyasn1 is not None:
         @ivar _completed: A L{Deferred} which will be fired when the number of
             results collected reaches C{totalResults}.
         """
-        name = 'ssh-connection'
+        name = b'ssh-connection'
         results = 0
         totalResults = 8
 
@@ -530,7 +534,7 @@ if cryptography is not None and pyasn1 is not None:
         @return: L{twisted.conch.checkers.SSHPublicKeyChecker}
         """
         conchTestPublicKeyDB = checkers.InMemorySSHKeyDB(
-            {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
+            {b'testuser': [keys.Key.fromString(publicDSA_openssh)]})
         return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
 
 
@@ -547,14 +551,14 @@ class SSHProtocolTests(unittest.TestCase):
     if not pyasn1:
         skip = "Cannot run without PyASN1"
 
-    def _ourServerOurClientTest(self, name='session', **kwargs):
+    def _ourServerOurClientTest(self, name=b'session', **kwargs):
         """
         Create a connected SSH client and server protocol pair and return a
         L{Deferred} which fires with an L{SSHTestChannel} instance connected to
         a channel on that SSH connection.
         """
         result = defer.Deferred()
-        self.realm = ConchTestRealm('testuser')
+        self.realm = ConchTestRealm(b'testuser')
         p = portal.Portal(self.realm)
         sshpc = ConchTestSSHChecker()
         sshpc.registerChecker(ConchTestPasswordChecker())
@@ -587,25 +591,25 @@ class SSHProtocolTests(unittest.TestCase):
             self.channel = channel
             return self.assertFailure(
                 channel.conn.sendRequest(
-                    channel, 'subsystem', common.NS('not-crazy'), 1),
+                    channel, b'subsystem', common.NS(b'not-crazy'), 1),
                 Exception)
         channel.addCallback(cbSubsystem)
 
         def cbNotCrazyFailed(ignored):
             channel = self.channel
             return channel.conn.sendRequest(
-                channel, 'subsystem', common.NS('crazy'), 1)
+                channel, b'subsystem', common.NS(b'crazy'), 1)
         channel.addCallback(cbNotCrazyFailed)
 
         def cbGlobalRequests(ignored):
             channel = self.channel
-            d1 = channel.conn.sendGlobalRequest('foo', 'bar', 1)
+            d1 = channel.conn.sendGlobalRequest(b'foo', b'bar', 1)
 
-            d2 = channel.conn.sendGlobalRequest('foo-2', 'bar2', 1)
-            d2.addCallback(self.assertEqual, 'data')
+            d2 = channel.conn.sendGlobalRequest(b'foo-2', b'bar2', 1)
+            d2.addCallback(self.assertEqual, b'data')
 
             d3 = self.assertFailure(
-                channel.conn.sendGlobalRequest('bar', 'foo', 1),
+                channel.conn.sendGlobalRequest(b'bar', b'foo', 1),
                 Exception)
 
             return defer.gatherResults([d1, d2, d3])
@@ -614,7 +618,7 @@ class SSHProtocolTests(unittest.TestCase):
         def disconnect(ignored):
             self.assertEqual(
                 self.realm.avatar.globalRequests,
-                {"foo": "bar", "foo_2": "bar2"})
+                {"foo": b"bar", "foo_2": b"bar2"})
             channel = self.channel
             channel.conn.transport.expectedLoseConnection = True
             channel.conn.serviceStopped()
@@ -631,25 +635,26 @@ class SSHProtocolTests(unittest.TestCase):
         """
         channel = self._ourServerOurClientTest()
 
-        data = session.packRequest_pty_req('conch-test-term', (24, 80, 0, 0), '')
+        data = session.packRequest_pty_req(
+            b'conch-test-term', (24, 80, 0, 0), b'')
         def cbChannel(channel):
             self.channel = channel
-            return channel.conn.sendRequest(channel, 'pty-req', data, 1)
+            return channel.conn.sendRequest(channel, b'pty-req', data, 1)
         channel.addCallback(cbChannel)
 
         def cbPty(ignored):
             # The server-side object corresponding to our client side channel.
             session = self.realm.avatar.conn.channels[0].session
             self.assertIs(session.avatar, self.realm.avatar)
-            self.assertEqual(session._terminalType, 'conch-test-term')
+            self.assertEqual(session._terminalType, b'conch-test-term')
             self.assertEqual(session._windowSize, (24, 80, 0, 0))
             self.assertTrue(session.ptyReq)
             channel = self.channel
-            return channel.conn.sendRequest(channel, 'shell', '', 1)
+            return channel.conn.sendRequest(channel, b'shell', b'', 1)
         channel.addCallback(cbPty)
 
         def cbShell(ignored):
-            self.channel.write('testing the shell!\x00')
+            self.channel.write(b'testing the shell!\x00')
             self.channel.conn.sendEOF(self.channel)
             return defer.gatherResults([
                     self.channel.onClose,
@@ -661,8 +666,8 @@ class SSHProtocolTests(unittest.TestCase):
                 log.msg(
                     'shell exit status was not 0: %i' % (self.channel.status,))
             self.assertEqual(
-                "".join(self.channel.received),
-                'testing the shell!\x00\r\n')
+                b"".join(self.channel.received),
+                b'testing the shell!\x00\r\n')
             self.assertTrue(self.channel.eofCalled)
             self.assertTrue(
                 self.realm.avatar._testSession.eof)
@@ -681,7 +686,7 @@ class SSHProtocolTests(unittest.TestCase):
             self.channel = channel
             return self.assertFailure(
                 channel.conn.sendRequest(
-                    channel, 'exec', common.NS('jumboliah'), 1),
+                    channel, b'exec', common.NS(b'jumboliah'), 1),
                 Exception)
         channel.addCallback(cbChannel)
 
@@ -704,7 +709,7 @@ class SSHProtocolTests(unittest.TestCase):
         def cbChannel(channel):
             self.channel = channel
             return channel.conn.sendRequest(
-                channel, 'exec', common.NS('false'), 1)
+                channel, b'exec', common.NS(b'false'), 1)
         channel.addCallback(cbChannel)
 
         def cbExec(ignored):
@@ -729,7 +734,7 @@ class SSHProtocolTests(unittest.TestCase):
         def cbChannel(channel):
             self.channel = channel
             return channel.conn.sendRequest(
-                channel, 'exec', common.NS('eecho hello'), 1)
+                channel, b'exec', common.NS(b'eecho hello'), 1)
         channel.addCallback(cbChannel)
 
         def cbExec(ignored):
@@ -740,7 +745,7 @@ class SSHProtocolTests(unittest.TestCase):
 
         def cbClosed(ignored):
             self.assertEqual(self.channel.received, [])
-            self.assertEqual("".join(self.channel.receivedExt), "hello\r\n")
+            self.assertEqual(b"".join(self.channel.receivedExt), b"hello\r\n")
             self.assertEqual(self.channel.status, 0)
             self.assertTrue(self.channel.eofCalled)
             self.assertEqual(self.channel.localWindowLeft, 4)
@@ -757,7 +762,7 @@ class SSHProtocolTests(unittest.TestCase):
         returned by L{SSHChannel.sendRequest} fires its errback.
         """
         d = self.assertFailure(
-            self._ourServerOurClientTest('crazy-unknown-channel'), Exception)
+            self._ourServerOurClientTest(b'crazy-unknown-channel'), Exception)
         def cbFailed(ignored):
             errors = self.flushLoggedErrors(error.ConchError)
             self.assertEqual(errors[0].value.args, (3, 'unknown channel'))
@@ -779,7 +784,7 @@ class SSHProtocolTests(unittest.TestCase):
         def cbChannel(channel):
             self.channel = channel
             return channel.conn.sendRequest(
-                channel, 'exec', common.NS('secho hello'), 1)
+                channel, b'exec', common.NS(b'secho hello'), 1)
         channel.addCallback(cbChannel)
 
         def cbExec(ignored):
@@ -788,8 +793,8 @@ class SSHProtocolTests(unittest.TestCase):
 
         def cbClosed(ignored):
             self.assertEqual(self.channel.status, 0)
-            self.assertEqual("".join(self.channel.received), "hello\r\n")
-            self.assertEqual("".join(self.channel.receivedExt), "hello\r\n")
+            self.assertEqual(b"".join(self.channel.received), b"hello\r\n")
+            self.assertEqual(b"".join(self.channel.receivedExt), b"hello\r\n")
             self.assertEqual(self.channel.localWindowLeft, 11)
             self.assertTrue(self.channel.eofCalled)
         channel.addCallback(cbClosed)
@@ -806,7 +811,7 @@ class SSHProtocolTests(unittest.TestCase):
         def cbChannel(channel):
             self.channel = channel
             return channel.conn.sendRequest(
-                channel, 'exec', common.NS('echo hello'), 1)
+                channel, b'exec', common.NS(b'echo hello'), 1)
         channel.addCallback(cbChannel)
 
         def cbEcho(ignored):
@@ -817,7 +822,7 @@ class SSHProtocolTests(unittest.TestCase):
 
         def cbClosed(ignored):
             self.assertEqual(self.channel.status, 0)
-            self.assertEqual("".join(self.channel.received), "hello\r\n")
+            self.assertEqual(b"".join(self.channel.received), b"hello\r\n")
             self.assertEqual(self.channel.localWindowLeft, 4)
             self.assertTrue(self.channel.eofCalled)
             self.assertEqual(
@@ -880,9 +885,9 @@ class SSHFactoryTests(unittest.TestCase):
         p1 = f1.buildProtocol(None)
 
         self.assertNotIn(
-            'diffie-hellman-group-exchange-sha1', p1.supportedKeyExchanges)
+            b'diffie-hellman-group-exchange-sha1', p1.supportedKeyExchanges)
         self.assertNotIn(
-            'diffie-hellman-group-exchange-sha256', p1.supportedKeyExchanges)
+            b'diffie-hellman-group-exchange-sha256', p1.supportedKeyExchanges)
 
 
     def test_buildProtocolWithPrimes(self):
@@ -894,9 +899,9 @@ class SSHFactoryTests(unittest.TestCase):
         p2 = f2.buildProtocol(None)
 
         self.assertIn(
-            'diffie-hellman-group-exchange-sha1', p2.supportedKeyExchanges)
+            b'diffie-hellman-group-exchange-sha1', p2.supportedKeyExchanges)
         self.assertIn(
-            'diffie-hellman-group-exchange-sha256', p2.supportedKeyExchanges)
+            b'diffie-hellman-group-exchange-sha256', p2.supportedKeyExchanges)
 
 
 
@@ -922,8 +927,8 @@ class MPTests(unittest.TestCase):
         string: a 4-byte length followed by length bytes of the integer.
         """
         self.assertEqual(
-            self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01'),
-            (1, ''))
+            self.getMP(b'\x00\x00\x00\x04\x00\x00\x00\x01'),
+            (1, b''))
 
 
     def test_getMPBigInteger(self):
@@ -932,8 +937,8 @@ class MPTests(unittest.TestCase):
         (that doesn't fit on one byte).
         """
         self.assertEqual(
-            self.getMP('\x00\x00\x00\x04\x01\x02\x03\x04'),
-            (16909060, ''))
+            self.getMP(b'\x00\x00\x00\x04\x01\x02\x03\x04'),
+            (16909060, b''))
 
 
     def test_multipleGetMP(self):
@@ -942,9 +947,9 @@ class MPTests(unittest.TestCase):
         string.
         """
         self.assertEqual(
-            self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01'
-                       '\x00\x00\x00\x04\x00\x00\x00\x02', 2),
-            (1, 2, ''))
+            self.getMP(b'\x00\x00\x00\x04\x00\x00\x00\x01'
+                       b'\x00\x00\x00\x04\x00\x00\x00\x02', 2),
+            (1, 2, b''))
 
 
     def test_getMPRemainingData(self):
@@ -953,8 +958,8 @@ class MPTests(unittest.TestCase):
         the remaining data.
         """
         self.assertEqual(
-            self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01foo'),
-            (1, 'foo'))
+            self.getMP(b'\x00\x00\x00\x04\x00\x00\x00\x01foo'),
+            (1, b'foo'))
 
 
     def test_notEnoughData(self):
@@ -962,7 +967,7 @@ class MPTests(unittest.TestCase):
         When the string passed to L{common.getMP} doesn't even make 5 bytes,
         it should raise a L{struct.error}.
         """
-        self.assertRaises(struct.error, self.getMP, '\x02\x00')
+        self.assertRaises(struct.error, self.getMP, b'\x02\x00')
 
 
 

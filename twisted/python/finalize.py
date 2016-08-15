@@ -3,6 +3,8 @@
 A module for externalized finalizers.
 """
 
+from __future__ import print_function
+
 import weakref
 
 garbageKey = 0
@@ -24,7 +26,7 @@ def register(inst):
 
 if __name__ == '__main__':
     def fin():
-        print 'I am _so_ dead.'
+        print('I am _so_ dead.')
 
     class Finalizeable:
         """
@@ -43,4 +45,4 @@ if __name__ == '__main__':
     del f
     import gc
     gc.collect()
-    print 'deled'
+    print('deled')

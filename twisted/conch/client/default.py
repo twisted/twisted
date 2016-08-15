@@ -14,6 +14,8 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 from __future__ import print_function
 
 from twisted.python import log
+from twisted.python.compat import (
+    nativeString, raw_input, _PY3, _b64decodebytes as decodebytes)
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -24,7 +26,10 @@ from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 
 from twisted.conch.client import agent
 
-import os, sys, base64, getpass
+import os, sys, getpass, contextlib
+
+if _PY3:
+    import io
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).
@@ -84,9 +89,13 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
     return kh.verifyHostKey(ui, actualHost, host, actualKey)
 
 
+
 def isInKnownHosts(host, pubKey, options):
-    """checks to see if host is in the known_hosts file for the user.
-    returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
+    """
+    Checks to see if host is in the known_hosts file for the user.
+
+    @return: 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
+    @rtype: L{int}
     """
     keyType = common.getNS(pubKey)[0]
     retVal = 0
@@ -96,26 +105,27 @@ def isInKnownHosts(host, pubKey, options):
         os.mkdir(os.path.expanduser('~/.ssh'))
     kh_file = options['known-hosts'] or _KNOWN_HOSTS
     try:
-        known_hosts = open(os.path.expanduser(kh_file))
+        known_hosts = open(os.path.expanduser(kh_file), 'rb')
     except IOError:
         return 0
-    for line in known_hosts.xreadlines():
-        split = line.split()
-        if len(split) < 3:
-            continue
-        hosts, hostKeyType, encodedKey = split[:3]
-        if host not in hosts.split(','): # incorrect host
-            continue
-        if hostKeyType != keyType: # incorrect type of key
-            continue
-        try:
-            decodedKey = base64.decodestring(encodedKey)
-        except:
-            continue
-        if decodedKey == pubKey:
-            return 1
-        else:
-            retVal = 2
+    with known_hosts:
+        for line in known_hosts.readlines():
+            split = line.split()
+            if len(split) < 3:
+                continue
+            hosts, hostKeyType, encodedKey = split[:3]
+            if host not in hosts.split(b','): # incorrect host
+                continue
+            if hostKeyType != keyType: # incorrect type of key
+                continue
+            try:
+                decodedKey = decodebytes(encodedKey)
+            except:
+                continue
+            if decodedKey == pubKey:
+                return 1
+            else:
+                retVal = 2
     return retVal
 
 
@@ -130,6 +140,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not options.identitys:
             options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
 
+
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
             log.msg('using agent')
@@ -140,10 +151,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         else:
             userauth.SSHUserAuthClient.serviceStarted(self)
 
+
     def serviceStopped(self):
         if self.keyAgent:
             self.keyAgent.transport.loseConnection()
             self.keyAgent = None
+
 
     def _setAgent(self, a):
         self.keyAgent = a
@@ -151,25 +164,41 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         d.addBoth(self._ebSetAgent)
         return d
 
+
     def _ebSetAgent(self, f):
         userauth.SSHUserAuthClient.serviceStarted(self)
 
+
     def _getPassword(self, prompt):
-        try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
-            p=getpass.getpass(prompt)
-            sys.stdout,sys.stdin=oldout,oldin
-            return p
-        except (KeyboardInterrupt, IOError):
-            print()
-            raise ConchError('PEBKAC')
+        """
+        Prompt for a password using L{getpass.getpass}.
+
+        @param prompt: Written on tty to ask for the input.
+        @type prompt: L{str}
+        @return: The input.
+        @rtype: L{str}
+        """
+        with self._replaceStdoutStdin():
+            try:
+                p = getpass.getpass(prompt)
+                return p
+            except (KeyboardInterrupt, IOError):
+                print()
+                raise ConchError('PEBKAC')
+
 
     def getPassword(self, prompt = None):
-        if not prompt:
-            prompt = "%s@%s's password: " % (self.user, self.transport.transport.getPeer().host)
+        if prompt:
+            prompt = nativeString(prompt)
+        else:
+            prompt = ("%s@%s's password: " %
+                (nativeString(self.user), self.transport.transport.getPeer().host))
         try:
-            p = self._getPassword(prompt)
+            # We don't know the encoding the other side is using,
+            # signaling that is not part of the SSH protocol. But
+            # using our defaultencoding is better than just going for
+            # ASCII.
+            p = self._getPassword(prompt).encode(sys.getdefaultencoding())
             return defer.succeed(p)
         except ConchError:
             return defer.fail()
@@ -208,7 +237,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         data, if one is available.
 
         @type publicKey: L{Key}
-        @type signData: C{str}
+        @type signData: L{bytes}
         """
         if not self.usedFiles: # agent key
             return self.keyAgent.signData(publicKey.blob(), signData)
@@ -229,10 +258,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.succeed(keys.Key.fromFile(file))
         except keys.EncryptedKeyError:
             for i in range(3):
-                prompt = "Enter passphrase for key '%s': " % \
-                    self.usedFiles[-1]
+                prompt = "Enter passphrase for key '%s': " % self.usedFiles[-1]
                 try:
-                    p = self._getPassword(prompt)
+                    p = self._getPassword(prompt).encode(
+                        sys.getfilesystemencoding())
                     return defer.succeed(keys.Key.fromFile(file, passphrase=p))
                 except (keys.BadKeyError, ConchError):
                     pass
@@ -245,18 +274,51 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
-        try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
+        with self._replaceStdoutStdin():
             if name:
-                print(name)
+                print(name.decode("utf-8"))
             if instruction:
-                print(instruction)
+                print(instruction.decode("utf-8"))
             for prompt, echo in prompts:
+                prompt = prompt.decode("utf-8")
                 if echo:
                     responses.append(raw_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
-        finally:
-            sys.stdout,sys.stdin=oldout,oldin
         return defer.succeed(responses)
+
+
+    @classmethod
+    def _openTty(cls):
+        """
+        Open /dev/tty as two streams one in read, one in write mode,
+        and return them.
+
+        @return: File objects for reading and writing to /dev/tty,
+                 corresponding to standard input and standard output.
+        @rtype: A L{tuple} of L{io.TextIOWrapper} on Python 3.
+                A L{tuple} of binary files on Python 2.
+        """
+        stdin = open("/dev/tty", "rb")
+        stdout = open("/dev/tty", "wb")
+        if _PY3:
+            stdin = io.TextIOWrapper(stdin)
+            stdout = io.TextIOWrapper(stdout)
+        return stdin, stdout
+
+
+    @classmethod
+    @contextlib.contextmanager
+    def _replaceStdoutStdin(cls):
+        """
+        Contextmanager that replaces stdout and stdin with /dev/tty
+        and resets them when it is done.
+        """
+        oldout, oldin = sys.stdout, sys.stdin
+        sys.stdin, sys.stdout = cls._openTty()
+        try:
+            yield
+        finally:
+            sys.stdout.close()
+            sys.stdin.close()
+            sys.stdout, sys.stdin = oldout, oldin

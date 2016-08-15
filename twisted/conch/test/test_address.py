@@ -5,6 +5,8 @@
 Tests for L{SSHTransportAddrress} in ssh/address.py
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.internet.address import IPv4Address
 from twisted.internet.test.test_address import AddressTestCaseMixin
@@ -46,4 +48,3 @@ class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
         Like C{buildAddress}, but with a different fixed address.
         """
         return SSHTransportAddress(IPv4Address("TCP", "127.0.0.2", 22))
-

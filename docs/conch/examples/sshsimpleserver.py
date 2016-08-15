@@ -12,7 +12,7 @@ from twisted.conch.ssh.transport import SSHServerTransport
 from twisted.internet import reactor, protocol
 from twisted.python import log
 from twisted.python import components
-from zope.interface import implements
+from zope.interface import implementer
 import sys
 log.startLogging(sys.stderr)
 
@@ -103,14 +103,13 @@ class ExampleAvatar(avatar.ConchUser):
 
 
 
+@implementer(portal.IRealm)
 class ExampleRealm(object):
     """
     When using Twisted Cred, the pluggable authentication framework, the
     C{requestAvatar} method should return a L{avatar.ConchUser} instance
     as required by the Conch SSH server.
     """
-    implements(portal.IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         """
         See: L{portal.IRealm.requestAvatar}

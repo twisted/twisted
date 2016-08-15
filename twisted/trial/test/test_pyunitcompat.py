@@ -252,30 +252,3 @@ class PyUnitResultTests(SynchronousTestCase):
         result = pyunit.TestResult()
         test.run(result)
         self.assertEqual(result.skipped, [(test, "skippy")])
-
-
-    def test_skip26(self):
-        """
-        On Python 2.6, pyunit doesn't support skipping, so it gets added as a
-        failure to the L{pyunit.TestResult}.
-        """
-        class SkipTest(SynchronousTestCase):
-            def test_skip(self):
-                1/0
-            test_skip.skip = "Let's skip!"
-
-        test = SkipTest('test_skip')
-        result = pyunit.TestResult()
-        test.run(result)
-        self.assertEqual(len(result.failures), 1)
-        test2, reason = result.failures[0]
-        self.assertIdentical(test, test2)
-        self.assertIn("UnsupportedTrialFeature", reason)
-
-    if sys.version_info[:2] < (2, 7):
-        message = "pyunit doesn't support skipping in Python 2.6"
-        test_trialSkip.skip = message
-        test_pyunitSkip.skip = message
-        del message
-    else:
-        test_skip26.skip = "This test is only relevant to Python 2.6"

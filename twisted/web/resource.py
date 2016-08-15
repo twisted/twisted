@@ -367,7 +367,7 @@ class _IEncodingResource(Interface):
         Parse the request and return an encoder if applicable, using
         L{_IRequestEncoderFactory.encoderForRequest}.
 
-        @return: A L{_IRequestEncoder}, or C{None}.
+        @return: A L{_IRequestEncoder}, or L{None}.
         """
 
 

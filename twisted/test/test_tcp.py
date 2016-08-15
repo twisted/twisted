@@ -20,6 +20,8 @@ from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
+from twisted.python.compat import _PY3
+from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
 
 
@@ -90,15 +92,15 @@ class MyProtocolFactoryMixin(object):
         typical C{protocol} attribute of factories (but that name is used by
         this class for something else).
 
-    @type protocolConnectionMade: L{NoneType} or L{defer.Deferred}
+    @type protocolConnectionMade: L{None} or L{defer.Deferred}
     @ivar protocolConnectionMade: When an instance of L{AccumulatingProtocol}
-        is connected, if this is not C{None}, the L{Deferred} will be called
-        back with the protocol instance and the attribute set to C{None}.
+        is connected, if this is not L{None}, the L{Deferred} will be called
+        back with the protocol instance and the attribute set to L{None}.
 
-    @type protocolConnectionLost: L{NoneType} or L{defer.Deferred}
+    @type protocolConnectionLost: L{None} or L{defer.Deferred}
     @ivar protocolConnectionLost: When an instance of L{AccumulatingProtocol}
         is created, this will be set as its C{closedDeferred} attribute and
-        then this attribute will be set to C{None} so the L{defer.Deferred} is
+        then this attribute will be set to L{None} so the L{defer.Deferred} is
         not used by more than one protocol.
 
     @ivar protocol: The most recently created L{AccumulatingProtocol} instance
@@ -1071,7 +1073,7 @@ class ConnectionLostNotifyingProtocol(protocol.Protocol):
     @ivar onConnectionLost: The L{Deferred} which will be fired in
         C{connectionLost}.
 
-    @ivar lostConnectionReason: C{None} until the connection is lost, then a
+    @ivar lostConnectionReason: L{None} until the connection is lost, then a
         reference to the reason passed to C{connectionLost}.
     """
     def __init__(self, onConnectionLost):
@@ -1138,10 +1140,11 @@ class ProperlyCloseFilesMixin:
         Return the errno expected to result from writing to a closed
         platform socket handle.
         """
-        # These platforms have been seen to give EBADF:
-        #
-        #  Linux 2.4.26, Linux 2.6.15, OS X 10.4, FreeBSD 5.4
-        #  Windows 2000 SP 4, Windows XP SP 2
+        # Windows and Python 3: returns WSAENOTSOCK
+        # Windows and Python 2: returns EBADF
+        # Linux, FreeBSD, Mac OS X: returns EBADF
+        if platform.isWindows() and _PY3:
+            return errno.WSAENOTSOCK
         return errno.EBADF
 
 
@@ -1516,9 +1519,9 @@ class HalfCloseTests(unittest.TestCase):
             t.loseWriteConnection()
             return loopUntil(lambda :t._writeDisconnected)
         def check(ignored):
-            self.assertEqual(client.closed, False)
-            self.assertEqual(client.writeHalfClosed, True)
-            self.assertEqual(client.readHalfClosed, False)
+            self.assertFalse(client.closed)
+            self.assertTrue(client.writeHalfClosed)
+            self.assertFalse(client.readHalfClosed)
             return loopUntil(lambda :f.protocol.readHalfClosed)
         def write(ignored):
             w = client.transport.write
@@ -1526,8 +1529,8 @@ class HalfCloseTests(unittest.TestCase):
             w(b"lalala fooled you")
             self.assertEqual(0, len(client.transport._tempDataBuffer))
             self.assertEqual(f.protocol.data, b"hello")
-            self.assertEqual(f.protocol.closed, False)
-            self.assertEqual(f.protocol.readHalfClosed, True)
+            self.assertFalse(f.protocol.closed)
+            self.assertTrue(f.protocol.readHalfClosed)
         return d.addCallback(loseWrite).addCallback(check).addCallback(write)
 
     def testWriteCloseNotification(self):
@@ -1579,7 +1582,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
                       self.assertEqual(self.f.protocol.data, b'hello'))
-        d.addCallback(lambda x: self.assertEqual(self.f.protocol.closed, True))
+        d.addCallback(lambda x: self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
     def testShutdownException(self):
@@ -1593,7 +1596,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.f.protocol.closedDeferred = d = defer.Deferred()
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
-                      self.assertEqual(self.f.protocol.closed, True))
+                      self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
 

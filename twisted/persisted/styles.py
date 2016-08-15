@@ -10,21 +10,38 @@ from __future__ import division, absolute_import
 
 # System Imports
 import types
+import pickle
 try:
     import copy_reg
 except ImportError:
     import copyreg as copy_reg
 import copy
 import inspect
-import sys
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _PYPY
 
 # Twisted Imports
 from twisted.python import log
 from twisted.python import reflect
 
 oldModules = {}
+
+
+try:
+    import cPickle
+except ImportError:
+    cPickle = None
+
+if cPickle is None or cPickle.PicklingError is pickle.PicklingError:
+    _UniversalPicklingError = pickle.PicklingError
+else:
+    class _UniversalPicklingError(pickle.PicklingError,
+                                  cPickle.PicklingError):
+        """
+        A PicklingError catchable by both L{cPickle.PicklingError} and
+        L{pickle.PicklingError} handlers.
+        """
+
 
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
@@ -111,10 +128,11 @@ def _pickleFunction(f):
 
     @return: a 2-tuple of a reference to L{_unpickleFunction} and a tuple of
         its arguments, a 1-tuple of the function's fully qualified name.
-    @rtype: 2-tuple of C{(callable, native string}}
+    @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
-        return None
+        raise _UniversalPicklingError(
+            "Cannot pickle lambda function: {}".format(f))
     return (_unpickleFunction,
             tuple([".".join([f.__module__, f.__qualname__])]))
 
@@ -262,8 +280,8 @@ class Ephemeral:
 
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
-        import gc
-        if '__pypy__' not in sys.builtin_module_names:
+        if not _PYPY:
+            import gc
             if getattr(gc, 'get_referrers', None):
                 for r in gc.get_referrers(self):
                     log.msg( " referred to by %s" % (r,))

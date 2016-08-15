@@ -195,7 +195,7 @@ class LookupsTests(TestCase):
         """
         L{namedClass} should return the class object for the name it is passed.
         """
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedClass("twisted.test.test_reflect.Summer"),
             Summer)
 
@@ -206,7 +206,7 @@ class LookupsTests(TestCase):
         passed.
         """
         from twisted.python import monkey
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedModule("twisted.python.monkey"), monkey)
 
 
@@ -215,7 +215,7 @@ class LookupsTests(TestCase):
         L{namedAny} should return the package object for the name it is passed.
         """
         import twisted.python
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny("twisted.python"), twisted.python)
 
 
@@ -224,7 +224,7 @@ class LookupsTests(TestCase):
         L{namedAny} should return the module object for the name it is passed.
         """
         from twisted.python import monkey
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny("twisted.python.monkey"), monkey)
 
 
@@ -232,7 +232,7 @@ class LookupsTests(TestCase):
         """
         L{namedAny} should return the class object for the name it is passed.
         """
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny("twisted.test.test_reflect.Summer"),
             Summer)
 
@@ -257,7 +257,7 @@ class LookupsTests(TestCase):
         itself was an attribute of a non-module, non-package object is bound to
         for the name it is passed.
         """
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny(
                 "twisted.test.test_reflect."
                 "Summer.reallySet.__doc__"),
@@ -359,11 +359,11 @@ class LookupsTests(TestCase):
 
     def test_requireModuleDefaultNone(self):
         """
-        When module import fails it returns C{None} by default.
+        When module import fails it returns L{None} by default.
         """
         result = reflect.requireModule('no.such.module')
 
-        self.assertIs(None, result)
+        self.assertIsNone(result)
 
 
     def test_requireModuleRequestedImport(self):

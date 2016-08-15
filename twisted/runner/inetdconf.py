@@ -12,15 +12,23 @@ from twisted.python.versions import Version
 
 # Various exceptions
 class InvalidConfError(Exception):
-    """Invalid configuration file"""
+    """
+    Invalid configuration file
+    """
+
 
 
 class InvalidInetdConfError(InvalidConfError):
-    """Invalid inetd.conf file"""
+    """
+    Invalid inetd.conf file
+    """
+
 
 
 class InvalidServicesConfError(InvalidConfError):
-    """Invalid services file"""
+    """
+    Invalid services file
+    """
 
 
 
@@ -36,48 +44,61 @@ class InvalidRPCServicesConfError(InvalidConfError):
 
 
 class UnknownService(Exception):
-    """Unknown service name"""
+    """
+    Unknown service name
+    """
+
 
 
 class SimpleConfFile:
-    """Simple configuration file parser superclass.
+    """
+    Simple configuration file parser superclass.
 
-    Filters out comments and empty lines (which includes lines that only 
+    Filters out comments and empty lines (which includes lines that only
     contain comments).
 
     To use this class, override parseLine or parseFields.
     """
-    
+
     commentChar = '#'
     defaultFilename = None
-    
+
     def parseFile(self, file=None):
-        """Parse a configuration file
-        
+        """
+        Parse a configuration file
+
         If file is None and self.defaultFilename is set, it will open
         defaultFilename and use it.
         """
+        close = False
         if file is None and self.defaultFilename:
             file = open(self.defaultFilename,'r')
-            
-        for line in file.readlines():
-            # Strip out comments
-            comment = line.find(self.commentChar)
-            if comment != -1:
-                line = line[:comment]
+            close = True
 
-            # Strip whitespace
-            line = line.strip()
+        try:
+            for line in file.readlines():
+                # Strip out comments
+                comment = line.find(self.commentChar)
+                if comment != -1:
+                    line = line[:comment]
 
-            # Skip empty lines (and lines which only contain comments)
-            if not line:
-                continue
+                # Strip whitespace
+                line = line.strip()
 
-            self.parseLine(line)
+                # Skip empty lines (and lines which only contain comments)
+                if not line:
+                    continue
+
+                self.parseLine(line)
+        finally:
+            if close:
+                file.close()
+
 
     def parseLine(self, line):
-        """Override this.
-        
+        """
+        Override this.
+
         By default, this will split the line on whitespace and call
         self.parseFields (catching any errors).
         """
@@ -85,13 +106,19 @@ class SimpleConfFile:
             self.parseFields(*line.split())
         except ValueError:
             raise InvalidInetdConfError('Invalid line: ' + repr(line))
-    
+
+
     def parseFields(self, *fields):
-        """Override this."""
+        """
+        Override this.
+        """
+
 
 
 class InetdService:
-    """A simple description of an inetd service."""
+    """
+    A simple description of an inetd service.
+    """
     name = None
     port = None
     socketType = None
@@ -101,7 +128,7 @@ class InetdService:
     group = None
     program = None
     programArgs = None
-    
+
     def __init__(self, name, port, socketType, protocol, wait, user, group,
                  program, programArgs):
         self.name = name
@@ -115,22 +142,27 @@ class InetdService:
         self.programArgs = programArgs
 
 
+
 class InetdConf(SimpleConfFile):
-    """Configuration parser for a traditional UNIX inetd(8)"""
+    """
+    Configuration parser for a traditional UNIX inetd(8)
+    """
 
     defaultFilename = '/etc/inetd.conf'
-    
+
     def __init__(self, knownServices=None):
         self.services = []
-        
+
         if knownServices is None:
             knownServices = ServicesConf()
             knownServices.parseFile()
         self.knownServices = knownServices
 
+
     def parseFields(self, serviceName, socketType, protocol, wait, user,
                     program, *programArgs):
-        """Parse an inetd.conf file.
+        """
+        Parse an inetd.conf file.
 
         Implemented from the description in the Debian inetd.conf man page.
         """
@@ -152,23 +184,26 @@ class InetdConf(SimpleConfFile):
         self.services.append(InetdService(serviceName, port, socketType,
                                           protocol, wait, user, group, program,
                                           programArgs))
-            
-            
+
+
+
 class ServicesConf(SimpleConfFile):
-    """/etc/services parser
-    
+    """
+    /etc/services parser
+
     @ivar services: dict mapping service names to (port, protocol) tuples.
     """
-    
+
     defaultFilename = '/etc/services'
 
     def __init__(self):
         self.services = {}
 
+
     def parseFields(self, name, portAndProtocol, *aliases):
         try:
             port, protocol = portAndProtocol.split('/')
-            port = long(port)
+            port = int(port)
         except:
             raise InvalidServicesConfError(
                 'Invalid port/protocol: %s' % (repr(portAndProtocol),))
@@ -195,9 +230,10 @@ class RPCServicesConf(SimpleConfFile):
     def __init__(self):
         self.services = {}
 
+
     def parseFields(self, name, port, *aliases):
         try:
-            port = long(port)
+            port = int(port)
         except:
             raise InvalidRPCServicesConfError(
                 'Invalid port: %s' % (repr(port),))

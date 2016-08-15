@@ -2275,7 +2275,7 @@ class LengthEnforcingConsumerTests(TestCase):
     def test_finished(self):
         """
         If L{LengthEnforcingConsumer._noMoreWritesExpected} is called after
-        the correct number of bytes have been written it returns C{None}.
+        the correct number of bytes have been written it returns L{None}.
         """
         self.enforcer.write(b'x' * 10)
         self.assertIdentical(self.enforcer._noMoreWritesExpected(), None)

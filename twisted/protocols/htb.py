@@ -20,7 +20,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
 # the same true of os.times?
 from time import time
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.protocols import pcp
 
@@ -32,11 +32,11 @@ class Bucket:
     A bucket can hold a certain number of tokens and it drains over time.
 
     @cvar maxburst: The maximum number of tokens that the bucket can
-        hold at any given time. If this is C{None}, the bucket has
+        hold at any given time. If this is L{None}, the bucket has
         an infinite size.
     @type maxburst: C{int}
     @cvar rate: The rate at which the bucket drains, in number
-        of tokens per second. If the rate is C{None}, the bucket
+        of tokens per second. If the rate is L{None}, the bucket
         drains instantaneously.
     @type rate: C{int}
     """
@@ -117,6 +117,7 @@ class IBucketFilter(Interface):
         @returntype: L{Bucket}
         """
 
+@implementer(IBucketFilter)
 class HierarchicalBucketFilter:
     """
     Filter things into buckets that can be nested.
@@ -126,9 +127,6 @@ class HierarchicalBucketFilter:
     @cvar sweepInterval: Seconds between sweeping out the bucket cache.
     @type sweepInterval: C{int}
     """
-
-    implements(IBucketFilter)
-
     bucketFactory = Bucket
     sweepInterval = None
 

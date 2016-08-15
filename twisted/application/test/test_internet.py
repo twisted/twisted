@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.test.test_internet -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -201,6 +202,21 @@ class EndpointServiceTests(TestCase):
         self.assertEqual(len(logged), 1)
 
 
+    def test_asynchronousFailReportsError(self):
+        """
+        L{StreamServerEndpointService.startService} and
+        L{StreamServerEndpointService.privilegedStartService} should both log
+        an exception when the L{Deferred} returned from their wrapped
+        L{IStreamServerEndpoint.listen} fails asynchronously, even if
+        C{_raiseSynchronously} is set.
+        """
+        self.svc._raiseSynchronously = True
+        self.svc.startService()
+        self.fakeServer.result.errback(ZeroDivisionError())
+        logged = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertEqual(len(logged), 1)
+
+
     def test_synchronousFailReportsError(self):
         """
         Without the C{_raiseSynchronously} compatibility flag, failing
@@ -299,6 +315,9 @@ class TimerServiceTests(TestCase):
     """
 
     def setUp(self):
+        """
+        Set up a timer service to test.
+        """
         self.timer = TimerService(2, self.call)
         self.clock = self.timer.clock = task.Clock()
         self.deferred = Deferred()
@@ -732,14 +751,14 @@ class ClientServiceTests(SynchronousTestCase):
         """
         clock = Clock()
         cq, service = self.makeReconnector(clock=clock, fireImmediately=False)
-        self.assertEquals(len(cq.connectQueue), 1)
+        self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].callback(None)
-        self.assertEquals(len(cq.connectQueue), 1)
+        self.assertEqual(len(cq.connectQueue), 1)
         self.assertIdentical(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[0])
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
         clock.advance(AT_LEAST_ONE_ATTEMPT)
-        self.assertEquals(len(cq.connectQueue), 2)
+        self.assertEqual(len(cq.connectQueue), 2)
         cq.connectQueue[1].callback(None)
         self.assertIdentical(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[1])

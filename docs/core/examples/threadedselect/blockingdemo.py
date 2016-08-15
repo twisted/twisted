@@ -2,6 +2,8 @@
 # See LICENSE for details.
 
 
+from __future__ import print_function
+
 from twisted.internet import _threadedselect
 _threadedselect.install()
 
@@ -66,26 +68,26 @@ class TwistedManager(object):
 def fakeDeferred(msg):
     d = Deferred()
     def cb():
-        print "deferred called back"
+        print("deferred called back")
         d.callback(msg)
     reactor.callLater(2, cb)
     return d
 
 def fakeCallback():
-    print "twisted is still running"
+    print("twisted is still running")
 
 def main():
     m = TwistedManager()
-    print "starting"
+    print("starting")
     m.start()
-    print "setting up a 1sec callback"
+    print("setting up a 1sec callback")
     reactor.callLater(1, fakeCallback)
-    print "getting a deferred"
+    print("getting a deferred")
     res = m.getDeferred(fakeDeferred("got it!"))
-    print "got the deferred:", res
-    print "stopping"
+    print("got the deferred:", res)
+    print("stopping")
     m.stop()
-    print "stopped"
+    print("stopped")
 
 
 if __name__ == '__main__':

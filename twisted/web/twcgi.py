@@ -116,7 +116,7 @@ class CGIScript(resource.Resource):
         # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
             envname = title.replace('-', '_').upper()
-            if title not in ('content-type', 'content-length'):
+            if title not in ('content-type', 'content-length', 'proxy'):
                 envname = "HTTP_" + envname
             env[envname] = header
         # Propagate our environment
@@ -132,7 +132,7 @@ class CGIScript(resource.Resource):
         """
         Run the cgi script.
 
-        @type env: A C{dict} of C{str}, or C{None}
+        @type env: A C{dict} of C{str}, or L{None}
         @param env: The environment variables to pass to the processs that will
             get spawned. See
             L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
@@ -174,7 +174,7 @@ class FilteredScript(CGIScript):
         """
         Run a script through the C{filter} executable.
 
-        @type env: A C{dict} of C{str}, or C{None}
+        @type env: A C{dict} of C{str}, or L{None}
         @param env: The environment variables to pass to the processs that will
             get spawned. See
             L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more

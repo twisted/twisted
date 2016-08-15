@@ -6,7 +6,7 @@ Test cases for twisted.mail.smtp module.
 """
 import inspect
 
-from zope.interface import implements, directlyProvides
+from zope.interface import implementer, directlyProvides
 
 from twisted.python.util import LineLog
 from twisted.trial import unittest, util
@@ -50,14 +50,13 @@ def spameater(*spam, **eggs):
 
 
 
+@implementer(smtp.IMessage)
 class BrokenMessage(object):
     """
     L{BrokenMessage} is an L{IMessage} which raises an unexpected exception
     from its C{eomReceived} method.  This is useful for creating a server which
     can be used to test client retry behavior.
     """
-    implements(smtp.IMessage)
-
     def __init__(self, user):
         pass
 
@@ -530,9 +529,8 @@ class AnotherSMTPTests(AnotherTestCase, unittest.TestCase):
 
 
 
+@implementer(cred.checkers.ICredentialsChecker)
 class DummyChecker:
-    implements(cred.checkers.ICredentialsChecker)
-
     users = {
         'testuser': 'testpassword'
     }
@@ -552,13 +550,12 @@ class DummyChecker:
 
 
 
+@implementer(smtp.IMessageDelivery)
 class SimpleDelivery(object):
     """
     L{SimpleDelivery} is a message delivery factory with no interesting
     behavior.
     """
-    implements(smtp.IMessageDelivery)
-
     def __init__(self, messageFactory):
         self._messageFactory = messageFactory
 
@@ -1024,13 +1021,12 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
 
 
 
+@implementer(IRealm)
 class SingletonRealm(object):
     """
     Trivial realm implementation which is constructed with an interface and an
     avatar and returns that avatar when asked for that interface.
     """
-    implements(IRealm)
-
     def __init__(self, interface, avatar):
         self.interface = interface
         self.avatar = avatar
@@ -1187,6 +1183,7 @@ class SMTPServerTests(unittest.TestCase):
             '<alice@example.com>: Sender not acceptable\r\n')
 
 
+    @implementer(ICredentialsChecker)
     def test_portalRejectedSenderAddress(self):
         """
         Test that a C{MAIL FROM} command with an address rejected by an
@@ -1197,8 +1194,6 @@ class SMTPServerTests(unittest.TestCase):
             """
             Checker for L{IAnonymous} which rejects authentication attempts.
             """
-            implements(ICredentialsChecker)
-
             credentialInterfaces = (IAnonymous,)
 
             def requestAvatarId(self, credentials):

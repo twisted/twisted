@@ -41,7 +41,7 @@ The result is what will be returned to the clients.
 Methods published via XML-RPC can return all the basic XML-RPC
 types, such as strings, lists and so on (just return a regular python
 integer, etc).  They can also raise exceptions or return Failure instances to indicate an
-error has occurred, or ``Binary`` , ``Boolean`` or ``DateTime`` 
+error has occurred, or ``Binary`` , ``Boolean`` or ``DateTime``
 instances (all of these are the same as the respective classes in xmlrpclib. In
 addition, XML-RPC published methods can return :api:`twisted.internet.defer.Deferred <Deferred>` instances whose results are one of the above. This allows
 you to return results that can't be calculated immediately, such as database queries.
@@ -61,36 +61,37 @@ following example has two methods published via XML-RPC, ``add(a, b)`` and ``ech
 
 .. code-block:: python
 
-    
+
     from twisted.web import xmlrpc, server
-    
+
     class Example(xmlrpc.XMLRPC):
         """
         An example object to be published.
         """
-    
+
         def xmlrpc_echo(self, x):
             """
             Return all passed args.
             """
             return x
-    
+
         def xmlrpc_add(self, a, b):
             """
             Return sum of arguments.
             """
             return a + b
-    
+
         def xmlrpc_fault(self):
             """
             Raise a Fault indicating that the procedure should not be used.
             """
             raise xmlrpc.Fault(123, "The fault procedure is faulty.")
-    
+
     if __name__ == '__main__':
-        from twisted.internet import reactor
+        from twisted.internet import reactor, endpoints
         r = Example()
-        reactor.listenTCP(7080, server.Site(r))
+        endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
+        endpoint.listen(server.Site(r))
         reactor.run()
 
 
@@ -105,7 +106,7 @@ to the server:
 
 .. code-block:: pycon
 
-    
+
     >>> import xmlrpclib
     >>> s = xmlrpclib.Server('http://localhost:7080/')
     >>> s.echo("lala")
@@ -117,7 +118,7 @@ to the server:
     ...
     xmlrpclib.Fault: <Fault 123: 'The fault procedure is faulty.'>
     >>>
-    
+
 
 
 
@@ -134,18 +135,19 @@ argument, before any XML-RPC parameters.  For example:
 
 .. code-block:: python
 
-    
+
     from twisted.web.xmlrpc import XMLRPC, withRequest
     from twisted.web.server import Site
-    
+
     class Example(XMLRPC):
         @withRequest
         def xmlrpc_headerValue(self, request, headerName):
             return request.requestHeaders.getRawHeaders(headerName)
-    
+
     if __name__ == '__main__':
-        from twisted.internet import reactor
-        reactor.listenTCP(7080, Site(Example()))
+        from twisted.internet import reactor, endpoints
+        endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
+        endpoint.listen(Site(Example()))
         reactor.run()
 
 
@@ -181,44 +183,45 @@ following:
 
 .. code-block:: python
 
-    
+
     import time
     from twisted.web import xmlrpc, server
-    
+
     class Example(xmlrpc.XMLRPC):
         """
         An example object to be published.
         """
-    
+
         def xmlrpc_echo(self, x):
             """
             Return all passed args.
             """
             return x
-    
+
         def xmlrpc_add(self, a, b):
             """
             Return sum of arguments.
             """
             return a + b
-    
+
     class Date(xmlrpc.XMLRPC):
         """
         Serve the XML-RPC 'time' method.
         """
-    
+
         def xmlrpc_time(self):
             """
             Return UNIX time.
             """
             return time.time()
-    
+
     if __name__ == '__main__':
-        from twisted.internet import reactor
+        from twisted.internet import reactor, endpoints
         r = Example()
         date = Date()
         r.putSubHandler('date', date)
-        reactor.listenTCP(7080, server.Site(r))
+        endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
+        endpoint.listen(server.Site(r))
         reactor.run()
 
 
@@ -241,7 +244,7 @@ Using your own procedure getter
 Sometimes, you want to implement your own policy of getting the end implementation.
 E.g. just like sub-handlers you want to divide the implementations into separate classes but
 may not want to introduce ``XMLRPC.separator`` in the procedure name.
-In such cases just override the ``lookupProcedure(self, procedurePath)`` 
+In such cases just override the ``lookupProcedure(self, procedurePath)``
 method and return the correct callable.
 Raise :api:`twisted.web.xmlrpc.NoSuchFunction <twisted.web.xmlrpc.NoSuchFunction>` otherwise.
 
@@ -261,7 +264,7 @@ Adding XML-RPC Introspection support
 
 
 XML-RPC has an
-informal `IntrospectionAPI <http://tldp.org/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html>`_ that specifies three methods in a ``system`` 
+informal `IntrospectionAPI <http://tldp.org/HOWTO/XML-RPC-HOWTO/xmlrpc-howto-interfaces.html>`_ that specifies three methods in a ``system``
 sub-handler which allow a client to query a server about the server's
 API. Adding Introspection support to
 the ``Example`` class is easy using
@@ -273,43 +276,44 @@ the :api:`twisted.web.xmlrpc.XMLRPCIntrospection <XMLRPCIntrospection>` class:
 
 .. code-block:: python
 
-    
+
     from twisted.web import xmlrpc, server
-    
+
     class Example(xmlrpc.XMLRPC):
         """An example object to be published."""
-    
+
         def xmlrpc_echo(self, x):
             """Return all passed args."""
             return x
-    
+
         xmlrpc_echo.signature = [['string', 'string'],
                                  ['int', 'int'],
                                  ['double', 'double'],
                                  ['array', 'array'],
                                  ['struct', 'struct']]
-    
+
         def xmlrpc_add(self, a, b):
             """Return sum of arguments."""
             return a + b
-    
+
         xmlrpc_add.signature = [['int', 'int', 'int'],
                                 ['double', 'double', 'double']]
         xmlrpc_add.help = "Add the arguments and return the sum."
-    
+
     if __name__ == '__main__':
-        from twisted.internet import reactor
+        from twisted.internet import reactor, endpoints
         r = Example()
         xmlrpc.addIntrospection(r)
-        reactor.listenTCP(7080, server.Site(r))
+        endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
+        endpoint.listen(server.Site(r))
         reactor.run()
 
 
 
 
-Note the method attributes ``help`` 
+Note the method attributes ``help``
 and ``signature`` which are used by the
-Introspection API methods ``system.methodHelp`` 
+Introspection API methods ``system.methodHelp``
 and ``system.methodSignature`` respectively. If
 no ``help`` attribute is specified, the
 method's documentation string is used instead.
@@ -382,18 +386,18 @@ XML-RPC level problem.
 
 .. code-block:: python
 
-    
+
     from twisted.web.xmlrpc import Proxy
     from twisted.internet import reactor
-    
+
     def printValue(value):
-        print repr(value)
+        print(repr(value))
         reactor.stop()
-    
+
     def printError(error):
-        print 'error', error
+        print('error', error)
         reactor.stop()
-    
+
     proxy = Proxy('http://advogato.org/XMLRPC')
     proxy.callRemote('test.sumprod', 3, 5).addCallbacks(printValue, printError)
     reactor.run()
@@ -409,7 +413,7 @@ prints:
 
 ::
 
-    
+
     [8, 15]
 
 
@@ -443,5 +447,5 @@ adds ``/RPC2`` and ``/SOAP`` paths to it.
 Refer to :ref:`Twisted Web
 Development <web-howto-using-twistedweb-development>` for more details about Resources.
 
-  
+
 

@@ -9,6 +9,8 @@ allows access to a shell and a python interpreter over SSH.
 Maintainer: Paul Swartz
 """
 
+from __future__ import division, absolute_import
+
 import struct
 import signal
 import sys
@@ -18,16 +20,17 @@ from zope.interface import implementer
 
 from twisted.internet import interfaces, protocol
 from twisted.python import log
+from twisted.python.compat import networkString, _bytesChr as chr
 from twisted.conch.interfaces import ISession
-from twisted.conch.ssh import common, channel
+from twisted.conch.ssh import common, channel, connection
 
 
 class SSHSession(channel.SSHChannel):
 
-    name = 'session'
+    name = b'session'
     def __init__(self, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
-        self.buf = ''
+        self.buf = b''
         self.client = None
         self.session = None
 
@@ -79,7 +82,7 @@ class SSHSession(channel.SSHChannel):
         if not self.session:
             self.session = ISession(self.avatar)
         term, windowSize, modes = parseRequest_pty_req(data)
-        log.msg('pty request: %s %s' % (term, windowSize))
+        log.msg('pty request: %r %r' % (term, windowSize))
         try:
             self.session.getPty(term, windowSize, modes)
         except:
@@ -160,7 +163,7 @@ class _DummyTransport:
         self.proto.dataReceived(data)
 
     def writeSequence(self, seq):
-        self.write(''.join(seq))
+        self.write(b''.join(seq))
 
     def loseConnection(self):
         self.proto.connectionLost(protocol.connectionDone)
@@ -267,12 +270,12 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
                 else:
                     log.msg('exitSignal: %s' % (signame,))
                     coreDumped = 0
-                self.session.conn.sendRequest(self.session, 'exit-signal',
-                        common.NS(signame[3:]) + chr(coreDumped) +
-                        common.NS('') + common.NS(''))
+                self.session.conn.sendRequest(self.session, b'exit-signal',
+                        common.NS(networkString(signame[3:])) +
+                        chr(coreDumped) + common.NS(b'') + common.NS(b''))
             elif err.exitCode is not None:
                 log.msg('exitCode: %r' % (err.exitCode,))
-                self.session.conn.sendRequest(self.session, 'exit-status',
+                self.session.conn.sendRequest(self.session, b'exit-status',
                         struct.pack('>L', err.exitCode))
         self.session.loseConnection()
 
@@ -296,7 +299,7 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
 
 
     def writeSequence(self, seq):
-        self.session.write(''.join(seq))
+        self.session.write(b''.join(seq))
 
 
     def loseConnection(self):
@@ -320,14 +323,20 @@ def parseRequest_pty_req(data):
     cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[: 16])
     modes, ignored= common.getNS(rest[16:])
     winSize = (rows, cols, xpixel, ypixel)
-    modes = [(ord(modes[i]), struct.unpack('>L', modes[i+1: i+5])[0]) for i in range(0, len(modes)-1, 5)]
+    modes = [(ord(modes[i:i+1]), struct.unpack('>L', modes[i+1: i+5])[0])
+             for i in range(0, len(modes)-1, 5)]
     return term, winSize, modes
 
-def packRequest_pty_req(term, (rows, cols, xpixel, ypixel), modes):
-    """Pack a pty-req request so that it is suitable for sending.
+def packRequest_pty_req(term, geometry, modes):
+    """
+    Pack a pty-req request so that it is suitable for sending.
 
     NOTE: modes must be packed before being sent here.
+
+    @type geometry: L{tuple}
+    @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
+    (rows, cols, xpixel, ypixel) = geometry
     termPacked = common.NS(term)
     winSizePacked = struct.pack('>4L', cols, rows, xpixel, ypixel)
     modesPacked = common.NS(modes) # depend on the client packing modes
@@ -341,9 +350,12 @@ def parseRequest_window_change(data):
     cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
     return rows, cols, xpixel, ypixel
 
-def packRequest_window_change((rows, cols, xpixel, ypixel)):
-    """Pack a window-change request so that it is suitable for sending.
+def packRequest_window_change(geometry):
     """
-    return struct.pack('>4L', cols, rows, xpixel, ypixel)
+    Pack a window-change request so that it is suitable for sending.
 
-import connection
+    @type geometry: L{tuple}
+    @param geometry: A tuple of (rows, columns, xpixel, ypixel)
+    """
+    (rows, cols, xpixel, ypixel) = geometry
+    return struct.pack('>4L', cols, rows, xpixel, ypixel)

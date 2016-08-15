@@ -3,8 +3,9 @@
 
 
 """Server for PB benchmark."""
+from __future__ import print_function
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.spread import pb
 from twisted.internet import reactor
@@ -20,7 +21,7 @@ class PBBenchPerspective(pb.Avatar):
         return None
 
     def printCallsPerSec(self):
-        print '(s) cps:', self.callsPerSec
+        print('(s) cps:', self.callsPerSec)
         self.callsPerSec = 0
         reactor.callLater(1, self.printCallsPerSec)
 
@@ -28,9 +29,8 @@ class PBBenchPerspective(pb.Avatar):
         return ['a', 1, 1, 1.0, [], ()]
 
 
+@implementer(IRealm)
 class SimpleRealm:
-    implements(IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:
             p = PBBenchPerspective()

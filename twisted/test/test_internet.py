@@ -23,7 +23,7 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, passthru
 if not _PY3:
     from twisted.python import util
 
@@ -675,7 +675,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsInDelayedCall(self):
         """
-        L{reactor.callLater} should use the reactor's seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should use the reactor's seconds factory
         to produce the time at which the DelayedCall will be called.
         """
         oseconds = reactor.seconds
@@ -685,11 +686,13 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(call.getTime(), 105)
         finally:
             reactor.seconds = oseconds
+        call.cancel()
 
 
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
         """
-        L{reactor.callLater} should propagate its own seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should propagate its own seconds factory
         to the DelayedCall to use as its own seconds factory.
         """
         oseconds = reactor.seconds
@@ -699,6 +702,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(call.seconds(), 100)
         finally:
             reactor.seconds = oseconds
+        call.cancel()
 
 
     def test_callLater(self):
@@ -710,6 +714,17 @@ class TimeTests(unittest.TestCase):
         reactor.callLater(0, d.callback, None)
         d.addCallback(self.assertEqual, None)
         return d
+
+
+    def test_callLaterReset(self):
+        """
+        A L{DelayedCall} that is reset will be scheduled at the new time.
+        """
+        call = reactor.callLater(2, passthru, passthru)
+        self.addCleanup(call.cancel)
+        origTime = call.time
+        call.reset(1)
+        self.assertNotEqual(call.time, origTime)
 
 
     def test_cancelDelayedCall(self):
@@ -828,6 +843,7 @@ class TimeTests(unittest.TestCase):
         self.assertEqual(dc.getTime(), 13)
 
 
+
 class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor
@@ -851,7 +867,7 @@ class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
 
     def _callFromThreadCallback2(self, d):
         try:
-            self.assert_(self.stopped)
+            self.assertTrue(self.stopped)
         except:
             # Send the error to the deferred
             d.errback()
@@ -945,10 +961,10 @@ class DelayedTests(unittest.TestCase):
         L{IDelayedCall.active} returns False once the call has run.
         """
         dcall = reactor.callLater(0.01, self.deferred.callback, True)
-        self.assertEqual(dcall.active(), True)
+        self.assertTrue(dcall.active())
 
         def checkDeferredCall(success):
-            self.assertEqual(dcall.active(), False)
+            self.assertFalse(dcall.active())
             return success
 
         self.deferred.addCallback(checkDeferredCall)
@@ -1005,13 +1021,12 @@ class ResolveTests(unittest.TestCase):
         # child which just does reactor.resolve after the reactor has
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
-        helperFile = open(helperPath, 'w')
+        with open(helperPath, 'w') as helperFile:
 
-        # Eeueuuggg
-        reactorName = reactor.__module__
+            # Eeueuuggg
+            reactorName = reactor.__module__
 
-        helperFile.write(resolve_helper % {'reactor': reactorName})
-        helperFile.close()
+            helperFile.write(resolve_helper % {'reactor': reactorName})
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
@@ -1130,7 +1145,7 @@ class ProtocolTests(unittest.TestCase):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
         self.assertEqual(protocol.factory, factory)
-        self.assert_( isinstance(protocol, factory.protocol) )
+        self.assertIsInstance(protocol, factory.protocol)
 
 
 class DummyProducer(object):

@@ -57,13 +57,13 @@ class HeadingTests(TestCase):
         """
         Tests that a simple heading has a value in decimal degrees, which is
         also its value when converted to a float. Its variation, and by
-        consequence its corrected heading, is C{None}.
+        consequence its corrected heading, is L{None}.
         """
         h = base.Heading(1.)
         self.assertEqual(h.inDecimalDegrees, 1.)
         self.assertEqual(float(h), 1.)
-        self.assertEqual(h.variation, None)
-        self.assertEqual(h.correctedHeading, None)
+        self.assertIsNone(h.variation)
+        self.assertIsNone(h.correctedHeading)
 
 
     def test_headingWithoutVariationRepr(self):
@@ -248,7 +248,7 @@ class HeadingTests(TestCase):
         C{ValueError}.
         """
         h = base.Heading.fromFloats(1.)
-        self.assertIdentical(None, h.variation.inDecimalDegrees)
+        self.assertIsNone(h.variation.inDecimalDegrees)
         self.assertRaises(ValueError, h.setSign, 1)
 
 
@@ -470,11 +470,11 @@ class CoordinateTests(TestCase):
 
     def test_unknownAngleInDegreesMinutesSeconds(self):
         """
-        If the vaue of a coordinate is C{None}, its values in degrees,
-        minutes, seconds is also C{None}.
+        If the vaue of a coordinate is L{None}, its values in degrees,
+        minutes, seconds is also L{None}.
         """
         c = base.Coordinate(None, None)
-        self.assertEqual(c.inDegreesMinutesSeconds, None)
+        self.assertIsNone(c.inDegreesMinutesSeconds)
 
 
 
@@ -636,23 +636,23 @@ class PositionErrorTests(TestCase):
     def test_allUnset(self):
         """
         In an empty L{base.PositionError} with no invariant testing, all
-        dilutions of positions are C{None}.
+        dilutions of positions are L{None}.
         """
         positionError = base.PositionError()
-        self.assertEqual(positionError.pdop, None)
-        self.assertEqual(positionError.hdop, None)
-        self.assertEqual(positionError.vdop, None)
+        self.assertIsNone(positionError.pdop)
+        self.assertIsNone(positionError.hdop)
+        self.assertIsNone(positionError.vdop)
 
 
     def test_allUnsetWithInvariant(self):
         """
         In an empty L{base.PositionError} with invariant testing, all
-        dilutions of positions are C{None}.
+        dilutions of positions are L{None}.
         """
         positionError = base.PositionError(testInvariant=True)
-        self.assertEqual(positionError.pdop, None)
-        self.assertEqual(positionError.hdop, None)
-        self.assertEqual(positionError.vdop, None)
+        self.assertIsNone(positionError.pdop)
+        self.assertIsNone(positionError.hdop)
+        self.assertIsNone(positionError.vdop)
 
 
     def test_withoutInvariant(self):
@@ -728,11 +728,11 @@ class PositionErrorTests(TestCase):
         @param pe: The position error under test.
         @type pe: C{PositionError}
         @param pdop: The expected position dilution of precision.
-        @type pdop: C{float} or C{NoneType}
+        @type pdop: C{float} or L{None}
         @param hdop: The expected horizontal dilution of precision.
-        @type hdop: C{float} or C{NoneType}
+        @type hdop: C{float} or L{None}
         @param vdop: The expected vertical dilution of precision.
-        @type vdop: C{float} or C{NoneType}
+        @type vdop: C{float} or L{None}
         """
         self.assertEqual(pe.pdop, pdop)
         self.assertEqual(pe.hdop, hdop)
@@ -886,13 +886,13 @@ class SatelliteTests(TestCase):
         Tests a minimal satellite that only has a known PRN.
 
         Tests that the azimuth, elevation and signal to noise ratios
-        are C{None} and verifies the repr.
+        are L{None} and verifies the repr.
         """
         s = base.Satellite(1)
         self.assertEqual(s.identifier, 1)
-        self.assertEqual(s.azimuth, None)
-        self.assertEqual(s.elevation, None)
-        self.assertEqual(s.signalToNoiseRatio, None)
+        self.assertIsNone(s.azimuth)
+        self.assertIsNone(s.elevation)
+        self.assertIsNone(s.signalToNoiseRatio)
         self.assertEqual(repr(s), "<Satellite (1), azimuth: None, "
                                    "elevation: None, snr: None>")
 

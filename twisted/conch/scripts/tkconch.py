@@ -398,10 +398,9 @@ class SSHClientTransport(transport.SSHClientTransport):
             raise error.ConchError('bad host key')
         try:
             frame.write("Warning: Permanently added '%s' (%s) to the list of known hosts.\r\n" % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType]))
-            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
-            encodedKey = base64.encodestring(pubKey).replace('\n', '')
-            known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
-            known_hosts.close()
+            with open(os.path.expanduser('~/.ssh/known_hosts'), 'a') as known_hosts:
+                encodedKey = base64.encodestring(pubKey).replace('\n', '')
+                known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
         except:
             log.deferr()
             raise error.ConchError

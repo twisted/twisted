@@ -2479,7 +2479,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
     def test_name(self):
         """
-        L{dns._OPTHeader.name} is a instance attribute whose value is
+        L{dns._OPTHeader.name} is an instance attribute whose value is
         fixed as the root domain
         """
         self.assertEqual(dns._OPTHeader().name, dns.Name(b''))
@@ -2561,7 +2561,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         L{dns._OPTHeader.dnssecOK} defaults to False.
         """
-        self.assertEqual(dns._OPTHeader().dnssecOK, False)
+        self.assertFalse(dns._OPTHeader().dnssecOK)
 
 
     def test_dnssecOKOverride(self):
@@ -2569,7 +2569,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.dnssecOK} can be overridden in the
         constructor.
         """
-        self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
+        self.assertTrue(dns._OPTHeader(dnssecOK=True).dnssecOK)
 
 
     def test_options(self):
@@ -4463,7 +4463,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         An L(_EDNSMessage} instance created from a byte string containing
         multiple I{OPT} records will discard all the C{OPT} records.
 
-        C{ednsVersion} will be set to C{None}.
+        C{ednsVersion} will be set to L{None}.
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
@@ -4475,7 +4475,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage()
         ednsMessage.fromStr(m.toStr())
 
-        self.assertEqual(ednsMessage.ednsVersion, None)
+        self.assertIsNone(ednsMessage.ednsVersion)
 
 
     def test_fromMessageCopiesSections(self):

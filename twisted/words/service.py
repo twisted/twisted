@@ -29,7 +29,7 @@ How does this thing work?
 
 from time import time, ctime
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.words import iwords, ewords
 
@@ -42,9 +42,8 @@ from twisted.python import log, failure, reflect
 from twisted import copyright
 
 
+@implementer(iwords.IGroup)
 class Group(object):
-    implements(iwords.IGroup)
-
     def __init__(self, name):
         self.name = name
         self.users = {}
@@ -128,9 +127,8 @@ class Group(object):
         return iter(self.users.values())
 
 
+@implementer(iwords.IUser)
 class User(object):
-    implements(iwords.IUser)
-
     realm = None
     mind = None
 
@@ -177,12 +175,11 @@ class User(object):
 NICKSERV = 'NickServ!NickServ@services'
 
 
+@implementer(iwords.IChatClient)
 class IRCUser(irc.IRC):
     """
     Protocol instance representing an IRC user connected to the server.
     """
-    implements(iwords.IChatClient)
-
     # A list of IGroups in which I am participating
     groups = None
 
@@ -382,7 +379,8 @@ class IRCUser(irc.IRC):
          ":End of /MOTD command.")
         ]
 
-    def _cbLogin(self, (iface, avatar, logout)):
+    def _cbLogin(self, result):
+        (iface, avatar, logout) = result
         assert iface is iwords.IUser, "Realm is buggy, got %r" % (iface,)
 
         # Let them send messages to the world
@@ -912,9 +910,8 @@ class PBMind(pb.Referenceable):
         pass
 
 
+@implementer(iwords.IChatClient)
 class PBMindReference(pb.RemoteReference):
-    implements(iwords.IChatClient)
-
     def receive(self, sender, recipient, message):
         if iwords.IGroup.providedBy(recipient):
             rec = PBGroup(self.realm, self.avatar, recipient)
@@ -971,9 +968,8 @@ class PBGroup(pb.Referenceable):
         return self.avatar.send(self.group, message)
 
 
+@implementer(iwords.IGroup)
 class PBGroupReference(pb.RemoteReference):
-    implements(iwords.IGroup)
-
     def unjellyFor(self, unjellier, unjellyList):
         clsName, name, ref = unjellyList
         self.name = name.decode('utf-8')
@@ -996,9 +992,8 @@ class PBUser(pb.Referenceable):
         return hash((self.realm.name, self.avatar.name, self.user.name))
 
 
+@implementer(iwords.IChatClient)
 class ChatAvatar(pb.Referenceable):
-    implements(iwords.IChatClient)
-
     def __init__(self, avatar):
         self.avatar = avatar
 
@@ -1033,9 +1028,8 @@ class AvatarReference(pb.RemoteReference):
 pb.setUnjellyableForClass(ChatAvatar, AvatarReference)
 
 
+@implementer(portal.IRealm, iwords.IChatService)
 class WordsRealm(object):
-    implements(portal.IRealm, iwords.IChatService)
-
     _encoding = 'utf-8'
 
     def __init__(self, name):
@@ -1093,13 +1087,13 @@ class WordsRealm(object):
     def addUser(self, user):
         """Add the given user to this service.
 
-        This is an internal method intented to be overridden by
+        This is an internal method intended to be overridden by
         L{WordsRealm} subclasses, not called by external code.
 
         @type user: L{IUser}
 
         @rtype: L{twisted.internet.defer.Deferred}
-        @return: A Deferred which fires with C{None} when the user is
+        @return: A Deferred which fires with L{None} when the user is
         added, or which fails with
         L{twisted.words.ewords.DuplicateUser} if a user with the
         same name exists already.
@@ -1113,7 +1107,7 @@ class WordsRealm(object):
         @type group: L{IGroup}
 
         @rtype: L{twisted.internet.defer.Deferred}
-        @return: A Deferred which fires with C{None} when the group is
+        @return: A Deferred which fires with L{None} when the group is
         added, or which fails with
         L{twisted.words.ewords.DuplicateGroup} if a group with the
         same name exists already.

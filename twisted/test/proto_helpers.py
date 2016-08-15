@@ -17,8 +17,9 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
-    ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
-    IReactorUNIX, IReactorSocket, IListeningPort, IReactorFDSet
+    ITransport, IConsumer, IPushProducer, IConnector,
+    IReactorCore, IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket,
+    IListeningPort, IReactorFDSet,
 )
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
@@ -121,26 +122,26 @@ class StringTransport:
         called, then C{True}.
 
     @ivar producer: If a producer is currently registered, C{producer} is a
-        reference to it.  Otherwise, C{None}.
+        reference to it.  Otherwise, L{None}.
 
     @ivar streaming: If a producer is currently registered, C{streaming} refers
         to the value of the second parameter passed to C{registerProducer}.
 
-    @ivar hostAddr: C{None} or an object which will be returned as the host
-        address of this transport.  If C{None}, a nasty tuple will be returned
+    @ivar hostAddr: L{None} or an object which will be returned as the host
+        address of this transport.  If L{None}, a nasty tuple will be returned
         instead.
 
-    @ivar peerAddr: C{None} or an object which will be returned as the peer
-        address of this transport.  If C{None}, a nasty tuple will be returned
+    @ivar peerAddr: L{None} or an object which will be returned as the peer
+        address of this transport.  If L{None}, a nasty tuple will be returned
         instead.
 
     @ivar producerState: The state of this L{StringTransport} in its capacity
         as an L{IPushProducer}.  One of C{'producing'}, C{'paused'}, or
         C{'stopped'}.
 
-    @ivar io: A L{BytesIO} which holds the data which has been written to this
-        transport since the last call to L{clear}.  Use L{value} instead of
-        accessing this directly.
+    @ivar io: A L{io.BytesIO} which holds the data which has been written to
+        this transport since the last call to L{clear}.  Use L{value} instead
+        of accessing this directly.
     """
 
     disconnecting = False
@@ -331,7 +332,7 @@ class _FakeConnector(object):
     connecting.
 
     @ivar stoppedConnecting: has this connector's
-        L{FakeConnector.stopConnecting} method been invoked yet?
+        L{_FakeConnector.stopConnecting} method been invoked yet?
 
     @ivar _address: An L{IAddress} provider that represents our destination.
     """
@@ -349,7 +350,7 @@ class _FakeConnector(object):
     def stopConnecting(self):
         """
         Implement L{IConnector.stopConnecting} and set
-        L{FakeConnector.stoppedConnecting} to C{True}
+        L{_FakeConnector.stoppedConnecting} to C{True}
         """
         self.stoppedConnecting = True
 
@@ -377,6 +378,7 @@ class _FakeConnector(object):
 
 
 @implementer(
+    IReactorCore,
     IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
 )
 class MemoryReactor(object):
@@ -385,34 +387,54 @@ class MemoryReactor(object):
     much that's useful yet.  It accepts TCP connection setup attempts, but
     they will never succeed.
 
-    @ivar tcpClients: a list that keeps track of connection attempts (ie, calls
-        to C{connectTCP}).
-    @type tcpClients: C{list}
+    @ivar hasInstalled: Keeps track of whether this reactor has been installed.
+    @type hasInstalled: L{bool}
 
-    @ivar tcpServers: a list that keeps track of server listen attempts (ie, calls
-        to C{listenTCP}).
-    @type tcpServers: C{list}
+    @ivar running: Keeps track of whether this reactor is running.
+    @type running: L{bool}
 
-    @ivar sslClients: a list that keeps track of connection attempts (ie,
-        calls to C{connectSSL}).
-    @type sslClients: C{list}
+    @ivar hasStopped: Keeps track of whether this reactor has been stopped.
+    @type hasStopped: L{bool}
 
-    @ivar sslServers: a list that keeps track of server listen attempts (ie,
-        calls to C{listenSSL}).
-    @type sslServers: C{list}
+    @ivar hasCrashed: Keeps track of whether this reactor has crashed.
+    @type hasCrashed: L{bool}
 
-    @ivar unixClients: a list that keeps track of connection attempts (ie,
-        calls to C{connectUNIX}).
-    @type unixClients: C{list}
+    @ivar whenRunningHooks: Keeps track of hooks registered with
+        C{callWhenRunning}.
+    @type whenRunningHooks: L{list}
 
-    @ivar unixServers: a list that keeps track of server listen attempts (ie,
-        calls to C{listenUNIX}).
-    @type unixServers: C{list}
+    @ivar triggers: Keeps track of hooks registered with
+        C{addSystemEventTrigger}.
+    @type triggers: L{dict}
 
-    @ivar adoptedPorts: a list that keeps track of server listen attempts (ie,
-        calls to C{adoptStreamPort}).
+    @ivar tcpClients: Keeps track of connection attempts (ie, calls to
+        C{connectTCP}).
+    @type tcpClients: L{list}
 
-    @ivar adoptedStreamConnections: a list that keeps track of stream-oriented
+    @ivar tcpServers: Keeps track of server listen attempts (ie, calls to
+        C{listenTCP}).
+    @type tcpServers: L{list}
+
+    @ivar sslClients: Keeps track of connection attempts (ie, calls to
+        C{connectSSL}).
+    @type sslClients: L{list}
+
+    @ivar sslServers: Keeps track of server listen attempts (ie, calls to
+        C{listenSSL}).
+    @type sslServers: L{list}
+
+    @ivar unixClients: Keeps track of connection attempts (ie, calls to
+        C{connectUNIX}).
+    @type unixClients: L{list}
+
+    @ivar unixServers: Keeps track of server listen attempts (ie, calls to
+        C{listenUNIX}).
+    @type unixServers: L{list}
+
+    @ivar adoptedPorts: Keeps track of server listen attempts (ie, calls to
+        C{adoptStreamPort}).
+
+    @ivar adoptedStreamConnections: Keeps track of stream-oriented
         connections added using C{adoptStreamConnection}.
     """
 
@@ -420,6 +442,16 @@ class MemoryReactor(object):
         """
         Initialize the tracking lists.
         """
+        self.hasInstalled = False
+
+        self.running = False
+        self.hasRun = True
+        self.hasStopped = True
+        self.hasCrashed = True
+
+        self.whenRunningHooks = []
+        self.triggers = {}
+
         self.tcpClients = []
         self.tcpServers = []
         self.sslClients = []
@@ -432,6 +464,99 @@ class MemoryReactor(object):
 
         self.readers = set()
         self.writers = set()
+
+
+    def install(self):
+        """
+        Fake install callable to emulate reactor module installation.
+        """
+        self.hasInstalled = True
+
+
+    def resolve(self, name, timeout=10):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def run(self):
+        """
+        Fake L{IReactorCore.run}.
+        Sets C{self.running} to L{True}, runs all of the hooks passed to
+        C{self.callWhenRunning}, then calls C{self.stop} to simulate a request
+        to stop the reactor.
+        Sets C{self.hasRun} to L{True}.
+        """
+        assert self.running is False
+        self.running = True
+        self.hasRun = True
+
+        for f, args, kwargs in self.whenRunningHooks:
+            f(*args, **kwargs)
+
+        self.stop()
+        # That we stopped means we can return, phew.
+
+
+    def stop(self):
+        """
+        Fake L{IReactorCore.run}.
+        Sets C{self.running} to L{False}.
+        Sets C{self.hasStopped} to L{True}.
+        """
+        self.running = False
+        self.hasStopped = True
+
+
+    def crash(self):
+        """
+        Fake L{IReactorCore.crash}.
+        Sets C{self.running} to L{None}, because that feels crashy.
+        Sets C{self.hasCrashed} to L{True}.
+        """
+        self.running = None
+        self.hasCrashed = True
+
+
+    def iterate(self, delay=0):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def fireSystemEvent(self, eventType):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+        """
+        Fake L{IReactorCore.run}.
+        Keep track of trigger by appending it to
+        self.triggers[phase][eventType].
+        """
+        phaseTriggers = self.triggers.setdefault(phase, {})
+        eventTypeTriggers = phaseTriggers.setdefault(eventType, [])
+        eventTypeTriggers.append((callable, args, kw))
+
+
+    def removeSystemEventTrigger(self, triggerID):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def callWhenRunning(self, callable, *args, **kw):
+        """
+        Fake L{IReactorCore.callWhenRunning}.
+        Keeps a list of invocations to make in C{self.whenRunningHooks}.
+        """
+        self.whenRunningHooks.append((callable, args, kw))
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
@@ -482,8 +607,8 @@ class MemoryReactor(object):
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
-        Fake L{reactor.listenTCP}, that logs the call and returns an
-        L{IListeningPort}.
+        Fake L{IReactorTCP.listenTCP}, that logs the call and
+        returns an L{IListeningPort}.
         """
         self.tcpServers.append((port, factory, backlog, interface))
         if isIPv6Address(interface):
@@ -495,8 +620,8 @@ class MemoryReactor(object):
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectTCP}, that logs the call and returns an
-        L{IConnector}.
+        Fake L{IReactorTCP.connectTCP}, that logs the call and
+        returns an L{IConnector}.
         """
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
         if isIPv6Address(host):
@@ -511,8 +636,8 @@ class MemoryReactor(object):
     def listenSSL(self, port, factory, contextFactory,
                   backlog=50, interface=''):
         """
-        Fake L{reactor.listenSSL}, that logs the call and returns an
-        L{IListeningPort}.
+        Fake L{IReactorSSL.listenSSL}, that logs the call and
+        returns an L{IListeningPort}.
         """
         self.sslServers.append((port, factory, contextFactory,
                                 backlog, interface))
@@ -522,7 +647,7 @@ class MemoryReactor(object):
     def connectSSL(self, host, port, factory, contextFactory,
                    timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectSSL}, that logs the call and returns an
+        Fake L{IReactorSSL.connectSSL}, that logs the call and returns an
         L{IConnector}.
         """
         self.sslClients.append((host, port, factory, contextFactory,
@@ -536,7 +661,7 @@ class MemoryReactor(object):
     def listenUNIX(self, address, factory,
                    backlog=50, mode=0o666, wantPID=0):
         """
-        Fake L{reactor.listenUNIX}, that logs the call and returns an
+        Fake L{IReactorUNIX.listenUNIX}, that logs the call and returns an
         L{IListeningPort}.
         """
         self.unixServers.append((address, factory, backlog, mode, wantPID))
@@ -545,7 +670,7 @@ class MemoryReactor(object):
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
-        Fake L{reactor.connectUNIX}, that logs the call and returns an
+        Fake L{IReactorUNIX.connectUNIX}, that logs the call and returns an
         L{IConnector}.
         """
         self.unixClients.append((address, factory, timeout, checkPID))
@@ -647,21 +772,21 @@ class RaisingMemoryReactor(object):
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """
         Fake L{IReactorSocket.adoptStreamPort}, that raises
-        L{self._listenException}.
+        L{_listenException}.
         """
         raise self._listenException
 
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
-        Fake L{reactor.listenTCP}, that raises L{self._listenException}.
+        Fake L{IReactorTCP.listenTCP}, that raises L{_listenException}.
         """
         raise self._listenException
 
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectTCP}, that raises L{self._connectException}.
+        Fake L{IReactorTCP.connectTCP}, that raises L{_connectException}.
         """
         raise self._connectException
 
@@ -669,7 +794,7 @@ class RaisingMemoryReactor(object):
     def listenSSL(self, port, factory, contextFactory,
                   backlog=50, interface=''):
         """
-        Fake L{reactor.listenSSL}, that raises L{self._listenException}.
+        Fake L{IReactorSSL.listenSSL}, that raises L{_listenException}.
         """
         raise self._listenException
 
@@ -677,7 +802,7 @@ class RaisingMemoryReactor(object):
     def connectSSL(self, host, port, factory, contextFactory,
                    timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectSSL}, that raises L{self._connectException}.
+        Fake L{IReactorSSL.connectSSL}, that raises L{_connectException}.
         """
         raise self._connectException
 
@@ -685,13 +810,13 @@ class RaisingMemoryReactor(object):
     def listenUNIX(self, address, factory,
                    backlog=50, mode=0o666, wantPID=0):
         """
-        Fake L{reactor.listenUNIX}, that raises L{self._listenException}.
+        Fake L{IReactorUNIX.listenUNIX}, that raises L{_listenException}.
         """
         raise self._listenException
 
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
-        Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
+        Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
         """
         raise self._connectException

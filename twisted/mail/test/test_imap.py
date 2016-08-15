@@ -19,7 +19,7 @@ import types
 
 from collections import OrderedDict
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
@@ -730,10 +730,11 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_files(self):
         inputStructure = [
-            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
+            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz',
+            u'biz'
         ]
 
-        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz"'
+        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
 
         self.assertEqual(imap4.collapseNestedLists(inputStructure), output)
 
@@ -972,9 +973,8 @@ class IMAP4HelperTests(unittest.TestCase):
                 self.assertEqual(L, expected,
                                   "len(%r) = %r != %r" % (input, L, expected))
 
+@implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
-    implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
-
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
     mUID = 0
@@ -1644,7 +1644,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
@@ -1652,7 +1653,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def login():
             return self.client.login('testuser', 'password-test')
         def append():
-            message = file(infile)
+            message = open(infile)
             return self.client.sendCommand(
                 imap4.Command(
                     'APPEND',
@@ -1674,7 +1675,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN'], 'Right now', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')
@@ -1767,7 +1769,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         self.laterQuery = ["16-Dec-2009"]
         self.seq = 0
         self.msg = FakeyMessage({"date" : "Mon, 13 Dec 2009 21:25:10 GMT"}, [],
-                                '', '', 1234, None)
+                                '13 Dec 2009 00:00:00 GMT', '', 1234, None)
 
 
     def test_searchSentBefore(self):
@@ -1867,6 +1869,45 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(self.server.search_NOT(
                 ["SENTON"] + self.laterQuery, self.seq, self.msg,
                 (None, None)))
+
+
+    def test_searchBefore(self):
+        """
+        L{imap4.IMAP4Server.search_BEFORE} returns True if the
+        internal message date is before the query date.
+        """
+        self.assertFalse(
+            self.server.search_BEFORE(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_BEFORE(self.sameDateQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_BEFORE(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchOn(self):
+        """
+        L{imap4.IMAP4Server.search_ON} returns True if the
+        internal message date is the same as the query date.
+        """
+        self.assertFalse(
+            self.server.search_ON(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_ON(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_ON(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchSince(self):
+        """
+        L{imap4.IMAP4Server.search_SINCE} returns True if the
+        internal message date is greater than the query date.
+        """
+        self.assertTrue(
+            self.server.search_SINCE(self.earlierQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_SINCE(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_SINCE(self.laterQuery, self.seq, self.msg))
 
 
 
@@ -2205,7 +2246,7 @@ class ClientCapabilityTests(unittest.TestCase):
     def test_simpleAtoms(self):
         """
         A capability response consisting only of atoms without C{'='} in them
-        should result in a dict mapping those atoms to C{None}.
+        should result in a dict mapping those atoms to L{None}.
         """
         capabilitiesResult = self.protocol.getCapabilities(useCache=False)
         self.protocol.dataReceived('* CAPABILITY IMAP4rev1 LOGINDISABLED\r\n')
@@ -2244,7 +2285,7 @@ class ClientCapabilityTests(unittest.TestCase):
     def test_mixedAtoms(self):
         """
         A capability response consisting of both simple and category atoms of
-        the same type should result in a list containing C{None} as well as the
+        the same type should result in a list containing L{None} as well as the
         values for the category.
         """
         capabilitiesResult = self.protocol.getCapabilities(useCache=False)
@@ -3391,9 +3432,8 @@ class FakeyServer(imap4.IMAP4Server):
     def sendServerGreeting(self):
         pass
 
+@implementer(imap4.IMessage)
 class FakeyMessage(util.FancyStrMixin):
-    implements(imap4.IMessage)
-
     showAttributes = ('headers', 'flags', 'date', 'body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
@@ -3565,7 +3605,7 @@ class GetBodyStructureTests(unittest.TestCase):
     def test_singlePartWithMissing(self):
         """
         For fields with no information contained in the message headers,
-        L{imap4.getBodyStructure} fills in C{None} values in its result.
+        L{imap4.getBodyStructure} fills in L{None} values in its result.
         """
         major = 'image'
         minor = 'jpeg'
@@ -4417,9 +4457,8 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
+@implementer(imap4.ISearchableMailbox)
 class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
-    implements(imap4.ISearchableMailbox)
-
     def setUp(self):
         self.expected = self.result = None
         self.server_received_query = None
@@ -4578,9 +4617,8 @@ class FakeMailbox:
         self.args.append((body, flags, date))
         return defer.succeed(None)
 
+@implementer(imap4.IMessageFile)
 class FeaturefulMessage:
-    implements(imap4.IMessageFile)
-
     def getFlags(self):
         return 'flags'
 
@@ -4590,9 +4628,8 @@ class FeaturefulMessage:
     def open(self):
         return StringIO("open")
 
+@implementer(imap4.IMessageCopier)
 class MessageCopierMailbox:
-    implements(imap4.IMessageCopier)
-
     def __init__(self):
         self.msgs = []
 

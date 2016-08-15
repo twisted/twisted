@@ -13,7 +13,7 @@ import struct
 
 def intFromBytes(data, byteorder, signed=False):
     """
-    Convert an integer in packed form to a Python C{int}.
+    Convert an integer in packed form to a Python L{int}.
 
     @type data: L{bytes}
     @param data: The packed integer.
@@ -47,15 +47,15 @@ def intFromBytes(data, byteorder, signed=False):
 
 def intToBytes(integer, length=None):
     """
-    Convert a Python C{int} to packed data.
+    Convert a Python L{int} to packed data.
 
     @type integer: L{int}
     @param integer: The integer to pack.
 
-    @type length: L{int} or C{None}
-    @param length: The length to pad the result to, or C{None} for no padding.
+    @type length: L{int} or L{None}
+    @param length: The length to pad the result to, or L{None} for no padding.
 
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     @return: The packed integer.
     """
     hexString = '%x' % (integer,)

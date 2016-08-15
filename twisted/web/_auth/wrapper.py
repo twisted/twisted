@@ -218,7 +218,7 @@ class HTTPAuthSessionWrapper(object):
         suitable to use to decode the given I{Authenticate} header.
 
         @return: A two-tuple of a factory and the remaining portion of the
-            header value to be decoded or a two-tuple of C{None} if no
+            header value to be decoded or a two-tuple of L{None} if no
             factory can decode the header value.
         """
         elements = header.split(b' ')

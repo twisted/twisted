@@ -327,11 +327,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # say.  Anyway, this inconsistency between different platforms
                 # is extremely unfortunate and I would remove it if I
                 # could. -exarkun
-                self.assertIs(err.signal, None)
+                self.assertIsNone(err.signal)
                 self.assertEqual(err.exitCode, 1)
             else:
                 self.assertEqual(err.signal, sigNum)
-                self.assertIs(err.exitCode, None)
+                self.assertIsNone(err.exitCode)
 
         exited.addCallback(cbExited)
         exited.addErrback(err)
@@ -348,7 +348,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         Older versions of Twisted installed a SIGCHLD handler on POSIX without
         using the feature exposed by the SA_RESTART flag to sigaction(2).  The
-        most noticable problem this caused was for blocking reads and writes to
+        most noticeable problem this caused was for blocking reads and writes to
         sometimes fail with EINTR.
         """
         reactor = self.buildReactor()
@@ -369,7 +369,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.stdout.read())
+                with f2.stdout:
+                    result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 
@@ -510,7 +511,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         # This will timeout if processExited isn't called:
         self.runReactor(reactor, timeout=30)
-        self.assertEqual(protocol.exited, True)
+        self.assertTrue(protocol.exited)
 
 
     def _changeIDTest(self, which):

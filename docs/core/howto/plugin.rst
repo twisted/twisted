@@ -134,8 +134,8 @@ objects providing the ``IMaterial`` interface:
 
     
     def displayMaterial(m):
-        print 'A material with yield stress %s at 500 K' % (m.yieldStress(500),)
-        print 'Also a dielectric constant of %s.' % (m.dielectricConstant,)
+        print('A material with yield stress %s at 500 K' % (m.yieldStress(500),))
+        print('Also a dielectric constant of %s.' % (m.dielectricConstant,))
 
 
 
@@ -187,13 +187,12 @@ location.  Consider the following example.
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     from twisted.plugin import IPlugin
     from matsim import imatsim
     
+    @implementer(IPlugin, imatsim.IMaterial)
     class SimpleMaterial(object):
-        implements(IPlugin, imatsim.IMaterial)
-    
         def __init__(self, yieldStressFactor, dielectricConstant):
             self._yieldStressFactor = yieldStressFactor
             self.dielectricConstant = dielectricConstant

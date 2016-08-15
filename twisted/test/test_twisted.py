@@ -90,7 +90,7 @@ def _install(modules):
         definition of this structure is recursive, so a value in the dictionary
         may be a dictionary to trigger another level of processing.
 
-    @return: C{None}
+    @return: L{None}
     """
     result = {}
     _makePackages(None, modules, result)
@@ -102,7 +102,7 @@ def _makePackages(parent, attributes, result):
     """
     Construct module objects (for either modules or packages).
 
-    @param parent: C{None} or a module object which is the Python package
+    @param parent: L{None} or a module object which is the Python package
         containing all of the modules being created by this function call.  Its
         name will be prepended to the name of all created modules.
 
@@ -203,11 +203,11 @@ class RequirementsTests(TestCase):
 
     def test_newPython(self):
         """
-        L{_checkRequirements} returns C{None} when run on a version of Python
+        L{_checkRequirements} returns L{None} when run on a version of Python
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
-        self.assertEqual(None, _checkRequirements())
+        self.assertIsNone(_checkRequirements())
 
 
     def test_oldPythonPy3(self):
@@ -225,11 +225,11 @@ class RequirementsTests(TestCase):
 
     def test_newPythonPy3(self):
         """
-        L{_checkRequirements} returns C{None} when run on a version of Python
+        L{_checkRequirements} returns L{None} when run on a version of Python
         that is sufficiently new.
         """
         sys.version_info = self.Py3supportedPythonVersion
-        self.assertEqual(None, _checkRequirements())
+        self.assertIsNone(_checkRequirements())
 
 
     def test_missingZopeNamespace(self):
@@ -330,11 +330,11 @@ class RequirementsTests(TestCase):
             """
             If the installed version of C{zope.interface} does support the
             C{implementer} class decorator, L{_checkRequirements} returns
-            C{None}.
+            L{None}.
             """
             with SetAsideModule("zope"):
                 _install(_zope40)
-                self.assertEqual(None, _checkRequirements())
+                self.assertIsNone(_checkRequirements())
 
     else:
         # Python 2 only requires a version that supports the class decorator
@@ -357,12 +357,12 @@ class RequirementsTests(TestCase):
 
         def test_newZopeInterface(self):
             """
-            L{_checkRequirements} returns C{None} when C{zope.interface} is
+            L{_checkRequirements} returns L{None} when C{zope.interface} is
             installed and new enough.
             """
             with SetAsideModule("zope"):
                 _install(_zope36)
-                self.assertEqual(None, _checkRequirements())
+                self.assertIsNone(_checkRequirements())
 
 
 
@@ -389,8 +389,8 @@ class MakePackagesTests(TestCase):
         """
         modules = {}
         _makePackages(None, dict(twisted=dict(version='123')), modules)
-        self.assertTrue(isinstance(modules, dict))
-        self.assertTrue(isinstance(modules['twisted'], ModuleType))
+        self.assertIsInstance(modules, dict)
+        self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
         self.assertEqual('123', modules['twisted'].version)
 
@@ -402,10 +402,10 @@ class MakePackagesTests(TestCase):
         """
         modules = {}
         _makePackages(None, dict(twisted=dict(web=dict(version='321'))), modules)
-        self.assertTrue(isinstance(modules, dict))
-        self.assertTrue(isinstance(modules['twisted'], ModuleType))
+        self.assertIsInstance(modules, dict)
+        self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
-        self.assertTrue(isinstance(modules['twisted'].web, ModuleType))
+        self.assertIsInstance(modules['twisted'].web, ModuleType)
         self.assertEqual('twisted.web', modules['twisted'].web.__name__)
         self.assertEqual('321', modules['twisted'].web.version)
 

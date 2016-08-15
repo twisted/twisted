@@ -20,6 +20,8 @@ from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
+from twisted.python.compat import _PY3
+from twisted.python.runtime import platform
 
 
 
@@ -79,7 +81,10 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         exc = self.assertRaises(
             socket.error,
             reactor.adoptStreamPort, fileno, socket.AF_INET, ServerFactory())
-        self.assertEqual(exc.args[0], errno.EBADF)
+        if platform.isWindows() and _PY3:
+            self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
+        else:
+            self.assertEqual(exc.args[0], errno.EBADF)
 
 
     def test_invalidAddressFamily(self):
@@ -91,6 +96,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
 
         port = socket.socket()
+        port.bind(("127.0.0.1", 0))
         port.listen(1)
         self.addCleanup(port.close)
 
@@ -114,6 +120,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         portSocket = socket.socket()
         self.addCleanup(portSocket.close)
 
+        portSocket.bind(("127.0.0.1", 0))
         portSocket.listen(1)
         portSocket.setblocking(False)
 
@@ -126,7 +133,10 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
             # portSocket.  If it was shutdown, the exception would be
             # EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.accept)
-            self.assertEqual(exc.args[0], errno.EAGAIN)
+            if platform.isWindows() and _PY3:
+                self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
+            else:
+                self.assertEqual(exc.args[0], errno.EAGAIN)
         d.addCallback(stopped)
         d.addErrback(err, "Failed to accept on original port.")
 
@@ -193,7 +203,10 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
             socket.error,
             reactor.adoptDatagramPort, fileno, socket.AF_INET,
             DatagramProtocol())
-        self.assertEqual(exc.args[0], errno.EBADF)
+        if platform.isWindows() and _PY3:
+            self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
+        else:
+            self.assertEqual(exc.args[0], errno.EBADF)
 
 
     def test_invalidAddressFamily(self):
@@ -228,6 +241,7 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
         portSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(portSocket.close)
 
+        portSocket.bind(("127.0.0.1", 0))
         portSocket.setblocking(False)
 
         # The file descriptor is duplicated by adoptDatagramPort
@@ -238,7 +252,10 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
             # Should still be possible to recv on portSocket.  If
             # it was shutdown, the exception would be EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.recvfrom, 1)
-            self.assertEqual(exc.args[0], errno.EAGAIN)
+            if platform.isWindows() and _PY3:
+                self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
+            else:
+                self.assertEqual(exc.args[0], errno.EAGAIN)
         d.addCallback(stopped)
         d.addErrback(err, "Failed to read on original port.")
 

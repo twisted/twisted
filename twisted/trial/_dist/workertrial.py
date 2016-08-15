@@ -85,7 +85,8 @@ def main(_fdopen=os.fdopen):
             r = protocolIn.read(1)
         except IOError as e:
             if e.args[0] == errno.EINTR:
-                sys.exc_clear()
+                if sys.version_info < (3, 0):
+                    sys.exc_clear()
                 continue
             else:
                 raise

@@ -12,9 +12,10 @@ from errno import ENOSYS
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
 
-from twisted.python.log import msg
-from twisted.python.filepath import FilePath
+from twisted.python.compat import networkString, iteritems
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
+from twisted.python.log import msg
 from twisted.python.reflect import requireModule
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
@@ -195,18 +196,18 @@ class CommandFactory(SSHFactory):
     @property
     def publicKeys(self):
         return {
-            'ssh-rsa': Key.fromString(data=publicRSA_openssh)
+            b'ssh-rsa': Key.fromString(data=publicRSA_openssh)
             }
 
     @property
     def privateKeys(self):
         return {
-            'ssh-rsa': Key.fromString(data=privateRSA_openssh)
+            b'ssh-rsa': Key.fromString(data=privateRSA_openssh)
             }
 
     services = {
-        'ssh-userauth': FakeClockSSHUserAuthServer,
-        'ssh-connection': SSHConnection
+        b'ssh-userauth': FakeClockSSHUserAuthServer,
+        b'ssh-connection': SSHConnection
     }
 
     # Simplify the tests by disconnecting after the first authentication
@@ -377,7 +378,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         # Now deal with the results on the endpoint side.
         f = self.failureResultOf(connected)
         f.trap(ConchError)
-        self.assertEqual('unknown channel', f.value.value)
+        self.assertEqual(b'unknown channel', f.value.value)
 
         self.assertClientTransportState(client, False)
 
@@ -467,7 +468,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
 
     def test_dataReceived(self):
@@ -563,7 +564,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         exception which encapsulates that status.
         """
         exitCode = 0
-        exc = self._exitStatusTest('exit-status', pack('>L', exitCode))
+        exc = self._exitStatusTest(b'exit-status', pack('>L', exitCode))
         exc.trap(ConnectionDone)
 
 
@@ -575,7 +576,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         """
         exitCode = 123
         signal = None
-        exc = self._exitStatusTest('exit-status', pack('>L', exitCode))
+        exc = self._exitStatusTest(b'exit-status', pack('>L', exitCode))
         exc.trap(ProcessTerminated)
         self.assertEqual(exitCode, exc.value.exitCode)
         self.assertEqual(signal, exc.value.signal)
@@ -589,7 +590,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         """
         exitCode = None
         signal = 123
-        exc = self._exitStatusTest('exit-signal', pack('>L', signal))
+        exc = self._exitStatusTest(b'exit-signal', pack('>L', signal))
         exc.trap(ProcessTerminated)
         self.assertEqual(exitCode, exc.value.exitCode)
         self.assertEqual(signal, exc.value.signal)
@@ -662,7 +663,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         protocol = self.successResultOf(connected)
 
         dataReceived = self.record(server, protocol, 'dataReceived')
-        protocol.transport.writeSequence(list(b"hello, world"))
+        protocol.transport.writeSequence([b"hello, world"])
         pump.pump()
         self.assertEqual(b"hello, world", b"".join(dataReceived))
 
@@ -683,9 +684,10 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         self.hostKeyPath = FilePath(self.mktemp())
         self.knownHosts = KnownHostsFile(self.hostKeyPath)
         self.knownHosts.addHostKey(
-            self.hostname, self.factory.publicKeys['ssh-rsa'])
+            self.hostname, self.factory.publicKeys[b'ssh-rsa'])
         self.knownHosts.addHostKey(
-            self.serverAddress.host, self.factory.publicKeys['ssh-rsa'])
+            networkString(self.serverAddress.host),
+            self.factory.publicKeys[b'ssh-rsa'])
         self.knownHosts.save()
 
 
@@ -803,7 +805,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         endpoint.connect(factory)
 
         host, port, factory, timeout, bindAddress = self.reactor.tcpClients[0]
-        self.assertEqual(self.hostname, host)
+        self.assertEqual(self.hostname, networkString(host))
         self.assertEqual(self.port, port)
         self.assertEqual(1, len(self.reactor.tcpClients))
 
@@ -861,7 +863,8 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         """
         differentKey = Key.fromString(privateDSA_openssh).public()
         knownHosts = KnownHostsFile(self.mktemp())
-        knownHosts.addHostKey(self.serverAddress.host, differentKey)
+        knownHosts.addHostKey(
+            networkString(self.serverAddress.host), differentKey)
         knownHosts.addHostKey(self.hostname, differentKey)
 
         # The UI may answer true to any questions asked of it; they should
@@ -1004,10 +1007,10 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         @param users: The users and their keys the checker will recognize.  Keys
             are byte strings giving user names.  Values are byte strings giving
             OpenSSH-formatted private keys.
-        @type users: C{dict}
+        @type users: L{dict}
         """
         mapping = dict([(k,[Key.fromString(v).public()])
-                        for k, v in users.iteritems()])
+                        for k, v in iteritems(users)])
         checker = SSHPublicKeyChecker(InMemorySSHKeyDB(mapping))
         portal.registerChecker(checker)
 
@@ -1078,7 +1081,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         # Now deal with the results on the endpoint side.
         f = self.failureResultOf(connected)
         f.trap(ConchError)
-        self.assertEqual('unknown channel', f.value.value)
+        self.assertEqual(b'unknown channel', f.value.value)
 
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
@@ -1106,7 +1109,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             self.factory, self.reactor.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
 
     def test_skipPasswordAuthentication(self):
@@ -1146,7 +1149,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         key = Key.fromString(privateRSA_openssh)
         agentServer = SSHAgentServer()
         agentServer.factory = Factory()
-        agentServer.factory.keys = {key.blob(): (key, "")}
+        agentServer.factory.keys = {key.blob(): (key, b"")}
 
         self.setupKeyChecker(self.portal, {self.user: privateRSA_openssh})
 
@@ -1172,7 +1175,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             pump.pump()
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
         # Ensure the connection with the agent is cleaned up after the
         # connection with the server is lost.
@@ -1219,9 +1222,10 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
 
         knownHosts = KnownHostsFile(FilePath(self.mktemp()))
         knownHosts.addHostKey(
-            self.hostname, self.factory.publicKeys['ssh-rsa'])
+            self.hostname, self.factory.publicKeys[b'ssh-rsa'])
         knownHosts.addHostKey(
-            self.serverAddress.host, self.factory.publicKeys['ssh-rsa'])
+            networkString(self.serverAddress.host),
+            self.factory.publicKeys[b'ssh-rsa'])
 
         self.endpoint = SSHCommandClientEndpoint.newConnection(
             self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
@@ -1358,7 +1362,7 @@ class _PTYPath(object):
 
         @return: A L{_ReadFile} instance
         """
-        if mode == "r+":
+        if mode == "rb+":
             return _ReadFile(self.contents)
         raise OSError(ENOSYS, "Function not implemented")
 
@@ -1404,10 +1408,10 @@ class NewConnectionHelperTests(TestCase):
         L{KnownHostsFile} created by L{_NewConnectionHelper} when none is
         supplied to it.
         """
-        key = CommandFactory().publicKeys['ssh-rsa']
+        key = CommandFactory().publicKeys[b'ssh-rsa']
         path = FilePath(self.mktemp())
         knownHosts = KnownHostsFile(path)
-        knownHosts.addHostKey("127.0.0.1", key)
+        knownHosts.addHostKey(b"127.0.0.1", key)
         knownHosts.save()
 
         msg("Created known_hosts file at %r" % (path.path,))
@@ -1419,12 +1423,12 @@ class NewConnectionHelperTests(TestCase):
         msg("Patched _KNOWN_HOSTS with %r" % (default,))
 
         loaded = _NewConnectionHelper._knownHosts()
-        self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
+        self.assertTrue(loaded.hasHostKey(b"127.0.0.1", key))
 
 
     def test_defaultConsoleUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to
+        If L{None} is passed for the C{ui} parameter to
         L{_NewConnectionHelper}, a L{ConsoleUI} is used.
         """
         helper = _NewConnectionHelper(
@@ -1434,7 +1438,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_ttyConsoleUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        If L{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
         and /dev/tty is available, the L{ConsoleUI} used is associated with
         /dev/tty.
         """
@@ -1447,7 +1451,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_nottyUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        If L{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
         and /dev/tty is not available, the L{ConsoleUI} used is associated with
         some file which always produces a C{b"no"} response.
         """

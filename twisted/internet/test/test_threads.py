@@ -74,7 +74,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         When invoked from the reactor thread, previous implementations of
         L{IReactorThreads.callFromThread} would skip the pipe/socket based wake
         up step, assuming the reactor would wake up on its own.  However, this
-        resulted in the reactor not noticing a insert into the thread queue at
+        resulted in the reactor not noticing an insert into the thread queue at
         the right time (in this case, after the thread queue has been processed
         for that reactor iteration).
         """
@@ -141,7 +141,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
         gc.collect()
-        self.assertIs(threadpool(), None)
+        self.assertIsNone(threadpool())
 
 
     def test_stopThreadPoolWhenStartedAfterReactorRan(self):
@@ -164,7 +164,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(acquireThreadPool)
         self.runReactor(reactor)
         gc.collect()
-        self.assertIs(threadPoolRefs[0](), None)
+        self.assertIsNone(threadPoolRefs[0]())
 
 
     def test_cleanUpThreadPoolEvenBeforeReactorIsRun(self):
@@ -181,8 +181,12 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         threadPoolRef = ref(reactor.getThreadPool())
         reactor.fireSystemEvent("shutdown")
-        gc.collect()
-        self.assertIs(threadPoolRef(), None)
+
+        if reactor.__class__.__name__ == "AsyncioSelectorReactor":
+            self.assertIsNone(reactor.threadpool)
+        else:
+            gc.collect()
+            self.assertIsNone(threadPoolRef())
 
 
     def test_isInIOThread(self):

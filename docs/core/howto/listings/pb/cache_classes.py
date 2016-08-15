@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 
 class MasterDuckPond(pb.Cacheable):
@@ -10,7 +12,7 @@ class MasterDuckPond(pb.Cacheable):
         self.observers = []
         self.ducks = ducks
     def count(self):
-        print "I have [%d] ducks" % len(self.ducks)
+        print("I have [%d] ducks" % len(self.ducks))
     def addDuck(self, duck):
         self.ducks.append(duck)
         for o in self.observers: o.callRemote('addDuck', duck)
@@ -31,13 +33,13 @@ class SlaveDuckPond(pb.RemoteCache):
     def getDucks(self):
         return self.cacheducks
     def setCopyableState(self, state):
-        print " cache - sitting, er, setting ducks"
+        print(" cache - sitting, er, setting ducks")
         self.cacheducks = state
     def observe_addDuck(self, newDuck):
-        print " cache - addDuck"
+        print(" cache - addDuck")
         self.cacheducks.append(newDuck)
     def observe_removeDuck(self, deadDuck):
-        print " cache - removeDuck"
+        print(" cache - removeDuck")
         self.cacheducks.remove(deadDuck)
 
 pb.setUnjellyableForClass(MasterDuckPond, SlaveDuckPond)

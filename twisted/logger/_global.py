@@ -64,9 +64,9 @@ class LogBeginner(object):
         L{LogBeginner} itself.
     @type _log: L{Logger}
 
-    @ivar _temporaryObserver: If not C{None}, an L{ILogObserver} that observes
+    @ivar _temporaryObserver: If not L{None}, an L{ILogObserver} that observes
         events on C{_publisher} for this L{LogBeginner}.
-    @type _temporaryObserver: L{ILogObserver} or L{NoneType}
+    @type _temporaryObserver: L{ILogObserver} or L{None}
 
     @ivar _stdio: An object with C{stderr} and C{stdout} attributes (like the
         L{sys} module) which will be replaced when redirecting standard I/O.
@@ -172,7 +172,7 @@ class LogBeginner(object):
         """
         Twisted-enabled wrapper around L{warnings.showwarning}.
 
-        If C{file} is C{None}, the default behaviour is to emit the warning to
+        If C{file} is L{None}, the default behaviour is to emit the warning to
         the log system, otherwise the original L{warnings.showwarning} Python
         function is called.
 
@@ -190,12 +190,12 @@ class LogBeginner(object):
             issued.
         @type lineno: L{int}
 
-        @param file: A file to write the warning message to.  If C{None},
+        @param file: A file to write the warning message to.  If L{None},
             write to L{sys.stderr}.
         @type file: file-like object
 
         @param line: A line of source code to include with the warning message.
-            If C{None}, attempt to read the line from C{filename} and
+            If L{None}, attempt to read the line from C{filename} and
             C{lineno}.
         @type line: L{str}
         """

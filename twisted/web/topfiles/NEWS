@@ -1,6 +1,37 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 16.3.0 (2016-07-05)
+===============================
+
+Features
+--------
+ - twisted.web.http.HTTPChannel now implements ITransport. Along with
+   this change, twisted.web.http.Request now directs all its writes to
+   the HTTPChannel, rather than to the backing transport. This change
+   is required for future HTTP/2 work. (#8191)
+ - twisted.web.http.HTTPChannel now has a HTTP/2 implementation which
+   will be used if the transport has negotiated using it through
+   ALPN/NPN (see #8188). (#8194)
+
+Bugfixes
+--------
+ - twisted.web.client.Agent and twisted.web.client.ProxyAgent now add
+   brackets to IPv6 literal addresses in the host header they send.
+   (#8369)
+ - The HTTP server now correctly times connections out. (broken in
+   16.2) (#8481)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web would previously dispatch pipelined requests
+   simultaneously and queue the responses. This behaviour did not
+   enforce any of the guarantees required by RFC 7230 or make it
+   possible for users to enforce those requirements. For this reason,
+   the parallel dispatch of requests has been removed. Pipelined
+   requests are now processed serially. (#8320)
+
+
 Twisted Web 16.2.0 (2016-05-18)
 ===============================
 

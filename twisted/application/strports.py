@@ -25,7 +25,7 @@ def parse(description, factory, default='tcp'):
     """
     This function is deprecated as of Twisted 10.2.
 
-    @see: L{twisted.internet.endpoints.server}
+    @see: L{twisted.internet.endpoints.serverFromString}
     """
     return endpoints._parseServer(description, factory, default)
 
@@ -43,7 +43,7 @@ def service(description, factory, default=_DEFAULT, reactor=None):
     Return the service corresponding to a description.
 
     @param description: The description of the listening port, in the syntax
-        described by L{twisted.internet.endpoints.server}.
+        described by L{twisted.internet.endpoints.serverFromString}.
 
     @type description: C{str}
 
@@ -52,7 +52,7 @@ def service(description, factory, default=_DEFAULT, reactor=None):
 
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
 
-    @type default: C{str} or C{None}
+    @type default: C{str} or L{None}
 
     @param default: Do not use this parameter. It has been deprecated since
         Twisted 10.2.0.
@@ -89,7 +89,7 @@ def listen(description, factory, default=None):
 
     @type description: C{str}
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
-    @type default: C{str} or C{None}
+    @type default: C{str} or L{None}
     @rtype: C{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable
     virtual circuit server.

@@ -21,8 +21,8 @@ order to get an overview of how URLs are treated when using Twisted Web's :api:`
 
 :api:`twisted.web.server.Site <Site>` (the object which
 associates a listening server port with the HTTP implementation), :api:`twisted.web.resource.Resource <Resource>` (a convenient base class
-to use when defining custom pages), and :api:`twisted.internet.reactor <reactor>` (the object which implements the Twisted
-main loop) return once again:
+to use when defining custom pages), :api:`twisted.internet.reactor <reactor>` (the object which implements the Twisted
+main loop), and :api:`twisted.internet.endpoints <endpoints>` return once again:
 
 
 
@@ -30,10 +30,10 @@ main loop) return once again:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
 
 
 
@@ -51,14 +51,14 @@ for the year passed to its initializer:
 
 .. code-block:: python
 
-    
+
     from calendar import calendar
-    
+
     class YearPage(Resource):
         def __init__(self, year):
             Resource.__init__(self)
             self.year = year
-    
+
         def render_GET(self, request):
             return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
 
@@ -75,7 +75,7 @@ by creating a suitable instance of this ``YearPage`` class:
 
 .. code-block:: python
 
-    
+
     class Calendar(Resource):
       def getChild(self, name, request):
           return YearPage(int(name))
@@ -101,10 +101,11 @@ root and then start the reactor:
 
 ::
 
-    
+
     root = Calendar()
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
@@ -119,28 +120,29 @@ basically like ``Calendar.getChild`` . Here's the full example code:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     from calendar import calendar
-    
+
     class YearPage(Resource):
         def __init__(self, year):
             Resource.__init__(self)
             self.year = year
-    
+
         def render_GET(self, request):
             return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
-    
+
     class Calendar(Resource):
       def getChild(self, name, request):
           return YearPage(int(name))
-    
+
     root = Calendar()
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 

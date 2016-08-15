@@ -89,5 +89,5 @@ class DistReporter(proxyForInterface(IReporter)):
         """
         self.running[test.id()].append((self.original.stopTest, test))
         for step in self.running[test.id()]:
-            apply(step[0], step[1:])
+            step[0](*step[1:])
         del self.running[test.id()]

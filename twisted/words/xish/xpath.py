@@ -11,12 +11,13 @@ L{domish.Element<twisted.words.xish.domish.Element>} instances against
 XPath-like expressions.
 """
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from __future__ import absolute_import, division
 
-class LiteralValue(str):
+from io import StringIO
+
+from twisted.python.compat import StringType, unicode
+
+class LiteralValue(unicode):
     def value(self, elem):
         return self
 
@@ -121,7 +122,7 @@ class _text_Function:
         pass
 
     def value(self, elem):
-        return str(elem)
+        return unicode(elem)
 
 
 class _Location:
@@ -161,7 +162,7 @@ class _Location:
             for c in elem.elements():
                 self.childLocation.queryForString(c, resultbuf)
         else:
-            resultbuf.write(str(elem))
+            resultbuf.write(unicode(elem))
 
     def queryForNodes(self, elem, resultlist):
         if not self.matchesPredicates(elem):
@@ -182,7 +183,7 @@ class _Location:
                 self.childLocation.queryForStringList(c, resultlist)
         else:
             for c in elem.children:
-                if isinstance(c, (str, unicode)):
+                if isinstance(c, StringType):
                     resultlist.append(c)
 
 
@@ -269,7 +270,7 @@ class _AnyLocation:
     def queryForStringList(self, elem, resultlist):
         if self.isRootMatch(elem):
             for c in elem.children:
-                if isinstance(c, (str, unicode)):
+                if isinstance(c, StringType):
                     resultlist.append(c)
         for c in elem.elements():
             self.queryForStringList(c, resultlist)
@@ -278,8 +279,11 @@ class _AnyLocation:
 class XPathQuery:
     def __init__(self, queryStr):
         self.queryStr = queryStr
-        from twisted.words.xish.xpathparser import parse
-        self.baseLocation = parse('XPATH', queryStr)
+        # Prevent a circular import issue, as xpathparser imports this module.
+        from twisted.words.xish.xpathparser import (XPathParser,
+                                                    XPathParserScanner)
+        parser = XPathParser(XPathParserScanner(queryStr))
+        self.baseLocation = getattr(parser, 'XPATH')()
 
     def __hash__(self):
         return self.queryStr.__hash__()
@@ -288,7 +292,7 @@ class XPathQuery:
         return self.baseLocation.matches(elem)
 
     def queryForString(self, elem):
-        result = StringIO.StringIO()
+        result = StringIO()
         self.baseLocation.queryForString(elem, result)
         return result.getvalue()
 

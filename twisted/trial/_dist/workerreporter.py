@@ -21,7 +21,7 @@ class WorkerReporter(TestResult):
     Reporter for trial's distributed workers. We send things not through a
     stream, but through an C{AMP} protocol's C{callRemote} method.
 
-    :ivar str _DEFAULT_TODO: Default message for expected failures and
+    @ivar _DEFAULT_TODO: Default message for expected failures and
         unexpected successes, used only if a C{Todo} is not provided.
     """
 
@@ -106,7 +106,7 @@ class WorkerReporter(TestResult):
         """
         Get the reason for a C{Todo}.
 
-        If C[todo} is C{None}, return a sensible default.
+        If C{todo} is L{None}, return a sensible default.
         """
         if todo is None:
             return self._DEFAULT_TODO

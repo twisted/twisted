@@ -10,9 +10,12 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
-import types
+from __future__ import absolute_import, division
 
-from zope.interface import implements, Interface, Attribute
+from zope.interface import implementer, Interface, Attribute
+
+from twisted.python.compat import (_PY3, StringType, _coercedUnicode,
+                                   iteritems, itervalues, unicode)
 
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
@@ -65,7 +68,7 @@ class _ListSerializer:
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, types.StringTypes):
+        if isinstance(elem, StringType):
             write(escapeToXml(elem))
             return
 
@@ -74,9 +77,9 @@ class _ListSerializer:
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
 
-        for p, u in elem.localPrefixes.iteritems():
+        for p, u in iteritems(elem.localPrefixes):
             self.prefixes[u] = p
-        self.prefixStack.append(elem.localPrefixes.keys())
+        self.prefixStack.append(list(elem.localPrefixes.keys()))
 
         # Inherit the default namespace
         if defaultUri is None:
@@ -106,13 +109,13 @@ class _ListSerializer:
            (uri != defaultUri or not prefix or not inScope):
             write(" xmlns='%s'" % (defaultUri))
 
-        for p, u in elem.localPrefixes.iteritems():
+        for p, u in iteritems(elem.localPrefixes):
             write(" xmlns:%s='%s'" % (p, u))
 
         # Serialize attributes
         for k,v in elem.attributes.items():
             # If the attribute name is a tuple, it's a qualified attribute
-            if isinstance(k, types.TupleType):
+            if isinstance(k, tuple):
                 attr_uri, attr_name = k
                 attr_prefix = self.getPrefix(attr_uri)
 
@@ -234,56 +237,79 @@ class IElement(Interface):
         @param prefixes: dictionary that maps namespace URIs to suggested
                          prefix names.
         @type prefixes: L{dict}
+
         @param closeElement: flag that determines whether to include the
-                             closing tag of the element in the serialized
-                             string. A value of C{0} only generates the
-                             element's start tag. A value of C{1} yields a
-                             complete serialization.
-        @type closeElement: C{int}
+            closing tag of the element in the serialized string. A value of
+            C{0} only generates the element's start tag. A value of C{1} yields
+            a complete serialization.
+        @type closeElement: L{int}
+
         @param defaultUri: Initial default namespace URI. This is most useful
-                           for partial rendering, where the logical parent
-                           element (of which the starttag was already
-                           serialized) declares a default namespace that should
-                           be inherited.
-        @type defaultUri: C{str}
+            for partial rendering, where the logical parent element (of which
+            the starttag was already serialized) declares a default namespace
+            that should be inherited.
+        @type defaultUri: L{unicode}
+
         @param prefixesInScope: list of prefixes that are assumed to be
-                                declared by ancestors.
+            declared by ancestors.
         @type prefixesInScope: C{list}
+
         @return: (partial) serialized XML
         @rtype: C{unicode}
         """
 
-    def addElement(name, defaultUri = None, content = None):
-        """ Create an element and add as child.
+    def addElement(name, defaultUri=None, content=None):
+        """
+        Create an element and add as child.
 
         The new element is added to this element as a child, and will have
         this element as its parent.
 
-        @param name: element name. This can be either a C{unicode} object that
-                     contains the local name, or a tuple of (uri, local_name)
-                     for a fully qualified name. In the former case,
-                     the namespace URI is inherited from this element.
-        @type name: C{unicode} or C{tuple} of (C{unicode}, C{unicode})
+        @param name: element name. This can be either a L{unicode} object that
+            contains the local name, or a tuple of (uri, local_name) for a
+            fully qualified name. In the former case, the namespace URI is
+            inherited from this element.
+        @type name: L{unicode} or L{tuple} of (L{unicode}, L{unicode})
+
         @param defaultUri: default namespace URI for child elements. If
-                           C{None}, this is inherited from this element.
-        @type defaultUri: C{unicode}
+            L{None}, this is inherited from this element.
+        @type defaultUri: L{unicode}
+
         @param content: text contained by the new element.
-        @type content: C{unicode}
+        @type content: L{unicode}
+
         @return: the created element
         @rtype: object providing L{IElement}
         """
 
     def addChild(node):
-        """ Adds a node as child of this element.
+        """
+        Adds a node as child of this element.
 
         The C{node} will be added to the list of childs of this element, and
         will have this element set as its parent when C{node} provides
-        L{IElement}.
+        L{IElement}. If C{node} is a L{unicode} and the current last child is
+        character data (L{unicode}), the text from C{node} is appended to the
+        existing last child.
 
         @param node: the child node.
-        @type node: C{unicode} or object implementing L{IElement}
+        @type node: L{unicode} or object implementing L{IElement}
         """
 
+    def addContent(text):
+        """
+        Adds character data to this element.
+
+        If the current last child of this element is a string, the text will
+        be appended to that string. Otherwise, the text will be added as a new
+        child.
+
+        @param text: The character data to be added to this element.
+        @type text: L{unicode}
+        """
+
+
+@implementer(IElement)
 class Element(object):
     """ Represents an XML element node.
 
@@ -310,14 +336,14 @@ class Element(object):
       u"<root xmlns='myns'><child>test</child></root>"
 
     For partial serialization, needed for streaming XML, a special value for
-    namespace URIs can be used: C{None}.
+    namespace URIs can be used: L{None}.
 
-    Using C{None} as the value for C{uri} means: this element is in whatever
+    Using L{None} as the value for C{uri} means: this element is in whatever
     namespace inherited by the closest logical ancestor when the complete XML
     document has been serialized. The serialized start tag will have a
     non-prefixed name, and no xmlns declaration will be generated.
 
-    Similarly, C{None} for C{defaultUri} means: the default namespace for my
+    Similarly, L{None} for C{defaultUri} means: the default namespace for my
     child elements is inherited from the logical ancestors of this element,
     when the complete XML document has been serialized.
 
@@ -341,7 +367,7 @@ class Element(object):
 
     As, you can see, this XML snippet has no xmlns declaration. When sent
     off, it inherits the C{jabber:client} namespace from the root element.
-    Note that this renders the same as using C{''} instead of C{None}:
+    Note that this renders the same as using C{''} instead of L{None}:
 
       >>> presence = domish.Element(('', 'presence'))
       >>> presence.toXml()
@@ -383,8 +409,6 @@ class Element(object):
                          namespace uri to.
     """
 
-    implements(IElement)
-
     _idCounter = 0
 
     def __init__(self, qname, defaultUri=None, attribs=None,
@@ -401,7 +425,7 @@ class Element(object):
         self.localPrefixes = localPrefixes or {}
         self.uri, self.name = qname
         if defaultUri is None and \
-           self.uri not in self.localPrefixes.itervalues():
+           self.uri not in itervalues(self.localPrefixes):
             self.defaultUri = self.uri
         else:
             self.defaultUri = defaultUri
@@ -431,16 +455,29 @@ class Element(object):
     def __setitem__(self, key, value):
         self.attributes[self._dqa(key)] = value
 
-    def __str__(self):
-        """ Retrieve the first CData (content) node
+    def __unicode__(self):
+        """
+        Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, types.StringTypes): return n
-        return ""
+            if isinstance(n, StringType):
+                return n
+        return u""
+
+    def __bytes__(self):
+        """
+        Retrieve the first character data node as UTF-8 bytes.
+        """
+        return unicode(self).encode('utf-8')
+
+    if _PY3:
+        __str__ = __unicode__
+    else:
+        __str__ = __bytes__
 
     def _dqa(self, attr):
         """ Dequalify an attribute key as needed """
-        if isinstance(attr, types.TupleType) and not attr[0]:
+        if isinstance(attr, tuple) and not attr[0]:
             return attr[1]
         else:
             return attr
@@ -456,7 +493,7 @@ class Element(object):
     def compareAttribute(self, attrib, value):
         """ Safely compare the value of an attribute against a provided value.
 
-        C{None}-safe.
+        L{None}-safe.
         """
         return self.attributes.get(self._dqa(attrib), None) == value
 
@@ -472,35 +509,34 @@ class Element(object):
         if IElement.providedBy(node):
             node.parent = self
         self.children.append(node)
-        return self.children[-1]
+        return node
 
     def addContent(self, text):
         """ Add some text data to this Element. """
+        text = _coercedUnicode(text)
         c = self.children
-        if len(c) > 0 and isinstance(c[-1], types.StringTypes):
+        if len(c) > 0 and isinstance(c[-1], unicode):
             c[-1] = c[-1] + text
         else:
             c.append(text)
         return c[-1]
 
     def addElement(self, name, defaultUri = None, content = None):
-        result = None
-        if isinstance(name, type(())):
+        if isinstance(name, tuple):
             if defaultUri is None:
                 defaultUri = name[0]
-            self.children.append(Element(name, defaultUri))
+            child = Element(name, defaultUri)
         else:
             if defaultUri is None:
                 defaultUri = self.defaultUri
-            self.children.append(Element((defaultUri, name), defaultUri))
+            child = Element((defaultUri, name), defaultUri)
 
-        result = self.children[-1]
-        result.parent = self
+        self.addChild(child)
 
         if content:
-            result.children.append(content)
+            child.addContent(content)
 
-        return result
+        return child
 
     def addRawXml(self, rawxmlstring):
         """ Add a pre-serialized chunk o' XML as a child of this Element. """
@@ -606,7 +642,7 @@ else:
             uri = None
 
             # Pass 1 - Identify namespace decls
-            for k, v in attributes.items():
+            for k, v in list(attributes.items()):
                 if k.startswith("xmlns"):
                     x, p = _splitPrefix(k)
                     if (x is None): # I.e.  default declaration
@@ -664,10 +700,14 @@ else:
 
         def gotText(self, data):
             if self.currElem != None:
+                if isinstance(data, bytes):
+                    data = data.decode('ascii')
                 self.currElem.addContent(data)
 
         def gotCData(self, data):
             if self.currElem != None:
+                if isinstance(data, bytes):
+                    data = data.decode('ascii')
                 self.currElem.addContent(data)
 
         def gotComment(self, data):
@@ -684,7 +724,10 @@ else:
             # If this is an entity we know about, add it as content
             # to the current element
             if entityRef in SuxElementStream.entities:
-                self.currElem.addContent(SuxElementStream.entities[entityRef])
+                data = SuxElementStream.entities[entityRef]
+                if isinstance(data, bytes):
+                    data = data.decode('ascii')
+                self.currElem.addContent(data)
 
         def gotTagEnd(self, name):
             # Ensure the document hasn't already ended
@@ -837,8 +880,9 @@ class ExpatElementStream:
 ##         self.done = 1
 
 ##     def parse(self, filename):
-##         for l in open(filename).readlines():
-##             self.parser.Parse(l)
+##         with open(filename) as f:
+##             for l in f.readlines():
+##                 self.parser.Parse(l)
 ##         assert self.done == 1
 ##         return self.document
 

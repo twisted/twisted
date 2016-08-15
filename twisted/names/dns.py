@@ -104,7 +104,8 @@ else:
 
 def randomSource():
     """
-    Wrapper around L{randbytes.secureRandom} to return 2 random chars.
+    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
+    2 random chars.
     """
     return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
 
@@ -195,7 +196,7 @@ EBADVERSION = 16
 
 class IRecord(Interface):
     """
-    An single entry in a zone of authority.
+    A single entry in a zone of authority.
     """
 
     TYPE = Attribute("An indicator of what kind of record this is.")
@@ -316,7 +317,7 @@ class IEncodable(Interface):
         @type strio: File-like object
         @param strio: The stream to which to write bytes
 
-        @type compDict: C{dict} or C{None}
+        @type compDict: C{dict} or L{None}
         @param compDict: A dictionary of backreference addresses that have
         already been written to this stream and that may be used for
         compression.
@@ -601,13 +602,13 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         attribute is a readonly property.
 
     @ivar type: The DNS record type. This is a fixed value of 41
-        (C{dns.OPT} for OPT Record. This attribute is a readonly
+        C{dns.OPT} for OPT Record. This attribute is a readonly
         property.
 
     @see: L{_OPTHeader.__init__} for documentation of other public
         instance attributes.
 
-    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -775,7 +776,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @see: L{_OPTVariableOption.__init__} for documentation of public
         instance attributes.
 
-    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -2035,6 +2036,43 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
+def _getDisplayableArguments(obj, alwaysShow, fieldNames):
+    """
+    Inspect the function signature of C{obj}'s constructor,
+    and get a list of which arguments should be displayed.
+    This is a helper function for C{_compactRepr}.
+
+    @param obj: The instance whose repr is being generated.
+    @param alwaysShow: A L{list} of field names which should always be shown.
+    @param fieldNames: A L{list} of field attribute names which should be shown
+        if they have non-default values.
+    @return: A L{list} of displayable arguments.
+    """
+    displayableArgs = []
+    if _PY3:
+        # Get the argument names and values from the constructor.
+        signature = inspect.signature(obj.__class__.__init__)
+        for name in fieldNames:
+            defaultValue = signature.parameters[name].default
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                displayableArgs.append(' %s=%r' % (name, fieldValue))
+    else:
+        # Get the argument names and values from the constructor.
+        argspec = inspect.getargspec(obj.__class__.__init__)
+        # Reverse the args and defaults to avoid mapping positional arguments
+        # which don't have a default.
+        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        for name in fieldNames:
+            defaultValue = defaults.get(name)
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                displayableArgs.append(' %s=%r' % (name, fieldValue))
+
+    return displayableArgs
+
+
+
 def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
                  sectionNames=None):
     """
@@ -2070,18 +2108,8 @@ def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
         if name in alwaysShow or getattr(obj, name, False) == True:
             setFlags.append(name)
 
-    out = ['<', obj.__class__.__name__]
-
-    # Get the argument names and values from the constructor.
-    argspec = inspect.getargspec(obj.__class__.__init__)
-    # Reverse the args and defaults to avoid mapping positional arguments
-    # which don't have a default.
-    defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-    for name in fieldNames:
-        defaultValue = defaults.get(name)
-        fieldValue = getattr(obj, name, defaultValue)
-        if (name in alwaysShow) or (fieldValue != defaultValue):
-            out.append(' %s=%r' % (name, fieldValue))
+    displayableArgs = _getDisplayableArguments(obj, alwaysShow, fieldNames)
+    out = ['<', obj.__class__.__name__] + displayableArgs
 
     if setFlags:
         out.append(' flags=%s' % (','.join(setFlags),))
@@ -2367,7 +2395,7 @@ class Message(tputil.FancyEqMixin):
         """
         Retrieve the L{IRecord} implementation for the given record type.
 
-        @param type: A record type, such as L{A} or L{NS}.
+        @param type: A record type, such as C{A} or L{NS}.
         @type type: L{int}
 
         @return: An object which implements L{IRecord} or L{None} if none
@@ -2457,10 +2485,10 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
         """
         Construct a new L{_EDNSMessage}
 
-        @see U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
-        @see U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
-        @see U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
-        @see U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
+        @see: U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+        @see: U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
+        @see: U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
+        @see: U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
 
         @param id: A 16 bit identifier assigned by the program that generates
             any kind of query.  This identifier is copied the corresponding
@@ -2637,14 +2665,14 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
     @classmethod
     def _fromMessage(cls, message):
         """
-        Construct and return a new L(_EDNSMessage} whose attributes and records
+        Construct and return a new L{_EDNSMessage} whose attributes and records
         are derived from the attributes and records of C{message} (a L{Message}
-        instance)
+        instance).
 
-        If present, an I{OPT} record will be extracted from the C{additional}
+        If present, an C{OPT} record will be extracted from the C{additional}
         section and its attributes and options will be used to set the EDNS
-        specific attributes C{extendedRCODE}, c{ednsVersion}, c{dnssecOK},
-        c{ednsOptions}.
+        specific attributes C{extendedRCODE}, C{ednsVersion}, C{dnssecOK},
+        C{ednsOptions}.
 
         The C{extendedRCODE} will be combined with C{message.rCode} and assigned
         to C{self.rCode}.

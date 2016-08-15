@@ -50,7 +50,7 @@ class Todo(object):
         @param errors: An iterable of exception types that the test is
         expected to raise. If one of these errors is raised by the test, it
         will be trapped. Raising any other kind of error will fail the test.
-        If C{None} is passed, then all errors will be trapped.
+        If L{None} is passed, then all errors will be trapped.
         """
         self.reason = reason
         self.errors = errors
@@ -399,9 +399,9 @@ class _Assertions(pyunit.TestCase, object):
         @param exception: exception type that is to be expected
         @param f: the function to call
 
-        @return: If C{f} is C{None}, a context manager which will make an
+        @return: If C{f} is L{None}, a context manager which will make an
             assertion about the exception raised from the suite it manages.  If
-            C{f} is not C{None}, the exception raised by C{f}.
+            C{f} is not L{None}, the exception raised by C{f}.
 
         @raise self.failureException: Raised if the function call does
             not raise an exception or if it raises an exception of a
@@ -780,6 +780,29 @@ class _Assertions(pyunit.TestCase, object):
 
 
 
+    def assertRegex(self, text, regex, msg=None):
+        """
+        Fail the test if a C{regexp} search of C{text} fails.
+
+        @param text: Text which is under test.
+        @type text: L{str}
+
+        @param regex: A regular expression object or a string containing a
+            regular expression suitable for use by re.search().
+        @type regex: L{str} or L{re.RegexObject}
+
+        @param msg: Text used as the error message on failure.
+        @type msg: L{str}
+        """
+        if sys.version_info[:2] > (2, 7):
+            super(_Assertions, self).assertRegex(text, regex, msg)
+        else:
+            # Python 2.7 has unittest.assertRegexpMatches() which was
+            # renamed to unittest.assertRegex() in Python 3.2
+            super(_Assertions, self).assertRegexpMatches(text, regex, msg)
+
+
+
 class _LogObserver(object):
     """
     Observes the Twisted logs and catches any errors.
@@ -897,17 +920,17 @@ class SynchronousTestCase(_Assertions):
     rather than an exception. All of the assertion methods raise this if the
     assertion fails.
 
-    @ivar skip: C{None} or a string explaining why this test is to be
+    @ivar skip: L{None} or a string explaining why this test is to be
     skipped. If defined, the test will not be run. Instead, it will be
     reported to the result object as 'skipped' (if the C{TestResult} supports
     skipping).
 
-    @ivar todo: C{None}, a string or a tuple of C{(errors, reason)} where
+    @ivar todo: L{None}, a string or a tuple of C{(errors, reason)} where
     C{errors} is either an exception class or an iterable of exception
     classes, and C{reason} is a string. See L{Todo} or L{makeTodo} for more
     information.
 
-    @ivar suppress: C{None} or a list of tuples of C{(args, kwargs)} to be
+    @ivar suppress: L{None} or a list of tuples of C{(args, kwargs)} to be
     passed to C{warnings.filterwarnings}. Use these to suppress warnings
     raised in a test. Useful for testing deprecated code. See also
     L{util.suppress}.
@@ -952,7 +975,7 @@ class SynchronousTestCase(_Assertions):
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As
         soon as it finds something with a C{skip} attribute, returns that.
-        Returns C{None} if it cannot find anything. See L{TestCase} docstring
+        Returns L{None} if it cannot find anything. See L{TestCase} docstring
         for more details.
         """
         return util.acquireAttribute(self._parents, 'skip', None)
@@ -963,7 +986,7 @@ class SynchronousTestCase(_Assertions):
         Return a L{Todo} object if the test is marked todo. Checks on the
         instance first, then the class, then the module, then packages. As
         soon as it finds something with a C{todo} attribute, returns that.
-        Returns C{None} if it cannot find anything. See L{TestCase} docstring
+        Returns L{None} if it cannot find anything. See L{TestCase} docstring
         for more details.
         """
         todo = util.acquireAttribute(self._parents, 'todo', None)
@@ -1064,7 +1087,7 @@ class SynchronousTestCase(_Assertions):
         C{TestCase} stores each error logged during the run of the test and
         reports them as errors during the cleanup phase (after C{tearDown}).
 
-        @param *errorTypes: If unspecifed, flush all errors. Otherwise, only
+        @param *errorTypes: If unspecified, flush all errors. Otherwise, only
         flush errors that match the given types.
 
         @return: A list of failures that have been removed.
@@ -1077,15 +1100,15 @@ class SynchronousTestCase(_Assertions):
         Remove stored warnings from the list of captured warnings and return
         them.
 
-        @param offendingFunctions: If C{None}, all warnings issued during the
+        @param offendingFunctions: If L{None}, all warnings issued during the
             currently running test will be flushed.  Otherwise, only warnings
             which I{point} to a function included in this list will be flushed.
             All warnings include a filename and source line number; if these
             parts of a warning point to a source line which is part of a
             function, then the warning I{points} to that function.
-        @type offendingFunctions: C{NoneType} or L{list} of functions or methods.
+        @type offendingFunctions: L{None} or L{list} of functions or methods.
 
-        @raise ValueError: If C{offendingFunctions} is not C{None} and includes
+        @raise ValueError: If C{offendingFunctions} is not L{None} and includes
             an object which is not a L{types.FunctionType} or
             L{types.MethodType} instance.
 
@@ -1247,7 +1270,7 @@ class SynchronousTestCase(_Assertions):
         Return the reason to use for skipping a test method.
 
         @param method: The method which produced the skip.
-        @param skip: A L{SkipTest} instance raised by C{method}.
+        @param skip: A L{unittest.SkipTest} instance raised by C{method}.
         """
         if len(skip.args) > 0:
             return skip.args[0]

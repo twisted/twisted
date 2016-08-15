@@ -55,7 +55,7 @@ from twisted.internet.defer import (
 
 def _maybeGlobalReactor(maybeReactor):
     """
-    @return: the argument, or the global reactor if the argument is C{None}.
+    @return: the argument, or the global reactor if the argument is L{None}.
     """
     if maybeReactor is None:
         from twisted.internet import reactor
@@ -343,7 +343,7 @@ class StreamServerEndpointService(service.Service, object):
     @since: 10.2
     """
 
-    _raiseSynchronously = None
+    _raiseSynchronously = False
 
     def __init__(self, endpoint, factory):
         self.endpoint = endpoint
@@ -366,6 +366,7 @@ class StreamServerEndpointService(service.Service, object):
         self._waitingForPort.addErrback(handleIt)
         if raisedNow:
             raisedNow[0].raiseException()
+        self._raiseSynchronously = False
 
 
     def startService(self):
@@ -384,7 +385,7 @@ class StreamServerEndpointService(service.Service, object):
         cancel the attempt to listen.
 
         @return: a L{Deferred<twisted.internet.defer.Deferred>} which fires
-            with C{None} when the port has stopped listening.
+            with L{None} when the port has stopped listening.
         """
         self._waitingForPort.cancel()
         def stopIt(port):

@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
@@ -17,11 +19,11 @@ class MyError2(Exception):
 class One(pb.Root):
     def remote_broken(self):
         msg = "fall down go boom"
-        print "raising a MyError exception with data '%s'" % msg
+        print("raising a MyError exception with data '%s'" % msg)
         raise MyError(msg)
     def remote_broken2(self):
         msg = "hadda owie"
-        print "raising a MyError2 exception with data '%s'" % msg
+        print("raising a MyError2 exception with data '%s'" % msg)
         raise MyError2(msg)
 
 def main():

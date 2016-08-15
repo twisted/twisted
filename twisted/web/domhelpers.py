@@ -63,7 +63,7 @@ def getIfExists(node, nodeId):
     """
     Get a node with the specified C{nodeId} as any of the C{class},
     C{id} or C{pattern} attributes.  If there is no such node, return
-    C{None}.
+    L{None}.
     """
     return _get(node, nodeId)
 

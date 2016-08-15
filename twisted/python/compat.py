@@ -25,6 +25,7 @@ from __future__ import absolute_import, division
 
 import inspect
 import os
+import platform
 import socket
 import string
 import struct
@@ -39,6 +40,29 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+if platform.python_implementation() == 'PyPy':
+    _PYPY = True
+else:
+    _PYPY = False
+
+def _shouldEnableNewStyle():
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 
 def currentframe(n=0):
@@ -187,11 +211,8 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    fin = open(filename, "rbU")
-    try:
+    with open(filename, "rbU") as fin:
         source = fin.read()
-    finally:
-        fin.close()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
 
@@ -422,7 +443,7 @@ Note that on Python 3, re-raised exceptions will be mutated, with their
 C{__traceback__} attribute being set.
 
 @param exception: The exception instance.
-@param traceback: The traceback to use, or C{None} indicating a new traceback.
+@param traceback: The traceback to use, or L{None} indicating a new traceback.
 """
 
 
@@ -630,6 +651,9 @@ def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
     L{bytes}.
+
+    This function is POSIX only; environment variables are always text strings
+    on Windows.
     """
     if not _PY3:
         # On py2, nothing to do.
@@ -702,6 +726,93 @@ def _bytesChr(i):
 
 
 
+try:
+    from sys import intern
+except ImportError:
+    intern = intern
+
+
+
+def _coercedUnicode(s):
+    """
+    Coerce ASCII-only byte strings into unicode for Python 2.
+
+    In Python 2 C{unicode(b'bytes')} returns a unicode string C{'bytes'}. In
+    Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
+    instead. This function mimics the behavior for Python 2. It will decode the
+    byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
+    passing a byte string. Unicode strings are returned as-is.
+
+    @param s: The string to coerce.
+    @type s: L{bytes} or L{unicode}
+
+    @raise UnicodeError: The input L{bytes} is not ASCII decodable.
+    @raise TypeError: The input is L{bytes} on Python 3.
+    """
+    if isinstance(s, bytes):
+        if _PY3:
+            raise TypeError("Expected str not %r (bytes)" % (s,))
+        else:
+            return s.decode('ascii')
+    else:
+        return s
+
+
+
+def _maybeMBCS(s):
+    """
+    Convert the string C{s} to a L{unicode} string, if required.
+
+    @param s: The string to convert.
+    @type s: L{bytes} or L{unicode}
+
+    @return: The string, decoded using MBCS if needed.
+    @rtype: L{unicode}
+
+    @raises UnicodeDecodeError: If passed a byte string that cannot be decoded
+        using MBCS.
+    """
+    assert sys.platform == "win32", "only reasonable on Windows"
+    assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
+
+    if isinstance(s, bytes):
+        return s.decode('mbcs')
+    return s
+
+
+
+if _PY3:
+    unichr = chr
+    raw_input = input
+else:
+    unichr = unichr
+    raw_input = raw_input
+
+
+
+def _bytesRepr(bytestring):
+    """
+    Provide a repr for a byte string that begins with 'b' on both
+    Python 2 and 3.
+
+    @param bytestring: The string to repr.
+    @type bytestring: L{bytes}
+
+    @raise TypeError: The input is not L{bytes}.
+
+    @return: The repr with a leading 'b'.
+    @rtype: L{bytes}
+    """
+    if not isinstance(bytestring, bytes):
+        raise TypeError("Expected bytes not %r" % (bytestring,))
+
+    if _PY3:
+        return repr(bytestring)
+    else:
+        return 'b' + repr(bytestring)
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -735,4 +846,10 @@ __all__ = [
     "_b64encodebytes",
     "_b64decodebytes",
     "_bytesChr",
+    "_coercedUnicode",
+    "_bytesRepr",
+    "intern",
+    "unichr",
+    "raw_input",
+    "_maybeMBCS",
 ]

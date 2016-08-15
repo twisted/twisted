@@ -52,7 +52,7 @@ caused it to be on.  For example::
 A formatting structure can then be serialized into a string containing the
 necessary VT102 control codes with L{assembleFormattedText}.
 
-@see: L{twisted.conch.insults.text.attributes}
+@see: L{twisted.conch.insults.text._CharacterAttributes}
 @author: Jp Calderone
 """
 
@@ -158,11 +158,11 @@ def assembleFormattedText(formatted):
 
     @param formatted: Structured text and attributes.
 
-    @rtype: C{str}
+    @rtype: L{str}
     @return: String containing VT102 control sequences that mimic those
-        specified by L{formatted}.
+        specified by C{formatted}.
 
-    @see: L{twisted.conch.insults.text.attributes}
+    @see: L{twisted.conch.insults.text._CharacterAttributes}
     @since: 13.1
     """
     return _textattributes.flatten(

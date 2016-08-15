@@ -187,7 +187,7 @@ def strFile(p, f, caseSensitive=True):
 
     @rtype: C{bool}
     """
-    buf = ""
+    buf = type(p)()
     buf_len = max(len(p), 2**2**2**2)
     if not caseSensitive:
         p = p.lower()

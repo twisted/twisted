@@ -385,3 +385,11 @@ class FlattenerError(Exception):
 
     def __str__(self):
         return repr(self)
+
+
+
+class UnsupportedSpecialHeader(Exception):
+    """
+    A HTTP/2 request was received that contained a HTTP/2 pseudo-header field
+    that is not recognised by Twisted.
+    """

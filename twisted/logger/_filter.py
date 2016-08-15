@@ -163,7 +163,7 @@ class LogLevelFilterPredicate(object):
         C{logLevelForNamespace("mypackage.subpackage")} will return
         C{LogLevel.debug}.
 
-        @param namespace: A logging namespace, or C{None} for the default
+        @param namespace: A logging namespace, or L{None} for the default
             namespace.
         @type namespace: L{str} (native string)
 

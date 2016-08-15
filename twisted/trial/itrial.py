@@ -175,12 +175,12 @@ class IReporter(zi.Interface):
 
         In Twisted 15.5 and prior, C{todo} was a mandatory parameter.
 
-        @type test: L{pyunit.TestCase}
+        @type test: L{unittest.TestCase}
         @param test: The test which this is about.
         @type error: L{failure.Failure}
         @param error: The error which this test failed with.
         @type todo: L{unittest.Todo}
-        @param todo: The reason for the test's TODO status. If C{None}, a
+        @param todo: The reason for the test's TODO status. If L{None}, a
             generic reason is used.
         """
 
@@ -191,10 +191,10 @@ class IReporter(zi.Interface):
 
         In Twisted 15.5 and prior, C{todo} was a mandatory parameter.
 
-        @type test: L{pyunit.TestCase}
+        @type test: L{unittest.TestCase}
         @param test: The test which this is about.
         @type todo: L{unittest.Todo}
-        @param todo: The reason for the test's TODO status. If C{None}, a
+        @param todo: The reason for the test's TODO status. If L{None}, a
             generic reason is used.
         """
 

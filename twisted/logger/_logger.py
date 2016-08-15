@@ -35,7 +35,7 @@ class Logger(object):
     def __init__(self, namespace=None, source=None, observer=None):
         """
         @param namespace: The namespace for this logger.  Uses a dotted
-            notation, as used by python modules.  If not C{None}, then the name
+            notation, as used by python modules.  If not L{None}, then the name
             of the module of the caller is used.
         @type namespace: L{str} (native string)
 
@@ -45,7 +45,7 @@ class Logger(object):
         @type source: L{object}
 
         @param observer: The observer that this logger will send events to.
-            If C{None}, use the L{global log publisher <globalLogPublisher>}.
+            If L{None}, use the L{global log publisher <globalLogPublisher>}.
         @type observer: L{ILogObserver}
         """
         if namespace is None:
@@ -134,7 +134,7 @@ class Logger(object):
 
     def failure(self, format, failure=None, level=LogLevel.critical, **kwargs):
         """
-        Log an failure and emit a traceback.
+        Log a failure and emit a traceback.
 
         For example::
 
@@ -162,7 +162,7 @@ class Logger(object):
             The logging event (which is a L{dict}) is used to render this
             format string.
 
-        @param failure: a L{Failure} to log.  If C{None}, a L{Failure} is
+        @param failure: a L{Failure} to log.  If L{None}, a L{Failure} is
             created from the exception in flight.
 
         @param level: a L{LogLevel} to use.

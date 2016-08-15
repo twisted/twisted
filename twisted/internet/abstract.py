@@ -54,7 +54,7 @@ class _ConsumerMixin(object):
 
     Subclasses must also override the C{startWriting} method.
 
-    @ivar producer: C{None} if no producer is registered, otherwise the
+    @ivar producer: L{None} if no producer is registered, otherwise the
         registered producer.
 
     @ivar producerPaused: A flag indicating whether the producer is currently
@@ -235,7 +235,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         Called when data can be written.
 
-        @return: C{None} on success, an exception or a negative integer on
+        @return: L{None} on success, an exception or a negative integer on
             failure.
 
         @see: L{twisted.internet.interfaces.IWriteDescriptor.doWrite}.

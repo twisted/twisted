@@ -78,9 +78,9 @@ def textFileLogObserver(outFile, timeFormat=timeFormatRFC3339):
     @type outFile: L{io.IOBase}
 
     @param timeFormat: The format to use when adding timestamp prefixes to
-        logged events.  If C{None}, or for events with no C{"log_timestamp"}
+        logged events.  If L{None}, or for events with no C{"log_timestamp"}
         key, the default timestamp prefix of C{u"-"} is used.
-    @type timeFormat: L{unicode} or C{None}
+    @type timeFormat: L{unicode} or L{None}
 
     @return: A file log observer.
     @rtype: L{FileLogObserver}

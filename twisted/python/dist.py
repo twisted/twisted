@@ -36,7 +36,7 @@ from setuptools import setup as _setup
 from setuptools import Extension
 
 from twisted import copyright
-from twisted.python.compat import execfile
+from twisted.python.compat import execfile, _PY3
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -57,19 +57,28 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
-        ],
-    )
+        "Programming Language :: Python :: 3.5",
+    ],
+)
 
 
+_dev = [
+    'pyflakes >= 1.0.0',
+    'twisted-dev-tools >= 0.0.2',
+    'python-subunit',
+    'sphinx >= 1.3.1',
+]
+
+if not _PY3:
+    # These modules do not yet work on Python 3.
+    _dev += [
+        'twistedchecker >= 0.4.0',
+        'pydoctor >= 16.2.0',
+    ]
 
 _EXTRA_OPTIONS = dict(
-    dev=['twistedchecker >= 0.4.0',
-         'pyflakes >= 1.0.0',
-         'twisted-dev-tools >= 0.0.2',
-         'python-subunit',
-         'sphinx >= 1.3.1',
-         'pydoctor >= 15.0.0'],
-    tls=['pyopenssl >= 0.13',
+    dev=_dev,
+    tls=['pyopenssl >= 16.0.0',
          'service_identity',
          'idna >= 0.6'],
     conch=['gmpy',
@@ -80,14 +89,17 @@ _EXTRA_OPTIONS = dict(
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
-    windows=['pypiwin32']
+    windows=['pypiwin32'],
+    http2=['h2 >= 2.3.0, < 3.0',
+           'priority >= 1.1.0, < 2.0'],
 )
 
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
-    _EXTRA_OPTIONS['serial']
+    _EXTRA_OPTIONS['serial'] +
+    _EXTRA_OPTIONS['http2']
 )
 
 _EXTRAS_REQUIRE = {
@@ -96,6 +108,7 @@ _EXTRAS_REQUIRE = {
     'conch': _EXTRA_OPTIONS['conch'],
     'soap': _EXTRA_OPTIONS['soap'],
     'serial': _EXTRA_OPTIONS['serial'],
+    'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'osx_platform': (
         _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
@@ -181,47 +194,54 @@ def getExtensions():
         ConditionalExtension(
             "twisted.test.raiser",
             ["twisted/test/raiser.c"],
-            condition=lambda _: _isCPython),
-
+            condition=lambda _: _isCPython
+        ),
         ConditionalExtension(
             "twisted.internet.iocpreactor.iocpsupport",
             ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
              "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
             libraries=["ws2_32"],
-            condition=lambda _: _isCPython and sys.platform == "win32"),
-
+            condition=lambda _: _isCPython and sys.platform == "win32"
+        ),
         ConditionalExtension(
             "twisted.python._sendmsg",
             sources=["twisted/python/_sendmsg.c"],
-            condition=lambda _: sys.platform != "win32"),
-
+            condition=lambda _: not _PY3 and sys.platform != "win32"
+        ),
         ConditionalExtension(
             "twisted.runner.portmap",
             ["twisted/runner/portmap.c"],
-            condition=lambda builder: builder._check_header("rpc/rpc.h")),
+            condition=(
+                lambda builder: not _PY3 and builder._check_header("rpc/rpc.h")
+            )
+        ),
     ]
 
     return extensions
 
 
 
-def getScripts(basedir=''):
+def getConsoleScripts():
     """
     Returns a list of scripts for Twisted.
     """
-    scriptdir = os.path.join(basedir, 'bin')
-    if not os.path.isdir(scriptdir):
-        # Probably a project-specific tarball, in which case only this
-        # project's bins are included in 'bin'
-        scriptdir = os.path.join(basedir, 'bin')
-        if not os.path.isdir(scriptdir):
-            return []
-    thingies = os.listdir(scriptdir)
-    for specialExclusion in ['_preamble.py', '_preamble.pyc']:
-        if specialExclusion in thingies:
-            thingies.remove(specialExclusion)
-    return list(filter(os.path.isfile,
-                       [os.path.join(scriptdir, x) for x in thingies]))
+    scripts = [
+        "cftp = twisted.conch.scripts.cftp:run",
+        "ckeygen = twisted.conch.scripts.ckeygen:run",
+        "conch = twisted.conch.scripts.conch:run",
+        "mailmail = twisted.mail.scripts.mailmail:run",
+        "pyhtmlizer = twisted.scripts.htmlizer:run",
+        "tkconch = twisted.conch.scripts.tkconch:run"
+    ]
+    portedToPython3Scripts = [
+        "trial = twisted.scripts.trial:run",
+        "twist = twisted.application.twist._twist:Twist.main",
+        "twistd = twisted.scripts.twistd:run",
+    ]
+    if _PY3:
+        return portedToPython3Scripts
+    else:
+        return scripts + portedToPython3Scripts
 
 
 ## Helpers and distutil tweaks
@@ -254,7 +274,7 @@ class build_ext_twisted(build_ext.build_ext):
         """
         Prepare the C{self.extensions} attribute (used by
         L{build_ext.build_ext}) by checking which extensions in
-        L{conditionalExtensions} should be built.  In addition, if we are
+        I{conditionalExtensions} should be built.  In addition, if we are
         building on NT, define the WIN32 macro to 1.
         """
         # always define WIN32 under Windows
@@ -273,8 +293,9 @@ class build_ext_twisted(build_ext.build_ext):
             self.define_macros.append(('_XOPEN_SOURCE', 1))
             self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
 
-        self.extensions = [x for x in self.conditionalExtensions
-                           if x.condition(self)]
+        self.extensions = [
+            x for x in self.conditionalExtensions if x.condition(self)
+        ]
 
         for ext in self.extensions:
             ext.define_macros.extend(self.define_macros)
@@ -299,8 +320,8 @@ class build_ext_twisted(build_ext.build_ext):
     def _compile_helper(self, content):
         conftest = open("conftest.c", "w")
         try:
-            conftest.write(content)
-            conftest.close()
+            with conftest:
+                conftest.write(content)
 
             try:
                 self.compiler.compile(["conftest.c"], output_dir='')

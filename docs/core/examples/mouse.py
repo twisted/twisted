@@ -21,6 +21,8 @@ Example using MouseMan protocol with the SerialPort transport.
 # -echo -echoe -echok -echonl -noflsh -xcase -tostop -echoprt -echoctl
 # -echoke
 
+from __future__ import print_function
+
 import sys
 from twisted.python import usage, log
 from twisted.protocols.mice import mouseman
@@ -67,8 +69,8 @@ if __name__ == '__main__':
     try:
         o.parseOptions()
     except usage.UsageError as errortext:
-        print "%s: %s" % (sys.argv[0], errortext)
-        print "%s: Try --help for usage details." % (sys.argv[0])
+        print("%s: %s" % (sys.argv[0], errortext))
+        print("%s: Try --help for usage details." % (sys.argv[0]))
         raise SystemExit(1)
 
     logFile = sys.stdout

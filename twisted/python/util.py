@@ -107,7 +107,7 @@ class InsensitiveDict:
             return default
 
     def setdefault(self, key, default):
-        """If 'key' doesn't exists, associate it with the 'default' value.
+        """If 'key' doesn't exist, associate it with the 'default' value.
         Return value associated with 'key'."""
         if not self.has_key(key):
             self[key] = default
@@ -589,7 +589,7 @@ else:
         @type uid: C{int}
         @param uid: The UID for which to look up group information.
 
-        @type primaryGid: C{int} or C{NoneType}
+        @type primaryGid: C{int} or L{None}
         @param primaryGid: If provided, an additional GID to include when
             setting the groups.
         """
@@ -604,13 +604,13 @@ def switchUID(uid, gid, euid=False):
     If C{uid} is the same value as L{os.getuid} (or L{os.geteuid}),
     this function will issue a L{UserWarning} and not raise an exception.
 
-    @type uid: C{int} or C{NoneType}
+    @type uid: C{int} or L{None}
     @param uid: the UID (or EUID) to switch the current process to. This
-                parameter will be ignored if the value is C{None}.
+                parameter will be ignored if the value is L{None}.
 
-    @type gid: C{int} or C{NoneType}
+    @type gid: C{int} or L{None}
     @param gid: the GID (or EGID) to switch the current process to. This
-                parameter will be ignored if the value is C{None}.
+                parameter will be ignored if the value is L{None}.
 
     @type euid: C{bool}
     @param euid: if True, set only effective user-id rather than real user-id.

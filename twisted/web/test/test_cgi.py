@@ -5,13 +5,15 @@
 Tests for L{twisted.web.twcgi}.
 """
 
-import sys, os
+import sys
+import os
+import json
 
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, error
 from twisted.python import util, failure, log
 from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
-from twisted.web import client, twcgi, server, resource
+from twisted.web import client, twcgi, server, resource, http_headers
 from twisted.web.test._util import _render
 from twisted.web.test.test_web import DummyRequest
 
@@ -73,6 +75,15 @@ print
 print "cgi output"
 '''
 
+HEADER_OUTPUT_CGI = '''\
+import json
+import os
+print("")
+print("")
+vals = {x:y for x,y in os.environ.items() if x.startswith("HTTP_")}
+print(json.dumps(vals))
+'''
+
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
 
@@ -99,9 +110,8 @@ class CGITests(unittest.TestCase):
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(source)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(source)
         return cgiFilename
 
 
@@ -154,6 +164,32 @@ class CGITests(unittest.TestCase):
         return factory.deferred
 
 
+    def test_noProxyPassthrough(self):
+        """
+        The CGI script is never called with the Proxy header passed through.
+        """
+        cgiFilename = self.writeCGI(HEADER_OUTPUT_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+
+        agent = client.Agent(reactor)
+
+        headers = http_headers.Headers({"Proxy": ["foo"],
+                                        "X-Innocent-Header": ["bar"]})
+        d = agent.request("GET", url, headers=headers)
+
+        def checkResponse(response):
+            headers = json.loads(response)
+            self.assertEqual(
+                set(headers.keys()),
+                {"HTTP_HOST", "HTTP_CONNECTION", "HTTP_X_INNOCENT_HEADER"})
+
+        d.addCallback(client.readBody)
+        d.addCallback(checkResponse)
+        return d
+
+
     def test_duplicateHeaderCGI(self):
         """
         If a CGI script emits two instances of the same header, both are sent in
@@ -200,9 +236,8 @@ class CGITests(unittest.TestCase):
 
     def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(READINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum)
@@ -214,9 +249,8 @@ class CGITests(unittest.TestCase):
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(READINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum,
@@ -231,9 +265,8 @@ class CGITests(unittest.TestCase):
 
     def testReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
-        cgiFile.write(READALLINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as cgiFile:
+            cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
         d = client.getPage("http://localhost:%d/cgi" % portnum,

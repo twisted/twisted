@@ -66,12 +66,12 @@ class SentenceTestsMixin(object):
         """
         A sentence attribute gets the correct value, and accessing an
         unset attribute (which is specified as being a valid sentence
-        attribute) gets C{None}.
+        attribute) gets L{None}.
         """
         thisSentinel = object()
         sentence = self.sentenceClass({sentinelValueOne: thisSentinel})
         self.assertEqual(getattr(sentence, sentinelValueOne), thisSentinel)
-        self.assertEqual(getattr(sentence, sentinelValueTwo), None)
+        self.assertIsNone(getattr(sentence, sentinelValueTwo))
 
 
     def test_raiseOnMissingAttributeAccess(self):
@@ -129,17 +129,6 @@ class SentenceTestsMixin(object):
 
 
 
-class DummyTests(TestCase, SentenceTestsMixin):
-    """
-    Tests for protocol classes that implement the appropriate interface
-    (L{ipositioning.IPositioningSentenceProducer}) manually.
-    """
-    def setUp(self):
-        self.protocol = DummyProtocol()
-        self.sentenceClass = DummySentence
-
-
-
 class MixinTests(TestCase, SentenceTestsMixin):
     """
     Tests for protocols deriving from L{base.PositioningSentenceProducerMixin}
@@ -152,10 +141,10 @@ class MixinTests(TestCase, SentenceTestsMixin):
 
     def test_noNoneInSentenceAttributes(self):
         """
-        C{None} does not appear in the sentence attributes of the
+        L{None} does not appear in the sentence attributes of the
         protocol, even though it's in the specification.
 
-        This is because C{None} is a placeholder for parts of the sentence you
+        This is because L{None} is a placeholder for parts of the sentence you
         don't really need or want, but there are some bits later on in the
         sentence that you do want. The alternative would be to have to specify
         things like "_UNUSED0", "_UNUSED1"... which would end up cluttering
