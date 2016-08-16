@@ -581,10 +581,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         format if explicitly specified.
         """
         self.assertEqual(
-            keys.Key(self.rsaObj).fingerprint('md5-hex'),
+            keys.Key(self.rsaObj).fingerprint(
+                keys.FingerprintFormats.MD5_HEX),
             '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
         self.assertEqual(
-            keys.Key(self.dsaObj).fingerprint('md5-hex'),
+            keys.Key(self.dsaObj).fingerprint(
+                keys.FingerprintFormats.MD5_HEX),
             '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
 
 
@@ -594,10 +596,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         format if explicitly specified.
         """
         self.assertEqual(
-            keys.Key(self.rsaObj).fingerprint('sha256-base64'),
+            keys.Key(self.rsaObj).fingerprint(
+                keys.FingerprintFormats.SHA256_BASE64),
             'ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=')
         self.assertEqual(
-            keys.Key(self.dsaObj).fingerprint('sha256-base64'),
+            keys.Key(self.dsaObj).fingerprint(
+                keys.FingerprintFormats.SHA256_BASE64),
             'Wz5o2YbKyxOEcJn1au/UaALSVruUzfz0vaLI1xiIGyY=')
 
 

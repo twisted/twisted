@@ -39,8 +39,10 @@ from twisted.python import randbytes
 from twisted.python.compat import (
     iterbytes, long, izip, nativeString, _PY3,
     _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
+from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version
+
 
 
 
@@ -65,6 +67,15 @@ class BadFingerPrintFormat(Exception):
     """
     Raises when unsupported fingerprint formats are presented to fingerprint.
     """
+
+
+
+class FingerprintFormats(Names):
+    """
+    Constants representing the supported formats of key fingerprints.
+    """
+    MD5_HEX = NamedConstant()
+    SHA256_BASE64 = NamedConstant()
 
 
 
@@ -790,7 +801,7 @@ class Key(object):
         return Key(self._keyObject.public_key())
 
 
-    def fingerprint(self, format='md5-hex'):
+    def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
         The fingerprint of a public key consists of the output of the
         message-digest algorithm in the specified format.
@@ -816,15 +827,13 @@ class Key(object):
 
         @rtype: L{str}
         """
-        hashFunction = {'md5-hex' : md5, 'sha256-base64' : sha256}
-
-        if format == 'sha256-base64':
+        if format is FingerprintFormats.SHA256_BASE64:
             return nativeString(base64.b64encode(
-                hashFunction[format](self.blob()).digest()))
-        elif format == 'md5-hex':
+                sha256(self.blob()).digest()))
+        elif format is FingerprintFormats.MD5_HEX:
             return nativeString(
                 b':'.join([binascii.hexlify(x)
-                for x in iterbytes(hashFunction[format](self.blob()).digest())]))
+                for x in iterbytes(md5(self.blob()).digest())]))
         else:
             raise BadFingerPrintFormat(
                 'Unsupported fingerprint format: %s' % (format,))

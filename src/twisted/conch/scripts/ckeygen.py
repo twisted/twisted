@@ -64,6 +64,7 @@ def run():
         else:
             sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
     elif options['fingerprint']:
+        enumrepresentation(options)
         printFingerprint(options)
     elif options['changepass']:
         changePassPhrase(options)
@@ -72,6 +73,18 @@ def run():
     else:
         options.opt_help()
         sys.exit(1)
+
+
+def enumrepresentation(options):
+    if options['fingerprint'] == 'md5-hex':
+        options['fingerprint'] = keys.FingerprintFormats.MD5_HEX
+        return options
+    elif options['fingerprint'] == 'sha256-base64':
+        options['fingerprint'] = keys.FingerprintFormats.SHA256_BASE64
+        return options
+    else:
+        raise keys.BadFingerPrintFormat(
+            'Unsupported fingerprint format: %s' % (options['fingerprint'],))
 
 
 
