@@ -96,7 +96,7 @@ class KeyGenTests(TestCase):
         with self.assertRaises(BadFingerPrintFormat) as em:
             printFingerprint({'filename': filename, 'fingerprint':'sha-base64'})
         self.assertEqual('Unsupported fingerprint format: sha-base64',
-            em.exception.message)
+            em.exception.args[0])
 
 
     def test_saveKey(self):
@@ -168,7 +168,7 @@ class KeyGenTests(TestCase):
             _saveKey(key, {'filename': filename, 'pass': 'passphrase',
                 'fingerprint': 'sha-base64'})
         self.assertEqual('Unsupported fingerprint format: sha-base64',
-            em.exception.message)
+            em.exception.args[0])
 
 
     def test_saveKeyEmptyPassphrase(self):
