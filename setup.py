@@ -24,7 +24,7 @@ class PickyBuildPy(build_py):
     ported to Python 3.
     """
     def find_package_modules(self, package, package_dir):
-        from twisted.python.dist3 import notPortedModules
+        from twisted.python._dist3 import notPortedModules
 
         modules = [
             module for module
