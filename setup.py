@@ -24,13 +24,12 @@ class PickyBuildPy(build_py):
     ported to Python 3.
     """
     def find_package_modules(self, package, package_dir):
-        from twisted.python.dist3 import modulesToInstall, testDataFiles
+        from twisted.python.dist3 import notPortedModules
 
         modules = [
             module for module
             in super(build_py, self).find_package_modules(package, package_dir)
-            if ".".join([module[0], module[1]]) in modulesToInstall or
-               ".".join([module[0], module[1]]) in testDataFiles]
+            if ".".join([module[0], module[1]]) not in notPortedModules]
         return modules
 
 
