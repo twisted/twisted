@@ -215,6 +215,8 @@ def get_setup_args():
     else:
         requirements = ["zope.interface >= 3.6.0"]
 
+    requirements.append("constantly >= 15.1")
+
     arguments.update(dict(
         packages=find_packages(),
         install_requires=requirements,
