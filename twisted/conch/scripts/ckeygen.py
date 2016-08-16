@@ -64,7 +64,7 @@ def run():
         else:
             sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
     elif options['fingerprint']:
-        enumrepresentation(options)
+        options = enumrepresentation(options)
         printFingerprint(options)
     elif options['changepass']:
         changePassPhrase(options)
