@@ -7,8 +7,9 @@ Windows implementation of local network interface enumeration.
 
 from socket import socket, AF_INET6, SOCK_STREAM
 from ctypes import (
-    WinDLL, byref, create_string_buffer, c_int, c_void_p,
-    POINTER, Structure, cast, string_at)
+    WinDLL, byref, create_string_buffer, create_unicode_buffer,
+    c_int, c_void_p,
+    POINTER, Structure, cast, wstring_at)
 
 WS2_32 = WinDLL('ws2_32')
 
@@ -48,7 +49,7 @@ WSAIoctl.restype = c_int
 #         __inout   LPTSTR lpszAddressString,
 #         __inout   LPDWORD lpdwAddressStringLength
 #       );
-WSAAddressToString = WS2_32.WSAAddressToStringA
+WSAAddressToString = WS2_32.WSAAddressToStringW
 WSAAddressToString.argtypes = [
     LPSOCKADDR, DWORD, LPWSAPROTOCOL_INFO, LPTSTR, LPDWORD]
 WSAAddressToString.restype = c_int
@@ -104,7 +105,7 @@ def win32GetLinkLocalIPv6Addresses():
     addrList = cast(buf, POINTER(make_SAL(addrCount)))
 
     addressStringBufLength = 1024
-    addressStringBuf = create_string_buffer(addressStringBufLength)
+    addressStringBuf = create_unicode_buffer(addressStringBufLength)
 
     retList = []
     for i in range(addrList[0].iAddressCount):
@@ -115,5 +116,5 @@ def win32GetLinkLocalIPv6Addresses():
             byref(retBytes))
         if ret:
             raise RuntimeError("WSAAddressToString failure")
-        retList.append(string_at(addressStringBuf))
+        retList.append(wstring_at(addressStringBuf))
     return [addr for addr in retList if '%' in addr]

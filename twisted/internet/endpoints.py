@@ -19,6 +19,8 @@ import re
 import socket
 import warnings
 
+from constantly import NamedConstant, Names
+
 from socket import AF_INET6, AF_INET
 
 from zope.interface import implementer, directlyProvides
@@ -37,7 +39,6 @@ from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
 from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
-from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.compat import iterbytes

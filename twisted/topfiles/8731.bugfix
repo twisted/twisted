@@ -1,0 +1,1 @@
+_twistd_unix now reports the name and encoded message of an exception raised during daemonization on Python 2 and 3.

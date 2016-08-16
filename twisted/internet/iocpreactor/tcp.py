@@ -15,6 +15,7 @@ from twisted.internet.abstract import _LogOwner, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
 from twisted.python import log, failure, reflect
+from twisted.python.compat import _PY3, nativeString
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
@@ -58,8 +59,20 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
 
 
     def dataReceived(self, rbuffer):
-        # XXX: some day, we'll have protocols that can handle raw buffers
-        self.protocol.dataReceived(str(rbuffer))
+        """
+        @param rbuffer: Data received.
+        @type rbuffer: L{bytes} or L{bytearray}
+        """
+        if isinstance(rbuffer, bytes):
+            pass
+        elif isinstance(rbuffer, bytearray):
+            # XXX: some day, we'll have protocols that can handle raw buffers
+            rbuffer = bytes(rbuffer)
+        else:
+            raise TypeError("data must be bytes or bytearray, not " +
+                            type(rbuffer))
+
+        self.protocol.dataReceived(rbuffer)
 
 
     def readFromHandle(self, bufflist, evt):
@@ -71,8 +84,9 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         Send C{buff} to current file handle using C{_iocp.send}. The buffer
         sent is limited to a size of C{self.SEND_LIMIT}.
         """
+        writeView = memoryview(buff)
         return _iocp.send(self.getFileHandle(),
-            buffer(buff, 0, self.SEND_LIMIT), evt)
+            writeView[0:self.SEND_LIMIT].tobytes(), evt)
 
 
     def _closeWriteConnection(self):
@@ -276,7 +290,7 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         self.reactor.removeActiveHandle(self)
 
 
-    def cbConnect(self, rc, bytes, evt):
+    def cbConnect(self, rc, data, evt):
         if rc:
             rc = connectExErrors.get(rc, rc)
             self.failIfNotConnected(error.getConnectError((rc,
@@ -534,7 +548,7 @@ class Port(_SocketCloser, _LogOwner):
         return self._addressType('TCP', host, port)
 
 
-    def cbAccept(self, rc, bytes, evt):
+    def cbAccept(self, rc, data, evt):
         self.handleAccept(rc, evt)
         if not (self.disconnecting or self.disconnected):
             self.doAccept()
@@ -556,6 +570,14 @@ class Port(_SocketCloser, _LogOwner):
                 struct.pack('P', self.socket.fileno()))
             family, lAddr, rAddr = _iocp.get_accept_addrs(evt.newskt.fileno(),
                                                           evt.buff)
+            if not _PY3:
+                # In _makesockaddr(), we use the Win32 API which
+                # gives us an address of the form: (unicode host, port).
+                # Only on Python 2 do we need to convert it to a
+                # non-unicode str.
+                # On Python 3, we leave it alone as unicode.
+                lAddr = (nativeString(lAddr[0]), lAddr[1])
+                rAddr = (nativeString(rAddr[0]), rAddr[1])
             assert family == self.addressFamily
 
             protocol = self.factory.buildProtocol(

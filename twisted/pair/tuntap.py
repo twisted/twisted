@@ -13,15 +13,15 @@ import fcntl
 import errno
 import struct
 import warnings
-from collections import namedtuple
 
+from collections import namedtuple
+from constantly import Flags, FlagConstant
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.python.versions import Version
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecated
-from twisted.python.constants import Flags, FlagConstant
 from twisted.python import log
 from twisted.internet import abstract, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
@@ -71,7 +71,7 @@ class TunnelFlags(Flags):
 
 
 @implementer(interfaces.IAddress)
-class TunnelAddress(FancyStrMixin, object, FancyEqMixin):
+class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
     """
     A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
     """
@@ -290,7 +290,7 @@ class TuntapPort(abstract.FileDescriptor):
         config = struct.pack("%dsH" % (_IFNAMSIZ,), name, mode.value)
         fileno = self._system.open(_TUN_KO_PATH, flags)
         result = self._system.ioctl(fileno, _TUNSETIFF, config)
-        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip('\x00'))
+        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip(b'\x00'))
 
 
     def _bindSocket(self):
@@ -431,4 +431,3 @@ class TuntapPort(abstract.FileDescriptor):
 TuntapPort.loseConnection = deprecated(
     Version("Twisted", 14, 0, 0),
     TuntapPort.stopListening)(TuntapPort.loseConnection)
-
