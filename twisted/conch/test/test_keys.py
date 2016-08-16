@@ -609,7 +609,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         with self.assertRaises(keys.BadFingerPrintFormat) as em:
             keys.Key(self.rsaObj).fingerprint('sha256-base')
         self.assertEqual('Unsupported fingerprint format: sha256-base',
-            em.exception.message)
+            em.exception.args[0])
 
 
     def test_type(self):
