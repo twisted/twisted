@@ -18,7 +18,6 @@ Maintainer: Glyph Lefkowitz
 
 from __future__ import division, absolute_import, print_function
 
-import collections
 import traceback
 import types
 import warnings
@@ -279,7 +278,7 @@ class Deferred:
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks = collections.deque()
+        self.callbacks = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
@@ -545,7 +544,7 @@ class Deferred:
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain = collections.deque([self])
+        chain = [self]
 
         while chain:
             current = chain[-1]
@@ -559,7 +558,7 @@ class Deferred:
             finished = True
             current._chainedTo = None
             while current.callbacks:
-                item = current.callbacks.popleft()
+                item = current.callbacks.pop(0)
                 callback, args, kw = item[
                     isinstance(current.result, failure.Failure)]
                 args = args or ()
