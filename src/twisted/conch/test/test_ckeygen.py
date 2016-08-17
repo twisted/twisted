@@ -65,8 +65,8 @@ class KeyGenTests(TestCase):
         L{enumrepresentation} takes a dictionary as input and returns a
         dictionary with its attributes changed to enum representation.
         """
-        options = enumrepresentation({'fingerprint': 'md5-hex'})
-        self.assertIs(options['fingerprint'],
+        options = enumrepresentation({'format': 'md5-hex'})
+        self.assertIs(options['format'],
             FingerprintFormats.MD5_HEX)
 
 
@@ -74,8 +74,8 @@ class KeyGenTests(TestCase):
         """
         Test for format C{sha256-base64}
         """
-        options = enumrepresentation({'fingerprint': 'sha256-base64'})
-        self.assertIs(options['fingerprint'],
+        options = enumrepresentation({'format': 'sha256-base64'})
+        self.assertIs(options['format'],
             FingerprintFormats.SHA256_BASE64)
 
 
@@ -85,7 +85,7 @@ class KeyGenTests(TestCase):
         Test for unsupported fingerprint format
         """
         with self.assertRaises(BadFingerPrintFormat) as em:
-            enumrepresentation({'fingerprint': 'sha-base64'})
+            enumrepresentation({'format': 'sha-base64'})
         self.assertEqual('Unsupported fingerprint format: sha-base64',
             em.exception.args[0])
 
@@ -100,7 +100,7 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename,
-            'fingerprint': FingerprintFormats.MD5_HEX})
+            'format': FingerprintFormats.MD5_HEX})
         self.assertEqual(
             self.stdout.getvalue(),
             '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
@@ -114,7 +114,7 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename,
-            'fingerprint': FingerprintFormats.SHA256_BASE64})
+            'format': FingerprintFormats.SHA256_BASE64})
         self.assertEqual(
             self.stdout.getvalue(),
             '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
@@ -128,7 +128,7 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         with self.assertRaises(BadFingerPrintFormat) as em:
-            printFingerprint({'filename': filename, 'fingerprint':'sha-base64'})
+            printFingerprint({'filename': filename, 'format':'sha-base64'})
         self.assertEqual('Unsupported fingerprint format: sha-base64',
             em.exception.args[0])
 
@@ -143,7 +143,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-            'fingerprint': FingerprintFormats.MD5_HEX})
+            'format': FingerprintFormats.MD5_HEX})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -171,7 +171,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-            'fingerprint': FingerprintFormats.SHA256_BASE64})
+            'format': FingerprintFormats.SHA256_BASE64})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -200,7 +200,7 @@ class KeyGenTests(TestCase):
         key = Key.fromString(privateRSA_openssh)
         with self.assertRaises(BadFingerPrintFormat) as em:
             _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-                'fingerprint': 'sha-base64'})
+                'format': 'sha-base64'})
         self.assertEqual('Unsupported fingerprint format: sha-base64',
             em.exception.args[0])
 
@@ -215,7 +215,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'no-passphrase': True,
-            'fingerprint': FingerprintFormats.MD5_HEX})
+            'format': FingerprintFormats.MD5_HEX})
         self.assertEqual(
             key.fromString(
                 base.child('id_rsa').getContent(), None, b''),
@@ -234,7 +234,7 @@ class KeyGenTests(TestCase):
         self.patch(__builtin__, 'raw_input', lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': None, 'no-passphrase': True,
-            'fingerprint': FingerprintFormats.MD5_HEX})
+            'format': FingerprintFormats.MD5_HEX})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
