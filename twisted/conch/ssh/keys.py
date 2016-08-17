@@ -73,6 +73,14 @@ class BadFingerPrintFormat(Exception):
 class FingerprintFormats(Names):
     """
     Constants representing the supported formats of key fingerprints.
+
+    @cvar MD5_HEX: Named constant representing fingerprint format generated
+        using md5[RFC1321] algorithm in hexadecimal encoding.
+    @type MD5_HEX: L{twisted.python.constants.NamedConstant}
+
+    @cvar SHA256_BASE64: Named constant representing fingerprint format
+        generated using sha256[RFC4634] algorithm in base64 encoding
+    @type SHA256_BASE64: L{twisted.python.constants.NamedConstant}
     """
     MD5_HEX = NamedConstant()
     SHA256_BASE64 = NamedConstant()
@@ -805,7 +813,9 @@ class Key(object):
         """
         The fingerprint of a public key consists of the output of the
         message-digest algorithm in the specified format.
-        Supported formats inclide C{md5-hex} and C{sha256-base64}
+        Supported formats include L{FingerprintFormats.MD5-HEX} and
+        L{FingerprintFormats.SHA256-BASE64}
+
         The input to the algorithm is the public key data as specified by [RFC4253].
 
         The output of sha256[RFC4634] algorithm is presented to the
@@ -818,7 +828,8 @@ class Key(object):
         Example: C{c1:b1:30:29:d7:b8:de:6c:97:77:10:d7:46:41:63:87}
 
         @param format: Format for fingerprint generation. Consists
-            hash function and representation format. Default is C{md5-hex}
+            hash function and representation format.
+            Default is L{FingerprintFormats.MD5-HEX}
 
         @since: 8.2
 

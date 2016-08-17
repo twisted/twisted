@@ -72,7 +72,7 @@ class KeyGenTests(TestCase):
 
     def test_enumrepresentationsha256(self):
         """
-        Test for format C{sha256-base64}
+        Test for format L{FingerprintFormats.SHA256-BASE64}.
         """
         options = enumrepresentation({'format': 'sha256-base64'})
         self.assertIs(options['format'],
@@ -108,8 +108,8 @@ class KeyGenTests(TestCase):
 
     def test_printFingerprintsha256(self):
         """
-        L{printFigerprint} will print key fingerprint in C{sha256-base64}
-        format if explicitly specified.
+        L{printFigerprint} will print key fingerprint in
+        L{FingerprintFormats.SHA256-BASE64} format if explicitly specified.
         """
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
@@ -163,8 +163,8 @@ class KeyGenTests(TestCase):
 
     def test_saveKeysha256(self):
         """
-        L{_saveKey} will generate key fingerprint in C{sha256-base64} format
-        if explicitly specified.
+        L{_saveKey} will generate key fingerprint in
+        L{FingerprintFormats.SHA256-BASE64} format if explicitly specified.
         """
         base = FilePath(self.mktemp())
         base.makedirs()
