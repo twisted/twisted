@@ -567,7 +567,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
     def test_fingerprintdefault(self):
         """
         Test that the fingerprint method returns fingerprint in
-        C{md5-hex} format by default.
+        L{FingerprintFormats.MD5-HEX} format by default.
         """
         self.assertEqual(keys.Key(self.rsaObj).fingerprint(),
             '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
@@ -577,8 +577,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_fingerprint_md5_hex(self):
         """
-        fingerprint method generates key fingerprint in C{md5-hex}
-        format if explicitly specified.
+        fingerprint method generates key fingerprint in
+        L{FingerprintFormats.MD5-HEX} format if explicitly specified.
         """
         self.assertEqual(
             keys.Key(self.rsaObj).fingerprint(
@@ -592,8 +592,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_fingerprintsha256(self):
         """
-        fingerprint method generates key fingerprint in C{sha256-base64}
-        format if explicitly specified.
+        fingerprint method generates key fingerprint in
+        L{FingerprintFormats.SHA256-BASE64} format if explicitly specified.
         """
         self.assertEqual(
             keys.Key(self.rsaObj).fingerprint(
