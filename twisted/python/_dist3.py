@@ -3,32 +3,10 @@
 # See LICENSE for details.
 
 """
-Support for installing Twisted on Python 3.
+Python 3 porting metadata. Only necessary while parts of Twisted are unported.
 
-Only necessary while parts of Twisted are unported.
-
-@var modules: A list of modules that have been ported,
-    e.g. "twisted.python.versions"; a package name (e.g. "twisted.python")
-    indicates the corresponding __init__.py file has been ported
-    (e.g. "twisted/python/__init__.py"). To reduce merge conflicts, add new
-    lines in alphabetical sort.
-
-@var testModules: A list of test modules that have been ported, e.g
-    "twisted.python.test.test_versions". To reduce merge conflicts, add new
-    lines in alphabetical sort.
-
-@var testDataFiles: A list of filenames that are data files used by tests.
-    These are generally used by another Python process that the test case
-    spawns.
-
-@var almostModules: A list of any other modules which are needed by any of the
-    modules in the other two lists, but which themselves have not actually
-    been properly ported to Python 3.  These modules might work well enough to
-    satisfy some of the requirements of the modules that depend on them, but
-    cannot be considered generally usable otherwise.
-
-@var modulesToInstall: A list of all modules that should be installed on
-    Python 3.
+@var notPortedModules: A list of fully-qualified Python names that correspond
+    to modules in Twisted are not ported, for exclusion during installation.
 """
 
 from __future__ import absolute_import, division
