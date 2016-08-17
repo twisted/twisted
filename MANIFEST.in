@@ -35,12 +35,8 @@ include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 
 # Some extras
-<<<<<<< HEAD
+recursive-include src/twisted *.3only
 recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
-=======
-recursive-include twisted *.3only
-recursive-include twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
->>>>>>> origin/trunk
 
 # Docs
 include docs/fun/lightbulb
