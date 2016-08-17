@@ -34,9 +34,10 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase.'],
-                     ['fingerprint', 'l', 'sha256-base64', 'Fingerprint format of key file.']]
+                     ['format', 'o', 'sha256-base64', 'Fingerprint format of key file.']]
 
-    optFlags = [['changepass', 'p', 'Change passphrase of private key file.'],
+    optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
+                ['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
                 ['no-passphrase', None, "Create the key with no passphrase."],
                 ['showpub', 'y', 'Read private key file and print public key.']]
@@ -76,15 +77,15 @@ def run():
 
 
 def enumrepresentation(options):
-    if options['fingerprint'] == 'md5-hex':
-        options['fingerprint'] = keys.FingerprintFormats.MD5_HEX
+    if options['format'] == 'md5-hex':
+        options['format'] = keys.FingerprintFormats.MD5_HEX
         return options
-    elif options['fingerprint'] == 'sha256-base64':
-        options['fingerprint'] = keys.FingerprintFormats.SHA256_BASE64
+    elif options['format'] == 'sha256-base64':
+        options['format'] = keys.FingerprintFormats.SHA256_BASE64
         return options
     else:
         raise keys.BadFingerPrintFormat(
-            'Unsupported fingerprint format: %s' % (options['fingerprint'],))
+            'Unsupported fingerprint format: %s' % (options['format'],))
 
 
 
@@ -135,7 +136,7 @@ def printFingerprint(options):
         key = keys.Key.fromFile(options['filename'])
         print('%s %s %s' % (
             key.size(),
-            key.fingerprint(options['fingerprint']),
+            key.fingerprint(options['format']),
             os.path.basename(options['filename'])))
     except keys.BadKeyError:
         sys.exit('bad key')
@@ -251,8 +252,8 @@ def _saveKey(key, options):
 
     print('Your identification has been saved in %s' % (options['filename'],))
     print('Your public key has been saved in %s.pub' % (options['filename'],))
-    print('The key fingerprint in %s is:' % (options['fingerprint'],))
-    print(key.fingerprint(options['fingerprint']))
+    print('The key fingerprint in %s is:' % (options['format'],))
+    print(key.fingerprint(options['format']))
 
 
 
