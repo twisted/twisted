@@ -47,6 +47,7 @@ def main(args):
         requirements = ["zope.interface >= 4.0.2"]
     else:
         requirements = ["zope.interface >= 3.6.0"]
+    requirements.append("constantly >= 15.1")
 
     from twisted.python.dist import (
         STATIC_PACKAGE_METADATA, getExtensions, getConsoleScripts,

@@ -858,11 +858,11 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual([], l)
         self.assertEqual(
             ui.promptText,
-            "The authenticity of host 'sample-host.example.com (4.3.2.1)' "
-            "can't be established.\n"
-            "RSA key fingerprint is "
-            "89:4e:cc:8c:57:83:96:48:ef:63:ad:ee:99:00:4c:8f.\n"
-            "Are you sure you want to continue connecting (yes/no)? ")
+            b"The authenticity of host 'sample-host.example.com (4.3.2.1)' "
+            b"can't be established.\n"
+            b"RSA key fingerprint is "
+            b"89:4e:cc:8c:57:83:96:48:ef:63:ad:ee:99:00:4c:8f.\n"
+            b"Are you sure you want to continue connecting (yes/no)? ")
         return ui, l, hostsFile
 
 
@@ -1003,7 +1003,7 @@ class ConsoleUITests(TestCase):
         If that line is 'yes', then it returns a L{Deferred} that fires with
         True.
         """
-        for okYes in ['yes', 'Yes', 'yes\n']:
+        for okYes in [b'yes', b'Yes', b'yes\n']:
             self.newFile([okYes])
             l = []
             self.ui.prompt("Hello, world!").addCallback(l.append)
@@ -1018,7 +1018,7 @@ class ConsoleUITests(TestCase):
         If that line is 'no', then it returns a L{Deferred} that fires with
         False.
         """
-        for okNo in ['no', 'No', 'no\n']:
+        for okNo in [b'no', b'No', b'no\n']:
             self.newFile([okNo])
             l = []
             self.ui.prompt("Goodbye, world!").addCallback(l.append)
@@ -1034,21 +1034,21 @@ class ConsoleUITests(TestCase):
         'yes' or 'no'" until it gets a 'yes' or a 'no', at which point it
         returns a Deferred that answers either True or False.
         """
-        self.newFile(['what', 'uh', 'okay', 'yes'])
+        self.newFile([b'what', b'uh', b'okay', b'yes'])
         l = []
-        self.ui.prompt("Please say something useful.").addCallback(l.append)
+        self.ui.prompt(b"Please say something useful.").addCallback(l.append)
         self.assertEqual([True], l)
         self.assertEqual(self.fakeFile.outchunks,
-                         ["Please say something useful."] +
-                         ["Please type 'yes' or 'no': "] * 3)
+                         [b"Please say something useful."] +
+                         [b"Please type 'yes' or 'no': "] * 3)
         self.assertTrue(self.fakeFile.closed)
-        self.newFile(['blah', 'stuff', 'feh', 'no'])
+        self.newFile([b'blah', b'stuff', b'feh', b'no'])
         l = []
-        self.ui.prompt("Please say something negative.").addCallback(l.append)
+        self.ui.prompt(b"Please say something negative.").addCallback(l.append)
         self.assertEqual([False], l)
         self.assertEqual(self.fakeFile.outchunks,
-                         ["Please say something negative."] +
-                         ["Please type 'yes' or 'no': "] * 3)
+                         [b"Please say something negative."] +
+                         [b"Please type 'yes' or 'no': "] * 3)
         self.assertTrue(self.fakeFile.closed)
 
 
@@ -1241,16 +1241,16 @@ class DefaultAPITests(TestCase):
         C{0} when passed an unknown host that the user refuses to acknowledge.
         """
         self.fakeTransport.factory.options['host'] = b'fake.example.com'
-        self.fakeFile.inlines.append("no")
+        self.fakeFile.inlines.append(b"no")
         d = default.verifyHostKey(
             self.fakeTransport, b"9.8.7.6", otherSampleKey,
             b"No fingerprint!")
         self.assertEqual(
-            ["The authenticity of host 'fake.example.com (9.8.7.6)' "
-             "can't be established.\n"
-             "RSA key fingerprint is "
-             "57:a1:c2:a1:07:a0:2b:f4:ce:b5:e5:b7:ae:cc:e1:99.\n"
-              "Are you sure you want to continue connecting (yes/no)? "],
+            [b"The authenticity of host 'fake.example.com (9.8.7.6)' "
+             b"can't be established.\n"
+             b"RSA key fingerprint is "
+             b"57:a1:c2:a1:07:a0:2b:f4:ce:b5:e5:b7:ae:cc:e1:99.\n"
+             b"Are you sure you want to continue connecting (yes/no)? "],
              self.fakeFile.outchunks)
         return self.assertFailure(d, UserRejectedKey)
 

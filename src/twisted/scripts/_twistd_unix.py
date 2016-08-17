@@ -7,9 +7,10 @@ from __future__ import absolute_import, division, print_function
 import errno
 import os
 import sys
+import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import intToBytes
+from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -198,6 +199,45 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.oldstderr = sys.stderr
 
 
+    def _formatChildException(self, exception):
+        """
+        Format the C{exception} in preparation for writing to the
+        status pipe.  This does the right thing on Python 2 if the
+        exception's message is Unicode, and in all cases limits the
+        length of the message afte* encoding to 100 bytes.
+
+        This means the returned message may be truncated in the middle
+        of a unicode escape.
+
+        @type exception: L{Exception}
+        @param exception: The exception to format.
+
+        @return: The formatted message, suitable for writing to the
+            status pipe.
+        @rtype: L{bytes}
+        """
+        # On Python 2 this will encode Unicode messages with the ascii
+        # codec and the backslashreplace error handler.
+        exceptionLine = traceback.format_exception_only(exception.__class__,
+                                                        exception)[-1]
+        # remove the trailing newline
+        formattedMessage = '1 %s' % exceptionLine.strip()
+        # On Python 3, encode the message the same way Python 2's
+        # format_exception_only does
+        if _PY3:
+            formattedMessage = formattedMessage.encode('ascii',
+                                                       'backslashreplace')
+        # By this point, the message has been encoded, if appropriate,
+        # with backslashreplace on both Python 2 and Python 3.
+        # Truncating the encoded message won't make it completely
+        # unreadable, and the reader should print out the repr of the
+        # message it receives anyway.  What it will do, however, is
+        # ensure that only 100 bytes are written to the status pipe,
+        # ensuring that the child doesn't block because the pipe's
+        # full.  This assumes PIPE_BUF > 100!
+        return formattedMessage[:100]
+
+
     def postApplication(self):
         """
         To be called after the application is created: start the application
@@ -209,16 +249,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
         except Exception as ex:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                # Limit the total length to the passed string to 100
-                strippedError = str(ex)[:98]
-                untilConcludes(os.write, statusPipe, "1 %s" % (strippedError,))
+                message = self._formatChildException(ex)
+                untilConcludes(os.write, statusPipe, message)
                 untilConcludes(os.close, statusPipe)
             self.removePID(self.config['pidfile'])
             raise
         else:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                untilConcludes(os.write, statusPipe, "0")
+                untilConcludes(os.write, statusPipe, b"0")
                 untilConcludes(os.close, statusPipe)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
@@ -342,9 +381,10 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @rtype: C{int}
         """
         data = untilConcludes(os.read, readPipe, 100)
-        if data != "0":
-            msg = ("An error has occurred: '%s'\nPlease look at log "
-                   "file for more information.\n" % (data[2:],))
+        dataRepr = _bytesRepr(data[2:])
+        if data != b"0":
+            msg = ("An error has occurred: %s\nPlease look at log "
+                   "file for more information.\n" % (dataRepr,))
             untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0

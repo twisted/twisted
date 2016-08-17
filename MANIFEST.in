@@ -29,16 +29,18 @@ include tox.ini .coveragerc
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
 
-# Python 3 setup file
-include setup3.py
-
 # Some tests stuff
 recursive-include src/twisted *.pem
 include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 
 # Some extras
+<<<<<<< HEAD
 recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
+=======
+recursive-include twisted *.3only
+recursive-include twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
+>>>>>>> origin/trunk
 
 # Docs
 include docs/fun/lightbulb

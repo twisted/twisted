@@ -7,6 +7,8 @@ Tools for saving and loading log events in a structured format.
 """
 
 import types
+
+from constantly import NamedConstant
 from json import dumps, loads
 from uuid import UUID
 
@@ -14,7 +16,6 @@ from ._flatten import flattenEvent
 from ._file import FileLogObserver
 from ._levels import LogLevel
 from ._logger import Logger
-from twisted.python.constants import NamedConstant
 
 from twisted.python.compat import unicode
 from twisted.python.failure import Failure

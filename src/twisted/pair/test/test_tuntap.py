@@ -16,6 +16,7 @@ from collections import deque
 from itertools import cycle
 from signal import SIGINT
 
+from twisted.python.compat import intToBytes, _PY3
 from twisted.python.reflect import ObjectNotFound, namedAny
 
 try:
@@ -258,7 +259,7 @@ class TapHelper(object):
         tun = TunHelper(self.tunnelRemote, self.tunnelLocal)
         ip = tun.encapsulate(source, destination, payload)
         frame = _ethernet(
-            src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
+            src=b'\x00\x00\x00\x00\x00\x00', dst=b'\xff\xff\xff\xff\xff\xff',
             protocol=_IPv4, payload=ip)
         if self.pi:
             # Going to send a datagram using IPv4 addressing
@@ -441,7 +442,7 @@ class TunnelDeviceTestsMixin(object):
         # guarantees for UDP - not even over localhost.
         for i in range(100):
             key = randrange(2 ** 64)
-            message = "hello world:%d" % (key,)
+            message = b"hello world:" + intToBytes(key)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
             # Likewise try receiving each of those datagrams a lot of times.
@@ -475,7 +476,7 @@ class TunnelDeviceTestsMixin(object):
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
         key = randrange(2 ** 64)
-        message = "hello world:%d" % (key,)
+        message = b"hello world:" + intToBytes(key)
 
         # To avoid really inconvenient test failures where the test just hangs
         # forever, set up a timeout for blocking socket operations.  This
@@ -513,9 +514,9 @@ class FakeDeviceTestsMixin(object):
     L{_IInputOutputSystem} provider.  This mixin hands out L{MemoryIOSystem}
     instances as the provider of that interface.
     """
-    _TUNNEL_DEVICE = "tap-twistedtest"
-    _TUNNEL_LOCAL = "172.16.2.1"
-    _TUNNEL_REMOTE = "172.16.2.2"
+    _TUNNEL_DEVICE = b"tap-twistedtest"
+    _TUNNEL_LOCAL = b"172.16.2.1"
+    _TUNNEL_REMOTE = b"172.16.2.2"
 
     def createSystem(self):
         """
@@ -675,9 +676,9 @@ class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
     Run various tap-type tunnel unit tests, with "protocol information" (PI)
     turned on, against a real I/O system.
     """
-    _TUNNEL_DEVICE = "tap-twtest-pi"
-    _TUNNEL_LOCAL = "172.16.1.1"
-    _TUNNEL_REMOTE = "172.16.1.2"
+    _TUNNEL_DEVICE = b"tap-twtest-pi"
+    _TUNNEL_LOCAL = b"172.16.1.1"
+    _TUNNEL_REMOTE = b"172.16.1.2"
 
     # The PI flag is not an inherent part of the tunnel.  It must be specified
     # by each user of the tunnel.  Thus, we must also have an indication of
@@ -695,9 +696,9 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
     Run various tap-type tunnel unit tests, with "protocol information" (PI)
     turned off, against a real I/O system.
     """
-    _TUNNEL_DEVICE = "tap-twtest"
-    _TUNNEL_LOCAL = "172.16.0.1"
-    _TUNNEL_REMOTE = "172.16.0.2"
+    _TUNNEL_DEVICE = b"tap-twtest"
+    _TUNNEL_LOCAL = b"172.16.0.1"
+    _TUNNEL_REMOTE = b"172.16.0.2"
 
     helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=False)
 
@@ -771,7 +772,7 @@ class TunnelTestsMixin(object):
 
         expected = (
             system.O_RDWR | system.O_CLOEXEC | system.O_NONBLOCK,
-            b"tun0" + "\x00" * (_IFNAMSIZ - len(b"tun0")),
+            b"tun0" + b"\x00" * (_IFNAMSIZ - len(b"tun0")),
             self.port.interface, False, True)
         actual = (
             tunnel.openFlags,
@@ -1144,12 +1145,20 @@ class TunnelTestsMixin(object):
         tunnel type and interface and the protocol associated with the port.
         """
         self.port.startListening()
-        expected = "<%s listening on %s/%s>" % (
-            fullyQualifiedName(self.protocol.__class__),
-            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-            self.system.getTunnel(self.port).name)
+        if _PY3:
+            self.assertRegex(str(self.port),
+                             fullyQualifiedName(self.protocol.__class__))
 
-        self.assertEqual(expected, str(self.port))
+            expected = " listening on %s/%s>" % (
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+                self.system.getTunnel(self.port).name)
+            self.assertTrue(str(self.port).find(expected) != -1)
+        else:
+            expected = "<%s listening on %s/%s>" % (
+                fullyQualifiedName(self.protocol.__class__),
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+                self.system.getTunnel(self.port).name)
+            self.assertEqual(expected, str(self.port))
 
 
     def test_unlisteningString(self):
@@ -1157,11 +1166,19 @@ class TunnelTestsMixin(object):
         The string representation of a L{TuntapPort} instance includes the
         tunnel type and interface and the protocol associated with the port.
         """
-        expected = "<%s not listening on %s/%s>" % (
-            fullyQualifiedName(self.protocol.__class__),
-            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
+        if _PY3:
+            self.assertRegex(str(self.port),
+                             fullyQualifiedName(self.protocol.__class__))
 
-        self.assertEqual(expected, str(self.port))
+            expected = " not listening on %s/%s>" % (
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+                self.name)
+            self.assertTrue(str(self.port).find(expected) != -1)
+        else:
+            expected = "<%s not listening on %s/%s>" % (
+                fullyQualifiedName(self.protocol.__class__),
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
+            self.assertEqual(expected, str(self.port))
 
 
     def test_logPrefix(self):
@@ -1214,9 +1231,14 @@ class TunnelAddressTests(SynchronousTestCase):
         The string representation of a L{TunnelAddress} instance includes the
         class name and the values of the C{type} and C{name} attributes.
         """
-        self.assertEqual(
-            "<TunnelAddress type=IFF_TUN name='device'>",
-            repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
+        if _PY3:
+            self.assertRegex(
+                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")),
+                "TunnelAddress type=IFF_TUN name=b'device'>")
+        else:
+            self.assertEqual(
+                "<TunnelAddress type=IFF_TUN name='device'>",
+                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
 
 
 
