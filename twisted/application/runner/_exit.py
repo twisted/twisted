@@ -8,7 +8,7 @@ System exit support.
 
 from sys import stdout, stderr, exit as sysexit
 
-from twisted.python.constants import Values, ValueConstant
+from constantly import Values, ValueConstant
 
 
 

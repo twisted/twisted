@@ -12,6 +12,7 @@ import sys
 import itertools
 
 from zope.interface import implementer
+from constantly import NamedConstant, Names
 
 skipSSL = None
 skipSNI = None
@@ -50,7 +51,6 @@ from twisted.test.iosim import connectedServerAndClient
 
 from twisted.internet.error import ConnectionClosed
 from twisted.python.compat import nativeString, _PY3
-from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 
