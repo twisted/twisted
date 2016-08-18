@@ -36,12 +36,12 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
         # need to do to implement a new command is add another do_* method.
         try:
             method = getattr(self, 'do_' + command)
-        except AttributeError, e:
+        except AttributeError as e:
             self.sendLine('Error: no such command.')
         else:
             try:
                 method(*args)
-            except Exception, e:
+            except Exception as e:
                 self.sendLine('Error: ' + str(e))
 
     def do_help(self, command=None):

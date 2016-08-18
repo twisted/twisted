@@ -230,7 +230,7 @@ Daemon
 
 
   
-  A instance of :api:`twisted.internet.defer.Deferred <twisted.internet.defer.Deferred>` , an
+  An instance of :api:`twisted.internet.defer.Deferred <twisted.internet.defer.Deferred>` , an
   abstraction for handling chains of callbacks and error handlers
   ("errbacks" ).
   See the :doc:`Deferring Execution <defer>` HOWTO.

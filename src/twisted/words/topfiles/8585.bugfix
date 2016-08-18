@@ -1,0 +1,1 @@
+twisted.words.protocols.irc.RPL_ADMINLOC was removed and replaced with twisted.words.protocols.irc.RPL_ADMINLOC1 and twisted.words.protocols.irc.RPL_ADMINLOC2 to match the admin commands defined in RFC 2812.

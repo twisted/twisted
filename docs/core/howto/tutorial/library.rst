@@ -43,7 +43,7 @@ module, and the HTML templates all belong in separate files.
 
 
 
-We can use the ``templateFile`` and ``templateDirectory`` 
+We can use the ``templateFile`` and ``templateDirectory``
 attributes to indicate what HTML template file to use for each Page, and where
 to look for it.
 
@@ -81,7 +81,7 @@ code correctly, it is easy to achieve a good separation of parts.
 Easy Configuration
 ------------------
 
-We can also supply easy configuration for common cases with a ``makeService`` method that will also help build .tap files later:
+We can also supply easy configuration for common cases with a ``makeService`` method that will also help build .tac files later:
 
 
 :download:`finger_config.py <listings/finger/finger_config.py>`
@@ -98,7 +98,7 @@ And we can write simpler files now:
 
 .. code-block:: console
 
-    
+
     % twistd -ny simple-finger.tac
 
 

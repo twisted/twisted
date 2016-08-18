@@ -136,7 +136,7 @@ Let's take this function as an example:
             first = second
             second = new
             if i % 100 == 0:
-                print "Progress: calculating the %dth Fibonnaci number" % i
+                print("Progress: calculating the %dth Fibonnaci number" % i)
     
         # give the Deferred the answer to pass to the callbacks:
         d.callback(second)
@@ -153,15 +153,15 @@ Let's take this function as an example:
     
     timeAfter = time.time()
     
-    print "Total time taken for largeFibonnaciNumber call: %0.3f seconds" % \
-          (timeAfter - timeBefore)
+    print("Total time taken for largeFibonnaciNumber call: %0.3f seconds" % \
+          (timeAfter - timeBefore))
     
     # add a callback to it to print the number
     
     def printNumber(number):
-        print "The %dth Fibonacci number is %d" % (TARGET, number)
+        print("The %dth Fibonacci number is %d" % (TARGET, number))
     
-    print "Adding the callback now."
+    print("Adding the callback now.")
     
     d.addCallback(printNumber)
 
@@ -357,7 +357,7 @@ program:
         Callback which manages the largeFibonnaciNumber result by
         printing it out
         """
-        print "largeFibonnaciNumber result =", result
+        print("largeFibonnaciNumber result =", result)
         # make sure the reactor stops after the callback chain finishes,
         # just so that this example terminates
         reactor.stop()
@@ -372,8 +372,8 @@ program:
         d = threads.deferToThread(largeFibonnaciNumber)
         # add our callback to print it out
         d.addCallback(fibonacciCallback)
-        print "1st line after the addition of the callback"
-        print "2nd line after the addition of the callback"
+        print("1st line after the addition of the callback")
+        print("2nd line after the addition of the callback")
     
     if __name__ == '__main__':
         run()

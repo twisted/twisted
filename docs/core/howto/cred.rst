@@ -364,6 +364,7 @@ Twisted's Perspective Broker protocol) is implemented:
 
 .. code-block:: python
 
+    from zope.interface import implementer
     
     from twisted.spread import pb
     from twisted.cred.portal import IRealm
@@ -371,15 +372,15 @@ Twisted's Perspective Broker protocol) is implemented:
     class SimplePerspective(pb.Avatar):
     
         def perspective_echo(self, text):
-            print 'echoing',text
+            print('echoing',text)
             return text
     
         def logout(self):
-            print self, "logged out"
+            print(self, "logged out")
     
     
+    @implementer(IRealm)
     class SimpleRealm:
-        implements(IRealm)
     
         def requestAvatar(self, avatarId, mind, *interfaces):
             if pb.IPerspective in interfaces:
@@ -533,20 +534,19 @@ checker instance.
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     from twisted import plugin
     from twisted.cred.strcred import ICheckerFactory
     from myapp.cred import SpecialChecker
     
+    # The class needs to implement both of these interfaces
+    # for the plugin system to find our factory.
+    @implementer(ICheckerFactory, plugin.IPlugin)
     class SpecialCheckerFactory(object):
         """
         A checker factory for a specialized (fictional) API.
         """
-        # The class needs to implement both of these interfaces
-        # for the plugin system to find our factory.
-        implements(ICheckerFactory, plugin.IPlugin)
-    
         # This tells AuthOptionsMixin how to find this factory.
         authType = "special"
     

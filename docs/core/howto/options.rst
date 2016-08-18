@@ -449,7 +449,7 @@ patch up inconsistencies, and the like. Here is an example:
     
         def postOptions(self):
             if self['fast'] and self['good'] and self['cheap']:
-                raise usage.UsageError, "can't have it all, brother"
+                raise usage.UsageError("can't have it all, brother")
 
 
 

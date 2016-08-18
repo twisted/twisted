@@ -8,34 +8,35 @@
 #  - Things only useful when running from a source checkout (_preamble.py)
 
 # Do not include the old topfiles, or news fragments
-recursive-exclude twisted *.misc *.bugfix *.doc *.feature *.removal
-recursive-exclude twisted NEWS README topfiles
-exclude twisted/topfiles/CREDITS twisted/topfiles/ChangeLog.Old
+recursive-exclude src/twisted *.misc *.bugfix *.doc *.feature *.removal
+recursive-exclude src/twisted NEWS README topfiles
+exclude src/twisted/topfiles/CREDITS src/twisted/topfiles/ChangeLog.Old
 
 # Include NEWS, READMEs, etc
 recursive-include docs README
 include NEWS README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
-exclude bin/_preamble.py
-exclude admin
-exclude bin/admin
-recursive-exclude admin *
-recursive-exclude bin/admin *
+exclude codecov.yml
+exclude appveyor.yml
+prune bin
+prune admin
+prune .travis
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc
 
-# Python 3 setup file
-include setup3.py
+# Include our docs templates
+recursive-include src/twisted/python/_pydoctortemplates *.html
 
 # Some tests stuff
-recursive-include twisted *.pem
-include twisted/internet/test/fake_CAs/*
-include twisted/mail/test/rfc822.message
+recursive-include src/twisted *.pem
+include src/twisted/internet/test/fake_CAs/*
+include src/twisted/mail/test/rfc822.message
 
 # Some extras
-recursive-include twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
+recursive-include src/twisted *.3only
+recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
 
 # Docs
 include docs/fun/lightbulb

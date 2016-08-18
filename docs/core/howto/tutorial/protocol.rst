@@ -51,7 +51,7 @@ our case. Testing it can be done by simply:
 
 .. code-block:: console
 
-    
+
     % nc localhost 1079   # or telnet localhost 1079
     moshez
     Giving a tutorial now, sorry!
@@ -68,7 +68,7 @@ our case. Testing it can be done by simply:
 
 This program has two protocol-factory-TCPServer pairs, which are
 both child services of the application.  Specifically,
-the :api:`twisted.application.service.Service.setServiceParent <setServiceParent>` 
+the :api:`twisted.application.service.Service.setServiceParent <setServiceParent>`
 method is used to define the two TCPServer services as children
 of ``application`` , which implements :api:`twisted.application.service.IServiceCollection <IServiceCollection>` .  Both
 services are thus started with the application.
@@ -94,7 +94,7 @@ also contains methods the factories will depend on.
 
 
 
-The factory-creation methods, ``getFingerFactory`` 
+The factory-creation methods, ``getFingerFactory``
 and ``getFingerSetterFactory`` , follow this pattern:
 
 
@@ -163,17 +163,17 @@ listings/finger/etc.users
 .. literalinclude:: listings/finger/finger14.tac
 
 
-Since this version is reading data from a file (and refreshing the data 
-every 30 seconds), there is no ``FingerSetterFactory`` and thus 
+Since this version is reading data from a file (and refreshing the data
+every 30 seconds), there is no ``FingerSetterFactory`` and thus
 nothing listening on port 1079.
 
 
 
 
-Here we override the standard :api:`twisted.application.service.Service.startService <startService>` 
+Here we override the standard :api:`twisted.application.service.Service.startService <startService>`
 and :api:`twisted.application.service.Service.stopService <stopService>` hooks in
 the Finger service, which is set up as a child service of the
-application in the last line of the code. ``startService`` 
+application in the last line of the code. ``startService``
 calls ``_read`` , the function responsible for reading the
 data; ``reactor.callLater`` is then used to schedule it to
 run again after thirty seconds every time it is
@@ -195,7 +195,7 @@ protocols. For example, in twisted.web, the factory itself
 (``Site`` ) is almost
 never subclassed — instead, it is given a resource, which
 represents the tree of resources available via URLs. That hierarchy is
-navigated by ``Site`` 
+navigated by ``Site``
 and overriding it dynamically is possible with ``getChild`` .
 
 
@@ -222,8 +222,8 @@ Announce on IRC, Too
 
 
 This is the first time there is client code. IRC clients often act a lot like
-servers: responding to events from the network.  The reconnecting client factory
-will make sure that severed links will get re-established, with intelligent
+servers: responding to events from the network.  The Client Service will make
+sure that severed links will get re-established, with intelligent
 tweaked exponential back-off algorithms. The IRC client itself is simple: the
 only real hack is getting the nickname from the factory
 in ``connectionMade`` .
@@ -239,7 +239,7 @@ in ``connectionMade`` .
 
 ``FingerService`` now has another new
 function, ``getIRCbot`` , which returns
-the ``ReconnectingClientFactory`` .  This factory in turn will
+a ``ClientFactory`` .  This factory in turn will
 instantiate the ``IRCReplyBot`` protocol.  The IRCBot is
 configured in the last line to connect
 to ``irc.freenode.org`` with a nickname
@@ -249,7 +249,7 @@ of ``fingerbot`` .
 
 
 By
-overriding ``irc.IRCClient.connectionMade`` , ``IRCReplyBot`` 
+overriding ``irc.IRCClient.connectionMade`` , ``IRCReplyBot``
 can access the ``nickname`` attribute of the factory that
 instantiated it.
 

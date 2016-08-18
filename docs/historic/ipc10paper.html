@@ -554,7 +554,7 @@ class DomainSMTP(SMTP):
             user, domain = string.split(destination, '@', 1)
         except ValueError:
             return 0
-        if not self.factory.domains.has_key(domain): 
+        if domain not in self.factory.domains:
             return 0
         if not self.factory.domains[domain].exists(user, domain, self): 
             return 0

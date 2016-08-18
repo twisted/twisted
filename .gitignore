@@ -2,6 +2,7 @@
 *.o
 *.py[co]
 *.so
+*.DS_Store
 _trial_temp*/
 build/
 dropin.cache
@@ -10,7 +11,7 @@ docs/_build/
 dist/
 venv/
 htmlcov/
-.coverage
+.coverage*
 *~
 *.lock
 apidocs/
