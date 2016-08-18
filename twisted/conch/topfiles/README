@@ -1,4 +1,4 @@
-Twisted Conch 16.3.1
+Twisted Conch 16.3.2
 
 Twisted Conch depends on Twisted Core and PyCA's Cryptography
 (<https://cryptography.io/en>).
