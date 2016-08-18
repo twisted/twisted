@@ -239,7 +239,7 @@ class Deferred:
     """
 
     called = False
-    paused = 0
+    paused = False
     _debugInfo = None
     _suppressAlreadyCalled = False
 
@@ -661,30 +661,14 @@ class Deferred:
     __repr__ = __str__
 
 
-    def __await__(self):
-        return _MakeDeferredAwaitable(self)
-
-
-
-class _MakeDeferredAwaitable(object):
-    """
-    A subgenerator which is created by L{Deferred.__await__}.
-    """
-    result = _NO_RESULT
-
-    def __init__(self, d):
-        self.d = d
-        self.d.addBoth(lambda x: setattr(self, "result", x))
-
-
-    def __next__(self):
-        if self.result is not _NO_RESULT:
-            raise StopIteration(self.result)
-        return self.d
-
-
     def __iter__(self):
-        return self
+
+        if getattr(self, "result", _NO_RESULT) is _NO_RESULT:
+            yield self
+        raise StopIteration(self.result)
+
+    # For PEP492/async + await
+    __await__ = __iter__
 
 
 

@@ -39,8 +39,8 @@ def main(args):
     Invoke twisted.python.dist with the appropriate metadata about the
     Twisted package.
     """
-    if os.path.exists('twisted'):
-        sys.path.insert(0, '.')
+    if os.path.exists('src/twisted/'):
+        sys.path.insert(0, 'src')
 
     if sys.version_info[0] >= 3:
         requirements = ["zope.interface >= 4.0.2"]
@@ -55,7 +55,7 @@ def main(args):
     setup_args = STATIC_PACKAGE_METADATA.copy()
 
     setup_args.update(dict(
-        packages=setuptools.find_packages(),
+        packages=setuptools.find_packages("src"),
         install_requires=requirements,
         conditionalExtensions=getExtensions(),
         entry_points={
@@ -64,6 +64,7 @@ def main(args):
         include_package_data=True,
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
+        package_dir={"": "src"},
     ))
 
     if sys.version_info[0] >= 3:

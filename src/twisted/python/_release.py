@@ -1014,10 +1014,11 @@ class BuildAPIDocsScript(object):
             checkout.
         @param output: A L{FilePath} pointing to the desired output directory.
         """
-        version = Project(projectRoot.child("twisted")).getVersion()
+        version = Project(
+            projectRoot.child("twisted")).getVersion()
         versionString = version.base()
         sourceURL = ("https://github.com/twisted/twisted/tree/"
-                     "twisted-%s" % (versionString,))
+                     "twisted-%s" % (versionString,) + "/src")
         apiBuilder = APIBuilder()
         apiBuilder.build(
             "Twisted",

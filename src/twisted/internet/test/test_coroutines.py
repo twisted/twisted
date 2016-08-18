@@ -9,11 +9,10 @@ includes keywords not valid in Pythons before 3.5.
 from __future__ import absolute_import, division
 
 import sys
+from twisted.python.compat import _PY3, execfile
+from twisted.python.filepath import FilePath
 
 if sys.version_info >= (3, 5, 0):
-    from twisted.python.compat import execfile
-    from twisted.python.filepath import FilePath
-
     _path = FilePath(__file__).parent().child("_awaittests.py.3only")
 
     _g = {}
@@ -35,6 +34,27 @@ else:
             too old.
             """
 
+if _PY3:
+    _path = FilePath(__file__).parent().child("_yieldfromtests.py.3only")
+
+    _g = {}
+    execfile(_path.path, _g)
+    YieldFromTests = _g["YieldFromTests"]
+else:
+    from twisted.trial.unittest import TestCase
+
+    class YieldFromTests(TestCase):
+        """
+        A dummy class to show that this test file was discovered but the tests
+        are unable to be ran in this version of Python.
+        """
+        skip = "yield from is not available before Python 3.2"
+
+        def test_notAvailable(self):
+            """
+            A skipped test to show that this was not ran because the Python is
+            too old.
+            """
 
 
-__all__ = ["AwaitTests"]
+__all__ = ["AwaitTests", "YieldFromTests"]
