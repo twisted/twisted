@@ -1,6 +1,64 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.3.2 (2016-08-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 16.3.2 (2016-08-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 16.3.2 (2016-08-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 16.3.2 (2016-08-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 16.3.2 (2016-08-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 16.3.2 (2016-08-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.3.2 (2016-08-18)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 16.3.2 (2016-08-18)
+===============================
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel now resumes producing on finished,
+   non-persistent connections. This prevents HTTP/1 servers using TLS
+   from leaking a CLOSE_WAIT socket per request. (#8766)
+
+
+Twisted Words 16.3.2 (2016-08-18)
+=================================
+
+No significant changes have been made for this release.
+
+
 Twisted Core 16.3.1 (2016-08-15)
 ================================
 
