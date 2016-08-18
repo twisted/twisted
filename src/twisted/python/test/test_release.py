@@ -228,10 +228,11 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         """
         now = date.today()
         major = now.year - VERSION_OFFSET
-        version = Version("twisted", major, 9, 0)
+        minor = now.month
+        version = Version("twisted", major, 0, 0)
         self.assertEqual(
             getNextVersion(version, prerelease=False, patch=False, today=now),
-            Version("twisted", major, 10, 0))
+            Version("twisted", major, now.month, 0))
 
 
     def test_getNextVersionAfterYearChange(self):
@@ -241,10 +242,11 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         """
         now = date.today()
         major = now.year - VERSION_OFFSET
+        minor = now.month
         version = Version("twisted", major - 1, 9, 0)
         self.assertEqual(
             getNextVersion(version, prerelease=False, patch=False, today=now),
-            Version("twisted", major, 0, 0))
+            Version("twisted", major, now.month, 0))
 
 
     def test_getNextVersionPreRelease(self):
@@ -254,10 +256,11 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         """
         now = date.today()
         major = now.year - VERSION_OFFSET
+        minor = now.month
         version = Version("twisted", 3, 9, 0)
         self.assertEqual(
             getNextVersion(version, prerelease=True, patch=False, today=now),
-            Version("twisted", major, 0, 0, 1))
+            Version("twisted", major, now.month, 0, 1))
 
 
     def test_getNextVersionFinalRelease(self):
@@ -357,11 +360,11 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         releaseDate = date(2010, 1, 1)
         changeAllProjectVersions(root, False, False, releaseDate)
         outStructure = {
-            "README.rst": "Hi this is 10.0.0.",
+            "README.rst": "Hi this is 10.1.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 10.0.0"},
-                "_version.py": genVersion("twisted", 10, 0, 0),
+                    "README": "Hi this is 10.1.0"},
+                "_version.py": genVersion("twisted", 10, 1, 0),
             }}
         self.assertStructure(root, outStructure)
 
