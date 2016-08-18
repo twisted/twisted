@@ -65,7 +65,6 @@ def run():
         else:
             sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
     elif options['fingerprint']:
-        options = enumrepresentation(options)
         printFingerprint(options)
     elif options['changepass']:
         changePassPhrase(options)
@@ -132,6 +131,7 @@ def printFingerprint(options):
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
+    options = enumrepresentation(options)
     try:
         key = keys.Key.fromFile(options['filename'])
         print('%s %s %s' % (
@@ -249,6 +249,7 @@ def _saveKey(key, options):
 
     filepath.FilePath(options['filename'] + '.pub').setContent(
         key.public().toString('openssh', comment))
+    options = enumrepresentation(options)
 
     print('Your identification has been saved in %s' % (options['filename'],))
     print('Your public key has been saved in %s.pub' % (options['filename'],))

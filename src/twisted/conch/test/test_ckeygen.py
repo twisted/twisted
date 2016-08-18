@@ -100,7 +100,7 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename,
-            'format': FingerprintFormats.MD5_HEX})
+            'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
             '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
@@ -114,7 +114,7 @@ class KeyGenTests(TestCase):
         filename = self.mktemp()
         FilePath(filename).setContent(publicRSA_openssh)
         printFingerprint({'filename': filename,
-            'format': FingerprintFormats.SHA256_BASE64})
+            'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
             '768 ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts= temp\n')
@@ -143,7 +143,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-            'format': FingerprintFormats.MD5_HEX})
+            'format': 'md5-hex'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -171,7 +171,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'pass': 'passphrase',
-            'format': FingerprintFormats.SHA256_BASE64})
+            'format': 'sha256-base64'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -215,7 +215,7 @@ class KeyGenTests(TestCase):
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': filename, 'no-passphrase': True,
-            'format': FingerprintFormats.MD5_HEX})
+            'format': 'md5-hex'})
         self.assertEqual(
             key.fromString(
                 base.child('id_rsa').getContent(), None, b''),
@@ -234,7 +234,7 @@ class KeyGenTests(TestCase):
         self.patch(__builtin__, 'raw_input', lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': None, 'no-passphrase': True,
-            'format': FingerprintFormats.MD5_HEX})
+            'format': 'md5-hex'})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
