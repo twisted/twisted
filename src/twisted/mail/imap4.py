@@ -45,6 +45,13 @@ from twisted.internet import interfaces
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 
+# Re-exported for compatibility reasons
+from twisted.mail.interfaces import IClientAuthentication
+from twisted.mail._cred import (
+    CramMD5ClientAuthenticator,
+    LOGINAuthenticator, LOGINCredentials,
+    PLAINAuthenticator, PLAINCredentials)
+
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
         range(1, 13),
@@ -380,36 +387,6 @@ class Command:
         if unuse:
             unusedCallback(unuse)
 
-class LOGINCredentials(credentials.UsernamePassword):
-    def __init__(self):
-        self.challenges = ['Password\0', 'User Name\0']
-        self.responses = ['password', 'username']
-        credentials.UsernamePassword.__init__(self, None, None)
-
-    def getChallenge(self):
-        return self.challenges.pop()
-
-    def setResponse(self, response):
-        setattr(self, self.responses.pop(), response)
-
-    def moreChallenges(self):
-        return bool(self.challenges)
-
-class PLAINCredentials(credentials.UsernamePassword):
-    def __init__(self):
-        credentials.UsernamePassword.__init__(self, None, None)
-
-    def getChallenge(self):
-        return ''
-
-    def setResponse(self, response):
-        parts = response.split('\0')
-        if len(parts) != 3:
-            raise IllegalClientResponse("Malformed Response - wrong number of parts")
-        useless, self.username, self.password = parts
-
-    def moreChallenges(self):
-        return False
 
 class IMAP4Exception(Exception):
     def __init__(self, *args):
@@ -4433,60 +4410,6 @@ def collapseNestedLists(items):
     return ''.join(pieces[1:])
 
 
-class IClientAuthentication(Interface):
-    def getName():
-        """Return an identifier associated with this authentication scheme.
-
-        @rtype: C{str}
-        """
-
-    def challengeResponse(secret, challenge):
-        """Generate a challenge response string"""
-
-
-
-@implementer(IClientAuthentication)
-class CramMD5ClientAuthenticator:
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "CRAM-MD5"
-
-    def challengeResponse(self, secret, chal):
-        response = hmac.HMAC(secret, chal).hexdigest()
-        return '%s %s' % (self.user, response)
-
-
-
-@implementer(IClientAuthentication)
-class LOGINAuthenticator:
-    def __init__(self, user):
-        self.user = user
-        self.challengeResponse = self.challengeUsername
-
-    def getName(self):
-        return "LOGIN"
-
-    def challengeUsername(self, secret, chal):
-        # Respond to something like "Username:"
-        self.challengeResponse = self.challengeSecret
-        return self.user
-
-    def challengeSecret(self, secret, chal):
-        # Respond to something like "Password:"
-        return secret
-
-@implementer(IClientAuthentication)
-class PLAINAuthenticator:
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "PLAIN"
-
-    def challengeResponse(self, secret, chal):
-        return '\0%s\0%s' % (self.user, secret)
 
 
 class MailboxException(IMAP4Exception): pass
