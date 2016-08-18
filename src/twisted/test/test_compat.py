@@ -19,6 +19,7 @@ from twisted.python.compat import (
     _coercedUnicode, unichr, raw_input, _bytesRepr
 )
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 
 
 
@@ -769,6 +770,9 @@ class BytesEnvironTests(unittest.TestCase):
             types.add(type(val))
 
         self.assertEqual(list(types), [bytes])
+
+    if platform.isWindows():
+        test_alwaysBytes.skip = "Environment vars are always str on Windows."
 
 
 
