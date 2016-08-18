@@ -387,10 +387,10 @@ class LineLog:
         """
         if size < 0:
             size = 0
-        self.log = [None]*size
+        self.log = [None] * size
         self.size = size
 
-    def append(self,line):
+    def append(self, line):
         if self.size:
             self.log[:-1] = self.log[1:]
             self.log[-1] = line
@@ -398,14 +398,23 @@ class LineLog:
             self.log.append(line)
 
     def str(self):
-        return '\n'.join(filter(None,self.log))
+        return bytes(self)
+
+    if not _PY3:
+        def __str__(self):
+            return self.__bytes__()
+
+    def __bytes__(self):
+        return b'\n'.join(filter(None, self.log))
 
     def __getitem__(self, item):
-        return filter(None,self.log)[item]
+        return filter(None, self.log)[item]
 
     def clear(self):
-        """Empty the log"""
-        self.log = [None]*self.size
+        """
+        Empty the log.
+        """
+        self.log = [None] * self.size
 
 
 def raises(exception, f, *args, **kwargs):
@@ -950,7 +959,7 @@ __all__ = [
 
 
 if _PY3:
-    __notported__ = ["SubclassableCStringIO", "LineLog", "makeStatBar"]
+    __notported__ = ["SubclassableCStringIO", "makeStatBar"]
     for name in __all__[:]:
         if name in __notported__:
             __all__.remove(name)

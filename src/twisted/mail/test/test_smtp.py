@@ -4,14 +4,17 @@
 """
 Test cases for twisted.mail.smtp module.
 """
+
+from __future__ import absolute_import, division
+
 import inspect
+from io import BytesIO
 
 from zope.interface import implementer, directlyProvides
 
 from twisted.python.util import LineLog
 from twisted.trial import unittest, util
 from twisted.protocols import basic, loopback
-from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
@@ -27,7 +30,8 @@ from twisted.cred.checkers import ICredentialsChecker, AllowAnonymousAccess
 from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 
-from twisted.mail import imap4
+from twisted.mail import smtp
+from twisted.mail._cred import LOGINAuthenticator, LOGINCredentials
 
 
 try:
@@ -38,11 +42,6 @@ else:
     sslSkip = None
 
 import re
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 
 def spameater(*spam, **eggs):
@@ -164,7 +163,7 @@ Someone set up us the bomb!\015
 
     testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
 
-mail = '''\
+mail = b'''\
 Subject: hello
 
 Goodbye
@@ -174,7 +173,7 @@ class MyClient:
     def __init__(self, messageInfo=None):
         if messageInfo is None:
             messageInfo = (
-                'moshez@foo.bar', ['moshez@foo.bar'], StringIO(mail))
+                'moshez@foo.bar', ['moshez@foo.bar'], BytesIO(mail))
         self._sender = messageInfo[0]
         self._recipient = messageInfo[1]
         self._data = messageInfo[2]
@@ -206,12 +205,12 @@ class MyClient:
 
 class MySMTPClient(MyClient, smtp.SMTPClient):
     def __init__(self, messageInfo=None):
-        smtp.SMTPClient.__init__(self, 'foo.baz')
+        smtp.SMTPClient.__init__(self, b'foo.baz')
         MyClient.__init__(self, messageInfo)
 
 class MyESMTPClient(MyClient, smtp.ESMTPClient):
-    def __init__(self, secret = '', contextFactory = None):
-        smtp.ESMTPClient.__init__(self, secret, contextFactory, 'foo.baz')
+    def __init__(self, secret = b'', contextFactory = None):
+        smtp.ESMTPClient.__init__(self, secret, contextFactory, b'foo.baz')
         MyClient.__init__(self)
 
 class LoopbackMixin:
@@ -316,7 +315,7 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         connection, the C{sendError} callback is invoked.
         """
         client = MySMTPClient(
-            ('alice@example.com', ['bob@example.com'], StringIO("foo")))
+            ('alice@example.com', ['bob@example.com'], BytesIO(b"foo")))
         transport = StringTransport()
         client.makeConnection(transport)
         client.dataReceived(
@@ -389,16 +388,17 @@ class DummySMTPMessage:
         self.buffer = []
 
     def lineReceived(self, line):
+        print(line)
         self.buffer.append(line)
 
     def eomReceived(self):
-        message = '\n'.join(self.buffer) + '\n'
-        helo, origin = self.users[0].helo[0], str(self.users[0].orig)
+        message = b'\n'.join(self.buffer) + b'\n'
+        helo, origin = self.users[0].helo[0], bytes(self.users[0].orig)
         recipients = []
         for user in self.users:
-            recipients.append(str(user))
+            recipients.append(bytes(user))
         self.protocol.message[tuple(recipients)] = (helo, origin, recipients, message)
-        return defer.succeed("saved")
+        return defer.succeed(b"saved")
 
 
 
@@ -432,23 +432,23 @@ class AnotherTestCase:
     serverClass = None
     clientClass = None
 
-    messages = [ ('foo.com', 'moshez@foo.com', ['moshez@bar.com'],
-                  'moshez@foo.com', ['moshez@bar.com'], '''\
+    messages = [ (b'foo.com', b'moshez@foo.com', [b'moshez@bar.com'],
+                  b'moshez@foo.com', [b'moshez@bar.com'], b'''\
 From: Moshe
 To: Moshe
 
 Hi,
 how are you?
 '''),
-                 ('foo.com', 'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'],
-                  'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'], '''\
+                 (b'foo.com', b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'],
+                  b'tttt@rrr.com', [b'uuu@ooo', b'yyy@eee'], b'''\
 Subject: pass
 
 ..rrrr..
 '''),
-                 ('foo.com', '@this,@is,@ignored:foo@bar.com',
-                  ['@ignore,@this,@too:bar@foo.com'],
-                  'foo@bar.com', ['bar@foo.com'], '''\
+                 (b'foo.com', b'@this,@is,@ignored:foo@bar.com',
+                  [b'@ignore,@this,@too:bar@foo.com'],
+                  b'foo@bar.com', [b'bar@foo.com'], b'''\
 Subject: apa
 To: foo
 
@@ -459,19 +459,19 @@ To: foo
               ]
 
     data = [
-        ('', '220.*\r\n$', None, None),
-        ('HELO foo.com\r\n', '250.*\r\n$', None, None),
-        ('RSET\r\n', '250.*\r\n$', None, None),
+        (b'', b'220.*\r\n$', None, None),
+        (b'HELO foo.com\r\n', b'250.*\r\n$', None, None),
+        (b'RSET\r\n', b'250.*\r\n$', None, None),
         ]
     for helo_, from_, to_, realfrom, realto, msg in messages:
-        data.append(('MAIL FROM:<%s>\r\n' % from_, '250.*\r\n',
+        data.append((b'MAIL FROM:<' + from_ + b'>\r\n', b'250.*\r\n',
                      None, None))
         for rcpt in to_:
-            data.append(('RCPT TO:<%s>\r\n' % rcpt, '250.*\r\n',
+            data.append((b'RCPT TO:<' + rcpt + b'>\r\n', b'250.*\r\n',
                          None, None))
 
-        data.append(('DATA\r\n','354.*\r\n',
-                     msg, ('250.*\r\n',
+        data.append((b'DATA\r\n', b'354.*\r\n',
+                     msg, (b'250.*\r\n',
                            (helo_, realfrom, realto, msg))))
 
 
@@ -485,7 +485,7 @@ To: foo
         transport = StringTransport()
         a = self.serverClass()
         class fooFactory:
-            domain = 'foo.com'
+            domain = b'foo.com'
 
         a.factory = fooFactory()
         a.makeConnection(transport)
@@ -496,12 +496,12 @@ To: foo
             transport.clear()
             if not re.match(expect, data):
                 raise AssertionError(send, expect, data)
-            if data[:3] == '354':
+            if data[:3] == b'354':
                 for line in msg.splitlines():
-                    if line and line[0] == '.':
-                        line = '.' + line
-                    a.dataReceived(line + '\r\n')
-                a.dataReceived('.\r\n')
+                    if line and line[0:1] == b'.':
+                        line = b'.' + line
+                    a.dataReceived(line + b'\r\n')
+                a.dataReceived(b'.\r\n')
                 # Special case for DATA. Now we want a 250, and then
                 # we compare the messages
                 data = transport.value()
@@ -532,7 +532,7 @@ class AnotherSMTPTests(AnotherTestCase, unittest.TestCase):
 @implementer(cred.checkers.ICredentialsChecker)
 class DummyChecker:
     users = {
-        'testuser': 'testpassword'
+        b'testuser': b'testpassword'
     }
 
     credentialInterfaces = (cred.credentials.IUsernamePassword,
@@ -590,11 +590,11 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP({'CRAM-MD5': cred.credentials.CramMD5Credentials})
+        server = DummyESMTP({b'CRAM-MD5': cred.credentials.CramMD5Credentials})
         server.portal = p
-        client = MyESMTPClient('testpassword')
+        client = MyESMTPClient(b'testpassword')
 
-        cAuth = smtp.CramMD5ClientAuthenticator('testuser')
+        cAuth = smtp.CramMD5ClientAuthenticator(b'testuser')
         client.registerAuthenticator(cAuth)
 
         d = self.loopback(server, client)
@@ -612,9 +612,9 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP({'LOGIN': imap4.LOGINCredentials})
+        server = DummyESMTP({b'LOGIN': LOGINCredentials})
         server.portal = p
-        client = MyESMTPClient('testpassword')
+        client = MyESMTPClient(b'testpassword')
 
         cAuth = smtp.LOGINAuthenticator('testuser')
         client.registerAuthenticator(cAuth)
@@ -635,11 +635,11 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP({'LOGIN': smtp.LOGINCredentials})
+        server = DummyESMTP({b'LOGIN': LOGINCredentials})
         server.portal = p
 
-        client = MyESMTPClient('testpassword')
-        cAuth = smtp.LOGINAuthenticator('testuser')
+        client = MyESMTPClient(b'testpassword')
+        cAuth = smtp.LOGINAuthenticator(b'testuser')
         client.registerAuthenticator(cAuth)
 
         d = self.loopback(server, client)
@@ -803,7 +803,7 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
             'source@address', 'recipient@address',
-            StringIO("Message body"), onDone,
+            BytesIO(b"Message body"), onDone,
             retries=0, timeout=0.5)
         return self._timeoutTest(onDone, clientFactory)
 
@@ -817,7 +817,7 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         clientFactory = smtp.ESMTPSenderFactory(
             'username', 'password',
             'source@address', 'recipient@address',
-            StringIO("Message body"), onDone,
+            BytesIO(b"Message body"), onDone,
             retries=0, timeout=0.5)
         return self._timeoutTest(onDone, clientFactory)
 
@@ -935,7 +935,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
             "source@address", "recipient@address",
-            StringIO("message"), sentDeferred)
+            BytesIO(b"message"), sentDeferred)
         connector = reactor.connectTCP("localhost", 25, clientFactory)
         clientFactory.buildProtocol(None)
         clientFactory.clientConnectionLost(connector,
@@ -952,7 +952,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
             "source@address", "recipient@address",
-            StringIO("message"), sentDeferred)
+            BytesIO(b"message"), sentDeferred)
         connector = reactor.connectTCP("localhost", 25, clientFactory)
         clientFactory.buildProtocol(None)
         clientFactory.clientConnectionFailed(connector,
@@ -972,7 +972,7 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
         tries to deliver the message again.
         """
         recipient = 'alice'
-        message = "some message text"
+        message = b"some message text"
         domain = DummyDomain([recipient])
 
         class CleanSMTP(smtp.SMTP):
@@ -1000,7 +1000,7 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
             "bob@example.org", recipient + "@example.com",
-            StringIO(message), sentDeferred)
+            BytesIO(message), sentDeferred)
         clientFactory.domain = "example.org"
         clientConnector = reactor.connectTCP(
             serverHost.host, serverHost.port, clientFactory)
@@ -1069,11 +1069,11 @@ class SMTPServerTests(unittest.TestCase):
         greeting.
         """
         s = serverClass()
-        s.host = "example.com"
+        s.host = b"example.com"
         t = StringTransport()
         s.makeConnection(t)
         s.connectionLost(error.ConnectionDone())
-        self.assertIn("example.com", t.value())
+        self.assertIn(b"example.com", t.value())
 
 
     def testSMTPGreetingNotExtended(self):
@@ -1086,7 +1086,7 @@ class SMTPServerTests(unittest.TestCase):
         t = StringTransport()
         s.makeConnection(t)
         s.connectionLost(error.ConnectionDone())
-        self.assertNotIn("ESMTP", t.value())
+        self.assertNotIn(b"ESMTP", t.value())
 
 
     def testESMTPGreetingHost(self):
@@ -1300,8 +1300,8 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         Create an ESMTP instance attached to a StringTransport.
         """
         self.server = smtp.ESMTP({
-                'LOGIN': imap4.LOGINCredentials})
-        self.server.host = 'localhost'
+                b'LOGIN': LOGINCredentials})
+        self.server.host = b'localhost'
         self.transport = StringTransport(
             peerAddress=address.IPv4Address('TCP', '127.0.0.1', 12345))
         self.server.makeConnection(self.transport)
@@ -1516,8 +1516,8 @@ class SMTPClientErrorTests(unittest.TestCase):
         included in the string representation of the exception instance.
         """
         log = LineLog(10)
-        log.append("testlog")
-        log.append("secondline")
+        log.append(b"testlog")
+        log.append(b"secondline")
         err = smtp.SMTPClientError(100, "test error", log=log.str())
         self.assertEqual(
             str(err),
@@ -1543,7 +1543,7 @@ class SenderMixinSentMailTests(unittest.TestCase):
 
         clientFactory = smtp.SMTPSenderFactory(
             'source@address', 'recipient@address',
-            StringIO("Message body"), onDone,
+            BytesIO(b"Message body"), onDone,
             retries=0, timeout=0.5)
 
         client = clientFactory.buildProtocol(
@@ -1647,7 +1647,7 @@ class SSLTestCase(unittest.TestCase):
 
     def setUp(self):
         self.clientProtocol = smtp.ESMTPClient(
-            "testpassword", ClientTLSContext(), "testuser")
+            b"testpassword", ClientTLSContext(), b"testuser")
         self.clientProtocol.requireTransportSecurity = True
         self.clientProtocol.getMailFrom = lambda: "test@example.org"
 
@@ -1849,7 +1849,7 @@ class SendmailTests(unittest.TestCase):
         if it is a file-like object.
         """
         reactor = MemoryReactor()
-        messageFile = StringIO(b"File!")
+        messageFile = BytesIO(b"File!")
 
         smtp.sendmail("localhost", "source@address", "recipient@address",
                       messageFile, reactor=reactor)
