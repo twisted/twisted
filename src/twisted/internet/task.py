@@ -24,7 +24,7 @@ from twisted.python.versions import Version
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime
-from twisted.internet.error import ReactorNotRunning
+from twisted.internet.error import ReactorNotRunning, TimeoutError
 
 
 class LoopingCall:
@@ -937,48 +937,34 @@ def react(main, argv=(), _reactor=None):
     sys.exit(codes[0])
 
 
-class TimedOutError(Exception):
+def _cancelledToTimedOutError(value, timeout):
     """
-    Exception that gets raised when a L{defer.Deferred} times out.
-
-    @since: 16.3
-    """
-    def __init__(self, timeout, deferredDescription):
-        super(TimedOutError, self).__init__(
-            "{desc} timed out after {timeout} seconds.".format(
-                desc=deferredDescription, timeout=timeout))
-
-
-def cancelledToTimedOutError(value, timeout):
-    """
-    A translation function that translate L{Failure}'s that are L{defer.CancelledError} to L{TimedOutError}.
+    A translation function that translate L{Failure}'s that are L{defer.CancelledError} to L{TimeoutError}.
 
     @param value: Anything
     @type value: Anything
 
     @param timeout: The timeout
-    @type timeout: C{int}
+    @type timeout: L{int}
 
     @rtype: C{value}
-    @raise: L{TimedOutError}
+    @raise: L{TimeoutError}
 
-    @since: 16.3
+    @since: 16.5
     """
     if isinstance(value, Failure):
         value.trap(defer.CancelledError)
-        raise TimedOutError(timeout, "Deferred")
+        raise TimeoutError(timeout, "Deferred")
     return value
 
 
-def timeoutDeferred(deferred, timeout, clock, translateCancellation=None):
+def timeoutDeferred(deferred, timeout, clock, onTimeoutCancel=None):
     """
     Timeout a L{defer.Deferred} by scheduling it to be cancelled after C{timeout} seconds.
 
-    If it gets timed out, it errbacks with a L{TimedOutError}, unless a
-    cancelable function is passed to the C{deferred}'s initialization and it
-    callbacks or errbacks with something else when cancelled, in which case
-    the caller should provide their own translation function that knows how
-    to handle the cancelled error.
+    If it gets timed out, it errbacks with a L{TimeoutError}, unless a
+    cancelable function is passed to the C{deferred}'s initialization or unless
+    a different C{onTimeoutCancel} callable is provided.
 
     (see the documentation for L{defer.Deferred} for more details about
     cancellation functions.)
@@ -987,21 +973,22 @@ def timeoutDeferred(deferred, timeout, clock, translateCancellation=None):
     @type deferred: L{defer.Deferred}
 
     @param timeout: number of seconds to wait before timing out the deferred
-    @type timeout: C{int}
+    @type timeout: L{int}
 
     @param clock: The object which will be used to schedule the timeout.
     @type clock: L{IReactorTime}
 
-    @param translateCancellation: A callable takes a L{Failure} and the
-        timeout, and knows how to handle timeout cancellations.  By default, a
-        callable is used that knows how to translate L{defer.CancelledError}
-        to L{TimedOutError}.  This will only be called if C{deferred} was timed
-        out, and not if it was cancelled early.
-    @type translateCancellation: L{callable}
+    @param onTimeoutCancel: A callable which is called immediately after C{deferred}
+        times out, and not if C{deferred} is otherwise cancelled before the timeout.
+        It takes an arbitrary value, which is the value of the deferred at that
+        exact time (probably a L{defer.CancelledError} L{Failure}), and the
+        C{timeout}.  The default callable (if none is provided) will translate
+        a L{defer.CancelledError} L{Failure} into a L{TimeoutError}.
+    @type onTimeoutCancel: L{callable}
 
-    @rtype: C{None}
+    @rtype: L{None}
 
-    @since: 16.3
+    @since: 16.5
     """
     timedOut = [False]
 
@@ -1015,7 +1002,7 @@ def timeoutDeferred(deferred, timeout, clock, translateCancellation=None):
         # if C{deferred} was timed out, call the translation function,
         # if provdied, otherwise just use L{cancelledToTimedOutError}
         if timedOut[0]:
-            toCall = translateCancellation or cancelledToTimedOutError
+            toCall = onTimeoutCancel or _cancelledToTimedOutError
             return toCall(value, timeout)
         return value
 
@@ -1037,4 +1024,4 @@ __all__ = [
 
     'SchedulerStopped', 'Cooperator', 'coiterate',
 
-    'deferLater', 'react', 'timeoutDeferred', 'TimedOutError']
+    'deferLater', 'react', 'timeoutDeferred']

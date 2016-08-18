@@ -1202,10 +1202,12 @@ class ReactTests(unittest.SynchronousTestCase):
 
 
 
-class _DummyException(Exception):
+def _overrideFunc(v, t):
     """
-    Exception type to be used in testing.
+    Private function to be used to pass as an alternate onTimeoutCancel value
+    to timeoutDeferred
     """
+    return "OVERRIDDEN"
 
 
 
@@ -1213,77 +1215,141 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
     """
     Tests for the function L{task.timeoutDeferred}
     """
-    def test_propagatesSuccessResultBeforeTimeoutDefaultTranslation(self):
+    def test_propagatesSuccessResultBeforeTimeoutDefaultOnTimeout(self):
         """
         The L{defer.Deferred} callbacks with the result if it succeeds before
         the timeout (e.g. timing out the L{defer.Deferred} does not obscure
-        the callback value) when using the default translation function.
+        the callback value) when using the default onTimeoutCancel function.
+        No cancellation happens after the callback either, which could also
+        cancel inner deferreds.
         """
         clock = Clock()
         d = defer.Deferred()
         task.timeoutDeferred(d, 10, clock)
-        d.callback("Result")
-        self.assertEqual(self.successResultOf(d), "Result")
 
-        # The timeout never happens - no errback occurs
+        # timeout happens before inner deferred is returned as a errback on d
+        innerDeferred = defer.Deferred()
+        dCallbacked = [False]
+
+        def onCallback(results):
+            self.assertEqual(results, "results")
+            dCallbacked[0] = True
+            return innerDeferred
+
+        d.addCallback(onCallback)
+        d.callback("results")
+
+        # callback happens immediately for d
+        self.assertTrue(dCallbacked[0])
+
+        # The timeout never happens - if it did, d would have been cancelled,
+        # which would cancel innerDeferred too
         clock.advance(15)
-        self.assertIsNone(self.successResultOf(d))
+        self.assertNoResult(innerDeferred)
 
-    def test_propagatesSuccessResultBeforeTimeoutCustomTranslation(self):
+    def test_propagatesSuccessResultBeforeTimeoutCustomOnTimeout(self):
         """
         The L{defer.Deferred} callbacks with the result if it succeeds before
         the timeout (e.g. timing out the L{defer.Deferred} does not obscure
-        the callback value) when using a custom translation function.
+        the callback value) when using a custom onTimeoutCancel function.
+        No cancellation happens after the callback either, which could also
+        cancel inner deferreds.
         """
         clock = Clock()
         d = defer.Deferred()
-        task.timeoutDeferred(
-            d, 10, clock, translateCancellation=lambda v, t: "OVERRIDDEN")
-        d.callback("Result")
-        self.assertEqual(self.successResultOf(d), "Result")
+        task.timeoutDeferred(d, 10, clock, onTimeoutCancel=_overrideFunc)
 
-        # The timeout never happens - the overridden result never happens
+        # timeout happens before inner deferred is returned as a errback on d
+        innerDeferred = defer.Deferred()
+        dCallbacked = [False]
+
+        def onCallback(results):
+            self.assertEqual(results, "results")
+            dCallbacked[0] = True
+            return innerDeferred
+
+        d.addCallback(onCallback)
+        d.callback("results")
+
+        # callback happens immediately for d
+        self.assertTrue(dCallbacked[0])
+
+        # The timeout never happens - if it did, d would have been cancelled,
+        # which would cancel innerDeferred too
         clock.advance(15)
-        self.assertIsNone(self.successResultOf(d))
+        self.assertNoResult(innerDeferred)
 
-    def test_propagatesFailureBeforeTimeoutDefaultTranslation(self):
+    def test_propagatesFailureBeforeTimeoutDefaultOnTimeout(self):
         """
         The L{defer.Deferred} errbacks with the failure if it fails before the
         timeout (e.g. timing out the L{defer.Deferred} does not obscure the
-        errback failure) when using the default translation function.
+        errback failure) when using the default onTimeoutCancel function.
+        No cancellation happens after the errback either, which could also
+        cancel inner deferreds.
         """
         clock = Clock()
         d = defer.Deferred()
         task.timeoutDeferred(d, 10, clock)
-        d.errback(_DummyException("fail"))
-        self.failureResultOf(d, _DummyException)
 
-        # The timeout never happens - no further errback occurs
+        # timeout happens before inner deferred is returned as a errback on d
+        innerDeferred = defer.Deferred()
+        dErrbacked = [False]
+        error = ValueError("fail")
+
+        def onErrback(f):
+            self.assertIs(f.value, error)
+            dErrbacked[0] = True
+            return innerDeferred
+
+        d.addErrback(onErrback)
+        d.errback(error)
+
+        # errback happens immediately for d
+        self.assertTrue(dErrbacked[0])
+
+        # The timeout never happens - if it did, d would have been cancelled,
+        # which would cancel innerDeferred too
         clock.advance(15)
-        self.assertIsNone(self.successResultOf(d))
+        self.assertNoResult(innerDeferred)
 
-    def test_propagatesFailureBeforeTimeoutCustomTranslation(self):
+    def test_propagatesFailureBeforeTimeoutCustomOnTimeout(self):
         """
         The L{defer.Deferred} errbacks with the failure if it fails before the
         timeout (e.g. timing out the L{defer.Deferred} does not obscure the
-        errback failure) when using a custom translation function.
+        errback failure) when using a custom onTimeoutCancel function.
+        No cancellation happens after the errback either, which could also
+        cancel inner deferreds.
         """
         clock = Clock()
         d = defer.Deferred()
-        task.timeoutDeferred(
-            d, 10, clock, translateCancellation=lambda v, t: "OVERRIDDEN")
-        d.errback(_DummyException("fail"))
-        self.failureResultOf(d, _DummyException)
+        task.timeoutDeferred(d, 10, clock, onTimeoutCancel=_overrideFunc)
 
-        # The timeout never happens - no further errback occurs
+        # timeout happens before inner deferred is returned as a errback on d
+        innerDeferred = defer.Deferred()
+        dErrbacked = [False]
+        error = ValueError("fail")
+
+        def onErrback(f):
+            self.assertIs(f.value, error)
+            dErrbacked[0] = True
+            return innerDeferred
+
+        d.addErrback(onErrback)
+        d.errback(error)
+
+        # errback happens immediately for d
+        self.assertTrue(dErrbacked[0])
+
+        # The timeout never happens - if it did, d would have been cancelled,
+        # which would cancel innerDeferred too
         clock.advance(15)
-        self.assertIsNone(self.successResultOf(d))
+        self.assertNoResult(innerDeferred)
 
-    def test_timedOutErrorPostTimeoutDefaultTranslation(self):
+    def test_timedOutErrorPostTimeoutDefaultOnTimeout(self):
         """
-        The L{defer.Deferred} errbacks with a L{task.TimedOutError} if the
+        The L{defer.Deferred} errbacks with a L{error.TimeoutError} if the
         timeout occurs before it either callbacks or errbacks when using the
-        default translation function.
+        default onTimeoutCancel function.
         """
         clock = Clock()
         d = defer.Deferred()
@@ -1292,29 +1358,29 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.failureResultOf(d, task.TimedOutError)
+        self.failureResultOf(d, error.TimeoutError)
 
-    def test_customTimeoutResultPostTimeoutCustomTranslation(self):
+    def test_customTimeoutResultPostTimeoutCustomOnTimeout(self):
         """
-        The L{defer.Deferred} returns whatever a custom translation function
-        translates the result to if the timeout occurs before the L{defer.Deferred} either callbacks or errbacks.  The custom translation
-        function can return a result instead of a failure.
+        The L{defer.Deferred} returns whatever a custom onTimeoutCancel function
+        returns if the timeout occurs before the L{defer.Deferred} either
+        callbacks or errbacks. The custom onTimeoutCancel function can return a
+        result instead of a failure.
         """
         clock = Clock()
         d = defer.Deferred()
-        task.timeoutDeferred(
-            d, 10, clock, translateCancellation=lambda v, t: "OVERRIDDEN")
+        task.timeoutDeferred(d, 10, clock, onTimeoutCancel=_overrideFunc)
         self.assertNoResult(d)
 
         clock.advance(15)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
 
-    def test_defaultTranslationPreservesCancellationFunctionCallback(self):
+    def test_defaultOnTimeoutPreservesCancellationFunctionCallback(self):
         """
         If a cancellation function that callbacks is provided to the
-        L{defer.Deferred} being cancelled, its effects will not be overridden
-        with a L{task.TimedOutError} when using the default translation
+        L{defer.Deferred} being timed out, its effects will not be overridden
+        with a L{error.TimeoutError} when using the default onTimeoutCancel
         function.
         """
         clock = Clock()
@@ -1326,68 +1392,94 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
 
         self.assertEqual(self.successResultOf(d), 'I was cancelled!')
 
-    def test_defaultTranslationPreservesCancellationFunctionErrback(self):
+    def test_defaultOnTimeoutPreservesCancellationFunctionErrback(self):
         """
         If a cancellation function that errbacks (with a
         non-L{defer.CancelledError}) is provided to the L{defer.Deferred}
         being cancelled, this other error will not be converted to a
-        L{task.TimedOutError} when using the default translation function.
+        L{error.TimeoutError} when using the default onTimeoutCancel function.
         """
         clock = Clock()
-        d = defer.Deferred(lambda c: c.errback(_DummyException('what!')))
+        error = ValueError('what!')
+        d = defer.Deferred(lambda c: c.errback(error))
         task.timeoutDeferred(d, 10, clock)
         self.assertNoResult(d)
 
         clock.advance(15)
 
-        self.failureResultOf(d, _DummyException)
+        f = self.failureResultOf(d, ValueError)
+        self.assertIs(f.value, error)
 
-    def test_defaultTranslationNotCalledForEarlyCancellation(self):
+    def test_defaultOnTimeoutNotCalledForEarlyCancellation(self):
         """
         If the L{defer.Deferred} is manually cancelled before the timeout, it
-        is not re-cancelled (no L{defer.AlreadyCancelled} error), and the
-        default translation function is not called, preserving the
-        L{defer.CancelledError}.
+        is not re-cancelled (no L{defer.AlreadyCancelled} error, and also no
+        canceling of inner deferreds), and the default onTimeoutCancel function
+        is not called, preserving the original L{defer.CancelledError}.
         """
         clock = Clock()
         d = defer.Deferred()
         task.timeoutDeferred(d, 10, clock)
-        self.assertNoResult(d)
 
+        # timeout happens before inner deferred is returned as a errback on d
+        innerDeferred = defer.Deferred()
+        dCanceled = [False]
+
+        def onErrback(f):
+            self.assertIs(f.type, defer.CancelledError)
+            dCanceled[0] = True
+            return innerDeferred
+
+        d.addErrback(onErrback)
         d.cancel()
-        self.failureResultOf(d, defer.CancelledError)
 
+        # cancellation happens immediately for d
+        self.assertTrue(dCanceled[0])
+
+        # The timeout never happens - if it did, d would have been cancelled
+        # again, which would cancel innerDeferred too
         clock.advance(15)
-        # No AlreadyCancelledError raised?  Good.
+        self.assertNoResult(innerDeferred)
 
-    def test_customTranslationNotCalledForEarlyCancellation(self):
+    def test_customOnTimeoutNotCalledForEarlyCancellation(self):
         """
         If the L{defer.Deferred} is manually cancelled before the timeout, it
-        is not re-cancelled (no L{defer.AlreadyCancelled} error), and the
-        custom translation function is not called, preserving the original
-        L{defer.CancelledError}.
+        is not re-cancelled (no L{defer.AlreadyCancelled} error, and also no
+        canceling of inner deferreds), and the custom onTimeoutCancel function
+        is not called, preserving the original L{defer.CancelledError}.
         """
         clock = Clock()
         d = defer.Deferred()
-        task.timeoutDeferred(
-            d, 10, clock, translateCancellation=lambda v, t: "OVERRIDDEN")
-        self.assertNoResult(d)
+        task.timeoutDeferred(d, 10, clock, onTimeoutCancel=_overrideFunc)
 
+        # timeout happens before inner deferred is returned as a errback on d
+        innerDeferred = defer.Deferred()
+        dCanceled = [False]
+
+        def onErrback(f):
+            self.assertIs(f.type, defer.CancelledError)
+            dCanceled[0] = True
+            return innerDeferred
+
+        d.addErrback(onErrback)
         d.cancel()
-        self.failureResultOf(d, defer.CancelledError)
 
+        # cancellation happens immediately for d
+        self.assertTrue(dCanceled[0])
+
+        # The timeout never happens - if it did, d would have been cancelled
+        # again, which would cancel innerDeferred too
         clock.advance(15)
-        # No AlreadyCancelledError raised?  Good.
+        self.assertNoResult(innerDeferred)
 
-    def test_customCancellationCustomTranslation(self):
+    def test_customCancellationCustomOnTimeout(self):
         """
         A custom translation function can handle a L{defer.Deferred} with a
         custom cancellation function.
         """
         clock = Clock()
-        d = defer.Deferred(lambda c: c.errback(_DummyException('what!')))
-        task.timeoutDeferred(
-            d, 10, clock, translateCancellation=lambda v, t: "OVERRIDDEN")
+        d = defer.Deferred(lambda c: c.errback(ValueError('what!')))
+        task.timeoutDeferred(d, 10, clock, onTimeoutCancel=_overrideFunc)
         self.assertNoResult(d)
 
         clock.advance(15)
