@@ -2623,6 +2623,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         val = [
             b"GET /path HTTP/1.1\r\n",
+            b"Connection: close\r\n",
             b"\r\n\r\n"
         ]
 
