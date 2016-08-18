@@ -6,11 +6,7 @@ import os, sys
 try:
     import _preamble
 except ImportError:
-    try:
-        sys.exc_clear()
-    except AttributeError:
-        # exc_clear() (and the requirement for it) has been removed from Py3
-        pass
+    pass
 
 # begin chdir armor
 sys.path[:] = map(os.path.abspath, sys.path)
