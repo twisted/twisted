@@ -712,7 +712,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         #source code.
         self.assertIn(
             '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/twisted">View Source</a>',
+            'twisted-1.0.0/src/twisted">View Source</a>',
             twistedPath.getContent())
 
         self.assertEqual(stdout.getvalue(), '')
