@@ -1,0 +1,1 @@
+When the source code is checked out, bin/trial is no longer in the tree.  Developers working on the Twisted source code itself should either (1) run all tests under tox, or (2) run 'python setup.py develop' to install trial before running any tests.
