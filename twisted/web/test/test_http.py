@@ -2498,6 +2498,39 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertTrue(transport.disconnecting)
 
 
+    def test_finishCleansConnection(self):
+        """
+        L{http.Request.finish} will notify the channel that it is finished, and
+        will put the transport back in the producing state so that the reactor
+        can close the connection.
+        """
+        factory = http.HTTPFactory()
+        factory.timeOut = None
+        factory._logDateTime = "sometime"
+        factory._logDateTimeCall = True
+        factory.startFactory()
+        factory.logFile = NativeStringIO()
+        proto = factory.buildProtocol(None)
+
+        val = [
+            b"GET /path HTTP/1.1\r\n",
+            b"Connection: close\r\n",
+            b"\r\n\r\n"
+        ]
+
+        trans = StringTransport()
+        proto.makeConnection(trans)
+
+        self.assertEqual(trans.producerState, 'producing')
+
+        for x in val:
+            proto.dataReceived(x)
+
+        self.assertEqual(trans.producerState, 'paused')
+        proto._channel.requests[0].finish()
+        self.assertEqual(trans.producerState, 'producing')
+
+
 
 class MultilineHeadersTests(unittest.TestCase):
     """
