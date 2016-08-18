@@ -8,7 +8,13 @@ Simple Mail Transfer Protocol implementation.
 
 from __future__ import absolute_import, division
 
-import time, re, base64, types, socket, os, random
+import time
+import re
+import base64
+import types
+import socket
+import os
+import random
 import binascii
 import email.utils
 import warnings
@@ -396,11 +402,8 @@ class Address:
         if isinstance(addr, Address):
             self.__dict__ = addr.__dict__.copy()
             return
-        elif isinstance(addr, unicode):
-            addr = addr.encode('ascii')
-
-        if not isinstance(addr, bytes):
-            raise ValueError("addr must be bytes or ASCII-encodable unicode.")
+        elif not isinstance(addr, bytes):
+            addr = str(addr).encode('ascii')
 
         self.addrstr = addr
 
@@ -493,7 +496,10 @@ class User:
     """
 
     def __init__(self, destination, helo, protocol, orig):
-        host = getattr(protocol, 'host', None)
+        try:
+            host = protocol.host
+        except AttributeError:
+            host = None
         self.dest = Address(destination, host)
         self.helo = helo
         self.protocol = protocol
@@ -685,7 +691,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                       self.host + b' Hello ' + host + b', nice to meet you')
 
     def do_QUIT(self, rest):
-        self.sendCode(221, 'See you later')
+        self.sendCode(221, b'See you later')
         self.transport.loseConnection()
 
     # A string of quoted strings, backslash-escaped character or
@@ -1151,7 +1157,6 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.sendError(SMTPConnectError(code, resp, self.log.str()))
 
     def smtpTransferFailed(self, code, resp):
-        print(resp)
         if code < 0:
             self.sendError(SMTPProtocolError(code, resp, self.log.str()))
         else:
@@ -1236,13 +1241,13 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         being made sending the message body, the client will not time out.
         """
         self.resetTimeout()
-        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
+        return chunk.replace(b'\n', b'\r\n').replace(b'\r\n.', b'\r\n..')
 
     def finishedFileTransfer(self, lastsent):
-        if lastsent != '\n':
-            line = '\r\n.'
+        if lastsent != b'\n':
+            line = b'\r\n.'
         else:
-            line = '.'
+            line = b'.'
         self.sendLine(line)
 
     ##
@@ -1298,7 +1303,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     def _disconnectFromServer(self):
         self._expected = xrange(0, 1000)
         self._okresponse = self.smtpState_disconnect
-        self.sendLine('QUIT')
+        self.sendLine(b'QUIT')
 
 
 
@@ -1860,19 +1865,19 @@ class ESMTP(SMTP):
 
         if response is None:
             challenge = self.challenger.getChallenge()
-            encoded = challenge.encode('base64')
+            encoded = base64.b64encode(challenge)
             self.sendCode(334, encoded)
             return
 
-        if response == '*':
+        if response == b'*':
             self.sendCode(501, b'Authentication aborted')
             self.challenger = None
             self.mode = COMMAND
             return
 
         try:
-            uncoded = response.decode('base64')
-        except binascii.Error:
+            uncoded = base64.b64decode(response)
+        except (TypeError, binascii.Error):
             self.sendCode(501, b'Syntax error in parameters or arguments')
             self.challenger = None
             self.mode = COMMAND
@@ -1881,7 +1886,7 @@ class ESMTP(SMTP):
         self.challenger.setResponse(uncoded)
         if self.challenger.moreChallenges():
             challenge = self.challenger.getChallenge()
-            coded = challenge.encode('base64')[:-1]
+            coded = base64.b64encode(challenge)
             self.sendCode(334, coded)
             return
 
@@ -2077,7 +2082,7 @@ class PLAINAuthenticator:
         self.user = user
 
     def getName(self):
-        return "PLAIN"
+        return b"PLAIN"
 
     def challengeResponse(self, secret, chal=1):
         if chal == 1:

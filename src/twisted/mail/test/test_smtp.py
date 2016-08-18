@@ -8,6 +8,8 @@ Test cases for twisted.mail.smtp module.
 from __future__ import absolute_import, division
 
 import inspect
+import base64
+
 from io import BytesIO
 
 from zope.interface import implementer, directlyProvides
@@ -598,7 +600,7 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         client.registerAuthenticator(cAuth)
 
         d = self.loopback(server, client)
-        d.addCallback(lambda x : self.assertEqual(server.authenticated, 1))
+        d.addCallback(lambda x: self.assertEqual(server.authenticated, 1))
         return d
 
 
@@ -1272,7 +1274,7 @@ class ESMTPAuthenticationTests(unittest.TestCase):
             self.transport.value().splitlines())
 
 
-    def assertServerAuthenticated(self, loginArgs, username="username", password="password"):
+    def assertServerAuthenticated(self, loginArgs, username=b"username", password=b"password"):
         """
         Assert that a login attempt has been made, that the credentials and
         interfaces passed to it are correct, and that when the login request
@@ -1291,7 +1293,7 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         d.callback((smtp.IMessageDeliveryFactory, None, lambda: None))
 
         self.assertEqual(
-            ["235 Authentication successful."],
+            [b"235 Authentication successful."],
             self.transport.value().splitlines())
 
 
@@ -1328,14 +1330,14 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         Test that AUTH is advertised to clients which issue an EHLO command.
         """
         self.transport.clear()
-        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
         responseLines = self.transport.value().splitlines()
         self.assertEqual(
             responseLines[0],
-            "250-localhost Hello 127.0.0.1, nice to meet you")
+            b"250-localhost Hello 127.0.0.1, nice to meet you")
         self.assertEqual(
             responseLines[1],
-            "250 AUTH LOGIN")
+            b"250 AUTH LOGIN")
         self.assertEqual(len(responseLines), 2)
 
 
@@ -1346,19 +1348,19 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
         self.transport.clear()
 
         self.assertServerResponse(
-            'AUTH LOGIN\r\n',
-            ["334 " + "User Name\0".encode('base64').strip()])
+            b'AUTH LOGIN\r\n',
+            [b"334 " + base64.b64encode(b"User Name\0").strip()])
 
         self.assertServerResponse(
-            'username'.encode('base64') + '\r\n',
-            ["334 " + "Password\0".encode('base64').strip()])
+            base64.b64encode(b'username') + b'\r\n',
+            [b"334 " + base64.b64encode(b"Password\0").strip()])
 
         self.assertServerResponse(
-            'password'.encode('base64').strip() + '\r\n',
+            base64.b64encode(b'password').strip() + b'\r\n',
             [])
 
         self.assertServerAuthenticated(loginArgs)
@@ -1371,19 +1373,19 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
         self.transport.clear()
 
         self.assertServerResponse(
-            'AUTH LOGIN\r\n',
-            ["334 " + "User Name\0".encode('base64').strip()])
+            b'AUTH LOGIN\r\n',
+            [b"334 " + base64.b64encode(b"User Name\0").strip()])
 
         self.assertServerResponse(
-            'username'.encode('base64') + '\r\n',
-            ["334 " + "Password\0".encode('base64').strip()])
+            base64.b64encode(b'username') + b'\r\n',
+            [b"334 " + base64.b64encode(b"Password\0").strip()])
 
-        self.assertServerResponse('\r\n', [])
-        self.assertServerAuthenticated(loginArgs, password='')
+        self.assertServerResponse(b'\r\n', [])
+        self.assertServerAuthenticated(loginArgs, password=b'')
 
 
     def test_plainAuthenticationInitialResponse(self):
@@ -1394,15 +1396,15 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
         self.transport.clear()
 
         self.assertServerResponse(
-            'AUTH LOGIN ' + "username".encode('base64').strip() + '\r\n',
-            ["334 " + "Password\0".encode('base64').strip()])
+            b'AUTH LOGIN ' + base64.b64encode(b"username").strip() + b'\r\n',
+            [b"334 " + base64.b64encode(b"Password\0").strip()])
 
         self.assertServerResponse(
-            'password'.encode('base64').strip() + '\r\n',
+            base64.b64encode(b'password').strip() + b'\r\n',
             [])
 
         self.assertServerAuthenticated(loginArgs)
@@ -1415,12 +1417,12 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
-        self.server.dataReceived('AUTH LOGIN\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
+        self.server.dataReceived(b'AUTH LOGIN\r\n')
 
         self.assertServerResponse(
-            '*\r\n',
-            ['501 Authentication aborted'])
+            b'*\r\n',
+            [b'501 Authentication aborted'])
 
 
     def test_invalidBase64EncodedResponse(self):
@@ -1431,12 +1433,12 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
-        self.server.dataReceived('AUTH LOGIN\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
+        self.server.dataReceived(b'AUTH LOGIN\r\n')
 
         self.assertServerResponse(
-            'x\r\n',
-            ['501 Syntax error in parameters or arguments'])
+            b'x\r\n',
+            [b'501 Syntax error in parameters or arguments'])
 
         self.assertEqual(loginArgs, [])
 
@@ -1449,10 +1451,10 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
         self.assertServerResponse(
-            'AUTH LOGIN x\r\n',
-            ['501 Syntax error in parameters or arguments'])
+            b'AUTH LOGIN x\r\n',
+            [b'501 Syntax error in parameters or arguments'])
 
         self.assertEqual(loginArgs, [])
 
@@ -1467,21 +1469,21 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         loginArgs = []
         self.server.portal = self.portalFactory(loginArgs)
 
-        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived(b'EHLO\r\n')
         self.transport.clear()
 
         self.assertServerResponse(
-            'AUTH LOGIN ' + 'username'.encode('base64').strip() + '\r\n',
-            ['334 ' + 'Password\0'.encode('base64').strip()])
+            b'AUTH LOGIN ' + base64.b64encode(b'username').strip() + b'\r\n',
+            [b'334 ' + base64.b64encode(b'Password\0').strip()])
         self.assertServerResponse(
-            'password'.encode('base64').strip() + '\r\n',
+            base64.b64encode(b'password').strip() + b'\r\n',
             [])
 
         d, credentials, mind, interfaces = loginArgs.pop()
         d.errback(RuntimeError("Something wrong with the server"))
 
         self.assertEqual(
-            '451 Requested action aborted: local error in processing\r\n',
+            b'451 Requested action aborted: local error in processing\r\n',
             self.transport.value())
 
         self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)

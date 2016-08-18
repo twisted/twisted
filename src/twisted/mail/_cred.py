@@ -69,7 +69,7 @@ class LOGINCredentials(credentials.UsernamePassword):
         return self.challenges.pop()
 
     def setResponse(self, response):
-        setattr(self, self.responses.pop(), response)
+        setattr(self, nativeString(self.responses.pop()), response)
 
     def moreChallenges(self):
         return bool(self.challenges)
