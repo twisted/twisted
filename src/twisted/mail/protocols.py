@@ -2,10 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Mail protocol support.
 """
+
+from __future__ import absolute_import, division
 
 from twisted.mail import pop3
 from twisted.mail import smtp
@@ -13,7 +14,8 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
 from twisted.python import log
-    
+from twisted.python.compat import networkString
+
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 
@@ -72,17 +74,21 @@ class DomainDeliveryBase:
         @rtype: L{bytes}
         @return: A received header string.
         """
-        authStr = heloStr = ""
+        authStr = heloStr = b""
         if self.user:
-            authStr = " auth=%s" % (self.user.encode('xtext'),)
+            authStr = b" auth=" + self.user.encode('xtext')
         if helo[0]:
-            heloStr = " helo=%s" % (helo[0],)
-        from_ = "from %s ([%s]%s%s)" % (helo[0], helo[1], heloStr, authStr)
-        by = "by %s with %s (%s)" % (
-            self.host, self.protocolName, longversion
-        )
-        for_ = "for <%s>; %s" % (' '.join(map(str, recipients)), smtp.rfc822date())
-        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
+            heloStr = b" helo=" + helo[0]
+        from_ = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
+                 heloStr + authStr)
+        by = (b"by " + self.host + b" with " + self.protocolName +
+              b" (" + networkString(longversion) + b")")
+        for_ = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
+                smtp.rfc822date())
+        print(from_)
+        print(by)
+        print(for_)
+        return b"Received: " + from_ + b"\n\t" + by + b"\n\t" + for_
 
 
     def validateTo(self, user):
@@ -130,7 +136,7 @@ class DomainDeliveryBase:
         """
         if not helo:
             raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
-        if origin.local != '' and origin.domain == '':
+        if origin.local != b'' and origin.domain == b'':
             raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
         return origin
 
@@ -140,7 +146,7 @@ class SMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an SMTP server.
     """
-    protocolName = 'smtp'
+    protocolName = b'smtp'
 
 
 
@@ -148,7 +154,7 @@ class ESMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an ESMTP server.
     """
-    protocolName = 'esmtp'
+    protocolName = b'esmtp'
 
 
 
@@ -288,7 +294,7 @@ class ESMTPFactory(SMTPFactory):
         """
         SMTPFactory.__init__(self, *args)
         self.challengers = {
-            'CRAM-MD5': CramMD5Credentials
+            b'CRAM-MD5': CramMD5Credentials
         }
 
 

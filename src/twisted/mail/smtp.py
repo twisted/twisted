@@ -80,7 +80,7 @@ class IMessageDelivery(Interface):
         @param recipients: A list of the addresses for which this message
         is bound.
 
-        @rtype: C{str}
+        @rtype: C{bytes}
         @return: The full \"Received\" header string.
         """
 
@@ -174,13 +174,13 @@ class SMTPClientError(SMTPError):
 
     def __str__(self):
         if self.code > 0:
-            res = ["%.3d %s" % (self.code, self.resp)]
+            res = [networkString("%.3d " % (self.code,)) + self.resp]
         else:
             res = [self.resp]
         if self.log:
             res.append(self.log)
-            res.append('')
-        return '\n'.join(res)
+            res.append(b'')
+        return b'\n'.join(res)
 
 
 class ESMTPClientError(SMTPClientError):
@@ -288,7 +288,7 @@ class SMTPBadSender(SMTPAddressError):
     def __init__(self, addr, code=550, resp='Sender not acceptable'):
         SMTPAddressError.__init__(self, addr, code, resp)
 
-def rfc822date(timeinfo=None,local=1):
+def rfc822date(timeinfo=None, local=1):
     """
     Format an RFC-2822 compliant date string.
 
@@ -298,7 +298,7 @@ def rfc822date(timeinfo=None,local=1):
         universal time, or if no time is given, whether now should be local or
         universal time. Default is local, as suggested (SHOULD) by rfc-2822.
 
-    @returns: A string representing the time and date in RFC-2822 format.
+    @returns: A L{bytes} representing the time and date in RFC-2822 format.
     """
     if not timeinfo:
         if local:
@@ -319,13 +319,13 @@ def rfc822date(timeinfo=None,local=1):
     else:
         (tzhr, tzmin) = (0,0)
 
-    return "%s, %02d %s %04d %02d:%02d:%02d %+03d%02d" % (
+    return networkString("%s, %02d %s %04d %02d:%02d:%02d %+03d%02d" % (
         ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][timeinfo[6]],
         timeinfo[2],
         ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][timeinfo[1] - 1],
         timeinfo[0], timeinfo[3], timeinfo[4], timeinfo[5],
-        tzhr, tzmin)
+        tzhr, tzmin))
 
 def idGenerator():
     i = 0
@@ -737,10 +737,9 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
     def _ebFromValidate(self, failure):
         if failure.check(SMTPBadSender):
             self.sendCode(failure.value.code,
-                          networkString(
-                              'Cannot receive from specified address %s: %s'
-                              % (quoteaddr(failure.value.addr),
-                                 failure.value.resp)))
+                          (b'Cannot receive from specified address ' +
+                            quoteaddr(failure.value.addr) + b': ' +
+                            networkString(failure.value.resp)))
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
@@ -1030,17 +1029,18 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if self.delivery is not None:
             return self.delivery.receivedHeader(helo, origin, recipients)
 
-        heloStr = ""
+        heloStr = b""
         if helo[0]:
-            heloStr = " helo=%s" % (helo[0],)
-        domain = self.transport.getHost().host
-        from_ = "from %s ([%s]%s)" % (helo[0], helo[1], heloStr)
-        by = "by %s with %s (%s)" % (domain,
+            heloStr = b" helo=" + helo[0]
+        domain = networkString(self.transport.getHost().host)
+
+        from_ = b"from " + helo[0] + b" ([" + helo[1] + b"]" + heloStr + b")"
+        by = b"by %s with %s (%s)" % (domain,
                                      self.__class__.__name__,
                                      longversion)
-        for_ = "for %s; %s" % (' '.join(map(str, recipients)),
+        for_ = b"for %s; %s" % (' '.join(map(str, recipients)),
                                rfc822date())
-        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
+        return b"Received: " + from_ + b"\n\t" + by + b"\n\t" + for_
 
 
 
