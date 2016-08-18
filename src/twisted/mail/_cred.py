@@ -9,6 +9,7 @@ import hmac
 from zope.interface import implementer
 
 from twisted.cred import credentials
+from twisted.python.compat import nativeString
 from twisted.mail.interfaces import IClientAuthentication
 
 
@@ -91,3 +92,10 @@ class PLAINCredentials(credentials.UsernamePassword):
 
     def moreChallenges(self):
         return False
+
+
+__all__ = [
+    "CramMD5ClientAuthenticator",
+    "LOGINCredentials", "LOGINAuthenticator",
+    "PLAINCredentials", "PLAINAuthenticator",
+]
