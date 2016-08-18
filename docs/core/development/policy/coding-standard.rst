@@ -610,6 +610,10 @@ Python 3
 Twisted is being ported to Python 3, targeting Python 3.3+.
 Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
 
+All new modules must be Python 2.7 & 3.3+ compatible, and all new code to ported modules must be Python 2.7 & 3.3+ compatible.
+New code in non-ported modules must be written in a 2.7 & 3.3+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
+Code targeting Python 3 specific features must gracefully fall-back on Python 2 as much as is reasonably possible (for example, Python 2 support for 'async/await' is not reasonably possible and would not be required, but code that uses a Python 3-specific module such as ipaddress should be able to use a backport to 2.7 if available).
+
 
 Database
 --------
