@@ -526,7 +526,7 @@ class SSHUserAuthClient(service.SSHService):
         prompts = []
         for i in range(numPrompts):
             prompt, data = getNS(data)
-            echo = bool(ord(data[0]))
+            echo = bool(ord(data[0:1]))
             data = data[1:]
             prompts.append((prompt, echo))
         d = self.getGenericAnswers(name, instruction, prompts)
