@@ -1060,7 +1060,7 @@ class SMTPServerTests(unittest.TestCase):
         s.makeConnection(t)
         s.lineReceived(b"DOAGOODTHING")
         s.connectionLost(error.ConnectionDone())
-        self.assertIn("500 Command not implemented", t.value())
+        self.assertIn(b"500 Command not implemented", t.value())
 
 
     def test_acceptSenderAddress(self):
