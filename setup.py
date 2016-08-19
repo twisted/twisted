@@ -20,8 +20,8 @@ setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
 if __name__ == "__main__":
     from twisted.python._setup import get_setup_args
     try:
-        if os.path.exists('twisted'):
-            sys.path.insert(0, '.')
+        if os.path.exists('src/twisted/'):
+            sys.path.insert(0, 'src')
         setuptools.setup(**get_setup_args())
     except KeyboardInterrupt:
         sys.exit(1)
