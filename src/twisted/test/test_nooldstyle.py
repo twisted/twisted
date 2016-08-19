@@ -24,7 +24,9 @@ elif not _shouldEnableNewStyle():
     _skip = "Not running with TWISTED_NEWSTYLE=1"
 
 
-forbiddenModules = ["twisted.internet"]
+forbiddenModules = [
+    "twisted.internet",
+]
 
 
 
