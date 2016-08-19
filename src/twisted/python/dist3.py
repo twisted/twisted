@@ -191,6 +191,7 @@ modules = [
     "twisted.mail.__init__",
     "twisted.mail.test.__init__",
     "twisted.mail.interfaces",
+    "twisted.mail.protocols",
     "twisted.mail.smtp",
     "twisted.mail._cred",
     "twisted.mail._except",
