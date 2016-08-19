@@ -9,7 +9,7 @@ import inspect
 from zope.interface import implementer, directlyProvides
 
 from twisted.python.util import LineLog
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.protocols import basic, loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
