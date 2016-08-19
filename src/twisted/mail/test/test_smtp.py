@@ -621,7 +621,7 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         server.portal = p
         client = MyESMTPClient(b'testpassword')
 
-        cAuth = smtp.LOGINAuthenticator('testuser')
+        cAuth = smtp.LOGINAuthenticator(b'testuser')
         client.registerAuthenticator(cAuth)
 
         d = self.loopback(server, client)
@@ -640,7 +640,7 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP({b'LOGIN': LOGINCredentials})
+        server = DummyESMTP({b'LOGIN': smtp.LOGINCredentials})
         server.portal = p
 
         client = MyESMTPClient(b'testpassword')
@@ -1719,7 +1719,7 @@ class SSLTestCase(unittest.TestCase):
             b"250 STARTTLS\r\n")
 
         # The client should try to start TLS before sending the message.
-        self.assertEqual("STARTTLS\r\n", transport.value())
+        self.assertEqual(b"STARTTLS\r\n", transport.value())
 
 
     def test_requireTransportSecurityTLSOfferedOverSSL(self):
@@ -1838,8 +1838,8 @@ class SendmailTests(unittest.TestCase):
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
-                      b"message", reactor=reactor, username="foo",
-                      password="bar", requireTransportSecurity=True,
+                      b"message", reactor=reactor, username=b"foo",
+                      password=b"bar", requireTransportSecurity=True,
                       requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory._requireTransportSecurity, True)

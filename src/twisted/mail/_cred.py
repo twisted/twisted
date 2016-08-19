@@ -22,7 +22,7 @@ class CramMD5ClientAuthenticator:
         return b"CRAM-MD5"
 
     def challengeResponse(self, secret, chal):
-        response = hmac.HMAC(secret, chal).hexdigest()
+        response = hmac.HMAC(secret, chal).hexdigest().encode('ascii')
         return self.user + b' ' + response
 
 

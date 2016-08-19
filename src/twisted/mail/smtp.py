@@ -40,11 +40,7 @@ from twisted.mail.interfaces import IClientAuthentication
 from twisted.mail._cred import CramMD5ClientAuthenticator, LOGINAuthenticator
 from twisted.mail._cred import LOGINCredentials as _lcredentials
 
-
-if _PY3:
-    from email.encoders import encode_base64
-else:
-    from email.base64MIME import encode as encode_base64
+from email.encoders import encode_base64
 
 from twisted import cred
 from twisted.python.runtime import platform
@@ -60,7 +56,7 @@ else:
     DNSNAME = socket.getfqdn()
 
 # Encode the DNS name into something we can send over the wire
-DNSNAME = DNSNAME.encode('idna')
+DNSNAME = DNSNAME.encode('ascii')
 
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(xrange(200,300))
@@ -186,6 +182,9 @@ class SMTPClientError(SMTPError):
 
     if not _PY3:
         __str__ = __bytes__
+    else:
+        def __str__(self):
+            return nativeString(bytes(self))
 
 
 class ESMTPClientError(SMTPClientError):
@@ -390,10 +389,10 @@ class Address:
     Source routes are stipped and ignored, UUCP-style bang-paths
     and %-style routing are not parsed.
 
-    @type domain: C{str}
+    @type domain: C{bytes}
     @ivar domain: The domain within which this address resides.
 
-    @type local: C{str}
+    @type local: C{bytes}
     @ivar local: The local (\"user\") portion of this address.
     """
 
@@ -749,7 +748,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                             quoteaddr(failure.value.addr) + b': ' +
                             networkString(failure.value.resp)))
         elif failure.check(SMTPServerError):
-            self.sendCode(failure.value.code, failure.value.resp)
+            self.sendCode(failure.value.code, networkString(failure.value.resp))
         else:
             log.err(failure, "SMTP sender validation failure")
             self.sendCode(
@@ -788,7 +787,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _ebToValidate(self, failure):
         if failure.check(SMTPBadRcpt, SMTPServerError):
-            self.sendCode(failure.value.code, failure.value.resp)
+            self.sendCode(failure.value.code, networkString(failure.value.resp))
         else:
             log.err(failure)
             self.sendCode(
@@ -1648,8 +1647,8 @@ class ESMTPClient(SMTPClient):
 
 
     def authenticate(self, code, resp, items):
-        if self.secret and items.get('AUTH'):
-            schemes = items['AUTH'].split()
+        if self.secret and items.get(b'AUTH'):
+            schemes = items[b'AUTH'].split()
             tmpSchemes = {}
 
             #XXX: May want to come up with a more efficient way to do this
@@ -1667,9 +1666,8 @@ class ESMTPClient(SMTPClient):
                         self._okresponse = self.smtpState_from
                         self._failresponse = self._esmtpState_plainAuth
                         self._expected = [235]
-                        challenge = encode_base64(
-                            self._authinfo.challengeResponse(self.secret, 1),
-                            eol=b"")
+                        challenge = base64.b64encode(
+                            self._authinfo.challengeResponse(self.secret, 1))
                         self.sendLine(b"AUTH %s %s" % (auth, challenge))
                     else:
                         self._expected = [334]
@@ -1691,8 +1689,8 @@ class ESMTPClient(SMTPClient):
         self._okresponse = self.smtpState_from
         self._failresponse = self.esmtpAUTHDeclined
         self._expected = [235]
-        challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 2), eol="")
-        self.sendLine('AUTH PLAIN ' + challenge)
+        challenge = base64.b64encode(self._authinfo.challengeResponse(self.secret, 2))
+        self.sendLine(b'AUTH PLAIN ' + challenge)
 
 
     def esmtpState_challenge(self, code, resp):
@@ -1702,17 +1700,17 @@ class ESMTPClient(SMTPClient):
     def _authResponse(self, auth, challenge):
         self._failresponse = self.esmtpAUTHDeclined
         try:
-            challenge = base64.decodestring(challenge)
+            challenge = base64.b64decode(challenge)
         except binascii.Error:
             # Illegal challenge, give up, then quit
-            self.sendLine('*')
+            self.sendLine(b'*')
             self._okresponse = self.esmtpAUTHMalformedChallenge
             self._failresponse = self.esmtpAUTHMalformedChallenge
         else:
             resp = auth.challengeResponse(self.secret, challenge)
             self._expected = [235, 334]
             self._okresponse = self.smtpState_maybeAuthenticated
-            self.sendLine(encode_base64(resp, eol=""))
+            self.sendLine(base64.b64encode(resp))
 
 
     def smtpState_maybeAuthenticated(self, code, resp):
