@@ -1,5 +1,10 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 Interfaces for L{twisted.mail}.
+
+@since: 16.5
 """
 
 from __future__ import absolute_import, division
