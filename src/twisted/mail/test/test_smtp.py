@@ -687,6 +687,7 @@ if not interfaces.IReactorSSL.providedBy(reactor):
 
 
 class EmptyLineTests(unittest.TestCase):
+
     def test_emptyLineSyntaxError(self):
         """
         If L{smtp.SMTP} receives an empty line, it responds with a 500 error
@@ -1044,6 +1045,18 @@ class SMTPServerTests(unittest.TestCase):
         s.makeConnection(t)
         s.connectionLost(error.ConnectionDone())
         self.assertIn("ESMTP", t.value())
+
+
+    def test_SMTPUnknownCommand(self):
+        """
+        Sending an unimplemented command is responded to with a 500.
+        """
+        s = smtp.SMTP()
+        t = StringTransport()
+        s.makeConnection(t)
+        s.lineReceived(b"DOAGOODTHING")
+        s.connectionLost(error.ConnectionDone())
+        self.assertIn("500 Command not implemented", t.value())
 
 
     def test_acceptSenderAddress(self):
