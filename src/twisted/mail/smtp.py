@@ -32,7 +32,8 @@ from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (_PY3, xrange, long, unicode, networkString,
-                                   nativeString, iteritems, _keys)
+                                   nativeString, iteritems, _keys, _bytesChr,
+                                   iterbytes)
 
 
 from twisted.mail.interfaces import IClientAuthentication
@@ -172,15 +173,19 @@ class SMTPClientError(SMTPError):
         self.retry = retry
 
 
-    def __str__(self):
+    def __bytes__(self):
         if self.code > 0:
-            res = [networkString("%.3d " % (self.code,)) + self.resp]
+            res = [networkString("%.3d " % (self.code,) + self.resp)]
         else:
-            res = [self.resp]
+            res = [networkString(self.resp)]
         if self.log:
             res.append(self.log)
             res.append(b'')
         return b'\n'.join(res)
+
+
+    if not _PY3:
+        __str__ = __bytes__
 
 
 class ESMTPClientError(SMTPClientError):
@@ -360,13 +365,16 @@ def quoteaddr(addr):
     if isinstance(addr, Address):
         return b'<' + bytes(addr) + b'>'
 
+    if isinstance(addr, bytes):
+        addr = addr.decode('ascii')
+
     res = email.utils.parseaddr(addr)
 
     if res == (None, None):
         # It didn't parse, use it as-is
         return  b'<' + bytes(addr) + b'>'
     else:
-        return  b'<' + networkString(res[1]) + b'>'
+        return  b'<' + res[1].encode('ascii') + b'>'
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
@@ -761,7 +769,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         try:
             user = User(m.group('path'), self._helo, self, self._from)
         except AddressError as e:
-            self.sendCode(553, str(e))
+            self.sendCode(553, networkString(str(e)))
             return
 
         d = defer.maybeDeferred(self.validateTo, user)
@@ -1085,6 +1093,9 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     timeout = None
 
     def __init__(self, identity, logsize=10):
+        if isinstance(identity, unicode):
+            identity = identity.encode('ascii')
+
         self.identity = identity or b''
         self.toAddressesResult = []
         self.successAddresses = []
@@ -1941,11 +1952,13 @@ class SenderMixin:
             errlog = []
             for addr, acode, aresp in addresses:
                 if acode not in SUCCESS:
-                    errlog.append("%s: %03d %s" % (addr, acode, aresp))
+                    errlog.append((addr + b": " +
+                                   networkString("%03d" % (acode,)) +
+                                   b" " + aresp))
 
             errlog.append(log.str())
 
-            exc = SMTPDeliveryError(code, resp, '\n'.join(errlog), addresses)
+            exc = SMTPDeliveryError(code, resp, b'\n'.join(errlog), addresses)
             self.factory.result.errback(exc)
         else:
             self.factory.result.callback((numOk, addresses))
@@ -1998,8 +2011,20 @@ class SMTPSenderFactory(protocol.ClientFactory):
         """
         assert isinstance(retries, (int, long))
 
-        if isinstance(toEmail, bytes):
+        if isinstance(toEmail, unicode):
+            toEmail = [toEmail.encode('ascii')]
+        elif isinstance(toEmail, bytes):
             toEmail = [toEmail]
+        else:
+            toEmailFinal = []
+            for email in toEmail:
+                if not isinstance(email, bytes):
+                    email = email.encode('ascii')
+
+                toEmailFinal.append(email)
+
+            toEmail = toEmailFinal
+
         self.fromEmail = Address(fromEmail)
         self.nEmails = len(toEmail)
         self.toEmail = toEmail
@@ -2244,7 +2269,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     """
     if not hasattr(msg, 'read'):
         # It's not a file
-        msg = BytesIO(str(msg))
+        msg = BytesIO(bytes(msg))
 
     def cancel(d):
         """
@@ -2266,7 +2291,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
         requireTransportSecurity=requireTransportSecurity)
 
     if senderDomainName is not None:
-        factory.domain = senderDomainName
+        factory.domain = networkString(senderDomainName)
 
     connector = reactor.connectTCP(smtphost, port, factory)
 
@@ -2280,13 +2305,13 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
 import codecs
 def xtext_encode(s, errors=None):
     r = []
-    for ch in s:
+    for ch in iterbytes(s):
         o = ord(ch)
         if ch == '+' or ch == '=' or o < 33 or o > 126:
-            r.append('+%02X' % o)
+            r.append(networkString('+%02X' % (o,)))
         else:
-            r.append(chr(o))
-    return (''.join(r), len(s))
+            r.append(_bytesChr(o))
+    return (b''.join(r), len(s))
 
 
 def xtext_decode(s, errors=None):
@@ -2296,14 +2321,14 @@ def xtext_decode(s, errors=None):
     r = []
     i = 0
     while i < len(s):
-        if s[i] == '+':
+        if s[i:i+1] == b'+':
             try:
-                r.append(chr(int(s[i + 1:i + 3], 16)))
+                r.append(chr(int(bytes(s[i + 1:i + 3]), 16)))
             except ValueError:
-                r.append(s[i:i + 3])
+                r.append(ord(s[i:i + 3]))
             i += 3
         else:
-            r.append(s[i])
+            r.append(bytes(s[i:i+1]).decode('ascii'))
             i += 1
     return (''.join(r), len(s))
 

@@ -85,9 +85,6 @@ class DomainDeliveryBase:
               b" (" + networkString(longversion) + b")")
         for_ = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
                 smtp.rfc822date())
-        print(from_)
-        print(by)
-        print(for_)
         return b"Received: " + from_ + b"\n\t" + by + b"\n\t" + for_
 
 

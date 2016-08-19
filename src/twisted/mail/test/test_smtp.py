@@ -90,7 +90,6 @@ class DummyMessage(object):
 
 
     def lineReceived(self, line):
-        print(line)
         # Throw away the generated Received: header
         if not re.match(b'Received: From yyy.com \(\[.*\]\) by localhost;', line):
             self.buffer.append(line)
@@ -156,7 +155,7 @@ Someone set up us the bomb!\015
         protocol.makeConnection(self.transport)
         protocol.lineReceived(b'HELO yyy.com')
         for message in self.messages:
-            protocol.lineReceived(b'MAIL FROM:<' + message[0] + b' >')
+            protocol.lineReceived(b'MAIL FROM:<' + message[0] + b'>')
             for target in message[1]:
                 protocol.lineReceived(b'RCPT TO:<' + target + b'>')
             protocol.lineReceived(b'DATA')
@@ -229,7 +228,7 @@ class LoopbackTestCase(LoopbackMixin):
         factory.domains = {}
         factory.domains[b'foo.bar'] = DummyDomain([b'moshez'])
         from twisted.mail.protocols import DomainSMTP
-        protocol =  DomainSMTP()
+        protocol = DomainSMTP()
         protocol.service = factory
         protocol.factory = factory
         clientProtocol = self.clientClass()
@@ -289,10 +288,10 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
         self.assertIsInstance(errors[0], smtp.SMTPTimeoutError)
         self.assertTrue(errors[0].isFatal)
         self.assertEqual(
-            str(errors[0]),
-            "Timeout waiting for SMTP server response\n"
-            "<<< 220 hello\n"
-            ">>> HELO foo.baz\n")
+            bytes(errors[0]),
+            b"Timeout waiting for SMTP server response\n"
+            b"<<< 220 hello\n"
+            b">>> HELO foo.baz\n")
 
 
     expected_output = [
@@ -386,7 +385,7 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
 
 
 
-class DummySMTPMessage:
+class DummySMTPMessage(object):
 
     def __init__(self, protocol, users):
         self.protocol = protocol
@@ -394,7 +393,6 @@ class DummySMTPMessage:
         self.buffer = []
 
     def lineReceived(self, line):
-        print(line)
         self.buffer.append(line)
 
     def eomReceived(self):
@@ -409,6 +407,7 @@ class DummySMTPMessage:
 
 
 class DummyProto:
+
     def connectionMade(self):
         self.dummyMixinBase.connectionMade(self)
         self.message = {}
@@ -664,26 +663,26 @@ class SMTPHelperTests(unittest.TestCase):
 
     def testQuoteAddr(self):
         cases = [
-            ['user@host.name', '<user@host.name>'],
-            ['"User Name" <user@host.name>', '<user@host.name>'],
-            [smtp.Address('someguy@someplace'), '<someguy@someplace>'],
-            ['', '<>'],
-            [smtp.Address(''), '<>'],
+            [b'user@host.name', b'<user@host.name>'],
+            [b'"User Name" <user@host.name>', b'<user@host.name>'],
+            [smtp.Address(b'someguy@someplace'), b'<someguy@someplace>'],
+            [b'', b'<>'],
+            [smtp.Address(b''), b'<>'],
         ]
 
         for (c, e) in cases:
             self.assertEqual(smtp.quoteaddr(c), e)
 
     def testUser(self):
-        u = smtp.User('user@host', 'helo.host.name', None, None)
+        u = smtp.User(b'user@host', b'helo.host.name', None, None)
         self.assertEqual(str(u), 'user@host')
 
     def testXtextEncoding(self):
         cases = [
-            ('Hello world', 'Hello+20world'),
-            ('Hello+world', 'Hello+2Bworld'),
-            ('\0\1\2\3\4\5', '+00+01+02+03+04+05'),
-            ('e=mc2@example.com', 'e+3Dmc2@example.com')
+            (u'Hello world', b'Hello+20world'),
+            (u'Hello+world', b'Hello+2Bworld'),
+            (u'\0\1\2\3\4\5', b'+00+01+02+03+04+05'),
+            (u'e=mc2@example.com', b'e+3Dmc2@example.com')
         ]
 
         for (case, expected) in cases:
@@ -711,9 +710,9 @@ class SMTPHelperTests(unittest.TestCase):
 
     def test_decodeWithErrors(self):
         """
-        Similar to L{test_encodeWithErrors}, but for C{str.decode}.
+        Similar to L{test_encodeWithErrors}, but for C{bytes.decode}.
         """
-        bytes = 'Hello world'
+        bytes = b'Hello world'
         self.assertEqual(
             smtp.xtext_decode(bytes, 'strict'),
             (bytes.decode('xtext'), len(bytes)))
@@ -764,13 +763,13 @@ class EmptyLineTests(unittest.TestCase):
         proto = smtp.SMTP()
         transport = StringTransport()
         proto.makeConnection(transport)
-        proto.lineReceived('')
+        proto.lineReceived(b'')
         proto.setTimeout(None)
 
         out = transport.value().splitlines()
         self.assertEqual(len(out), 2)
-        self.assertTrue(out[0].startswith('220'))
-        self.assertEqual(out[1], "500 Error: bad syntax")
+        self.assertTrue(out[0].startswith(b'220'))
+        self.assertEqual(out[1], b"500 Error: bad syntax")
 
 
 
@@ -977,7 +976,7 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
         before receiving confirmation of message delivery, it reconnects and
         tries to deliver the message again.
         """
-        recipient = 'alice'
+        recipient = b'alice'
         message = b"some message text"
         domain = DummyDomain([recipient])
 
@@ -1005,9 +1004,9 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
         # server.
         sentDeferred = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            "bob@example.org", recipient + "@example.com",
+            b"bob@example.org", recipient + b"@example.com",
             BytesIO(message), sentDeferred)
-        clientFactory.domain = "example.org"
+        clientFactory.domain = b"example.org"
         clientConnector = reactor.connectTCP(
             serverHost.host, serverHost.port, clientFactory)
         self.addCleanup(clientConnector.disconnect)
@@ -1019,7 +1018,7 @@ class SMTPSenderFactoryRetryTests(unittest.TestCase):
             """
             self.assertEqual(
                 domain.messages,
-                {recipient: ["\n%s\n" % (message,)]})
+                {recipient: [b"\n" + message + b"\n"]})
             # Flush the RuntimeError that BrokenMessage caused to be logged.
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
         sentDeferred.addCallback(cbSent)
@@ -1182,7 +1181,6 @@ class SMTPServerTests(unittest.TestCase):
         # exception.
         proto.connectionLost(error.ConnectionLost())
 
-        print(trans.value())
         # Make sure that we received exactly the correct response
         self.assertEqual(
             trans.value(),
@@ -1546,7 +1544,7 @@ class SenderMixinSentMailTests(unittest.TestCase):
         """
         onDone = self.assertFailure(defer.Deferred(), smtp.SMTPDeliveryError)
         onDone.addCallback(lambda e: self.assertEqual(
-                e.log, "bob@example.com: 199 Error in sending.\n"))
+                e.log, b"bob@example.com: 199 Error in sending.\n"))
 
         clientFactory = smtp.SMTPSenderFactory(
             'source@address', 'recipient@address',
@@ -1556,9 +1554,9 @@ class SenderMixinSentMailTests(unittest.TestCase):
         client = clientFactory.buildProtocol(
             address.IPv4Address('TCP', 'example.net', 25))
 
-        addresses = [("alice@example.com", 200, "No errors here!"),
-                     ("bob@example.com", 199, "Error in sending.")]
-        client.sentMail(199, "Test response", 1, addresses, client.log)
+        addresses = [(b"alice@example.com", 200, b"No errors here!"),
+                     (b"bob@example.com", 199, b"Error in sending.")]
+        client.sentMail(199, b"Test response", 1, addresses, client.log)
 
         return onDone
 
@@ -1649,8 +1647,8 @@ class SSLTestCase(unittest.TestCase):
     if sslSkip is not None:
         skip = sslSkip
 
-    SERVER_GREETING = "220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
-    EHLO_RESPONSE = "250-localhost Hello 127.0.0.1, nice to meet you\r\n"
+    SERVER_GREETING = b"220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
+    EHLO_RESPONSE = b"250-localhost Hello 127.0.0.1, nice to meet you\r\n"
 
     def setUp(self):
         self.clientProtocol = smtp.ESMTPClient(
@@ -1717,8 +1715,8 @@ class SSLTestCase(unittest.TestCase):
         # Tell the client about the server's capabilities - including STARTTLS
         self.clientProtocol.dataReceived(
             self.EHLO_RESPONSE +
-            "250-AUTH LOGIN\r\n"
-            "250 STARTTLS\r\n")
+            b"250-AUTH LOGIN\r\n"
+            b"250 STARTTLS\r\n")
 
         # The client should try to start TLS before sending the message.
         self.assertEqual("STARTTLS\r\n", transport.value())
@@ -1751,10 +1749,10 @@ class SSLTestCase(unittest.TestCase):
         # Tell the client about the server's capabilities - excluding STARTTLS
         self.clientProtocol.dataReceived(
             self.EHLO_RESPONSE +
-            "250 AUTH LOGIN\r\n")
+            b"250 AUTH LOGIN\r\n")
 
         # The client give up
-        self.assertEqual("QUIT\r\n", transport.value())
+        self.assertEqual(b"QUIT\r\n", transport.value())
 
 
     def test_esmtpClientTlsModeDeprecationGet(self):
@@ -1840,14 +1838,14 @@ class SendmailTests(unittest.TestCase):
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
-                      "message", reactor=reactor, username="foo",
+                      b"message", reactor=reactor, username="foo",
                       password="bar", requireTransportSecurity=True,
                       requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory._requireTransportSecurity, True)
         self.assertEqual(factory._requireAuthentication, True)
-        self.assertEqual(factory.username, "foo")
-        self.assertEqual(factory.password, "bar")
+        self.assertEqual(factory.username, b"foo")
+        self.assertEqual(factory.password, b"bar")
 
 
     def test_messageFilePassthrough(self):
@@ -1871,11 +1869,11 @@ class SendmailTests(unittest.TestCase):
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
-                      "message", reactor=reactor)
+                      b"message", reactor=reactor)
         factory = reactor.tcpClients[0][2]
         messageFile = factory.file
         messageFile.seek(0)
-        self.assertEqual(messageFile.read(), "message")
+        self.assertEqual(messageFile.read(), b"message")
 
 
     def test_senderDomainName(self):
@@ -1885,9 +1883,9 @@ class SendmailTests(unittest.TestCase):
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
-                      "message", reactor=reactor, senderDomainName="foo")
+                      b"message", reactor=reactor, senderDomainName="foo")
         factory = reactor.tcpClients[0][2]
-        self.assertEqual(factory.domain, "foo")
+        self.assertEqual(factory.domain, b"foo")
 
 
     def test_cancelBeforeConnectionMade(self):
@@ -1898,7 +1896,7 @@ class SendmailTests(unittest.TestCase):
         """
         reactor = MemoryReactor()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          "message", reactor=reactor)
+                          b"message", reactor=reactor)
         d.cancel()
         self.assertEqual(reactor.connectors[0]._disconnected, True)
         failure = self.failureResultOf(d)
@@ -1914,7 +1912,7 @@ class SendmailTests(unittest.TestCase):
         reactor = MemoryReactor()
         transport = AbortableStringTransport()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          "message", reactor=reactor)
+                          b"message", reactor=reactor)
         factory = reactor.tcpClients[0][2]
         p = factory.buildProtocol(None)
         p.makeConnection(transport)
