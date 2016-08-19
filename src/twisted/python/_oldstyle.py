@@ -14,7 +14,7 @@ from twisted.python.compat import _shouldEnableNewStyle, _PY3
 from twisted.python.util import _replaceIf
 
 
-def passthru(arg, **kwargs):
+def passthru(arg):
     """
     Return C{arg}. Do nothing.
 
@@ -50,7 +50,7 @@ def _ensureOldClass(cls):
 
 @_replaceIf(_PY3, passthru)
 @_replaceIf(not _shouldEnableNewStyle(), _ensureOldClass)
-def _oldStyle(cls, bases=(object,)):
+def _oldStyle(cls):
     """
     A decorator which conditionally converts old-style classes to new-style
     classes. If it is Python 3, or if the C{TWISTED_NEWSTYLE} environment
