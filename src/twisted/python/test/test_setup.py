@@ -7,38 +7,42 @@ Tests for parts of our release automation system.
 
 
 import os
-import sys
 
 
 from setuptools.dist import Distribution
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import dist
+from twisted.python import _setup, dist3
 from twisted.python.compat import _PY3
-from twisted.python.dist import (get_setup_args, ConditionalExtension,
-                                 build_scripts_twisted, _EXTRAS_REQUIRE)
-from twisted.python.filepath import FilePath
+from twisted.python._setup import (
+    BuildPy3,
+    getSetupArgs,
+    ConditionalExtension,
+    _EXTRAS_REQUIRE,
+    )
 
 
 
 class SetupTests(TestCase):
     """
-    Tests for L{get_setup_args}.
+    Tests for L{getSetupArgs}.
     """
+
     def test_conditionalExtensions(self):
         """
-        Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
-        objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be built.
+        Will return the arguments with a custom build_ext which knows how to
+        check whether they should be built.
         """
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: False)
-        args = get_setup_args(conditionalExtensions=[good_ext, bad_ext])
+
+        args = getSetupArgs(extensions=[good_ext, bad_ext])
+
         # ext_modules should be set even though it's not used.  See comment
-        # in get_setup_args
+        # in getSetupArgs
         self.assertEqual(args["ext_modules"], [good_ext, bad_ext])
         cmdclass = args["cmdclass"]
         build_ext = cmdclass["build_ext"]
@@ -49,11 +53,14 @@ class SetupTests(TestCase):
 
     def test_win32Definition(self):
         """
-        When building on Windows NT, the WIN32 macro will be defined as 1.
+        When building on Windows NT, the WIN32 macro will be defined as 1 on
+        the extensions.
         """
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
-        args = get_setup_args(conditionalExtensions=[ext])
+
+        args = getSetupArgs(extensions=[ext])
+
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
@@ -230,133 +237,6 @@ class OptionalDependenciesTests(TestCase):
 
 
 
-class GetVersionTests(TestCase):
-    """
-    Tests for L{dist.getVersion}.
-    """
-
-    def setUp(self):
-        self.dirname = self.mktemp()
-        os.mkdir(self.dirname)
-
-    def test_getVersionCore(self):
-        """
-        Test that getting the version of core reads from the
-        [base]/_version.py file.
-        """
-        with open(os.path.join(self.dirname, "_version.py"), "w") as f:
-            f.write("""
-from twisted.python import versions
-version = versions.Version("twisted", 0, 1, 2)
-""")
-        self.assertEqual(dist.getVersion(base=self.dirname), "0.1.2")
-
-
-
-class DummyCommand:
-    """
-    A fake Command.
-    """
-    def __init__(self, **kwargs):
-        for kw, val in kwargs.items():
-            setattr(self, kw, val)
-
-    def ensure_finalized(self):
-        pass
-
-
-
-class BuildScriptsTests(TestCase):
-    """
-    Tests for L{dist.build_scripts_twisted}.
-    """
-
-    def setUp(self):
-        self.source = FilePath(self.mktemp())
-        self.target = FilePath(self.mktemp())
-        self.source.makedirs()
-        self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(self.source.path)
-
-
-    def buildScripts(self):
-        """
-        Write 3 types of scripts and run the L{build_scripts_twisted}
-        command.
-        """
-        self.writeScript(self.source, "script1",
-                          ("#! /usr/bin/env python2.7\n"
-                           "# bogus script w/ Python sh-bang\n"
-                           "pass\n"))
-
-        self.writeScript(self.source, "script2.py",
-                        ("#!/usr/bin/python\n"
-                         "# bogus script w/ Python sh-bang\n"
-                         "pass\n"))
-
-        self.writeScript(self.source, "shell.sh",
-                        ("#!/bin/sh\n"
-                         "# bogus shell script w/ sh-bang\n"
-                         "exit 0\n"))
-
-        expected = ['script1', 'script2.py', 'shell.sh']
-        cmd = self.getBuildScriptsCmd(self.target,
-                                     [self.source.child(fn).path
-                                      for fn in expected])
-        cmd.finalize_options()
-        cmd.run()
-
-        return self.target.listdir()
-
-
-    def getBuildScriptsCmd(self, target, scripts):
-        """
-        Create a distutils L{Distribution} with a L{DummyCommand} and wrap it
-        in L{build_scripts_twisted}.
-
-        @type target: L{FilePath}
-        """
-        dist = Distribution()
-        dist.scripts = scripts
-        dist.command_obj["build"] = DummyCommand(
-            build_scripts = target.path,
-            force = 1,
-            executable = sys.executable
-        )
-        return build_scripts_twisted(dist)
-
-
-    def writeScript(self, dir, name, text):
-        """
-        Write the script to disk.
-        """
-        with open(dir.child(name).path, "w") as f:
-            f.write(text)
-
-
-    def test_notWindows(self):
-        """
-        L{build_scripts_twisted} does not rename scripts on non-Windows
-        platforms.
-        """
-        self.patch(os, "name", "twisted")
-        built = self.buildScripts()
-        for name in ['script1', 'script2.py', 'shell.sh']:
-            self.assertIn(name, built)
-
-
-    def test_windows(self):
-        """
-        L{build_scripts_twisted} renames scripts so they end with '.py' on
-        the Windows platform.
-        """
-        self.patch(os, "name", "nt")
-        built = self.buildScripts()
-        for name in ['script1.py', 'script2.py', 'shell.sh.py']:
-            self.assertIn(name, built)
-
-
-
 class FakeModule(object):
     """
     A fake module, suitable for dependency injection in testing.
@@ -398,7 +278,7 @@ class WithPlatformTests(TestCase):
         L{_checkCPython} returns C{True} when C{platform.python_implementation}
         says we're running on CPython.
         """
-        self.assertTrue(dist._checkCPython(platform=fakeCPythonPlatform))
+        self.assertTrue(_setup._checkCPython(platform=fakeCPythonPlatform))
 
 
     def test_other(self):
@@ -406,4 +286,66 @@ class WithPlatformTests(TestCase):
         L{_checkCPython} returns C{False} when C{platform.python_implementation}
         says we're not running on CPython.
         """
-        self.assertFalse(dist._checkCPython(platform=fakeOtherPlatform))
+        self.assertFalse(_setup._checkCPython(platform=fakeOtherPlatform))
+
+
+
+class BuildPy3Tests(TestCase):
+    """
+    Tests for L{BuildPy3}.
+    """
+
+    def test_find_package_modules(self):
+        """
+        Will filter the found modules including only the modules listed in
+        L{twisted.python.dist3}.
+        """
+        distribution = Distribution()
+        distribution.script_name = 'setup.py'
+        distribution.script_args = 'build_py'
+        builder = BuildPy3(distribution)
+
+        # Rig the dist3 data so that we can reduce the scope of this test and
+        # reduce the risk of getting false failures, while doing a minimum
+        # level of patching.
+        self.patch(
+            dist3,
+            'modulesToInstall',
+            [
+                "twisted.spread.banana",
+                "twisted.test.__init__",
+                "twisted.test.iosim",
+                "twisted.test.test_abstract",
+                ],
+            )
+        self.patch(
+            dist3,
+            'testDataFiles',
+            [
+                "twisted.python.test.pullpipe",
+                "twisted.test.mock_win32process",
+                ],
+            )
+        # We are in _trial_temp which can be at PWD/_trial_temp when executed
+        # outside of tox or some tox temporary folder.
+        # When running under tox we use TOX_INI_DIR to find where the source
+        # code is located.
+        basePath = os.environ.get('PWD', '../')
+        # Overwrite the path if we are running with tox.
+        basePath = os.environ.get('TOX_INI_DIR', basePath)
+        packageDir = os.path.join(basePath, 'src', 'twisted', 'test')
+
+        result = builder.find_package_modules('twisted.test', packageDir)
+
+        self.assertEqual(sorted([
+            ('twisted.test', 'test_abstract',
+                os.path.join(packageDir, 'test_abstract.py')),
+            ('twisted.test', '__init__',
+                os.path.join(packageDir, '__init__.py')),
+            ('twisted.test', 'iosim',
+                os.path.join(packageDir, 'iosim.py')),
+            ('twisted.test', 'mock_win32process',
+                 os.path.join(packageDir, 'mock_win32process.py')),
+            ]),
+            sorted(result),
+            )
