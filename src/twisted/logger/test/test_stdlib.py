@@ -276,7 +276,7 @@ def handlerAndBytesIO():
     stream = output
     template = py_logging.BASIC_FORMAT
     if _PY3:
-        stream = TextIOWrapper(output, encoding="utf-8")
+        stream = TextIOWrapper(output, encoding="utf-8", newline="\n")
     formatter = py_logging.Formatter(template)
     handler = py_logging.StreamHandler(stream)
     handler.setFormatter(formatter)

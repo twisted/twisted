@@ -1924,9 +1924,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if request != self.requests[0]: raise TypeError
         del self.requests[0]
 
+        self._producer.resumeProducing()
+
         if self.persistent:
             self._handlingRequest = False
-            self._producer.resumeProducing()
 
             if self._savedTimeOut:
                 self.setTimeout(self._savedTimeOut)
