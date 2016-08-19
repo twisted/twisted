@@ -37,7 +37,7 @@ from twisted.python import failure
 from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.mail.relaymanager import _AttemptManager
-from twisted.test.proto_helpers import MemoryReactorClock
+from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 
 from twisted import mail
 import twisted.mail.mail
@@ -185,6 +185,42 @@ class BounceTests(unittest.TestCase):
     def testAddUser(self):
         self.domain.addUser("bob", "password")
         self.assertRaises(smtp.SMTPBadRcpt, self.domain.exists, "bob")
+
+
+
+class BounceWithSMTPServerTests(unittest.TestCase):
+    """
+    Tests for L{twisted.mail.mail.BounceDomain} with
+    L{twisted.mail.smtp.SMTPServer}.
+    """
+    def test_rejected(self):
+        """
+        Incoming emails to a SMTP server with L{twisted.mail.mail.BounceDomain}
+        are rejected.
+        """
+        service = mail.mail.MailService()
+        domain = mail.mail.BounceDomain()
+        service.addDomain(b'foo.com', domain)
+
+        factory = mail.protocols.SMTPFactory(service)
+        protocol = factory.buildProtocol(None)
+
+        deliverer = mail.protocols.SMTPDomainDelivery(service, None, None)
+        protocol.delivery = deliverer
+
+        transport = StringTransport()
+        protocol.makeConnection(transport)
+
+        protocol.lineReceived(b'HELO baz.net')
+        protocol.lineReceived(b'MAIL FROM:<a@baz.net>')
+        protocol.lineReceived(b'RCPT TO:<any@foo.com>')
+        protocol.lineReceived(b'QUIT')
+
+        self.assertTrue(transport.disconnecting)
+        protocol.connectionLost(None)
+
+        self.assertEqual(transport.value().strip().split(b'\r\n')[-2],
+                         b'550 Cannot receive for specified address')
 
 
 

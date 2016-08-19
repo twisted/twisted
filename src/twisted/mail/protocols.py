@@ -155,64 +155,6 @@ class ESMTPDomainDelivery(DomainDeliveryBase):
 
 
 
-class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
-    """
-    An SMTP server which uses the domains of a mail service.
-    """
-    service = user = None
-
-    def __init__(self, *args, **kw):
-        """
-        Initialize the SMTP server.
-
-        @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{None}, L{IMessageDeliveryFactory}
-            provider or L{None})
-        @param args: Positional arguments for L{SMTP.__init__}
-
-        @type kw: L{dict}
-        @param kw: Keyword arguments for L{SMTP.__init__}.
-        """
-        import warnings
-        warnings.warn(
-            "DomainSMTP is deprecated.  Use IMessageDelivery objects instead.",
-            DeprecationWarning, stacklevel=2,
-        )
-        smtp.SMTP.__init__(self, *args, **kw)
-        if self.delivery is None:
-            self.delivery = self
-
-
-
-class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
-    """
-    An ESMTP server which uses the domains of a mail service.
-    """
-    service = user = None
-
-    def __init__(self, *args, **kw):
-        """
-        Initialize the ESMTP server.
-
-        @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{None}, L{IMessageDeliveryFactory}
-            provider or L{None})
-        @param args: Positional arguments for L{ESMTP.__init__}
-
-        @type kw: L{dict}
-        @param kw: Keyword arguments for L{ESMTP.__init__}.
-        """
-        import warnings
-        warnings.warn(
-            "DomainESMTP is deprecated.  Use IMessageDelivery objects instead.",
-            DeprecationWarning, stacklevel=2,
-        )
-        smtp.ESMTP.__init__(self, *args, **kw)
-        if self.delivery is None:
-            self.delivery = self
-
-
-
 class SMTPFactory(smtp.SMTPFactory):
     """
     An SMTP server protocol factory.
