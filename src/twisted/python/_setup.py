@@ -185,14 +185,13 @@ _EXTENSIONS = [
 
 
 
-def get_setup_args():
+def getSetupArgs(extensions=_EXTENSIONS):
     """
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
     arguments = STATIC_PACKAGE_METADATA.copy()
 
-    extensions = _EXTENSIONS
     # This is a workaround for distutils behavior; ext_modules isn't
     # actually used by our custom builder.  distutils deep-down checks
     # to see if there are any ext_modules defined before invoking
@@ -218,7 +217,7 @@ def get_setup_args():
     requirements.append("constantly >= 15.1")
 
     arguments.update(dict(
-        packages=find_packages(),
+        packages=find_packages("src"),
         install_requires=requirements,
         entry_points={
             'console_scripts':  _CONSOLE_SCRIPTS
@@ -227,6 +226,7 @@ def get_setup_args():
         include_package_data=True,
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
+        package_dir={"": "src"},
     ))
 
     return arguments

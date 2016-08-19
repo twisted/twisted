@@ -17,7 +17,7 @@ from twisted.python import _setup, dist3
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
-    get_setup_args,
+    getSetupArgs,
     ConditionalExtension,
     _EXTRAS_REQUIRE,
     )
@@ -26,7 +26,7 @@ from twisted.python._setup import (
 
 class SetupTests(TestCase):
     """
-    Tests for L{get_setup_args}.
+    Tests for L{getSetupArgs}.
     """
 
     def test_conditionalExtensions(self):
@@ -38,10 +38,11 @@ class SetupTests(TestCase):
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: False)
-        self.patch(_setup, '_EXTENSIONS', [good_ext, bad_ext])
-        args = get_setup_args()
+
+        args = getSetupArgs(extensions=[good_ext, bad_ext])
+
         # ext_modules should be set even though it's not used.  See comment
-        # in get_setup_args
+        # in getSetupArgs
         self.assertEqual(args["ext_modules"], [good_ext, bad_ext])
         cmdclass = args["cmdclass"]
         build_ext = cmdclass["build_ext"]
@@ -57,8 +58,9 @@ class SetupTests(TestCase):
         """
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
-        self.patch(_setup, '_EXTENSIONS', [ext])
-        args = get_setup_args()
+
+        args = getSetupArgs(extensions=[ext])
+
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
@@ -331,7 +333,7 @@ class BuildPy3Tests(TestCase):
         basePath = os.environ.get('PWD', '../')
         # Overwrite the path if we are running with tox.
         basePath = os.environ.get('TOX_INI_DIR', basePath)
-        packageDir = os.path.join(basePath, 'twisted', 'test')
+        packageDir = os.path.join(basePath, 'src', 'twisted', 'test')
 
         result = builder.find_package_modules('twisted.test', packageDir)
 
