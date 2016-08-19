@@ -10,6 +10,7 @@ from zope.interface import implementer
 
 from twisted.cred import credentials
 from twisted.python.compat import nativeString
+from twisted.mail._except import IllegalClientResponse
 from twisted.mail.interfaces import IClientAuthentication
 
 

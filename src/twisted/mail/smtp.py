@@ -11,7 +11,6 @@ from __future__ import absolute_import, division
 import time
 import re
 import base64
-import types
 import socket
 import os
 import random
@@ -39,8 +38,6 @@ from twisted.python.compat import (_PY3, xrange, long, unicode, networkString,
 from twisted.mail.interfaces import IClientAuthentication
 from twisted.mail._cred import CramMD5ClientAuthenticator, LOGINAuthenticator
 from twisted.mail._cred import LOGINCredentials as _lcredentials
-
-from email.encoders import encode_base64
 
 from twisted import cred
 from twisted.python.runtime import platform
@@ -2015,12 +2012,11 @@ class SMTPSenderFactory(protocol.ClientFactory):
             toEmail = [toEmail]
         else:
             toEmailFinal = []
-            for email in toEmail:
-                if not isinstance(email, bytes):
-                    email = email.encode('ascii')
+            for _email in toEmail:
+                if not isinstance(_email, bytes):
+                    _email = _email.encode('ascii')
 
                 toEmailFinal.append(email)
-
             toEmail = toEmailFinal
 
         self.fromEmail = Address(fromEmail)

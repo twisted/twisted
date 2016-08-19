@@ -33,7 +33,7 @@ from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 
 from twisted.mail import smtp
-from twisted.mail._cred import LOGINAuthenticator, LOGINCredentials
+from twisted.mail._cred import LOGINCredentials
 
 
 try:

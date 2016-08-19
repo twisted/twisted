@@ -17,7 +17,6 @@ To do::
 
 import base64
 import binascii
-import hmac
 import re
 import copy
 import tempfile
@@ -51,6 +50,9 @@ from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
     LOGINAuthenticator, LOGINCredentials,
     PLAINAuthenticator, PLAINCredentials)
+from twisted.mail._except import (
+    IMAP4Exception, IllegalClientResponse, IllegalOperation,
+    IllegalMailboxEncoding)
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
@@ -388,15 +390,6 @@ class Command:
             unusedCallback(unuse)
 
 
-class IMAP4Exception(Exception):
-    def __init__(self, *args):
-        Exception.__init__(self, *args)
-
-class IllegalClientResponse(IMAP4Exception): pass
-
-class IllegalOperation(IMAP4Exception): pass
-
-class IllegalMailboxEncoding(IMAP4Exception): pass
 
 class IMailboxListener(Interface):
     """Interface for objects interested in mailbox events"""
