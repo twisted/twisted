@@ -161,24 +161,26 @@ class ConditionalExtension(Extension):
 _EXTENSIONS = [
     ConditionalExtension(
         "twisted.test.raiser",
-        ["twisted/test/raiser.c"],
+        sources=["src/twisted/test/raiser.c"],
         condition=lambda _: _isCPython),
 
     ConditionalExtension(
         "twisted.internet.iocpreactor.iocpsupport",
-        ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-         "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
+        sources=[
+            "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+            "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
+            ],
         libraries=["ws2_32"],
         condition=lambda _: _isCPython and sys.platform == "win32"),
 
     ConditionalExtension(
         "twisted.python._sendmsg",
-        sources=["twisted/python/_sendmsg.c"],
+        sources=["src/twisted/python/_sendmsg.c"],
         condition=lambda _: not _PY3 and sys.platform != "win32"),
 
     ConditionalExtension(
         "twisted.runner.portmap",
-        ["twisted/runner/portmap.c"],
+        sources=["src/twisted/runner/portmap.c"],
         condition=lambda builder: not _PY3 and
                                   builder._check_header("rpc/rpc.h")),
     ]
