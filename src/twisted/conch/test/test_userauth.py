@@ -82,7 +82,7 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
         """
         Return 'foo' as the answer to two questions.
         """
-        return defer.succeed((b'foo', b'foo'))
+        return defer.succeed(('foo', 'foo'))
 
 
 
@@ -712,8 +712,8 @@ class SSHUserAuthClientTests(unittest.TestCase):
             NS(b'Password: ') + b'\x00')
         self.assertEqual(
             self.authClient.transport.packets[-1],
-            (userauth.MSG_USERAUTH_REQUEST,
-             NS(b'foo') + NS(b'nancy') + NS(b'none')))
+            (userauth.MSG_USERAUTH_INFO_RESPONSE,
+             b'\x00\x00\x00\x02' + NS(b'foo') + NS(b'foo')))
 
 
     def test_USERAUTH_PK_OK_unknown_method(self):
