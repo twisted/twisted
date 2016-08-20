@@ -71,6 +71,7 @@ class Key(object):
     @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey} object
         that operations are performed with.
     """
+    @classmethod
     def fromFile(cls, filename, type=None, passphrase=None):
         """
         Load a key from a file.
@@ -90,9 +91,9 @@ class Key(object):
         """
         with open(filename, 'rb') as f:
             return cls.fromString(f.read(), type, passphrase)
-    fromFile = classmethod(fromFile)
 
 
+    @classmethod
     def fromString(cls, data, type=None, passphrase=None):
         """
         Return a Key object corresponding to the string data.
@@ -128,7 +129,6 @@ class Key(object):
             return method(data)
         else:
             return method(data, passphrase)
-    fromString = classmethod(fromString)
 
 
     @classmethod
@@ -486,6 +486,7 @@ class Key(object):
             raise BadKeyError("unknown key type %s" % (keyType,))
 
 
+    @classmethod
     def _guessStringType(cls, data):
         """
         Guess the type of key in data.  The types map to _fromString_*
@@ -512,7 +513,6 @@ class Key(object):
                 return 'agentv3'
             else:
                 return 'blob'
-    _guessStringType = classmethod(_guessStringType)
 
 
     @classmethod

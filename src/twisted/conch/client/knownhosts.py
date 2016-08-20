@@ -122,6 +122,7 @@ class PlainEntry(_BaseEntry):
         super(PlainEntry, self).__init__(keyType, publicKey, comment)
 
 
+    @classmethod
     def fromString(cls, string):
         """
         Parse a plain-text entry in a known_hosts file, and return a
@@ -148,8 +149,6 @@ class PlainEntry(_BaseEntry):
         hostnames, keyType, key, comment = _extractCommon(string)
         self = cls(hostnames.split(b","), keyType, key, comment)
         return self
-
-    fromString = classmethod(fromString)
 
 
     def matchesHost(self, hostname):
@@ -270,6 +269,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
         super(HashedEntry, self).__init__(keyType, publicKey, comment)
 
 
+    @classmethod
     def fromString(cls, string):
         """
         Load a hashed entry from a string representing a line in a known_hosts
@@ -300,8 +300,6 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
         self = cls(a2b_base64(hostSalt), a2b_base64(hostHash),
                    keyType, key, comment)
         return self
-
-    fromString = classmethod(fromString)
 
 
     def matchesHost(self, hostname):
@@ -543,6 +541,7 @@ class KnownHostsFile(object):
         self._clobber = False
 
 
+    @classmethod
     def fromPath(cls, path):
         """
         Create a new L{KnownHostsFile}, potentially reading existing known
@@ -559,8 +558,6 @@ class KnownHostsFile(object):
         knownHosts = cls(path)
         knownHosts._clobber = False
         return knownHosts
-
-    fromPath = classmethod(fromPath)
 
 
 
