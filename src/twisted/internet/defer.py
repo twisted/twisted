@@ -661,20 +661,20 @@ class Deferred:
     __repr__ = __str__
 
 
+    def __iter__(self):
+        return self
 
-if _PY3:
-    # __iter__ and __await__ support for yield from and await respectively.
-    # return with a result is a syntax error on Python 2, so, we have to use
-    # some exec hacks for it.
-    code = """def __iter__(self):
-    if getattr(self, 'result', _NO_RESULT) is _NO_RESULT:
-        yield self
-    return self.result"""
-    l = {}
-    exec(code, globals(), l)
-    Deferred.__iter__ =  l["__iter__"]
-    Deferred.__await__ = Deferred.__iter__
-    del l
+
+    def __send__(self, value=None):
+        result = getattr(self, 'result', _NO_RESULT)
+        if result is _NO_RESULT:
+            return self
+        raise StopIteration(result)
+
+
+    # For PEP-492 support (async/await)
+    __await__ = __iter__
+    __next__ = __send__
 
 
 
