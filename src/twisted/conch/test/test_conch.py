@@ -439,7 +439,7 @@ class RekeyAvatar(ConchUser):
         # Send enough bytes to the connection so that a rekey is triggered in
         # the client.
         def write(counter):
-            i = counter()
+            i = next(counter)
             if i == 60:
                 call.stop()
                 transport.session.conn.sendRequest(
@@ -455,7 +455,7 @@ class RekeyAvatar(ConchUser):
         # rekey has been initiated.  If there were, then generating a packet
         # immediately at that time would be a better way to test the
         # functionality being tested here.
-        call = LoopingCall(write, count().next)
+        call = LoopingCall(write, count())
         call.start(0.01)
 
 
