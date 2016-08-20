@@ -25,7 +25,7 @@ from sys import exc_info
 from functools import wraps
 
 # Twisted imports
-from twisted.python.compat import cmp, comparable
+from twisted.python.compat import cmp, comparable, _PY3
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
@@ -661,14 +661,20 @@ class Deferred:
     __repr__ = __str__
 
 
-    def __iter__(self):
 
-        if getattr(self, "result", _NO_RESULT) is _NO_RESULT:
-            yield self
-        raise StopIteration(self.result)
-
-    # For PEP492/async + await
-    __await__ = __iter__
+if _PY3:
+    # __iter__ and __await__ support for yield from and await respectively.
+    # return with a result is a syntax error on Python 2, so, we have to use
+    # some exec hacks for it.
+    code = """def __iter__(self):
+    if getattr(self, 'result', _NO_RESULT) is _NO_RESULT:
+        yield self
+    return self.result"""
+    l = {}
+    exec(code, globals(), l)
+    Deferred.__iter__ =  l["__iter__"]
+    Deferred.__await__ = Deferred.__iter__
+    del l
 
 
 
