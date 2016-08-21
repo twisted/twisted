@@ -1,12 +1,13 @@
-# -*- test-case-name: twisted.python.test.test_setup -*-
+# -*- test-case-name: twisted.python.test.test_dist -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Setuptools convenience functionality.
+Distutils convenience functionality.
 
-Since Twisted is not yet fully ported to Python3, it uses
-L{twisted.python.dist3} to know what to install on Python3.
+Don't use this outside of Twisted.
+
+Maintainer: Christopher Armstrong
 
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
@@ -23,23 +24,19 @@ L{twisted.python.dist3} to know what to install on Python3.
 
 @var _PLATFORM_INDEPENDENT: A list of all optional cross-platform dependencies,
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
-
-@var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
-    process.
 """
 
 import os
 import platform
 import sys
 
-from distutils.command import build_ext
+from distutils.command import build_scripts, build_ext
 from distutils.errors import CompileError
-from setuptools import Extension, find_packages
-from setuptools.command.build_py import build_py
+from setuptools import setup as _setup
+from setuptools import Extension
 
 from twisted import copyright
-from twisted.python import dist3
-from twisted.python.compat import _PY3
+from twisted.python.compat import execfile, _PY3
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -121,25 +118,6 @@ _EXTRAS_REQUIRE = {
     ),
 }
 
-# Scripts provided by Twisted on Python 2 and 3.
-_CONSOLE_SCRIPTS = [
-    "trial = twisted.scripts.trial:run",
-    "twistd = twisted.scripts.twistd:run",
-    ]
-# Scripts provided by Twisted on Python 2 only.
-_CONSOLE_SCRIPTS_PY2 = [
-    "cftp = twisted.conch.scripts.cftp:run",
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
-    "conch = twisted.conch.scripts.conch:run",
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    "pyhtmlizer = twisted.scripts.htmlizer:run",
-    "tkconch = twisted.conch.scripts.tkconch:run",
-    ]
-
-if not _PY3:
-    _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
-
-
 
 class ConditionalExtension(Extension):
     """
@@ -157,100 +135,134 @@ class ConditionalExtension(Extension):
 
 
 
-# The C extensions used for Twisted.
-_EXTENSIONS = [
-    ConditionalExtension(
-        "twisted.test.raiser",
-        sources=["src/twisted/test/raiser.c"],
-        condition=lambda _: _isCPython),
+def setup(**kw):
+    """
+    An alternative to distutils' setup() which is specially designed
+    for Twisted subprojects.
 
-    ConditionalExtension(
-        "twisted.internet.iocpreactor.iocpsupport",
-        sources=[
-            "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-            "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
+    @param conditionalExtensions: Extensions to optionally build.
+    @type conditionalExtensions: C{list} of L{ConditionalExtension}
+    """
+    return _setup(**get_setup_args(**kw))
+
+
+def get_setup_args(**kw):
+    if 'cmdclass' not in kw:
+        kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
+
+    if "conditionalExtensions" in kw:
+        extensions = kw["conditionalExtensions"]
+        del kw["conditionalExtensions"]
+
+        if 'ext_modules' not in kw:
+            # This is a workaround for distutils behavior; ext_modules isn't
+            # actually used by our custom builder.  distutils deep-down checks
+            # to see if there are any ext_modules defined before invoking
+            # the build_ext command.  We need to trigger build_ext regardless
+            # because it is the thing that does the conditional checks to see
+            # if it should build any extensions.  The reason we have to delay
+            # the conditional checks until then is that the compiler objects
+            # are not yet set up when this code is executed.
+            kw["ext_modules"] = extensions
+
+        class my_build_ext(build_ext_twisted):
+            conditionalExtensions = extensions
+        kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
+    return kw
+
+
+def getVersion(base):
+    """
+    Extract the version number.
+
+    @rtype: str
+    @returns: The version number of the project, as a string like
+    "2.0.0".
+    """
+    vfile = os.path.join(base, '_version.py')
+    ns = {'__name__': 'Nothing to see here'}
+    execfile(vfile, ns)
+    return ns['version'].base()
+
+
+
+def getExtensions():
+    """
+    Get the C extensions used for Twisted.
+    """
+    extensions = [
+        ConditionalExtension(
+            "twisted.test.raiser",
+            ["src/twisted/test/raiser.c"],
+            condition=lambda _: _isCPython
+        ),
+        ConditionalExtension(
+            "twisted.internet.iocpreactor.iocpsupport",
+            ["src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+             "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"
             ],
-        libraries=["ws2_32"],
-        condition=lambda _: _isCPython and sys.platform == "win32"),
-
-    ConditionalExtension(
-        "twisted.python._sendmsg",
-        sources=["src/twisted/python/_sendmsg.c"],
-        condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-    ConditionalExtension(
-        "twisted.runner.portmap",
-        sources=["src/twisted/runner/portmap.c"],
-        condition=lambda builder: not _PY3 and
-                                  builder._check_header("rpc/rpc.h")),
+            libraries=["ws2_32"],
+            condition=lambda _: _isCPython and sys.platform == "win32"
+        ),
+        ConditionalExtension(
+            "twisted.python._sendmsg",
+            sources=["src/twisted/python/_sendmsg.c"],
+            condition=lambda _: not _PY3 and sys.platform != "win32"
+        ),
+        ConditionalExtension(
+            "twisted.runner.portmap",
+            ["src/twisted/runner/portmap.c"],
+            condition=(
+                lambda builder: not _PY3 and builder._check_header("rpc/rpc.h")
+            )
+        ),
     ]
 
+    return extensions
 
 
-def getSetupArgs(extensions=_EXTENSIONS):
+
+def getConsoleScripts():
     """
-    @return: The keyword arguments to be used the the setup method.
-    @rtype: L{dict}
+    Returns a list of scripts for Twisted.
     """
-    arguments = STATIC_PACKAGE_METADATA.copy()
-
-    # This is a workaround for distutils behavior; ext_modules isn't
-    # actually used by our custom builder.  distutils deep-down checks
-    # to see if there are any ext_modules defined before invoking
-    # the build_ext command.  We need to trigger build_ext regardless
-    # because it is the thing that does the conditional checks to see
-    # if it should build any extensions.  The reason we have to delay
-    # the conditional checks until then is that the compiler objects
-    # are not yet set up when this code is executed.
-    arguments["ext_modules"] = extensions
-    # Use custome class to build the extensions.
-    class my_build_ext(build_ext_twisted):
-        conditionalExtensions = extensions
-    command_classes = {
-        'build_ext': my_build_ext,
-        }
-
-    if sys.version_info[0] >= 3:
-        requirements = ["zope.interface >= 4.0.2"]
-        command_classes['build_py'] = BuildPy3
+    scripts = [
+        "cftp = twisted.conch.scripts.cftp:run",
+        "ckeygen = twisted.conch.scripts.ckeygen:run",
+        "conch = twisted.conch.scripts.conch:run",
+        "mailmail = twisted.mail.scripts.mailmail:run",
+        "pyhtmlizer = twisted.scripts.htmlizer:run",
+        "tkconch = twisted.conch.scripts.tkconch:run"
+    ]
+    portedToPython3Scripts = [
+        "trial = twisted.scripts.trial:run",
+        "twist = twisted.application.twist._twist:Twist.main",
+        "twistd = twisted.scripts.twistd:run",
+    ]
+    if _PY3:
+        return portedToPython3Scripts
     else:
-        requirements = ["zope.interface >= 3.6.0"]
-
-    requirements.append("constantly >= 15.1")
-
-    arguments.update(dict(
-        packages=find_packages("src"),
-        install_requires=requirements,
-        entry_points={
-            'console_scripts':  _CONSOLE_SCRIPTS
-        },
-        cmdclass=command_classes,
-        include_package_data=True,
-        zip_safe=False,
-        extras_require=_EXTRAS_REQUIRE,
-        package_dir={"": "src"},
-    ))
-
-    return arguments
-
-
-
-class BuildPy3(build_py):
-    """
-    A version of build_py that doesn't install the modules that aren't yet
-    ported to Python 3.
-    """
-    def find_package_modules(self, package, package_dir):
-        modules = [
-            module for module
-            in build_py.find_package_modules(self, package, package_dir)
-            if ".".join([module[0], module[1]]) in dist3.modulesToInstall or
-               ".".join([module[0], module[1]]) in dist3.testDataFiles]
-        return modules
-
+        return scripts + portedToPython3Scripts
 
 
 ## Helpers and distutil tweaks
+
+class build_scripts_twisted(build_scripts.build_scripts):
+    """
+    Renames scripts so they end with '.py' on Windows.
+    """
+    def run(self):
+        build_scripts.build_scripts.run(self)
+        if not os.name == "nt":
+            return
+        for f in os.listdir(self.build_dir):
+            fpath = os.path.join(self.build_dir, f)
+            if not fpath.endswith(".py"):
+                pypath = fpath + ".py"
+                if os.path.exists(pypath):
+                    os.unlink(pypath)
+                os.rename(fpath, pypath)
+
 
 
 class build_ext_twisted(build_ext.build_ext):
