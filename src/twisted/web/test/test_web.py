@@ -727,10 +727,6 @@ class RequestTests(unittest.TestCase):
 
 
 class GzipEncoderTests(unittest.TestCase):
-
-    if _PY3:
-        skip = "GzipEncoder not ported to Python 3 yet."
-
     def setUp(self):
         self.channel = DummyChannel()
         staticResource = Data(b"Some data", "text/plain")
@@ -1059,10 +1055,6 @@ class AllowedMethodsTests(unittest.TestCase):
     'C{twisted.web.resource._computeAllowedMethods} is provided by a
     default should the subclass not provide the method.
     """
-
-    if _PY3:
-        skip = "Allowed methods functionality not ported to Python 3."
-
     def _getReq(self):
         """
         Generate a dummy request for use by C{_computeAllowedMethod} tests.
