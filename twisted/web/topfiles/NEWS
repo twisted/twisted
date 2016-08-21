@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 16.4.0pre2 (2016-08-22)
+===================================
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel now resumes producing on finished,
+   non-persistent connections. This prevents HTTP/1 servers using TLS
+   from leaking a CLOSE_WAIT socket per request. (#8766)
+
+
 Twisted Web 16.4.0pre1 (2016-08-11)
 ===================================
 
