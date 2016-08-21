@@ -191,7 +191,7 @@ class ElementTests(unittest.TestCase):
         self.assertRaises(TypeError, element.addContent, b'bytes')
     if not _PY3:
         test_addContentBytes.skip = (
-            "Bytes behavior of addContent only provided on Python 3.")
+            "Bytes behavior of addContent only provided on Python 2.")
 
 
     def test_addContentBytesNonASCII(self):
