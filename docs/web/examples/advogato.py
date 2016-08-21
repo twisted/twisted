@@ -24,7 +24,8 @@ class AddDiary:
         self.proxy = Proxy('http://advogato.org/XMLRPC')
 
     def __call__(self, filename):
-        self.data = open(filename).read()
+        with open(filename) as f:
+            self.data = f.read()
         d = self.proxy.callRemote('authenticate', self.name, self.password)
         d.addCallbacks(self.login, self.noLogin)
 

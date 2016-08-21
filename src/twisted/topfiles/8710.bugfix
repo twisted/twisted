@@ -1,0 +1,1 @@
+twisted.application.strports.service (and thus twistd) no longer swallow asynchronous exceptions from IStreamServerEndpoint.listen.

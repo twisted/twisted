@@ -1,5 +1,5 @@
 # Fix asymmetry
-from twisted.application import internet, service
+from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -53,7 +53,7 @@ class FingerService(service.Service):
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService(moshez='Happy and well')
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79,f.getFingerFactory()
+strports.service("tcp:79", f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(1079,f.getFingerSetterFactory()
+strports.service("tcp:1079", f.getFingerSetterFactory()
                    ).setServiceParent(serviceCollection)

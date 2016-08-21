@@ -1,0 +1,1 @@
+twisted.mail.protocols.DomainSMTP and DomainESMTP, deprecated since 2003, have been removed.

@@ -61,7 +61,7 @@ def main(reactor):
     options = ssl.optionsForClientTLS(
         hostname=TARGET_HOST,
         trustRoot=serverCertificate,
-        # `acceptableProtocols` is the targetted option for this example.
+        # `acceptableProtocols` is the targeted option for this example.
         acceptableProtocols=ACCEPTABLE_PROTOCOLS,
     )
 

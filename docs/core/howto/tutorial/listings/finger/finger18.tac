@@ -1,6 +1,6 @@
 # Do everything properly
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.web import resource, server, static, xmlrpc
@@ -94,11 +94,12 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        for line in open(self.filename):
-            user, status = line.split(':', 1)
-            user = user.strip()
-            status = status.strip()
-            self.users[user] = status
+        with open(self.filename) as f:
+            for line in f:
+                user, status = line.split(':', 1)
+                user = user.strip()
+                status = status.strip()
+                self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
@@ -120,7 +121,7 @@ class FingerService(service.Service):
         return r
 
     def getIRCBot(self, nickname):
-        f = protocol.ReconnectingClientFactory()
+        f = protocol.ClientFactory()
         f.protocol = IRCReplyBot
         f.nickname = nickname
         f.getUser = self.getUser
@@ -139,9 +140,10 @@ application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-internet.TCPServer(79, f.getFingerFactory()
+strports.service("tcp:79", f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(f.getResource())
+strports.service("tcp:8000", server.Site(f.getResource())
                    ).setServiceParent(serviceCollection)
-internet.TCPClient('irc.freenode.org', 6667, f.getIRCBot('fingerbot')
-                   ).setServiceParent(serviceCollection)
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    f.getIRCBot('fingerbot')).setServiceParent(serviceCollection)

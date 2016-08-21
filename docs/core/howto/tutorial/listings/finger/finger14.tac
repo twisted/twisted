@@ -1,5 +1,5 @@
 # Read from file
-from twisted.application import internet, service
+from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -23,11 +23,12 @@ class FingerService(service.Service):
         self.filename = filename
 
     def _read(self):
-        for line in open(self.filename):
-            user, status = line.split(':', 1)
-            user = user.strip()
-            status = status.strip()
-            self.users[user] = status
+        with open(self.filename) as f:
+            for line in f:
+                user, status = line.split(':', 1)
+                user = user.strip()
+                status = status.strip()
+                self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def startService(self):
@@ -50,7 +51,7 @@ class FingerService(service.Service):
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
-finger = internet.TCPServer(79, f.getFingerFactory())
+finger = strports.service("tcp:79", f.getFingerFactory())
 
 finger.setServiceParent(service.IServiceCollection(application))
 f.setServiceParent(service.IServiceCollection(application))

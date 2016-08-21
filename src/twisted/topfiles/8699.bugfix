@@ -1,0 +1,1 @@
+twisted.logger._flatten.flattenEvent() now does not crash if passed a unicode string.

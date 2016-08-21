@@ -39,8 +39,8 @@ different resources at a few different URLs.
 
 
 First things first: we need to import :api:`twisted.web.server.Site <Site>` , the factory for HTTP servers, :api:`twisted.web.resource.Resource <Resource>` , a convenient base class
-for custom pages, and :api:`twisted.internet.reactor <reactor>` ,
-the object which implements the Twisted main loop. We'll also import :api:`twisted.web.static.File <File>` to use as the resource at one
+for custom pages, :api:`twisted.internet.reactor <reactor>` ,
+the object which implements the Twisted main loop, and :api:`twisted.internet.endpoints <endpoints>`, which contains classes for creating listening sockets. We'll also import :api:`twisted.web.static.File <File>` to use as the resource at one
 of the example URLs.
 
 
@@ -49,10 +49,10 @@ of the example URLs.
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
     from twisted.web.static import File
 
 
@@ -67,7 +67,7 @@ hierarchy: all URLs are children of this resource.
 
 .. code-block:: python
 
-    
+
     root = Resource()
 
 
@@ -83,7 +83,7 @@ URLs ``/foo`` , ``/bar`` , and ``/baz`` :
 
 .. code-block:: python
 
-    
+
     root.putChild("foo", File("/tmp"))
     root.putChild("bar", File("/lost+found"))
     root.putChild("baz", File("/opt"))
@@ -100,15 +100,16 @@ resource, associate it with a listening server port, and start the reactor:
 
 .. code-block:: python
 
-    
+
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
 
 
-With this server running, ``http://localhost:8880/foo`` 
+With this server running, ``http://localhost:8880/foo``
 will serve a listing of files
 from ``/tmp`` , ``http://localhost:8880/bar`` will
 serve a listing of files from ``/lost+found`` ,
@@ -126,19 +127,20 @@ Here's the whole example uninterrupted:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
     from twisted.web.static import File
-    
+
     root = Resource()
     root.putChild("foo", File("/tmp"))
     root.putChild("bar", File("/lost+found"))
     root.putChild("baz", File("/opt"))
-    
+
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 

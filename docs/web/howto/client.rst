@@ -343,20 +343,17 @@ negotiation performed when an *HTTPS* URI is requested, there's
 one extra object to pay attention to: the SSL context factory.
 
 
-    
 
 
 
-``Agent`` 's constructor takes an optional second argument, a
-context factory.  This is an object like the context factory described
-in :doc:`Using SSL in Twisted <../../core/howto/ssl>` but has
-one small difference.  The ``getContext`` method of this factory
-accepts the address from the URL being requested.  This allows it to
-return a context object which verifies that the server's certificate
-matches the URL being requested.
+
+``Agent`` 's constructor takes an optional second argument, a context factory.
+Generally you don't want to create the context factory yourself: it's easy to get wrong.
+Instead, Twisted provides helpers for building correctly configured ones.
+For example, you can use :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>`, which takes care of all hostname certificate verification for you.
 
 
-    
+
 
 
 
@@ -374,18 +371,14 @@ an *HTTPS* URL with no certificate verification.
     from twisted.python.log import err
     from twisted.web.client import Agent
     from twisted.internet import reactor
-    from twisted.internet.ssl import ClientContextFactory
-    
-    class WebClientContextFactory(ClientContextFactory):
-        def getContext(self, hostname, port):
-            return ClientContextFactory.getContext(self)
-    
+    from twisted.internet.ssl import optionsForClientTLS
+
     def display(response):
         print("Received response")
         print(response)
     
     def main():
-        contextFactory = WebClientContextFactory()
+        contextFactory = optionsForClientTLS(u"https://example.com/")
         agent = Agent(reactor, contextFactory)
         d = agent.request("GET", "https://example.com/")
         d.addCallbacks(display, err)
@@ -399,27 +392,11 @@ an *HTTPS* URL with no certificate verification.
 
     
 
-The important point to notice here is that ``getContext`` now
-accepts two arguments, a hostname and a port number.  These two arguments,
-a ``str`` and an ``int`` , give the address to which a
-connection is being established to request an HTTPS URL.  Because an agent
-might make multiple requests over a single connection,
-``getContext`` may not be called once for each request.  A second
-or later request for a URL with the same hostname as a previous request
-may re-use an existing connection, and therefore will re-use the
-previously returned context object.
 
 
-    
+For more fine-grained over the TLS configuration, check out the documentation for the :api:`twisted.internet.ssl <ssl>` module and :doc:`Using SSL in Twisted <../../core/howto/ssl>`.
 
 
-
-To configure SSL options or enable certificate verification or hostname
-checking, provide a context factory which creates suitably configured
-context objects.
-
-
-    
 
 
 
