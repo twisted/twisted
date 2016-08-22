@@ -55,9 +55,6 @@ environment:
 
 matrix:
   allow_failures:
-    # Some tests are still failing on Python 3.
-    # These tests will be fixed in separate tickets.
-    - PYTHON_VERSION: "3.5"
     # Some IOCP tests are failing on Appveyor:
     # https://twistedmatrix.com/trac/ticket/8679
     - TWISTED_REACTOR: "iocp"
