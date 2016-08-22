@@ -343,6 +343,9 @@ class AbstractFilePath(object):
             # The winerror attribute is bound to the Windows error code while
             # the errno attribute is bound to a translation of that code to a
             # perhaps equivalent POSIX error number.
+            #
+            # For further details, refer to:
+            # https://docs.python.org/3/library/exceptions.html#OSError
 
             # If not for this clause OSError would be handling all of these
             # errors on Windows.  The errno attribute contains a POSIX error
