@@ -138,8 +138,11 @@ def connectedServerAndClient(test, realm=None):
     pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
     # Challenge-response authentication:
     pump.flush()
-    test.addCleanup(lambda: clientBroker.connectionLost(None))
-    test.addCleanup(lambda: serverBroker.connectionLost(None))
+    def maybeDisconnect(broker):
+        if not broker.disconnected:
+            broker.connectionLost(failure.Failure(main.CONNECTION_DONE))
+    test.addCleanup(maybeDisconnect, clientBroker)
+    test.addCleanup(maybeDisconnect, serverBroker)
     return clientBroker, serverBroker, pump
 
 
