@@ -117,7 +117,7 @@ class IOPump:
 
 
 
-def connectedServerAndClient(realm=None):
+def connectedServerAndClient(test, realm=None):
     """
     Connect a client and server L{Broker} together with an L{IOPump}
 
@@ -138,6 +138,8 @@ def connectedServerAndClient(realm=None):
     pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
     # Challenge-response authentication:
     pump.flush()
+    test.addCleanup(lambda: clientBroker.connectionLost(None))
+    test.addCleanup(lambda: serverBroker.connectionLost(None))
     return clientBroker, serverBroker, pump
 
 
@@ -545,7 +547,7 @@ class BrokerTests(unittest.TestCase):
         self.fail("This should cause an error, not %s" % (result,))
 
     def test_reference(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
 
         class X(pb.Referenceable):
             def remote_catch(self,arg):
@@ -569,7 +571,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(y.remoteMethod('throw'), y.remoteMethod('throw'))
 
     def test_result(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         for x, y in (c, s), (s, c):
             # test reflexivity
             foo = SimpleRemote()
@@ -592,7 +594,7 @@ class BrokerTests(unittest.TestCase):
     def test_tooManyRefs(self):
         l = []
         e = []
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
@@ -607,7 +609,7 @@ class BrokerTests(unittest.TestCase):
                           "expected %s got %s" % (expected, len(l)))
 
     def test_copy(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = NestedCopy()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
@@ -620,7 +622,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(self.thunkResult.z[0], 'test')
 
     def test_observe(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
 
         # this is really testing the comparison between remote objects, to make
         # sure that you can *UN*observe when you have an observer architecture.
@@ -640,7 +642,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(b.obj, 1, 'notified too much')
 
     def test_defer(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         d = DeferredRemote()
         s.setNameForLocal("d", d)
         e = c.remoteForName("d")
@@ -656,7 +658,7 @@ class BrokerTests(unittest.TestCase):
 
 
     def test_refcount(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
@@ -683,7 +685,7 @@ class BrokerTests(unittest.TestCase):
         self.assertNotIn(rluid, s.localObjects)
 
     def test_cache(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         obj = NestedCache()
         obj2 = NestedComplicatedCache()
         vcc = obj2.c
@@ -758,7 +760,7 @@ class BrokerTests(unittest.TestCase):
             os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
         except OSError:
             pass # Sometimes it's not there.
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = GetPublisher()
         # foo.pub.timestamp = 1.0
         s.setNameForLocal("foo", foo)
@@ -772,7 +774,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(obj.yayIGotPublished, 1)
         # timestamp's dirty, we don't have a cache file
         self.assertEqual(obj._wasCleanWhenLoaded, 0)
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
         bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
@@ -786,7 +788,7 @@ class BrokerTests(unittest.TestCase):
 
 
     def test_factoryCopy(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         ID = 99
         obj = NestedCopy()
         s.setNameForLocal("foo", obj)
@@ -854,7 +856,7 @@ class PagingTests(unittest.TestCase):
         Test L{util.StringPager}, passing a callback to fire when all pages
         are sent.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value=10))
         x = c.remoteForName("foo")
         l = []
@@ -873,7 +875,7 @@ class PagingTests(unittest.TestCase):
         """
         Test L{util.StringPager} without a callback.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         s.setNameForLocal("foo", Pagerizer(None))
         x = c.remoteForName("foo")
         l = []
@@ -890,7 +892,7 @@ class PagingTests(unittest.TestCase):
         """
         filenameEmpty = self.mktemp()
         open(filenameEmpty, 'w').close()
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pagerizer = FilePagerizer(filenameEmpty, None)
         s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
@@ -911,7 +913,7 @@ class PagingTests(unittest.TestCase):
         Test L{util.FilePager}, passing a callback to fire when all pages
         are sent, and verify that the pager doesn't keep chunks in memory.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pagerizer = FilePagerizer(self.filename, finishedCallback,
                                   'frodo', value = 9)
         s.setNameForLocal("bar", pagerizer)
@@ -933,7 +935,7 @@ class PagingTests(unittest.TestCase):
         """
         Test L{util.FilePager} without a callback.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pagerizer = FilePagerizer(self.filename, None)
         s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
@@ -990,7 +992,7 @@ class DisconnectionTests(unittest.TestCase):
         self.objectCallback = 1
 
     def test_badSerialization(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pump.pump()
         s.setNameForLocal("o", BadCopySet())
         g = c.remoteForName("o")
@@ -1000,7 +1002,7 @@ class DisconnectionTests(unittest.TestCase):
         self.assertEqual(len(l), 1)
 
     def test_disconnection(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pump.pump()
         s.setNameForLocal("o", SimpleRemote())
 
@@ -1184,7 +1186,8 @@ class NewCredLeakTests(unittest.TestCase):
             self.mindRef = weakref.ref(mind)
 
         clientBroker, serverBroker, pump = connectedServerAndClient(
-                LeakyRealm(setMindRef))
+            test=self, realm=LeakyRealm(setMindRef)
+        )
 
         # log in from the client
         connectionBroken = []
