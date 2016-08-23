@@ -49,48 +49,63 @@ class LegacyLogObserverWrapper(object):
         @param event: an event
         @type event: L{dict}
         """
+        self.legacyObserver(_ensureCompatWithLegacyObservers(event))
 
-        # The "message" key is required by textFromEventDict()
-        if "message" not in event:
+
+
+def _ensureCompatWithLegacyObservers(event):
+    """
+    Edit new-style log events to ensure compatibility with
+    observers that expect legacy events.
+
+    @param event: an event
+    @type event: L{dict}
+
+    @return: an edited event that is compatible with observers
+        that expect legacy events.
+    @rtype: L{dict}
+    """
+    # The "message" key is required by textFromEventDict()
+    if "message" not in event:
+        event["message"] = ()
+
+    if "time" not in event:
+        event["time"] = event["log_time"]
+
+    if "system" not in event:
+        event["system"] = event.get("log_system", "-")
+
+    # Format new style -> old style
+    if "format" not in event and event.get("log_format", None) is not None:
+        # Create an object that implements __str__() in order to defer the
+        # work of formatting until it's needed by a legacy log observer.
+        event["format"] = "%(log_legacy)s"
+        event["log_legacy"] = StringifiableFromEvent(event.copy())
+
+        # In the old-style system, the 'message' key always holds a tuple
+        # of messages. If we find the 'message' key here to not be a
+        # tuple, it has been passed as new-style parameter. We drop it
+        # here because we render it using the old-style 'format' key,
+        # which otherwise doesn't get precedence, and the original event
+        # has been copied above.
+        if not isinstance(event["message"], tuple):
             event["message"] = ()
 
-        if "time" not in event:
-            event["time"] = event["log_time"]
+    # From log.failure() -> isError blah blah
+    if "log_failure" in event:
+        if "failure" not in event:
+            event["failure"] = event["log_failure"]
+        if "isError" not in event:
+            event["isError"] = 1
+        if "why" not in event:
+            event["why"] = formatEvent(event)
+    elif "isError" not in event:
+        if event["log_level"] in (LogLevel.error, LogLevel.critical):
+            event["isError"] = 1
+        else:
+            event["isError"] = 0
 
-        if "system" not in event:
-            event["system"] = event.get("log_system", "-")
-
-        # Format new style -> old style
-        if "format" not in event and event.get("log_format", None) is not None:
-            # Create an object that implements __str__() in order to defer the
-            # work of formatting until it's needed by a legacy log observer.
-            event["format"] = "%(log_legacy)s"
-            event["log_legacy"] = StringifiableFromEvent(event.copy())
-
-            # In the old-style system, the 'message' key always holds a tuple
-            # of messages. If we find the 'message' key here to not be a
-            # tuple, it has been passed as new-style parameter. We drop it
-            # here because we render it using the old-style 'format' key,
-            # which otherwise doesn't get precedence, and the original event
-            # has been copied above.
-            if not isinstance(event["message"], tuple):
-                event["message"] = ()
-
-        # From log.failure() -> isError blah blah
-        if "log_failure" in event:
-            if "failure" not in event:
-                event["failure"] = event["log_failure"]
-            if "isError" not in event:
-                event["isError"] = 1
-            if "why" not in event:
-                event["why"] = formatEvent(event)
-        elif "isError" not in event:
-            if event["log_level"] in (LogLevel.error, LogLevel.critical):
-                event["isError"] = 1
-            else:
-                event["isError"] = 0
-
-        self.legacyObserver(event)
+    return event
 
 
 
