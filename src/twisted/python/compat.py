@@ -88,8 +88,10 @@ def inet_pton(af, addr):
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
     elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        if [x for x in addr if x not in string.hexdigits + ':.']:
-            raise ValueError("Illegal characters: %r" % (''.join(x),))
+        illegalChars = [x for x in addr if x not in string.hexdigits + ':.']
+        if illegalChars:
+            raise ValueError("Illegal characters: %r" %
+                             (''.join(illegalChars),))
 
         parts = addr.split(':')
         elided = parts.count('')
