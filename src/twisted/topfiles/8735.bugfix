@@ -1,0 +1,1 @@
+Arguments to processes on Windows are now passed mbcs-encoded arguments.  This prevents process-related tests from hanging on Windows with Python 3.
