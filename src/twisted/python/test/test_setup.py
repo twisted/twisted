@@ -295,6 +295,9 @@ class BuildPy3Tests(TestCase):
     Tests for L{BuildPy3}.
     """
 
+    if not _PY3:
+        skip = "BuildPy3 setuptools command used with Python 3 only."
+
     def test_find_package_modules(self):
         """
         Will filter the found modules including only the modules listed in
