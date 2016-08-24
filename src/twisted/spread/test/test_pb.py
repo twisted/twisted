@@ -11,9 +11,11 @@ only specific tests for old API.
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
+from __future__ import absolute_import, division
+
 import sys, os, time, gc, weakref
 
-from cStringIO import StringIO
+from io import BytesIO as StringIO
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
@@ -23,6 +25,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
+from twisted.python.compat import iterbytes, xrange, _PY3
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 
@@ -103,9 +106,9 @@ class IOPump:
         self.serverIO.truncate()
         self.client.transport._checkProducer()
         self.server.transport._checkProducer()
-        for byte in cData:
+        for byte in iterbytes(cData):
             self.server.dataReceived(byte)
-        for byte in sData:
+        for byte in iterbytes(sData):
             self.client.dataReceived(byte)
         if cData or sData:
             return 1
@@ -114,7 +117,7 @@ class IOPump:
 
 
 
-def connectedServerAndClient(realm=None):
+def connectedServerAndClient(test, realm=None):
     """
     Connect a client and server L{Broker} together with an L{IOPump}
 
@@ -124,7 +127,7 @@ def connectedServerAndClient(realm=None):
     """
     realm = realm or DummyRealm()
     clientBroker = pb.Broker()
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest='guest')
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest=b'guest')
     factory = pb.PBServerFactory(portal.Portal(realm, [checker]))
     serverBroker = factory.buildProtocol(('127.0.0.1',))
 
@@ -135,6 +138,11 @@ def connectedServerAndClient(realm=None):
     pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
     # Challenge-response authentication:
     pump.flush()
+    def maybeDisconnect(broker):
+        if not broker.disconnected:
+            broker.connectionLost(failure.Failure(main.CONNECTION_DONE))
+    test.addCleanup(maybeDisconnect, clientBroker)
+    test.addCleanup(maybeDisconnect, serverBroker)
     return clientBroker, serverBroker, pump
 
 
@@ -542,7 +550,7 @@ class BrokerTests(unittest.TestCase):
         self.fail("This should cause an error, not %s" % (result,))
 
     def test_reference(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
 
         class X(pb.Referenceable):
             def remote_catch(self,arg):
@@ -566,7 +574,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(y.remoteMethod('throw'), y.remoteMethod('throw'))
 
     def test_result(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         for x, y in (c, s), (s, c):
             # test reflexivity
             foo = SimpleRemote()
@@ -589,7 +597,7 @@ class BrokerTests(unittest.TestCase):
     def test_tooManyRefs(self):
         l = []
         e = []
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
@@ -604,7 +612,7 @@ class BrokerTests(unittest.TestCase):
                           "expected %s got %s" % (expected, len(l)))
 
     def test_copy(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = NestedCopy()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
@@ -617,7 +625,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(self.thunkResult.z[0], 'test')
 
     def test_observe(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
 
         # this is really testing the comparison between remote objects, to make
         # sure that you can *UN*observe when you have an observer architecture.
@@ -637,7 +645,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(b.obj, 1, 'notified too much')
 
     def test_defer(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         d = DeferredRemote()
         s.setNameForLocal("d", d)
         e = c.remoteForName("d")
@@ -653,7 +661,7 @@ class BrokerTests(unittest.TestCase):
 
 
     def test_refcount(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
@@ -680,7 +688,7 @@ class BrokerTests(unittest.TestCase):
         self.assertNotIn(rluid, s.localObjects)
 
     def test_cache(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         obj = NestedCache()
         obj2 = NestedComplicatedCache()
         vcc = obj2.c
@@ -707,9 +715,10 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(complex[0].foo, 4)
         self.assertEqual(len(coll), 2)
         cp = coll[0][0]
-        self.assertIs(cp.checkMethod().im_self, cp,
+        self.assertIdentical(cp.checkMethod().__self__ if _PY3 else
+                             cp.checkMethod().im_self, cp,
                              "potential refcounting issue")
-        self.assertIs(cp.checkSelf(), cp,
+        self.assertIdentical(cp.checkSelf(), cp,
                              "other potential refcounting issue")
         col2 = []
         o2.callRemote('putCache',cp).addCallback(col2.append)
@@ -754,7 +763,7 @@ class BrokerTests(unittest.TestCase):
             os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
         except OSError:
             pass # Sometimes it's not there.
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         foo = GetPublisher()
         # foo.pub.timestamp = 1.0
         s.setNameForLocal("foo", foo)
@@ -768,7 +777,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(obj.yayIGotPublished, 1)
         # timestamp's dirty, we don't have a cache file
         self.assertEqual(obj._wasCleanWhenLoaded, 0)
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
         bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
@@ -782,7 +791,7 @@ class BrokerTests(unittest.TestCase):
 
 
     def test_factoryCopy(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         ID = 99
         obj = NestedCopy()
         s.setNameForLocal("foo", obj)
@@ -796,7 +805,7 @@ class BrokerTests(unittest.TestCase):
             "ID not correct on factory object %s" % (self.thunkResult,))
 
 
-bigString = "helloworld" * 50
+bigString = b"helloworld" * 50
 
 callbackArgs = None
 callbackKeyword = None
@@ -825,7 +834,7 @@ class FilePagerizer(pb.Referenceable):
         self.callback, self.args, self.kw = callback, args, kw
 
     def remote_getPages(self, collector):
-        self.pager = util.FilePager(collector, file(self.filename),
+        self.pager = util.FilePager(collector, open(self.filename, 'rb'),
                                     self.callback, *self.args, **self.kw)
         self.args = self.kw = None
 
@@ -841,8 +850,8 @@ class PagingTests(unittest.TestCase):
         Create a file used to test L{util.FilePager}.
         """
         self.filename = self.mktemp()
-        with open(self.filename, 'w') as fd:
-            fd.write(bigString)
+        with open(self.filename, 'wb') as f:
+            f.write(bigString)
 
 
     def test_pagingWithCallback(self):
@@ -850,14 +859,14 @@ class PagingTests(unittest.TestCase):
         Test L{util.StringPager}, passing a callback to fire when all pages
         are sent.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value=10))
         x = c.remoteForName("foo")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        self.assertEqual(''.join(l[0]), bigString,
+        self.assertEqual(b''.join(l[0]), bigString,
                           "Pages received not equal to pages sent!")
         self.assertEqual(callbackArgs, ('hello',),
                           "Completed callback not invoked")
@@ -869,14 +878,14 @@ class PagingTests(unittest.TestCase):
         """
         Test L{util.StringPager} without a callback.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         s.setNameForLocal("foo", Pagerizer(None))
         x = c.remoteForName("foo")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        self.assertEqual(''.join(l[0]), bigString,
+        self.assertEqual(b''.join(l[0]), bigString,
                           "Pages received not equal to pages sent!")
 
 
@@ -886,7 +895,7 @@ class PagingTests(unittest.TestCase):
         """
         filenameEmpty = self.mktemp()
         open(filenameEmpty, 'w').close()
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pagerizer = FilePagerizer(filenameEmpty, None)
         s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
@@ -898,7 +907,7 @@ class PagingTests(unittest.TestCase):
             ttl -= 1
         if not ttl:
             self.fail('getAllPages timed out')
-        self.assertEqual(''.join(l[0]), '',
+        self.assertEqual(b''.join(l[0]), b'',
                           "Pages received not equal to pages sent!")
 
 
@@ -907,7 +916,7 @@ class PagingTests(unittest.TestCase):
         Test L{util.FilePager}, passing a callback to fire when all pages
         are sent, and verify that the pager doesn't keep chunks in memory.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pagerizer = FilePagerizer(self.filename, finishedCallback,
                                   'frodo', value = 9)
         s.setNameForLocal("bar", pagerizer)
@@ -916,7 +925,7 @@ class PagingTests(unittest.TestCase):
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        self.assertEqual(''.join(l[0]), bigString,
+        self.assertEqual(b''.join(l[0]), bigString,
                           "Pages received not equal to pages sent!")
         self.assertEqual(callbackArgs, ('frodo',),
                           "Completed callback not invoked")
@@ -929,7 +938,7 @@ class PagingTests(unittest.TestCase):
         """
         Test L{util.FilePager} without a callback.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pagerizer = FilePagerizer(self.filename, None)
         s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
@@ -937,7 +946,7 @@ class PagingTests(unittest.TestCase):
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        self.assertEqual(''.join(l[0]), bigString,
+        self.assertEqual(b''.join(l[0]), bigString,
                           "Pages received not equal to pages sent!")
         self.assertEqual(pagerizer.pager.chunks, [])
 
@@ -986,7 +995,7 @@ class DisconnectionTests(unittest.TestCase):
         self.objectCallback = 1
 
     def test_badSerialization(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pump.pump()
         s.setNameForLocal("o", BadCopySet())
         g = c.remoteForName("o")
@@ -996,7 +1005,7 @@ class DisconnectionTests(unittest.TestCase):
         self.assertEqual(len(l), 1)
 
     def test_disconnection(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedServerAndClient(test=self)
         pump.pump()
         s.setNameForLocal("o", SimpleRemote())
 
@@ -1180,17 +1189,18 @@ class NewCredLeakTests(unittest.TestCase):
             self.mindRef = weakref.ref(mind)
 
         clientBroker, serverBroker, pump = connectedServerAndClient(
-                LeakyRealm(setMindRef))
+            test=self, realm=LeakyRealm(setMindRef)
+        )
 
         # log in from the client
         connectionBroken = []
         root = clientBroker.remoteForName("root")
-        d = root.callRemote("login", 'guest')
-        def cbResponse(result):
-            (challenge, challenger) = result
+        d = root.callRemote("login", b'guest')
+        def cbResponse(x):
+            challenge, challenger = x
             mind = SimpleRemote()
             return challenger.callRemote("respond",
-                    pb.respond(challenge, 'guest'), mind)
+                    pb.respond(challenge, b'guest'), mind)
         d.addCallback(cbResponse)
         def connectionLost(_):
             pump.stop() # don't try to pump data anymore - it won't work
@@ -1349,7 +1359,7 @@ class NewCredTests(unittest.TestCase):
         """
         clientFactory = pb.PBClientFactory()
         loginDeferred = clientFactory.login(
-            credentials.UsernamePassword("foo", "bar"))
+            credentials.UsernamePassword(b"foo", b"bar"))
         clientFactory.clientConnectionFailed(
             None,
             failure.Failure(
@@ -1376,9 +1386,9 @@ class NewCredTests(unittest.TestCase):
         that when the connection is dropped the avatar is logged out.
         """
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
-        creds = credentials.UsernamePassword("user", "pass")
+        creds = credentials.UsernamePassword(b"user", b"pass")
 
         # NOTE: real code probably won't need anything where we have the
         # "BRAINS!" argument, passing None is fine. We just do it here to
@@ -1424,10 +1434,10 @@ class NewCredTests(unittest.TestCase):
         self.realm.perspectiveFactory = EventPerspective
 
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(foo='bar'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(foo=b'bar'))
         factory = pb.PBClientFactory()
         d = factory.login(
-            credentials.UsernamePassword('foo', 'bar'), "BRAINS!")
+            credentials.UsernamePassword(b'foo', b'bar'), "BRAINS!")
         def cbLoggedIn(avatar):
             # Just wait for the logout to happen, as it should since the
             # reference to the avatar will shortly no longer exists.
@@ -1451,13 +1461,13 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(
-                foo='bar', baz='quux'))
+                foo=b'bar', baz=b'quux'))
         factory = pb.PBClientFactory()
 
         firstLogin = factory.login(
-            credentials.UsernamePassword('foo', 'bar'), "BRAINS!")
+            credentials.UsernamePassword(b'foo', b'bar'), "BRAINS!")
         secondLogin = factory.login(
-            credentials.UsernamePassword('baz', 'quux'), "BRAINS!")
+            credentials.UsernamePassword(b'baz', b'quux'), "BRAINS!")
         d = gatherResults([firstLogin, secondLogin])
         def cbLoggedIn(result):
             (first, second) = result
@@ -1465,10 +1475,10 @@ class NewCredTests(unittest.TestCase):
                     first.callRemote('getAvatarId'),
                     second.callRemote('getAvatarId')])
         d.addCallback(cbLoggedIn)
-        def cbAvatarIds(result):
-            (first, second) = result
-            self.assertEqual(first, 'foo')
-            self.assertEqual(second, 'baz')
+        def cbAvatarIds(x):
+            first, second = x
+            self.assertEqual(first, b'foo')
+            self.assertEqual(second, b'baz')
         d.addCallback(cbAvatarIds)
         d.addCallback(self._disconnect, factory)
 
@@ -1483,13 +1493,13 @@ class NewCredTests(unittest.TestCase):
         fails in the appropriate way.
         """
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
 
         firstLogin = factory.login(
-            credentials.UsernamePassword('nosuchuser', 'pass'))
+            credentials.UsernamePassword(b'nosuchuser', b'pass'))
         secondLogin = factory.login(
-            credentials.UsernamePassword('user', 'wrongpass'))
+            credentials.UsernamePassword(b'user', b'wrongpass'))
 
         self.assertFailure(firstLogin, UnauthorizedLogin)
         self.assertFailure(secondLogin, UnauthorizedLogin)
@@ -1558,7 +1568,7 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
         d = factory.login(credentials.Anonymous(), "BRAINS!")
 
@@ -1582,10 +1592,10 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
         d = factory.login(
-            credentials.UsernamePassword('user', 'pass'), "BRAINS!")
+            credentials.UsernamePassword(b'user', b'pass'), "BRAINS!")
 
         def cbLogin(perspective):
             return perspective.callRemote('add', 100, 23)
@@ -1606,10 +1616,10 @@ class NewCredTests(unittest.TestCase):
         cred.
         """
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
         d = factory.login(
-            credentials.UsernamePassword("user", "pass"), "BRAINS!")
+            credentials.UsernamePassword(b"user", b"pass"), "BRAINS!")
 
         def cbLogin(perspective):
             return perspective.callRemote("getViewPoint")
@@ -1656,7 +1666,7 @@ class NSPTests(unittest.TestCase):
         self.realm.perspectiveFactory = NonSubclassingPerspective
         self.portal = portal.Portal(self.realm)
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        self.checker.addUser("user", "pass")
+        self.checker.addUser(b"user", b"pass")
         self.portal.registerChecker(self.checker)
         self.factory = WrappingFactory(pb.PBServerFactory(self.portal))
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
@@ -1670,7 +1680,7 @@ class NSPTests(unittest.TestCase):
         L{Avatar} can expose remote methods for the client to call.
         """
         factory = pb.PBClientFactory()
-        d = factory.login(credentials.UsernamePassword('user', 'pass'),
+        d = factory.login(credentials.UsernamePassword(b'user', b'pass'),
                           "BRAINS!")
         reactor.connectTCP('127.0.0.1', self.portno, factory)
         d.addCallback(lambda p: p.callRemote('ANYTHING', 'here', bar='baz'))

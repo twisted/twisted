@@ -5,6 +5,8 @@
 Test cases for L{jelly} object serialization.
 """
 
+from __future__ import absolute_import, division
+
 import datetime
 import decimal
 
@@ -120,8 +122,8 @@ class JellyTests(unittest.TestCase):
     @cvar decimalData: serialized version of decimal data, to be used in tests.
     @type decimalData: L{list}
     """
-    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
-                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
+    decimalData = [b'list', [b'decimal', 995, -2], [b'decimal', 0, 0],
+                   [b'decimal', 123456, 0], [b'decimal', -78901, -3]]
 
 
     def _testSecurity(self, inputList, atom):
@@ -142,15 +144,6 @@ class JellyTests(unittest.TestCase):
         taster.allowedTypes.pop(atom)
         # But it should raise an exception when disallowed
         self.assertRaises(jelly.InsecureJelly, jelly.unjelly, c, taster)
-
-
-    def test_methodSelfIdentity(self):
-        a = A()
-        b = B()
-        a.bmethod = b.bmethod
-        b.a = a
-        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
-        self.assertEqual(im_.im_class, im_.im_self.__class__)
 
 
     def test_methodsNotSelfIdentity(self):
@@ -289,7 +282,7 @@ class JellyTests(unittest.TestCase):
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
         inputList = [decimal.Decimal('9.95')]
-        self._testSecurity(inputList, "decimal")
+        self._testSecurity(inputList, b"decimal")
 
 
     def test_set(self):
@@ -323,7 +316,7 @@ class JellyTests(unittest.TestCase):
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
         inputList = [set([1, 2, 3])]
-        self._testSecurity(inputList, "set")
+        self._testSecurity(inputList, b"set")
 
 
     def test_frozensetSecurity(self):
@@ -333,7 +326,7 @@ class JellyTests(unittest.TestCase):
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
         inputList = [frozenset([1, 2, 3])]
-        self._testSecurity(inputList, "frozenset")
+        self._testSecurity(inputList, b"frozenset")
 
 
     def test_oldSets(self):
@@ -618,7 +611,7 @@ class JellyDeprecationTests(unittest.TestCase):
         """
         jelly.unjelly(
             ["instance",
-             ["class", "twisted.test.test_jelly.A"],
+             ["class", "twisted.spread.test.test_jelly.A"],
              ["dictionary"]])
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 1)

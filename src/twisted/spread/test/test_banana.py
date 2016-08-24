@@ -1,17 +1,23 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division
+
 import sys
 from functools import partial
 from io import BytesIO
 
-# Twisted Imports
-from twisted.internet import protocol, main
-from twisted.python import failure
-from twisted.python.compat import iterbytes, _PY3, _bytesChr as chr
-from twisted.spread import banana
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
+from twisted.spread import banana
+from twisted.python import failure
+from twisted.python.compat import long, iterbytes, _bytesChr as chr, _PY3
+from twisted.internet import protocol, main
+from twisted.test.proto_helpers import StringTransport
+
+if _PY3:
+    _maxint = 9223372036854775807
+else:
+    from sys import maxint as _maxint
 
 
 class MathTests(unittest.TestCase):
@@ -23,7 +29,7 @@ class MathTests(unittest.TestCase):
             banana.int2b128(i, x.write)
             v = x.getvalue()
             y = banana.b1282int(v)
-            assert y == i, "y = %s; i = %s" % (y,i)
+            self.assertEqual(y, i)
 
 
 
@@ -165,7 +171,7 @@ class BananaTests(BananaTestBase):
         banana without changing value and should come out represented
         as an C{int} (regardless of the type which was encoded).
         """
-        for value in (10151, 10151):
+        for value in (10151, long(10151)):
             self.enc.sendEncoded(value)
             self.enc.dataReceived(self.io.getvalue())
             self.assertEqual(self.result, 10151)
@@ -185,7 +191,7 @@ class BananaTests(BananaTestBase):
                 for n in (m, -m-1):
                     self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
-                    if n > sys.maxint or n < -sys.maxint - 1:
+                    if n > _maxint or n < -_maxint - 1:
                         self.assertIsInstance(self.result, long)
                     else:
                         self.assertIsInstance(self.result, int)
@@ -260,28 +266,22 @@ class BananaTests(BananaTestBase):
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 
 
-    def test_negativeLong(self):
-        self.enc.sendEncoded(-1015)
-        self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -1015, "should be -1015l, got %s" % self.result
-
-
     def test_integer(self):
         self.enc.sendEncoded(1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 1015, "should be 1015, got %s" % self.result
+        self.assertEqual(self.result, 1015)
 
 
     def test_negative(self):
         self.enc.sendEncoded(-1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -1015, "should be -1015, got %s" % self.result
+        self.assertEqual(self.result, -1015)
 
 
     def test_float(self):
         self.enc.sendEncoded(1015.)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 1015.
+        self.assertEqual(self.result, 1015.0)
 
 
     def test_list(self):
@@ -289,7 +289,7 @@ class BananaTests(BananaTestBase):
                [b"six", b"seven", [b"eight", 9]], [10], []])
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
+        self.assertEqual(self.result, foo)
 
 
     def test_partial(self):
@@ -303,7 +303,7 @@ class BananaTests(BananaTestBase):
                sys.maxsize * 3, sys.maxsize * 2, sys.maxsize * -2]
         self.enc.sendEncoded(foo)
         self.feed(self.io.getvalue())
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
+        self.assertEqual(self.result, foo)
 
 
     def feed(self, data):
@@ -358,7 +358,7 @@ class BananaTests(BananaTestBase):
         # (assuming 32-bit longs)
         self.enc.sendEncoded(-2147483648)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -2147483648, "should be -2147483648, got %s" % self.result
+        self.assertEqual(self.result, -2147483648)
 
 
     def test_sizedIntegerTypes(self):
