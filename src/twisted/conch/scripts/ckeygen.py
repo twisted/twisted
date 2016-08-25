@@ -33,7 +33,8 @@ class GeneralOptions(usage.Options):
                      ['type', 't', None, 'Specify type of key to create.'],
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
-                     ['pass', 'P', None, 'Provide old passphrase.']]
+                     ['pass', 'P', None, 'Provide old passphrase.'],
+                     ['format', 'o', 'sha256-base64', 'Fingerprint format of key file.']]
 
     optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
                 ['changepass', 'p', 'Change passphrase of private key file.'],
@@ -72,6 +73,18 @@ def run():
     else:
         options.opt_help()
         sys.exit(1)
+
+
+def enumrepresentation(options):
+    if options['format'] == 'md5-hex':
+        options['format'] = keys.FingerprintFormats.MD5_HEX
+        return options
+    elif options['format'] == 'sha256-base64':
+        options['format'] = keys.FingerprintFormats.SHA256_BASE64
+        return options
+    else:
+        raise keys.BadFingerPrintFormat(
+            'Unsupported fingerprint format: %s' % (options['format'],))
 
 
 
@@ -118,13 +131,14 @@ def printFingerprint(options):
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
+    options = enumrepresentation(options)
     try:
         key = keys.Key.fromFile(options['filename'])
         print('%s %s %s' % (
             key.size(),
-            key.fingerprint(),
+            key.fingerprint(options['format']),
             os.path.basename(options['filename'])))
-    except:
+    except keys.BadKeyError:
         sys.exit('bad key')
 
 
@@ -235,11 +249,12 @@ def _saveKey(key, options):
 
     filepath.FilePath(options['filename'] + '.pub').setContent(
         key.public().toString('openssh', comment))
+    options = enumrepresentation(options)
 
     print('Your identification has been saved in %s' % (options['filename'],))
     print('Your public key has been saved in %s.pub' % (options['filename'],))
-    print('The key fingerprint is:')
-    print(key.fingerprint())
+    print('The key fingerprint in %s is:' % (options['format'],))
+    print(key.fingerprint(options['format']))
 
 
 

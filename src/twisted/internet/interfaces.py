@@ -1807,11 +1807,13 @@ class IProtocol(Interface):
         callback will be made upon the receipt of each complete protocol
         message.
 
-        @param data: a string of indeterminate length.  Please keep in mind
-            that you will probably need to buffer some data, as partial
-            (or multiple) protocol messages may be received!  I recommend
-            that unit tests for protocols call through to this method with
-            differing chunk sizes, down to one byte at a time.
+        Please keep in mind that you will probably need to buffer some data
+        as partial (or multiple) protocol messages may be received!  We
+        recommend that unit tests for protocols call through to this method
+        with differing chunk sizes, down to one byte at a time.
+
+        @param data: bytes of indeterminate length
+        @type data: L{bytes}
         """
 
     def connectionLost(reason):

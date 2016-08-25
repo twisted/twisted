@@ -624,6 +624,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertIn(b"&#9731;", request.transport.written.getvalue())
 
+        # On some platforms, we get a UnicodeError when trying to
+        # display the Failure with twisted.python.log because
+        # the default encoding cannot display u"\u2603".  Windows for example
+        # uses a default encodig of cp437 which does not support u"\u2603".
+        self.flushLoggedErrors(UnicodeError)
+
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -727,10 +733,6 @@ class RequestTests(unittest.TestCase):
 
 
 class GzipEncoderTests(unittest.TestCase):
-
-    if _PY3:
-        skip = "GzipEncoder not ported to Python 3 yet."
-
     def setUp(self):
         self.channel = DummyChannel()
         staticResource = Data(b"Some data", "text/plain")
@@ -1059,10 +1061,6 @@ class AllowedMethodsTests(unittest.TestCase):
     'C{twisted.web.resource._computeAllowedMethods} is provided by a
     default should the subclass not provide the method.
     """
-
-    if _PY3:
-        skip = "Allowed methods functionality not ported to Python 3."
-
     def _getReq(self):
         """
         Generate a dummy request for use by C{_computeAllowedMethod} tests.

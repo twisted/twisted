@@ -12,7 +12,8 @@ import binascii
 import itertools
 import warnings
 
-from hashlib import md5
+from hashlib import md5, sha256
+import base64
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -38,8 +39,10 @@ from twisted.python import randbytes
 from twisted.python.compat import (
     iterbytes, long, izip, nativeString, _PY3,
     _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
+from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version
+
 
 
 
@@ -57,6 +60,30 @@ class EncryptedKeyError(Exception):
     Raised when an encrypted key is presented to fromString/fromFile without
     a password.
     """
+
+
+
+class BadFingerPrintFormat(Exception):
+    """
+    Raises when unsupported fingerprint formats are presented to fingerprint.
+    """
+
+
+
+class FingerprintFormats(Names):
+    """
+    Constants representing the supported formats of key fingerprints.
+
+    @cvar MD5_HEX: Named constant representing fingerprint format generated
+        using md5[RFC1321] algorithm in hexadecimal encoding.
+    @type MD5_HEX: L{twisted.python.constants.NamedConstant}
+
+    @cvar SHA256_BASE64: Named constant representing fingerprint format
+        generated using sha256[RFC4634] algorithm in base64 encoding
+    @type SHA256_BASE64: L{twisted.python.constants.NamedConstant}
+    """
+    MD5_HEX = NamedConstant()
+    SHA256_BASE64 = NamedConstant()
 
 
 
@@ -782,18 +809,27 @@ class Key(object):
         return Key(self._keyObject.public_key())
 
 
-    def fingerprint(self):
+    def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
-        Get the user presentation of the fingerprint of this L{Key}.  As
-        described by U{RFC 4716 section
-        4<http://tools.ietf.org/html/rfc4716#section-4>}::
+        The fingerprint of a public key consists of the output of the
+        message-digest algorithm in the specified format.
+        Supported formats include L{FingerprintFormats.MD5-HEX} and
+        L{FingerprintFormats.SHA256-BASE64}
 
-            The fingerprint of a public key consists of the output of the MD5
-            message-digest algorithm [RFC1321].  The input to the algorithm is
-            the public key data as specified by [RFC4253].  (...)  The output
-            of the (MD5) algorithm is presented to the user as a sequence of 16
-            octets printed as hexadecimal with lowercase letters and separated
-            by colons.
+        The input to the algorithm is the public key data as specified by [RFC4253].
+
+        The output of sha256[RFC4634] algorithm is presented to the
+        user in the form of base64 encoded sha256 hashes.
+        Example: C{US5jTUa0kgX5ZxdqaGF0yGRu8EgKXHNmoT8jHKo1StM=}
+
+        The output of the MD5[RFC1321](default) algorithm is presented to the user as
+        a sequence of 16 octets printed as hexadecimal with lowercase letters
+        and separated by colons.
+        Example: C{c1:b1:30:29:d7:b8:de:6c:97:77:10:d7:46:41:63:87}
+
+        @param format: Format for fingerprint generation. Consists
+            hash function and representation format.
+            Default is L{FingerprintFormats.MD5-HEX}
 
         @since: 8.2
 
@@ -802,9 +838,16 @@ class Key(object):
 
         @rtype: L{str}
         """
-        return nativeString(
-            b':'.join([binascii.hexlify(x)
-                       for x in iterbytes(md5(self.blob()).digest())]))
+        if format is FingerprintFormats.SHA256_BASE64:
+            return nativeString(base64.b64encode(
+                sha256(self.blob()).digest()))
+        elif format is FingerprintFormats.MD5_HEX:
+            return nativeString(
+                b':'.join([binascii.hexlify(x)
+                for x in iterbytes(md5(self.blob()).digest())]))
+        else:
+            raise BadFingerPrintFormat(
+                'Unsupported fingerprint format: %s' % (format,))
 
 
     def type(self):

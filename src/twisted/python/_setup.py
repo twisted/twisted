@@ -124,6 +124,7 @@ _EXTRAS_REQUIRE = {
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
     "trial = twisted.scripts.trial:run",
+    "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
 # Scripts provided by Twisted on Python 2 only.

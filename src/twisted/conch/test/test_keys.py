@@ -564,6 +564,58 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(rsa1 != None)
 
 
+    def test_fingerprintdefault(self):
+        """
+        Test that the fingerprint method returns fingerprint in
+        L{FingerprintFormats.MD5-HEX} format by default.
+        """
+        self.assertEqual(keys.Key(self.rsaObj).fingerprint(),
+            '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+        self.assertEqual(keys.Key(self.dsaObj).fingerprint(),
+            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
+
+
+    def test_fingerprint_md5_hex(self):
+        """
+        fingerprint method generates key fingerprint in
+        L{FingerprintFormats.MD5-HEX} format if explicitly specified.
+        """
+        self.assertEqual(
+            keys.Key(self.rsaObj).fingerprint(
+                keys.FingerprintFormats.MD5_HEX),
+            '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+        self.assertEqual(
+            keys.Key(self.dsaObj).fingerprint(
+                keys.FingerprintFormats.MD5_HEX),
+            '63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1')
+
+
+    def test_fingerprintsha256(self):
+        """
+        fingerprint method generates key fingerprint in
+        L{FingerprintFormats.SHA256-BASE64} format if explicitly specified.
+        """
+        self.assertEqual(
+            keys.Key(self.rsaObj).fingerprint(
+                keys.FingerprintFormats.SHA256_BASE64),
+            'ryaugIFT0B8ItuszldMEU7q14rG/wj9HkRosMeBWkts=')
+        self.assertEqual(
+            keys.Key(self.dsaObj).fingerprint(
+                keys.FingerprintFormats.SHA256_BASE64),
+            'Wz5o2YbKyxOEcJn1au/UaALSVruUzfz0vaLI1xiIGyY=')
+
+
+    def test_fingerprintBadFormat(self):
+        """
+        A C{BadFingerPrintFormat} error is raised when unsupported
+        formats are requested.
+        """
+        with self.assertRaises(keys.BadFingerPrintFormat) as em:
+            keys.Key(self.rsaObj).fingerprint('sha256-base')
+        self.assertEqual('Unsupported fingerprint format: sha256-base',
+            em.exception.args[0])
+
+
     def test_type(self):
         """
         Test that the type method returns the correct type for an object.

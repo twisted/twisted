@@ -1041,7 +1041,12 @@ class ResolveTests(unittest.TestCase):
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
             output = b''.join(output)
-            if output != b'done 127.0.0.1\n':
+            if _PY3:
+                expected_output = (b'done 127.0.0.1' +
+                                   os.linesep.encode("ascii"))
+            else:
+                expected_output = b'done 127.0.0.1\n'
+            if output != expected_output:
                 self.fail((
                     "The child process failed to produce the desired results:\n"
                     "   Reason for termination was: %r\n"
