@@ -48,14 +48,29 @@ else:
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(xrange(200,300))
 
+__all__ = [
+    'AUTHDeclinedError', 'AUTHRequiredError', 'AddressError',
+    'AuthenticationError',  'EHLORequiredError', 'ESMTPClientError',
+    'SMTPAddressError', 'SMTPBadRcpt', 'SMTPBadSender', 'SMTPClientError',
+    'SMTPConnectError', 'SMTPDeliveryError', 'SMTPError', 'SMTPServerError',
+    'SMTPTimeoutError', 'TLSError', 'TLSRequiredError', 'SMTPProtocolError',
 
+    'IClientAuthentication', 'IMessage', 'IMessageDelivery',
+    'IMessageDeliveryFactory',
 
+    'CramMD5ClientAuthenticator', 'LOGINAuthenticator', 'LOGINCredentials',
+    'PLAINAuthenticator',
 
+    'Address', 'User', 'sendmail', 'SenderMixin',
+    'ESMTP', 'ESMTPClient', 'ESMTPSender', 'ESMTPSenderFactory',
+    'SMTP', 'SMTPClient', 'SMTPFactory',  'SMTPSender', 'SMTPSenderFactory',
 
+    'idGenerator', 'messageid', 'quoteaddr', 'rfc822date', 'xtextStreamReader',
+    'xtextStreamWriter', 'xtext_codec', 'xtext_decode', 'xtext_encode'
+]
 
 class SMTPError(Exception):
     pass
-
 
 
 class SMTPClientError(SMTPError):
