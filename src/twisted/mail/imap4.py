@@ -45,6 +45,10 @@ from twisted.internet import interfaces
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 
+# Re-exported for compatibility reasons
+from twisted.mail.interfaces import (
+    IClientAuthentication,
+)
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
         range(1, 13),
@@ -4432,16 +4436,6 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
-
-class IClientAuthentication(Interface):
-    def getName():
-        """Return an identifier associated with this authentication scheme.
-
-        @rtype: C{str}
-        """
-
-    def challengeResponse(secret, challenge):
-        """Generate a challenge response string"""
 
 
 
