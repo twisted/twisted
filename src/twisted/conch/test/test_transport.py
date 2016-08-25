@@ -38,7 +38,7 @@ else:
         class SSHFactory:
             pass
 
-from hashlib import md5, sha1, sha256, sha512
+from hashlib import md5, sha1, sha256, sha384, sha512
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -2081,6 +2081,16 @@ class GetMACTests(unittest.TestCase):
         """
         self.assertGetMAC(
             b"hmac-sha2-256", sha256, digestSize=32, blockPadSize=32)
+
+    def test_hmacsha2384(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
+        algorithm name it returns a tuple of (sha384 digest object, inner pad,
+        outer pad, sha384 digest size) with a C{key} attribute set to the
+        value of the key supplied.
+        """
+        self.assertGetMAC(
+            b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=80)
 
 
     def test_hmacsha1(self):

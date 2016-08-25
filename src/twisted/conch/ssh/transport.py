@@ -17,7 +17,7 @@ import hmac
 import struct
 import zlib
 
-from hashlib import md5, sha1, sha256, sha512
+from hashlib import md5, sha1, sha256, sha384, sha512
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -141,6 +141,7 @@ class SSHCiphers:
     }
     macMap = {
         b'hmac-sha2-512': sha512,
+        b'hmac-sha2-384': sha384,
         b'hmac-sha2-256': sha256,
         b'hmac-sha1': sha1,
         b'hmac-md5': md5,
@@ -463,6 +464,7 @@ class SSHTransportBase(protocol.Protocol):
     supportedCiphers = _getSupportedCiphers()
     supportedMACs = [
         b'hmac-sha2-512',
+        b'hmac-sha2-384',
         b'hmac-sha2-256',
         b'hmac-sha1',
         b'hmac-md5',
