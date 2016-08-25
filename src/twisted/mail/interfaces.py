@@ -28,7 +28,7 @@ class IClientAuthentication(Interface):
 
 
 
-class IServerFactory(Interface):
+class IServerFactoryPOP3(Interface):
     """
     An interface for querying capabilities of a POP3 server.
 
@@ -93,7 +93,7 @@ class IServerFactory(Interface):
 
 
 
-class IMailboxSMTP(Interface):
+class IMailboxPOP3(Interface):
     """
     An interface for mailbox access.
 
@@ -831,7 +831,7 @@ class ICloseableMailboxIMAP(Interface):
 
 
 
-class IAccount(Interface):
+class IAccountIMAP(Interface):
     """
     Interface for Account classes
 
@@ -847,7 +847,7 @@ class IAccount(Interface):
         @param name: The name associated with this mailbox. It may not contain
             multiple hierarchical parts.
 
-        @type mbox: An object implementing C{IMailbox}
+        @type mbox: An object implementing C{IMailboxIMAP}
         @param mbox: The mailbox to associate with this name. If L{None}, a
             suitable default is created and used.
 
@@ -1007,6 +1007,7 @@ class IAccount(Interface):
 
 
 class INamespacePresenter(Interface):
+
     def getPersonalNamespaces():
         """
         Report the available personal namespaces.
@@ -1045,3 +1046,25 @@ class INamespacePresenter(Interface):
         @return: The user namespaces and their hierarchical delimiters. If no
             namespaces of this type exist, None should be returned.
         """
+
+
+
+__all__ = [
+    # IMAP
+    'IAccountIMAP', 'ICloseableMailboxIMAP', 'IMailboxIMAP',
+    'IMailboxIMAPInfo', 'IMailboxIMAPListener', 'IMessageIMAP',
+    'IMessageIMAPCopier', 'IMessageIMAPFile', 'IMessageIMAPPart',
+    'ISearchableIMAPMailbox', 'INamespacePresenter',
+
+    # SMTP
+    'IMessageDelivery', 'IMessageDeliveryFactory', 'IMessageSMTP',
+
+    # Domains and aliases
+    'IDomain', 'IAlias', 'IAliasableDomain',
+
+    # POP3
+    'IMailboxPOP3', 'IServerFactoryPOP3',
+
+    # Authentication
+    'IClientAuthentication',
+]

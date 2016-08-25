@@ -19,7 +19,10 @@ from hashlib import md5
 from zope.interface import implementer
 
 from twisted.mail import smtp
-from twisted.mail.interfaces import IServerFactory, IMailbox
+from twisted.mail.interfaces import (
+    IServerFactoryPOP3 as IServerFactory,
+    IMailboxPOP3 as IMailbox,
+)
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import task

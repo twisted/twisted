@@ -46,7 +46,8 @@ from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 
 # Re-exported for compatibility reasons
 from twisted.mail.interfaces import (
-    IClientAuthentication, IAccount, INamespacePresenter,
+    IClientAuthentication, INamespacePresenter,
+    IAccountIMAP as IAccount,
     IMessageIMAPPart as IMessagePart,
     IMessageIMAP as IMessage,
     IMessageIMAPFile as IMessageFile,
