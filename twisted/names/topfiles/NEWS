@@ -1,20 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Names 16.4.0pre1 (2016-08-11)
-=====================================
-
-Features
---------
- - twisted.names.srvconnect is now ported to Python 3. (#8262)
- - twisted.names.resolve and twisted.names.tap have been ported to
-   Python 3 (#8550)
-
-Other
------
- - #8625, #8663
-
-
 Twisted Names 16.3.0 (2016-07-05)
 =================================
 

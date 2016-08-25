@@ -1,34 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Words 16.4.0pre1 (2016-08-11)
-=====================================
-
-Features
---------
- - twisted.words.xish is now ported to Python 3 (#8337)
- - twisted.words.protocols.jabber is now ported to Python 3 (#8423)
- - twisted.words.protocols.irc.ERR_TOOMANYMATCHES was introduced
-   according to the RFC 2812 errata. (#8585)
-
-Bugfixes
---------
- - twisted.words.protocols.irc.RPL_ADMINLOC was removed and replaced
-   with twisted.words.protocols.irc.RPL_ADMINLOC1 and
-   twisted.words.protocols.irc.RPL_ADMINLOC2 to match the admin
-   commands defined in RFC 2812. (#8585)
- - twisted.words.protocols.jabber.sasl_mechanisms has been fixed for
-   Python 3.3 (#8738)
-
-Improved Documentation
-----------------------
- - The XMPP client example now works on Python 3. (#8509)
-
-Other
------
- - #8360, #8460
-
-
 Twisted Words 16.3.0 (2016-07-05)
 =================================
 
