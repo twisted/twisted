@@ -832,82 +832,87 @@ class ICloseableMailboxIMAP(Interface):
 
 
 class IAccount(Interface):
-    """Interface for Account classes
+    """
+    Interface for Account classes
 
     Implementors of this interface should consider implementing
     C{INamespacePresenter}.
     """
 
     def addMailbox(name, mbox = None):
-        """Add a new mailbox to this account
+        """
+        Add a new mailbox to this account
 
         @type name: C{str}
-        @param name: The name associated with this mailbox.  It may not
-        contain multiple hierarchical parts.
+        @param name: The name associated with this mailbox. It may not contain
+            multiple hierarchical parts.
 
         @type mbox: An object implementing C{IMailbox}
-        @param mbox: The mailbox to associate with this name.  If L{None},
-        a suitable default is created and used.
+        @param mbox: The mailbox to associate with this name. If L{None}, a
+            suitable default is created and used.
 
         @rtype: C{Deferred} or C{bool}
         @return: A true value if the creation succeeds, or a deferred whose
-        callback will be invoked when the creation succeeds.
+            callback will be invoked when the creation succeeds.
 
         @raise MailboxException: Raised if this mailbox cannot be added for
-        some reason.  This may also be raised asynchronously, if a C{Deferred}
-        is returned.
+            some reason. This may also be raised asynchronously, if a
+            C{Deferred} is returned.
         """
 
     def create(pathspec):
-        """Create a new mailbox from the given hierarchical name.
+        """
+        Create a new mailbox from the given hierarchical name.
 
         @type pathspec: C{str}
         @param pathspec: The full hierarchical name of a new mailbox to create.
-        If any of the inferior hierarchical names to this one do not exist,
-        they are created as well.
+            If any of the inferior hierarchical names to this one do not exist,
+            they are created as well.
 
         @rtype: C{Deferred} or C{bool}
         @return: A true value if the creation succeeds, or a deferred whose
-        callback will be invoked when the creation succeeds.
+            callback will be invoked when the creation succeeds.
 
-        @raise MailboxException: Raised if this mailbox cannot be added.
-        This may also be raised asynchronously, if a C{Deferred} is
-        returned.
+        @raise MailboxException: Raised if this mailbox cannot be added. This
+            may also be raised asynchronously, if a C{Deferred} is returned.
         """
 
     def select(name, rw=True):
-        """Acquire a mailbox, given its name.
+        """
+        Acquire a mailbox, given its name.
 
         @type name: C{str}
         @param name: The mailbox to acquire
 
         @type rw: C{bool}
         @param rw: If a true value, request a read-write version of this
-        mailbox.  If a false value, request a read-only version.
+            mailbox. If a false value, request a read-only version.
 
-        @rtype: Any object implementing C{IMailbox} or C{Deferred}
-        @return: The mailbox object, or a C{Deferred} whose callback will
-        be invoked with the mailbox object.  None may be returned if the
-        specified mailbox may not be selected for any reason.
+        @rtype: Any object implementing C{IMailboxIMAP} or C{Deferred}
+        @return: The mailbox object, or a C{Deferred} whose callback will be
+            invoked with the mailbox object. None may be returned if the
+            specified mailbox may not be selected for any reason.
         """
 
     def delete(name):
-        """Delete the mailbox with the specified name.
+        """
+        Delete the mailbox with the specified name.
 
         @type name: C{str}
         @param name: The mailbox to delete.
 
         @rtype: C{Deferred} or C{bool}
         @return: A true value if the mailbox is successfully deleted, or a
-        C{Deferred} whose callback will be invoked when the deletion
-        completes.
+            C{Deferred} whose callback will be invoked when the deletion
+            completes.
 
-        @raise MailboxException: Raised if this mailbox cannot be deleted.
-        This may also be raised asynchronously, if a C{Deferred} is returned.
+        @raise MailboxException: Raised if this mailbox cannot be deleted. This
+            may also be raised asynchronously, if a C{Deferred} is returned.
         """
 
     def rename(oldname, newname):
-        """Rename a mailbox
+        """
+        Rename a mailbox
 
         @type oldname: C{str}
         @param oldname: The current name of the mailbox to rename.
@@ -917,107 +922,114 @@ class IAccount(Interface):
 
         @rtype: C{Deferred} or C{bool}
         @return: A true value if the mailbox is successfully renamed, or a
-        C{Deferred} whose callback will be invoked when the rename operation
-        is completed.
+            C{Deferred} whose callback will be invoked when the rename
+            operation is completed.
 
-        @raise MailboxException: Raised if this mailbox cannot be
-        renamed.  This may also be raised asynchronously, if a C{Deferred}
-        is returned.
+        @raise MailboxException: Raised if this mailbox cannot be renamed. This
+            may also be raised asynchronously, if a C{Deferred} is returned.
         """
 
     def isSubscribed(name):
-        """Check the subscription status of a mailbox
+        """
+        Check the subscription status of a mailbox
 
         @type name: C{str}
         @param name: The name of the mailbox to check
 
         @rtype: C{Deferred} or C{bool}
-        @return: A true value if the given mailbox is currently subscribed
-        to, a false value otherwise.  A C{Deferred} may also be returned
-        whose callback will be invoked with one of these values.
+        @return: A true value if the given mailbox is currently subscribed to,
+            a false value otherwise. A C{Deferred} may also be returned whose
+            callback will be invoked with one of these values.
         """
 
     def subscribe(name):
-        """Subscribe to a mailbox
+        """
+        Subscribe to a mailbox
 
         @type name: C{str}
         @param name: The name of the mailbox to subscribe to
 
         @rtype: C{Deferred} or C{bool}
-        @return: A true value if the mailbox is subscribed to successfully,
-        or a Deferred whose callback will be invoked with this value when
-        the subscription is successful.
+        @return: A true value if the mailbox is subscribed to successfully, or
+            a Deferred whose callback will be invoked with this value when the
+            subscription is successful.
 
-        @raise MailboxException: Raised if this mailbox cannot be
-        subscribed to.  This may also be raised asynchronously, if a
-        C{Deferred} is returned.
+        @raise MailboxException: Raised if this mailbox cannot be subscribed
+            to. This may also be raised asynchronously, if a C{Deferred} is
+            returned.
         """
 
     def unsubscribe(name):
-        """Unsubscribe from a mailbox
+        """
+        Unsubscribe from a mailbox
 
         @type name: C{str}
         @param name: The name of the mailbox to unsubscribe from
 
         @rtype: C{Deferred} or C{bool}
         @return: A true value if the mailbox is unsubscribed from successfully,
-        or a Deferred whose callback will be invoked with this value when
-        the unsubscription is successful.
+            or a Deferred whose callback will be invoked with this value when
+            the unsubscription is successful.
 
-        @raise MailboxException: Raised if this mailbox cannot be
-        unsubscribed from.  This may also be raised asynchronously, if a
-        C{Deferred} is returned.
+        @raise MailboxException: Raised if this mailbox cannot be unsubscribed
+            from. This may also be raised asynchronously, if a C{Deferred} is
+            returned.
         """
 
     def listMailboxes(ref, wildcard):
-        """List all the mailboxes that meet a certain criteria
+        """
+        List all the mailboxes that meet a certain criteria
 
         @type ref: C{str}
         @param ref: The context in which to apply the wildcard
 
         @type wildcard: C{str}
         @param wildcard: An expression against which to match mailbox names.
-        '*' matches any number of characters in a mailbox name, and '%'
-        matches similarly, but will not match across hierarchical boundaries.
+            '*' matches any number of characters in a mailbox name, and '%'
+            matches similarly, but will not match across hierarchical
+            boundaries.
 
         @rtype: C{list} of C{tuple}
-        @return: A list of C{(mailboxName, mailboxObject)} which meet the
-        given criteria.  C{mailboxObject} should implement either
-        C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned.
+        @return: A list of C{(mailboxName, mailboxObject)} which meet the given
+            criteria. C{mailboxObject} should implement either
+            C{IMailboxIMAPInfo} or C{IMailboxIMAP}. A Deferred may also be
+            returned.
         """
 
 class INamespacePresenter(Interface):
     def getPersonalNamespaces():
-        """Report the available personal namespaces.
+        """
+        Report the available personal namespaces.
 
-        Typically there should be only one personal namespace.  A common
-        name for it is \"\", and its hierarchical delimiter is usually
-        \"/\".
+        Typically there should be only one personal namespace. A common name
+        for it is C{\"\"}, and its hierarchical delimiter is usually C{\"/\"}.
 
         @rtype: iterable of two-tuples of strings
-        @return: The personal namespaces and their hierarchical delimiters.
-        If no namespaces of this type exist, None should be returned.
+        @return: The personal namespaces and their hierarchical delimiters. If
+            no namespaces of this type exist, None should be returned.
         """
 
     def getSharedNamespaces():
-        """Report the available shared namespaces.
+        """
+        Report the available shared namespaces.
 
-        Shared namespaces do not belong to any individual user but are
-        usually to one or more of them.  Examples of shared namespaces
-        might be \"#news\" for a usenet gateway.
+        Shared namespaces do not belong to any individual user but are usually
+        to one or more of them. Examples of shared namespaces might be
+        C{\"#news\"} for a usenet gateway.
 
         @rtype: iterable of two-tuples of strings
-        @return: The shared namespaces and their hierarchical delimiters.
-        If no namespaces of this type exist, None should be returned.
+        @return: The shared namespaces and their hierarchical delimiters. If no
+            namespaces of this type exist, None should be returned.
         """
 
     def getUserNamespaces():
-        """Report the available user namespaces.
+        """
+        Report the available user namespaces.
 
         These are namespaces that contain folders belonging to other users
         access to which this account has been granted.
 
         @rtype: iterable of two-tuples of strings
-        @return: The user namespaces and their hierarchical delimiters.
-        If no namespaces of this type exist, None should be returned.
+        @return: The user namespaces and their hierarchical delimiters. If no
+            namespaces of this type exist, None should be returned.
         """
