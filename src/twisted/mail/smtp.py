@@ -12,7 +12,7 @@ import email.utils
 import warnings
 from email.base64MIME import encode as encode_base64
 
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 from twisted.copyright import longversion
 from twisted.protocols import basic
@@ -1883,7 +1883,6 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
 
 
-from twisted.mail.imap4 import IClientAuthentication
 from twisted.mail.imap4 import CramMD5ClientAuthenticator, LOGINAuthenticator
 from twisted.mail.imap4 import LOGINCredentials as _lcredentials
 
