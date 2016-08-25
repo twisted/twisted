@@ -12,7 +12,7 @@ import email.utils
 import warnings
 from email.base64MIME import encode as encode_base64
 
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 from twisted.copyright import longversion
 from twisted.protocols import basic
@@ -24,9 +24,10 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.mail.interfaces import IClientAuthentication
-from twisted.mail._cred import CramMD5ClientAuthenticator, LOGINAuthenticator
-from twisted.mail._cred import LOGINCredentials as _lcredentials
+from twisted.mail.interfaces import (IClientAuthentication, IMessage,
+                                     IMessageDeliveryFactory, IMessageDelivery)
+from twisted.mail._cred import (CramMD5ClientAuthenticator, LOGINAuthenticator,
+                                LOGINCredentials as _lcredentials)
 
 from twisted import cred
 from twisted.python.runtime import platform
@@ -47,77 +48,10 @@ else:
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(xrange(200,300))
 
-class IMessageDelivery(Interface):
-    def receivedHeader(helo, origin, recipients):
-        """
-        Generate the Received header for a message
 
-        @type helo: C{(str, str)}
-        @param helo: The argument to the HELO command and the client's IP
-        address.
 
-        @type origin: C{Address}
-        @param origin: The address the message is from
 
-        @type recipients: C{list} of L{User}
-        @param recipients: A list of the addresses for which this message
-        is bound.
 
-        @rtype: C{str}
-        @return: The full \"Received\" header string.
-        """
-
-    def validateTo(user):
-        """
-        Validate the address for which the message is destined.
-
-        @type user: C{User}
-        @param user: The address to validate.
-
-        @rtype: no-argument callable
-        @return: A C{Deferred} which becomes, or a callable which
-        takes no arguments and returns an object implementing C{IMessage}.
-        This will be called and the returned object used to deliver the
-        message when it arrives.
-
-        @raise SMTPBadRcpt: Raised if messages to the address are
-        not to be accepted.
-        """
-
-    def validateFrom(helo, origin):
-        """
-        Validate the address from which the message originates.
-
-        @type helo: C{(str, str)}
-        @param helo: The argument to the HELO command and the client's IP
-        address.
-
-        @type origin: C{Address}
-        @param origin: The address the message is from
-
-        @rtype: C{Deferred} or C{Address}
-        @return: C{origin} or a C{Deferred} whose callback will be
-        passed C{origin}.
-
-        @raise SMTPBadSender: Raised of messages from this address are
-        not to be accepted.
-        """
-
-class IMessageDeliveryFactory(Interface):
-    """An alternate interface to implement for handling message delivery.
-
-    It is useful to implement this interface instead of L{IMessageDelivery}
-    directly because it allows the implementor to distinguish between
-    different messages delivery over the same connection.  This can be
-    used to optimize delivery of a single message to multiple recipients,
-    something which cannot be done by L{IMessageDelivery} implementors
-    due to their lack of information.
-    """
-    def getMessageDelivery():
-        """Return an L{IMessageDelivery} object.
-
-        This will be called once per message.
-        """
 
 class SMTPError(Exception):
     pass
@@ -483,24 +417,6 @@ class User:
     def __str__(self):
         return str(self.dest)
 
-class IMessage(Interface):
-    """Interface definition for messages that can be sent via SMTP."""
-
-    def lineReceived(line):
-        """handle another line"""
-
-    def eomReceived():
-        """handle end of message
-
-        return a deferred. The deferred should be called with either:
-        callback(string) or errback(error)
-        """
-
-    def connectionLost():
-        """handle message truncated
-
-        semantics should be to discard the message
-        """
 
 class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
     """
