@@ -1,1 +1,1 @@
-twisted.internet.inotify and twisted.python._inotify have been ported to Python 3
+twisted.internet.inotify have been ported to Python 3
