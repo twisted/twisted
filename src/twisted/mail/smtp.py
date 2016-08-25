@@ -24,7 +24,8 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.mail.interfaces import (IClientAuthentication, IMessage,
+from twisted.mail.interfaces import (IClientAuthentication,
+                                     ISMTPMessage as IMessage,
                                      IMessageDeliveryFactory, IMessageDelivery)
 from twisted.mail._cred import (CramMD5ClientAuthenticator, LOGINAuthenticator,
                                 LOGINCredentials as _lcredentials)
