@@ -4438,7 +4438,6 @@ def collapseNestedLists(items):
 
 
 
-
 @implementer(IClientAuthentication)
 class CramMD5ClientAuthenticator:
     def __init__(self, user):
