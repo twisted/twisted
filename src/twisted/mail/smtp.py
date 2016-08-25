@@ -24,6 +24,9 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
+from twisted.mail.interfaces import IClientAuthentication
+from twisted.mail._cred import CramMD5ClientAuthenticator, LOGINAuthenticator
+from twisted.mail._cred import LOGINCredentials as _lcredentials
 
 from twisted import cred
 from twisted.python.runtime import platform
@@ -1969,10 +1972,6 @@ class SMTPSenderFactory(protocol.ClientFactory):
         return result
 
 
-
-from twisted.mail.imap4 import IClientAuthentication
-from twisted.mail.imap4 import CramMD5ClientAuthenticator, LOGINAuthenticator
-from twisted.mail.imap4 import LOGINCredentials as _lcredentials
 
 class LOGINCredentials(_lcredentials):
     """
