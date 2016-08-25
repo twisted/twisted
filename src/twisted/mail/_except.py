@@ -12,6 +12,7 @@ class IMAP4Exception(Exception):
     pass
 
 
+
 class IllegalClientResponse(IMAP4Exception):
     pass
 
@@ -29,6 +30,7 @@ class IllegalMailboxEncoding(IMAP4Exception):
 
 class SMTPError(Exception):
     pass
+
 
 
 class SMTPClientError(SMTPError):
@@ -194,6 +196,7 @@ class SMTPServerError(SMTPError):
         self.code = code
         self.resp = resp
 
+
     def __str__(self):
         return "%.3d %s" % (self.code, self.resp)
 
@@ -205,6 +208,7 @@ class SMTPAddressError(SMTPServerError):
 
         SMTPServerError.__init__(self, code, resp)
         self.addr = Address(addr)
+
 
     def __str__(self):
         return "%.3d <%s>... %s" % (self.code, self.addr, self.resp)

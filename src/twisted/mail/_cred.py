@@ -103,7 +103,8 @@ class PLAINCredentials(credentials.UsernamePassword):
     def setResponse(self, response):
         parts = response.split(b'\0')
         if len(parts) != 3:
-            raise IllegalClientResponse("Malformed Response - wrong number of parts")
+            raise IllegalClientResponse(
+                "Malformed Response - wrong number of parts")
         useless, self.username, self.password = parts
 
 

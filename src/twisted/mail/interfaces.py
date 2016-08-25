@@ -839,7 +839,7 @@ class IAccount(Interface):
     C{INamespacePresenter}.
     """
 
-    def addMailbox(name, mbox = None):
+    def addMailbox(name, mbox=None):
         """
         Add a new mailbox to this account
 
@@ -860,6 +860,7 @@ class IAccount(Interface):
             C{Deferred} is returned.
         """
 
+
     def create(pathspec):
         """
         Create a new mailbox from the given hierarchical name.
@@ -876,6 +877,7 @@ class IAccount(Interface):
         @raise MailboxException: Raised if this mailbox cannot be added. This
             may also be raised asynchronously, if a C{Deferred} is returned.
         """
+
 
     def select(name, rw=True):
         """
@@ -894,6 +896,7 @@ class IAccount(Interface):
             specified mailbox may not be selected for any reason.
         """
 
+
     def delete(name):
         """
         Delete the mailbox with the specified name.
@@ -909,6 +912,7 @@ class IAccount(Interface):
         @raise MailboxException: Raised if this mailbox cannot be deleted. This
             may also be raised asynchronously, if a C{Deferred} is returned.
         """
+
 
     def rename(oldname, newname):
         """
@@ -929,6 +933,7 @@ class IAccount(Interface):
             may also be raised asynchronously, if a C{Deferred} is returned.
         """
 
+
     def isSubscribed(name):
         """
         Check the subscription status of a mailbox
@@ -941,6 +946,7 @@ class IAccount(Interface):
             a false value otherwise. A C{Deferred} may also be returned whose
             callback will be invoked with one of these values.
         """
+
 
     def subscribe(name):
         """
@@ -959,6 +965,7 @@ class IAccount(Interface):
             returned.
         """
 
+
     def unsubscribe(name):
         """
         Unsubscribe from a mailbox
@@ -975,6 +982,7 @@ class IAccount(Interface):
             from. This may also be raised asynchronously, if a C{Deferred} is
             returned.
         """
+
 
     def listMailboxes(ref, wildcard):
         """
@@ -996,6 +1004,8 @@ class IAccount(Interface):
             returned.
         """
 
+
+
 class INamespacePresenter(Interface):
     def getPersonalNamespaces():
         """
@@ -1009,6 +1019,7 @@ class INamespacePresenter(Interface):
             no namespaces of this type exist, None should be returned.
         """
 
+
     def getSharedNamespaces():
         """
         Report the available shared namespaces.
@@ -1021,6 +1032,7 @@ class INamespacePresenter(Interface):
         @return: The shared namespaces and their hierarchical delimiters. If no
             namespaces of this type exist, None should be returned.
         """
+
 
     def getUserNamespaces():
         """
