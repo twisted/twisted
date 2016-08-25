@@ -54,7 +54,8 @@ from twisted.mail.interfaces import (
     IMessageIMAPCopier as IMessageCopier,
     IMailboxIMAPInfo as IMailboxInfo,
     IMailboxIMAP as IMailbox,
-    ICloseableMailboxIMAP as ICloseableMailbox
+    ICloseableMailboxIMAP as ICloseableMailbox,
+    IMailboxIMAPListener as IMailboxListener
 )
 from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
@@ -401,38 +402,6 @@ class Command:
 
 
 
-class IMailboxListener(Interface):
-    """Interface for objects interested in mailbox events"""
-
-    def modeChanged(writeable):
-        """Indicates that the write status of a mailbox has changed.
-
-        @type writeable: C{bool}
-        @param writeable: A true value if write is now allowed, false
-        otherwise.
-        """
-
-    def flagsChanged(newFlags):
-        """Indicates that the flags of one or more messages have changed.
-
-        @type newFlags: C{dict}
-        @param newFlags: A mapping of message identifiers to tuples of flags
-        now set on that message.
-        """
-
-    def newMessages(exists, recent):
-        """Indicates that the number of messages in a mailbox has changed.
-
-        @type exists: C{int} or L{None}
-        @param exists: The total number of messages now in this mailbox.
-        If the total number of messages has not changed, this should be
-        L{None}.
-
-        @type recent: C{int}
-        @param recent: The number of messages now flagged \\Recent.
-        If the number of recent messages has not changed, this should be
-        L{None}.
-        """
 
 # Some constants to help define what an atom is and is not - see the grammar
 # section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.

@@ -443,62 +443,122 @@ class IMessageIMAPPart(Interface):
         @return: The specified sub-part.
         """
 
+
+
 class IMessageIMAP(IMessageIMAPPart):
+
     def getUID():
-        """Retrieve the unique identifier associated with this message.
+        """
+        Retrieve the unique identifier associated with this message.
         """
 
+
     def getFlags():
-        """Retrieve the flags associated with this message.
+        """
+        Retrieve the flags associated with this message.
 
         @rtype: C{iterable}
         @return: The flags, represented as strings.
         """
 
+
     def getInternalDate():
-        """Retrieve the date internally associated with this message.
+        """
+        Retrieve the date internally associated with this message.
 
         @rtype: C{str}
         @return: An RFC822-formatted date string.
         """
 
+
+
 class IMessageIMAPFile(Interface):
-    """Optional message interface for representing messages as files.
-
-    If provided by message objects, this interface will be used instead
-    the more complex MIME-based interface.
     """
-    def open():
-        """Return a file-like object opened for reading.
+    Optional message interface for representing messages as files.
 
-        Reading from the returned file will return all the bytes
-        of which this message consists.
+    If provided by message objects, this interface will be used instead the
+    more complex MIME-based interface.
+    """
+
+    def open():
+        """
+        Return a file-like object opened for reading.
+
+        Reading from the returned file will return all the bytes of which this
+        message consists.
         """
 
+
+
 class ISearchableIMAPMailbox(Interface):
+
     def search(query, uid):
-        """Search for messages that meet the given query criteria.
+        """
+        Search for messages that meet the given query criteria.
 
-        If this interface is not implemented by the mailbox, L{IMailboxIMAP.fetch}
-        and various methods of L{IMessageIMAP} will be used instead.
+        If this interface is not implemented by the mailbox,
+        L{IMailboxIMAP.fetch} and various methods of L{IMessageIMAP} will be
+        used instead.
 
-        Implementations which wish to offer better performance than the
-        default implementation should implement this interface.
+        Implementations which wish to offer better performance than the default
+        implementation should implement this interface.
 
         @type query: C{list}
         @param query: The search criteria
 
         @type uid: C{bool}
-        @param uid: If true, the IDs specified in the query are UIDs;
-        otherwise they are message sequence IDs.
+        @param uid: If true, the IDs specified in the query are UIDs; otherwise
+            they are message sequence IDs.
 
         @rtype: C{list} or C{Deferred}
-        @return: A list of message sequence numbers or message UIDs which
-        match the search criteria or a C{Deferred} whose callback will be
-        invoked with such a list.
+        @return: A list of message sequence numbers or message UIDs which match
+            the search criteria or a C{Deferred} whose callback will be invoked
+            with such a list.
 
         @raise IllegalQueryError: Raised when query is not valid.
         """
+
+
+
+class IMailboxIMAPListener(Interface):
+    """
+    Interface for objects interested in mailbox events
+    """
+
+    def modeChanged(writeable):
+        """
+        Indicates that the write status of a mailbox has changed.
+
+        @type writeable: C{bool}
+        @param writeable: A true value if write is now allowed, false
+            otherwise.
+        """
+
+
+    def flagsChanged(newFlags):
+        """
+        Indicates that the flags of one or more messages have changed.
+
+        @type newFlags: C{dict}
+        @param newFlags: A mapping of message identifiers to tuples of flags
+            now set on that message.
+        """
+
+
+    def newMessages(exists, recent):
+        """
+        Indicates that the number of messages in a mailbox has changed.
+
+        @type exists: C{int} or L{None}
+        @param exists: The total number of messages now in this mailbox. If the
+            total number of messages has not changed, this should be L{None}.
+
+        @type recent: C{int}
+        @param recent: The number of messages now flagged \\Recent. If the
+            number of recent messages has not changed, this should be L{None}.
+        """
+
+
 
 class IMessageIMAPCopier(Interface):
     def copy(messageObject):
