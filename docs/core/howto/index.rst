@@ -200,7 +200,7 @@ Developer Guides
 
   - :doc:`Symbolic constants <constants>`
 
-    enum-like constants.
+    enum-like constants. (Deprecated, spun out into `Constantly <http://constantly.readthedocs.org/en/latest/>`_)
 
   - :doc:`Twisted RDBMS support with adbapi <rdbms>`
 
