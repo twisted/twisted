@@ -1300,7 +1300,7 @@ class SSHServerTransport(SSHTransportBase):
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        self.sendPacket(MSG_KEX_ECDH_REPLY, NS(pubHostKey.blob()) + NS(encPub) + NS(privHostKey.sign(exchangeHash)))
+        self.sendPacket(MSG_KEXDH_REPLY, NS(pubHostKey.blob()) + NS(encPub) + NS(privHostKey.sign(exchangeHash)))
         self._keySetup(sharedSecret, exchangeHash)
 
 
@@ -1984,8 +1984,6 @@ MSG_KEXINIT = 20
 MSG_NEWKEYS = 21
 MSG_KEXDH_INIT = 30
 MSG_KEXDH_REPLY = 31
-MSG_KEX_ECDH_INIT = 30
-MSG_KEX_ECDH_REPLY = 31
 MSG_KEX_DH_GEX_REQUEST_OLD = 30
 MSG_KEX_DH_GEX_REQUEST = 34
 MSG_KEX_DH_GEX_GROUP = 31

@@ -1340,7 +1340,18 @@ class Key(object):
             signer.update(data)
             signature = signer.finalize()
             (r, s) = decode_dss_signature(signature)
-            ret = common.NS(common.NS(int_to_bytes(r)) + common.NS(int_to_bytes(s)))
+
+            rb = int_to_bytes(r)
+            sb = int_to_bytes(s)
+
+            # If the MSB is set, prepend a null byte for correct formatting.
+            if ord(rb[0]) & 0x80:
+                rb = "\x00" + rb
+            
+            if ord(sb[0]) & 0x80:
+                sb = "\x00" + sb
+
+            ret = common.NS(common.NS(rb) + common.NS(sb))
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
         return common.NS(self.sshType()) + ret
