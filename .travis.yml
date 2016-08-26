@@ -7,9 +7,19 @@
 language: python
 sudo: false
 
+
+# Only run tests on push on a few branches.
+# Test on PR should be execute for all branches and forks.
+branches:
+  only:
+  - trunk
+  - /^release-.*$/
+
+
 env:
   global:
     - TRIAL_REPORTER=text
+
 
 matrix:
   include:
@@ -61,12 +71,15 @@ addons:
     - libssl-dev
     - libssl1.0.0
 
+
 cache:
   directories:
     - $HOME/.cache/pip
 
+
 install:
   - ./.travis/install.sh tox
+
 
 # FIXME: https://twistedmatrix.com/trac/ticket/8373
 # By default, Travis only clones one branch.
@@ -75,6 +88,7 @@ install:
 before_script:
   - git remote set-branches --add origin trunk
   - git fetch origin trunk
+
 
 # Run tox from the created virtualenv.
 script:
