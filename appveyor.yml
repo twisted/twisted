@@ -30,8 +30,6 @@ environment:
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\bin\\admin\\run_with_env.cmd"
 
-    TRIAL_REPORTER: text
-
   # Only use pre-installed Python versions, which Appveyor may upgrade to
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
@@ -40,11 +38,42 @@ environment:
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-coverage-windows,codecov-publish
-    #- PYTHON_HOME: "C:\\PYTHON35-x64"
-    #  PYTHON_VERSION: "3.5"
-    #  PYTHON_ARCH: "64"
-    #  TOXENV: 'py35-tests-windows'
+      TWISTED_REACTOR: "select"
+    - PYTHON_HOME: C:\\Python27-x64
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      TOXENV: py27-coverage-windows,codecov-publish
+      TWISTED_REACTOR: "iocp"
+    - PYTHON_HOME: C:\\PYTHON33-x64
+      PYTHON_VERSION: "3.3"
+      PYTHON_ARCH: "64"
+      TOXENV: py33-coverage-windows,codecov-publish
+      # The --reactor flag to trial doesn't work on Windows Python 3
+      # so we can only choose the default reactor here:
+      # https://twistedmatrix.com/trac/ticket/8745
+      TWISTED_REACTOR: "default"
+    - PYTHON_HOME: C:\\PYTHON34-x64
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "64"
+      TOXENV: py34-coverage-windows,codecov-publish
+      # The --reactor flag to trial doesn't work on Windows Python 3
+      # so we can only choose the default reactor here:
+      # https://twistedmatrix.com/trac/ticket/8745
+      TWISTED_REACTOR: "default"
+    - PYTHON_HOME: C:\\PYTHON35-x64
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
+      TOXENV: py35-coverage-windows,codecov-publish
+      # The --reactor flag to trial doesn't work on Windows Python 3
+      # so we can only choose the default reactor here:
+      # https://twistedmatrix.com/trac/ticket/8745
+      TWISTED_REACTOR: "default"
 
+matrix:
+  allow_failures:
+    # Some IOCP tests are failing on Appveyor:
+    # https://twistedmatrix.com/trac/ticket/8679
+    - TWISTED_REACTOR: "iocp"
 
 install:
   # Install OpenSSH through chocolatey
