@@ -96,7 +96,7 @@ def listen(description, factory, default=None):
     @see: L{twisted.internet.endpoints.serverFromString}
     """
     from twisted.internet import reactor
-    name, args, kw = parse(description, factory, default)
+    name, args, kw = endpoints._parseServer(description, factory, default)
     return getattr(reactor, 'listen'+name)(*args, **kw)
 
 
