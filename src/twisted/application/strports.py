@@ -86,15 +86,14 @@ def service(description, factory, default=_DEFAULT, reactor=None):
 def listen(description, factory, default=None):
     """Listen on a port corresponding to a description
 
-    @type description: C{str}
+    @type description: L{str}
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
-    @type default: C{str} or L{None}
-    @rtype: C{twisted.internet.interfaces.IListeningPort}
+    @type default: L{str} or L{None}
+    @rtype: L{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable
     virtual circuit server.
 
-    See the documentation of the C{parse} function for description
-    of the semantics of the arguments.
+    @see: L{twisted.internet.endpoints.serverFromString}
     """
     from twisted.internet import reactor
     name, args, kw = parse(description, factory, default)
