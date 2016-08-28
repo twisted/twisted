@@ -117,7 +117,7 @@ class IOPump:
 
 
 
-def connectServerAndClient(test, serverFactory, clientFactory):
+def connectServerAndClient(test, clientFactory, serverFactory):
     """
     Create a server and a client and connect the two with an
     L{IOPump}.
@@ -126,19 +126,19 @@ def connectServerAndClient(test, serverFactory, clientFactory):
         used.
     @type test: L{twisted.trial.unittest.TestCase}
 
-    @param serverFactory: The factory that creates the server object.
-    @type serverFactory: L{twisted.spread.pb.PBServerFactory}
-
     @param clientFactory: The factory that creates the client object.
     @type clientFactory: L{twisted.spread.pb.PBClientFactory}
+
+    @param serverFactory: The factory that creates the server object.
+    @type serverFactory: L{twisted.spread.pb.PBServerFactory}
 
     @return: a 3-tuple of (client, server, pump)
     @rtype: (L{twisted.spread.pb.Broker}, L{twisted.spread.pb.Broker},
         L{IOPump})
     """
     addr = ('127.0.0.1',)
-    serverBroker = serverFactory.buildProtocol(addr)
     clientBroker = clientFactory.buildProtocol(addr)
+    serverBroker = serverFactory.buildProtocol(addr)
 
     clientTransport = StringIO()
     serverTransport = StringIO()
@@ -182,7 +182,7 @@ def connectedServerAndClient(test, realm=None):
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest=b'guest')
     serverFactory = pb.PBServerFactory(portal.Portal(realm, [checker]))
     clientFactory = pb.PBClientFactory()
-    return connectServerAndClient(test, serverFactory, clientFactory)
+    return connectServerAndClient(test, clientFactory, serverFactory)
 
 
 
@@ -426,8 +426,8 @@ class NewStyleTests(unittest.SynchronousTestCase):
         clientFactory = pb.PBClientFactory()
         client, self.server, self.pump = connectServerAndClient(
             test=self,
-            serverFactory=self.serverFactory,
-            clientFactory=clientFactory)
+            clientFactory=clientFactory,
+            serverFactory=self.serverFactory)
         self.ref = self.successResultOf(clientFactory.getRootObject())
 
 
