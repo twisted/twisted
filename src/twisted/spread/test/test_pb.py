@@ -142,6 +142,7 @@ def connectServerAndClient(test, serverFactory, clientFactory):
 
     clientTransport = StringIO()
     serverTransport = StringIO()
+
     clientBroker.makeConnection(protocol.FileWrapper(clientTransport))
     serverBroker.makeConnection(protocol.FileWrapper(serverTransport))
     pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
@@ -403,20 +404,18 @@ class CachedReturner(pb.Root):
         return self.cache
 
 
-class NewStyleTests(unittest.TestCase):
+class NewStyleTests(unittest.SynchronousTestCase):
     def setUp(self):
         """
         Create a pb server using L{Echoer} protocol and connect a client to it.
         """
         self.serverFactory = pb.PBServerFactory(Echoer())
-        self.wrapper = WrappingFactory(self.serverFactory)
-        self.server = reactor.listenTCP(0, self.wrapper)
         clientFactory = pb.PBClientFactory()
-        reactor.connectTCP("localhost", self.server.getHost().port,
-                           clientFactory)
-        def gotRoot(ref):
-            self.ref = ref
-        return clientFactory.getRootObject().addCallback(gotRoot)
+        client, self.server, self.pump = connectServerAndClient(
+            test=self,
+            serverFactory=self.serverFactory,
+            clientFactory=clientFactory)
+        self.ref = self.successResultOf(clientFactory.getRootObject())
 
 
     def tearDown(self):
@@ -427,11 +426,7 @@ class NewStyleTests(unittest.TestCase):
         NewStyleCopy2.allocated = 0
         NewStyleCopy2.initialized = 0
         NewStyleCopy2.value = 1
-        self.ref.broker.transport.loseConnection()
-        # Disconnect any server-side connections too.
-        for proto in self.wrapper.protocols:
-            proto.transport.loseConnection()
-        return self.server.stopListening()
+
 
     def test_newStyle(self):
         """
@@ -439,6 +434,7 @@ class NewStyleTests(unittest.TestCase):
         """
         orig = NewStyleCopy("value")
         d = self.ref.callRemote("echo", orig)
+        self.pump.flush()
         def cb(res):
             self.assertIsInstance(res, NewStyleCopy)
             self.assertEqual(res.s, "value")
@@ -454,6 +450,7 @@ class NewStyleTests(unittest.TestCase):
         self.assertEqual(NewStyleCopy2.allocated, 1)
         self.assertEqual(NewStyleCopy2.initialized, 1)
         d = self.ref.callRemote("echo", orig)
+        self.pump.flush()
         def cb(res):
             # receiving the response creates a third one on the way back
             self.assertIsInstance(res, NewStyleCopy2)
@@ -1465,6 +1462,7 @@ class NewCredTests(unittest.TestCase):
         factory = pb.PBClientFactory()
         d = factory.login(
             credentials.UsernamePassword(b'foo', b'bar'), "BRAINS!")
+
         def cbLoggedIn(avatar):
             # Just wait for the logout to happen, as it should since the
             # reference to the avatar will shortly no longer exists.
