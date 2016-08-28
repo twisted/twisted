@@ -150,8 +150,20 @@ def connectServerAndClient(test, serverFactory, clientFactory):
     def maybeDisconnect(broker):
         if not broker.disconnected:
             broker.connectionLost(failure.Failure(main.CONNECTION_DONE))
+
+
+    def disconnectClientFactory():
+        # There's no connector, just a FileWrapper mediated by the
+        # IOPump.  Fortunately PBClientFactory.clientConnectionLost
+        # doesn't do anything with the connector so we can get away
+        # with passing None here.
+        clientFactory.clientConnectionLost(
+            connector=None,
+            reason=failure.Failure(main.CONNECTION_DONE))
+
     test.addCleanup(maybeDisconnect, clientBroker)
     test.addCleanup(maybeDisconnect, serverBroker)
+    test.addCleanup(disconnectClientFactory)
     # Establish the connection
     pump.pump()
     return clientBroker, serverBroker, pump
@@ -405,6 +417,7 @@ class CachedReturner(pb.Root):
 
 
 class NewStyleTests(unittest.SynchronousTestCase):
+
     def setUp(self):
         """
         Create a pb server using L{Echoer} protocol and connect a client to it.
