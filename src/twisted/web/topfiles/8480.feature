@@ -1,1 +1,0 @@
-Twisted web HTTP/2 servers now time out HTTP/2 connections in the same manner as HTTP/1.1 connections.
