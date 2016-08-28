@@ -1,6 +1,24 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.4.1pre1 (2016-08-28)
+====================================
+
+Features
+--------
+ - Client and server TLS connections made via the client TLS endpoint
+   and the server SSL endpoint, as well as any other code that uses
+   twisted.internet.ssl.CertificateOptions, now support ChaCha20
+   ciphers when available from the OpenSSL on the system. (#8760)
+
+Bugfixes
+--------
+ - Client and server TLS connections made via the client TLS endpoint
+   and the server SSL endpoint, as well as any other code that uses
+   twisted.internet.ssl.CertificateOptions, no longer accept 3DES-
+   based cipher suites by default, to defend against SWEET32. (#8781)
+
+
 Twisted Core 16.4.0 (2016-08-25)
 ================================
 
