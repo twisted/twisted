@@ -117,6 +117,46 @@ class IOPump:
 
 
 
+def connectServerAndClient(test, serverFactory, clientFactory):
+    """
+    Create a server and a client and connect the two with an
+    L{IOPump}.
+
+    @param test: the test case where the client and server will be
+        used.
+    @type test: L{twisted.trial.unittest.TestCase}
+
+    @param serverFactory: The factory that creates the server object.
+    @type serverFactory: L{twisted.spread.pb.PBServerFactory}
+
+    @param clientFactory: The factory that creates the client object.
+    @type clientFactory: L{twisted.spread.pb.PBClientFactory}
+
+    @return: a 3-tuple of (client, server, pump)
+    @rtype: (L{twisted.spread.pb.Broker}, L{twisted.spread.pb.Broker},
+        L{IOPump})
+    """
+    addr = ('127.0.0.1',)
+    serverBroker = serverFactory.buildProtocol(addr)
+    clientBroker = clientFactory.buildProtocol(addr)
+
+    clientTransport = StringIO()
+    serverTransport = StringIO()
+    clientBroker.makeConnection(protocol.FileWrapper(clientTransport))
+    serverBroker.makeConnection(protocol.FileWrapper(serverTransport))
+    pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
+
+    def maybeDisconnect(broker):
+        if not broker.disconnected:
+            broker.connectionLost(failure.Failure(main.CONNECTION_DONE))
+    test.addCleanup(maybeDisconnect, clientBroker)
+    test.addCleanup(maybeDisconnect, serverBroker)
+    # Establish the connection
+    pump.pump()
+    return clientBroker, serverBroker, pump
+
+
+
 def connectedServerAndClient(test, realm=None):
     """
     Connect a client and server L{Broker} together with an L{IOPump}
@@ -126,24 +166,11 @@ def connectedServerAndClient(test, realm=None):
     @returns: a 3-tuple (client, server, pump).
     """
     realm = realm or DummyRealm()
-    clientBroker = pb.Broker()
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest=b'guest')
-    factory = pb.PBServerFactory(portal.Portal(realm, [checker]))
-    serverBroker = factory.buildProtocol(('127.0.0.1',))
+    serverFactory = pb.PBServerFactory(portal.Portal(realm, [checker]))
+    clientFactory = pb.PBClientFactory()
+    return connectServerAndClient(test, serverFactory, clientFactory)
 
-    clientTransport = StringIO()
-    serverTransport = StringIO()
-    clientBroker.makeConnection(protocol.FileWrapper(clientTransport))
-    serverBroker.makeConnection(protocol.FileWrapper(serverTransport))
-    pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
-    # Challenge-response authentication:
-    pump.flush()
-    def maybeDisconnect(broker):
-        if not broker.disconnected:
-            broker.connectionLost(failure.Failure(main.CONNECTION_DONE))
-    test.addCleanup(maybeDisconnect, clientBroker)
-    test.addCleanup(maybeDisconnect, serverBroker)
-    return clientBroker, serverBroker, pump
 
 
 class SimpleRemote(pb.Referenceable):
