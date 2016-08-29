@@ -11,6 +11,7 @@ import time
 
 from twisted.internet import protocol, task
 from twisted.python.filepath import FilePath
+from twisted.python.compat import unicode
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
