@@ -88,7 +88,7 @@ def parsemsg(s):
     trailing = []
     if not s:
         raise IRCBadMessage("Empty line.")
-    if s[0] == ':':
+    if s[0:1] == ':':
         prefix, s = s[1:].split(' ', 1)
     if s.find(' :') != -1:
         s, trailing = s.split(' :', 1)
@@ -249,7 +249,7 @@ class IRC(protocol.Protocol):
     Internet Relay Chat server protocol.
     """
 
-    buffer = ""
+    buffer = b""
     hostname = None
 
     encoding = None
