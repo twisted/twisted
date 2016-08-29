@@ -1206,7 +1206,7 @@ class IRCClient(basic.LineReceiver):
     _queue = None
     _queueEmptying = None
 
-    delimiter = '\n' # '\r\n' will also work (see dataReceived)
+    delimiter = b'\n' # b'\r\n' will also work (see dataReceived)
 
     __pychecker__ = 'unusednames=params,prefix,channel'
 
