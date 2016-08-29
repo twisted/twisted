@@ -20,6 +20,19 @@ from twisted.words.protocols.irc import IRCClient, attributes as A
 
 
 
+def assertEqualBufferValue(bufferValue, val):
+    # A buffer is always bytes, but sometimes
+    # we need to compare it to a utf-8 unicode string
+    if isinstance(val, unicode):
+        bufferValue = bufferValue.decode("utf-8")
+
+    if isinstance(bufferValue, list):
+        if isinstance(val[0], unicode):
+            bufferValue = [buf.decode("utf8") for buf in bufferValue]
+    assert bufferValue == val, "%s != %s" % (bufferValue, val)
+
+
+
 class ModeParsingTests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.irc.parseModes}.
@@ -1602,9 +1615,9 @@ class ClientImplementationTests(unittest.TestCase):
         self.assertEqual(self.client.hostname, 'foo')
 
         # Pump the clock enough to trigger one LoopingCall.
-        self.assertEqual(self.transport.value(), '')
+        assertEqualBufferValue(self.transport.value(), '')
         self.clock.advance(self.client.heartbeatInterval)
-        self.assertEqual(self.transport.value(), 'PING foo\r\n')
+        assertEqualBufferValue(self.transport.value(), 'PING foo\r\n')
 
         # When the connection is lost the heartbeat is stopped.
         self.transport.loseConnection()
@@ -1635,7 +1648,13 @@ class BasicServerFunctionalityTests(unittest.TestCase):
 
 
     def check(self, s):
-        self.assertEqual(self.f.getvalue(), s)
+        bufferValue = self.f.getvalue()
+        if isinstance(s, unicode):
+            # Convert bufferValue from bytes
+            # to unicode, so we can compare it to
+            # a unicode string.
+            bufferValue = bufferValue.decode("utf-8")
+        self.assertEqual(bufferValue, s)
 
 
     def test_sendMessage(self):
@@ -2183,7 +2202,7 @@ class ClientTests(TestCase):
 
         # Sanity check - we don't want anything to have happened at this
         # point, since we're not in a test yet.
-        self.assertEqual(self.transport.value(), "")
+        assertEqualBufferValue(self.transport.value(), "")
 
         self.addCleanup(self.transport.loseConnection)
         self.addCleanup(self.protocol.connectionLost, None)
@@ -2206,7 +2225,7 @@ class ClientTests(TestCase):
             'AWAY :%s' % (message,),
             '',
         ]
-        self.assertEqual(self.transport.value().split('\r\n'), expected)
+        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_back(self):
@@ -2218,7 +2237,7 @@ class ClientTests(TestCase):
             'AWAY :',
             '',
         ]
-        self.assertEqual(self.transport.value().split('\r\n'), expected)
+        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_whois(self):
@@ -2226,7 +2245,7 @@ class ClientTests(TestCase):
         L{IRCClient.whois} sends a WHOIS message.
         """
         self.protocol.whois('alice')
-        self.assertEqual(
+        assertEqualBufferValue(
             self.transport.value().split('\r\n'),
             ['WHOIS alice', ''])
 
