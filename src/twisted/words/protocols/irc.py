@@ -772,6 +772,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             'CHANMODES': self._parseChanModesParam(['b', '', 'lk'])}
 
 
+    @classmethod
     def _splitParamArgs(cls, params, valueProcessor=None):
         """
         Split ISUPPORT parameter arguments.
@@ -802,9 +803,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
                 a, b = param.split(':', 1)
                 yield a, valueProcessor(b)
         return list(_parse())
-    _splitParamArgs = classmethod(_splitParamArgs)
 
 
+    @classmethod
     def _unescapeParamValue(cls, value):
         """
         Unescape an ISUPPORT parameter.
@@ -829,9 +830,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         if '\\x' not in value:
             return value
         return ''.join(_unescape())
-    _unescapeParamValue = classmethod(_unescapeParamValue)
 
 
+    @classmethod
     def _splitParam(cls, param):
         """
         Split an ISUPPORT parameter.
@@ -845,9 +846,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             param += '='
         key, value = param.split('=', 1)
         return key, map(cls._unescapeParamValue, value.split(','))
-    _splitParam = classmethod(_splitParam)
 
 
+    @classmethod
     def _parsePrefixParam(cls, prefix):
         """
         Parse the ISUPPORT "PREFIX" parameter.
@@ -868,9 +869,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         symbols = zip(symbols, xrange(len(symbols)))
         modes = modes[1:]
         return dict(zip(modes, symbols))
-    _parsePrefixParam = classmethod(_parsePrefixParam)
 
 
+    @classmethod
     def _parseChanModesParam(self, params):
         """
         Parse the ISUPPORT "CHANMODES" parameter.
@@ -884,7 +885,6 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
                     len(names), len(params)))
         items = map(lambda key, value: (key, value or ''), names, params)
         return dict(items)
-    _parseChanModesParam = classmethod(_parseChanModesParam)
 
 
     def getFeature(self, feature, default=None):
