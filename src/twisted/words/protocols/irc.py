@@ -39,6 +39,7 @@ import operator
 import string, socket
 import textwrap
 import shlex
+from functools import reduce
 from os import path
 
 from twisted.internet import reactor, protocol, task
