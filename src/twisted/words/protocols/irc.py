@@ -262,10 +262,11 @@ class IRC(protocol.Protocol):
 
 
     def sendLine(self, line):
-        if self.encoding is not None:
-            if not isinstance(line, bytes):
-                line = line.encode(self.encoding)
-        self.transport.write("%s%s%s" % (line, CR, LF))
+        line = line + CR + LF
+        if isinstance(line, unicode):
+            useEncoding = self.encoding if self.encoding else "utf-8"
+            line = line.encode(useEncoding)
+        self.transport.write(line)
 
 
     def sendMessage(self, command, *parameter_list, **prefix):
@@ -1218,7 +1219,10 @@ class IRCClient(basic.LineReceiver):
 
 
     def _reallySendLine(self, line):
-        return basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
+        quoteLine = lowQuote(line) + '\r'
+        if isinstance(quoteLine, unicode):
+            quoteLine = quoteLine.encode("utf-8")
+        return basic.LineReceiver.sendLine(self, quoteLine)
 
     def sendLine(self, line):
         if self.lineRate is None:
@@ -2621,9 +2625,17 @@ class IRCClient(basic.LineReceiver):
             self.register(self.nickname)
 
     def dataReceived(self, data):
-        basic.LineReceiver.dataReceived(self, data.replace('\r', ''))
+        data = data.replace('\r', '')
+        if isinstance(data, unicode):
+            data = data.encode("utf-8")
+        basic.LineReceiver.dataReceived(self, data)
+
 
     def lineReceived(self, line):
+        if bytes != str and isinstance(line, bytes):
+            # decode bytes from transport to unicode
+            line = line.decode("utf-8")
+
         line = lowDequote(line)
         try:
             prefix, command, params = parsemsg(line)
