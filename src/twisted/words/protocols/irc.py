@@ -2899,7 +2899,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
     delimiter = CR + NL
     client = None
     remoteParty = None
-    buffer = ""
+    buffer = b""
 
     def __init__(self, client, queryData=None):
         """
