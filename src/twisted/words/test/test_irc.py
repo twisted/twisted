@@ -1844,7 +1844,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
 
         # We pull off the leading '@' sign so that the split tags can be
         # compared with what we expect.
-        outTags = outTagStr[1:].split(";")
+        outTags = outTagStr[1:].split(b";")
 
         self.assertEqual(sorted(outTags), sorted(expectedTags))
 
