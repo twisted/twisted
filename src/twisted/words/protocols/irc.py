@@ -2655,7 +2655,7 @@ class IRCClient(basic.LineReceiver):
         # parameter.
         params = ['', '']
         prefixes = self.supported.getFeature('PREFIX', {})
-        params[0] = params[1] = ''.join(prefixes.iterkeys())
+        params[0] = params[1] = ''.join(prefixes.keys())
 
         chanmodes = self.supported.getFeature('CHANMODES')
         if chanmodes is not None:
