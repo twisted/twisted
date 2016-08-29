@@ -770,7 +770,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             # CHANMODES, but we're defaulting it here to handle the case where
             # the IRC server doesn't send us any ISUPPORT information, since
             # IRCClient.getChannelModeParams relies on this value.
-            'CHANMODES': self._parseChanModesParam(['b', '', 'lk'])}
+            'CHANMODES': self._parseChanModesParam(['b', '', 'lk', ''])}
 
 
     @classmethod
