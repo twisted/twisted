@@ -846,7 +846,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         if '=' not in param:
             param += '='
         key, value = param.split('=', 1)
-        return key, map(cls._unescapeParamValue, value.split(','))
+        return key, [cls._unescapeParamValue(v) for v in value.split(',')]
 
 
     @classmethod
