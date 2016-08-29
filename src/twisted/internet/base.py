@@ -893,7 +893,7 @@ class ReactorBase(object):
                     return None
                 warnings.warn(
                     "Argument strings and environment keys/values passed to "
-                    "reactor.spawnProcess should be str, not unicode.",
+                    "reactor.spawnProcess should be bytes, not unicode.",
                     category=DeprecationWarning,
                     stacklevel=4)
             if isinstance(arg, bytes) and b'\0' not in arg:
