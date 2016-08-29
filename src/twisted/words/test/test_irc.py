@@ -1098,7 +1098,7 @@ class CTCPTests(unittest.TestCase):
                            'vnum': self.client.versionNum,
                            'venv': self.client.versionEnv})
         reply = self.file.getvalue()
-        self.assertEqual(versionReply, reply)
+        assertEqualBufferValue(reply, versionReply)
 
 
     def test_noDuplicateCTCPDispatch(self):
