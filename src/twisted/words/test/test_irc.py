@@ -2212,7 +2212,7 @@ class ClientTests(TestCase):
         """
         Return the last IRC message in the transport buffer.
         """
-        return transport.value().split('\r\n')[-2]
+        return transport.value().split(b'\r\n')[-2]
 
 
     def test_away(self):
@@ -2246,7 +2246,7 @@ class ClientTests(TestCase):
         """
         self.protocol.whois('alice')
         assertEqualBufferValue(
-            self.transport.value().split('\r\n'),
+            self.transport.value().split(b'\r\n'),
             ['WHOIS alice', ''])
 
 
@@ -2257,7 +2257,7 @@ class ClientTests(TestCase):
         """
         self.protocol.whois('alice', 'example.org')
         self.assertEqual(
-            self.transport.value().split('\r\n'),
+            self.transport.value().split(b'\r\n'),
             ['WHOIS example.org alice', ''])
 
 
@@ -2277,7 +2277,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqual(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_registerWithPassword(self):
@@ -2298,7 +2298,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqual(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_registerWithTakenNick(self):
@@ -2397,7 +2397,7 @@ class ClientTests(TestCase):
             'PRIVMSG %s :\01ACTION %s\01' % (target, action),
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
-        self.assertEqual(self.transport.value().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_noticedDoesntPrivmsg(self):
