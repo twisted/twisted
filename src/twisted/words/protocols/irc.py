@@ -339,9 +339,6 @@ class IRC(protocol.Protocol):
         if tags:
             tagStr = self._stringTags(tags)
             line = "@%s %s" % (tagStr, line)
-        if self.encoding is None:
-            # Either pass bytes to sendLine, or have sendLine do the translation
-            line = line.encode("utf-8")
         self.sendLine(line)
 
         if len(parameters) > 15:
