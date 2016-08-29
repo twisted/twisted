@@ -685,7 +685,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         """
         _parseChanModesParam = irc.ServerSupportedFeatures._parseChanModesParam
         self.assertEqual(
-            _parseChanModesParam([]),
+            _parseChanModesParam(['', '', '', '']),
             {'addressModes': '',
              'param': '',
              'setParam': '',
@@ -699,7 +699,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
              'noParam': 'imnpst'})
 
         self.assertEqual(
-            _parseChanModesParam(['b', 'k', 'l']),
+            _parseChanModesParam(['b', 'k', 'l', '']),
             {'addressModes': 'b',
              'param': 'k',
              'setParam': 'l',
@@ -806,14 +806,14 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         self._testFeatureDefault('CHANMODES', [('CHANMODES', 'b,,lk,ha,ha')])
 
         self.assertEqual(
-            self._parseFeature('CHANMODES', ''),
+            self._parseFeature('CHANMODES', ',,,'),
             {'addressModes': '',
              'param': '',
              'setParam': '',
              'noParam': ''})
 
         self.assertEqual(
-            self._parseFeature('CHANMODES', ',A'),
+            self._parseFeature('CHANMODES', ',A,,'),
             {'addressModes': '',
              'param': 'A',
              'setParam': '',
