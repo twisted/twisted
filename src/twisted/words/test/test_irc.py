@@ -1738,15 +1738,15 @@ class BasicServerFunctionalityTests(unittest.TestCase):
             u"ccc": None,
             u"example.com/ddd": u"eee"
         }
-        expectedTags = ("aaa=bbb", "ccc", "example.com/ddd=eee")
+        expectedTags = (b"aaa=bbb", b"ccc", b"example.com/ddd=eee")
         self.p.sendCommand(u"CMD", (u"param1", u"param2"), u"irc.example.com",
             sendTags)
         outMsg = self.f.getvalue()
-        outTagStr, outLine = outMsg.split(' ', 1)
+        outTagStr, outLine = outMsg.split(b' ', 1)
 
         # We pull off the leading '@' sign so that the split tags can be
         # compared with what we expect.
-        outTags = outTagStr[1:].split(';')
+        outTags = outTagStr[1:].split(b';')
 
         self.assertEqual(outLine, b":irc.example.com CMD param1 param2\r\n")
         self.assertEqual(sorted(expectedTags), sorted(outTags))
@@ -1816,11 +1816,11 @@ class BasicServerFunctionalityTests(unittest.TestCase):
             u"aaa": u"bbb",
             u"ccc": u"test\r\n \\;;"
         }
-        expectedTags = ("aaa=bbb", "ccc=test\\r\\n\\s\\\\\\:\\:")
+        expectedTags = (b"aaa=bbb", b"ccc=test\\r\\n\\s\\\\\\:\\:")
         self.p.sendCommand(u"CMD", (u"param1", u"param2"), u"irc.example.com",
             sendTags)
         outMsg = self.f.getvalue()
-        outTagStr, outLine = outMsg.split(" ", 1)
+        outTagStr, outLine = outMsg.split(b" ", 1)
 
         # We pull off the leading '@' sign so that the split tags can be
         # compared with what we expect.
