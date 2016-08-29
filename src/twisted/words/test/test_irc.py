@@ -1060,7 +1060,7 @@ class CTCPTests(unittest.TestCase):
         self.client.dataReceived(errQuery)
         reply = self.file.getvalue()
 
-        self.assertEqual(errReply, reply)
+        assertEqualBufferValue(reply, errReply)
 
 
     def test_noNumbersVERSION(self):
@@ -1077,7 +1077,7 @@ class CTCPTests(unittest.TestCase):
                            'EOL': irc.CR + irc.LF,
                            'vname': self.client.versionName})
         reply = self.file.getvalue()
-        self.assertEqual(versionReply, reply)
+        assertEqualBufferValue(reply, versionReply)
 
 
     def test_fullVERSION(self):
@@ -1115,9 +1115,7 @@ class CTCPTests(unittest.TestCase):
             'foo!bar@baz.quux', [
                 '#chan',
                 '%(X)sTESTTHIS%(X)sfoo%(X)sTESTTHIS%(X)s' % {'X': irc.X_DELIM}])
-        self.assertEqual(
-            self.file.getvalue(),
-            '')
+        assertEqualBufferValue(self.file.getvalue(), '')
         self.assertEqual(self.called, 1)
 
 
@@ -1135,9 +1133,7 @@ class CTCPTests(unittest.TestCase):
             'foo!bar@baz.quux', [
                 '#chan',
                 '%(X)sNOTREAL%(X)s' % {'X': irc.X_DELIM}])
-        self.assertEqual(
-            self.file.getvalue(),
-            '')
+        assertEqualBufferValue(self.file.getvalue(), '')
         self.assertEqual(
             self.calledWith,
             ('foo!bar@baz.quux', '#chan', 'NOTREAL', None))
@@ -1677,7 +1673,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         U{RFC 1459 <https://tools.ietf.org/html/rfc1459.html#section-2.3>}.
         """
         self.p.sendCommand(u"CMD", (u"param1", u"param2"))
-        self.check(b"CMD param1 param2\r\n")
+        self.check("CMD param1 param2\r\n")
 
 
     def test_sendUnicodeCommand(self):
@@ -1686,7 +1682,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         in UTF-8.
         """
         self.p.sendCommand(u"CMD", (u"param\u00b9", u"param\u00b2"))
-        self.check("CMD param\xc2\xb9 param\xc2\xb2\r\n")
+        self.check(b"CMD param\xc2\xb9 param\xc2\xb2\r\n")
 
 
     def test_sendMessageNoCommand(self):
@@ -2259,7 +2255,7 @@ class ClientTests(TestCase):
         value is passed for the C{server} parameter.
         """
         self.protocol.whois('alice', 'example.org')
-        self.assertEqual(
+        assertEqualBufferValue(
             self.transport.value().split(b'\r\n'),
             ['WHOIS example.org alice', ''])
 
@@ -2280,7 +2276,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqual(self.transport.value().split(b'\r\n'), expected)
+        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_registerWithPassword(self):
@@ -2301,7 +2297,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqual(self.transport.value().split(b'\r\n'), expected)
+        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_registerWithTakenNick(self):
@@ -2400,7 +2396,7 @@ class ClientTests(TestCase):
             'PRIVMSG %s :\01ACTION %s\01' % (target, action),
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
-        self.assertEqual(self.transport.value().split(b'\r\n'), expected)
+        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_noticedDoesntPrivmsg(self):
