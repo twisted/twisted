@@ -46,7 +46,7 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
-from twisted.python.compat import xrange
+from twisted.python.compat import unicode, xrange
 
 NUL = chr(0)
 CR = chr(0o15)
