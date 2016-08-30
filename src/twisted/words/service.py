@@ -35,7 +35,7 @@ from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode
+from twisted.python.compat import itervalues, unicode
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
 from twisted.words import iwords, ewords
@@ -69,7 +69,7 @@ class Group(object):
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
-            for p in self.users.itervalues():
+            for p in itervalues(self.users):
                 if p is not user:
                     d = defer.maybeDeferred(p.userJoined, self, user)
                     d.addErrback(self._ebUserCall, p=p)
@@ -86,7 +86,7 @@ class Group(object):
             pass
         else:
             removals = []
-            for p in self.users.itervalues():
+            for p in itervalues(self.users):
                 if p is not user:
                     d = defer.maybeDeferred(p.userLeft, self, user, reason)
                     d.addErrback(self._ebUserCall, p=p)
@@ -102,7 +102,7 @@ class Group(object):
     def receive(self, sender, recipient, message):
         assert recipient is self
         receives = []
-        for p in self.users.itervalues():
+        for p in itervalues(self.users):
             if p is not sender:
                 d = defer.maybeDeferred(p.receive, sender, self, message)
                 d.addErrback(self._ebUserCall, p=p)
@@ -114,7 +114,7 @@ class Group(object):
     def setMetadata(self, meta):
         self.meta = meta
         sets = []
-        for p in self.users.itervalues():
+        for p in itervalues(self.users):
             d = defer.maybeDeferred(p.groupMetaUpdate, self, meta)
             d.addErrback(self._ebUserCall, p=p)
             sets.append(d)
@@ -1173,7 +1173,7 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def itergroups(self):
-        return defer.succeed(self.groups.itervalues())
+        return defer.succeed(itervalues(self.groups))
 
 
     def addUser(self, user):
