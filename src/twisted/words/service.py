@@ -288,7 +288,8 @@ class IRCUser(irc.IRC):
         """
         nickname = params[0]
         try:
-            nickname = nickname.decode(self.encoding)
+            if isinstance(nickname, bytes):
+                nickname = nickname.decode(self.encoding)
         except UnicodeDecodeError:
             self.privmsg(
                 NICKSERV,
@@ -464,7 +465,9 @@ class IRCUser(irc.IRC):
 
         """
         try:
-            channelOrUser = params[0].decode(self.encoding)
+            channelOrUser = params[0]
+            if isinstance(channelOrUser, bytes):
+                channelOrUser = channelOrUser.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHNICK, params[0],
@@ -511,7 +514,9 @@ class IRCUser(irc.IRC):
         Parameters: <msgtarget> <text to be sent>
         """
         try:
-            targetName = params[0].decode(self.encoding)
+            targetName = params[0]
+            if isinstance(targetName, bytes):
+                targetName = targetName.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHNICK, params[0],
@@ -542,7 +547,9 @@ class IRCUser(irc.IRC):
         Parameters: ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] )
         """
         try:
-            groupName = params[0].decode(self.encoding)
+            groupName = params[0]
+            if isinstance(groupName, bytes):
+                groupName = groupName.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHCHANNEL, params[0],
@@ -576,7 +583,9 @@ class IRCUser(irc.IRC):
         Parameters: <channel> *( "," <channel> ) [ <Part Message> ]
         """
         try:
-            groupName = params[0].decode(self.encoding)
+            groupName = params[0]
+            if isinstance(params[0], bytes):
+                groupName = params[0].decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOTONCHANNEL, params[0],
@@ -587,7 +596,9 @@ class IRCUser(irc.IRC):
             groupName = groupName[1:]
 
         if len(params) > 1:
-            reason = params[1].decode('utf-8')
+            reason = params[1]
+            if isinstance(reason, bytes):
+                reason = reason.decode('utf-8')
         else:
             reason = None
 
@@ -615,7 +626,9 @@ class IRCUser(irc.IRC):
         #>> :benford.openprojects.net 353 glyph = #python :Orban ... @glyph ... Zymurgy skreech
         #>> :benford.openprojects.net 366 glyph #python :End of /NAMES list.
         try:
-            channel = params[-1].decode(self.encoding)
+            channel = params[-1]
+            if isinstance(channel, bytes):
+                channel = channel.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHCHANNEL, params[-1],
@@ -648,7 +661,9 @@ class IRCUser(irc.IRC):
         Parameters: <channel> [ <topic> ]
         """
         try:
-            channel = params[0].decode(self.encoding)
+            channel = params[0]
+            if isinstance(params[0], bytes):
+                channel = channel.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHCHANNEL,
@@ -743,7 +758,10 @@ class IRCUser(irc.IRC):
         if params:
             # Return information about indicated channels
             try:
-                channels = params[0].decode(self.encoding).split(',')
+                allChannels = params[0]
+                if isinstance(allChannels, bytes):
+                    allChannels = allChannels.decode(self.encoding)
+                channels = allChannels.split(',')
             except UnicodeDecodeError:
                 self.sendMessage(
                     irc.ERR_NOSUCHCHANNEL, params[0],
@@ -801,7 +819,9 @@ class IRCUser(irc.IRC):
             return
 
         try:
-            channelOrUser = params[0].decode(self.encoding)
+            channelOrUser = params[0]
+            if isinstance(channelOrUser, bytes):
+                channelOrUser = channelOrUser.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.RPL_ENDOFWHO, params[0],
@@ -848,7 +868,9 @@ class IRCUser(irc.IRC):
                 ":No such nick/channel")
 
         try:
-            user = params[0].decode(self.encoding)
+            user = params[0]
+            if isinstance(user, bytes):
+                user = user.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHNICK,
@@ -895,7 +917,10 @@ class PBMind(pb.Referenceable):
         pass
 
     def jellyFor(self, jellier):
-        return reflect.qual(PBMind), jellier.invoker.registerReference(self)
+        qual = reflect.qual(PBMind)
+        if isinstance(qual, unicode):
+            qual = qual.encode("utf-8")
+        return qual, jellier.invoker.registerReference(self)
 
     def remote_userJoined(self, user, group):
         pass
@@ -957,7 +982,10 @@ class PBGroup(pb.Referenceable):
 
 
     def jellyFor(self, jellier):
-        return reflect.qual(self.__class__), self.group.name.encode('utf-8'), jellier.invoker.registerReference(self)
+        qual = reflect.qual(self.__class__)
+        if isinstance(qual, unicode):
+            qual = qual.encode("utf-8")
+        return qual, self.group.name.encode('utf-8'), jellier.invoker.registerReference(self)
 
 
     def remote_leave(self, reason=None):
@@ -972,7 +1000,9 @@ class PBGroup(pb.Referenceable):
 class PBGroupReference(pb.RemoteReference):
     def unjellyFor(self, unjellier, unjellyList):
         clsName, name, ref = unjellyList
-        self.name = name.decode('utf-8')
+        self.name = name
+        if isinstance(self.name, bytes):
+            self.name = self.name.decode('utf-8')
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
     def leave(self, reason=None):
@@ -999,7 +1029,10 @@ class ChatAvatar(pb.Referenceable):
 
 
     def jellyFor(self, jellier):
-        return reflect.qual(self.__class__), jellier.invoker.registerReference(self)
+        qual = reflect.qual(self.__class__)
+        if isinstance(qual, unicode):
+            qual = qual.encode("utf-8")
+        return qual, jellier.invoker.registerReference(self)
 
 
     def remote_join(self, groupName):
@@ -1053,7 +1086,7 @@ class WordsRealm(object):
 
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        if isinstance(avatarId, str):
+        if isinstance(avatarId, bytes):
             avatarId = avatarId.decode(self._encoding)
 
         def gotAvatar(avatar):
