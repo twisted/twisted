@@ -31,15 +31,14 @@ from time import time, ctime
 
 from zope.interface import implementer
 
-from twisted.words import iwords, ewords
-
-from twisted.python.components import registerAdapter
+from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
-from twisted.spread import pb
-from twisted.words.protocols import irc
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted import copyright
+from twisted.python.components import registerAdapter
+from twisted.spread import pb
+from twisted.words import iwords, ewords
+from twisted.words.protocols import irc
 
 
 @implementer(iwords.IGroup)
