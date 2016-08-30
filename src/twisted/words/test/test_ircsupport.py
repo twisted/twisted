@@ -10,6 +10,7 @@ from twisted.test.proto_helpers import StringTransport
 
 from twisted.words.im.basechat import Conversation, ChatUI
 from twisted.words.im.ircsupport import IRCAccount, IRCProto
+from twisted.words.test.test_irc import assertEqualBufferValue
 
 
 
@@ -42,7 +43,7 @@ class IRCProtoTests(TestCase):
         I{USER} commands with the username from the account object.
         """
         self.proto.makeConnection(self.transport)
-        self.assertEqual(
+        assertEqualBufferValue(
             self.transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n")
@@ -55,7 +56,7 @@ class IRCProtoTests(TestCase):
         """
         self.account.password = "secret"
         self.proto.makeConnection(self.transport)
-        self.assertEqual(
+        assertEqualBufferValue(
             self.transport.value(),
             "PASS secret\r\n"
             "NICK alice\r\n"
@@ -69,7 +70,7 @@ class IRCProtoTests(TestCase):
         """
         self.account.channels = ['#foo', '#bar']
         self.proto.makeConnection(self.transport)
-        self.assertEqual(
+        assertEqualBufferValue(
             self.transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n"
