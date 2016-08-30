@@ -250,7 +250,7 @@ class IRC(protocol.Protocol):
     Internet Relay Chat server protocol.
     """
 
-    buffer = b""
+    buffer = ""
     hostname = None
 
     encoding = None
