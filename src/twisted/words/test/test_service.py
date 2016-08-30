@@ -7,15 +7,14 @@ Tests for L{twisted.words.service}.
 
 import time
 
-from twisted.trial import unittest
-from twisted.test import proto_helpers
-
 from twisted.cred import portal, credentials, checkers
+from twisted.internet import address, defer, reactor
+from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
+from twisted.spread import pb
+from twisted.test import proto_helpers
+from twisted.trial import unittest
 from twisted.words import ewords, service
 from twisted.words.protocols import irc
-from twisted.spread import pb
-from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
-from twisted.internet import address, defer, reactor
 
 class RealmTests(unittest.TestCase):
     def _entityCreationTest(self, kind):
