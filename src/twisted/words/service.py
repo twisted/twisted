@@ -216,7 +216,12 @@ class IRCUser(irc.IRC):
             kw['to'] = self.name.encode(self.encoding)
 
         arglist = [self, command, kw['to']] + list(parameter_list)
-        irc.IRC.sendMessage(*arglist, **kw)
+        arglistUnicode  = []
+        for arg in arglist:
+            if isinstance(arg, bytes):
+                arg = arg.decode("utf-8")
+            arglistUnicode.append(arg)
+        irc.IRC.sendMessage(*arglistUnicode, **kw)
 
 
     # IChatClient implementation
@@ -231,7 +236,7 @@ class IRCUser(irc.IRC):
         self.part(
             "%s!%s@%s" % (user.name, user.name, self.hostname),
             '#' + group.name,
-            (reason or u"leaving").encode(self.encoding, 'replace'))
+            (reason or u"leaving"))
 
 
     def receive(self, sender, recipient, message):

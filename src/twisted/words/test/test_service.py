@@ -151,7 +151,7 @@ class TestGroup(object):
 class TestUser(object):
     def __init__(self, name, groups, signOn, lastMessage):
         self.name = name
-        self.itergroups = lambda: iter([TestGroup(g, 3, 'Hello') for g in groups])
+        self.itergroups = lambda: iter([TestGroup(g, 3, b'Hello') for g in groups])
         self.signOn = signOn
         self.lastMessage = lastMessage
 
@@ -178,8 +178,6 @@ class TestCaseUserAgg(object):
 
 
     def write(self, stuff):
-        if isinstance(stuff, unicode):
-            stuff = stuff.encode('utf-8')
         self.protocol.dataReceived(stuff)
 
 
@@ -197,8 +195,10 @@ class IRCProtocolTests(unittest.TestCase):
 
         c = []
         for nick in self.STATIC_USERS:
+            if isinstance(nick, bytes):
+                nick = nick.decode("utf-8")
             c.append(self.realm.createUser(nick))
-            self.checker.addUser(nick.encode('ascii'), nick + "_password")
+            self.checker.addUser(nick, nick + u"_password")
         return DeferredList(c)
 
 
@@ -206,7 +206,7 @@ class IRCProtocolTests(unittest.TestCase):
         """
         The user has been greeted with the four messages that are (usually)
         considered to start an IRC session.
-        
+
         Asserts that the required responses were received.
         """
         # Make sure we get 1-4 at least
@@ -222,8 +222,8 @@ class IRCProtocolTests(unittest.TestCase):
     def _login(self, user, nick, password=None):
         if password is None:
             password = nick + "_password"
-        user.write('PASS %s\r\n' % (password,))
-        user.write('NICK %s extrainfo\r\n' % (nick,))
+        user.write(u'PASS %s\r\n' % (password,))
+        user.write(u'NICK %s extrainfo\r\n' % (nick,))
 
 
     def _loggedInUser(self, name):
@@ -238,7 +238,10 @@ class IRCProtocolTests(unittest.TestCase):
         Extracts the user's response, and returns a list of parsed lines.
         If messageType is defined, only messages of that type will be returned.
         """
-        response = user.transport.value().splitlines()
+        response = user.transport.value()
+        if isinstance(response, bytes):
+            response = response.decode("utf-8")
+        response = response.splitlines()
         user.transport.clear()
         result = []
         for message in map(irc.parsemsg, response):
@@ -277,7 +280,7 @@ class IRCProtocolTests(unittest.TestCase):
         firstuser = self.successResultOf(self.realm.lookupUser(u'firstuser'))
 
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
-        self._login(user, "firstuser", "wrongpass")
+        self._login(user, u"firstuser", u"wrongpass")
         response = self._response(user, "PRIVMSG")
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][2], ['firstuser', 'Login failed.  Goodbye.'])
@@ -812,8 +815,11 @@ class PBProtocolTests(unittest.TestCase):
 
 
     def _loggedInAvatar(self, name, password, mind):
-        creds = credentials.UsernamePassword(name, password)
-        self.checker.addUser(name.encode('ascii'), password)
+        nameBytes = name
+        if isinstance(name, unicode):
+            nameBytes = name.encode("ascii")
+        creds = credentials.UsernamePassword(nameBytes, password)
+        self.checker.addUser(nameBytes, password)
         d = self.realm.createUser(name)
         d.addCallback(lambda ign: self.clientFactory.login(creds, mind))
         return d
@@ -822,10 +828,10 @@ class PBProtocolTests(unittest.TestCase):
     @defer.inlineCallbacks
     def testGroups(self):
         mindone = TestMind()
-        one = yield self._loggedInAvatar(u"one", "p1", mindone)
+        one = yield self._loggedInAvatar(u"one", b"p1", mindone)
 
         mindtwo = TestMind()
-        two = yield self._loggedInAvatar(u"two", "p2", mindtwo)
+        two = yield self._loggedInAvatar(u"two", b"p2", mindtwo)
 
         yield self.realm.createGroup(u"foobar")
 
@@ -833,6 +839,6 @@ class PBProtocolTests(unittest.TestCase):
 
         yield two.join(u"foobar")
 
-        yield groupone.send({"text": "hello, monkeys"})
+        yield groupone.send({b"text": b"hello, monkeys"})
 
         yield groupone.leave()
