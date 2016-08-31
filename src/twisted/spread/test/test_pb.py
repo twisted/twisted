@@ -106,11 +106,6 @@ class IOPump:
         self.serverIO.truncate()
         self.client.transport._checkProducer()
         self.server.transport._checkProducer()
-        def maybeDecode(data):
-            from twisted.spread.banana import decode, _i
-            _i._selectDialect(b"pb")
-            return repr(decode(data) if data else b'')
-        # print maybeDecode(cData), maybeDecode(sData)
         for byte in iterbytes(cData):
             self.server.dataReceived(byte)
         for byte in iterbytes(sData):
@@ -196,13 +191,13 @@ class ReconnectingConnector(object):
 
     def stopConnecting(self):
         """
-        A stub C{stopConnecting} implementation.
+        A stub C{stopConnecting} implementation.  Does nothing!
         """
 
 
     def disconnect(self):
         """
-        A stub C{disconnect} implementation.
+        A stub C{disconnect} implementation.  Does nothing!
         """
 
 
@@ -215,7 +210,7 @@ class ReconnectingConnector(object):
 
     def getDestination(self):
         """
-        A stub C{getDestination} implementation.
+        A stub C{getDestination} implementation.  Does nothing!
         """
 
 
@@ -1554,7 +1549,7 @@ class NewCredTests(unittest.TestCase):
         # The perspective passed to cbLogin has gone out of scope.
         # Ensure its __del__ runs...
         gc.collect()
-        # ...and sned its decref message to the server
+        # ...and send its decref message to the server
         self.pump.flush()
         # Now allow the client to disconnect.
         loginCompleted.callback(None)
