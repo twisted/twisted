@@ -167,6 +167,12 @@ class KeyTests(unittest.TestCase):
             g=keydata.DSAData['g'],
             x=keydata.DSAData['x'],
             )._keyObject
+        self.ecObj = keys.Key._fromECComponents(
+            x=keydata.ECDatanistp256['x'],
+            y=keydata.ECDatanistp256['y'],
+            private_value=keydata.ECDatanistp256['private_value'],
+            curve=keydata.ECDatanistp256['curve']
+            )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
             b'\x00\x00`N\xac\xb4@qK\xa0(\xc3\xf2h \xd3\xdd\xee6Np\x9d_'
             b'\xb0>\xe3\x0c(L\x9d{\txUd|!\xf6m\x9c\xd3\x93\x842\x7fU'
@@ -189,6 +195,22 @@ class KeyTests(unittest.TestCase):
         os.unlink(self.keyFile)
 
 
+    def test_getECKeyName(self):
+        """
+        Test that getECKeyName works properly.
+        """
+        ecKey = keys.Key(self.ecObj)
+        ecKey.ecKeyName = keydata.ECDatanistp256['curve']
+        rsaKey = keys.Key(self.rsaObj)
+
+        self.assertEqual(ecKey.getECKeyName(),
+                            keydata.ECDatanistp256['curve'])
+        with self.assertRaises(keys.BadKeyError) as em:
+            rsaKey.getECKeyName()
+        self.assertEqual('getECKeyName supports only EC keys',
+            em.exception.args[0])
+
+
     def test__guessStringType(self):
         """
         Test that the _guessStringType method guesses string types
@@ -198,10 +220,14 @@ class KeyTests(unittest.TestCase):
                 'public_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_openssh),
                 'public_openssh')
+        self.assertEqual(keys.Key._guessStringType(keydata.publicECDSA_openssh),
+                'public_openssh')
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateRSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateDSA_openssh), 'private_openssh')
+        self.assertEqual(keys.Key._guessStringType(
+            keydata.privateECDSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh),
                 'public_lsh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh),
@@ -249,6 +275,8 @@ class KeyTests(unittest.TestCase):
         """
         Test that keys are correctly generated from OpenSSH strings.
         """
+        self._testPublicPrivateFromString(keydata.publicECDSA_openssh,
+                keydata.privateECDSA_openssh, 'EC', keydata.ECDatanistp256)
         self._testPublicPrivateFromString(keydata.publicRSA_openssh,
                 keydata.privateRSA_openssh, 'RSA', keydata.RSAData)
         self.assertEqual(keys.Key.fromString(
@@ -620,10 +648,15 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Test that the type method returns the correct type for an object.
         """
+        ecKey = keys.Key(self.ecObj)
+        ecKey.ecKeyName = keydata.ECDatanistp256['curve']
         self.assertEqual(keys.Key(self.rsaObj).type(), 'RSA')
         self.assertEqual(keys.Key(self.rsaObj).sshType(), b'ssh-rsa')
         self.assertEqual(keys.Key(self.dsaObj).type(), 'DSA')
         self.assertEqual(keys.Key(self.dsaObj).sshType(), b'ssh-dss')
+        self.assertEqual(ecKey.type(), 'EC')
+        self.assertEqual(ecKey.sshType(),
+                        keydata.ECDatanistp256['curve'])
         self.assertRaises(RuntimeError, keys.Key(None).type)
         self.assertRaises(RuntimeError, keys.Key(None).sshType)
         self.assertRaises(RuntimeError, keys.Key(self).type)
@@ -682,6 +715,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(dsaKey.isPublic())
         self.assertEqual(dsaPublicData, dsaKey.data())
 
+    def test_fromBlobECDSA(self):
+        """
+        A public ECDSA key is correctly generated from a public key blob.
+        """
+        ecPublicData = {
+            'x': keydata.ECDatanistp256['x'],
+            'y': keydata.ECDatanistp256['y'],
+            'curve': keydata.ECDatanistp256['curve']
+            }
+        ecblob = (
+            common.NS(ecPublicData['curve']) +
+            common.MP(ecPublicData['x']) +
+            common.MP(ecPublicData['y'])
+            )
+
+        eckey = keys.Key.fromString(ecblob)
+        self.assertTrue(eckey.isPublic())
+        self.assertEqual(ecPublicData, eckey.data())
+
     def test_fromPrivateBlobUnsupportedType(self):
         """
         C{BadKeyError} is raised when loading a private blob with an
@@ -732,6 +784,23 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(keydata.DSAData, dsaKey.data())
 
 
+    def test_fromPrivateBlobECDSA(self):
+        """
+        A private EC key is correctly generated from a private key blob.
+        """
+        ecblob = (
+            common.NS(keydata.ECDatanistp256['curve']) +
+            common.MP(keydata.ECDatanistp256['x']) +
+            common.MP(keydata.ECDatanistp256['y']) +
+            common.MP(keydata.ECDatanistp256['private_value'])
+            )
+
+        eckey = keys.Key._fromString_PRIVATE_BLOB(ecblob)
+
+        self.assertFalse(eckey.isPublic())
+        self.assertEqual(keydata.ECDatanistp256, eckey.data())
+
+
     def test_blobRSA(self):
         """
         Return the over-the-wire SSH format of the RSA public key.
@@ -757,6 +826,21 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             common.MP(publicNumbers.parameter_numbers.q) +
             common.MP(publicNumbers.parameter_numbers.g) +
             common.MP(publicNumbers.y)
+            )
+
+
+    def test_blobEC(self):
+        """
+        Return the over-the-wire SSH format of the EC public key.
+        """
+        ecKey = keys.Key(self.ecObj)
+        ecKey.ecKeyName = keydata.ECDatanistp256['curve']
+
+        self.assertEqual(
+            ecKey.blob(),
+            common.NS(keydata.ECDatanistp256['curve']) +
+            common.MP(self.ecObj.private_numbers().public_numbers.x) +
+            common.MP(self.ecObj.private_numbers().public_numbers.y)
             )
 
 
@@ -805,6 +889,23 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             common.MP(publicNumbers.parameter_numbers.g) +
             common.MP(publicNumbers.y) +
             common.MP(self.dsaObj.private_numbers().x)
+            )
+
+
+    def test_privateBlobEC(self):
+        """
+        L{keys.Key.privateBlob} returns the SSH ptotocol-level format of EC
+        private key.
+        """
+        ecKey = keys.Key(self.ecObj)
+        ecKey.ecKeyName = keydata.ECDatanistp256['curve']
+
+        self.assertEqual(
+            ecKey.privateBlob(),
+            common.NS(keydata.ECDatanistp256['curve']) +
+            common.MP(self.ecObj.private_numbers().public_numbers.x) +
+            common.MP(self.ecObj.private_numbers().public_numbers.y) +
+            common.MP(self.ecObj.private_numbers().private_value)
             )
 
 
