@@ -63,12 +63,8 @@ class IRCUserTests(unittest.TestCase):
         current IRCUser's encoding results in a PRIVMSG from NickServ
         indicating that the nickname could not be decoded.
         """
-        expectedResult = (b":NickServ!NickServ@services PRIVMSG "
-                          b"\xd4\xc5\xd3\xd4 :Your nickname cannot be "
-                          b"decoded. Please use ASCII or UTF-8.\r\n")
-
         self.ircUser.irc_NICK("", [b"\xd4\xc5\xd3\xd4"])
-        self.assertEqual(self.stringTransport.value(), expectedResult)
+        self.assertRaises(UnicodeError)
 
 
     def response(self):
