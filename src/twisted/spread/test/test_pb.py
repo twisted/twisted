@@ -1496,19 +1496,6 @@ class NewCredTests(unittest.TestCase):
         return self.assertFailure(loginDeferred, ConnectionRefusedError)
 
 
-    def _disconnect(self, ignore, factory):
-        """
-        Helper method disconnecting the given client factory and returning a
-        C{Deferred} that will fire when the server connection has noticed the
-        disconnection.
-        """
-        disconnectedDeferred = Deferred()
-        self.serverFactory.protocolInstance.notifyOnDisconnect(
-            lambda: disconnectedDeferred.callback(None))
-        factory.disconnect()
-        return disconnectedDeferred
-
-
     def test_loginLogout(self):
         """
         Test that login can be performed with IUsernamePassword credentials and
@@ -1594,7 +1581,6 @@ class NewCredTests(unittest.TestCase):
             self.assertEqual(self.serverFactory.protocolInstance._localCleanup, {})
         d.addCallback(cbLoggedOut)
 
-        # we need an unconnected client factory, so throw away
         self.establishClientAndServer()
 
         # complete authentication
