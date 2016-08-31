@@ -71,8 +71,10 @@ class IRCUserTests(unittest.TestCase):
         """
         Grabs our responses and then clears the transport
         """
-        response = self.ircUser.transport.value().splitlines()
+        response = self.ircUser.transport.value()
         self.ircUser.transport.clear()
+        response = response.decode("utf-8")
+        response = response.splitlines()
         return [irc.parsemsg(r) for r in response]
 
 
