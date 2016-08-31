@@ -22,10 +22,11 @@ class IRCUserTests(unittest.TestCase):
         Sets up a Realm, Portal, Factory, IRCUser, Transport, and Connection
         for our tests.
         """
-        self.wordsRealm = InMemoryWordsRealm("example.com")
-        self.portal = portal.Portal(self.wordsRealm,
-            [checkers.InMemoryUsernamePasswordDatabaseDontUse(john="pass")])
-        self.factory = IRCFactory(self.wordsRealm, self.portal)
+        self.realm = InMemoryWordsRealm("example.com")
+        self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        self.portal = portal.Portal(self.realm, [self.checker])
+        self.checker.addUser(u"john", u"pass")
+        self.factory = IRCFactory(self.realm, self.portal)
         self.ircUser = self.factory.buildProtocol(None)
         self.stringTransport = proto_helpers.StringTransport()
         self.ircUser.makeConnection(self.stringTransport)
