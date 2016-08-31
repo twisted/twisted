@@ -1632,7 +1632,6 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
-        factory = pb.PBClientFactory()
 
         firstLogin = self.clientFactory.login(
             credentials.UsernamePassword(b'nosuchuser', b'pass'))
