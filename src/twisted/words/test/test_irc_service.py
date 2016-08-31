@@ -5,11 +5,11 @@
 Tests for IRC portions of L{twisted.words.service}.
 """
 
-from twisted.trial import unittest
-from twisted.test import proto_helpers
-from twisted.words.service import InMemoryWordsRealm, IRCFactory, IRCUser
-from twisted.words.protocols import irc
 from twisted.cred import checkers, portal
+from twisted.test import proto_helpers
+from twisted.trial import unittest
+from twisted.words.protocols import irc
+from twisted.words.service import InMemoryWordsRealm, IRCFactory, IRCUser
 
 class IRCUserTests(unittest.TestCase):
     """
