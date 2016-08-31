@@ -73,7 +73,7 @@ class IRCUserTests(unittest.TestCase):
         """
         response = self.ircUser.transport.value().splitlines()
         self.ircUser.transport.clear()
-        return map(irc.parsemsg, response)
+        return [irc.parsemsg(r) for r in response]
 
 
     def scanResponse(self, response, messageType):
