@@ -298,7 +298,7 @@ class IRCUser(irc.IRC):
         except UnicodeDecodeError:
             self.privmsg(
                 NICKSERV,
-                nickname,
+                repr(nickname),
                 'Your nickname cannot be decoded. Please use ASCII or UTF-8.')
             self.transport.loseConnection()
             return
@@ -898,7 +898,7 @@ class IRCUser(irc.IRC):
 class IRCFactory(protocol.ServerFactory):
     """
     IRC server that creates instances of the L{IRCUser} protocol.
-    
+
     @ivar _serverInfo: A dictionary mapping:
         "serviceName" to the name of the server,
         "serviceVersion" to the copyright version,
