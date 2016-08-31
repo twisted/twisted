@@ -15,12 +15,12 @@ import warnings
 from hashlib import md5, sha256
 import base64
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
-from cryptography.hazmat.primitives.serialization import (load_der_private_key,
-                                            load_pem_private_key, load_ssh_public_key)
+from cryptography.hazmat.primitives.serialization import (load_pem_private_key,
+                                            load_ssh_public_key)
 
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
