@@ -194,6 +194,14 @@ class KeyTests(unittest.TestCase):
     def tearDown(self):
         os.unlink(self.keyFile)
 
+    def test_size(self):
+        """
+        Test that size method returns the correct size.
+        """
+        self.assertEqual(keys.Key(self.rsaObj).size(), 768)
+        self.assertEqual(keys.Key(self.dsaObj).size(), 1024)
+        self.assertEqual(keys.Key(self.ecObj).size(), 256)
+
 
     def test_getECKeyName(self):
         """
