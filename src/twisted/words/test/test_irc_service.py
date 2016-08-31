@@ -147,7 +147,7 @@ class MocksyIRCUser(IRCUser):
     def sendMessage(self, code, *_, **__):
         self.mockedCodes.append(code)
 
-BADTEXT = '\xff'
+BADTEXT = b'\xff'
 
 class IRCUserBadEncodingTests(unittest.TestCase):
     """
