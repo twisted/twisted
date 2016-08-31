@@ -58,7 +58,7 @@ ECDatanistp256 = {
             '59310646683104'),
   'private_value': long('3463874347721034170096400845565569825355565567882605'
                         '9678074967909361042656500'),
-  'curve': 'ecdsa-sha2-nistp256'
+  'curve': b'ecdsa-sha2-nistp256'
 }
 
 publicECDSA_openssh = (b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAA"

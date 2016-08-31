@@ -245,7 +245,7 @@ class Key(object):
             newKey =  cls(
                 ec.EllipticCurvePublicNumbers(
                     x, y,
-                    _curveTable[keyType.split('-')[2]]
+                    _curveTable[keyType.split(b'-')[2]]
                     ).public_key(default_backend())
                 )
             newKey.ecKeyName = keyType
@@ -469,11 +469,11 @@ class Key(object):
             newKey = cls(load_pem_private_key(data, passphrase, default_backend()))
             keyName = None
 
-            curve = _oidTable[str(decodedKey[2])]
+            curve = _oidTable[str(decodedKey[2]).encode('utf-8')]
             # Reverse look up the nist curve name to be referenced later
             for k,v in _curveTable.items():
                 if isinstance(curve, v.__class__):
-                    keyName = 'ecdsa-sha2-' + k
+                    keyName = b'ecdsa-sha2-' + k
                     break
 
             if keyName == None:
@@ -736,7 +736,7 @@ class Key(object):
         """
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
-            x=x, y=y, curve=_curveTable[curve.split('-')[2]])
+            x=x, y=y, curve=_curveTable[curve.split(b'-')[2]])
         if private_value is None:
             # We have public components.
             keyObject = publicNumbers.public_key(default_backend())
@@ -1006,7 +1006,7 @@ class Key(object):
         @return: The key type format
         @rtype: L{bytes}
         """
-        if hasattr(self, b'ecKeyName'):
+        if hasattr(self, 'ecKeyName'):
             return self.ecKeyName
         else:
             raise BadKeyError(
