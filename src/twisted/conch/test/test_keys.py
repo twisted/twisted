@@ -173,6 +173,18 @@ class KeyTests(unittest.TestCase):
             private_value=keydata.ECDatanistp256['private_value'],
             curve=keydata.ECDatanistp256['curve']
             )._keyObject
+        self.ecObj384 = keys.Key._fromECComponents(
+            x=keydata.ECDatanistp384['x'],
+            y=keydata.ECDatanistp384['y'],
+            private_value=keydata.ECDatanistp384['private_value'],
+            curve=keydata.ECDatanistp384['curve']
+            )._keyObject
+        self.ecObj521 = keys.Key._fromECComponents(
+            x=keydata.ECDatanistp521['x'],
+            y=keydata.ECDatanistp521['y'],
+            private_value=keydata.ECDatanistp521['private_value'],
+            curve=keydata.ECDatanistp521['curve']
+            )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
             b'\x00\x00`N\xac\xb4@qK\xa0(\xc3\xf2h \xd3\xdd\xee6Np\x9d_'
             b'\xb0>\xe3\x0c(L\x9d{\txUd|!\xf6m\x9c\xd3\x93\x842\x7fU'
@@ -201,6 +213,8 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.rsaObj).size(), 768)
         self.assertEqual(keys.Key(self.dsaObj).size(), 1024)
         self.assertEqual(keys.Key(self.ecObj).size(), 256)
+        self.assertEqual(keys.Key(self.ecObj384).size(), 384)
+        self.assertEqual(keys.Key(self.ecObj521).size(), 521)
 
 
     def test_getECKeyName(self):
@@ -1025,7 +1039,19 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateECDSA_openssh)
         key.ecKeyName = keydata.ECDatanistp256['curve']
         signature = key.sign(data)
+
+        key384 = keys.Key.fromString(keydata.privateECDSA_openssh384)
+        key384.ecKeyName  = keydata.ECDatanistp384['curve']
+        signature384 = key384.sign(data)
+
+        # load_pem_private_key fails with EC key of size 521.
+        # key521 = keys.Key.fromString(keydata.privateECDSA_openssh521)
+        # key521.ecKeyName  = keydata.ECDatanistp521['curve']
+        # signature521 = key521.sign(data)
+
         self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key384.public().verify(signature384, data))
+        # self.assertTrue(key.public().verify(signature521, data))
 
 
     def test_verifyRSA(self):
