@@ -1017,6 +1017,17 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key.public().verify(signature, data))
 
 
+    def test_signAndVerifyEC(self):
+        """
+        Signed data can be verified using EC.
+        """
+        data = b'some-data'
+        key = keys.Key.fromString(keydata.privateECDSA_openssh)
+        key.ecKeyName = keydata.ECDatanistp256['curve']
+        signature = key.sign(data)
+        self.assertTrue(key.public().verify(signature, data))
+
+
     def test_verifyRSA(self):
         """
         A known-good RSA signature verifies successfully.

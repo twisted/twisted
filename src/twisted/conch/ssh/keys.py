@@ -933,6 +933,10 @@ class Key(object):
         @rtype: L{Key}
         @return: A public key.
         """
+        if self.type() == 'EC':
+            newKey = Key(self._keyObject.public_key())
+            newKey.ecKeyName = self.sshType()
+            return newKey
         return Key(self._keyObject.public_key())
 
 
@@ -1398,19 +1402,7 @@ class Key(object):
                 hashSize = hashes.SHA512()
             signer = self._keyObject.signer(ec.ECDSA(hashSize))
             signer.update(data)
-            signature = signer.finalize()
-            (r, s) = decode_dss_signature(signature)
-
-            rb = int_to_bytes(r)
-            sb = int_to_bytes(s)
-
-            # Prepend with null byte if MSB is set.
-            if ord(rb[0]) & 0x80:
-                rb = "\x00" + rb
-            if ord(sb[0]) & 0x80:
-                sb = "\x00" + sb
-
-            ret = common.NS(common.NS(rb) + common.NS(sb))
+            ret = common.NS(signer.finalize())
 
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
@@ -1456,6 +1448,20 @@ class Key(object):
                 k = k.public_key()
             verifier = k.verifier(
                 signature, hashes.SHA1())
+
+        elif self.type() == 'EC':
+            k = self._keyObject
+            if not self.isPublic():
+                k=k.public_key()
+            keySize = self.size()
+            if keySize <= 256:
+                hashSize = hashes.SHA256()
+            elif keySize <= 384:
+                hashSize = hashes.SHA384()
+            else:
+                hashSize = hashes.SHA512()
+            verifier = k.verifier(
+                common.getNS(signature)[0], ec.ECDSA(hashSize))
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
 
