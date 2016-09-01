@@ -467,20 +467,13 @@ class Key(object):
             )
         elif kind == b'EC':
             newKey = cls(load_pem_private_key(data, passphrase, default_backend()))
-            keyName = None
 
             curve = _oidTable[str(decodedKey[2]).encode('utf-8')]
             # Reverse look up the nist curve name to be referenced later
             for k,v in _curveTable.items():
                 if isinstance(curve, v.__class__):
-                    keyName = b'ecdsa-sha2-' + k
+                    newKey.ecKeyName = b'ecdsa-sha2-' + k
                     break
-
-            if keyName == None:
-                raise UnsupportedAlgorithm("Unable to find the nist name for curve: " + curve)
-                # Continue on because there's a possibility we won't need the curve name again.
-            else:
-                newKey.ecKeyName = keyName
 
             return newKey
         else:
@@ -1257,9 +1250,6 @@ class Key(object):
             elif self.type() == 'DSA':
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
                            data['x'])
-            elif self.type() == 'EC':
-                objData = (0, data['curve'], data['x'], data['y'],
-                           data['private_value'])
             asn1Sequence = univ.Sequence()
             for index, value in izip(itertools.count(), objData):
                 asn1Sequence.setComponentByPosition(index, univ.Integer(value))
