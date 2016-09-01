@@ -1136,11 +1136,9 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']))
-        elif type == 'EC':
+        else:
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']))
-        else:
-            raise BadKeyError("unknown key type %s" % (type,))
 
 
     def privateBlob(self):
@@ -1186,11 +1184,9 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        elif type == 'EC':
+        else:
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['private_value']))
-        else:
-            raise BadKeyError("unknown key type %s" % (type,))
 
 
     def toString(self, type, extra=None):
@@ -1247,7 +1243,7 @@ class Key(object):
                 objData = (0, data['n'], data['e'], data['d'], q, p,
                            data['d'] % (q - 1), data['d'] % (p - 1),
                            data['u'])
-            elif self.type() == 'DSA':
+            else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
                            data['x'])
             asn1Sequence = univ.Sequence()

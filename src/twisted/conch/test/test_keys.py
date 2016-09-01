@@ -311,6 +311,21 @@ class KeyTests(unittest.TestCase):
         self._testPublicPrivateFromString(keydata.publicDSA_openssh,
                 keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
 
+    def test_fromOpenSSHErrors(self):
+        """
+        Tests for invalid key types.
+        """
+        badKey = b"""-----BEGIN FOO PRIVATE KEY-----
+MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
+LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
+Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
+G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
+-----END EC PRIVATE KEY-----"""
+        with self.assertRaises(keys.BadKeyError) as em:
+            keys.Key._fromString_PRIVATE_OPENSSH(badKey, None)
+        self.assertEqual("unknown key type b'FOO'",
+            em.exception.args[0])
+
 
     def test_fromOpenSSH_with_whitespace(self):
         """
@@ -612,6 +627,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(rsa1 != dsa)
         self.assertTrue(rsa1 != object)
         self.assertTrue(rsa1 != None)
+
+
+    def test_dataError(self):
+        """
+        Error test for data method
+        """
+        badKey = keys.Key(b'')
+        self.assertRaises(RuntimeError, badKey.data)
 
 
     def test_fingerprintdefault(self):
