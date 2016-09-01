@@ -321,10 +321,8 @@ LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
 Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
 G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
 -----END EC PRIVATE KEY-----"""
-        with self.assertRaises(keys.BadKeyError) as em:
-            keys.Key._fromString_PRIVATE_OPENSSH(badKey, None)
-        self.assertEqual("unknown key type b'FOO'",
-            em.exception.args[0])
+        self.assertRaises(keys.BadKeyError,
+            keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
 
 
     def test_fromOpenSSH_with_whitespace(self):
