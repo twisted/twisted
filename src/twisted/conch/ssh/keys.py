@@ -1360,13 +1360,14 @@ class Key(object):
         @rtype: L{bytes}
         @return: A signature for the given data.
         """
-        if self.type() == 'RSA':
+        keyType = self.type()
+        if keyType == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
             signer.update(data)
             ret = common.NS(signer.finalize())
 
-        elif self.type() == 'DSA':
+        elif keyType == 'DSA':
             signer = self._keyObject.signer(hashes.SHA1())
             signer.update(data)
             signature = signer.finalize()
@@ -1377,7 +1378,7 @@ class Key(object):
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
-        elif self.type() == 'EC':
+        else:
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1390,8 +1391,6 @@ class Key(object):
             signer.update(data)
             ret = common.NS(signer.finalize())
 
-        else:
-            raise BadKeyError("unknown key type %s" % (self.type(),))
         return common.NS(self.sshType()) + ret
 
 
@@ -1415,7 +1414,8 @@ class Key(object):
             signatureType, signature = common.getNS(signature)
         if signatureType != self.sshType():
             return False
-        if self.type() == 'RSA':
+        keyType = self.type()
+        if keyType == 'RSA':
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
@@ -1424,7 +1424,7 @@ class Key(object):
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
-        elif self.type() == 'DSA':
+        elif keyType == 'DSA':
             concatenatedSignature = common.getNS(signature)[0]
             r = int_from_bytes(concatenatedSignature[:20], 'big')
             s = int_from_bytes(concatenatedSignature[20:], 'big')
@@ -1435,7 +1435,7 @@ class Key(object):
             verifier = k.verifier(
                 signature, hashes.SHA1())
 
-        elif self.type() == 'EC':
+        else:
             k = self._keyObject
             if not self.isPublic():
                 k=k.public_key()
@@ -1448,8 +1448,6 @@ class Key(object):
                 hashSize = hashes.SHA512()
             verifier = k.verifier(
                 common.getNS(signature)[0], ec.ECDSA(hashSize))
-        else:
-            raise BadKeyError("unknown key type %s" % (self.type(),))
 
         verifier.update(data)
         try:
