@@ -84,18 +84,18 @@ ECDatanistp521 = {
   'curve': b'ecdsa-sha2-nistp521'
 }
 
-# privateECDSA_openssh521 = b"""-----BEGIN EC PRIVATE KEY-----
-# MIHcAgEBBEIAjn0lSVF6QweS4bjOGP9RHwqxUiTastSE0MVuLtFvkxygZqQ712oZ
-# ewMvqKkxthMQgxzSpGtRBcmkL7RqZ94+18qgBwYFK4EEACOhgYkDgYYABAFpX/6B
-# mxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7M+TQctdlR2Xv/J+AgIeVGmB
-# j2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja0P7DMTE0EV8X
-# f09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw==
-# -----END EC PRIVATE KEY------"""
+privateECDSA_openssh521 = b"""-----BEGIN EC PRIVATE KEY-----
+MIHcAgEBBEIAjn0lSVF6QweS4bjOGP9RHwqxUiTastSE0MVuLtFvkxygZqQ712oZ
+ewMvqKkxthMQgxzSpGtRBcmkL7RqZ94+18qgBwYFK4EEACOhgYkDgYYABAFpX/6B
+mxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7M+TQctdlR2Xv/J+AgIeVGmB
+j2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja0P7DMTE0EV8X
+f09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw==
+-----END EC PRIVATE KEY-----"""
 
-# publicECDSA_openssh521 = (b"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA"
-# b"1MjEAAAAIbmlzdHA1MjEAAACFBAFpX/6BmxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7"
-# b"M+TQctdlR2Xv/J+AgIeVGmBj2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja"
-# b"0P7DMTE0EV8Xf09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw== comment")
+publicECDSA_openssh521 = (b"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA"
+b"1MjEAAAAIbmlzdHA1MjEAAACFBAFpX/6BmxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7"
+b"M+TQctdlR2Xv/J+AgIeVGmBj2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja"
+b"0P7DMTE0EV8Xf09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw== comment")
 
 privateECDSA_openssh384 = b"""-----BEGIN EC PRIVATE KEY-----
 MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU

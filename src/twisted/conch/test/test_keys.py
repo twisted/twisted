@@ -1065,14 +1065,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key384.ecKeyName  = keydata.ECDatanistp384['curve']
         signature384 = key384.sign(data)
 
-        # load_pem_private_key fails with EC key of size 521.
-        # key521 = keys.Key.fromString(keydata.privateECDSA_openssh521)
-        # key521.ecKeyName  = keydata.ECDatanistp521['curve']
-        # signature521 = key521.sign(data)
+        key521 = keys.Key.fromString(keydata.privateECDSA_openssh521)
+        key521.ecKeyName  = keydata.ECDatanistp521['curve']
+        signature521 = key521.sign(data)
 
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key384.public().verify(signature384, data))
-        # self.assertTrue(key.public().verify(signature521, data))
+        self.assertTrue(key521.public().verify(signature521, data))
 
 
     def test_verifyRSA(self):
