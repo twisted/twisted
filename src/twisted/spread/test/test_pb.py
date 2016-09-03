@@ -1345,7 +1345,8 @@ class NewCredTests(unittest.TestCase):
         self.connector = ReconnectingConnector(self.establishClientAndServer)
 
 
-    def completeClientLostConnection(self, reason=None):
+    def completeClientLostConnection(
+            self, reason=failure.Failure(main.CONNECTION_DONE)):
         """
         Asserts that the client broker's transport was closed and then
         mimics the event loop by calling the broker's connectionLost
@@ -1356,8 +1357,6 @@ class NewCredTests(unittest.TestCase):
             broker's connectionLost callback
         @type reason: L{Failure}
         """
-        if reason is None:
-            reason = failure.Failure(main.CONNECTION_DONE)
         self.assertTrue(self.client.transport.closed)
         # simulate the reactor calling back the client's
         # connectionLost after the loseConnection implied by
