@@ -1,4 +1,3 @@
-
 # -*- test-case-name: twisted.conch.test.test_insults -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -8,7 +7,10 @@ from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
 from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
-from twisted.conch.insults.insults import CS_UK, CS_US, CS_DRAWING, CS_ALTERNATE, CS_ALTERNATE_SPECIAL, BLINK, UNDERLINE
+from twisted.conch.insults.insults import (CS_UK, CS_US, CS_DRAWING,
+                                           CS_ALTERNATE,
+                                           CS_ALTERNATE_SPECIAL,
+                                           BLINK, UNDERLINE)
 from twisted.conch.insults.insults import G0, G1
 from twisted.conch.insults.insults import modes, privateModes
 from twisted.python.compat import intToBytes, iterbytes

@@ -1,1 +1,1 @@
-A Conch server no longer corrupts a client's display when attempting to set the cursor position, and insults' ServerProtocol's ECMA-48 terminal manipulation works on Python 3.
+twisted.conch.insults.insults.ServerProtocol no longer corrupts a client's display when attempting to set the cursor position, and its ECMA-48 terminal manipulation works on Python 3.
