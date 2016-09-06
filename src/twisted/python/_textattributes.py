@@ -49,7 +49,7 @@ class _Attribute(FancyEqMixin, object):
 
 
     def __getitem__(self, item):
-        assert isinstance(item, (list, tuple, _Attribute, str))
+        assert isinstance(item, (list, tuple, _Attribute, bytes))
         if isinstance(item, (list, tuple)):
             self.children.extend(item)
         else:
@@ -61,16 +61,16 @@ class _Attribute(FancyEqMixin, object):
         """
         Serialize the text attribute and its children.
 
-        @param write: C{callable}, taking one C{str} argument, called to output
-            a single text attribute at a time.
+        @param write: C{callable}, taking one C{str} argument, called
+            to output a single text attribute at a time.
 
-        @param attrs: A formatting state instance used to determine how to
-            serialize the attribute children.
+        @param attrs: A formatting state instance used to determine
+            how to serialize the attribute children.
 
         @type attributeRenderer: C{str}
-        @param attributeRenderer: Name of the method on I{attrs} that should be
-            called to render the attributes during serialization. Defaults to
-            C{'toVT102'}.
+        @param attributeRenderer: Name of the method on I{attrs} that
+            should be called to render the attributes during
+            serialization.  Defaults to C{'toVT102'}.
         """
         if attrs is None:
             attrs = DefaultFormattingState()
@@ -251,13 +251,16 @@ class DefaultFormattingState(FancyEqMixin, object):
         @return: A string containing VT102 control sequences that mimic this
             formatting state.
         """
-        return ''
+        return b''
 
 
 
 class _FormattingStateMixin(DefaultFormattingState):
     """
     Mixin for the formatting state/attributes of a single character.
+
+    Implementers must ensure their C{__init__} method can be called
+    with no arguments.
     """
     def copy(self):
         c = DefaultFormattingState.copy(self)
@@ -268,7 +271,7 @@ class _FormattingStateMixin(DefaultFormattingState):
     def _withAttribute(self, name, value):
         if getattr(self, name) != value:
             attr = self.copy()
-            attr._subtracting = not value
+            attr.subtracting = not value
             setattr(attr, name, value)
             return attr
         else:
@@ -312,7 +315,7 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     """
     flattened = []
     output.serialize(flattened.append, attrs, attributeRenderer)
-    return ''.join(flattened)
+    return b''.join(flattened)
 
 
 
