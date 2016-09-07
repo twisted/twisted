@@ -174,7 +174,7 @@ class StringTransport:
         if peerAddress is not None:
             self.peerAddr = peerAddress
         self.connected = True
-        self.lenient = lenient
+        self._lenient = lenient
 
     def clear(self):
         """
@@ -256,7 +256,7 @@ class StringTransport:
 
     # IPushProducer
     def _checkState(self):
-        if self.disconnecting and not self.lenient:
+        if self.disconnecting and not self._lenient:
             raise RuntimeError(
                 "Cannot resume producing after loseConnection")
         if self.producerState == 'stopped':
