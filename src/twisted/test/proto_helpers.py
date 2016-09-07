@@ -143,11 +143,17 @@ class StringTransport:
         this transport since the last call to L{clear}.  Use L{value} instead
         of accessing this directly.
 
-    @ivar lenient: A L{bool} that controls whether L{StringTransport} will
-        throw errors if production is resumed after the connection has been
-        lost. By default L{StringTransport} enforces that C{resumeProducing}
-        cannot be called after the connection is lost, but real transports
-        don't do that. Defaults to C{False}.
+    @ivar lenient: By default L{StringTransport} enforces that
+        L{resumeProducing} is not called after the connection is lost. This is
+        to ensure that any code that does call L{resumeProducing} after the
+        connection is lost is not blindly expecting L{resumeProducing} to have
+        any impact.
+
+        However, if your test case is calling L{resumeProducing} after
+        connection close on purpose, and you know it won't block expecting
+        further data to show up, this flag may safely be set to L{True}.
+
+        Defaults to L{False}.
     @type lenient: L{bool}
     """
 
