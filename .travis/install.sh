@@ -16,7 +16,7 @@ fi
 # already using the same Python version in this venv as in the test env,
 # thanks to travis.yml).
 
-pip install 'setuptools<26'
+pip install -U pip 'setuptools<26'
 pip install cryptography
 
 pip install $@
