@@ -271,7 +271,7 @@ class _FormattingStateMixin(DefaultFormattingState):
     def _withAttribute(self, name, value):
         if getattr(self, name) != value:
             attr = self.copy()
-            attr.subtracting = not value
+            attr._subtracting = not value
             setattr(attr, name, value)
             return attr
         else:

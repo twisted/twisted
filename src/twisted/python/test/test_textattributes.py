@@ -728,7 +728,7 @@ class _FlattenableFormattingState(_FormattingStateMixin):
     foreground = b"<default foreground>"
     background = b'<default background>'
 
-    subtracting = False
+    _subtracting = False
 
 
     def toVT102(self):
@@ -741,7 +741,7 @@ class _FlattenableFormattingState(_FormattingStateMixin):
                 attrs.append(_FlattenableAttributes.attrs[name])
         for name in ("foreground", "background"):
             attrs.append(getattr(self, name))
-        if self.subtracting:
+        if self._subtracting:
             attrs.append[b"<subtracting>"]
 
         return b''.join(attrs)
