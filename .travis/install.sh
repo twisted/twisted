@@ -7,7 +7,6 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     python get-pip.py --user
     python -m pip install --user virtualenv
     python -m virtualenv ~/.venv
-
     source ~/.venv/bin/activate
 fi
 
@@ -15,7 +14,6 @@ fi
 # install (and thereby cache a built wheel of) cryptography.  (NB: We're
 # already using the same Python version in this venv as in the test env,
 # thanks to travis.yml).
-
 pip install -U pip 'setuptools<26'
 pip install cryptography
 
