@@ -143,7 +143,7 @@ class StringTransport:
         this transport since the last call to L{clear}.  Use L{value} instead
         of accessing this directly.
 
-    @ivar lenient: By default L{StringTransport} enforces that
+    @ivar _lenient: By default L{StringTransport} enforces that
         L{resumeProducing} is not called after the connection is lost. This is
         to ensure that any code that does call L{resumeProducing} after the
         connection is lost is not blindly expecting L{resumeProducing} to have
