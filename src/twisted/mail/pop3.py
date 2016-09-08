@@ -24,7 +24,8 @@ from twisted.mail.interfaces import (
     IMailboxPOP3 as IMailbox,
 )
 from twisted.mail._except import (
-    POP3Error, _POP3MessageDeleted,
+    POP3Error, _POP3MessageDeleted
+)
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import task

@@ -68,7 +68,8 @@ from twisted.mail._except import (
     IllegalMailboxEncoding, MailboxCollision, NoSuchMailbox, ReadOnlyMailbox,
     UnhandledResponse, NegativeResponse, NoSupportedAuthentication,
     IllegalIdentifierError, IllegalQueryError, MismatchedNesting,
-    MismatchedQuoting)
+    MismatchedQuoting, IllegalServerResponse,
+)
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
