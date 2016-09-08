@@ -407,7 +407,8 @@ class Command:
             unusedCallback(unuse)
 
 
-
+    def moreChallenges(self):
+        return False
 
 # Some constants to help define what an atom is and is not - see the grammar
 # section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.
