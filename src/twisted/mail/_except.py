@@ -28,6 +28,77 @@ class IllegalMailboxEncoding(IMAP4Exception):
 
 
 
+class MailboxException(IMAP4Exception):
+    pass
+
+
+
+class MailboxCollision(MailboxException):
+    def __str__(self):
+        return 'Mailbox named %s already exists' % self.args
+
+
+
+class NoSuchMailbox(MailboxException):
+    def __str__(self):
+        return 'No mailbox named %s exists' % self.args
+
+
+
+class ReadOnlyMailbox(MailboxException):
+    def __str__(self):
+        return 'Mailbox open in read-only state'
+
+
+class UnhandledResponse(IMAP4Exception):
+    pass
+
+
+
+class NegativeResponse(IMAP4Exception):
+    pass
+
+
+
+class NoSupportedAuthentication(IMAP4Exception):
+    def __init__(self, serverSupports, clientSupports):
+        IMAP4Exception.__init__(
+            self, 'No supported authentication schemes available')
+        self.serverSupports = serverSupports
+        self.clientSupports = clientSupports
+
+    def __str__(self):
+        return (IMAP4Exception.__str__(self)
+            + ': Server supports %r, client supports %r'
+            % (self.serverSupports, self.clientSupports))
+
+
+
+class IllegalServerResponse(IMAP4Exception):
+    pass
+
+
+
+class IllegalIdentifierError(IMAP4Exception):
+    pass
+
+
+
+class IllegalQueryError(IMAP4Exception):
+    pass
+
+
+
+class MismatchedNesting(IMAP4Exception):
+    pass
+
+
+
+class MismatchedQuoting(IMAP4Exception):
+    pass
+
+
+
 class SMTPError(Exception):
     pass
 

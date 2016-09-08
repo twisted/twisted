@@ -17,12 +17,13 @@ To do::
 
 import base64
 import binascii
-import re
+import codecs
 import copy
-import tempfile
-import string
-import time
 import random
+import re
+import string
+import tempfile
+import time
 
 import email.utils
 
@@ -63,8 +64,11 @@ from twisted.mail._cred import (
     LOGINAuthenticator, LOGINCredentials,
     PLAINAuthenticator, PLAINCredentials)
 from twisted.mail._except import (
-    IMAP4Exception, IllegalClientResponse, IllegalOperation,
-    IllegalMailboxEncoding)
+    IMAP4Exception, IllegalClientResponse, IllegalOperation, MailboxException,
+    IllegalMailboxEncoding, MailboxCollision, NoSuchMailbox, ReadOnlyMailbox,
+    UnhandledResponse, NegativeResponse, NoSupportedAuthentication,
+    IllegalIdentifierError, IllegalQueryError, MismatchedNesting,
+    MismatchedQuoting)
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
@@ -2138,23 +2142,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendUntaggedResponse('%d RECENT' % recent, async=True)
 
 
-class UnhandledResponse(IMAP4Exception): pass
-
-class NegativeResponse(IMAP4Exception): pass
-
-class NoSupportedAuthentication(IMAP4Exception):
-    def __init__(self, serverSupports, clientSupports):
-        IMAP4Exception.__init__(self, 'No supported authentication schemes available')
-        self.serverSupports = serverSupports
-        self.clientSupports = clientSupports
-
-    def __str__(self):
-        return (IMAP4Exception.__str__(self)
-            + ': Server supports %r, client supports %r'
-            % (self.serverSupports, self.clientSupports))
-
-class IllegalServerResponse(IMAP4Exception): pass
-
 TIMEOUT_ERROR = error.TimeoutError()
 
 @implementer(IMailboxListener)
@@ -3911,7 +3898,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """Override me"""
 
 
-class IllegalIdentifierError(IMAP4Exception): pass
 
 def parseIdList(s, lastMessageId=None):
     """
@@ -3973,7 +3959,7 @@ def parseIdList(s, lastMessageId=None):
                 res.extend(p or lastMessageId)
     return res
 
-class IllegalQueryError(IMAP4Exception): pass
+
 
 _SIMPLE_BOOL = (
     'ALL', 'ANSWERED', 'DELETED', 'DRAFT', 'FLAGGED', 'NEW', 'OLD', 'RECENT',
@@ -4132,11 +4118,6 @@ def Not(query):
     """The negation of a query"""
     return '(NOT %s)' % (query,)
 
-class MismatchedNesting(IMAP4Exception):
-    pass
-
-class MismatchedQuoting(IMAP4Exception):
-    pass
 
 def wildcardToRegexp(wildcard, delim=None):
     wildcard = wildcard.replace('*', '(?:.*?)')
@@ -4381,22 +4362,6 @@ def collapseNestedLists(items):
         else:
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
-
-
-
-class MailboxException(IMAP4Exception): pass
-
-class MailboxCollision(MailboxException):
-    def __str__(self):
-        return 'Mailbox named %s already exists' % self.args
-
-class NoSuchMailbox(MailboxException):
-    def __str__(self):
-        return 'No mailbox named %s exists' % self.args
-
-class ReadOnlyMailbox(MailboxException):
-    def __str__(self):
-        return 'Mailbox open in read-only state'
 
 
 
@@ -5510,7 +5475,6 @@ def parseTime(s):
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
         )
 
-import codecs
 def modified_base64(s):
     s_utf7 = s.encode('utf-7')
     return s_utf7[1:-1].replace('/', ',')
