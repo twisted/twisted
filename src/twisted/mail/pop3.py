@@ -24,7 +24,7 @@ from twisted.mail.interfaces import (
     IMailboxPOP3 as IMailbox,
 )
 from twisted.mail._except import (
-    POP3Error, _POP3MessageDeleted
+    POP3Error, _POP3MessageDeleted, POP3ClientError
 )
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -1684,7 +1684,6 @@ class POP3Client(basic.LineOnlyReceiver):
 
 
 from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
-from twisted.mail.pop3client import POP3ClientError
 from twisted.mail.pop3client import InsecureAuthenticationDisallowed
 from twisted.mail.pop3client import ServerErrorResponse
 from twisted.mail.pop3client import LineTooLong
