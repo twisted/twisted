@@ -207,7 +207,7 @@ class AuthenticationError(ESMTPClientError):
 
 
 
-class TLSError(ESMTPClientError):
+class SMTPTLSError(ESMTPClientError):
     """
     An error occurred while negiotiating for transport security.
 

@@ -21,7 +21,7 @@ from twisted.protocols import policies
 from twisted.internet import error
 from twisted.internet import interfaces
 from twisted.mail._except import (
-    POP3ClientError, InsecureAuthenticationDisallowed, TLSError,
+    InsecureAuthenticationDisallowed, TLSError,
     TLSNotSupportedError, ServerErrorResponse, LineTooLong)
 
 OK = '+OK'

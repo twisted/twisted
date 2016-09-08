@@ -31,10 +31,11 @@ from twisted.mail._cred import (CramMD5ClientAuthenticator, LOGINAuthenticator,
                                 LOGINCredentials as _lcredentials)
 from twisted.mail._except import (
     AUTHDeclinedError, AUTHRequiredError, AddressError,
-    AuthenticationError,  EHLORequiredError, ESMTPClientError,
+    AuthenticationError, EHLORequiredError, ESMTPClientError,
     SMTPAddressError, SMTPBadRcpt, SMTPBadSender, SMTPClientError,
     SMTPConnectError, SMTPDeliveryError, SMTPError, SMTPServerError,
-    SMTPTimeoutError, TLSError, TLSRequiredError, SMTPProtocolError)
+    SMTPTimeoutError, SMTPTLSError as TLSError, TLSRequiredError,
+    SMTPProtocolError)
 
 from twisted import cred
 from twisted.python.runtime import platform
