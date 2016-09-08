@@ -1372,7 +1372,10 @@ class HTTP11ClientProtocolTests(TestCase):
         method will be invoked with a L{ResponseFailed} failure containing a
         L{ConnectionAborted} exception.
         """
-        transport = StringTransport()
+        # We need to set StringTransport to lenient mode because we'll call
+        # resumeProducing on it after the connection is aborted. That's ok:
+        # for real transports nothing will happen.
+        transport = StringTransport(lenient=True)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
@@ -2611,7 +2614,7 @@ class ResponseTests(TestCase):
     def test_transportResumed(self):
         """
         L{Response.deliverBody} resumes the HTTP connection's transport
-        before passing it to the consumer's C{makeConnection} method.
+        after passing it to the consumer's C{makeConnection} method.
         """
         transportState = []
         class ListConsumer(Protocol):
@@ -2624,7 +2627,8 @@ class ResponseTests(TestCase):
         response = justTransportResponse(transport)
         self.assertEqual(transport.producerState, u'paused')
         response.deliverBody(protocol)
-        self.assertEqual(transportState, [u'producing'])
+        self.assertEqual(transportState, [u'paused'])
+        self.assertEqual(transport.producerState, u'producing')
 
 
     def test_bodyDataFinishedBeforeStartProducing(self):
