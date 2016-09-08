@@ -201,7 +201,7 @@ class IDomain(Interface):
         @type user: L{User}
         @param user: A user.
 
-        @rtype: no-argument callable which returns L{IMessageSMTPI} provider
+        @rtype: no-argument callable which returns L{IMessageSMTP} provider
         @return: A function which takes no arguments and returns a message
             receiver for the user.
 
