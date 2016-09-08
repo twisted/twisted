@@ -117,7 +117,7 @@ class SMTPClientError(SMTPError):
 
         @param log: A string log of the exchange leading up to and including
             the error.
-        @type log: L{str}
+        @type log: L{bytes}
 
         @param isFatal: A boolean indicating whether this connection can
             proceed or not. If True, the connection will be dropped.

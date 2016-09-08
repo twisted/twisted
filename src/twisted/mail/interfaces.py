@@ -18,7 +18,7 @@ class IClientAuthentication(Interface):
         """
         Return an identifier associated with this authentication scheme.
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
 
     def challengeResponse(secret, challenge):
@@ -33,9 +33,9 @@ class IServerFactoryPOP3(Interface):
     An interface for querying capabilities of a POP3 server.
 
     Any cap_* method may raise L{NotImplementedError} if the particular
-    capability is not supported.  If L{cap_EXPIRE()} does not raise
+    capability is not supported. If L{cap_EXPIRE()} does not raise
     L{NotImplementedError}, L{perUserExpiration()} must be implemented,
-    otherwise they are optional.  If L{cap_LOGIN_DELAY()} is implemented,
+    otherwise they are optional. If L{cap_LOGIN_DELAY()} is implemented,
     L{perUserLoginDelay()} must be implemented, otherwise they are optional.
 
     @type challengers: L{dict} of L{bytes} -> L{IUsernameHashedPassword
@@ -395,14 +395,14 @@ class IMessageIMAPPart(Interface):
         """
         Retrieve a group of message headers.
 
-        @type names: C{tuple} of C{str}
+        @type names: L{tuple} of L{bytes}
         @param names: The names of the headers to retrieve or omit.
 
-        @type negate: C{bool}
+        @type negate: L{bool}
         @param negate: If True, indicates that the headers listed in C{names}
             should be omitted from the return value, rather than included.
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         @return: A mapping of header field names to header field values
         """
 
@@ -417,7 +417,7 @@ class IMessageIMAPPart(Interface):
         """
         Retrieve the total size, in octets, of this message.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
 
 
@@ -425,7 +425,7 @@ class IMessageIMAPPart(Interface):
         """
         Indicate whether this message has subparts.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         """
 
 
@@ -433,7 +433,7 @@ class IMessageIMAPPart(Interface):
         """
         Retrieve a MIME sub-message
 
-        @type part: C{int}
+        @type part: L{int}
         @param part: The number of the part to retrieve, indexed from 0.
 
         @raise IndexError: Raised if the specified part does not exist.
@@ -466,7 +466,7 @@ class IMessageIMAP(IMessageIMAPPart):
         """
         Retrieve the date internally associated with this message.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         @return: An RFC822-formatted date string.
         """
 
@@ -503,16 +503,16 @@ class ISearchableIMAPMailbox(Interface):
         Implementations which wish to offer better performance than the default
         implementation should implement this interface.
 
-        @type query: C{list}
+        @type query: L{list}
         @param query: The search criteria
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: If true, the IDs specified in the query are UIDs; otherwise
             they are message sequence IDs.
 
-        @rtype: C{list} or C{Deferred}
+        @rtype: L{list} or L{Deferred}
         @return: A list of message sequence numbers or message UIDs which match
-            the search criteria or a C{Deferred} whose callback will be invoked
+            the search criteria or a L{Deferred} whose callback will be invoked
             with such a list.
 
         @raise IllegalQueryError: Raised when query is not valid.
@@ -529,7 +529,7 @@ class IMailboxIMAPListener(Interface):
         """
         Indicates that the write status of a mailbox has changed.
 
-        @type writeable: C{bool}
+        @type writeable: L{bool}
         @param writeable: A true value if write is now allowed, false
             otherwise.
         """
@@ -539,7 +539,7 @@ class IMailboxIMAPListener(Interface):
         """
         Indicates that the flags of one or more messages have changed.
 
-        @type newFlags: C{dict}
+        @type newFlags: L{dict}
         @param newFlags: A mapping of message identifiers to tuples of flags
             now set on that message.
         """
@@ -549,12 +549,12 @@ class IMailboxIMAPListener(Interface):
         """
         Indicates that the number of messages in a mailbox has changed.
 
-        @type exists: C{int} or L{None}
+        @type exists: L{int} or L{None}
         @param exists: The total number of messages now in this mailbox. If the
             total number of messages has not changed, this should be L{None}.
 
-        @type recent: C{int}
-        @param recent: The number of messages now flagged \\Recent. If the
+        @type recent: L{int}
+        @param recent: The number of messages now flagged C{\\Recent}. If the
             number of recent messages has not changed, this should be L{None}.
         """
 
@@ -574,7 +574,7 @@ class IMessageIMAPCopier(Interface):
         If this interface is not implemented by the mailbox,
         L{IMailboxIMAP.addMessage} will be used instead.
 
-        @rtype: C{Deferred} or C{int}
+        @rtype: L{Deferred} or L{int}
         @return: Either the UID of the message or a Deferred which fires with
             the UID when the copy finishes.
         """
@@ -596,7 +596,7 @@ class IMailboxIMAPInfo(Interface):
 
         Flags with the \\ prefix are reserved for use as system flags.
 
-        @rtype: C{list} of C{str}
+        @rtype: L{list} of L{bytes}
         @return: A list of the flags that can be set on messages in this
             mailbox.
         """
@@ -606,7 +606,7 @@ class IMailboxIMAPInfo(Interface):
         """
         Get the character which delimits namespaces for in this mailbox.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         """
 
 
@@ -616,7 +616,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Return the unique validity identifier for this mailbox.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
 
 
@@ -624,7 +624,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Return the likely UID for the next message added to this mailbox.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
 
 
@@ -632,10 +632,10 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Return the UID of a message in the mailbox
 
-        @type message: C{int}
+        @type message: L{int}
         @param message: The message sequence number
 
-        @rtype: C{int}
+        @rtype: L{int}
         @return: The UID of the message.
         """
 
@@ -644,7 +644,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Return the number of messages in this mailbox.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
 
 
@@ -652,7 +652,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Return the number of messages with the 'Recent' flag.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
 
 
@@ -660,7 +660,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Return the number of messages with the 'Unseen' flag.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
 
 
@@ -668,7 +668,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Get the read/write status of the mailbox.
 
-        @rtype: C{int}
+        @rtype: L{int}
         @return: A true value if write permission is allowed, a false value
             otherwise.
         """
@@ -697,7 +697,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             possible values for each name are: MESSAGES, RECENT, UIDNEXT,
             UIDVALIDITY, UNSEEN.
 
-        @rtype: C{dict} or C{Deferred}
+        @rtype: L{dict} or L{Deferred}
         @return: A dictionary containing status information about the requested
             names is returned. If the process of looking this information up
             would be costly, a deferred whose callback will eventually be
@@ -735,13 +735,13 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @type message: A file-like object
         @param message: The RFC822 formatted message
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{bytes}
         @param flags: The flags to associate with this message
 
-        @type date: C{str}
+        @type date: L{bytes}
         @param date: If specified, the date to associate with this message.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with the message id if
             the message is added successfully and whose errback is invoked
             otherwise.
@@ -755,9 +755,9 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
         Remove all messages flagged \\Deleted.
 
-        @rtype: C{list} or C{Deferred}
+        @rtype: L{list} or L{Deferred}
         @return: The list of message sequence numbers which were deleted, or a
-            C{Deferred} whose callback will be invoked with such a list.
+            L{Deferred} whose callback will be invoked with such a list.
 
         @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
             read-write.
@@ -772,7 +772,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @param messages: The identifiers of messages to retrieve information
             about
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: If true, the IDs specified in the query are UIDs; otherwise
             they are message sequence IDs.
 
@@ -788,7 +788,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @type messages: A MessageSet object with the list of messages requested
         @param messages: The identifiers of the messages to set the flags of.
 
-        @type flags: sequence of C{str}
+        @type flags: sequence of L{bytes}
         @param flags: The flags to set, unset, or add.
 
         @type mode: -1, 0, or 1
@@ -797,15 +797,15 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             the specified messages. If mode is 0, all existing flags should be
             cleared and these flags should be added.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: If true, the IDs specified in the query are UIDs; otherwise
             they are message sequence IDs.
 
-        @rtype: C{dict} or C{Deferred}
-        @return: A C{dict} mapping message sequence numbers to sequences of
-            C{str} representing the flags set on the message after this
-            operation has been performed, or a C{Deferred} whose callback will
-            be invoked with such a C{dict}.
+        @rtype: L{dict} or L{Deferred}
+        @return: A L{dict} mapping message sequence numbers to sequences of
+            L{bytes} representing the flags set on the message after this
+            operation has been performed, or a L{Deferred} whose callback will
+            be invoked with such a L{dict}.
 
         @raise ReadOnlyMailbox: Raised if this mailbox is not open for
             read-write.
@@ -825,7 +825,7 @@ class ICloseableMailboxIMAP(Interface):
         """
         Close this mailbox.
 
-        @return: A C{Deferred} which fires when this mailbox has been closed,
+        @return: A L{Deferred} which fires when this mailbox has been closed,
             or None if the mailbox can be closed immediately.
         """
 
@@ -843,7 +843,7 @@ class IAccountIMAP(Interface):
         """
         Add a new mailbox to this account
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: The name associated with this mailbox. It may not contain
             multiple hierarchical parts.
 
@@ -851,13 +851,13 @@ class IAccountIMAP(Interface):
         @param mbox: The mailbox to associate with this name. If L{None}, a
             suitable default is created and used.
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the creation succeeds, or a deferred whose
             callback will be invoked when the creation succeeds.
 
         @raise MailboxException: Raised if this mailbox cannot be added for
             some reason. This may also be raised asynchronously, if a
-            C{Deferred} is returned.
+            L{Deferred} is returned.
         """
 
 
@@ -865,17 +865,17 @@ class IAccountIMAP(Interface):
         """
         Create a new mailbox from the given hierarchical name.
 
-        @type pathspec: C{str}
+        @type pathspec: L{bytes}
         @param pathspec: The full hierarchical name of a new mailbox to create.
             If any of the inferior hierarchical names to this one do not exist,
             they are created as well.
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the creation succeeds, or a deferred whose
             callback will be invoked when the creation succeeds.
 
         @raise MailboxException: Raised if this mailbox cannot be added. This
-            may also be raised asynchronously, if a C{Deferred} is returned.
+            may also be raised asynchronously, if a L{Deferred} is returned.
         """
 
 
@@ -883,15 +883,15 @@ class IAccountIMAP(Interface):
         """
         Acquire a mailbox, given its name.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: The mailbox to acquire
 
-        @type rw: C{bool}
+        @type rw: L{bool}
         @param rw: If a true value, request a read-write version of this
             mailbox. If a false value, request a read-only version.
 
-        @rtype: Any object implementing C{IMailboxIMAP} or C{Deferred}
-        @return: The mailbox object, or a C{Deferred} whose callback will be
+        @rtype: Any object implementing C{IMailboxIMAP} or L{Deferred}
+        @return: The mailbox object, or a L{Deferred} whose callback will be
             invoked with the mailbox object. None may be returned if the
             specified mailbox may not be selected for any reason.
         """
@@ -901,16 +901,16 @@ class IAccountIMAP(Interface):
         """
         Delete the mailbox with the specified name.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: The mailbox to delete.
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the mailbox is successfully deleted, or a
-            C{Deferred} whose callback will be invoked when the deletion
+            L{Deferred} whose callback will be invoked when the deletion
             completes.
 
         @raise MailboxException: Raised if this mailbox cannot be deleted. This
-            may also be raised asynchronously, if a C{Deferred} is returned.
+            may also be raised asynchronously, if a L{Deferred} is returned.
         """
 
 
@@ -918,19 +918,19 @@ class IAccountIMAP(Interface):
         """
         Rename a mailbox
 
-        @type oldname: C{str}
+        @type oldname: L{bytes}
         @param oldname: The current name of the mailbox to rename.
 
-        @type newname: C{str}
+        @type newname: L{bytes}
         @param newname: The new name to associate with the mailbox.
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the mailbox is successfully renamed, or a
-            C{Deferred} whose callback will be invoked when the rename
+            L{Deferred} whose callback will be invoked when the rename
             operation is completed.
 
         @raise MailboxException: Raised if this mailbox cannot be renamed. This
-            may also be raised asynchronously, if a C{Deferred} is returned.
+            may also be raised asynchronously, if a L{Deferred} is returned.
         """
 
 
@@ -938,12 +938,12 @@ class IAccountIMAP(Interface):
         """
         Check the subscription status of a mailbox
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: The name of the mailbox to check
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the given mailbox is currently subscribed to,
-            a false value otherwise. A C{Deferred} may also be returned whose
+            a false value otherwise. A L{Deferred} may also be returned whose
             callback will be invoked with one of these values.
         """
 
@@ -952,16 +952,16 @@ class IAccountIMAP(Interface):
         """
         Subscribe to a mailbox
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: The name of the mailbox to subscribe to
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the mailbox is subscribed to successfully, or
             a Deferred whose callback will be invoked with this value when the
             subscription is successful.
 
         @raise MailboxException: Raised if this mailbox cannot be subscribed
-            to. This may also be raised asynchronously, if a C{Deferred} is
+            to. This may also be raised asynchronously, if a L{Deferred} is
             returned.
         """
 
@@ -970,16 +970,16 @@ class IAccountIMAP(Interface):
         """
         Unsubscribe from a mailbox
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: The name of the mailbox to unsubscribe from
 
-        @rtype: C{Deferred} or C{bool}
+        @rtype: L{Deferred} or L{bool}
         @return: A true value if the mailbox is unsubscribed from successfully,
             or a Deferred whose callback will be invoked with this value when
             the unsubscription is successful.
 
         @raise MailboxException: Raised if this mailbox cannot be unsubscribed
-            from. This may also be raised asynchronously, if a C{Deferred} is
+            from. This may also be raised asynchronously, if a L{Deferred} is
             returned.
         """
 
@@ -988,16 +988,16 @@ class IAccountIMAP(Interface):
         """
         List all the mailboxes that meet a certain criteria
 
-        @type ref: C{str}
+        @type ref: L{bytes}
         @param ref: The context in which to apply the wildcard
 
-        @type wildcard: C{str}
+        @type wildcard: L{bytes}
         @param wildcard: An expression against which to match mailbox names.
             '*' matches any number of characters in a mailbox name, and '%'
             matches similarly, but will not match across hierarchical
             boundaries.
 
-        @rtype: C{list} of C{tuple}
+        @rtype: L{list} of L{tuple}
         @return: A list of C{(mailboxName, mailboxObject)} which meet the given
             criteria. C{mailboxObject} should implement either
             C{IMailboxIMAPInfo} or C{IMailboxIMAP}. A Deferred may also be
