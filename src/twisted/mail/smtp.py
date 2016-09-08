@@ -44,16 +44,6 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-# Cache the hostname (XXX Yes - this is broken)
-if platform.isMacOSX():
-    # On OS X, getfqdn() is ridiculously slow - use the
-    # probably-identical-but-sometimes-not gethostname() there.
-    DNSNAME = socket.gethostname()
-else:
-    DNSNAME = socket.getfqdn()
-
-# Used for fast success code lookup
-SUCCESS = dict.fromkeys(xrange(200,300))
 
 __all__ = [
     'AUTHDeclinedError', 'AUTHRequiredError', 'AddressError',
@@ -75,6 +65,19 @@ __all__ = [
     'idGenerator', 'messageid', 'quoteaddr', 'rfc822date', 'xtextStreamReader',
     'xtextStreamWriter', 'xtext_codec', 'xtext_decode', 'xtext_encode'
 ]
+
+
+# Cache the hostname (XXX Yes - this is broken)
+if platform.isMacOSX():
+    # On OS X, getfqdn() is ridiculously slow - use the
+    # probably-identical-but-sometimes-not gethostname() there.
+    DNSNAME = socket.gethostname()
+else:
+    DNSNAME = socket.getfqdn()
+
+# Used for fast success code lookup
+SUCCESS = dict.fromkeys(xrange(200,300))
+
 
 def rfc822date(timeinfo=None,local=1):
     """

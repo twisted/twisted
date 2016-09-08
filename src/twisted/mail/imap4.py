@@ -4384,7 +4384,6 @@ def collapseNestedLists(items):
 
 
 
-
 class MailboxException(IMAP4Exception): pass
 
 class MailboxCollision(MailboxException):

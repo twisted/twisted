@@ -63,7 +63,7 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
         server.setsockopt(
-            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', server.fileno()))
+            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', port.fileno()))
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
             _iocp.get_accept_addrs(server.fileno(), buff))
