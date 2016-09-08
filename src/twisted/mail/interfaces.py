@@ -18,7 +18,7 @@ class IClientAuthentication(Interface):
         """
         Return an identifier associated with this authentication scheme.
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
 
     def challengeResponse(secret, challenge):
@@ -136,7 +136,672 @@ class IMessageSMTP(Interface):
 
 
 
+class IMessageIMAPPart(Interface):
+    def getHeaders(negate, *names):
+        """
+        Retrieve a group of message headers.
+
+        @type names: L{tuple} of L{bytes}
+        @param names: The names of the headers to retrieve or omit.
+
+        @type negate: L{bool}
+        @param negate: If True, indicates that the headers listed in C{names}
+            should be omitted from the return value, rather than included.
+
+        @rtype: L{dict}
+        @return: A mapping of header field names to header field values
+        """
+
+
+    def getBodyFile():
+        """
+        Retrieve a file object containing only the body of this message.
+        """
+
+
+    def getSize():
+        """
+        Retrieve the total size, in octets, of this message.
+
+        @rtype: L{int}
+        """
+
+
+    def isMultipart():
+        """
+        Indicate whether this message has subparts.
+
+        @rtype: L{bool}
+        """
+
+
+    def getSubPart(part):
+        """
+        Retrieve a MIME sub-message
+
+        @type part: L{int}
+        @param part: The number of the part to retrieve, indexed from 0.
+
+        @raise IndexError: Raised if the specified part does not exist.
+        @raise TypeError: Raised if this message is not multipart.
+
+        @rtype: Any object implementing L{IMessageIMAPPart}.
+        @return: The specified sub-part.
+        """
+
+
+
+class IMessageIMAP(IMessageIMAPPart):
+
+    def getUID():
+        """
+        Retrieve the unique identifier associated with this message.
+        """
+
+
+    def getFlags():
+        """
+        Retrieve the flags associated with this message.
+
+        @rtype: C{iterable}
+        @return: The flags, represented as strings.
+        """
+
+
+    def getInternalDate():
+        """
+        Retrieve the date internally associated with this message.
+
+        @rtype: L{bytes}
+        @return: An RFC822-formatted date string.
+        """
+
+
+
+class IMessageIMAPFile(Interface):
+    """
+    Optional message interface for representing messages as files.
+
+    If provided by message objects, this interface will be used instead the
+    more complex MIME-based interface.
+    """
+
+    def open():
+        """
+        Return a file-like object opened for reading.
+
+        Reading from the returned file will return all the bytes of which this
+        message consists.
+        """
+
+
+
+class ISearchableIMAPMailbox(Interface):
+
+    def search(query, uid):
+        """
+        Search for messages that meet the given query criteria.
+
+        If this interface is not implemented by the mailbox,
+        L{IMailboxIMAP.fetch} and various methods of L{IMessageIMAP} will be
+        used instead.
+
+        Implementations which wish to offer better performance than the default
+        implementation should implement this interface.
+
+        @type query: L{list}
+        @param query: The search criteria
+
+        @type uid: L{bool}
+        @param uid: If true, the IDs specified in the query are UIDs; otherwise
+            they are message sequence IDs.
+
+        @rtype: L{list} or L{Deferred}
+        @return: A list of message sequence numbers or message UIDs which match
+            the search criteria or a L{Deferred} whose callback will be invoked
+            with such a list.
+
+        @raise IllegalQueryError: Raised when query is not valid.
+        """
+
+
+
+class IMailboxIMAPListener(Interface):
+    """
+    Interface for objects interested in mailbox events
+    """
+
+    def modeChanged(writeable):
+        """
+        Indicates that the write status of a mailbox has changed.
+
+        @type writeable: L{bool}
+        @param writeable: A true value if write is now allowed, false
+            otherwise.
+        """
+
+
+    def flagsChanged(newFlags):
+        """
+        Indicates that the flags of one or more messages have changed.
+
+        @type newFlags: L{dict}
+        @param newFlags: A mapping of message identifiers to tuples of flags
+            now set on that message.
+        """
+
+
+    def newMessages(exists, recent):
+        """
+        Indicates that the number of messages in a mailbox has changed.
+
+        @type exists: L{int} or L{None}
+        @param exists: The total number of messages now in this mailbox. If the
+            total number of messages has not changed, this should be L{None}.
+
+        @type recent: L{int}
+        @param recent: The number of messages now flagged C{\\Recent}. If the
+            number of recent messages has not changed, this should be L{None}.
+        """
+
+
+
+class IMessageIMAPCopier(Interface):
+    def copy(messageObject):
+        """
+        Copy the given message object into this mailbox.
+
+        The message object will be one which was previously returned by
+        L{IMailboxIMAP.fetch}.
+
+        Implementations which wish to offer better performance than the default
+        implementation should implement this interface.
+
+        If this interface is not implemented by the mailbox,
+        L{IMailboxIMAP.addMessage} will be used instead.
+
+        @rtype: L{Deferred} or L{int}
+        @return: Either the UID of the message or a Deferred which fires with
+            the UID when the copy finishes.
+        """
+
+
+
+class IMailboxIMAPInfo(Interface):
+    """
+    Interface specifying only the methods required for C{listMailboxes}.
+
+    Implementations can return objects implementing only these methods for
+    return to C{listMailboxes} if it can allow them to operate more
+    efficiently.
+    """
+
+    def getFlags():
+        """
+        Return the flags defined in this mailbox
+
+        Flags with the \\ prefix are reserved for use as system flags.
+
+        @rtype: L{list} of L{bytes}
+        @return: A list of the flags that can be set on messages in this
+            mailbox.
+        """
+
+
+    def getHierarchicalDelimiter():
+        """
+        Get the character which delimits namespaces for in this mailbox.
+
+        @rtype: L{bytes}
+        """
+
+
+
+class IMailboxIMAP(IMailboxIMAPInfo):
+    def getUIDValidity():
+        """
+        Return the unique validity identifier for this mailbox.
+
+        @rtype: L{int}
+        """
+
+
+    def getUIDNext():
+        """
+        Return the likely UID for the next message added to this mailbox.
+
+        @rtype: L{int}
+        """
+
+
+    def getUID(message):
+        """
+        Return the UID of a message in the mailbox
+
+        @type message: L{int}
+        @param message: The message sequence number
+
+        @rtype: L{int}
+        @return: The UID of the message.
+        """
+
+
+    def getMessageCount():
+        """
+        Return the number of messages in this mailbox.
+
+        @rtype: L{int}
+        """
+
+
+    def getRecentCount():
+        """
+        Return the number of messages with the 'Recent' flag.
+
+        @rtype: L{int}
+        """
+
+
+    def getUnseenCount():
+        """
+        Return the number of messages with the 'Unseen' flag.
+
+        @rtype: L{int}
+        """
+
+
+    def isWriteable():
+        """
+        Get the read/write status of the mailbox.
+
+        @rtype: L{int}
+        @return: A true value if write permission is allowed, a false value
+            otherwise.
+        """
+
+
+    def destroy():
+        """
+        Called before this mailbox is deleted, permanently.
+
+        If necessary, all resources held by this mailbox should be cleaned up
+        here. This function _must_ set the \\Noselect flag on this mailbox.
+        """
+
+
+    def requestStatus(names):
+        """
+        Return status information about this mailbox.
+
+        Mailboxes which do not intend to do any special processing to generate
+        the return value, C{statusRequestHelper} can be used to build the
+        dictionary by calling the other interface methods which return the data
+        for each name.
+
+        @type names: Any iterable
+        @param names: The status names to return information regarding. The
+            possible values for each name are: MESSAGES, RECENT, UIDNEXT,
+            UIDVALIDITY, UNSEEN.
+
+        @rtype: L{dict} or L{Deferred}
+        @return: A dictionary containing status information about the requested
+            names is returned. If the process of looking this information up
+            would be costly, a deferred whose callback will eventually be
+            passed this dictionary is returned instead.
+        """
+
+
+    def addListener(listener):
+        """
+        Add a mailbox change listener
+
+        @type listener: Any object which implements C{IMailboxIMAPListener}
+        @param listener: An object to add to the set of those which will be
+            notified when the contents of this mailbox change.
+        """
+
+
+    def removeListener(listener):
+        """
+        Remove a mailbox change listener
+
+        @type listener: Any object previously added to and not removed from
+            this mailbox as a listener.
+        @param listener: The object to remove from the set of listeners.
+
+        @raise ValueError: Raised when the given object is not a listener for
+            this mailbox.
+        """
+
+
+    def addMessage(message, flags=(), date=None):
+        """
+        Add the given message to this mailbox.
+
+        @type message: A file-like object
+        @param message: The RFC822 formatted message
+
+        @type flags: Any iterable of L{bytes}
+        @param flags: The flags to associate with this message
+
+        @type date: L{bytes}
+        @param date: If specified, the date to associate with this message.
+
+        @rtype: L{Deferred}
+        @return: A deferred whose callback is invoked with the message id if
+            the message is added successfully and whose errback is invoked
+            otherwise.
+
+        @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
+            read-write.
+        """
+
+
+    def expunge():
+        """
+        Remove all messages flagged \\Deleted.
+
+        @rtype: L{list} or L{Deferred}
+        @return: The list of message sequence numbers which were deleted, or a
+            L{Deferred} whose callback will be invoked with such a list.
+
+        @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
+            read-write.
+        """
+
+
+    def fetch(messages, uid):
+        """
+        Retrieve one or more messages.
+
+        @type messages: C{MessageSet}
+        @param messages: The identifiers of messages to retrieve information
+            about
+
+        @type uid: L{bool}
+        @param uid: If true, the IDs specified in the query are UIDs; otherwise
+            they are message sequence IDs.
+
+        @rtype: Any iterable of two-tuples of message sequence numbers and
+            implementors of C{IMessageIMAP}.
+        """
+
+
+    def store(messages, flags, mode, uid):
+        """
+        Set the flags of one or more messages.
+
+        @type messages: A MessageSet object with the list of messages requested
+        @param messages: The identifiers of the messages to set the flags of.
+
+        @type flags: sequence of L{bytes}
+        @param flags: The flags to set, unset, or add.
+
+        @type mode: -1, 0, or 1
+        @param mode: If mode is -1, these flags should be removed from the
+            specified messages. If mode is 1, these flags should be added to
+            the specified messages. If mode is 0, all existing flags should be
+            cleared and these flags should be added.
+
+        @type uid: L{bool}
+        @param uid: If true, the IDs specified in the query are UIDs; otherwise
+            they are message sequence IDs.
+
+        @rtype: L{dict} or L{Deferred}
+        @return: A L{dict} mapping message sequence numbers to sequences of
+            L{bytes} representing the flags set on the message after this
+            operation has been performed, or a L{Deferred} whose callback will
+            be invoked with such a L{dict}.
+
+        @raise ReadOnlyMailbox: Raised if this mailbox is not open for
+            read-write.
+        """
+
+
+
+class ICloseableMailboxIMAP(Interface):
+    """
+    A supplementary interface for mailboxes which require cleanup on close.
+
+    Implementing this interface is optional. If it is implemented, the protocol
+    code will call the close method defined whenever a mailbox is closed.
+    """
+
+    def close():
+        """
+        Close this mailbox.
+
+        @return: A L{Deferred} which fires when this mailbox has been closed,
+            or None if the mailbox can be closed immediately.
+        """
+
+
+
+class IAccountIMAP(Interface):
+    """
+    Interface for Account classes
+
+    Implementors of this interface should consider implementing
+    C{INamespacePresenter}.
+    """
+
+    def addMailbox(name, mbox=None):
+        """
+        Add a new mailbox to this account
+
+        @type name: L{bytes}
+        @param name: The name associated with this mailbox. It may not contain
+            multiple hierarchical parts.
+
+        @type mbox: An object implementing C{IMailboxIMAP}
+        @param mbox: The mailbox to associate with this name. If L{None}, a
+            suitable default is created and used.
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the creation succeeds, or a deferred whose
+            callback will be invoked when the creation succeeds.
+
+        @raise MailboxException: Raised if this mailbox cannot be added for
+            some reason. This may also be raised asynchronously, if a
+            L{Deferred} is returned.
+        """
+
+
+    def create(pathspec):
+        """
+        Create a new mailbox from the given hierarchical name.
+
+        @type pathspec: L{bytes}
+        @param pathspec: The full hierarchical name of a new mailbox to create.
+            If any of the inferior hierarchical names to this one do not exist,
+            they are created as well.
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the creation succeeds, or a deferred whose
+            callback will be invoked when the creation succeeds.
+
+        @raise MailboxException: Raised if this mailbox cannot be added. This
+            may also be raised asynchronously, if a L{Deferred} is returned.
+        """
+
+
+    def select(name, rw=True):
+        """
+        Acquire a mailbox, given its name.
+
+        @type name: L{bytes}
+        @param name: The mailbox to acquire
+
+        @type rw: L{bool}
+        @param rw: If a true value, request a read-write version of this
+            mailbox. If a false value, request a read-only version.
+
+        @rtype: Any object implementing C{IMailboxIMAP} or L{Deferred}
+        @return: The mailbox object, or a L{Deferred} whose callback will be
+            invoked with the mailbox object. None may be returned if the
+            specified mailbox may not be selected for any reason.
+        """
+
+
+    def delete(name):
+        """
+        Delete the mailbox with the specified name.
+
+        @type name: L{bytes}
+        @param name: The mailbox to delete.
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the mailbox is successfully deleted, or a
+            L{Deferred} whose callback will be invoked when the deletion
+            completes.
+
+        @raise MailboxException: Raised if this mailbox cannot be deleted. This
+            may also be raised asynchronously, if a L{Deferred} is returned.
+        """
+
+
+    def rename(oldname, newname):
+        """
+        Rename a mailbox
+
+        @type oldname: L{bytes}
+        @param oldname: The current name of the mailbox to rename.
+
+        @type newname: L{bytes}
+        @param newname: The new name to associate with the mailbox.
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the mailbox is successfully renamed, or a
+            L{Deferred} whose callback will be invoked when the rename
+            operation is completed.
+
+        @raise MailboxException: Raised if this mailbox cannot be renamed. This
+            may also be raised asynchronously, if a L{Deferred} is returned.
+        """
+
+
+    def isSubscribed(name):
+        """
+        Check the subscription status of a mailbox
+
+        @type name: L{bytes}
+        @param name: The name of the mailbox to check
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the given mailbox is currently subscribed to,
+            a false value otherwise. A L{Deferred} may also be returned whose
+            callback will be invoked with one of these values.
+        """
+
+
+    def subscribe(name):
+        """
+        Subscribe to a mailbox
+
+        @type name: L{bytes}
+        @param name: The name of the mailbox to subscribe to
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the mailbox is subscribed to successfully, or
+            a Deferred whose callback will be invoked with this value when the
+            subscription is successful.
+
+        @raise MailboxException: Raised if this mailbox cannot be subscribed
+            to. This may also be raised asynchronously, if a L{Deferred} is
+            returned.
+        """
+
+
+    def unsubscribe(name):
+        """
+        Unsubscribe from a mailbox
+
+        @type name: L{bytes}
+        @param name: The name of the mailbox to unsubscribe from
+
+        @rtype: L{Deferred} or L{bool}
+        @return: A true value if the mailbox is unsubscribed from successfully,
+            or a Deferred whose callback will be invoked with this value when
+            the unsubscription is successful.
+
+        @raise MailboxException: Raised if this mailbox cannot be unsubscribed
+            from. This may also be raised asynchronously, if a L{Deferred} is
+            returned.
+        """
+
+
+    def listMailboxes(ref, wildcard):
+        """
+        List all the mailboxes that meet a certain criteria
+
+        @type ref: L{bytes}
+        @param ref: The context in which to apply the wildcard
+
+        @type wildcard: L{bytes}
+        @param wildcard: An expression against which to match mailbox names.
+            '*' matches any number of characters in a mailbox name, and '%'
+            matches similarly, but will not match across hierarchical
+            boundaries.
+
+        @rtype: L{list} of L{tuple}
+        @return: A list of C{(mailboxName, mailboxObject)} which meet the given
+            criteria. C{mailboxObject} should implement either
+            C{IMailboxIMAPInfo} or C{IMailboxIMAP}. A Deferred may also be
+            returned.
+        """
+
+
+
+class INamespacePresenter(Interface):
+
+    def getPersonalNamespaces():
+        """
+        Report the available personal namespaces.
+
+        Typically there should be only one personal namespace. A common name
+        for it is C{\"\"}, and its hierarchical delimiter is usually C{\"/\"}.
+
+        @rtype: iterable of two-tuples of strings
+        @return: The personal namespaces and their hierarchical delimiters. If
+            no namespaces of this type exist, None should be returned.
+        """
+
+
+    def getSharedNamespaces():
+        """
+        Report the available shared namespaces.
+
+        Shared namespaces do not belong to any individual user but are usually
+        to one or more of them. Examples of shared namespaces might be
+        C{\"#news\"} for a usenet gateway.
+
+        @rtype: iterable of two-tuples of strings
+        @return: The shared namespaces and their hierarchical delimiters. If no
+            namespaces of this type exist, None should be returned.
+        """
+
+
+    def getUserNamespaces():
+        """
+        Report the available user namespaces.
+
+        These are namespaces that contain folders belonging to other users
+        access to which this account has been granted.
+
+        @rtype: iterable of two-tuples of strings
+        @return: The user namespaces and their hierarchical delimiters. If no
+            namespaces of this type exist, None should be returned.
+        """
+
+
+
 __all__ = [
+    # IMAP
+    'IAccountIMAP', 'ICloseableMailboxIMAP', 'IMailboxIMAP',
+    'IMailboxIMAPInfo', 'IMailboxIMAPListener', 'IMessageIMAP',
+    'IMessageIMAPCopier', 'IMessageIMAPFile', 'IMessageIMAPPart',
+    'ISearchableIMAPMailbox', 'INamespacePresenter',
+
     # SMTP
     'IMessageDelivery', 'IMessageDeliveryFactory', 'IMessageSMTP',
 
