@@ -23,6 +23,8 @@ from twisted.mail.interfaces import (
     IServerFactoryPOP3 as IServerFactory,
     IMailboxPOP3 as IMailbox,
 )
+from twisted.mail._except import (
+    POP3Error, _POP3MessageDeleted,
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import task
@@ -161,22 +163,6 @@ class _HeadersPlusNLines:
             return val
         else:
             return data
-
-
-
-class _POP3MessageDeleted(Exception):
-    """
-    An internal control-flow error which indicates that a deleted message was
-    requested.
-    """
-
-
-
-class POP3Error(Exception):
-    """
-    The base class for POP3 errors.
-    """
-    pass
 
 
 
