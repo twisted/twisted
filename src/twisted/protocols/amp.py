@@ -1488,7 +1488,11 @@ class Float(Argument):
     Encode floating-point values on the wire as their repr.
     """
     fromString = float
-    toString = repr
+
+    def toString(self, inString):
+        if not isinstance(inString, float):
+            raise ValueError("Bad float value %r" % (inString,))
+        return str(inString).encode('ascii')
 
 
 

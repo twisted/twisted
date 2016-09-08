@@ -296,18 +296,18 @@ class ConchServerSetupMixin:
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
-        with open('rsa_test','w') as f:
+        with open('rsa_test','wb') as f:
             f.write(privateRSA_openssh)
-        with open('rsa_test.pub','w') as f:
+        with open('rsa_test.pub','wb') as f:
             f.write(publicRSA_openssh)
-        with open('dsa_test.pub','w') as f:
+        with open('dsa_test.pub','wb') as f:
             f.write(publicDSA_openssh)
-        with open('dsa_test','w') as f:
+        with open('dsa_test','wb') as f:
             f.write(privateDSA_openssh)
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
-        with open('kh_test','w') as f:
-            f.write('127.0.0.1 '+publicRSA_openssh)
+        with open('kh_test','wb') as f:
+            f.write(b'127.0.0.1 '+publicRSA_openssh)
 
 
     def _getFreePort(self):
@@ -425,7 +425,7 @@ class RekeyAvatar(ConchUser):
     """
     def __init__(self):
         ConchUser.__init__(self)
-        self.channelLookup['session'] = SSHSession
+        self.channelLookup[b'session'] = SSHSession
 
 
     def openShell(self, transport):
@@ -439,7 +439,7 @@ class RekeyAvatar(ConchUser):
         # Send enough bytes to the connection so that a rekey is triggered in
         # the client.
         def write(counter):
-            i = counter()
+            i = next(counter)
             if i == 60:
                 call.stop()
                 transport.session.conn.sendRequest(
@@ -455,7 +455,7 @@ class RekeyAvatar(ConchUser):
         # rekey has been initiated.  If there were, then generating a packet
         # immediately at that time would be a better way to test the
         # functionality being tested here.
-        call = LoopingCall(write, count().next)
+        call = LoopingCall(write, count())
         call.start(0.01)
 
 

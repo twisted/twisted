@@ -1,0 +1,1 @@
+The twisted.internet.interfaces.IProtocol.dataReceived() method takes one parameter of type bytes.  This has been clarified in the doc string.

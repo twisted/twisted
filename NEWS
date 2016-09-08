@@ -1,6 +1,285 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.4.0 (2016-08-25)
+================================
+
+Features
+--------
+ - Add twisted.application.twist, meant to eventually replace twistd
+   with a simpler interface.  Add twisted.application.runner API,
+   currently private, which twist is built on. (#5705)
+ - The new interface IHandshakeListener that can be implemented by any
+   Protocol provides a callback that is called when the TLS handshake
+   has been completed, allowing Protocols to make decisions about the
+   TLS configuration before application data is sent. (#6024)
+ - twisted.python.syslog has been ported to Python 3. (#7957)
+ - twisted.internet.defer.ensureDeferred has been added, similar to
+   asyncio's ensure_future. Wrapping a coroutine (the result of a
+   function defined using async def, available only on Python 3.5+)
+   with it allows you to use the "await" keyword with Deferreds inside
+   the coroutine, similar to "yield" when using inlineCallbacks.
+   (#8088)
+ - twisted.internet.inotify have been ported to Python 3 (#8211)
+ - twisted.enterprise has been ported to Python 3. The third-party
+   pysqlite2 package has not been ported to Python 3, so any database
+   connector based on pysqlite2 cannot be used. Instead the sqlite3
+   module included with Python 3 should be used. (#8303)
+ - Scripts such as cftp, ckeygen, conch, mailmail, pyhtmlizer,
+   tkconch, twistd and trial have been updated to be setuptools
+   console scripts.  (#8491)
+ - twisted.pair.raw and twisted.pair.rawudp have been ported to Python
+   3 (#8545)
+ - twisted.internet.baseprocess has been ported to Python 3. (#8546)
+ - twisted.python.dist has been ported to Python 3 (#8556)
+ - twisted.internet.interfaces.IOpenSSLContextFactory has been added,
+   which defines the interface provided both by the old-style
+   twisted.internet.ssl.ContextFactory class and the newer
+   twisted.interface.ssl.CertificateOptions class. This is a precursor
+   to formally deprecating the former class in favour of the latter.
+   (#8597)
+ - twisted.python.zipstream has been ported to Python 3 (#8607)
+ - Zip file entries returned by ChunkingZipFile.readfile() are now
+   context managers. (#8641)
+ - twisted.protocols.socks has been ported to Python 3 (#8665)
+ - twisted.spread.banana has been ported to Python 3 (#8667)
+ - Trial can now be invoked via "python -m twisted.trial". (#8712)
+ - twisted.protocols.postfix has been ported to Python 3 (#8713)
+ - twisted.protocols.wire and twisted.protocols.portforwarding have
+   been ported to Python 3 (#8717)
+ - twisted.protocols.stateful has been ported to Python 3 (#8718)
+ - twisted.protocols.memcache is now compatible with Python 3. (#8726)
+ - twisted.protocols.dict has been ported to Python 3 (#8732)
+
+Bugfixes
+--------
+ - pip install -e ".[dev]" now works on Python 3, but it will not
+   install twistedchecker or pydoctor, which have not yet been ported.
+   (#7807)
+ - twistd can now properly daemonize on Linux/Unix when run under
+   Python3 and will not hang indefinitely. (#8155)
+ - tox can now be used to run Twisted's tests on Windows (#8578)
+ - twisted.python.filepath.setContent() and
+   twisted.python.filepath.moveTo() now work on Windows with Python 3
+   (#8610)
+ - twisted.internet.win32eventreactor works on Python 3 in Windows
+   (#8626)
+ - The TLS payload buffer size was reduced in
+   twisted.protocols.tls.TLSMemoryBIOProtocol.  This fixes writing of
+   very long strings using the TLSv1_1 method from the OpenSSL
+   library. (#8693)
+ - twisted.logger._flatten.flattenEvent() now does not crash if passed
+   a unicode string. (#8699)
+ - twisted.application.strports.service (and thus twistd) no longer
+   swallow asynchronous exceptions from IStreamServerEndpoint.listen.
+   (#8710)
+ - _twistd_unix now reports the name and encoded message of an
+   exception raised during daemonization on Python 2 and 3. (#8731)
+ - twisted.protocols.amp now handles floats on Python 3. Previously,
+   sending a float would raise a ValueError. (#8746)
+
+Improved Documentation
+----------------------
+ - Some broken links to xprogramming in the unit test documentation
+   have been fixed. (#8579)
+ - The Twisted Tutorial "The Evolution of Finger" has been updated to
+   use endpoints throughout. (#8588)
+ - Updated the mail examples to use endpoints and better TLS. (#8595)
+ - Changed the Twisted Web howto to use endpoints and modern TLS.
+   (#8596)
+ - Updated bug report URL in man pages. (#8600)
+ - In twisted.internet.udp.Port, write() takes a parameter of type
+   bytes.  This is clarified in the docstring. (#8635)
+ - twisted.internet.interfaces.ITransport.write() and
+   twisted.internet.interfaces.ITransport.writeSequence() take bytes
+   parameters. (#8636)
+ - twisted.python.filepath.AbstractFilePath.getContent() returns
+   bytes.  The docstring was updated to clarify this. (#8637)
+ - Updated release notes to reflect that 15.4 is the last version that
+   supported Python 2.6, not 15.5. (#8651)
+ - A missing space in defer.rst resulted in badly rendered output. The
+   space was added. (#8723)
+
+Deprecations and Removals
+-------------------------
+ - Dropped support for pyOpenSSL versions less than 16.0.0. (#8441)
+
+Other
+-----
+ - #4926, #7868, #8209, #8271, #8276, #8308, #8324, #8348, #8367,
+   #8377, #8378, #8379, #8380, #8381, #8383, #8385, #8386, #8387,
+   #8388, #8389, #8391, #8392, #8393, #8394, #8397, #8406, #8410,
+   #8412, #8413, #8414, #8421, #8425, #8426, #8428, #8429, #8430,
+   #8432, #8434, #8435, #8437, #8438, #8439, #8444, #8451, #8452,
+   #8453, #8454, #8456, #8457, #8459, #8462, #8463, #8465, #8468,
+   #8469, #8479, #8482, #8483, #8486, #8490, #8493, #8494, #8496,
+   #8497, #8498, #8499, #8501, #8503, #8504, #8507, #8508, #8510,
+   #8513, #8514, #8515, #8516, #8517, #8520, #8521, #8522, #8523,
+   #8524, #8527, #8528, #8529, #8531, #8532, #8534, #8536, #8537,
+   #8538, #8540, #8541, #8543, #8548, #8552, #8553, #8554, #8555,
+   #8557, #8560, #8563, #8565, #8568, #8569, #8572, #8573, #8574,
+   #8577, #8580, #8581, #8582, #8584, #8586, #8589, #8590, #8592,
+   #8593, #8598, #8603, #8604, #8606, #8609, #8615, #8616, #8617,
+   #8618, #8619, #8621, #8624, #8627, #8628, #8630, #8632, #8634,
+   #8640, #8644, #8645, #8646, #8647, #8648, #8662, #8664, #8666,
+   #8668, #8671, #8672, #8684, #8691, #8702, #8703, #8705, #8706,
+   #8716, #8719, #8724, #8725, #8727, #8733, #8734, #8741
+
+
+Twisted Conch 16.4.0 (2016-08-25)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.address is now ported to Python 3. (#8495)
+ - twisted.conch.ssh.transport is now ported to Python 3. (#8638)
+ - twisted.conch.ssh.channel is now ported to Python 3. (#8649)
+ - twisted.conch.ssh.userauth is now ported to Python 3. (#8654)
+ - twisted.conch.ssh.connection is now ported to Python 3. (#8660)
+ - twisted.conch.ssh.session is now ported to Python 3. (#8661)
+ - twisted.conch.ssh.filetransfer is now ported to Python 3. (#8675)
+ - twisted.conch.ssh.agent is now ported to Python 3. (#8686)
+ - twisted.conch.ssh is now ported to Python 3. (#8690)
+ - twisted.conch.openssh_compat.* is now ported to Python 3. (#8694)
+ - twisted.conch.client.knownhosts is now ported to Python 3. (#8697)
+ - twisted.conch.insults.insults has been ported to Python 3 (#8698)
+ - twisted.conch.client.default is now ported to Python 3. (#8700)
+ - twisted.conch.recvline has been ported to Python 3 (#8709)
+ - twisted.conch.endpoints is now ported to Python 3. (#8722)
+
+Bugfixes
+--------
+ - The SSHService is now a bytestring (#8653)
+ - The name field in SShChannel is now a bytestring (#8683)
+
+Improved Documentation
+----------------------
+ - Fixed syntax errors in cftp man page. (#8601)
+
+Other
+-----
+ - #8495, #8511, #8715
+
+
+Twisted Mail 16.4.0 (2016-08-25)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.mail.DomainWithDefaultDict.has_key is now deprecated
+   in favor of the `in` keyword. (#8361)
+ - twisted.mail.protocols.SSLContextFactory, deprecated since Twisted
+   12.0, has been removed. (#8591)
+
+Other
+-----
+ - #8525
+
+
+Twisted Names 16.4.0 (2016-08-25)
+=================================
+
+Features
+--------
+ - twisted.names.srvconnect is now ported to Python 3. (#8262)
+ - twisted.names.resolve and twisted.names.tap have been ported to
+   Python 3 (#8550)
+
+Other
+-----
+ - #8625, #8663
+
+
+Twisted News 16.4.0 (2016-08-25)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 16.4.0 (2016-08-25)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.4.0 (2016-08-25)
+==================================
+
+Features
+--------
+ - twisted.runner has been ported to Python 3. (#8739)
+
+
+Twisted Web 16.4.0 (2016-08-25)
+===============================
+
+Features
+--------
+ - Twisted web HTTP/2 servers now time out HTTP/2 connections in the
+   same manner as HTTP/1.1 connections. (#8480)
+
+Bugfixes
+--------
+ - A bug in twisted.web.server.Site.makeSession which may lead to
+   predictable session IDs was fixed.  Session IDs are now generated
+   securely using `os.urandom`. (#3460)
+ - twisted.web.server.Request.getSession will now, for a request sent
+   over HTTPS, set a "Secure" cookie, preventing the secure session
+   from being sent over plain-text HTTP. (#3461)
+ - If called multiple times, twisted.web.http.Request.setLastModified
+   now correctly observes the greatest supplied value. (#3807)
+ - The HTTP server now correctly times connections out. (broken in
+   16.2) (#8481)
+ - Twisted's HTTP/2 support no longer throws priority exceptions when
+   WINDOW_UDPATE frames are received after a response has been
+   completed. (#8558)
+ - twisted.web.twcgi.CGIScript will now not pass the "Proxy" header to
+   CGI scripts, as a mitigation to CVE-2016-1000111. (#8623)
+ - Twisted Web's HTTP/2 server can now tolerate streams being reset by
+   the client midway through a data upload without throwing
+   exceptions. (#8682)
+ - twisted.web.http.Request now swallows header writes on reset HTTP/2
+   streams, rather than erroring out. (#8685)
+ - twisted.web's HTTP/2 server now tolerates receiving WINDOW_UPDATE
+   frames for streams for which it has no outstanding data to send.
+   (#8695)
+ - twisted.web.http.HTTPChannel now resumes producing on finished,
+   non-persistent connections. This prevents HTTP/1 servers using TLS
+   from leaking a CLOSE_WAIT socket per request. (#8766)
+
+Other
+-----
+ - #8519, #8530, #8629, #8707
+
+
+Twisted Words 16.4.0 (2016-08-25)
+=================================
+
+Features
+--------
+ - twisted.words.xish is now ported to Python 3 (#8337)
+ - twisted.words.protocols.jabber is now ported to Python 3 (#8423)
+ - twisted.words.protocols.irc.ERR_TOOMANYMATCHES was introduced
+   according to the RFC 2812 errata. (#8585)
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.RPL_ADMINLOC was removed and replaced
+   with twisted.words.protocols.irc.RPL_ADMINLOC1 and
+   twisted.words.protocols.irc.RPL_ADMINLOC2 to match the admin
+   commands defined in RFC 2812. (#8585)
+ - twisted.words.protocols.jabber.sasl_mechanisms has been fixed for
+   Python 3.3 (#8738)
+
+Improved Documentation
+----------------------
+ - The XMPP client example now works on Python 3. (#8509)
+
+Other
+-----
+ - #8360, #8460
+
+
 Twisted Core 16.3.0 (2016-07-05)
 ================================
 
