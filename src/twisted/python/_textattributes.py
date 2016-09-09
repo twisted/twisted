@@ -23,6 +23,10 @@ Serializing a formatting structure is done with L{flatten}.
 from __future__ import print_function
 
 from twisted.python.util import FancyEqMixin
+from twisted.python.compat import unicode
+
+import sys
+import warnings
 
 
 
@@ -49,6 +53,13 @@ class _Attribute(FancyEqMixin, object):
 
 
     def __getitem__(self, item):
+        if isinstance(item, unicode):
+            warnings.warn("Calling _Attribute.__getitem__ with a unicode/str"
+                          " object instead of a bytes object is deprecated"
+                          " since Twisted 16.4.1",
+                          category=DeprecationWarning,
+                          stacklevel=2)
+            item = item.encode(sys.getdefaultencoding())
         assert isinstance(item, (list, tuple, _Attribute, bytes))
         if isinstance(item, (list, tuple)):
             self.children.extend(item)

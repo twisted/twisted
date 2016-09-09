@@ -330,6 +330,21 @@ class AttributeTests(_AttributeTestsMixin):
                           b"bytes"])
 
 
+    def test_unicodeDeprecation(self):
+        """
+        L{_Attribute.__geitem__} emits a deprecation warning when
+        given a L{unicode}/L{str} object instead of a L{bytes} object.
+        """
+        self.attribute[u"unicode"]
+        message = ("Calling _Attribute.__getitem__ with a unicode/str"
+                   " object instead of a bytes object is deprecated"
+                   " since Twisted 16.4.1")
+        warnings = self.flushWarnings([self.test_unicodeDeprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
+
+
 
 class NormalAttrTests(_AttributeTestsMixin):
     """
