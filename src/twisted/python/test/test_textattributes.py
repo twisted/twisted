@@ -84,6 +84,7 @@ class RecordsFakeFormattingState(object):
         self.withAttributeReturns = "<_withAttribute>"
 
 
+
 class FakeFormattingState(object):
     """
     A L{DefaultFormattingState} subclass that records all calls to its
@@ -168,6 +169,9 @@ class _AttributeTestsMixin(unittest.TestCase):
         """
         An implementation of the C{write} callable required by
         L{_Attribute.serialize} that records its argument.
+
+        @param argument: the bytes the caller intends to write
+        @type argument: L{bytes}
         """
         self.fakeWriteCalls.append(argument)
 
@@ -175,6 +179,9 @@ class _AttributeTestsMixin(unittest.TestCase):
     def assertIsAttribute(self, value):
         """
         Assert that C{value} is C{self.attribute}.
+
+        @param value: (hopefully) an attribute object.
+        @type value: L{_Attribute}
         """
         self.assertIs(self.attribute, value)
 
@@ -376,9 +383,17 @@ class _ModifyingAttrTestsMixin(_AttributeTestsMixin):
 
     def assertWithAttributeCalled(self, name, value):
         """
-        Assert that our L{fakeFormattingState}'s C{_withAttribute}
+        Assert that our L{FakeFormattingState}'s C{_withAttribute}
         method was called with C{name} and C{value}, and that it was
         passed to the base class' C{serialize} method.
+
+        @param name: the name argument passed to
+            C{self.fakeFormattingState._withAttribute}
+        @type name: L{bytes}
+
+        @param value: the value argument passed to
+            C{self.fakeFormattingState._withAttribute}
+        @type value: L{bytes}
         """
         self.assertIsAttribute(self.attribute[self.fakeAttribute])
 
@@ -400,7 +415,6 @@ class _ModifyingAttrTestsMixin(_AttributeTestsMixin):
 
 
 
-
 class OtherAttrTests(_ModifyingAttrTestsMixin):
     """
     Tests for L{_OtherAttr}.
@@ -415,6 +429,10 @@ class OtherAttrTests(_ModifyingAttrTestsMixin):
     def attributeFactory(self):
         """
         Make an L{_OtherAttr} instance.
+
+        @return: an L{_OtherAttr} that was passed C{self.attrname} and
+            C{self.attrvalue}
+        @rtype: L{_OtherAttr}
         """
         return _OtherAttr(self.attrname, self.attrvalue)
 
@@ -468,6 +486,10 @@ class ColorAttrTests(_ModifyingAttrTestsMixin):
     def attributeFactory(self):
         """
         Make a L{_ColorAttr} instance.
+
+        @return: an L{_ColorAttr} instance that was passed
+            C{self.color} and C{self.ground}
+        @rtype: L{_ColorAttr}
         """
         return _ColorAttr(self.color, self.ground)
 
@@ -774,7 +796,9 @@ class FlattenTests(unittest.TestCase):
 
     def test_flatten(self):
         """
-        Given a constructed
+        A constructed sequence of L{_Attribute}s L{flatten}s to a
+        L{bytes} object that contains the intended control
+        sequences.
         """
         serialized = flatten(
             self.A.normal[
