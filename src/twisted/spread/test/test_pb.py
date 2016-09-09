@@ -14,13 +14,14 @@ only specific tests for old API.
 from __future__ import absolute_import, division
 
 import sys, os, time, gc, weakref
+from collections import deque
 
 from io import BytesIO as StringIO
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
 from twisted.spread import pb, util, publish, jelly
-from twisted.internet import interfaces, protocol, main, reactor
+from twisted.internet import protocol, main, reactor, address
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
@@ -28,6 +29,9 @@ from twisted.python import failure, log
 from twisted.python.compat import iterbytes, xrange, _PY3
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
+
+from twisted.test.proto_helpers import _FakeConnector
+
 
 
 class Dummy(pb.Viewable):
@@ -169,8 +173,7 @@ def connectServerAndClient(test, clientFactory, serverFactory):
 
 
 
-@implementer(interfaces.IConnector)
-class ReconnectingConnector(object):
+class _ReconnectingFakeConnector(_FakeConnector):
     """
     An L{IConnector} implementation that calls the specified callback
     when its C{connect} method is called
@@ -183,35 +186,32 @@ class ReconnectingConnector(object):
     @param **kwargs: Keyword arguments to pass to C{reconnectCallback}
     """
 
-    def __init__(self, reconnectCallback, *args, **kwargs):
-        self.reconnectCallback = reconnectCallback
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, *args, **kwargs):
+        super(_ReconnectingFakeConnector, self).__init__(*args, **kwargs)
+        self.notifications = deque()
 
 
-    def stopConnecting(self):
+    def notifyOnConnect(self):
         """
-        A stub C{stopConnecting} implementation.  Does nothing!
+        Connection notification.
+
+        @return: A L{Deferred} that fires when this instance's
+            L{twisted.internet.interfaces.IConnector.connect} method
+            is called.
+        @rtype: L{Deferred}
         """
+        notifier = Deferred()
+        self.notifications.appendleft(notifier)
+        return notifier
 
 
-    def disconnect(self):
-        """
-        A stub C{disconnect} implementation.  Does nothing!
-        """
-
-
-    def connect(self):
+    def connect(self, *args, **kwargs):
         """
         A C{connect} implementation that calls C{reconnectCallback}
         """
-        self.reconnectCallback(*self.args, **self.kwargs)
-
-
-    def getDestination(self):
-        """
-        A stub C{getDestination} implementation.  Does nothing!
-        """
+        super(_ReconnectingFakeConnector, self).connect(*args, **kwargs)
+        while self.notifications:
+            self.notifications.pop().callback(self)
 
 
 
@@ -1318,7 +1318,7 @@ class NewCredTests(unittest.TestCase):
         self.clientFactory = pb.PBClientFactory()
 
 
-    def establishClientAndServer(self):
+    def establishClientAndServer(self, _ignored=None):
         """
         Connect a client obtained from C{clientFactory} and a server
         obtained from the current server factory via an L{IOPump},
@@ -1342,7 +1342,10 @@ class NewCredTests(unittest.TestCase):
         """
         self.client, self.server, self.pump = connectServerAndClient(
             self, self.clientFactory, self.serverFactory)
-        self.connector = ReconnectingConnector(self.establishClientAndServer)
+        self.connector = _ReconnectingFakeConnector(
+            address.IPv4Address('TCP', '127.0.0.1', 4321))
+        self.connector.notifyOnConnect().addCallback(
+            self.establishClientAndServer)
 
 
     def completeClientLostConnection(
