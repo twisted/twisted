@@ -107,12 +107,11 @@ class TerminalBuffer(protocol.Protocol):
     """
     An in-memory terminal emulator.
     """
-    for keyID in (b'UP_ARROW', b'DOWN_ARROW', b'RIGHT_ARROW', b'LEFT_ARROW',
-                  b'HOME', b'INSERT', b'DELETE', b'END', b'PGUP', b'PGDN',
-                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8', b'F9',
-                  b'F10', b'F11', b'F12'):
-        execBytes = keyID + b" = object()"
-        execStr = execBytes.decode("ascii")
+    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
+                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
+                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
+                  'F10', 'F11', 'F12'):
+        execStr = keyID + " = object()"
         exec(execStr)
 
     TAB = b'\t'
