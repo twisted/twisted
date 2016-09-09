@@ -1302,7 +1302,7 @@ class NewCredLeakTests(unittest.TestCase):
 
 
 
-class NewCredTests(unittest.TestCase):
+class NewCredTests(unittest.SynchronousTestCase):
     """
     Tests related to the L{twisted.cred} support in PB.
     """
@@ -1393,7 +1393,7 @@ class NewCredTests(unittest.TestCase):
         rootObjDeferred.addCallback(gotRootObject)
         rootObjDeferred.addCallback(disconnect)
 
-        return rootObjDeferred
+        self.successResultOf(rootObjDeferred)
 
 
     def test_deadReferenceError(self):
@@ -1420,7 +1420,8 @@ class NewCredTests(unittest.TestCase):
 
             return disconnectedDeferred
 
-        return rootObjDeferred.addCallback(gotRootObject)
+        rootObjDeferred.addCallback(gotRootObject)
+        self.successResultOf(rootObjDeferred)
 
 
     def test_clientConnectionLost(self):
@@ -1468,7 +1469,8 @@ class NewCredTests(unittest.TestCase):
                 return d.addCallback(gotAnotherRootObject)
             return d.addCallback(disconnected)
 
-        return rootObjDeferred.addCallback(gotRootObject)
+        rootObjDeferred.addCallback(gotRootObject)
+        self.successResultOf(rootObjDeferred)
 
 
     def test_immediateClose(self):
@@ -1495,7 +1497,9 @@ class NewCredTests(unittest.TestCase):
             None,
             failure.Failure(
                 ConnectionRefusedError("Test simulated refused connection")))
-        return self.assertFailure(loginDeferred, ConnectionRefusedError)
+
+        loginFailure = self.failureResultOf(loginDeferred)
+        loginFailure.trap(ConnectionRefusedError)
 
 
     def test_loginLogout(self):
@@ -1542,7 +1546,8 @@ class NewCredTests(unittest.TestCase):
         self.pump.flush()
         # Now allow the client to disconnect.
         loginCompleted.callback(None)
-        return d
+
+        self.successResultOf(loginCompleted)
 
 
     def test_logoutAfterDecref(self):
@@ -1592,7 +1597,8 @@ class NewCredTests(unittest.TestCase):
         gc.collect()
         # push their decref messages through
         self.pump.flush()
-        return d
+
+        self.successResultOf(d)
 
 
     def test_concurrentLogin(self):
@@ -1624,7 +1630,7 @@ class NewCredTests(unittest.TestCase):
         self.establishClientAndServer()
         self.pump.flush()
 
-        return d
+        self.successResultOf(d)
 
 
     def test_badUsernamePasswordLogin(self):
@@ -1640,19 +1646,17 @@ class NewCredTests(unittest.TestCase):
         secondLogin = self.clientFactory.login(
             credentials.UsernamePassword(b'user', b'wrongpass'))
 
-        self.assertFailure(firstLogin, UnauthorizedLogin)
-        self.assertFailure(secondLogin, UnauthorizedLogin)
-        d = gatherResults([firstLogin, secondLogin])
-
-        def cleanup(ignore):
-            errors = self.flushLoggedErrors(UnauthorizedLogin)
-            self.assertEqual(len(errors), 2)
-        d.addCallback(cleanup)
-
         self.establishClientAndServer()
         self.pump.flush()
 
-        return d
+        firstLoginFailure = self.failureResultOf(firstLogin)
+        secondLoginFailure = self.failureResultOf(secondLogin)
+
+        firstLoginFailure.trap(UnauthorizedLogin)
+        secondLoginFailure.trap(UnauthorizedLogin)
+
+        errors = self.flushLoggedErrors(UnauthorizedLogin)
+        self.assertEqual(len(errors), 2)
 
 
     def test_anonymousLogin(self):
@@ -1672,7 +1676,8 @@ class NewCredTests(unittest.TestCase):
 
         self.establishClientAndServer()
         self.pump.flush()
-        return d
+
+        self.successResultOf(d)
 
 
     def test_anonymousLoginNotPermitted(self):
@@ -1683,17 +1688,15 @@ class NewCredTests(unittest.TestCase):
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
         d = self.clientFactory.login(credentials.Anonymous(), "BRAINS!")
-        self.assertFailure(d, UnhandledCredentials)
-
-        def cleanup(ignore):
-            errors = self.flushLoggedErrors(UnhandledCredentials)
-            self.assertEqual(len(errors), 1)
-        d.addCallback(cleanup)
 
         self.establishClientAndServer()
         self.pump.flush()
 
-        return d
+        loginFailure = self.failureResultOf(d)
+        loginFailure.trap(UnhandledCredentials)
+
+        errors = self.flushLoggedErrors(UnhandledCredentials)
+        self.assertEqual(len(errors), 1)
 
 
     def test_anonymousLoginWithMultipleCheckers(self):
@@ -1715,7 +1718,7 @@ class NewCredTests(unittest.TestCase):
         self.establishClientAndServer()
         self.pump.flush()
 
-        return d
+        self.successResultOf(d)
 
 
     def test_authenticatedLoginWithMultipleCheckers(self):
@@ -1738,7 +1741,7 @@ class NewCredTests(unittest.TestCase):
         self.establishClientAndServer()
         self.pump.flush()
 
-        return d
+        self.successResultOf(d)
 
 
     def test_view(self):
@@ -1764,7 +1767,7 @@ class NewCredTests(unittest.TestCase):
         self.establishClientAndServer()
         self.pump.flush()
 
-        return d
+        self.successResultOf(d)
 
 
 
