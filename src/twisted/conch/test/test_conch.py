@@ -574,6 +574,34 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         return d.addCallback(self.assertEqual, 'hello\n')
 
 
+    def test_ECDHSHA256(self):
+        """
+        The ecdh-sha2-nistp256 key exchange algorithm is compatible with
+        OpenSSH
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'ecdh-sha2-nistp256')
+
+
+    def test_ECDHSHA384(self):
+        """
+        The ecdh-sha2-nistp384 key exchange algorithm is compatible with
+        OpenSSH
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'ecdh-sha2-nistp384')
+
+
+
+    def test_ECDHSHA521(self):
+        """
+        The ecdh-sha2-nistp521 key exchange algorithm is compatible with
+        OpenSSH
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'ecdh-sha2-nistp521')
+
+
     def test_DH_GROUP1(self):
         """
         The diffie-hellman-group1-sha1 key exchange algorithm is compatible
