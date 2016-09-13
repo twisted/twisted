@@ -175,20 +175,13 @@ def connectServerAndClient(test, clientFactory, serverFactory):
 
 class _ReconnectingFakeConnector(_FakeConnector):
     """
-    An L{IConnector} implementation that calls the specified callback
-    when its C{connect} method is called
-
-    @param reconnectCallback: the callback to call when C{connect} is
-        called
-    @type reconnectCallback: A callable
-
-    @param *args: Position arguments to pass C{reconnectCallback}
-    @param **kwargs: Keyword arguments to pass to C{reconnectCallback}
+    A fake L{IConnector} that can fire L{Deferred}s when its
+    C{connect} method is called.
     """
 
     def __init__(self, *args, **kwargs):
         super(_ReconnectingFakeConnector, self).__init__(*args, **kwargs)
-        self.notifications = deque()
+        self._notifications = deque()
 
 
     def notifyOnConnect(self):
@@ -201,17 +194,17 @@ class _ReconnectingFakeConnector(_FakeConnector):
         @rtype: L{Deferred}
         """
         notifier = Deferred()
-        self.notifications.appendleft(notifier)
+        self._notifications.appendleft(notifier)
         return notifier
 
 
-    def connect(self, *args, **kwargs):
+    def connect(self):
         """
         A C{connect} implementation that calls C{reconnectCallback}
         """
-        super(_ReconnectingFakeConnector, self).connect(*args, **kwargs)
-        while self.notifications:
-            self.notifications.pop().callback(self)
+        super(_ReconnectingFakeConnector, self).connect()
+        while self._notifications:
+            self._notifications.pop().callback(self)
 
 
 
