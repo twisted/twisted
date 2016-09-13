@@ -14,7 +14,7 @@ from constantly import Values, ValueConstant
 
 def exit(status, message=None):
     """
-    Exit the python interpreter with an optional message.
+    Exit the python interpreter with the given status and an optional message.
 
     @param status: An exit status.
     @type status: L{int} or L{ValueConstant} from L{ExitStatus}.
