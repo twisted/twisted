@@ -1,0 +1,1 @@
+twisted.protocols.gps, deprecated since Twisted 15.2, has been removed.
