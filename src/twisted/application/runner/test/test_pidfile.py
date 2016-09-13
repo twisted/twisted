@@ -7,9 +7,8 @@ Tests for L{twisted.application.runner._pidfile}.
 
 from os import getpid
 
-from ...runner import _pidfile
 from .._pidfile import PIDFile
-from .test_runner import DummyKill, DummyFilePath
+from .test_runner import DummyFilePath
 
 import twisted.trial.unittest
 
@@ -19,24 +18,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
     """
     Tests for L{PIDFile}.
     """
-
-    def setUp(self):
-        # Patch exit and kill so we can capture usage and prevent actual exits
-        # and kills.
-
-        # self.exit = DummyExit()
-        # self.kill = DummyKill()
-
-        # self.patch(_pidfile, "exit", self.exit)
-        # self.patch(_pidfile, "kill", self.kill)
-
-        # Patch getpid so we get a known result
-
-        # self.pid = 1337
-        # self.pidFileContent = u"{}\n".format(self.pid).encode("utf-8")
-        pass
-
-
 
     def test_readWithPID(self):
         """
