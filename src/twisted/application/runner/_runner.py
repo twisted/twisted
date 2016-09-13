@@ -6,11 +6,6 @@
 Twisted application runner.
 """
 
-__all__ = [
-    "Runner",
-    "RunnerOptions",
-]
-
 from sys import stderr
 from signal import SIGTERM
 from os import getpid, kill
