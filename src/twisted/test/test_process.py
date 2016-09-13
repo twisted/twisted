@@ -739,7 +739,7 @@ class ProcessTests(unittest.TestCase):
         self.assertEqual(
             warning["message"],
             ("Argument strings and environment keys/values passed to "
-             "reactor.spawnProcess should be str, not unicode."))
+             "reactor.spawnProcess should be bytes, not unicode."))
         self.assertTrue(__file__.startswith(warning["filename"]))
 
         return d.getResult()
