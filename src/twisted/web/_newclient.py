@@ -1041,17 +1041,20 @@ class Response:
         Deliver any buffered data to C{protocol} and prepare to deliver any
         future data to it.  Move to the C{'CONNECTED'} state.
         """
-        # Now that there's a protocol to consume the body, resume the
-        # transport.  It was previously paused by HTTPClientParser to avoid
-        # reading too much data before it could be handled.
-        self._transport.resumeProducing()
-
         protocol.makeConnection(self._transport)
         self._bodyProtocol = protocol
         for data in self._bodyBuffer:
             self._bodyProtocol.dataReceived(data)
         self._bodyBuffer = None
+
         self._state = 'CONNECTED'
+
+        # Now that there's a protocol to consume the body, resume the
+        # transport.  It was previously paused by HTTPClientParser to avoid
+        # reading too much data before it could be handled. We need to do this
+        # after we transition our state as it may recursively lead to more data
+        # being delivered, or even the body completing.
+        self._transport.resumeProducing()
 
 
     def _deliverBody_CONNECTED(self, protocol):
