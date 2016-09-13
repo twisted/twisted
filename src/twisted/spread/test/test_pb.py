@@ -173,15 +173,17 @@ def connectServerAndClient(test, clientFactory, serverFactory):
 
 
 
-class _ReconnectingFakeConnector(_FakeConnector):
+class _ReconnectingFakeConnectorState(object):
     """
-    A fake L{IConnector} that can fire L{Deferred}s when its
-    C{connect} method is called.
+    Manages connection notifications for a
+    L{_ReconnectingFakeConnector} instance.
+
+    @ivar notifications: pending L{Deferreds} that will fire when the
+        L{_ReconnectingFakeConnector}'s connect method is called
     """
 
-    def __init__(self, *args, **kwargs):
-        super(_ReconnectingFakeConnector, self).__init__(*args, **kwargs)
-        self._notifications = deque()
+    def __init__(self):
+        self.notifications = deque()
 
 
     def notifyOnConnect(self):
@@ -194,8 +196,36 @@ class _ReconnectingFakeConnector(_FakeConnector):
         @rtype: L{Deferred}
         """
         notifier = Deferred()
-        self._notifications.appendleft(notifier)
+        self.notifications.appendleft(notifier)
         return notifier
+
+
+    def notifyAll(self):
+        """
+        Fire all pending notifications.
+        """
+        while self.notifications:
+            self.notifications.pop().callback(self)
+
+
+
+class _ReconnectingFakeConnector(_FakeConnector):
+    """
+    A fake L{IConnector} that can fire L{Deferred}s when its
+    C{connect} method is called.
+    """
+
+    def __init__(self, address, state):
+        """
+        @param address: An L{IAddress} provider that represents this
+            connector's destination.
+        @type address: An L{IAddress} provider.
+
+        @param state: The state instance
+        @type state: L{_ReconnectingFakeConnectorState}
+        """
+        super(_ReconnectingFakeConnector, self).__init__(address)
+        self._state = state
 
 
     def connect(self):
@@ -203,8 +233,7 @@ class _ReconnectingFakeConnector(_FakeConnector):
         A C{connect} implementation that calls C{reconnectCallback}
         """
         super(_ReconnectingFakeConnector, self).connect()
-        while self._notifications:
-            self._notifications.pop().callback(self)
+        self._state.notifyAll()
 
 
 
@@ -1335,9 +1364,12 @@ class NewCredTests(unittest.TestCase):
         """
         self.client, self.server, self.pump = connectServerAndClient(
             self, self.clientFactory, self.serverFactory)
+
+        self.connectorState = _ReconnectingFakeConnectorState()
         self.connector = _ReconnectingFakeConnector(
-            address.IPv4Address('TCP', '127.0.0.1', 4321))
-        self.connector.notifyOnConnect().addCallback(
+            address.IPv4Address('TCP', '127.0.0.1', 4321),
+            self.connectorState)
+        self.connectorState.notifyOnConnect().addCallback(
             self.establishClientAndServer)
 
 
