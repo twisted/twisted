@@ -407,18 +407,18 @@ class DummyFilePath(FilePath):
     containing the given data when opened.
     """
 
-    def __init__(self, content=b""):
+    def __init__(self, content=None):
         self.setContent(content)
 
 
     def open(self, mode="r"):
-        if self._content is None:
+        if not self._exits:
             raise EnvironmentError()
         return BytesIO(self._content)
 
 
     def setContent(self, content):
-        self._exits = True
+        self._exits = content is not None
         self._content = content
 
 
@@ -427,7 +427,7 @@ class DummyFilePath(FilePath):
 
 
     def remove(self):
-        self._exits = False
+        self.setContent(None)
 
 
     def exists(self):
