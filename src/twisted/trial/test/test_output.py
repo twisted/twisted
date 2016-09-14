@@ -166,7 +166,7 @@ class ImportErrorsTests(packages.SysPathManglingTest):
 
 
     def test_filename(self):
-        self.mangleSysPath(self.oldPath)
+        self.mangleSysPath(self.newPath)
         d = self.runTrial(
             os.path.join(self.parent, 'package', 'test_module.py'))
         self.assertNotIn(d, '[ERROR]')
@@ -178,7 +178,7 @@ class ImportErrorsTests(packages.SysPathManglingTest):
 
     def test_dosFile(self):
         ## XXX -- not really an output test, more of a script test
-        self.mangleSysPath(self.oldPath)
+        self.mangleSysPath(self.newPath)
         d = self.runTrial(
             os.path.join(self.parent,
                          'package', 'test_dos_module.py'))
