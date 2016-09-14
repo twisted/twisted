@@ -124,7 +124,10 @@ def run():
     else:
         log.discardLogs()
     doConnect()
-    fd = sys.stdin.fileno()
+    try:
+        fd = sys.stdin.fileno()
+    except:
+        fd = realout.fileno()
     try:
         old = tty.tcgetattr(fd)
     except:
