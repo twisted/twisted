@@ -1,4 +1,4 @@
-Twisted 16.4.0
+Twisted 16.4.1
 ==============
 
 |pypi|
@@ -15,7 +15,7 @@ Twisted 16.4.0
     * idnar flips the "days since glyph has bought a vanity domain name" counter back over to zero
 
 
-For information on what's new in Twisted 16.4.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.4.1, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
