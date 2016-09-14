@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_banana -*-
+# -*- test-case-name: twisted.spread.test.test_banana -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -11,6 +11,8 @@ for more details.
 
 @author: Glyph Lefkowitz
 """
+
+from __future__ import absolute_import, division
 
 import copy, struct
 from io import BytesIO
@@ -100,7 +102,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
     # The specification calls these profiles but this implementation calls them
     # dialects instead.
-    knownDialects = ["pb", "none"]
+    knownDialects = [b"pb", b"none"]
 
     prefixLimit = None
     sizeLimit = SIZE_LIMIT
@@ -371,7 +373,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 # For use from the interactive interpreter
 _i = Banana()
 _i.connectionMade()
-_i._selectDialect("none")
+_i._selectDialect(b"none")
 
 
 def encode(lst):

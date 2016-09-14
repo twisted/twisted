@@ -624,6 +624,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertIn(b"&#9731;", request.transport.written.getvalue())
 
+        # On some platforms, we get a UnicodeError when trying to
+        # display the Failure with twisted.python.log because
+        # the default encoding cannot display u"\u2603".  Windows for example
+        # uses a default encodig of cp437 which does not support u"\u2603".
+        self.flushLoggedErrors(UnicodeError)
+
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
