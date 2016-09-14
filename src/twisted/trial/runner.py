@@ -380,6 +380,7 @@ class TestLoader(object):
         """
         return sorted(xs, key=self.sorter)
 
+
     def findTestClasses(self, module):
         """Given a module, return all Trial test classes"""
         classes = []
@@ -387,18 +388,6 @@ class TestLoader(object):
             if isTestCase(val):
                 classes.append(val)
         return self.sort(classes)
-
-    def loadFile(self, fileName, recurse=False):
-        """
-        Load a file, and then the tests in that file.
-
-        @param fileName: The file name to load.
-        @param recurse: A boolean. If True, inspect modules within packages
-            within the given package (and so on), otherwise, only inspect
-            modules in the package itself.
-        """
-        module = filenameToModule(fileName)
-        return self.loadAnything(module, recurse=recurse)
 
 
     def findByName(self, _name, recurse=False):
