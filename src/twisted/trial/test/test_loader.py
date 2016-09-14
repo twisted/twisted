@@ -46,38 +46,6 @@ class FinderTests(packages.PackageTest):
     def tearDown(self):
         packages.PackageTest.tearDown(self)
 
-    def test_findPackage(self):
-        sample1 = self.loader.findByName('twisted')
-        import twisted as sample2
-        self.assertEqual(sample1, sample2)
-
-    def test_findModule(self):
-        sample1 = self.loader.findByName('twisted.trial.test.sample')
-        from twisted.trial.test import sample as sample2
-        self.assertEqual(sample1, sample2)
-
-    def test_findFile(self):
-        path = util.sibpath(__file__, 'sample.py')
-        sample1 = self.loader.findByName(path)
-        from twisted.trial.test import sample as sample2
-        self.assertEqual(sample1, sample2)
-
-    def test_findObject(self):
-        sample1 = self.loader.findByName('twisted.trial.test.sample.FooTest')
-        from twisted.trial.test import sample
-        self.assertEqual(sample.FooTest, sample1)
-
-    if _PY3:
-        # In Python 3, `findByName` returns full TestCases, not the objects
-        # inside them. This because on Python 3, unbound methods don't exist,
-        # so you can't simply make a TestCase after finding it -- it's easier
-        # to just find it and put it in a TestCase immediately.
-        _Py3SkipMsg = ("Not relevant on Python 3")
-        test_findPackage.skip = _Py3SkipMsg
-        test_findModule.skip = _Py3SkipMsg
-        test_findFile.skip = _Py3SkipMsg
-        test_findObject.skip = _Py3SkipMsg
-
     def test_findNonModule(self):
         self.assertRaises(AttributeError,
                               self.loader.findByName,
@@ -90,7 +58,7 @@ class FinderTests(packages.PackageTest):
 
     def test_findNonFile(self):
         path = util.sibpath(__file__, 'nonexistent.py')
-        self.assertRaises(ValueError, self.loader.findByName, path)
+        self.assertRaises(ImportError, self.loader.findByName, path)
 
 
 
@@ -117,29 +85,6 @@ class FileTests(packages.SysPathManglingTest):
         self.assertEqual(sample2, sample1)
 
 
-    def test_moduleNotInPath(self):
-        """
-        If passed the path to a file containing the implementation of a
-        module within a package which is not on the import path,
-        L{runner.filenameToModule} returns a module object loosely
-        resembling the module defined by that file anyway.
-        """
-        # "test_sample" isn't actually the name of this module.  However,
-        # filenameToModule can't seem to figure that out.  So clean up this
-        # misnamed module.  It would be better if this weren't necessary
-        # and filenameToModule either didn't exist or added a correctly
-        # named module to sys.modules.
-        self.addCleanup(sys.modules.pop, 'test_sample', None)
-
-        self.mangleSysPath(self.oldPath)
-        sample1 = runner.filenameToModule(
-            os.path.join(self.parent, 'goodpackage', 'test_sample.py'))
-        self.mangleSysPath(self.newPath)
-        from goodpackage import test_sample as sample2
-        self.assertEqual(os.path.splitext(sample2.__file__)[0],
-                             os.path.splitext(sample1.__file__)[0])
-
-
     def test_packageInPath(self):
         """
         If the file in question is a package on the Python path, then it should
@@ -154,50 +99,20 @@ class FileTests(packages.SysPathManglingTest):
     def test_packageNotInPath(self):
         """
         If passed the path to a directory which represents a package which
-        is not on the import path, L{runner.filenameToModule} returns a
-        module object loosely resembling the package defined by that
-        directory anyway.
+        is not on the import path, L{runner.filenameToModule} does not load it.
         """
         # "__init__" isn't actually the name of the package!  However,
         # filenameToModule is pretty stupid and decides that is its name
         # after all.  Make sure it gets cleaned up.  See the comment in
         # test_moduleNotInPath for possible courses of action related to
         # this.
-        self.addCleanup(sys.modules.pop, "__init__")
-
         self.mangleSysPath(self.oldPath)
-        package1 = runner.filenameToModule(
-            os.path.join(self.parent, 'goodpackage'))
+        try:
+            package1 = runner.filenameToModule(
+                os.path.join(self.parent, 'goodpackage'))
+        except Exception as e:
+            self.assertEqual(e.args[0], "No module named 'goodpackage'")
         self.mangleSysPath(self.newPath)
-        import goodpackage
-        self.assertEqual(os.path.splitext(goodpackage.__file__)[0],
-                         os.path.splitext(package1.__file__)[0])
-
-
-    def test_directoryNotPackage(self):
-        """
-        L{runner.filenameToModule} raises a C{ValueError} when the name of an
-        empty directory is passed that isn't considered a valid Python package
-        because it doesn't contain a C{__init__.py} file.
-        """
-        emptyDir = filepath.FilePath(self.parent).child("emptyDirectory")
-        emptyDir.createDirectory()
-
-        err = self.assertRaises(ValueError, runner.filenameToModule,
-            emptyDir.path)
-        self.assertEqual(str(err), "%r is not a package directory" % (
-            emptyDir.path,))
-
-
-    def test_filenameNotPython(self):
-        """
-        L{runner.filenameToModule} raises a C{SyntaxError} when a non-Python
-        file is passed.
-        """
-        filename = filepath.FilePath(self.parent).child('notpython')
-        filename.setContent(b"This isn't python")
-        self.assertRaises(
-            SyntaxError, runner.filenameToModule, filename.path)
 
 
     def test_filenameMatchesPackage(self):
