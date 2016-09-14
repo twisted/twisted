@@ -26,6 +26,7 @@ if pyasn1 is not None and cryptography is not None:
     from twisted.conch.test import keydata
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.exceptions import UnsupportedAlgorithm
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
@@ -1413,14 +1414,33 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
              (transport.MSG_NEWKEYS, b'')])
 
 
-    def test_checkBadCurveName(self):
+    def test_checkBad_KEX_ECDH_INIT_CurveName(self):
         """
         Test that if the server receives a KEX_DH_GEX_REQUEST_OLD message
         and the key exchange algorithm is not set, we raise a ConchError.
         """
         self.proto.kexAlg = b'bad-curve'
-        self.assertRaises(AttributeError, self.proto._ssh_KEX_ECDH_INIT, common.NS(b'unused-key'))
+        self.proto.keyAlg = b'ssh-rsa'
+        self.assertRaises(UnsupportedAlgorithm, self.proto._ssh_KEX_ECDH_INIT, common.NS(b'unused-key'))
 
+
+    def test_checkBad_KEX_INIT_CurveName(self):
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b'ecdh-sha2-nistp256') +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+        self.assertRaises(UnsupportedAlgorithm)
 
     def test_KEXDH_INIT_GROUP1(self):
         """
