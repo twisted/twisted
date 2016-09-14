@@ -1,11 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function
 
 import gc
 import re
 import sys
+import os
 import textwrap
 import types
 
@@ -871,3 +872,101 @@ class HelpOrderTests(unittest.TestCase):
             )
 
             self.assertTrue(match, msg=msg % (orderName, output))
+
+
+
+class DoesNotAddToPathTests(unittest.TestCase):
+    """
+    Tests for when trial cannot find a package.
+    """
+    def test_cwdNotOnSysPathButPackageInCwd(self):
+        """
+        If the given package is not in C{sys.path}, but a package looking like
+        it is in the current working directory, a warning pointing this out
+        will be given.
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+
+        path.child("mypackage").makedirs()
+        path.child("mypackage").child("__init__.py").setContent(b"")
+
+        self.patch(sys, "stdout", NativeStringIO())
+        self.patch(sys, "path", [])
+        self.patch(os, "getcwd", lambda: path.path)
+        self.patch(sys, "argv", ["trial", "mypackage"])
+
+        from pkg_resources import load_entry_point
+
+        exc = self.assertRaises(
+            SystemExit,
+            load_entry_point('Twisted', 'console_scripts', 'trial'))
+        self.assertEqual(exc.code, 1)
+
+        output = sys.stdout.getvalue()
+        self.assertIn("ModuleNotFound", output)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(
+            warnings[0]["message"],
+            ("mypackage was not found in sys.path, but a Python package called"
+             " 'mypackage' is in your current working directory. If you wish "
+             "to run the tests for this package, either install it (for "
+             "example, using tox to run your tests) or add the current "
+             "working dir to your path using "
+             "'env PYTHONPATH=. trial mypackage'."))
+
+    def test_cwdOnSysPath(self):
+        """
+        If the current working directory is on C{sys.path} and it fails
+        importing, the warning is not given.
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+
+        self.patch(sys, "stdout", NativeStringIO())
+        self.patch(sys, "path", [path.path])
+        self.patch(os, "getcwd", lambda: path.path)
+        self.patch(sys, "argv", ["trial", "mypackage"])
+
+        from pkg_resources import load_entry_point
+
+        exc = self.assertRaises(
+            SystemExit,
+            load_entry_point('Twisted', 'console_scripts', 'trial'))
+        self.assertEqual(exc.code, 1)
+
+        output = sys.stdout.getvalue()
+        self.assertIn("ModuleNotFound", output)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0)
+
+    def test_cwdNotOnSysPathAndNoPackage(self):
+        """
+        If the current working directory is not in C{sys.path} and the package
+        does not look like it exists in the current working directory, the
+        warning is not given.
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+
+        self.patch(sys, "stdout", NativeStringIO())
+        self.patch(sys, "path", [])
+        self.patch(os, "getcwd", lambda: path.path)
+        self.patch(sys, "argv", ["trial", "mypackage"])
+
+        from pkg_resources import load_entry_point
+
+        exc = self.assertRaises(
+            SystemExit,
+            load_entry_point('Twisted', 'console_scripts', 'trial'))
+        self.assertEqual(exc.code, 1)
+
+        output = sys.stdout.getvalue()
+
+        self.assertIn("ModuleNotFound", output)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0)
