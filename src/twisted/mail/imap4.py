@@ -17,13 +17,13 @@ To do::
 
 import base64
 import binascii
-import hmac
-import re
+import codecs
 import copy
-import tempfile
-import string
-import time
 import random
+import re
+import string
+import tempfile
+import time
 
 import email.utils
 
@@ -32,7 +32,7 @@ try:
 except:
     import StringIO
 
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -44,6 +44,32 @@ from twisted.internet import interfaces
 
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+
+# Re-exported for compatibility reasons
+from twisted.mail.interfaces import (
+    IClientAuthentication, INamespacePresenter,
+    IAccountIMAP as IAccount,
+    IMessageIMAPPart as IMessagePart,
+    IMessageIMAP as IMessage,
+    IMessageIMAPFile as IMessageFile,
+    ISearchableIMAPMailbox as ISearchableMailbox,
+    IMessageIMAPCopier as IMessageCopier,
+    IMailboxIMAPInfo as IMailboxInfo,
+    IMailboxIMAP as IMailbox,
+    ICloseableMailboxIMAP as ICloseableMailbox,
+    IMailboxIMAPListener as IMailboxListener
+)
+from twisted.mail._cred import (
+    CramMD5ClientAuthenticator,
+    LOGINAuthenticator, LOGINCredentials,
+    PLAINAuthenticator, PLAINCredentials)
+from twisted.mail._except import (
+    IMAP4Exception, IllegalClientResponse, IllegalOperation, MailboxException,
+    IllegalMailboxEncoding, MailboxCollision, NoSuchMailbox, ReadOnlyMailbox,
+    UnhandledResponse, NegativeResponse, NoSupportedAuthentication,
+    IllegalIdentifierError, IllegalQueryError, MismatchedNesting,
+    MismatchedQuoting, IllegalServerResponse,
+)
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
@@ -380,79 +406,7 @@ class Command:
         if unuse:
             unusedCallback(unuse)
 
-class LOGINCredentials(credentials.UsernamePassword):
-    def __init__(self):
-        self.challenges = ['Password\0', 'User Name\0']
-        self.responses = ['password', 'username']
-        credentials.UsernamePassword.__init__(self, None, None)
 
-    def getChallenge(self):
-        return self.challenges.pop()
-
-    def setResponse(self, response):
-        setattr(self, self.responses.pop(), response)
-
-    def moreChallenges(self):
-        return bool(self.challenges)
-
-class PLAINCredentials(credentials.UsernamePassword):
-    def __init__(self):
-        credentials.UsernamePassword.__init__(self, None, None)
-
-    def getChallenge(self):
-        return ''
-
-    def setResponse(self, response):
-        parts = response.split('\0')
-        if len(parts) != 3:
-            raise IllegalClientResponse("Malformed Response - wrong number of parts")
-        useless, self.username, self.password = parts
-
-    def moreChallenges(self):
-        return False
-
-class IMAP4Exception(Exception):
-    def __init__(self, *args):
-        Exception.__init__(self, *args)
-
-class IllegalClientResponse(IMAP4Exception): pass
-
-class IllegalOperation(IMAP4Exception): pass
-
-class IllegalMailboxEncoding(IMAP4Exception): pass
-
-class IMailboxListener(Interface):
-    """Interface for objects interested in mailbox events"""
-
-    def modeChanged(writeable):
-        """Indicates that the write status of a mailbox has changed.
-
-        @type writeable: C{bool}
-        @param writeable: A true value if write is now allowed, false
-        otherwise.
-        """
-
-    def flagsChanged(newFlags):
-        """Indicates that the flags of one or more messages have changed.
-
-        @type newFlags: C{dict}
-        @param newFlags: A mapping of message identifiers to tuples of flags
-        now set on that message.
-        """
-
-    def newMessages(exists, recent):
-        """Indicates that the number of messages in a mailbox has changed.
-
-        @type exists: C{int} or L{None}
-        @param exists: The total number of messages now in this mailbox.
-        If the total number of messages has not changed, this should be
-        L{None}.
-
-        @type recent: C{int}
-        @param recent: The number of messages now flagged \\Recent.
-        If the number of recent messages has not changed, this should be
-        L{None}.
-        """
 
 # Some constants to help define what an atom is and is not - see the grammar
 # section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.
@@ -2187,23 +2141,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if recent is not None:
             self.sendUntaggedResponse('%d RECENT' % recent, async=True)
 
-
-class UnhandledResponse(IMAP4Exception): pass
-
-class NegativeResponse(IMAP4Exception): pass
-
-class NoSupportedAuthentication(IMAP4Exception):
-    def __init__(self, serverSupports, clientSupports):
-        IMAP4Exception.__init__(self, 'No supported authentication schemes available')
-        self.serverSupports = serverSupports
-        self.clientSupports = clientSupports
-
-    def __str__(self):
-        return (IMAP4Exception.__str__(self)
-            + ': Server supports %r, client supports %r'
-            % (self.serverSupports, self.clientSupports))
-
-class IllegalServerResponse(IMAP4Exception): pass
 
 TIMEOUT_ERROR = error.TimeoutError()
 
@@ -3961,7 +3898,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """Override me"""
 
 
-class IllegalIdentifierError(IMAP4Exception): pass
 
 def parseIdList(s, lastMessageId=None):
     """
@@ -4023,7 +3959,7 @@ def parseIdList(s, lastMessageId=None):
                 res.extend(p or lastMessageId)
     return res
 
-class IllegalQueryError(IMAP4Exception): pass
+
 
 _SIMPLE_BOOL = (
     'ALL', 'ANSWERED', 'DELETED', 'DRAFT', 'FLAGGED', 'NEW', 'OLD', 'RECENT',
@@ -4182,11 +4118,6 @@ def Not(query):
     """The negation of a query"""
     return '(NOT %s)' % (query,)
 
-class MismatchedNesting(IMAP4Exception):
-    pass
-
-class MismatchedQuoting(IMAP4Exception):
-    pass
 
 def wildcardToRegexp(wildcard, delim=None):
     wildcard = wildcard.replace('*', '(?:.*?)')
@@ -4432,268 +4363,6 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
-
-class IClientAuthentication(Interface):
-    def getName():
-        """Return an identifier associated with this authentication scheme.
-
-        @rtype: C{str}
-        """
-
-    def challengeResponse(secret, challenge):
-        """Generate a challenge response string"""
-
-
-
-@implementer(IClientAuthentication)
-class CramMD5ClientAuthenticator:
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "CRAM-MD5"
-
-    def challengeResponse(self, secret, chal):
-        response = hmac.HMAC(secret, chal).hexdigest()
-        return '%s %s' % (self.user, response)
-
-
-
-@implementer(IClientAuthentication)
-class LOGINAuthenticator:
-    def __init__(self, user):
-        self.user = user
-        self.challengeResponse = self.challengeUsername
-
-    def getName(self):
-        return "LOGIN"
-
-    def challengeUsername(self, secret, chal):
-        # Respond to something like "Username:"
-        self.challengeResponse = self.challengeSecret
-        return self.user
-
-    def challengeSecret(self, secret, chal):
-        # Respond to something like "Password:"
-        return secret
-
-@implementer(IClientAuthentication)
-class PLAINAuthenticator:
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "PLAIN"
-
-    def challengeResponse(self, secret, chal):
-        return '\0%s\0%s' % (self.user, secret)
-
-
-class MailboxException(IMAP4Exception): pass
-
-class MailboxCollision(MailboxException):
-    def __str__(self):
-        return 'Mailbox named %s already exists' % self.args
-
-class NoSuchMailbox(MailboxException):
-    def __str__(self):
-        return 'No mailbox named %s exists' % self.args
-
-class ReadOnlyMailbox(MailboxException):
-    def __str__(self):
-        return 'Mailbox open in read-only state'
-
-
-class IAccount(Interface):
-    """Interface for Account classes
-
-    Implementors of this interface should consider implementing
-    C{INamespacePresenter}.
-    """
-
-    def addMailbox(name, mbox = None):
-        """Add a new mailbox to this account
-
-        @type name: C{str}
-        @param name: The name associated with this mailbox.  It may not
-        contain multiple hierarchical parts.
-
-        @type mbox: An object implementing C{IMailbox}
-        @param mbox: The mailbox to associate with this name.  If L{None},
-        a suitable default is created and used.
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the creation succeeds, or a deferred whose
-        callback will be invoked when the creation succeeds.
-
-        @raise MailboxException: Raised if this mailbox cannot be added for
-        some reason.  This may also be raised asynchronously, if a C{Deferred}
-        is returned.
-        """
-
-    def create(pathspec):
-        """Create a new mailbox from the given hierarchical name.
-
-        @type pathspec: C{str}
-        @param pathspec: The full hierarchical name of a new mailbox to create.
-        If any of the inferior hierarchical names to this one do not exist,
-        they are created as well.
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the creation succeeds, or a deferred whose
-        callback will be invoked when the creation succeeds.
-
-        @raise MailboxException: Raised if this mailbox cannot be added.
-        This may also be raised asynchronously, if a C{Deferred} is
-        returned.
-        """
-
-    def select(name, rw=True):
-        """Acquire a mailbox, given its name.
-
-        @type name: C{str}
-        @param name: The mailbox to acquire
-
-        @type rw: C{bool}
-        @param rw: If a true value, request a read-write version of this
-        mailbox.  If a false value, request a read-only version.
-
-        @rtype: Any object implementing C{IMailbox} or C{Deferred}
-        @return: The mailbox object, or a C{Deferred} whose callback will
-        be invoked with the mailbox object.  None may be returned if the
-        specified mailbox may not be selected for any reason.
-        """
-
-    def delete(name):
-        """Delete the mailbox with the specified name.
-
-        @type name: C{str}
-        @param name: The mailbox to delete.
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the mailbox is successfully deleted, or a
-        C{Deferred} whose callback will be invoked when the deletion
-        completes.
-
-        @raise MailboxException: Raised if this mailbox cannot be deleted.
-        This may also be raised asynchronously, if a C{Deferred} is returned.
-        """
-
-    def rename(oldname, newname):
-        """Rename a mailbox
-
-        @type oldname: C{str}
-        @param oldname: The current name of the mailbox to rename.
-
-        @type newname: C{str}
-        @param newname: The new name to associate with the mailbox.
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the mailbox is successfully renamed, or a
-        C{Deferred} whose callback will be invoked when the rename operation
-        is completed.
-
-        @raise MailboxException: Raised if this mailbox cannot be
-        renamed.  This may also be raised asynchronously, if a C{Deferred}
-        is returned.
-        """
-
-    def isSubscribed(name):
-        """Check the subscription status of a mailbox
-
-        @type name: C{str}
-        @param name: The name of the mailbox to check
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the given mailbox is currently subscribed
-        to, a false value otherwise.  A C{Deferred} may also be returned
-        whose callback will be invoked with one of these values.
-        """
-
-    def subscribe(name):
-        """Subscribe to a mailbox
-
-        @type name: C{str}
-        @param name: The name of the mailbox to subscribe to
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the mailbox is subscribed to successfully,
-        or a Deferred whose callback will be invoked with this value when
-        the subscription is successful.
-
-        @raise MailboxException: Raised if this mailbox cannot be
-        subscribed to.  This may also be raised asynchronously, if a
-        C{Deferred} is returned.
-        """
-
-    def unsubscribe(name):
-        """Unsubscribe from a mailbox
-
-        @type name: C{str}
-        @param name: The name of the mailbox to unsubscribe from
-
-        @rtype: C{Deferred} or C{bool}
-        @return: A true value if the mailbox is unsubscribed from successfully,
-        or a Deferred whose callback will be invoked with this value when
-        the unsubscription is successful.
-
-        @raise MailboxException: Raised if this mailbox cannot be
-        unsubscribed from.  This may also be raised asynchronously, if a
-        C{Deferred} is returned.
-        """
-
-    def listMailboxes(ref, wildcard):
-        """List all the mailboxes that meet a certain criteria
-
-        @type ref: C{str}
-        @param ref: The context in which to apply the wildcard
-
-        @type wildcard: C{str}
-        @param wildcard: An expression against which to match mailbox names.
-        '*' matches any number of characters in a mailbox name, and '%'
-        matches similarly, but will not match across hierarchical boundaries.
-
-        @rtype: C{list} of C{tuple}
-        @return: A list of C{(mailboxName, mailboxObject)} which meet the
-        given criteria.  C{mailboxObject} should implement either
-        C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned.
-        """
-
-class INamespacePresenter(Interface):
-    def getPersonalNamespaces():
-        """Report the available personal namespaces.
-
-        Typically there should be only one personal namespace.  A common
-        name for it is \"\", and its hierarchical delimiter is usually
-        \"/\".
-
-        @rtype: iterable of two-tuples of strings
-        @return: The personal namespaces and their hierarchical delimiters.
-        If no namespaces of this type exist, None should be returned.
-        """
-
-    def getSharedNamespaces():
-        """Report the available shared namespaces.
-
-        Shared namespaces do not belong to any individual user but are
-        usually to one or more of them.  Examples of shared namespaces
-        might be \"#news\" for a usenet gateway.
-
-        @rtype: iterable of two-tuples of strings
-        @return: The shared namespaces and their hierarchical delimiters.
-        If no namespaces of this type exist, None should be returned.
-        """
-
-    def getUserNamespaces():
-        """Report the available user namespaces.
-
-        These are namespaces that contain folders belonging to other users
-        access to which this account has been granted.
-
-        @rtype: iterable of two-tuples of strings
-        @return: The user namespaces and their hierarchical delimiters.
-        If no namespaces of this type exist, None should be returned.
-        """
 
 
 @implementer(IAccount, INamespacePresenter)
@@ -5310,335 +4979,6 @@ def getBodyStructure(msg, extended=False):
     return _getMessageStructure(msg).encode(extended)
 
 
-
-class IMessagePart(Interface):
-    def getHeaders(negate, *names):
-        """Retrieve a group of message headers.
-
-        @type names: C{tuple} of C{str}
-        @param names: The names of the headers to retrieve or omit.
-
-        @type negate: C{bool}
-        @param negate: If True, indicates that the headers listed in C{names}
-        should be omitted from the return value, rather than included.
-
-        @rtype: C{dict}
-        @return: A mapping of header field names to header field values
-        """
-
-    def getBodyFile():
-        """Retrieve a file object containing only the body of this message.
-        """
-
-    def getSize():
-        """Retrieve the total size, in octets, of this message.
-
-        @rtype: C{int}
-        """
-
-    def isMultipart():
-        """Indicate whether this message has subparts.
-
-        @rtype: C{bool}
-        """
-
-    def getSubPart(part):
-        """Retrieve a MIME sub-message
-
-        @type part: C{int}
-        @param part: The number of the part to retrieve, indexed from 0.
-
-        @raise IndexError: Raised if the specified part does not exist.
-        @raise TypeError: Raised if this message is not multipart.
-
-        @rtype: Any object implementing C{IMessagePart}.
-        @return: The specified sub-part.
-        """
-
-class IMessage(IMessagePart):
-    def getUID():
-        """Retrieve the unique identifier associated with this message.
-        """
-
-    def getFlags():
-        """Retrieve the flags associated with this message.
-
-        @rtype: C{iterable}
-        @return: The flags, represented as strings.
-        """
-
-    def getInternalDate():
-        """Retrieve the date internally associated with this message.
-
-        @rtype: C{str}
-        @return: An RFC822-formatted date string.
-        """
-
-class IMessageFile(Interface):
-    """Optional message interface for representing messages as files.
-
-    If provided by message objects, this interface will be used instead
-    the more complex MIME-based interface.
-    """
-    def open():
-        """Return a file-like object opened for reading.
-
-        Reading from the returned file will return all the bytes
-        of which this message consists.
-        """
-
-class ISearchableMailbox(Interface):
-    def search(query, uid):
-        """Search for messages that meet the given query criteria.
-
-        If this interface is not implemented by the mailbox, L{IMailbox.fetch}
-        and various methods of L{IMessage} will be used instead.
-
-        Implementations which wish to offer better performance than the
-        default implementation should implement this interface.
-
-        @type query: C{list}
-        @param query: The search criteria
-
-        @type uid: C{bool}
-        @param uid: If true, the IDs specified in the query are UIDs;
-        otherwise they are message sequence IDs.
-
-        @rtype: C{list} or C{Deferred}
-        @return: A list of message sequence numbers or message UIDs which
-        match the search criteria or a C{Deferred} whose callback will be
-        invoked with such a list.
-
-        @raise IllegalQueryError: Raised when query is not valid.
-        """
-
-class IMessageCopier(Interface):
-    def copy(messageObject):
-        """Copy the given message object into this mailbox.
-
-        The message object will be one which was previously returned by
-        L{IMailbox.fetch}.
-
-        Implementations which wish to offer better performance than the
-        default implementation should implement this interface.
-
-        If this interface is not implemented by the mailbox, IMailbox.addMessage
-        will be used instead.
-
-        @rtype: C{Deferred} or C{int}
-        @return: Either the UID of the message or a Deferred which fires
-        with the UID when the copy finishes.
-        """
-
-class IMailboxInfo(Interface):
-    """Interface specifying only the methods required for C{listMailboxes}.
-
-    Implementations can return objects implementing only these methods for
-    return to C{listMailboxes} if it can allow them to operate more
-    efficiently.
-    """
-
-    def getFlags():
-        """Return the flags defined in this mailbox
-
-        Flags with the \\ prefix are reserved for use as system flags.
-
-        @rtype: C{list} of C{str}
-        @return: A list of the flags that can be set on messages in this mailbox.
-        """
-
-    def getHierarchicalDelimiter():
-        """Get the character which delimits namespaces for in this mailbox.
-
-        @rtype: C{str}
-        """
-
-class IMailbox(IMailboxInfo):
-    def getUIDValidity():
-        """Return the unique validity identifier for this mailbox.
-
-        @rtype: C{int}
-        """
-
-    def getUIDNext():
-        """Return the likely UID for the next message added to this mailbox.
-
-        @rtype: C{int}
-        """
-
-    def getUID(message):
-        """Return the UID of a message in the mailbox
-
-        @type message: C{int}
-        @param message: The message sequence number
-
-        @rtype: C{int}
-        @return: The UID of the message.
-        """
-
-    def getMessageCount():
-        """Return the number of messages in this mailbox.
-
-        @rtype: C{int}
-        """
-
-    def getRecentCount():
-        """Return the number of messages with the 'Recent' flag.
-
-        @rtype: C{int}
-        """
-
-    def getUnseenCount():
-        """Return the number of messages with the 'Unseen' flag.
-
-        @rtype: C{int}
-        """
-
-    def isWriteable():
-        """Get the read/write status of the mailbox.
-
-        @rtype: C{int}
-        @return: A true value if write permission is allowed, a false value otherwise.
-        """
-
-    def destroy():
-        """Called before this mailbox is deleted, permanently.
-
-        If necessary, all resources held by this mailbox should be cleaned
-        up here.  This function _must_ set the \\Noselect flag on this
-        mailbox.
-        """
-
-    def requestStatus(names):
-        """Return status information about this mailbox.
-
-        Mailboxes which do not intend to do any special processing to
-        generate the return value, C{statusRequestHelper} can be used
-        to build the dictionary by calling the other interface methods
-        which return the data for each name.
-
-        @type names: Any iterable
-        @param names: The status names to return information regarding.
-        The possible values for each name are: MESSAGES, RECENT, UIDNEXT,
-        UIDVALIDITY, UNSEEN.
-
-        @rtype: C{dict} or C{Deferred}
-        @return: A dictionary containing status information about the
-        requested names is returned.  If the process of looking this
-        information up would be costly, a deferred whose callback will
-        eventually be passed this dictionary is returned instead.
-        """
-
-    def addListener(listener):
-        """Add a mailbox change listener
-
-        @type listener: Any object which implements C{IMailboxListener}
-        @param listener: An object to add to the set of those which will
-        be notified when the contents of this mailbox change.
-        """
-
-    def removeListener(listener):
-        """Remove a mailbox change listener
-
-        @type listener: Any object previously added to and not removed from
-        this mailbox as a listener.
-        @param listener: The object to remove from the set of listeners.
-
-        @raise ValueError: Raised when the given object is not a listener for
-        this mailbox.
-        """
-
-    def addMessage(message, flags = (), date = None):
-        """Add the given message to this mailbox.
-
-        @type message: A file-like object
-        @param message: The RFC822 formatted message
-
-        @type flags: Any iterable of C{str}
-        @param flags: The flags to associate with this message
-
-        @type date: C{str}
-        @param date: If specified, the date to associate with this
-        message.
-
-        @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with the message
-        id if the message is added successfully and whose errback is
-        invoked otherwise.
-
-        @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
-        read-write.
-        """
-
-    def expunge():
-        """Remove all messages flagged \\Deleted.
-
-        @rtype: C{list} or C{Deferred}
-        @return: The list of message sequence numbers which were deleted,
-        or a C{Deferred} whose callback will be invoked with such a list.
-
-        @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
-        read-write.
-        """
-
-    def fetch(messages, uid):
-        """Retrieve one or more messages.
-
-        @type messages: C{MessageSet}
-        @param messages: The identifiers of messages to retrieve information
-        about
-
-        @type uid: C{bool}
-        @param uid: If true, the IDs specified in the query are UIDs;
-        otherwise they are message sequence IDs.
-
-        @rtype: Any iterable of two-tuples of message sequence numbers and
-        implementors of C{IMessage}.
-        """
-
-    def store(messages, flags, mode, uid):
-        """Set the flags of one or more messages.
-
-        @type messages: A MessageSet object with the list of messages requested
-        @param messages: The identifiers of the messages to set the flags of.
-
-        @type flags: sequence of C{str}
-        @param flags: The flags to set, unset, or add.
-
-        @type mode: -1, 0, or 1
-        @param mode: If mode is -1, these flags should be removed from the
-        specified messages.  If mode is 1, these flags should be added to
-        the specified messages.  If mode is 0, all existing flags should be
-        cleared and these flags should be added.
-
-        @type uid: C{bool}
-        @param uid: If true, the IDs specified in the query are UIDs;
-        otherwise they are message sequence IDs.
-
-        @rtype: C{dict} or C{Deferred}
-        @return: A C{dict} mapping message sequence numbers to sequences of C{str}
-        representing the flags set on the message after this operation has
-        been performed, or a C{Deferred} whose callback will be invoked with
-        such a C{dict}.
-
-        @raise ReadOnlyMailbox: Raised if this mailbox is not open for
-        read-write.
-        """
-
-class ICloseableMailbox(Interface):
-    """A supplementary interface for mailboxes which require cleanup on close.
-
-    Implementing this interface is optional.  If it is implemented, the protocol
-    code will call the close method defined whenever a mailbox is closed.
-    """
-    def close():
-        """Close this mailbox.
-
-        @return: A C{Deferred} which fires when this mailbox
-        has been closed, or None if the mailbox can be closed
-        immediately.
-        """
-
 def _formatHeaders(headers):
     hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v)
             in headers.iteritems()]
@@ -6135,7 +5475,6 @@ def parseTime(s):
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
         )
 
-import codecs
 def modified_base64(s):
     s_utf7 = s.encode('utf-7')
     return s_utf7[1:-1].replace('/', ',')
@@ -6237,6 +5576,7 @@ __all__ = [
     'IMailboxListener', 'IClientAuthentication', 'IAccount', 'IMailbox',
     'INamespacePresenter', 'ICloseableMailbox', 'IMailboxInfo',
     'IMessage', 'IMessageCopier', 'IMessageFile', 'ISearchableMailbox',
+    'IMessagePart',
 
     # Exceptions
     'IMAP4Exception', 'IllegalClientResponse', 'IllegalOperation',

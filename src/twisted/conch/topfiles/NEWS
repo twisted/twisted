@@ -1,6 +1,47 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.4.1 (2016-09-07)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 16.4.0 (2016-08-25)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.address is now ported to Python 3. (#8495)
+ - twisted.conch.ssh.transport is now ported to Python 3. (#8638)
+ - twisted.conch.ssh.channel is now ported to Python 3. (#8649)
+ - twisted.conch.ssh.userauth is now ported to Python 3. (#8654)
+ - twisted.conch.ssh.connection is now ported to Python 3. (#8660)
+ - twisted.conch.ssh.session is now ported to Python 3. (#8661)
+ - twisted.conch.ssh.filetransfer is now ported to Python 3. (#8675)
+ - twisted.conch.ssh.agent is now ported to Python 3. (#8686)
+ - twisted.conch.ssh is now ported to Python 3. (#8690)
+ - twisted.conch.openssh_compat.* is now ported to Python 3. (#8694)
+ - twisted.conch.client.knownhosts is now ported to Python 3. (#8697)
+ - twisted.conch.insults.insults has been ported to Python 3 (#8698)
+ - twisted.conch.client.default is now ported to Python 3. (#8700)
+ - twisted.conch.recvline has been ported to Python 3 (#8709)
+ - twisted.conch.endpoints is now ported to Python 3. (#8722)
+
+Bugfixes
+--------
+ - The SSHService is now a bytestring (#8653)
+ - The name field in SShChannel is now a bytestring (#8683)
+
+Improved Documentation
+----------------------
+ - Fixed syntax errors in cftp man page. (#8601)
+
+Other
+-----
+ - #8495, #8511, #8715
+
+
 Twisted Conch 16.3.0 (2016-07-05)
 =================================
 
