@@ -51,7 +51,6 @@ _curveTable = {
     b'nistp256' : ec.SECP256R1(),
     b'nistp384' : ec.SECP384R1(),
     b'nistp521' : ec.SECP521R1(),
-    b'nistp521' : ec.SECP521R1(),
     b'nistk163' : ec.SECT163K1(),
     b'nistp192' : ec.SECP192R1(),
     b'nistp224' : ec.SECP224R1(),
