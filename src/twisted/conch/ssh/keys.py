@@ -257,7 +257,7 @@ class Key(object):
             integer y
             integer private_value
 
-            identifier is the standard NIST curbe name.
+            identifier is the standard NIST curve name.
 
 
         @type blob: L{bytes}
@@ -676,17 +676,17 @@ class Key(object):
         """
         Build a key from EC components.
 
-        @type x: L{int}
         @param x: The affine x component of the public point used for verifying.
+        @type x: L{int}
 
-        @type y: L{int}
         @param y: The affine y component of the public point used for verifying.
+        @type y: L{int}
 
-        @type curve: L{str}
         @param curve: NIST name of elliptic curve.
+        @type curve: L{str}
 
+        @param curve: NIST name of elliptic curve.
         @type private_value: L{int}
-        @param private_value: The private value.
         """
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
@@ -696,9 +696,8 @@ class Key(object):
             keyObject = publicNumbers.public_key(default_backend())
         else:
             privateNumbers = ec.EllipticCurvePrivateNumbers(
-                private_value= private_value, public_numbers= publicNumbers)
+                private_value=private_value, public_numbers=publicNumbers)
             keyObject = privateNumbers.private_key(default_backend())
-
 
         return cls(keyObject)
 
@@ -1062,7 +1061,7 @@ class Key(object):
         EC keys::
             string 'ecdsa-sha2-[identifier]'
             integer x
-            integr y
+            integer y
 
             identifier is the standard NIST curve name
 
@@ -1319,7 +1318,7 @@ class Key(object):
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
-        else:
+        elif keyType == 'EC':
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1376,7 +1375,7 @@ class Key(object):
             verifier = k.verifier(
                 signature, hashes.SHA1())
 
-        else:
+        elif keyType == 'EC':
             k = self._keyObject
             if not self.isPublic():
                 k=k.public_key()
