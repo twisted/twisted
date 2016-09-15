@@ -14,12 +14,13 @@ import os
 import tempfile
 
 from twisted.mail import smtp
+from twisted.mail.interfaces import IAlias
 from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.python import log
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 
 def handle(result, line, filename, lineNo):
@@ -120,20 +121,6 @@ def loadAliasFile(domains, filename=None, fp=None):
     for (u, a) in result.items():
         result[u] = AliasGroup(a, domains, u)
     return result
-
-
-
-class IAlias(Interface):
-    """
-    An interface for aliases.
-    """
-    def createMessageReceiver():
-        """
-        Create a message receiver.
-
-        @rtype: L{IMessage <smtp.IMessage>} provider
-        @return: A message receiver.
-        """
 
 
 
