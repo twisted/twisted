@@ -170,19 +170,19 @@ class KeyTests(unittest.TestCase):
         self.ecObj = keys.Key._fromECComponents(
             x=keydata.ECDatanistp256['x'],
             y=keydata.ECDatanistp256['y'],
-            private_value=keydata.ECDatanistp256['private_value'],
+            privateValue=keydata.ECDatanistp256['privateValue'],
             curve=keydata.ECDatanistp256['curve']
             )._keyObject
         self.ecObj384 = keys.Key._fromECComponents(
             x=keydata.ECDatanistp384['x'],
             y=keydata.ECDatanistp384['y'],
-            private_value=keydata.ECDatanistp384['private_value'],
+            privateValue=keydata.ECDatanistp384['privateValue'],
             curve=keydata.ECDatanistp384['curve']
             )._keyObject
         self.ecObj521 = keys.Key._fromECComponents(
             x=keydata.ECDatanistp521['x'],
             y=keydata.ECDatanistp521['y'],
-            private_value=keydata.ECDatanistp521['private_value'],
+            privateValue=keydata.ECDatanistp521['privateValue'],
             curve=keydata.ECDatanistp521['curve']
             )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
@@ -818,7 +818,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             common.NS(keydata.ECDatanistp256['curve']) +
             common.MP(keydata.ECDatanistp256['x']) +
             common.MP(keydata.ECDatanistp256['y']) +
-            common.MP(keydata.ECDatanistp256['private_value'])
+            common.MP(keydata.ECDatanistp256['privateValue'])
             )
 
         eckey = keys.Key._fromString_PRIVATE_BLOB(ecblob)

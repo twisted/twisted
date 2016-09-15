@@ -255,7 +255,7 @@ class Key(object):
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
-            integer private_value
+            integer privateValue
 
             identifier is the standard NIST curve name.
 
@@ -276,9 +276,9 @@ class Key(object):
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
         elif keyType in [b'ecdsa-sha2-' + curve for curve in list(_curveTable.keys())]:
-            x, y, private_value, rest = common.getMP(rest, 3)
+            x, y, privateValue, rest = common.getMP(rest, 3)
             return cls._fromECComponents(x=x, y=y, curve=keyType,
-                private_value=private_value)
+                privateValue=privateValue)
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -672,7 +672,7 @@ class Key(object):
 
 
     @classmethod
-    def _fromECComponents(cls, x, y, curve, private_value=None):
+    def _fromECComponents(cls, x, y, curve, privateValue=None):
         """
         Build a key from EC components.
 
@@ -685,18 +685,18 @@ class Key(object):
         @param curve: NIST name of elliptic curve.
         @type curve: L{str}
 
-        @param curve: NIST name of elliptic curve.
-        @type private_value: L{int}
+        @param privateValue: The private value.
+        @type privateValue: L{int}
         """
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
             x=x, y=y, curve=_curveTable[curve.split(b'-')[2]])
-        if private_value is None:
+        if privateValue is None:
             # We have public components.
             keyObject = publicNumbers.public_key(default_backend())
         else:
             privateNumbers = ec.EllipticCurvePrivateNumbers(
-                private_value=private_value, public_numbers=publicNumbers)
+                private_value=privateValue, public_numbers=publicNumbers)
             keyObject = privateNumbers.private_key(default_backend())
 
         return cls(keyObject)
@@ -1031,7 +1031,7 @@ class Key(object):
             return {
                 "x": numbers.public_numbers.x,
                 "y": numbers.public_numbers.y,
-                "private_value": numbers.private_value,
+                "privateValue": numbers.private_value,
                 "curve": self.sshType(),
 
             }
@@ -1109,7 +1109,7 @@ class Key(object):
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
-            integer private_value
+            integer privateValue
 
             identifier is the NIST standard curve name.
         """
@@ -1126,7 +1126,7 @@ class Key(object):
                     common.MP(data['y']) + common.MP(data['x']))
         else:
             return (common.NS(data['curve']) + common.MP(data['x']) +
-                    common.MP(data['y']) + common.MP(data['private_value']))
+                    common.MP(data['y']) + common.MP(data['privateValue']))
 
 
     def toString(self, type, extra=None):
