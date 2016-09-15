@@ -50,8 +50,34 @@ from twisted.python.versions import Version
 _curveTable = {
     b'nistp256' : ec.SECP256R1(),
     b'nistp384' : ec.SECP384R1(),
-    b'nistp521' : ec.SECP521R1()
+    b'nistp521' : ec.SECP521R1(),
+    b'nistp521' : ec.SECP521R1(),
+    b'nistk163' : ec.SECT163K1(),
+    b'nistp192' : ec.SECP192R1(),
+    b'nistp224' : ec.SECP224R1(),
+    b'nistk233' : ec.SECT233K1(),
+    b'nistb233' : ec.SECT233R1(),
+    b'nistk283' : ec.SECT283K1(),
+    b'nistk409' : ec.SECT409K1(),
+    b'nistb409' : ec.SECT409R1(),
+    b'nistt571' : ec.SECT571K1()
     }
+
+
+_secToNist = {
+    b'secp256r1' : b'nistp256',
+    b'secp384r1' : b'nistp384',
+    b'secp521r1' : b'nistp521',
+    b'sect163k1' : b'nistk163',
+    b'secp192r1' : b'nistp192',
+    b'secp224r1' : b'nistp224',
+    b'sect233k1' : b'nistk233',
+    b'sect233r1' : b'nistb233',
+    b'sect283k1' : b'nistk283',
+    b'sect409k1' : b'nistk409',
+    b'sect409r1' : b'nistb409',
+    b'sect571k1' : b'nistt571'
+}
 
 
 
@@ -955,14 +981,17 @@ class Key(object):
         """
         Get the type of the object we wrap as defined in the SSH protocol,
         defined in RFC 4253, Section 6.6. Currently this can only be b'ssh-rsa',
-        b'ssh-dss' and ecdsa-sha2-*.
+        b'ssh-dss' and ecdsa-sha2-[identifier].
+
+        identifier is the standard NIST curve name
 
         @return: The key type format.
         @rtype: L{bytes}
         """
 
-        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss',
-            'EC': b'ecdsa-sha2-nistp' + str(self.size()).encode('utf-8')}[self.type()]
+        return (b'ecdsa-sha2-' +
+        _secToNist[self._keyObject.curve.name.encode('utf-8')] if self.type() == 'EC'
+        else {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()])
 
 
     def size(self):
