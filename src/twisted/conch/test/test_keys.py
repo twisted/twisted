@@ -208,7 +208,7 @@ class KeyTests(unittest.TestCase):
 
     def test_size(self):
         """
-        Test that size method returns the correct size.
+        The size() method returns the size of key object in bits.
         """
         self.assertEqual(keys.Key(self.rsaObj).size(), 768)
         self.assertEqual(keys.Key(self.dsaObj).size(), 1024)
@@ -614,7 +614,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_dataError(self):
         """
-        Error test for data method
+        The data() method raises RuntimeError for bad keys.
         """
         badKey = keys.Key(b'')
         self.assertRaises(RuntimeError, badKey.data)
@@ -743,7 +743,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_fromBlobECDSA(self):
         """
-        A public ECDSA key is correctly generated from a public key blob.
+        Key.fromString generates ECDSA keys from blobs.
         """
         ecPublicData = {
             'x': keydata.ECDatanistp256['x'],
