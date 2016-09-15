@@ -287,7 +287,8 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureUnjellyable(fail):
             self.assertEqual(
-                fail.type, 'twisted.test.test_pbfailure.SynchronousError')
+                fail.type,
+                'twisted.spread.test.test_pbfailure.SynchronousError')
             return 431
         return self._testImpl('synchronousError', 431, failureUnjellyable)
 
@@ -299,7 +300,7 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureUnknown(fail):
             self.assertEqual(
-                fail.type, 'twisted.test.test_pbfailure.UnknownError')
+                fail.type, 'twisted.spread.test.test_pbfailure.UnknownError')
             return 4310
         return self._testImpl('unknownError', 4310, failureUnknown)
 
@@ -329,7 +330,8 @@ class PBFailureTests(PBConnTestCase):
             self.assertNotIsInstance(fail.type, str)
             self.assertIsInstance(fail.value, fail.type)
             return 43000
-        return self._testImpl('deferredSecurity', 43000, failureDeferredSecurity)
+        return self._testImpl('deferredSecurity', 43000,
+                              failureDeferredSecurity)
 
 
     def test_noSuchMethodFailure(self):
@@ -466,4 +468,3 @@ class FailureJellyingTests(unittest.TestCase):
             "Traceback from remote host -- Traceback unavailable\n"
             "exceptions.Exception: some reason\n",
             output.getvalue())
-

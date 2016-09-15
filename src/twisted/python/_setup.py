@@ -6,7 +6,7 @@
 Setuptools convenience functionality.
 
 Since Twisted is not yet fully ported to Python3, it uses
-L{twisted.python.dist3} to know what to install on Python3.
+L{twisted.python._dist3} to know what to install not on Python3.
 
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
@@ -38,7 +38,7 @@ from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
 
 from twisted import copyright
-from twisted.python import dist3
+from twisted.python import _dist3
 from twisted.python.compat import _PY3
 
 STATIC_PACKAGE_METADATA = dict(
@@ -245,8 +245,7 @@ class BuildPy3(build_py):
         modules = [
             module for module
             in build_py.find_package_modules(self, package, package_dir)
-            if ".".join([module[0], module[1]]) in dist3.modulesToInstall or
-               ".".join([module[0], module[1]]) in dist3.testDataFiles]
+            if ".".join([module[0], module[1]]) not in _dist3.notPortedModules]
         return modules
 
 
