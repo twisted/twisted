@@ -100,3 +100,18 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile.write()
 
         self.assertTrue(pidFile.isRunning())
+
+
+    def test_contextManager(self):
+        """
+        When used as a context manager, a L{PIDFile} will store the current pid
+        on entry, then removes the PID file on exit.
+        """
+        pidFile = PIDFile(DummyFilePath())
+        self.assertFalse(pidFile.filePath.exists())
+
+        with pidFile:
+            self.assertTrue(pidFile.filePath.exists())
+            self.assertEqual(pidFile.read(), getpid())
+
+        self.assertFalse(pidFile.filePath.exists())

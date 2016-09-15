@@ -71,8 +71,8 @@ class PIDFile(object):
 
     def isRunning(self):
         """
-        Determine whether there is a running process corresponding to this PID
-        file.
+        Determine whether there is a running process corresponding to the PID
+        in this PID file.
 
         @return: True if this PID file contains a PID and a process with that
         PID is currently running; false otherwise.
@@ -96,3 +96,12 @@ class PIDFile(object):
                 raise
         else:
             return True
+
+
+    def __enter__(self):
+        self.write()
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.remove()
