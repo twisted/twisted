@@ -28,6 +28,7 @@ from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 
 from twisted.mail import imap4
+from twisted.mail._cred import LOGINCredentials
 
 
 try:
@@ -549,7 +550,7 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
 
-        server = DummyESMTP({'LOGIN': imap4.LOGINCredentials})
+        server = DummyESMTP({b'LOGIN': LOGINCredentials})
         server.portal = p
         client = MyESMTPClient('testpassword')
 

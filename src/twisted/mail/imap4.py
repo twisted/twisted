@@ -17,13 +17,13 @@ To do::
 
 import base64
 import binascii
-import hmac
-import re
+import codecs
 import copy
-import tempfile
-import string
-import time
 import random
+import re
+import string
+import tempfile
+import time
 
 import email.utils
 
@@ -59,6 +59,18 @@ from twisted.mail.interfaces import (
     ICloseableMailboxIMAP as ICloseableMailbox,
     IMailboxIMAPListener as IMailboxListener
 )
+from twisted.mail._cred import (
+    CramMD5ClientAuthenticator,
+    LOGINAuthenticator, LOGINCredentials,
+    PLAINAuthenticator, PLAINCredentials)
+from twisted.mail._except import (
+    IMAP4Exception, IllegalClientResponse, IllegalOperation, MailboxException,
+    IllegalMailboxEncoding, MailboxCollision, NoSuchMailbox, ReadOnlyMailbox,
+    UnhandledResponse, NegativeResponse, NoSupportedAuthentication,
+    IllegalIdentifierError, IllegalQueryError, MismatchedNesting,
+    MismatchedQuoting, IllegalServerResponse,
+)
+
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
         range(1, 13),
@@ -394,46 +406,7 @@ class Command:
         if unuse:
             unusedCallback(unuse)
 
-class LOGINCredentials(credentials.UsernamePassword):
-    def __init__(self):
-        self.challenges = ['Password\0', 'User Name\0']
-        self.responses = ['password', 'username']
-        credentials.UsernamePassword.__init__(self, None, None)
 
-    def getChallenge(self):
-        return self.challenges.pop()
-
-    def setResponse(self, response):
-        setattr(self, self.responses.pop(), response)
-
-    def moreChallenges(self):
-        return bool(self.challenges)
-
-class PLAINCredentials(credentials.UsernamePassword):
-    def __init__(self):
-        credentials.UsernamePassword.__init__(self, None, None)
-
-    def getChallenge(self):
-        return ''
-
-    def setResponse(self, response):
-        parts = response.split('\0')
-        if len(parts) != 3:
-            raise IllegalClientResponse("Malformed Response - wrong number of parts")
-        useless, self.username, self.password = parts
-
-    def moreChallenges(self):
-        return False
-
-class IMAP4Exception(Exception):
-    def __init__(self, *args):
-        Exception.__init__(self, *args)
-
-class IllegalClientResponse(IMAP4Exception): pass
-
-class IllegalOperation(IMAP4Exception): pass
-
-class IllegalMailboxEncoding(IMAP4Exception): pass
 
 # Some constants to help define what an atom is and is not - see the grammar
 # section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.
@@ -2168,23 +2141,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if recent is not None:
             self.sendUntaggedResponse('%d RECENT' % recent, async=True)
 
-
-class UnhandledResponse(IMAP4Exception): pass
-
-class NegativeResponse(IMAP4Exception): pass
-
-class NoSupportedAuthentication(IMAP4Exception):
-    def __init__(self, serverSupports, clientSupports):
-        IMAP4Exception.__init__(self, 'No supported authentication schemes available')
-        self.serverSupports = serverSupports
-        self.clientSupports = clientSupports
-
-    def __str__(self):
-        return (IMAP4Exception.__str__(self)
-            + ': Server supports %r, client supports %r'
-            % (self.serverSupports, self.clientSupports))
-
-class IllegalServerResponse(IMAP4Exception): pass
 
 TIMEOUT_ERROR = error.TimeoutError()
 
@@ -3942,7 +3898,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """Override me"""
 
 
-class IllegalIdentifierError(IMAP4Exception): pass
 
 def parseIdList(s, lastMessageId=None):
     """
@@ -4004,7 +3959,7 @@ def parseIdList(s, lastMessageId=None):
                 res.extend(p or lastMessageId)
     return res
 
-class IllegalQueryError(IMAP4Exception): pass
+
 
 _SIMPLE_BOOL = (
     'ALL', 'ANSWERED', 'DELETED', 'DRAFT', 'FLAGGED', 'NEW', 'OLD', 'RECENT',
@@ -4163,11 +4118,6 @@ def Not(query):
     """The negation of a query"""
     return '(NOT %s)' % (query,)
 
-class MismatchedNesting(IMAP4Exception):
-    pass
-
-class MismatchedQuoting(IMAP4Exception):
-    pass
 
 def wildcardToRegexp(wildcard, delim=None):
     wildcard = wildcard.replace('*', '(?:.*?)')
@@ -4413,65 +4363,6 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
-
-
-@implementer(IClientAuthentication)
-class CramMD5ClientAuthenticator:
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "CRAM-MD5"
-
-    def challengeResponse(self, secret, chal):
-        response = hmac.HMAC(secret, chal).hexdigest()
-        return '%s %s' % (self.user, response)
-
-
-
-@implementer(IClientAuthentication)
-class LOGINAuthenticator:
-    def __init__(self, user):
-        self.user = user
-        self.challengeResponse = self.challengeUsername
-
-    def getName(self):
-        return "LOGIN"
-
-    def challengeUsername(self, secret, chal):
-        # Respond to something like "Username:"
-        self.challengeResponse = self.challengeSecret
-        return self.user
-
-    def challengeSecret(self, secret, chal):
-        # Respond to something like "Password:"
-        return secret
-
-@implementer(IClientAuthentication)
-class PLAINAuthenticator:
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "PLAIN"
-
-    def challengeResponse(self, secret, chal):
-        return '\0%s\0%s' % (self.user, secret)
-
-
-class MailboxException(IMAP4Exception): pass
-
-class MailboxCollision(MailboxException):
-    def __str__(self):
-        return 'Mailbox named %s already exists' % self.args
-
-class NoSuchMailbox(MailboxException):
-    def __str__(self):
-        return 'No mailbox named %s exists' % self.args
-
-class ReadOnlyMailbox(MailboxException):
-    def __str__(self):
-        return 'Mailbox open in read-only state'
 
 
 @implementer(IAccount, INamespacePresenter)
@@ -5584,7 +5475,6 @@ def parseTime(s):
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
         )
 
-import codecs
 def modified_base64(s):
     s_utf7 = s.encode('utf-7')
     return s_utf7[1:-1].replace('/', ',')

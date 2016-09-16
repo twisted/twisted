@@ -20,69 +20,12 @@ from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import error
 from twisted.internet import interfaces
+from twisted.mail._except import (
+    InsecureAuthenticationDisallowed, TLSError,
+    TLSNotSupportedError, ServerErrorResponse, LineTooLong)
 
 OK = '+OK'
 ERR = '-ERR'
-
-
-
-class POP3ClientError(Exception):
-    """
-    The base class for all exceptions raised by POP3Client.
-    """
-
-
-
-class InsecureAuthenticationDisallowed(POP3ClientError):
-    """
-    An error indicating secure authentication was required but no mechanism
-    could be found.
-    """
-
-
-
-class TLSError(POP3ClientError):
-    """
-    An error indicating secure authentication was required but either the
-    transport does not support TLS or no TLS context factory was supplied.
-    """
-
-
-
-class TLSNotSupportedError(POP3ClientError):
-    """
-    An error indicating secure authentication was required but the server does
-    not support TLS.
-    """
-
-
-
-class ServerErrorResponse(POP3ClientError):
-    """
-    An error indicating that the server returned an error response to a
-    request.
-
-    @ivar consumer: See L{__init__}
-    """
-    def __init__(self, reason, consumer=None):
-        """
-        @type reason: L{bytes}
-        @param reason: The server response minus the status indicator.
-
-        @type consumer: callable that takes L{object}
-        @param consumer: The function meant to handle the values for a
-            multi-line response.
-        """
-        POP3ClientError.__init__(self, reason)
-        self.consumer = consumer
-
-
-
-class LineTooLong(POP3ClientError):
-    """
-    An error indicating that the server sent a line which exceeded the
-    maximum line length (L{LineOnlyReceiver.MAX_LENGTH}).
-    """
 
 
 
