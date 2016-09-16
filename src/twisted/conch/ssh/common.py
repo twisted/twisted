@@ -17,7 +17,6 @@ from twisted.conch.ssh._cryptography_backports import (
 
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
-from twisted.python.compat import long
 
 __all__ = ["NS", "getNS", "MP", "getMP", "ffs"]
 
