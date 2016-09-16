@@ -6,13 +6,14 @@ Tests for L{twisted.application.runner._pidfile}.
 """
 
 import errno
-from os import getpid
+from os import getpid, name as SYSTEM_NAME
 
 from ...runner import _pidfile
 from .._pidfile import PIDFile
 from .test_runner import DummyFilePath
 
 import twisted.trial.unittest
+from twisted.trial.unittest import SkipTest
 
 
 
@@ -97,7 +98,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         """
         L{PIDFile.isRunning} returns true for a process that does exist.
         """
-        pidFile = PIDFile(DummyFilePath(PIDFile.format(1337)))
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1337)
 
         def kill(pid, signal):
             return  # Don't actually kill anything
@@ -111,10 +113,9 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         """
         L{PIDFile.isRunning} returns true for this process (which is running).
 
-        This differs from L{PIDFileTests.test_isRunningDoesExist} in that it
-        actually invokes the C{kill} system call, which is useful for
-        cross-platform testing of our method for probing the existence of a
-        process.
+        @note: This differs from L{PIDFileTests.test_isRunningDoesExist} in
+        that it actually invokes the C{kill} system call, which is useful for
+        testing of our chosen method for probing the existence of a process.
         """
         pidFile = PIDFile(DummyFilePath())
         pidFile.write()
@@ -127,7 +128,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.isRunning} returns false for a process that does not exist
         (errno=ESRCH).
         """
-        pidFile = PIDFile(DummyFilePath(PIDFile.format(1337)))
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1337)
 
         def kill(pid, signal):
             raise OSError(errno.ESRCH, "No such process")
@@ -142,12 +144,36 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.isRunning} returns true for a process that we are not allowed
         to kill (errno=EPERM).
         """
-        pidFile = PIDFile(DummyFilePath(PIDFile.format(1337)))
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1337)
 
         def kill(pid, signal):
             raise OSError(errno.EPERM, "Operation not permitted")
 
         self.patch(_pidfile, "kill", kill)
+
+        self.assertTrue(pidFile.isRunning())
+
+
+    def test_isRunningInit(self):
+        """
+        L{PIDFile.isRunning} returns true for a process that we are not allowed
+        to kill (errno=EPERM).
+
+        @note: This differs from L{PIDFileTests.test_isRunningNotAllowed} in
+        that it actually invokes the C{kill} system call, which is useful for
+        testing of our chosen method for probing the existence of a process
+        that we are not allowed to kill.
+
+        @note: In this case, we try killing C{init}, which is process #1 on
+        POSIX systems, so this test is not portable.  C{init} should always be
+        running and should not be killable by non-root users.
+        """
+        if SYSTEM_NAME != "posix":
+            raise SkipTest("This test assumes POSIX")
+
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1)  # PID 1 is init on POSIX systems
 
         self.assertTrue(pidFile.isRunning())
 
