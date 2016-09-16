@@ -24,6 +24,23 @@ class PIDFile(object):
     _log = Logger()
 
 
+    @staticmethod
+    def format(pid=None):
+        """
+        Format a PID file's content.
+
+        @param pid: A process ID.
+        @type pid: int
+
+        @return: Formatted PID file contents.
+        @rtype: L{bytes}
+        """
+        if pid is not None:
+            return u"{}\n".format(pid).encode("utf-8")
+        else:
+            return b""
+
+
     def __init__(self, filePath):
         """
         @param filePath: The path to the PID file on disk.
@@ -59,7 +76,7 @@ class PIDFile(object):
         else:
             pid = int(pid)
 
-        self.filePath.setContent(u"{}\n".format(pid).encode("utf-8"))
+        self.filePath.setContent(self.format(pid=pid))
 
 
     def remove(self):

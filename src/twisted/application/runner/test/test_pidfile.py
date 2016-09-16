@@ -24,9 +24,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.read} returns the PID from the given file path.
         """
         pid = 1337
-        pidFileContent = u"{}\n".format(pid).encode("utf-8")
 
-        pidFile = PIDFile(DummyFilePath(pidFileContent))
+        pidFile = PIDFile(DummyFilePath(PIDFile.format(pid=pid)))
 
         self.assertEqual(pid, pidFile.read())
 
