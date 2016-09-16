@@ -81,14 +81,15 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    tls=['pyopenssl >= 16.0.0',
-         'service_identity',
-         'idna >= 0.6'],
-    conch=['gmpy',
-           'pyasn1',
-           'cryptography >= 0.9.1',
-           'appdirs >= 1.4.0',
-           ],
+    tls=[
+        'pyopenssl >= 16.0.0',
+        'service_identity',
+        'idna >= 0.6'],
+    conch=[
+        'pyasn1',
+        'cryptography >= 0.9.1',
+        'appdirs >= 1.4.0',
+    ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],

@@ -138,7 +138,6 @@ class OptionalDependenciesTests(TestCase):
         work.
         """
         deps = _EXTRAS_REQUIRE['conch']
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
@@ -186,7 +185,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -206,7 +204,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -226,7 +223,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
