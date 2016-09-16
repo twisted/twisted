@@ -93,9 +93,28 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertFalse(pidFile.filePath.exists())
 
 
+    def test_isRunningDoesExist(self):
+        """
+        L{PIDFile.isRunning} returns true for a process that does exist.
+        """
+        pidFile = PIDFile(DummyFilePath(PIDFile.format(1337)))
+
+        def kill(pid, signal):
+            return  # Don't actually kill anything
+
+        self.patch(_pidfile, "kill", kill)
+
+        self.assertTrue(pidFile.isRunning())
+
+
     def test_isRunningThis(self):
         """
         L{PIDFile.isRunning} returns true for this process (which is running).
+
+        This differs from L{PIDFileTests.test_isRunningDoesExist} in that it
+        actually invokes the C{kill} system call, which is useful for
+        cross-platform testing of our method for probing the existence of a
+        process.
         """
         pidFile = PIDFile(DummyFilePath())
         pidFile.write()
