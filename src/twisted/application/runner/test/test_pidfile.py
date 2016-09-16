@@ -92,12 +92,23 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertFalse(pidFile.filePath.exists())
 
 
-    def test_isRunningTrue(self):
+    def test_isRunningThis(self):
         """
-        L{PIDFile.isRunning} returns true for this process.
+        L{PIDFile.isRunning} returns true for this process (which is running).
         """
         pidFile = PIDFile(DummyFilePath())
         pidFile.write()
+
+        self.assertTrue(pidFile.isRunning())
+
+
+    def test_isRunningNotAllowed(self):
+        """
+        L{PIDFile.isRunning} returns true for a process that we are not allowed
+        to kill.
+        """
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1)  # We should not be allowed to kill init, yo.
 
         self.assertTrue(pidFile.isRunning())
 
