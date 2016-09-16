@@ -2,10 +2,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Mail service support.
 """
+
 import warnings
 
 # Twisted imports
@@ -13,6 +13,7 @@ from twisted.internet import defer
 from twisted.application import service, internet
 from twisted.python import util
 from twisted.python import log
+from twisted.mail.interfaces import IAliasableDomain, IDomain
 from twisted.cred.portal import Portal
 
 # Sibling imports
@@ -20,7 +21,7 @@ from twisted.mail import protocols, smtp
 
 # System imports
 import os
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 
 class DomainWithDefaultDict:
@@ -360,82 +361,6 @@ class DomainWithDefaultDict:
 
 
 
-class IDomain(Interface):
-    """
-    An interface for email domains.
-    """
-    def exists(user):
-        """
-        Check whether a user exists in this domain.
-
-        @type user: L{User}
-        @param user: A user.
-
-        @rtype: no-argument callable which returns L{IMessage <smtp.IMessage>}
-            provider
-        @return: A function which takes no arguments and returns a message
-            receiver for the user.
-
-        @raise SMTPBadRcpt: When the given user does not exist in this domain.
-        """
-
-
-    def addUser(user, password):
-        """
-        Add a user to this domain.
-
-        @type user: L{bytes}
-        @param user: A username.
-
-        @type password: L{bytes}
-        @param password: A password.
-        """
-
-
-    def getCredentialsCheckers():
-        """
-        Return credentials checkers for this domain.
-
-        @rtype: L{list} of L{ICredentialsChecker
-            <twisted.cred.checkers.ICredentialsChecker>} provider
-        @return: Credentials checkers for this domain.
-        """
-
-
-
-class IAliasableDomain(IDomain):
-    """
-    An interface for email domains which can be aliased to other domains.
-    """
-    def setAliasGroup(aliases):
-        """
-        Set the group of defined aliases for this domain.
-
-        @type aliases: L{dict} of L{bytes} -> L{IAlias} provider
-        @param aliases: A mapping of domain name to alias.
-        """
-
-
-    def exists(user, memo=None):
-        """
-        Check whether a user exists in this domain or an alias of it.
-
-        @type user: L{User}
-        @param user: A user.
-
-        @type memo: L{None} or L{dict} of L{AliasBase}
-        @param memo: A record of the addresses already considered while
-            resolving aliases.  The default value should be used by all
-            external code.
-
-        @rtype: no-argument callable which returns L{IMessage <smtp.IMessage>}
-            provider
-        @return: A function which takes no arguments and returns a message
-            receiver for the user.
-
-        @raise SMTPBadRcpt: When the given user does not exist in this domain
-            or an alias of it.
-        """
 
 
 
