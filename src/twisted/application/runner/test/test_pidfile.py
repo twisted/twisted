@@ -5,8 +5,10 @@
 Tests for L{twisted.application.runner._pidfile}.
 """
 
+import errno
 from os import getpid
 
+from ...runner import _pidfile
 from .._pidfile import PIDFile
 from .test_runner import DummyFilePath
 
@@ -101,15 +103,50 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
 
+    def test_isRunningDoesNotExist(self):
+        """
+        L{PIDFile.isRunning} returns false for a process that does not exist
+        (errno=ESRCH).
+        """
+        pidFile = PIDFile(DummyFilePath(PIDFile.format(1337)))
+
+        def kill(pid, signal):
+            raise OSError(errno.ESRCH, "No such process")
+
+        self.patch(_pidfile, "kill", kill)
+
+        self.assertFalse(pidFile.isRunning())
+
+
     def test_isRunningNotAllowed(self):
         """
         L{PIDFile.isRunning} returns true for a process that we are not allowed
-        to kill.
+        to kill (errno=EPERM).
         """
-        pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1)  # We should not be allowed to kill init, yo.
+        pidFile = PIDFile(DummyFilePath(PIDFile.format(1337)))
+
+        def kill(pid, signal):
+            raise OSError(errno.EPERM, "Operation not permitted")
+
+        self.patch(_pidfile, "kill", kill)
 
         self.assertTrue(pidFile.isRunning())
+
+
+    def test_isRunningUnknownErrno(self):
+        """
+        L{PIDFile.isRunning} re-raises L{OSError} if the attached C{errno}
+        value is not an expected one.
+        """
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write()
+
+        def kill(pid, signal):
+            raise OSError(errno.EEXIST, "File exists")
+
+        self.patch(_pidfile, "kill", kill)
+
+        self.assertRaises(OSError, pidFile.isRunning)
 
 
     def test_contextManager(self):
