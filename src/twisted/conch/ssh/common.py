@@ -15,7 +15,12 @@ import struct
 from twisted.conch.ssh._cryptography_backports import (
     intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
 
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 from twisted.python.compat import long
+
+__all__ = ["NS", "getNS", "MP", "getMP", "ffs"]
+
 
 
 def NS(t):
@@ -88,6 +93,7 @@ def ffs(c, s):
 
 
 
+@deprecated(Version("Twisted", 16, 5, 0))
 def install():
     # This used to install gmpy, but is technically public API, so just do
     # nothing.
