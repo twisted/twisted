@@ -375,23 +375,23 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         """
         root = FilePath(self.mktemp())
 
-        coreNews = ("Twisted Core 1.0.0pre1 (2009-12-25)\n"
+        coreNews = ("Twisted Core 1.0.0rc1 (2009-12-25)\n"
                     "===============================\n"
                     "\n")
-        webNews = ("Twisted Web 1.0.0pre1 (2009-12-25)\n"
+        webNews = ("Twisted Web 1.0.0rc1 (2009-12-25)\n"
                    "==================================\n"
                    "\n")
         structure = {
-            "README.rst": "Hi this is 1.0.0pre1.",
+            "README.rst": "Hi this is 1.0.0rc1.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.0pre1",
+                    "README": "Hi this is 1.0.0rc1",
                     "NEWS": coreNews},
                 "_version.py": genVersion("twisted", 1, 0, 0, 1),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0pre1",
+                        "README": "Hi this is 1.0.0rc1",
                         "NEWS": webNews}
                 }}}
         self.createStructure(root, structure)
@@ -598,7 +598,7 @@ class VersionWritingTests(ExternalTempdirTestCase):
                                       prerelease=8))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
-        self.assertEqual(ns["version"].base(), "0.82.7pre8")
+        self.assertEqual(ns["version"].base(), "0.82.7rc8")
 
 
 
