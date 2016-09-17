@@ -5,9 +5,6 @@
 """
 Setuptools convenience functionality.
 
-Since Twisted is not yet fully ported to Python3, it uses
-L{twisted.python._dist3} to know what to install not on Python3.
-
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
     combinations of the packages can be created without the need to copy
@@ -26,6 +23,8 @@ L{twisted.python._dist3} to know what to install not on Python3.
 
 @var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
     process.
+
+@var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
 import os
