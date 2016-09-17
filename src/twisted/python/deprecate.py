@@ -64,7 +64,7 @@ the attributes being deprecated are in the same module as the
 L{deprecatedModuleAttribute} call is being made from, the C{__name__} global
 can be used as the C{moduleName} parameter.
 
-See also L{Version}.
+See also L{incremental.Version}.
 
 @type DEPRECATION_WARNING_FORMAT: C{str}
 @var DEPRECATION_WARNING_FORMAT: The default deprecation warning string format
@@ -151,7 +151,7 @@ def _getDeprecationDocstring(version, replacement=None):
     deprecation.
 
     @param version: the version it was deprecated.
-    @type version: L{Version}
+    @type version: L{incremental.Version}
 
     @param replacement: The replacement, if specified.
     @type replacement: C{str} or callable
