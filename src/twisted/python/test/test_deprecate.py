@@ -27,7 +27,7 @@ from twisted.python.deprecate import (
 )
 
 from twisted.python.compat import _PY3
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 
@@ -255,7 +255,7 @@ class ImportedModuleAttributeTests(TwistedModulesMixin, SynchronousTestCase):
 
     _packageInit = """\
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from incremental import Version
 
 deprecatedModuleAttribute(
     Version('Package', 1, 2, 3), 'message', __name__, 'module')

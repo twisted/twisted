@@ -22,7 +22,7 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.filepath import FilePath
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError

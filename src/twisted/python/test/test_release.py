@@ -27,7 +27,7 @@ from twisted.python.compat import execfile
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
-from twisted.python.versions import Version
+from incremental import Version
 
 from subprocess import CalledProcessError
 
@@ -736,7 +736,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
             "from twisted.python.deprecate import deprecated\n"
-            "from twisted.python.versions import Version\n"
+            "from incremental import Version\n"
             "@deprecated(Version('Twisted', 15, 0, 0), "
             "'Baz')\n"
             "def foo():\n"

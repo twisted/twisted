@@ -7,7 +7,7 @@ Deprecation framework for Twisted.
 
 To mark a method, function, or class as being deprecated do this::
 
-    from twisted.python.versions import Version
+    from incremental import Version
     from twisted.python.deprecate import deprecated
 
     @deprecated(Version("Twisted", 8, 0, 0))
@@ -29,7 +29,7 @@ appended to their docstring.
 
 To deprecate properties you can use::
 
-    from twisted.python.versions import Version
+    from incremental import Version
     from twisted.python.deprecate import deprecatedProperty
 
     class OtherwiseUndeprecatedClass(object):
@@ -88,7 +88,7 @@ from warnings import warn, warn_explicit
 from dis import findlinestarts
 from functools import wraps
 
-from twisted.python.versions import getVersionString
+from incremental import getVersionString
 from twisted.python.compat import _PY3
 
 DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
@@ -175,7 +175,7 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
     @type fqpn: C{str}
 
     @param version: Version that C{fqpn} was deprecated in.
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
 
     @param format: A user-provided format to interpolate warning values into, or
         L{DEPRECATION_WARNING_FORMAT
@@ -212,7 +212,7 @@ def getDeprecationWarningString(callableThing, version, format=None,
     @type callableThing: C{callable}
     @param callableThing: Callable object to be deprecated
 
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
     @param version: Version that C{callableThing} was deprecated in
 
     @type format: C{str}
@@ -223,7 +223,7 @@ def getDeprecationWarningString(callableThing, version, format=None,
 
     @param callableThing: A callable to be deprecated.
 
-    @param version: The L{twisted.python.versions.Version} that the callable
+    @param version: The L{incremental.Version} that the callable
         was deprecated in.
 
     @param replacement: what should be used in place of the callable. Either
@@ -271,14 +271,14 @@ def deprecated(version, replacement=None):
     Return a decorator that marks callables as deprecated. To deprecate a
     property, see L{deprecatedProperty}.
 
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
     @param version: The version in which the callable will be marked as
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
 
     @param version: the version that the callable was deprecated in.
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
 
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
@@ -314,14 +314,14 @@ def deprecatedProperty(version, replacement=None):
     Return a decorator that marks a property as deprecated. To deprecate a
     regular callable or class, see L{deprecated}.
 
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
     @param version: The version in which the callable will be marked as
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
 
     @param version: the version that the callable was deprecated in.
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
 
     @param replacement: what should be used in place of the callable.
         Either pass in a string, which will be inserted into the warning
@@ -532,7 +532,7 @@ class _DeprecatedAttribute(object):
     @type fqpn: C{str}
     @ivar fqpn: Fully qualified Python name for the deprecated attribute
 
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
     @ivar version: Version that the attribute was deprecated in
 
     @type message: C{str}
@@ -575,7 +575,7 @@ def _deprecateAttribute(proxy, name, version, message):
     @type name: C{str}
     @param name: Attribute name
 
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
     @param version: Version that the attribute was deprecated in
 
     @type message: C{str}
@@ -595,7 +595,7 @@ def deprecatedModuleAttribute(version, message, moduleName, name):
     """
     Declare a module-level attribute as being deprecated.
 
-    @type version: L{twisted.python.versions.Version}
+    @type version: L{incremental.Version}
     @param version: Version that the attribute was deprecated in
 
     @type message: C{str}

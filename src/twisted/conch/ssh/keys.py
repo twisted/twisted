@@ -15,6 +15,8 @@ import warnings
 from hashlib import md5, sha256
 import base64
 
+from incremental import Version
+
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -41,7 +43,6 @@ from twisted.python.compat import (
     _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
-from twisted.python.versions import Version
 
 
 

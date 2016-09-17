@@ -5,7 +5,7 @@
 Twisted News: A NNTP-based news service.
 """
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 from twisted._version import __version__ as version
