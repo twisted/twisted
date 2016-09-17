@@ -8,7 +8,7 @@ Twisted Mail: Servers and clients for POP3, ESMTP, and IMAP.
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
-from twisted._version import version
+from twisted._version import __version__ as version
 __version__ = version.short()
 
 deprecatedModuleAttribute(

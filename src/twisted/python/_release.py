@@ -331,7 +331,7 @@ class Project(object):
                 directory = directory.parent()
             else:
                 execfile(directory.child("_version.py").path, namespace)
-        return namespace["version"]
+        return namespace["__version__"]
 
 
     def updateVersion(self, version):
@@ -403,7 +403,7 @@ Provides Twisted version information.
 """
 
 from twisted.python import versions
-version = versions.Version(%r, %s, %s, %s%s)
+__version__ = versions.Version(%r, %s, %s, %s%s)
 ''' % (version.package, version.major, version.minor, version.micro,
        prerelease)
     return data

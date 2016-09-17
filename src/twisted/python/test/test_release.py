@@ -585,7 +585,7 @@ class VersionWritingTests(ExternalTempdirTestCase):
                               Version("twisted.test_project", 0, 82, 7))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
-        self.assertEqual(ns["version"].base(), "0.82.7")
+        self.assertEqual(ns["__version__"].base(), "0.82.7")
 
 
     def test_replaceProjectVersionWithPrerelease(self):
@@ -598,7 +598,7 @@ class VersionWritingTests(ExternalTempdirTestCase):
                                       prerelease=8))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
-        self.assertEqual(ns["version"].base(), "0.82.7rc8")
+        self.assertEqual(ns["__version__"].base(), "0.82.7rc8")
 
 
 
