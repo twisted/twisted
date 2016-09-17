@@ -58,7 +58,7 @@ _checkRequirements()
 from twisted.python import compat
 
 # setup version
-from twisted._version import version
-__version__ = version.short()
+from twisted._version import __version__
+__version__ = __version__.short()
 
 del compat
