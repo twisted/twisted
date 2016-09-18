@@ -226,7 +226,7 @@ class MessageSet(object):
 
             oldl, oldh = l, h
 
-        self.ranges = filter(None, self.ranges)
+        self.ranges = [r for r in self.ranges if r]
 
 
     def __contains__(self, value):
@@ -4706,7 +4706,7 @@ class MemoryAccount(object):
 
 
     def create(self, pathspec):
-        paths = filter(None, pathspec.split('/'))
+        paths = [path for path in pathspec.split('/') if path]
         for accum in range(1, len(paths)):
             try:
                 self.addMailbox('/'.join(paths[:accum]))
