@@ -11,7 +11,6 @@ Test case for twisted.mail.imap4
 import codecs
 import locale
 import os
-import types
 from io import BytesIO
 
 from collections import OrderedDict
@@ -55,9 +54,9 @@ def sortNest(l):
     l = l[:]
     l.sort()
     for i in range(len(l)):
-        if isinstance(l[i], types.ListType):
+        if isinstance(l[i], list):
             l[i] = sortNest(l[i])
-        elif isinstance(l[i], types.TupleType):
+        elif isinstance(l[i], tuple):
             l[i] = tuple(sortNest(list(l[i])))
     return l
 
