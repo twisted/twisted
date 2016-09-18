@@ -81,7 +81,7 @@ class MessageSet(object):
     """
     Essentially an infinite bitfield, with some extra features.
 
-    @type getnext: Function taking C{int} returning C{int}
+    @type getnext: Function taking L{int} returning L{int}
     @ivar getnext: A function that returns the next message number,
     used when iterating through the MessageSet. By default, a function
     returning the next integer is supplied, but as this can be rather
@@ -97,10 +97,10 @@ class MessageSet(object):
         """
         Create a new MessageSet()
 
-        @type start: Optional C{int}
+        @type start: Optional L{int}
         @param start: Start of range, or only message number
 
-        @type end: Optional C{int}
+        @type end: Optional L{int}
         @param end: End of range.
         """
         self._last = self._empty # Last message/UID in use
@@ -152,10 +152,10 @@ class MessageSet(object):
         """
         Add another range
 
-        @type start: C{int}
+        @type start: L{int}
         @param start: Start of range, or only message number
 
-        @type end: Optional C{int}
+        @type end: Optional L{int}
         @param end: End of range.
         """
         if end is self._empty:
@@ -1090,10 +1090,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         The default behavior is to defer authentication to C{self.portal}
         if it is not None, or to deny the login otherwise.
 
-        @type user: C{str}
+        @type user: L{str}
         @param user: The username to lookup
 
-        @type passwd: C{str}
+        @type passwd: L{str}
         @param passwd: The password to login with
         """
         if self.portal:
@@ -1528,24 +1528,24 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Apply the search filter to a set of messages. Send the response to the
         client.
 
-        @type result: C{list} of C{tuple} of (C{int}, provider of
+        @type result: L{list} of L{tuple} of (L{int}, provider of
             L{imap4.IMessage})
         @param result: A list two tuples of messages with their sequence ids,
             sorted by the ids in descending order.
 
-        @type tag: C{str}
+        @type tag: L{str}
         @param tag: A command tag.
 
         @type mbox: Provider of L{imap4.IMailbox}
         @param mbox: The searched mailbox.
 
-        @type query: C{list}
+        @type query: L{list}
         @param query: A list representing the parsed form of the search query.
 
         @param uid: A flag indicating whether the search is over message
             sequence numbers or UIDs.
 
-        @type searchResults: C{list}
+        @type searchResults: L{list}
         @param searchResults: The search results so far or L{None} if no
             results yet.
         """
@@ -1589,11 +1589,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         @param msg: The message being checked.
 
-        @type lastSequenceId: C{int}
+        @type lastSequenceId: L{int}
         @param lastSequenceId: The highest sequence number of any message in
             the mailbox being searched.
 
-        @type lastMessageId: C{int}
+        @type lastMessageId: L{int}
         @param lastMessageId: The highest UID of any message in the mailbox
             being searched.
 
@@ -1660,10 +1660,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message matches the ALL search key (always).
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed query string.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
@@ -1675,10 +1675,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message has been answered.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed query string.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
@@ -1690,10 +1690,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message has a BCC address matching the query.
 
-        @type query: A C{list} of C{str}
-        @param query: A list whose first element is a BCC C{str}
+        @type query: A L{list} of L{str}
+        @param query: A list whose first element is a BCC L{str}
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
@@ -1757,20 +1757,20 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message does not match the query.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed form of the search query.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastIDs: C{tuple}
+        @type lastIDs: L{tuple}
         @param lastIDs: A tuple of (last sequence id, last message id).
-        The I{last sequence id} is an C{int} containing the highest sequence
+        The I{last sequence id} is an L{int} containing the highest sequence
         number of a message in the mailbox.  The I{last message id} is an
-        C{int} containing the highest UID of a message in the mailbox.
+        L{int} containing the highest UID of a message in the mailbox.
         """
         (lastSequenceId, lastMessageId) = lastIDs
         return not self._singleSearchStep(query, id, msg,
@@ -1791,20 +1791,20 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Returns C{True} if the message matches any of the first two query
         items.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed form of the search query.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastIDs: C{tuple}
+        @type lastIDs: L{tuple}
         @param lastIDs: A tuple of (last sequence id, last message id).
-        The I{last sequence id} is an C{int} containing the highest sequence
+        The I{last sequence id} is an L{int} containing the highest sequence
         number of a message in the mailbox.  The I{last message id} is an
-        C{int} containing the highest UID of a message in the mailbox.
+        L{int} containing the highest UID of a message in the mailbox.
         """
         (lastSequenceId, lastMessageId) = lastIDs
         a = self._singleSearchStep(query, id, msg,
@@ -1826,12 +1826,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message date is earlier than the query date.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
@@ -1845,7 +1845,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message date is the same as the query date.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
@@ -1861,7 +1861,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Returns C{True} if the message date is later than the query date.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
@@ -1903,22 +1903,22 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Returns C{True} if the message UID is in the range defined by the
         search query.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed form of the search
-            query. Its first element should be a C{str} that can be interpreted
+            query. Its first element should be a L{str} that can be interpreted
             as a sequence range, for example '2:4,5:*'.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastIDs: C{tuple}
+        @type lastIDs: L{tuple}
         @param lastIDs: A tuple of (last sequence id, last message id).
-        The I{last sequence id} is an C{int} containing the highest sequence
+        The I{last sequence id} is an L{int} containing the highest sequence
         number of a message in the mailbox.  The I{last message id} is an
-        C{int} containing the highest UID of a message in the mailbox.
+        L{int} containing the highest UID of a message in the mailbox.
         """
         (lastSequenceId, lastMessageId) = lastIDs
         c = query.pop(0)
@@ -2521,7 +2521,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         Create a file to which an incoming message may be written.
 
-        @type octets: C{int}
+        @type octets: L{int}
         @param octets: The number of octets which will be written to the file
 
         @rtype: Any object which implements C{write(string)} and
@@ -2877,10 +2877,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         A more secure way to log in is to use C{startTLS} or
         C{authenticate} or both.
 
-        @type username: C{str}
+        @type username: L{str}
         @param username: The username to log in with
 
-        @type password: C{str}
+        @type password: L{str}
         @param password: The password to log in with
 
         @rtype: C{Deferred}
@@ -2994,7 +2994,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The name of the mailbox to select
 
         @rtype: C{Deferred}
@@ -3034,7 +3034,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The name of the mailbox to examine
 
         @rtype: C{Deferred}
@@ -3138,7 +3138,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The name of the mailbox to create.
 
         @rtype: C{Deferred}
@@ -3154,7 +3154,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The name of the mailbox to delete.
 
         @rtype: C{Deferred}
@@ -3170,10 +3170,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type oldname: C{str}
+        @type oldname: L{str}
         @param oldname: The current name of the mailbox to rename.
 
-        @type newname: C{str}
+        @type newname: L{str}
         @param newname: The new name to give the mailbox.
 
         @rtype: C{Deferred}
@@ -3191,7 +3191,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The mailbox to mark as 'active' or 'subscribed'
 
         @rtype: C{Deferred}
@@ -3207,7 +3207,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The mailbox to unsubscribe
 
         @rtype: C{Deferred}
@@ -3223,10 +3223,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type reference: C{str}
+        @type reference: L{str}
         @param reference: The context in which to interpret C{wildcard}
 
-        @type wildcard: C{str}
+        @type wildcard: L{str}
         @param wildcard: The pattern of mailbox names to match, optionally
         including either or both of the '*' and '%' wildcards.  '*' will
         match zero or more characters and cross hierarchical boundaries.
@@ -3234,8 +3234,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         single hierarchical level.
 
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a list of C{tuple}s,
-        the first element of which is a C{tuple} of mailbox flags, the second
+        @return: A deferred whose callback is invoked with a list of L{tuple}s,
+        the first element of which is a L{tuple} of mailbox flags, the second
         element of which is the hierarchy delimiter for this mailbox, and the
         third of which is the mailbox name; if the command is unsuccessful,
         the deferred's errback is invoked instead.
@@ -3254,7 +3254,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        The parameters and returned object are the same as for the C{list}
+        The parameters and returned object are the same as for the L{list}
         method, with one slight difference: Only mailboxes which have been
         subscribed can be included in the resulting list.
         """
@@ -3282,10 +3282,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The name of the mailbox to query
 
-        @type *names: C{str}
+        @type *names: L{str}
         @param *names: The status names to query.  These may be any number of:
             C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
             C{'UNSEEN'}.
@@ -3329,17 +3329,17 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The mailbox to which to add this message.
 
         @type message: Any file-like object
         @param message: The message to add, in RFC822 format.  Newlines
         in this file should be \\r\\n-style.
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to associated with this message.
 
-        @type date: C{str}
+        @type date: L{str}
         @param date: The date to associate with this message.  This should
         be of the format DD-MM-YYYY HH:MM:SS +/-HHMM.  For example, in
         Eastern Standard Time, on July 1st 2004 at half past 1 PM,
@@ -3479,7 +3479,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3500,7 +3500,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve flags.
 
         @type uid: C{bool}
@@ -3521,7 +3521,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve the internal date.
 
         @type uid: C{bool}
@@ -3543,7 +3543,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve envelope data.
 
         @type uid: C{bool}
@@ -3570,7 +3570,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve body structure
         data.
 
@@ -3600,7 +3600,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3623,7 +3623,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: L{MessageSet} or C{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3635,8 +3635,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A L{Deferred} which will fire with a C{dict} mapping message
             sequence numbers to C{dict}s giving message data for the
             corresponding message.  If C{uid} is true, the inner dictionaries
-            have a C{'UID'} key mapped to a C{str} giving the UID for the
-            message.  The text of the message is a C{str} associated with the
+            have a C{'UID'} key mapped to a L{str} giving the UID for the
+            message.  The text of the message is a L{str} associated with the
             C{'RFC822'} key in each dictionary.
         """
         return self._fetch(messages, useUID=uid, rfc822=1)
@@ -3648,7 +3648,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3669,7 +3669,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3690,7 +3690,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3714,7 +3714,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         C{fetchSize}, C{fetchEnvelope}, and C{fetchSimplifiedBody}
         functions.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3740,7 +3740,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, and C{fetchEnvelope} functions.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3766,7 +3766,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         to issuing all of the C{fetchFlags}, C{fetchInternalDate}, and
         C{fetchSize} functions.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3945,28 +3945,28 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         Retrieve a specific section of one or more messages
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @type headerType: C{str}
+        @type headerType: L{str}
         @param headerType: If specified, must be one of HEADER,
         HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or TEXT, and will determine
         which part of the message is retrieved.  For HEADER.FIELDS and
         HEADER.FIELDS.NOT, C{headerArgs} must be a sequence of header names.
         For MIME, C{headerNumber} must be specified.
 
-        @type headerNumber: C{int} or C{int} sequence
+        @type headerNumber: L{int} or L{int} sequence
         @param headerNumber: The nested rfc822 index specifying the
         entity to retrieve.  For example, C{1} retrieves the first
         entity of the message, and C{(2, 1, 3}) retrieves the 3rd
         entity inside the first entity inside the second entity of
         the message.
 
-        @type headerArgs: A sequence of C{str}
+        @type headerArgs: A sequence of L{str}
         @param headerArgs: If C{headerType} is HEADER.FIELDS, these are the
         headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
         headers to exclude from retrieval.
@@ -3975,11 +3975,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param peek: If true, cause the server to not set the \\Seen
         flag on this message as a result of this command.
 
-        @type offset: C{int}
+        @type offset: L{int}
         @param offset: The number of octets at the beginning of the result
         to skip.
 
-        @type length: C{int}
+        @type length: L{int}
         @param length: The number of octets to retrieve.
 
         @rtype: C{Deferred}
@@ -4043,10 +4043,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
         @type silent: C{bool}
@@ -4071,10 +4071,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
         @type silent: C{bool}
@@ -4099,10 +4099,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
         @type silent: C{bool}
@@ -4140,10 +4140,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: L{str}
         @param messages: A message sequence set
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The mailbox to which to copy the messages
 
         @type uid: C{bool}
@@ -4180,10 +4180,10 @@ def parseIdList(s, lastMessageId=None):
     """
     Parse a message set search key into a C{MessageSet}.
 
-    @type s: C{str}
+    @type s: L{str}
     @param s: A string description of an id list, for example "1:3, 4:*"
 
-    @type lastMessageId: C{int}
+    @type lastMessageId: L{int}
     @param lastMessageId: The last message sequence id or UID, depending on
         whether we are parsing the list in UID or sequence id context. The
         caller should pass in the correct value.
@@ -4356,7 +4356,7 @@ def Query(sorted=0, **kwarg):
     easier.  The default is zero, and this should be acceptable for any
     application.
 
-    @rtype: C{str}
+    @rtype: L{str}
     @return: The formatted query string
     """
     cmd = []
@@ -4424,7 +4424,7 @@ def splitQuoted(s):
     @type s: L{bytes}
     @param s: The string to be split
 
-    @rtype: C{list} of L{bytes}
+    @rtype: L{list} of L{bytes}
     @return: A list of the resulting tokens
 
     @raise MismatchedQuoting: Raised if an odd number of quotes are present
@@ -4650,7 +4650,7 @@ def collapseNestedLists(items):
 
     @type items: Any iterable
 
-    @rtype: C{str}
+    @rtype: L{str}
     """
     pieces = []
     for i in items:
@@ -4949,7 +4949,7 @@ class _MessageStructure(object):
         Parse a I{Content-Disposition} header into a two-sequence of the
         disposition and a flattened list of its parameters.
 
-        @return: L{None} if there is no disposition header value, a C{list} with
+        @return: L{None} if there is no disposition header value, a L{list} with
             two elements otherwise.
         """
         if disp:
@@ -4992,10 +4992,10 @@ class _SinglepartMessageStructure(_MessageStructure):
         @param message: An L{IMessagePart} provider which this structure object
             reports on.
 
-        @param main: A C{str} giving the main MIME type of the message (for
+        @param main: A L{str} giving the main MIME type of the message (for
             example, C{"text"}).
 
-        @param subtype: A C{str} giving the MIME subtype of the message (for
+        @param subtype: A L{str} giving the MIME subtype of the message (for
             example, C{"plain"}).
 
         @param attrs: A C{dict} giving the parameters of the I{Content-Type}
@@ -5132,7 +5132,7 @@ class _MultipartMessageStructure(_MessageStructure):
         @param message: An L{IMessagePart} provider which this structure object
             reports on.
 
-        @param subtype: A C{str} giving the MIME subtype of the message (for
+        @param subtype: A L{str} giving the MIME subtype of the message (for
             example, C{"plain"}).
 
         @param attrs: A C{dict} giving the parameters of the I{Content-Type}
@@ -5880,7 +5880,7 @@ def encoder(s, errors=None):
 
     @param errors: Policy for handling encoding errors.  Currently ignored.
 
-    @return: C{tuple} of a C{str} giving the encoded bytes and an C{int}
+    @return: L{tuple} of a L{str} giving the encoded bytes and an L{int}
         giving the number of code units consumed from the input.
     """
     r = []
@@ -5906,15 +5906,15 @@ def encoder(s, errors=None):
 
 def decoder(s, errors=None):
     """
-    Decode the given C{str} using the IMAP4 specific variation of UTF-7.
+    Decode the given L{str} using the IMAP4 specific variation of UTF-7.
 
-    @type s: C{str}
+    @type s: L{str}
     @param s: The bytes to decode.
 
     @param errors: Policy for handling decoding errors.  Currently ignored.
 
-    @return: a C{tuple} of a C{unicode} string giving the text which was
-        decoded and an C{int} giving the number of bytes consumed from the
+    @return: a L{tuple} of a C{unicode} string giving the text which was
+        decoded and an L{int} giving the number of bytes consumed from the
         input.
     """
     r = []
