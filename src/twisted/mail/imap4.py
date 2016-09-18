@@ -4220,7 +4220,9 @@ def parseIdList(s, lastMessageId=None):
                 low = low or lastMessageId
 
                 # RFC says that 2:4 and 4:2 are equivalent
-                if low > high:
+                if low is not None and high is None:
+                    low, high = high, low
+                elif low > high:
                     low, high = high, low
                 res.extend((low, high))
             except ValueError:
