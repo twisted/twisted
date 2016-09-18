@@ -26,10 +26,7 @@ import time
 
 import email.utils
 
-try:
-    import cStringIO as StringIO
-except:
-    import StringIO
+from io import BytesIO
 
 from zope.interface import implementer
 
@@ -339,7 +336,7 @@ class LiteralFile:
         if size > self._memoryFileLimit:
             self.data = tempfile.TemporaryFile()
         else:
-            self.data = StringIO.StringIO()
+            self.data = BytesIO()
 
 
     def write(self, data):
@@ -2534,7 +2531,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if octets > self._memoryFileLimit:
             return tempfile.TemporaryFile()
         else:
-            return StringIO.StringIO()
+            return BytesIO()
 
 
     def makeTag(self):
