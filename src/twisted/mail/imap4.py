@@ -801,7 +801,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         sequence-set
         """
         rest = ''
-        arg = line.split(' ',1)
+        arg = line.split(b' ',1)
         if len(arg) == 2:
             rest = arg[1]
         arg = arg[0]
@@ -818,7 +818,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         p = _FetchParser()
         p.parseString(line)
-        return (p.result, '')
+        return (p.result, b'')
 
 
     def arg_flaglist(self, line):
@@ -826,8 +826,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Flag part of store-att-flag
         """
         flags = []
-        if line[0] == '(':
-            if line[-1] != ')':
+        if line[0:1] == b'(':
+            if line[-1:] != b')':
                 raise IllegalClientResponse("Mismatched parenthesis")
             line = line[1:-1]
 
@@ -835,15 +835,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             m = self.atomre.search(line)
             if not m:
                 raise IllegalClientResponse("Malformed flag")
-            if line[0] == '\\' and m.start() == 1:
-                flags.append('\\' + m.group('atom'))
+            if line[0:1] == b'\\' and m.start() == 1:
+                flags.append(b'\\' + m.group('atom'))
             elif m.start() == 0:
                 flags.append(m.group('atom'))
             else:
                 raise IllegalClientResponse("Malformed flag")
             line = m.group('rest')
 
-        return (flags, '')
+        return (flags, b'')
 
 
     def arg_line(self, line):
@@ -1508,7 +1508,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             # that's not the ideal way to get all messages, there should be a
             # method on mailboxes that gives you all of them
-            s = parseIdList('1:*')
+            s = parseIdList(b'1:*')
             maybeDeferred(self.mbox.fetch, s, uid=uid
                           ).addCallback(self.__cbManualSearch,
                                         tag, self.mbox, query, uid
@@ -2022,13 +2022,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_envelope(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
+        _w(b'ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
 
 
     def spew_flags(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('FLAGS ' + '(%s)' % (b' '.join(msg.getFlags())))
+        _w(b'FLAGS ' + b'(' + b' '.join(msg.getFlags()) + b')')
 
 
     def spew_internaldate(self, id, msg, _w=None, _f=None):
@@ -2051,20 +2051,20 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 sign = "-"
             odate = odate + sign + str(((abs(ttup[9]) // 3600) * 100 + (abs(ttup[9]) % 3600) // 60)).zfill(4)
-        _w('INTERNALDATE ' + _quote(odate))
+        _w(b'INTERNALDATE ' + _quote(odate))
 
 
     def spew_rfc822header(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
         hdrs = _formatHeaders(msg.getHeaders(True))
-        _w('RFC822.HEADER ' + _literal(hdrs))
+        _w(b'RFC822.HEADER ' + _literal(hdrs))
 
 
     def spew_rfc822text(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('RFC822.TEXT ')
+        _w(b'RFC822.TEXT ')
         _f()
         return FileProducer(msg.getBodyFile()
             ).beginProducing(self.transport
@@ -2074,13 +2074,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_rfc822size(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('RFC822.SIZE ' + str(msg.getSize()))
+        _w(b'RFC822.SIZE ' + str(msg.getSize()))
 
 
     def spew_rfc822(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('RFC822 ')
+        _w(b'RFC822 ')
         _f()
         mf = IMessageFile(msg, None)
         if mf is not None:
@@ -2095,11 +2095,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_uid(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('UID ' + str(msg.getUID()))
+        _w(b'UID ' + str(msg.getUID()))
 
 
     def spew_bodystructure(self, id, msg, _w=None, _f=None):
-        _w('BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
+        _w(b'BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
 
 
     def spew_body(self, part, id, msg, _w=None, _f=None):
@@ -2116,18 +2116,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
             hdrs = _formatHeaders(hdrs)
-            _w(str(part) + ' ' + _literal(hdrs))
+            _w(part.__bytes__() + b' ' + _literal(hdrs))
         elif part.text:
-            _w(str(part) + ' ')
+            _w(part.__bytes__() + b' ')
             _f()
             return FileProducer(msg.getBodyFile()
                 ).beginProducing(self.transport
                 )
         elif part.mime:
             hdrs = _formatHeaders(msg.getHeaders(True))
-            _w(str(part) + ' ' + _literal(hdrs))
+            _w(part.__bytes__() + b' ' + _literal(hdrs))
         elif part.empty:
-            _w(str(part) + ' ')
+            _w(part.__bytes__() + b' ')
             _f()
             if part.part:
                 return FileProducer(msg.getBodyFile()
@@ -2140,7 +2140,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 return MessageProducer(msg, None, self._scheduler).beginProducing(self.transport)
 
         else:
-            _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
+            _w(b'BODY ' + collapseNestedLists([getBodyStructure(msg)]))
 
 
     def spewMessage(self, id, msg, query, uid):
@@ -2148,11 +2148,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         write = wbuf.write
         flush = wbuf.flush
         def start():
-            write('* %d FETCH (' % (id,))
+            write(b'* %d FETCH (' % (id,))
         def finish():
-            write(')\r\n')
+            write(b')\r\n')
         def space():
-            write(' ')
+            write(b' ')
 
         def spew():
             seenUID = False
@@ -2185,10 +2185,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_STORE(self, tag, messages, mode, flags, uid=0):
         mode = mode.upper()
-        silent = mode.endswith('SILENT')
-        if mode.startswith('+'):
+        silent = mode.endswith(b'SILENT')
+        if mode.startswith(b'+'):
             mode = 1
-        elif mode.startswith('-'):
+        elif mode.startswith(b'-'):
             mode = -1
         else:
             mode = 0
@@ -2204,11 +2204,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if result and not silent:
             for (k, v) in result.iteritems():
                 if uid:
-                    uidstr = ' UID %d' % mbox.getUID(k)
+                    uidstr = b' UID ' + intToBytes(mbox.getUID(k))
                 else:
-                    uidstr = ''
-                self.sendUntaggedResponse('%d FETCH (FLAGS (%s)%s)' %
-                                          (k, ' '.join(v), uidstr))
+                    uidstr = b''
+                self.sendUntaggedResponse(intToBytes(k) +
+                                          b' FETCH (FLAGS ('+ b' '.join(v) + b')' +
+                                          uidstr + b')')
         self.sendPositiveResponse(tag, b'STORE completed')
 
 
@@ -4064,7 +4065,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), 'FLAGS', silent, flags, uid)
+        return self._store(messages, b'FLAGS', silent, flags, uid)
 
 
     def addFlags(self, messages, flags, silent=1, uid=0):
@@ -4092,7 +4093,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages),'+FLAGS', silent, flags, uid)
+        return self._store(messages, b'+FLAGS', silent, flags, uid)
 
 
     def removeFlags(self, messages, flags, silent=1, uid=0):
@@ -4120,7 +4121,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), '-FLAGS', silent, flags, uid)
+        return self._store(messages, b'-FLAGS', silent, flags, uid)
 
 
     def _store(self, messages, cmd, silent, flags, uid):
@@ -4194,19 +4195,19 @@ def parseIdList(s, lastMessageId=None):
     @return: A C{MessageSet} that contains the ids defined in the list
     """
     res = MessageSet()
-    parts = s.split(',')
+    parts = s.split(b',')
     for p in parts:
-        if ':' in p:
-            low, high = p.split(':', 1)
+        if b':' in p:
+            low, high = p.split(b':', 1)
             try:
-                if low == '*':
+                if low == b'*':
                     low = None
                 else:
-                    low = long(low)
-                if high == '*':
+                    low = int(low)
+                if high == b'*':
                     high = None
                 else:
-                    high = long(high)
+                    high = int(high)
                 if low is high is None:
                     # *:* does not make sense
                     raise IllegalIdentifierError(p)
@@ -4226,10 +4227,10 @@ def parseIdList(s, lastMessageId=None):
                 raise IllegalIdentifierError(p)
         else:
             try:
-                if p == '*':
+                if p == b'*':
                     p = None
                 else:
-                    p = long(p)
+                    p = int(p)
                 if p is not None and p <= 0:
                     raise IllegalIdentifierError(p)
             except ValueError:
@@ -4603,12 +4604,12 @@ class DontQuoteMe:
 
 
 
-_ATOM_SPECIALS = '(){ %*"'
+_ATOM_SPECIALS = b'(){ %*"'
 def _needsQuote(s):
-    if s == '':
+    if s == b'':
         return 1
-    for c in s:
-        if c < '\x20' or c > '\x7f':
+    for c in iterbytes(s):
+        if c < b'\x20' or c > b'\x7f':
             return 1
         if c in _ATOM_SPECIALS:
             return 1
@@ -5493,25 +5494,29 @@ class _FetchParser:
         empty = False
         partialBegin = None
         partialLength = None
+
         def __str__(self):
-            base = 'BODY'
-            part = ''
-            separator = ''
+            return nativeString(self.__bytes__())
+
+        def __bytes__(self):
+            base = b'BODY'
+            part = b''
+            separator = b''
             if self.part:
-                part = '.'.join([str(x + 1) for x in self.part])
-                separator = '.'
+                part = b'.'.join([str(x + 1) for x in self.part])
+                separator = b'.'
 #            if self.peek:
 #                base += '.PEEK'
             if self.header:
                 base += '[%s%s%s]' % (part, separator, self.header,)
             elif self.text:
-                base += '[%s%sTEXT]' % (part, separator)
+                base += b'[' + part + separator + b'TEXT]'
             elif self.mime:
-                base += '[%s%sMIME]' % (part, separator)
+                base += b'[' + part + separator + b'MIME]'
             elif self.empty:
-                base += '[%s]' % (part,)
+                base += b'[' + part + b']'
             if self.partialBegin is not None:
-                base += '<%d.%d>' % (self.partialBegin, self.partialLength)
+                base += b'<' + intToBytes(self.partialBegin) + b'.' + intToBytes(self.partialLength) + b'>'
             return base
 
 
@@ -5525,21 +5530,26 @@ class _FetchParser:
         negate = False
         fields = None
         part = None
+
         def __str__(self):
-            base = 'HEADER'
+            return nativeString(self.__bytes__())
+
+
+        def __bytes__(self):
+            base = b'HEADER'
             if self.fields:
-                base += '.FIELDS'
+                base += b'.FIELDS'
                 if self.negate:
-                    base += '.NOT'
+                    base += b'.NOT'
                 fields = []
                 for f in self.fields:
                     f = f.title()
                     if _needsQuote(f):
                         f = _quote(f)
                     fields.append(f)
-                base += ' (%s)' % ' '.join(fields)
+                base += b' (' + b' '.join(fields) + b')'
             if self.part:
-                base = '.'.join([str(x + 1) for x in self.part]) + '.' + base
+                base = b'.'.join([(x + 1).__bytes__() for x in self.part]) + b'.' + base
             return base
 
 
@@ -5553,21 +5563,21 @@ class _FetchParser:
     parts = None
 
     _simple_fetch_att = [
-        ('envelope', Envelope),
-        ('flags', Flags),
-        ('internaldate', InternalDate),
-        ('rfc822.header', RFC822Header),
-        ('rfc822.text', RFC822Text),
-        ('rfc822.size', RFC822Size),
-        ('rfc822', RFC822),
-        ('uid', UID),
-        ('bodystructure', BodyStructure),
+        (b'envelope', Envelope),
+        (b'flags', Flags),
+        (b'internaldate', InternalDate),
+        (b'rfc822.header', RFC822Header),
+        (b'rfc822.text', RFC822Text),
+        (b'rfc822.size', RFC822Size),
+        (b'rfc822', RFC822),
+        (b'uid', UID),
+        (b'bodystructure', BodyStructure),
     ]
 
     def __init__(self):
         self.state = ['initial']
         self.result = []
-        self.remaining = ''
+        self.remaining = b''
 
 
     def parseString(self, s):
@@ -5598,26 +5608,26 @@ class _FetchParser:
             return 0
 
         l = s.lower()
-        if l.startswith('all'):
+        if l.startswith(b'all'):
             self.result.extend((
                 self.Flags(), self.InternalDate(),
                 self.RFC822Size(), self.Envelope()
             ))
             return 3
-        if l.startswith('full'):
+        if l.startswith(b'full'):
             self.result.extend((
                 self.Flags(), self.InternalDate(),
                 self.RFC822Size(), self.Envelope(),
                 self.Body()
             ))
             return 4
-        if l.startswith('fast'):
+        if l.startswith(b'fast'):
             self.result.extend((
                 self.Flags(), self.InternalDate(), self.RFC822Size(),
             ))
             return 4
 
-        if l.startswith('('):
+        if l.startswith(b'('):
             self.state.extend(('close_paren', 'maybe_fetch_att', 'fetch_att'))
             return 1
 
@@ -5626,7 +5636,7 @@ class _FetchParser:
 
 
     def state_close_paren(self, s):
-        if s.startswith(')'):
+        if s.startswith(b')'):
             return 1
         raise Exception("Missing )")
 
@@ -5643,7 +5653,7 @@ class _FetchParser:
 
 
     def state_maybe_fetch_att(self, s):
-        if not s.startswith(')'):
+        if not s.startswith(b')'):
             self.state.extend(('maybe_fetch_att', 'fetch_att', 'whitespace'))
         return 0
 
@@ -5661,10 +5671,10 @@ class _FetchParser:
                 return len(name)
 
         b = self.Body()
-        if l.startswith('body.peek'):
+        if l.startswith(b'body.peek'):
             b.peek = True
             used = 9
-        elif l.startswith('body'):
+        elif l.startswith(b'body'):
             used = 4
         else:
             raise Exception("Nothing recognized in fetch_att: %s" % (l,))
@@ -5681,13 +5691,13 @@ class _FetchParser:
 
 
     def state_maybe_section(self, s):
-        if not s.startswith("["):
+        if not s.startswith(b"["):
             return 0
 
         self.state.extend(('section', 'part_number'))
         return 1
 
-    _partExpr = re.compile(r'(\d+(?:\.\d+)*)\.?')
+    _partExpr = re.compile(b'(\d+(?:\.\d+)*)\.?')
 
 
     def state_part_number(self, s):
@@ -5707,18 +5717,18 @@ class _FetchParser:
 
         l = s.lower()
         used = 0
-        if l.startswith(']'):
+        if l.startswith(b']'):
             self.pending_body.empty = True
             used += 1
-        elif l.startswith('header]'):
+        elif l.startswith(b'header]'):
             h = self.pending_body.header = self.Header()
             h.negate = True
             h.fields = ()
             used += 7
-        elif l.startswith('text]'):
+        elif l.startswith(b'text]'):
             self.pending_body.text = self.Text()
             used += 5
-        elif l.startswith('mime]'):
+        elif l.startswith(b'mime]'):
             self.pending_body.mime = self.MIME()
             used += 5
         else:
@@ -5758,14 +5768,14 @@ class _FetchParser:
 
     def state_maybe_partial(self, s):
         # Grab <number.number> or nothing at all
-        if not s.startswith('<'):
+        if not s.startswith(b'<'):
             return 0
-        end = s.find('>')
+        end = s.find(b'>')
         if end == -1:
             raise Exception("Found < but not >")
 
         partial = s[1:end]
-        parts = partial.split('.', 1)
+        parts = partial.split(b'.', 1)
         if len(parts) != 2:
             raise Exception("Partial specification did not include two .-delimited integers")
         begin, length = map(int, parts)
