@@ -305,11 +305,9 @@ def comparable(klass):
 if _PY3:
     unicode = str
     long = int
-    intTypes = int
 else:
     unicode = unicode
     long = long
-    intTypes = (int, long)
 
 
 
@@ -830,8 +828,6 @@ __all__ = [
     "NativeStringIO",
     "networkString",
     "unicode",
-    "long",
-    "intTypes",
     "iterbytes",
     "intToBytes",
     "lazyByteSlice",

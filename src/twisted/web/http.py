@@ -90,7 +90,7 @@ from zope.interface import implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, unicode, intTypes, intToBytes, networkString, nativeString)
+    _PY3, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.python.versions import Version
@@ -131,6 +131,11 @@ from twisted.web._responses import (
     NOT_EXTENDED,
 
     RESPONSES)
+
+if _PY3:
+    _intTypes = int
+else:
+    _intTypes = (int, long)
 
 protocol_version = "HTTP/1.1"
 
@@ -1039,7 +1044,7 @@ class Request:
         @type code: C{int}
         @type message: C{bytes}
         """
-        if not isinstance(code, intTypes):
+        if not isinstance(code, _intTypes):
             raise TypeError("HTTP response code must be int or long")
         self.code = code
         if message:

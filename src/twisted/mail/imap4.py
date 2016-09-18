@@ -37,7 +37,7 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
-from twisted.python.compat import unicode, intTypes
+from twisted.python.compat import unicode, long
 from twisted.internet import interfaces
 
 from twisted.cred import credentials
@@ -4348,7 +4348,7 @@ def collapseNestedLists(items):
     for i in items:
         if i is None:
             pieces.extend([' ', 'NIL'])
-        elif isinstance(i, (DontQuoteMe, intTypes)):
+        elif isinstance(i, (DontQuoteMe, int, long)):
             pieces.extend([' ', str(i)])
         elif isinstance(i, (str, unicode)):
             if _needsLiteral(i):
