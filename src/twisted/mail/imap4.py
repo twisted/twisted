@@ -606,11 +606,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             return self.dispatchCommand(tag, cmd, rest)
         except IllegalClientResponse as e:
-            self.sendBadResponse(tag, b'Illegal syntax: ' + nativeString(str(e)))
+            self.sendBadResponse(tag, b'Illegal syntax: ' + networkString(str(e)))
         except IllegalOperation as e:
-            self.sendNegativeResponse(tag, b'Illegal operation: ' + nativeString(str(e)))
+            self.sendNegativeResponse(tag, b'Illegal operation: ' + networkString(str(e)))
         except IllegalMailboxEncoding as e:
-            self.sendNegativeResponse(tag, b'Illegal mailbox name: ' + nativeString(str(e)))
+            self.sendNegativeResponse(tag, b'Illegal mailbox name: ' + networkString(str(e)))
 
 
     def parse_pending(self, line):
@@ -1050,14 +1050,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebAuthChunk(self, failure, tag):
-        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+        self.sendNegativeResponse(tag, b'Authentication failed: ' + networkString(str(failure.value)))
 
 
     def do_STARTTLS(self, tag):
         if self.startedTLS:
-            self.sendNegativeResponse(tag, 'TLS already negotiated')
+            self.sendNegativeResponse(tag, b'TLS already negotiated')
         elif self.ctx and self.canStartTLS:
-            self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
+            self.sendPositiveResponse(tag, b'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
             self.startedTLS = True
             self.challengers = self.challengers.copy()
@@ -1066,7 +1066,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if b'PLAIN' not in self.challengers:
                 self.challengers[b'PLAIN'] = PLAINCredentials
         else:
-            self.sendNegativeResponse(tag, 'TLS not available')
+            self.sendNegativeResponse(tag, b'TLS not available')
 
     unauth_STARTTLS = (do_STARTTLS,)
 
@@ -1124,7 +1124,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if failure.check(UnauthorizedLogin):
             self.sendNegativeResponse(tag, b'LOGIN failed')
         else:
-            self.sendBadResponse(tag, b'Server error: ' + str(failure.value))
+            self.sendBadResponse(tag, b'Server error: ' + networkString(str(failure.value)))
             log.err(failure)
 
 
@@ -1222,7 +1222,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             result = self.account.create(name)
         except MailboxException as c:
-            self.sendNegativeResponse(tag, str(c))
+            self.sendNegativeResponse(tag, networkString(str(c)))
         except:
             self.sendBadResponse(tag, b"Server error encountered while creating mailbox")
             log.err()
@@ -1244,7 +1244,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self.account.delete(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
             self.sendBadResponse(tag, b"Server error encountered while deleting mailbox")
             log.err()
@@ -1265,7 +1265,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except TypeError:
             self.sendBadResponse(tag, b'Invalid command syntax')
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
             self.sendBadResponse(tag, b"Server error encountered while renaming mailbox")
             log.err()
@@ -1281,7 +1281,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self.account.subscribe(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
             self.sendBadResponse(tag, b"Server error encountered while subscribing to mailbox")
             log.err()
@@ -1297,7 +1297,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self.account.unsubscribe(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
             self.sendBadResponse(tag, b"Server error encountered while unsubscribing from mailbox")
             log.err()
@@ -1365,12 +1365,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStatus(self, status, tag, box):
         line = ' '.join(['%s %s' % x for x in status.iteritems()])
-        self.sendUntaggedResponse(b'STATUS %s (%s)' % (box, line))
-        self.sendPositiveResponse(tag, 'STATUS complete')
+        self.sendUntaggedResponse(b'STATUS ' + box + b' ('+ line + b')')
+        self.sendPositiveResponse(tag, b'STATUS complete')
 
 
     def __ebStatus(self, failure, tag, box):
-        self.sendBadResponse(tag, b'STATUS %s failed: %s' % (box, str(failure.value)))
+        self.sendBadResponse(tag, b'STATUS '+ box + b' failed: ' +
+                             networkString(str(failure.value)))
 
 
     def do_APPEND(self, tag, mailbox, flags, date, message):
@@ -1401,12 +1402,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __cbAppend(self, result, tag, mbox):
-        self.sendUntaggedResponse(b'%d EXISTS' % mbox.getMessageCount())
+        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
         self.sendPositiveResponse(tag, 'APPEND complete')
 
 
     def __ebAppend(self, failure, tag):
-        self.sendBadResponse(tag, b'APPEND failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'APPEND failed: ' +
+                             networkString(str(failure.value)))
 
 
     def do_CHECK(self, tag):
@@ -1428,7 +1430,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebCheck(self, failure, tag):
-        self.sendBadResponse(tag, b'CHECK failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'CHECK failed: ' +
+                             networkString(str(failure.value)))
 
 
     def checkpoint(self):
@@ -1469,7 +1472,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebClose(self, failure, tag):
-        self.sendBadResponse(tag, b'CLOSE failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'CLOSE failed: ' +
+                             networkString(str(failure.value)))
 
 
     def do_EXPUNGE(self, tag):
@@ -1478,7 +1482,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 self.__cbExpunge, self.__ebExpunge, (tag,), None, (tag,), None
             )
         else:
-            self.sendNegativeResponse(tag, 'EXPUNGE ignored on read-only mailbox')
+            self.sendNegativeResponse(tag, b'EXPUNGE ignored on read-only mailbox')
 
     select_EXPUNGE = (do_EXPUNGE,)
 
@@ -1490,7 +1494,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebExpunge(self, failure, tag):
-        self.sendBadResponse(tag, b'EXPUNGE failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'EXPUNGE failed: ' +
+                             networkString(str(failure.value)))
         log.err(failure)
 
 
@@ -1950,7 +1955,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebSearch(self, failure, tag):
-        self.sendBadResponse(tag, b'SEARCH failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'SEARCH failed: ' +
+                             networkString(str(failure.value)))
         log.err(failure)
 
 
@@ -2173,7 +2179,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(self._oldTimeout)
         del self._oldTimeout
         log.err(failure)
-        self.sendBadResponse(tag, b'FETCH failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'FETCH failed: ' +
+                             networkString(str(failure.value)))
 
 
     def do_STORE(self, tag, messages, mode, flags, uid=0):
@@ -2206,7 +2213,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebStore(self, failure, tag):
-        self.sendBadResponse(tag, b'Server error: ' + str(failure.value))
+        self.sendBadResponse(tag, b'Server error: ' +
+                             networkString(str(failure.value)))
 
 
     def do_COPY(self, tag, messages, mailbox, uid=0):
@@ -2230,7 +2238,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _ebCopySelectedMailbox(self, failure, tag):
-        self.sendBadResponse(tag, b'Server error: ' + str(failure.value))
+        self.sendBadResponse(tag, b'Server error: ' +
+                             networkString(str(failure.value)))
 
 
     def __cbCopy(self, messages, tag, mbox):
@@ -2282,7 +2291,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __ebCopy(self, failure, tag):
-        self.sendBadResponse(tag, b'COPY failed:' + str(failure.value))
+        self.sendBadResponse(tag, b'COPY failed:' +
+                             networkString(str(failure.value)))
         log.err(failure)
 
 
