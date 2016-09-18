@@ -970,7 +970,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_NOOP(self, tag):
-        self.sendPositiveResponse(tag, 'NOOP No operation performed')
+        self.sendPositiveResponse(tag, b'NOOP No operation performed')
 
     unauth_NOOP = (do_NOOP,)
     auth_NOOP = unauth_NOOP
@@ -981,7 +981,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_AUTHENTICATE(self, tag, args):
         args = args.upper().strip()
         if args not in self.challengers:
-            self.sendNegativeResponse(tag, 'AUTHENTICATE method unsupported')
+            self.sendNegativeResponse(tag, b'AUTHENTICATE method unsupported')
         else:
             self.authenticate(self.challengers[args](), tag)
 
@@ -990,7 +990,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def authenticate(self, chal, tag):
         if self.portal is None:
-            self.sendNegativeResponse(tag, 'Temporary authentication failure')
+            self.sendNegativeResponse(tag, b'Temporary authentication failure')
             return
 
         self._setupChallenge(chal, tag)
