@@ -1364,7 +1364,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __cbStatus(self, status, tag, box):
-        line = ' '.join(['%s %s' % x for x in status.iteritems()])
+        line = ' '.join(['%s %s' % x for x in status.items()])
         self.sendUntaggedResponse(b'STATUS ' + box + b' ('+ line + b')')
         self.sendPositiveResponse(tag, b'STATUS complete')
 
@@ -2202,7 +2202,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStore(self, result, tag, mbox, uid, silent):
         if result and not silent:
-            for (k, v) in result.iteritems():
+            for (k, v) in result.items():
                 if uid:
                     uidstr = b' UID ' + intToBytes(mbox.getUID(k))
                 else:
@@ -2319,7 +2319,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def flagsChanged(self, newFlags):
-        for (mId, flags) in newFlags.iteritems():
+        for (mId, flags) in newFlags.items():
             msg = intToBytes(mId) + b' FETCH (FLAGS (' +b' '.join(flags) + b'))'
             self.sendUntaggedResponse(msg, async=True)
 
@@ -3914,7 +3914,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     info[id][0].extend(parts[2])
 
         results = {}
-        for (messageId, values) in info.iteritems():
+        for (messageId, values) in info.items():
             mapping = self._parseFetchPairs(values[0])
             results.setdefault(messageId, {}).update(mapping)
 
@@ -4975,7 +4975,7 @@ class _MessageStructure(object):
             the corresponding parameter value.
         """
         if self.attrs:
-            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.iteritems()]
+            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.items()]
             return [y for x in sorted(unquoted) for y in x]
         return None
 
