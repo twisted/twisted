@@ -12,7 +12,6 @@ from io import StringIO, BytesIO
 import codecs
 import locale
 import os
-import types
 
 from collections import OrderedDict
 

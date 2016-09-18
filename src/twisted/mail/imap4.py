@@ -27,7 +27,7 @@ import time
 
 import email.utils
 
-from io import StringIO, BytesIO
+from io import BytesIO
 
 from zope.interface import implementer
 
