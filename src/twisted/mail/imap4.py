@@ -15,7 +15,6 @@ To do::
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
-import base64
 import binascii
 import codecs
 import copy
@@ -40,7 +39,10 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
-from twisted.python.compat import _bytesChr as chr
+from twisted.python.compat import (
+    _bytesChr as chr, _b64decodebytes as decodebytes,
+    _b64encodebytes as encodebytes,
+    intToBytes, iterbytes, long, nativeString, networkString, unicode)
 from twisted.internet import interfaces
 
 from twisted.cred import credentials
@@ -1000,7 +1002,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except Exception as e:
             self.sendBadResponse(tag, 'Server error: ' + str(e))
         else:
-            coded = base64.encodestring(challenge)[:-1]
+            coded = encodebytes(challenge)[:-1]
             self.parseState = 'pending'
             self._pendingLiteral = defer.Deferred()
             self.sendContinuationRequest(coded)
@@ -1010,7 +1012,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbAuthChunk(self, result, chal, tag):
         try:
-            uncoded = base64.decodestring(result)
+            uncoded = decodebytes(result)
         except binascii.Error:
             raise IllegalClientResponse("Malformed Response - not base64")
 
@@ -2833,14 +2835,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbContinueAuth(self, rest, scheme, secret):
         try:
-            chal = base64.decodestring(rest + '\n')
+            chal = decodebytes(rest + b'\n')
         except binascii.Error:
             self.sendLine('*')
             raise IllegalServerResponse(rest)
         else:
             auth = self.authenticators[scheme]
             chal = auth.challengeResponse(secret, chal)
-            self.sendLine(base64.encodestring(chal).strip())
+            self.sendLine(encodebytes(chal).strip())
 
 
     def __cbAuthTLS(self, caps, secret):
