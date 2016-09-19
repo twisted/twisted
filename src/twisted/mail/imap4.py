@@ -26,6 +26,7 @@ import time
 
 import email.utils
 
+from itertools import chain
 from io import BytesIO
 
 from zope.interface import implementer
@@ -37,7 +38,7 @@ from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.python.compat import (
-    _bytesChr as chr, _b64decodebytes as decodebytes,
+    _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
     intToBytes, iterbytes, long, nativeString, networkString, unicode)
 from twisted.internet import interfaces
@@ -435,14 +436,14 @@ class Command:
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
 _SP = b' '
-_CTL = b''.join(chr(ch) for ch in list(range(0x21)) + list(range(0x80, 0x100)))
+_CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
 _nonAtomChars = b'(){%*"\]' + _SP + _CTL
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
-_atomChars = b''.join(chr(ch) for ch in list(range(0x100)) if chr(ch) not in _nonAtomChars)
+_atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
 
 @implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
@@ -1361,7 +1362,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStatus(self, status, tag, box):
         line = ' '.join(['%s %s' % x for x in status.items()])
-        self.sendUntaggedResponse(b'STATUS ' + box + b' ('+ line + b')')
+        self.sendUntaggedResponse(b'STATUS ' + box.encode('imap4-utf-7') + b' ('+ line + b')')
         self.sendPositiveResponse(tag, b'STATUS complete')
 
 
@@ -5862,12 +5863,17 @@ def parseTime(s):
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
         )
 
+# we need to cast Python >=3.3 memoryview to chars (from unsigned bytes), but
+# cast is absent in previous versions: thus, the lambda returns the
+# memoryview instance while ignoring the format
+memory_cast = getattr(memoryview, "cast", lambda *x: x[0])
+
 def modified_base64(s):
     s_utf7 = s.encode('utf-7')
-    return s_utf7[1:-1].replace('/', ',')
+    return s_utf7[1:-1].replace(b'/', b',')
 
 def modified_unbase64(s):
-    s_utf7 = '+' + s.replace(',', '/') + '-'
+    s_utf7 = b'+' + s.replace(b',', b'/') + b'-'
     return s_utf7.decode('utf-7')
 
 def encoder(s, errors=None):
@@ -5883,24 +5889,26 @@ def encoder(s, errors=None):
     @return: L{tuple} of a L{str} giving the encoded bytes and an L{int}
         giving the number of code units consumed from the input.
     """
-    r = []
+    r = bytearray()
     _in = []
+    valid_chars = set(map(chr, range(0x20,0x7f))) - {u"&"}
     for c in s:
-        if ord(c) in (range(0x20, 0x26) + range(0x27, 0x7f)):
+        if c in valid_chars:
             if _in:
-                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                r += b'&' + modified_base64(''.join(_in)) + b'-'
                 del _in[:]
-            r.append(str(c))
-        elif c == '&':
+            r.append(ord(c))
+        elif c == u'&':
             if _in:
-                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                r += b'&' + modified_base64(''.join(_in)) + b'-'
                 del _in[:]
-            r.append('&-')
+            r += b'&-'
         else:
             _in.append(c)
     if _in:
-        r.extend(['&', modified_base64(''.join(_in)), '-'])
-    return (''.join(r), len(s))
+        r.extend(b'&' + modified_base64(''.join(_in)) + b'-')
+    return (bytes(r), len(s))
+
 
 
 
@@ -5919,22 +5927,23 @@ def decoder(s, errors=None):
     """
     r = []
     decode = []
+    s = memory_cast(memoryview(s), 'c')
     for c in s:
-        if c == '&' and not decode:
-            decode.append('&')
-        elif c == '-' and decode:
+        if c == b'&' and not decode:
+            decode.append(b'&')
+        elif c == b'-' and decode:
             if len(decode) == 1:
-                r.append('&')
+                r.append(u'&')
             else:
-                r.append(modified_unbase64(''.join(decode[1:])))
+                r.append(modified_unbase64(b''.join(decode[1:])))
             decode = []
         elif decode:
             decode.append(c)
         else:
-            r.append(c)
+            r.append(c.decode())
     if decode:
-        r.append(modified_unbase64(''.join(decode[1:])))
-    return (''.join(r), len(s))
+        r.append(modified_unbase64(b''.join(decode[1:])))
+    return (u''.join(r), len(s))
 
 
 

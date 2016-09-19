@@ -7,12 +7,12 @@
 Test case for twisted.mail.imap4
 """
 
-
 import codecs
 import locale
 import os
 from io import BytesIO
 
+from itertools import chain
 from collections import OrderedDict
 
 from zope.interface import implementer
@@ -86,9 +86,9 @@ class IMAP4UTF7Tests(unittest.TestCase):
 
     def test_decodeWithErrors(self):
         """
-        Similar to L{test_encodeWithErrors}, but for C{str.decode}.
+        Similar to L{test_encodeWithErrors}, but for C{bytes.decode}.
         """
-        bytes = 'Hello world'
+        bytes = b'Hello world'
         self.assertEqual(
             bytes.decode('imap4-utf-7', 'strict'),
             bytes.decode('imap4-utf-7'))
@@ -111,7 +111,7 @@ class IMAP4UTF7Tests(unittest.TestCase):
         output = BytesIO()
         writer = codecs.getwriter('imap4-utf-7')(output)
         writer.write(u'Hello\xffworld')
-        self.assertEqual(output.getvalue(), 'Hello&AP8-world')
+        self.assertEqual(output.getvalue(), b'Hello&AP8-world')
 
 
     def test_encode(self):
@@ -138,11 +138,12 @@ class IMAP4UTF7Tests(unittest.TestCase):
         characters which are in ASCII using the corresponding ASCII byte.
         """
         # All printables represent themselves
-        for o in range(0x20, 0x26) + range(0x27, 0x7f):
-            self.assertEqual(chr(o), chr(o).encode('imap4-utf-7'))
-            self.assertEqual(chr(o), chr(o).decode('imap4-utf-7'))
-        self.assertEqual('&'.encode('imap4-utf-7'), '&-')
-        self.assertEqual('&-'.decode('imap4-utf-7'), '&')
+        for o in chain(range(0x20, 0x26), range(0x27, 0x7f)):
+            charbyte = chr(o).encode()
+            self.assertEqual(charbyte, chr(o).encode('imap4-utf-7'))
+            self.assertEqual(chr(o), charbyte.decode('imap4-utf-7'))
+        self.assertEqual(u'&'.encode('imap4-utf-7'), b'&-')
+        self.assertEqual(b'&-'.decode('imap4-utf-7'), u'&')
 
 
 
