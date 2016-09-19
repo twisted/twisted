@@ -1362,7 +1362,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStatus(self, status, tag, box):
         line = ' '.join(['%s %s' % x for x in status.items()])
-        self.sendUntaggedResponse(b'STATUS ' + box + b' ('+ line + b')')
+        self.sendUntaggedResponse(b'STATUS ' + box.encode('imap4-utf-7') + b' ('+ line + b')')
         self.sendPositiveResponse(tag, b'STATUS complete')
 
 
