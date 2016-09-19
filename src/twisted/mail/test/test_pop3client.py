@@ -26,6 +26,7 @@ except ImportError:
     ClientTLSContext = ServerTLSContext = None
 
 
+
 class StringTransportWithConnectionLosing(StringTransport):
     def loseConnection(self):
         self.protocol.connectionLost(error.ConnectionDone())
@@ -49,8 +50,12 @@ def setUp(greet=True):
 
     return p, t
 
+
+
 def strip(f):
     return lambda result, f=f: f()
+
+
 
 class POP3ClientLoginTests(unittest.TestCase):
     def testNegativeGreeting(self):
@@ -70,6 +75,7 @@ class POP3ClientLoginTests(unittest.TestCase):
         p.dataReceived("+OK send password\r\n")
         return d.addCallback(self.assertEqual, "send password")
 
+
     def testBadUser(self):
         p, t = setUp()
         d = p.user("username")
@@ -79,12 +85,14 @@ class POP3ClientLoginTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "account suspended"))
 
+
     def testOkPass(self):
         p, t = setUp()
         d = p.password("password")
         self.assertEqual(t.value(), "PASS password\r\n")
         p.dataReceived("+OK you're in!\r\n")
         return d.addCallback(self.assertEqual, "you're in!")
+
 
     def testBadPass(self):
         p, t = setUp()
@@ -95,6 +103,7 @@ class POP3ClientLoginTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "go away"))
 
+
     def testOkLogin(self):
         p, t = setUp()
         p.allowInsecureLogin = True
@@ -104,6 +113,7 @@ class POP3ClientLoginTests(unittest.TestCase):
         self.assertEqual(t.value(), "USER username\r\nPASS password\r\n")
         p.dataReceived("+OK password accepted\r\n")
         return d.addCallback(self.assertEqual, "password accepted")
+
 
     def testBadPasswordLogin(self):
         p, t = setUp()
@@ -117,6 +127,7 @@ class POP3ClientLoginTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "bogus login"))
 
+
     def testBadUsernameLogin(self):
         p, t = setUp()
         p.allowInsecureLogin = True
@@ -127,15 +138,18 @@ class POP3ClientLoginTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "bogus login"))
 
+
     def testServerGreeting(self):
         p, t = setUp(greet=False)
         p.dataReceived("+OK lalala this has no challenge\r\n")
         self.assertEqual(p.serverChallenge, None)
 
+
     def testServerGreetingWithChallenge(self):
         p, t = setUp(greet=False)
         p.dataReceived("+OK <here is the challenge>\r\n")
         self.assertEqual(p.serverChallenge, "<here is the challenge>")
+
 
     def testAPOP(self):
         p, t = setUp(greet=False)
@@ -144,6 +158,7 @@ class POP3ClientLoginTests(unittest.TestCase):
         self.assertEqual(t.value(), "APOP username f34f1e464d0d7927607753129cabe39a\r\n")
         p.dataReceived("+OK Welcome!\r\n")
         return d.addCallback(self.assertEqual, "Welcome!")
+
 
     def testInsecureLoginRaisesException(self):
         p, t = setUp(greet=False)
@@ -177,16 +192,22 @@ class ListConsumer:
     def __init__(self):
         self.data = {}
 
+
     def consume(self, result):
         (item, value) = result
         self.data.setdefault(item, []).append(value)
+
+
 
 class MessageConsumer:
     def __init__(self):
         self.data = []
 
+
     def consume(self, line):
         self.data.append(line)
+
+
 
 class POP3ClientListTests(unittest.TestCase):
     def testListSize(self):
@@ -196,6 +217,7 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived("+OK Here it comes\r\n")
         p.dataReceived("1 3\r\n2 2\r\n3 1\r\n.\r\n")
         return d.addCallback(self.assertEqual, [3, 2, 1])
+
 
     def testListSizeWithConsumer(self):
         p, t = setUp()
@@ -211,6 +233,7 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived(".\r\n")
         return d.addCallback(self.assertIdentical, f)
 
+
     def testFailedListSize(self):
         p, t = setUp()
         d = p.listSize()
@@ -220,6 +243,7 @@ class POP3ClientListTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
 
+
     def testListUID(self):
         p, t = setUp()
         d = p.listUID()
@@ -227,6 +251,7 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived("+OK Here it comes\r\n")
         p.dataReceived("1 abc\r\n2 def\r\n3 ghi\r\n.\r\n")
         return d.addCallback(self.assertEqual, ["abc", "def", "ghi"])
+
 
     def testListUIDWithConsumer(self):
         p, t = setUp()
@@ -240,6 +265,7 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived(".\r\n")
         return d.addCallback(self.assertIdentical, f)
 
+
     def testFailedListUID(self):
         p, t = setUp()
         d = p.listUID()
@@ -248,6 +274,8 @@ class POP3ClientListTests(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
+
+
 
 class POP3ClientMessageTests(unittest.TestCase):
     def testRetrieve(self):
@@ -263,6 +291,7 @@ class POP3ClientMessageTests(unittest.TestCase):
             ["La la la here is message text",
              ".Further message text tra la la"])
 
+
     def testRetrieveWithConsumer(self):
         p, t = setUp()
         c = MessageConsumer()
@@ -274,10 +303,12 @@ class POP3ClientMessageTests(unittest.TestCase):
         p.dataReceived("..Further message text\r\n.\r\n")
         return d.addCallback(self._cbTestRetrieveWithConsumer, f, c)
 
+
     def _cbTestRetrieveWithConsumer(self, result, f, c):
         self.assertIdentical(result, f)
         self.assertEqual(c.data, ["La la la here is message text",
                                    ".Further message text"])
+
 
     def testPartialRetrieve(self):
         p, t = setUp()
@@ -292,6 +323,7 @@ class POP3ClientMessageTests(unittest.TestCase):
             ["Line the first!  Woop",
              "Line the last!  Bye"])
 
+
     def testPartialRetrieveWithConsumer(self):
         p, t = setUp()
         c = MessageConsumer()
@@ -304,10 +336,12 @@ class POP3ClientMessageTests(unittest.TestCase):
         p.dataReceived(".\r\n")
         return d.addCallback(self._cbTestPartialRetrieveWithConsumer, f, c)
 
+
     def _cbTestPartialRetrieveWithConsumer(self, result, f, c):
         self.assertIdentical(result, f)
         self.assertEqual(c.data, ["Line the first!  Woop",
                                    "Line the last!  Bye"])
+
 
     def testFailedRetrieve(self):
         p, t = setUp()
@@ -360,6 +394,7 @@ class POP3ClientMiscTests(unittest.TestCase):
              "B": ["1", "2"],
              "C": ["1"]})
 
+
     def testCapabilityError(self):
         p, t = setUp()
         d = p.capabilities(useCache=0)
@@ -367,12 +402,14 @@ class POP3ClientMiscTests(unittest.TestCase):
         p.dataReceived("-ERR This server is lame!\r\n")
         return d.addCallback(self.assertEqual, {})
 
+
     def testStat(self):
         p, t = setUp()
         d = p.stat()
         self.assertEqual(t.value(), "STAT\r\n")
         p.dataReceived("+OK 1 1212\r\n")
         return d.addCallback(self.assertEqual, (1, 1212))
+
 
     def testStatError(self):
         p, t = setUp()
@@ -383,12 +420,14 @@ class POP3ClientMiscTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
+
     def testNoop(self):
         p, t = setUp()
         d = p.noop()
         self.assertEqual(t.value(), "NOOP\r\n")
         p.dataReceived("+OK No-op to you too!\r\n")
         return d.addCallback(self.assertEqual, "No-op to you too!")
+
 
     def testNoopError(self):
         p, t = setUp()
@@ -399,12 +438,14 @@ class POP3ClientMiscTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
+
     def testRset(self):
         p, t = setUp()
         d = p.reset()
         self.assertEqual(t.value(), "RSET\r\n")
         p.dataReceived("+OK Reset state\r\n")
         return d.addCallback(self.assertEqual, "Reset state")
+
 
     def testRsetError(self):
         p, t = setUp()
@@ -415,12 +456,14 @@ class POP3ClientMiscTests(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
+
     def testDelete(self):
         p, t = setUp()
         d = p.delete(3)
         self.assertEqual(t.value(), "DELE 4\r\n")
         p.dataReceived("+OK Hasta la vista\r\n")
         return d.addCallback(self.assertEqual, "Hasta la vista")
+
 
     def testDeleteError(self):
         p, t = setUp()
@@ -432,13 +475,17 @@ class POP3ClientMiscTests(unittest.TestCase):
             lambda exc: self.assertEqual(exc.args[0], "Winner is not you."))
 
 
+
 class SimpleClient(POP3Client):
     def __init__(self, deferred, contextFactory = None):
         self.deferred = deferred
         self.allowInsecureLogin = True
 
+
     def serverGreeting(self, challenge):
         self.deferred.callback(None)
+
+
 
 class POP3HelperMixin:
     serverCTX = None
@@ -451,21 +498,26 @@ class POP3HelperMixin:
         self.client.timeout = 30
         self.connected = d
 
+
     def tearDown(self):
         del self.server
         del self.client
         del self.connected
 
+
     def _cbStopClient(self, ignore):
         self.client.transport.loseConnection()
+
 
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
         return failure
 
+
     def loopback(self):
         return loopback.loopbackTCP(self.server, self.client, noisy=False)
+
 
 
 class TLSServerFactory(protocol.ServerFactory):
@@ -481,6 +533,7 @@ class TLSServerFactory(protocol.ServerFactory):
             map(self.sendLine, self.output.pop(0))
             if line == 'STLS':
                 self.transport.startTLS(self.context)
+
 
 
 class POP3TLSTests(unittest.TestCase):
@@ -545,6 +598,7 @@ class POP3TLSTests(unittest.TestCase):
         return cp.deferred
 
 
+
 class POP3TimeoutTests(POP3HelperMixin, unittest.TestCase):
     def testTimeout(self):
         def login():
@@ -575,6 +629,7 @@ class POP3TimeoutTests(POP3HelperMixin, unittest.TestCase):
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
         return self.loopback()
+
 
 
 if ClientTLSContext is None:
