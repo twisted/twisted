@@ -9,6 +9,6 @@ See L{incremental}.
 
 from __future__ import division, absolute_import
 
-from incremental import IncomparableVersions, Version, getVersionString, _inf
+from incremental import IncomparableVersions, Version, getVersionString
 
 __all__ = ["Version", "getVersionString", "IncomparableVersions"]

@@ -16,10 +16,6 @@ def _checkRequirements():
         raise ImportError("Twisted requires Python 2.7 or later.")
     elif version >= (3, 0) and version < (3, 3):
         raise ImportError("Twisted on Python 3 requires Python 3.3 or later.")
-    if version < (3, 0):
-        required = "3.6.0"
-    else:
-        required = "4.0.0"
 
 _checkRequirements()
 
