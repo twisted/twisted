@@ -107,9 +107,9 @@ How to do a pre-release
 
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
 2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL.rst``.
-3. In your Git-SVN-enabled Git repo, fetch and check out the new release branch.
-4. Run ``./bin/admin/change-versions --prerelease``
-5. Commit the changes made by change-versions
+3. In your Git repo, fetch and check out the new release branch.
+4. Run ``python -m incremental.update Twisted --newversion $RELEASErc1``
+5. Commit the changes made by Incremental.
 6. Run ``./bin/admin/build-news .``
 7. Commit the changes made by build-news - this automatically removes the NEWS topfiles (see #4315)
 8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
@@ -138,7 +138,7 @@ Pre-release announcement
 
 The pre-release announcement should mention the important changes since the last release, and exhort readers to test this pre-release.
 
-Here's what the $RELEASEpre1 release announcement might look like::
+Here's what the $RELEASErc1 release announcement might look like::
 
     Live from PyCon Atlanta, I'm pleased to herald the approaching
     footsteps of the $API release.
@@ -175,16 +175,18 @@ Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
 1. Have the release branch, previously used to generate a pre-release, checked out
-2. Run ``./bin/admin/change-versions``
-3. Add the quote of the release to the ``README.rst``
-4. Make a new quote file for the next version
+2. Run ``python -m incremental.update Twisted``.
+3. Revert the prerelease newsfile changes, in order.
+4. Run ``./bin/admin/build-news .`` to make the final newsfile.
+5. Add the quote of the release to the ``README.rst``
+6. Make a new quote file for the next version
 
    - ``git mv docs/fun/Twisted.Quotes docs/historic/Quotes/Twisted-$API; echo '' > docs/fun/Twisted.Quotes; git add docs/fun/Twisted.Quotes``
 
-5. Commit the version and ``README.rst`` changes.
-6. Submit the ticket for review
-7. Pause until the ticket is reviewed and accepted.
-8. Tag the release.
+7. Commit the version and ``README.rst`` changes.
+8. Submit the ticket for review
+9. Pause until the ticket is reviewed and accepted.
+10. Tag the release.
 
    - ``git tag -s twisted-$RELEASE -m "Tag $RELEASE release"``
    - ``git push --tags``
@@ -214,8 +216,7 @@ Update documentation
 
 1. Get the dependencies
 
-  - Pydoctor (use the branch "twisted" from ​https://github.com/twisted/pydoctor)
-  - Epydoc
+  - PyDoctor (from PyPI)
 
 2. Build the documentation
 
@@ -281,9 +282,10 @@ Announce
   - Twitter, if you feel like it
   - ``#twisted`` topic on IRC (you'll need ops)
 
-5. Merge the release branch into trunk, closing the release ticket at the same time.
-6. Close the release milestone (which should have no tickets in it).
-7. Open a milestone for the next release.
+5. Run ``python -m incremental Twisted --dev`` to add a `dev0` postfix.
+6. Merge the release branch into trunk, closing the release ticket at the same time.
+7. Close the release milestone (which should have no tickets in it).
+8. Open a milestone for the next release.
 
 
 Release announcement
@@ -365,7 +367,7 @@ This section goes over doing these "point" releases.
 3. Cherry-pick the merge commits that merge the bugfixes into trunk, onto the new release branch.
 4. Go through the rest of the process for a full release from "How to do a pre-release", merging the release branch into trunk as normal as the end of the process.
 
-  - Instead of just ``--prerelease`` when running the change-versions script, add the patch flag, making it ``--patch --prerelease``.
+  - Instead of just ``--rc`` when running the change-versions script, add the patch flag, making it ``--patch --rc``.
   - Instead of waiting a week, a shorter pause is acceptable for a patch release.
 
 
