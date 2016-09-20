@@ -3,5 +3,5 @@
 
 from incremental import Version
 
-__version__ = Version('Twisted', 16, 4, 0)
+__version__ = Version('Twisted', 16, 4, 1)
 __all__ = ["__version__"]
