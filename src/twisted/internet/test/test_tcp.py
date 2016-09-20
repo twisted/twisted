@@ -115,6 +115,28 @@ def connect(client, destination):
 
 
 
+class TCPClientTestsBuilder(ReactorBuilder):
+    """
+    Builder defining tests relating to L{IReactorTCP.connectTCP}.
+    """
+    def _freePort(self, interface='127.0.0.1'):
+        probe = socket.socket()
+        try:
+            probe.bind((interface, 0))
+            return probe.getsockname()
+        finally:
+            probe.close()
+
+    def test_clientConnectionFailedStopsReactor(self):
+        """
+        The reactor can be stopped by a client factory's
+        C{clientConnectionFailed} method.
+        """
+        host, port = self._freePort()
+        reactor = self.buildReactor()
+        reactor.connectTCP(host, port, Stop(reactor))
+
+
 class FakeSocket(object):
     """
     A fake for L{socket.socket} objects.
@@ -432,7 +454,7 @@ class FakeResolver(object):
         self.names = names
 
 
-    def getHostByName(self, name, timeout):
+    def getHostByName(self, name, timeout=(1, 3, 11, 45)):
         """
         Return the address mapped to C{name} if it exists, or raise a
         C{DNSLookupError}.
