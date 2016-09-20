@@ -83,7 +83,7 @@ class INameResolver(Interface):
 
         @param proto: If specified, limit results to addresses for this socket
             protocol.  Must be one of the protocol constants from the socket
-            module.  For example, L{socket.IPPROTO_TCP}.
+            module.  For example, C{socket.IPPROTO_TCP}.
 
         @param flags: A bitvector specifying zero or more of the following::
 

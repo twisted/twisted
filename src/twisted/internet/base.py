@@ -413,7 +413,7 @@ class AddressInformation(FancyEqMixin, object):
 
         @param protocol: The address socket protocol.
         @type protocol: One of the protocol constants from the socket
-            module.  For example, L{socket.IPPROTO_TCP}.
+            module.  For example, C{socket.IPPROTO_TCP}.
 
         @param canonicalName: A string representing the canonical name
             of the host if AI_CANONNAME is part of the flags argument;
