@@ -23,21 +23,19 @@ from io import BytesIO as StringIO
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import execfile
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
+
 from incremental import Version
 
 from subprocess import CalledProcessError
 
 from twisted.python._release import (
-    _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
-    replaceProjectVersion, Project, generateVersionFileData,
-    changeAllProjectVersions, VERSION_OFFSET, filePathDelta,
+    findTwistedProjects, replaceInFile, Project, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
-    ChangeVersionsScript, NewsBuilder, SphinxBuilder,
+    NewsBuilder, SphinxBuilder,
     GitCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
@@ -131,7 +129,8 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return generateVersionFileData(Version(*args, **kwargs))
+    return ("from incremental import Version\n__version__=%r" % (
+        Version(*args, **kwargs))).encode('ascii')
 
 
 
@@ -199,227 +198,6 @@ class StructureAssertingMixin(object):
 
 
 
-class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
-    """
-    Twisted has the ability to change versions.
-    """
-
-    def makeFile(self, relativePath, content):
-        """
-        Create a file with the given content relative to a temporary directory.
-
-        @param relativePath: The basename of the file to create.
-        @param content: The content that the file will have.
-        @return: The filename.
-        """
-        baseDirectory = FilePath(self.mktemp())
-        directory, filename = os.path.split(relativePath)
-        directory = baseDirectory.preauthChild(directory)
-        file = directory.child(filename)
-        directory.child(filename).setContent(content)
-        return file
-
-
-    def test_getNextVersion(self):
-        """
-        When calculating the next version to release when a release is
-        happening in the same year as the last release, the minor version
-        number is incremented.
-        """
-        now = date.today()
-        major = now.year - VERSION_OFFSET
-        version = Version("twisted", major, 9, 0)
-        self.assertEqual(
-            getNextVersion(version, prerelease=False, patch=False, today=now),
-            Version("twisted", major, 10, 0))
-
-
-    def test_getNextVersionAfterYearChange(self):
-        """
-        When calculating the next version to release when a release is
-        happening in a later year, the minor version number is reset to 0.
-        """
-        now = date.today()
-        major = now.year - VERSION_OFFSET
-        version = Version("twisted", major - 1, 9, 0)
-        self.assertEqual(
-            getNextVersion(version, prerelease=False, patch=False, today=now),
-            Version("twisted", major, 0, 0))
-
-
-    def test_getNextVersionPreRelease(self):
-        """
-        L{getNextVersion} updates the major to the current year, and resets the
-        minor when creating a pre-release.
-        """
-        now = date.today()
-        major = now.year - VERSION_OFFSET
-        version = Version("twisted", 3, 9, 0)
-        self.assertEqual(
-            getNextVersion(version, prerelease=True, patch=False, today=now),
-            Version("twisted", major, 0, 0, 1))
-
-
-    def test_getNextVersionFinalRelease(self):
-        """
-        L{getNextVersion} resets the pre-release count when making a final
-        release after a pre-release.
-        """
-        now = date.today()
-        version = Version("twisted", 3, 9, 0, 1)
-        self.assertEqual(
-            getNextVersion(version, prerelease=False, patch=False, today=now),
-            Version("twisted", 3, 9, 0))
-
-
-    def test_getNextVersionNextPreRelease(self):
-        """
-        L{getNextVersion} just increments the pre-release number when operating
-        on a pre-release.
-        """
-        now = date.today()
-        version = Version("twisted", 3, 9, 1, 1)
-        self.assertEqual(
-            getNextVersion(version, prerelease=True, patch=False, today=now),
-            Version("twisted", 3, 9, 1, 2))
-
-
-    def test_getNextVersionPatchRelease(self):
-        """
-        L{getNextVersion} sets the micro number when creating a patch release.
-        """
-        now = date.today()
-        version = Version("twisted", 3, 9, 0)
-        self.assertEqual(
-            getNextVersion(version, prerelease=False, patch=True, today=now),
-            Version("twisted", 3, 9, 1))
-
-
-    def test_getNextVersionNextPatchRelease(self):
-        """
-        L{getNextVersion} just increments the micro number when creating a
-        patch release.
-        """
-        now = date.today()
-        version = Version("twisted", 3, 9, 1)
-        self.assertEqual(
-            getNextVersion(version, prerelease=False, patch=True, today=now),
-            Version("twisted", 3, 9, 2))
-
-
-    def test_getNextVersionNextPatchPreRelease(self):
-        """
-        L{getNextVersion} updates both the micro version and the pre-release
-        count when making a patch pre-release.
-        """
-        now = date.today()
-        version = Version("twisted", 3, 9, 1)
-        self.assertEqual(
-            getNextVersion(version, prerelease=True, patch=True, today=now),
-            Version("twisted", 3, 9, 2, 1))
-
-
-    def test_changeVersionInFile(self):
-        """
-        _changeVersionInFile replaces the old version information in a file
-        with the given new version information.
-        """
-        # The version numbers are arbitrary, the name is only kind of
-        # arbitrary.
-        packageName = 'foo'
-        oldVersion = Version(packageName, 2, 5, 0)
-        file = self.makeFile('README',
-                             "Hello and welcome to %s." % oldVersion.base())
-
-        newVersion = Version(packageName, 7, 6, 0)
-        _changeVersionInFile(oldVersion, newVersion, file.path)
-
-        self.assertEqual(file.getContent(),
-                         "Hello and welcome to %s." % newVersion.base())
-
-
-    def test_changeAllProjectVersions(self):
-        """
-        L{changeAllProjectVersions} changes the version numbers in the
-        _version.py
-        and README file.
-        """
-        root = FilePath(self.mktemp())
-        structure = {
-            "README.rst": "Hi this is 1.0.0.",
-            "twisted": {
-                "topfiles": {
-                    "README": "Hi this is 1.0.0"},
-                "_version.py": genVersion("twisted", 1, 0, 0)
-                }
-            }
-        self.createStructure(root, structure)
-        releaseDate = date(2010, 1, 1)
-        changeAllProjectVersions(root, False, False, releaseDate)
-        outStructure = {
-            "README.rst": "Hi this is 10.0.0.",
-            "twisted": {
-                "topfiles": {
-                    "README": "Hi this is 10.0.0"},
-                "_version.py": genVersion("twisted", 10, 0, 0),
-            }}
-        self.assertStructure(root, outStructure)
-
-
-    def test_changeAllProjectVersionsPreRelease(self):
-        """
-        L{changeAllProjectVersions} changes all version numbers in _version.py
-        and README files for all projects as well as in the top-level
-        README file. If the old version was a pre-release, it will change the
-        version in NEWS files as well.
-        """
-        root = FilePath(self.mktemp())
-
-        coreNews = ("Twisted Core 1.0.0rc1 (2009-12-25)\n"
-                    "===============================\n"
-                    "\n")
-        webNews = ("Twisted Web 1.0.0rc1 (2009-12-25)\n"
-                   "==================================\n"
-                   "\n")
-        structure = {
-            "README.rst": "Hi this is 1.0.0rc1.",
-            "NEWS": coreNews + webNews,
-            "twisted": {
-                "topfiles": {
-                    "README": "Hi this is 1.0.0rc1",
-                    "NEWS": coreNews},
-                "_version.py": genVersion("twisted", 1, 0, 0, 1),
-                "web": {
-                    "topfiles": {
-                        "README": "Hi this is 1.0.0rc1",
-                        "NEWS": webNews}
-                }}}
-        self.createStructure(root, structure)
-        releaseDate = date(2010, 1, 1)
-        changeAllProjectVersions(root, False, False, releaseDate)
-        coreNews = ("Twisted Core 1.0.0 (2010-01-01)\n"
-                    "===============================\n"
-                    "\n")
-        webNews = ("Twisted Web 1.0.0 (2010-01-01)\n"
-                   "==============================\n"
-                   "\n")
-        outStructure = {
-            "README.rst": "Hi this is 1.0.0.",
-            "NEWS": coreNews + webNews,
-            "twisted": {
-                "topfiles": {
-                    "README": "Hi this is 1.0.0",
-                    "NEWS": coreNews},
-                "_version.py": genVersion("twisted", 1, 0, 0),
-                "web": {
-                    "topfiles": {
-                        "README": "Hi this is 1.0.0",
-                        "NEWS": webNews}
-                }}}
-        self.assertStructure(root, outStructure)
-
-
-
 class ProjectTests(ExternalTempdirTestCase):
     """
     There is a first-class representation of a project.
@@ -449,7 +227,7 @@ class ProjectTests(ExternalTempdirTestCase):
         """
         if baseDirectory is None:
             baseDirectory = FilePath(self.mktemp())
-        segments = version.package.split('.')
+        segments = version[0].split('.')
         directory = baseDirectory
         for segment in segments:
             directory = directory.child(segment)
@@ -457,9 +235,7 @@ class ProjectTests(ExternalTempdirTestCase):
                 directory.createDirectory()
             directory.child('__init__.py').setContent('')
         directory.child('topfiles').createDirectory()
-        directory.child('topfiles').child('README').setContent(version.base())
-        replaceProjectVersion(
-            directory.child('_version.py').path, version)
+        directory.child('_version.py').setContent(genVersion(*version))
         return Project(directory)
 
 
@@ -479,23 +255,9 @@ class ProjectTests(ExternalTempdirTestCase):
         """
         Project objects know their version.
         """
-        version = Version('twisted', 2, 1, 0)
+        version = ('twisted', 2, 1, 0)
         project = self.makeProject(version)
-        self.assertEqual(project.getVersion(), version)
-
-
-    def test_updateVersion(self):
-        """
-        Project objects know how to update the version numbers in those
-        projects.
-        """
-        project = self.makeProject(Version("twisted", 2, 1, 0))
-        newVersion = Version("twisted", 3, 2, 9)
-        project.updateVersion(newVersion)
-        self.assertEqual(project.getVersion(), newVersion)
-        self.assertEqual(
-            project.directory.child("topfiles").child("README").getContent(),
-            "3.2.9")
+        self.assertEqual(project.getVersion(), Version(*version))
 
 
     def test_repr(self):
@@ -514,7 +276,7 @@ class ProjectTests(ExternalTempdirTestCase):
         directory and is returned as a Project object.
         """
         baseDirectory = self.makeProjects(
-            Version('foo', 2, 3, 0), Version('foo.bar', 0, 7, 4))
+            ('foo', 2, 3, 0), ('foo.bar', 0, 7, 4))
         projects = findTwistedProjects(baseDirectory)
         self.assertProjectsEqual(
             projects,
@@ -567,38 +329,6 @@ class UtilityTests(ExternalTempdirTestCase):
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
         with open('release.replace') as f:
             self.assertEqual(f.read(), expected)
-
-
-
-class VersionWritingTests(ExternalTempdirTestCase):
-    """
-    Tests for L{replaceProjectVersion}.
-    """
-
-    def test_replaceProjectVersion(self):
-        """
-        L{replaceProjectVersion} writes a Python file that defines a
-        C{version} variable that corresponds to the given name and version
-        number.
-        """
-        replaceProjectVersion("test_project",
-                              Version("twisted.test_project", 0, 82, 7))
-        ns = {'__name___': 'twisted.test_project'}
-        execfile("test_project", ns)
-        self.assertEqual(ns["__version__"].base(), "0.82.7")
-
-
-    def test_replaceProjectVersionWithPrerelease(self):
-        """
-        L{replaceProjectVersion} will write a Version instantiation that
-        includes a prerelease parameter if necessary.
-        """
-        replaceProjectVersion("test_project",
-                              Version("twisted.test_project", 0, 82, 7,
-                                      prerelease=8))
-        ns = {'__name___': 'twisted.test_project'}
-        execfile("test_project", ns)
-        self.assertEqual(ns["__version__"].base(), "0.82.7rc8")
 
 
 
@@ -737,15 +467,15 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath.child("__init__.py").setContent(
             "from twisted.python.deprecate import deprecated\n"
             "from incremental import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0), "
+            "@deprecated(('Twisted', 15, 0, 0), "
             "'Baz')\n"
             "def foo():\n"
             "    '%s'\n"
             "from twisted.python import deprecate, versions\n"
-            "@deprecate.deprecated(versions.Version('Twisted', 16, 0, 0))\n"
+            "@deprecate.deprecated(versions.('Twisted', 16, 0, 0))\n"
             "def _bar():\n"
             "    '%s'\n"
-            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            "@deprecated(('Twisted', 14, 2, 3), replacement='stuff')\n"
             "class Baz(object):\n"
             "    pass"
             "" % (docstring, privateDocstring))
@@ -1303,37 +1033,6 @@ class NewsBuilderMixin(StructureAssertingMixin):
         self.assertIn("Old boring stuff from the past", aggregateContent)
 
 
-    def test_changeVersionInNews(self):
-        """
-        L{NewsBuilder._changeVersions} gets the release date for a given
-        version of a project as a string.
-        """
-        builder = NewsBuilder()
-        builder._today = lambda: '2009-12-01'
-        project = self.createFakeTwistedProject()
-        self._commit(project)
-        builder.buildAll(project)
-        newVersion = Version('TEMPLATE', 7, 7, 14)
-        coreNews = project.child('topfiles').child('NEWS')
-        # twisted 1.2.3 is the old version.
-        builder._changeNewsVersion(
-            coreNews, "Core", Version("twisted", 1, 2, 3),
-            newVersion, '2010-01-01')
-        expectedCore = (
-            'Twisted Core 7.7.14 (2010-01-01)\n'
-            '================================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - Third feature addition. (#3)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #5\n\n\n')
-        self.assertEqual(
-            expectedCore + 'Old core news.\n', coreNews.getContent())
-
-
     def test_removeNEWSfragments(self):
         """
         L{NewsBuilder.buildALL} removes all the NEWS fragments after the build
@@ -1555,91 +1254,6 @@ class ScriptTests(StructureAssertingMixin, ExternalTempdirTestCase):
     """
     Tests for the release script functionality.
     """
-
-    def _testVersionChanging(self, prerelease, patch):
-        """
-        Check that L{ChangeVersionsScript.main} calls the version-changing
-        function with the appropriate version data and filesystem path.
-        """
-        versionUpdates = []
-
-        def myVersionChanger(sourceTree, prerelease, patch):
-            versionUpdates.append((sourceTree, prerelease, patch))
-
-        versionChanger = ChangeVersionsScript()
-        versionChanger.changeAllProjectVersions = myVersionChanger
-        args = []
-        if prerelease:
-            args.append("--prerelease")
-        if patch:
-            args.append("--patch")
-        versionChanger.main(args)
-        self.assertEqual(len(versionUpdates), 1)
-        self.assertEqual(versionUpdates[0][0], FilePath("."))
-        self.assertEqual(versionUpdates[0][1], prerelease)
-        self.assertEqual(versionUpdates[0][2], patch)
-
-
-    def test_changeVersions(self):
-        """
-        L{ChangeVersionsScript.main} changes version numbers for all Twisted
-        projects.
-        """
-        self._testVersionChanging(False, False)
-
-
-    def test_changeVersionsWithPrerelease(self):
-        """
-        A prerelease can be created with L{changeVersionsScript}.
-        """
-        self._testVersionChanging(True, False)
-
-
-    def test_changeVersionsWithPatch(self):
-        """
-        A patch release can be created with L{changeVersionsScript}.
-        """
-        self._testVersionChanging(False, True)
-
-
-    def test_defaultChangeVersionsVersionChanger(self):
-        """
-        The default implementation of C{changeAllProjectVersions} is
-        L{changeAllProjectVersions}.
-        """
-        versionChanger = ChangeVersionsScript()
-        self.assertEqual(versionChanger.changeAllProjectVersions,
-                         changeAllProjectVersions)
-
-
-    def test_badNumberOfArgumentsToChangeVersionsScript(self):
-        """
-        L{changeVersionsScript} raises SystemExit when the wrong arguments are
-        passed.
-        """
-        versionChanger = ChangeVersionsScript()
-        self.assertRaises(SystemExit, versionChanger.main, ["12.3.0"])
-
-
-    def test_tooManyDotsToChangeVersionsScript(self):
-        """
-        L{changeVersionsScript} raises SystemExit when there are the wrong
-        number of segments in the version number passed.
-        """
-        versionChanger = ChangeVersionsScript()
-        self.assertRaises(SystemExit, versionChanger.main,
-                          ["3.2.1.0"])
-
-
-    def test_nonIntPartsToChangeVersionsScript(self):
-        """
-        L{changeVersionsScript} raises SystemExit when the version number isn't
-        made out of numbers.
-        """
-        versionChanger = ChangeVersionsScript()
-        self.assertRaises(SystemExit, versionChanger.main,
-                          ["my united.states.of prewhatever"])
-
 
     def test_badNumberOfArgumentsToBuildNews(self):
         """

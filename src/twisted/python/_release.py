@@ -13,7 +13,6 @@ which must run on multiple platforms (eg the setup.py script).
 """
 
 import os
-import re
 import sys
 import textwrap
 
@@ -22,14 +21,8 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
-from incremental import Version
 from twisted.python.filepath import FilePath
-from twisted.python.compat import execfile
-from twisted.python.usage import Options, UsageError
 from twisted.python.monkey import MonkeyPatcher
-
-# The offset between a year and the corresponding major version number.
-VERSION_OFFSET = 2000
 
 # Types of topfiles.
 TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
@@ -197,108 +190,6 @@ def getRepositoryCommand(directory):
 
 
 
-def _changeVersionInFile(old, new, filename):
-    """
-    Replace the C{old} version number with the C{new} one in the given
-    C{filename}.
-    """
-    replaceInFile(filename, {old.base(): new.base()})
-
-
-
-def getNextVersion(version, prerelease, patch, today):
-    """
-    Calculate the version number for a new release of Twisted based on
-    the previous version number.
-
-    @param version: The previous version number.
-
-    @type prerelease: C{bool}
-    @param prerelease: If C{True}, make the next version a pre-release one. If
-       C{version} is a pre-release, it increments the pre-release counter,
-       otherwise create a new version with prerelease set to 1.
-
-    @type patch: C{bool}
-    @param patch: If C{True}, make the next version a patch release. It
-        increments the micro counter.
-
-    @type today: C{datetime}
-    @param today: The current date.
-    """
-    micro = 0
-    major = today.year - VERSION_OFFSET
-    if major != version.major:
-        minor = 0
-    else:
-        minor = version.minor + 1
-
-    if patch:
-        micro = version.micro + 1
-        major = version.major
-        minor = version.minor
-
-    newPrerelease = None
-    if version.prerelease is not None:
-        major = version.major
-        minor = version.minor
-        micro = version.micro
-        if prerelease:
-            newPrerelease = version.prerelease + 1
-    elif prerelease:
-        newPrerelease = 1
-    return Version(version.package, major, minor, micro, newPrerelease)
-
-
-
-def changeAllProjectVersions(root, prerelease, patch, today=None):
-    """
-    Change the version of the project.
-
-    @type root: L{FilePath}
-    @param root: The root of the Twisted source tree.
-
-    @type prerelease: C{bool}
-    @param prerelease:
-
-    @type patch: C{bool}
-    @param patch:
-
-    @type today: C{datetime}
-    @param today: Defaults to the current day, according to the system clock.
-    """
-    if not today:
-        today = date.today()
-    formattedToday = today.strftime('%Y-%m-%d')
-
-    twistedProject = Project(root.child("twisted"))
-    oldVersion = twistedProject.getVersion()
-    newVersion = getNextVersion(oldVersion, prerelease, patch, today)
-
-    def _makeNews(project, underTopfiles=True):
-        builder = NewsBuilder()
-        builder._changeNewsVersion(
-            root.child("NEWS"), builder._getNewsName(project),
-            oldVersion, newVersion, formattedToday)
-        if underTopfiles:
-            builder._changeNewsVersion(
-                project.directory.child("topfiles").child("NEWS"),
-                builder._getNewsName(project), oldVersion, newVersion,
-                formattedToday)
-
-    if oldVersion.prerelease:
-        _makeNews(twistedProject, underTopfiles=False)
-
-    for project in findTwistedProjects(root):
-        if oldVersion.prerelease:
-            _makeNews(project)
-        project.updateREADME(newVersion)
-
-    # Then change the global version.
-    twistedProject.updateVersion(newVersion)
-    _changeVersionInFile(oldVersion, newVersion, root.child('README.rst').path)
-
-
-
 class Project(object):
     """
     A representation of a project that has a version.
@@ -335,37 +226,6 @@ class Project(object):
         return namespace["__version__"]
 
 
-    def updateVersion(self, version):
-        """
-        Replace the existing version numbers in _version.py and README files
-        with the specified version.
-
-        @param version: The version to update to.
-        """
-        if not self.directory.basename() == "twisted":
-            raise Exception("Can't change the version of subprojects.")
-
-        oldVersion = self.getVersion()
-        replaceProjectVersion(self.directory.child("_version.py").path,
-                              version)
-        _changeVersionInFile(
-            oldVersion, version,
-            self.directory.child("topfiles").child("README").path)
-
-
-    def updateREADME(self, version):
-        """
-        Replace the existing version numbers in the README file with the
-        specified version.
-
-        @param version: The version to update to.
-        """
-        oldVersion = self.getVersion()
-        _changeVersionInFile(
-            oldVersion, version,
-            self.directory.child("topfiles").child("README").path)
-
-
 
 def findTwistedProjects(baseDirectory):
     """
@@ -380,51 +240,6 @@ def findTwistedProjects(baseDirectory):
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
-
-
-
-def generateVersionFileData(version):
-    """
-    Generate the data to be placed into a _version.py file.
-
-    @param version: A version object.
-    """
-    if version.prerelease is not None:
-        prerelease = ", prerelease=%r" % (version.prerelease,)
-    else:
-        prerelease = ""
-    data = '''\
-# Copyright (c) Twisted Matrix Laboratories.
-# See LICENSE for details.
-
-# This is an auto-generated file. Do not edit it.
-
-"""
-Provides Twisted version information.
-"""
-
-from twisted.python import versions
-__version__ = versions.Version(%r, %s, %s, %s%s)
-''' % (version.package, version.major, version.minor, version.micro,
-       prerelease)
-    return data
-
-
-
-def replaceProjectVersion(filename, newversion):
-    """
-    Write version specification code into the given filename, which
-    sets the version to the given version number.
-
-    @param filename: A filename which is most likely a "_version.py"
-        under some Twisted project.
-    @param newversion: A version object.
-    """
-    # XXX - this should be moved to Project and renamed to writeVersionFile.
-    # jml, 2007-11-15.
-    with open(filename, 'w') as f:
-        f.write(generateVersionFileData(newversion))
-
 
 
 def replaceInFile(filename, oldToNew):
@@ -810,34 +625,6 @@ class NewsBuilder(object):
             self._deleteFragments(topfiles)
 
 
-    def _changeNewsVersion(self, news, name, oldVersion, newVersion, today):
-        """
-        Change all references to the current version number in a NEWS file to
-        refer to C{newVersion} instead.
-
-        @param news: The NEWS file to change.
-        @type news: L{FilePath}
-        @param name: The name of the project to change.
-        @type name: C{str}
-        @param oldVersion: The old version of the project.
-        @type oldVersion: L{Version}
-        @param newVersion: The new version of the project.
-        @type newVersion: L{Version}
-        @param today: A YYYY-MM-DD string representing today's date.
-        @type today: C{str}
-        """
-        newHeader = self._formatHeader(
-            "Twisted %s %s (%s)" % (name, newVersion.base(), today))
-        expectedHeaderRegex = re.compile(
-            r"Twisted %s %s \(\d{4}-\d\d-\d\d\)\n=+\n\n" % (
-                re.escape(name), re.escape(oldVersion.base())))
-        oldNews = news.getContent()
-        match = expectedHeaderRegex.search(oldNews)
-        if match:
-            oldHeader = match.group()
-            replaceInFile(news.path, {oldHeader: newHeader})
-
-
     def main(self, args):
         """
         Build all news files.
@@ -963,42 +750,6 @@ class NotWorkingDirectory(Exception):
     Raised when a directory does not appear to be a repository directory of a
     supported VCS.
     """
-
-
-
-class ChangeVersionsScriptOptions(Options):
-    """
-    Options for L{ChangeVersionsScript}.
-    """
-    optFlags = [["prerelease", None, "Change to the next prerelease"],
-                ["patch", None, "Make a patch version"]]
-
-
-
-class ChangeVersionsScript(object):
-    """
-    A thing for changing version numbers. See L{main}.
-    """
-    changeAllProjectVersions = staticmethod(changeAllProjectVersions)
-
-    def main(self, args):
-        """
-        Given a list of command-line arguments, change all the Twisted versions
-        in the current directory.
-
-        @type args: list of str
-        @param args: List of command line arguments.  This should only
-            contain the version number.
-        """
-        options = ChangeVersionsScriptOptions()
-
-        try:
-            options.parseOptions(args)
-        except UsageError as e:
-            raise SystemExit(e)
-
-        self.changeAllProjectVersions(FilePath("."), options["prerelease"],
-                                      options["patch"])
 
 
 
