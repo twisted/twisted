@@ -19,8 +19,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
-from cryptography.hazmat.primitives.serialization import (load_pem_private_key,
-                                            load_ssh_public_key)
+from cryptography.hazmat.primitives.serialization import (
+    load_pem_private_key, load_ssh_public_key)
 
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
@@ -243,12 +243,7 @@ class Key(object):
             )
         elif keyType in [b'ecdsa-sha2-' + curve for curve in list(_curveTable.keys())]:
             x, y, rest = common.getMP(rest, 2)
-            return cls(
-                ec.EllipticCurvePublicNumbers(
-                    x, y,
-                    _curveTable[keyType.split(b'-')[2]]
-                    ).public_key(default_backend())
-                )
+            return cls._fromECComponents(x=x, y=y, curve=keyType)
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -322,7 +317,7 @@ class Key(object):
         @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the blob type is unknown.
         """
-
+        #decoding and splitting messes up ecdsa keys.
         if data.startswith(b'ecdsa-sha2'):
             return cls(load_ssh_public_key(data, default_backend()))
         blob = decodebytes(data.split()[1])
@@ -368,7 +363,7 @@ class Key(object):
             * a passphrase is not provided for an encrypted key
         """
         lines = data.strip().split(b'\n')
-        kind = lines[0][11:14].replace(b' ', b'')
+        kind = lines[0][11:-17]
         if lines[1].startswith(b'Proc-Type: 4,ENCRYPTED'):
             if not passphrase:
                 raise EncryptedKeyError('Passphrase must be provided '
@@ -708,7 +703,7 @@ class Key(object):
         @type y: L{int}
 
         @param curve: NIST name of elliptic curve.
-        @type curve: L{str}
+        @type curve: L{bytes}
 
         @param privateValue: The private value.
         @type privateValue: L{int}
@@ -957,7 +952,7 @@ class Key(object):
     def type(self):
         """
         Return the type of the object we wrap.  Currently this can only be
-        'RSA', 'DSA' and 'EC'.
+        'RSA', 'DSA' or 'EC'.
 
         @rtype: L{str}
         """
@@ -980,17 +975,17 @@ class Key(object):
         """
         Get the type of the object we wrap as defined in the SSH protocol,
         defined in RFC 4253, Section 6.6. Currently this can only be b'ssh-rsa',
-        b'ssh-dss' and ecdsa-sha2-[identifier].
+        b'ssh-dss' or b'ecdsa-sha2-[identifier]'.
 
         identifier is the standard NIST curve name
 
         @return: The key type format.
         @rtype: L{bytes}
         """
-
-        return (b'ecdsa-sha2-' +
-        _secToNist[self._keyObject.curve.name.encode('utf-8')] if self.type() == 'EC'
-        else {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()])
+        if self.type() == 'EC':
+            return b'ecdsa-sha2-' + _secToNist[self._keyObject.curve.name.encode('ascii')]
+        else:
+            return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()]
 
 
     def size(self):
@@ -1061,7 +1056,6 @@ class Key(object):
                 "y": numbers.public_numbers.y,
                 "privateValue": numbers.private_value,
                 "curve": self.sshType(),
-
             }
         else:
             raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
@@ -1095,7 +1089,7 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-        type = self.type()
+        type = self.type() #takes care of bad key type.
         data = self.data()
         if type == 'RSA':
             return (common.NS(b'ssh-rsa') + common.MP(data['e']) +
@@ -1141,7 +1135,7 @@ class Key(object):
 
             identifier is the NIST standard curve name.
         """
-        type = self.type()
+        type = self.type() #takes care of bad key type.
         data = self.data()
         if type == 'RSA':
             return (common.NS(b'ssh-rsa') + common.MP(data['n']) +
@@ -1328,7 +1322,7 @@ class Key(object):
         @rtype: L{bytes}
         @return: A signature for the given data.
         """
-        keyType = self.type()
+        keyType = self.type() # takes care of bad key type.
         if keyType == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
@@ -1382,7 +1376,7 @@ class Key(object):
             signatureType, signature = common.getNS(signature)
         if signatureType != self.sshType():
             return False
-        keyType = self.type()
+        keyType = self.type() #takes care of bad key type
         if keyType == 'RSA':
             k = self._keyObject
             if not self.isPublic():
@@ -1408,7 +1402,7 @@ class Key(object):
             if not self.isPublic():
                 k=k.public_key()
             keySize = self.size()
-            if keySize <= 256:
+            if keySize <= 256: # Hash size depends on key size
                 hashSize = hashes.SHA256()
             elif keySize <= 384:
                 hashSize = hashes.SHA384()
