@@ -211,8 +211,8 @@ class Project(object):
 
     def getVersion(self):
         """
-        @return: A L{Version} specifying the version number of the project
-        based on live python modules.
+        @return: A L{incremental.Version} specifying the version number of the
+            project based on live python modules.
         """
         namespace = {}
         directory = self.directory

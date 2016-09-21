@@ -467,15 +467,16 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath.child("__init__.py").setContent(
             "from twisted.python.deprecate import deprecated\n"
             "from incremental import Version\n"
-            "@deprecated(('Twisted', 15, 0, 0), "
+            "@deprecated(Version('Twisted', 15, 0, 0), "
             "'Baz')\n"
             "def foo():\n"
             "    '%s'\n"
-            "from twisted.python import deprecate, versions\n"
-            "@deprecate.deprecated(versions.('Twisted', 16, 0, 0))\n"
+            "from twisted.python import deprecate\n"
+            "import incremental\n"
+            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
             "def _bar():\n"
             "    '%s'\n"
-            "@deprecated(('Twisted', 14, 2, 3), replacement='stuff')\n"
+            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
             "class Baz(object):\n"
             "    pass"
             "" % (docstring, privateDocstring))
@@ -490,6 +491,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             quuxPath.exists(),
             "Package documentation file %r did not exist." % (quuxPath.path,))
+
         self.assertIn(
             docstring, quuxPath.getContent(),
             "Docstring not in package documentation file.")
