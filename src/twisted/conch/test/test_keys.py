@@ -1257,3 +1257,11 @@ class PersistentRSAKeyTests(unittest.TestCase):
         key = keys._getPersistentRSAKey(keyFile, keySize=1024)
         self.assertEqual(key.size(), 512)
         self.assertEqual(keyFile.getContent(), keyContent)
+
+    def test_keySizeZero(self):
+        tempDir = FilePath(self.mktemp())
+        keyFile = tempDir.child("mykey.pem")
+
+        key = keys._getPersistentRSAKey(keyFile, keySize=512)
+        key._keyObject = None
+        self.assertEqual( key.size(), 0)
