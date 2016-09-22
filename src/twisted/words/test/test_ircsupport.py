@@ -5,13 +5,11 @@
 Tests for L{twisted.words.im.ircsupport}.
 """
 
-from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport
 
 from twisted.words.im.basechat import ChatUI, Conversation, GroupConversation
 from twisted.words.im.ircsupport import IRCAccount, IRCProto
-from twisted.words.protocols.irc import IRCClient
-from twisted.words.test.test_irc import assertEqualBufferValue
+from twisted.words.test.test_irc import IRCTestCase
 
 
 
@@ -53,7 +51,7 @@ class StubChatUI(ChatUI):
 
 
 
-class IRCProtoTests(TestCase):
+class IRCProtoTests(IRCTestCase):
     """
     Tests for L{IRCProto}.
     """
@@ -70,7 +68,7 @@ class IRCProtoTests(TestCase):
         I{USER} commands with the username from the account object.
         """
         self.proto.makeConnection(self.transport)
-        assertEqualBufferValue(
+        self.assertEqualBufferValue(
             self.transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n")
@@ -83,7 +81,7 @@ class IRCProtoTests(TestCase):
         """
         self.account.password = "secret"
         self.proto.makeConnection(self.transport)
-        assertEqualBufferValue(
+        self.assertEqualBufferValue(
             self.transport.value(),
             "PASS secret\r\n"
             "NICK alice\r\n"
@@ -97,7 +95,7 @@ class IRCProtoTests(TestCase):
         """
         self.account.channels = ['#foo', '#bar']
         self.proto.makeConnection(self.transport)
-        assertEqualBufferValue(
+        self.assertEqualBufferValue(
             self.transport.value(),
             "NICK alice\r\n"
             "USER alice foo bar :Twisted-IM user\r\n"
@@ -124,6 +122,7 @@ class IRCProtoTests(TestCase):
         self.proto.dataReceived(":alice JOIN #group1\r\n")
         self.proto.dataReceived(":alice1 JOIN #group1\r\n")
         self.proto.dataReceived(":alice1 NICK newnick\r\n")
+        self.proto.dataReceived(":alice3 NICK newnick3\r\n")
         self.assertIn("newnick", self.proto._ingroups)
         self.assertNotIn("alice1", self.proto._ingroups)
 
@@ -172,14 +171,70 @@ class IRCProtoTests(TestCase):
 
     def test_privmsg(self):
         """
-        Send a private message to a user.
+        PRIVMSG sends a private message to a user or channel.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.privmsg("alice1", " ", "test message 1")
-        self.proto.dataReceived(":alice1 JOIN #group1\r\n")
+        self.proto.dataReceived(":alice1 PRIVMSG t2 test_message_1\r\n")
         conversation = self.proto.chat.getConversation(
             self.proto.getPerson("alice1"))
-        self.assertEqual(conversation.message, "test message 1")
-        self.proto.privmsg("alice1", "#group1", "test message 2")
+        self.assertEqual(conversation.message, "test_message_1")
+
+        self.proto.dataReceived(":alice1 PRIVMSG #group1 test_message_2\r\n")
         groupConversation = self.proto.getGroupConversation("group1")
-        self.assertEqual(groupConversation.text, "test message 2")
+        self.assertEqual(groupConversation.text, "test_message_2")
+
+        self.proto.setNick("alice")
+        self.proto.dataReceived(":alice PRIVMSG #foo test_message_3\r\n")
+        groupConversation = self.proto.getGroupConversation("foo")
+        self.assertFalse(hasattr(groupConversation, "text"))
+        conversation = self.proto.chat.getConversation(
+            self.proto.getPerson("alice"))
+        self.assertFalse(hasattr(conversation, "message"))
+
+
+    def test_action(self):
+        """
+        CTCP ACTION to a user or channel.
+        """
+        self.proto.makeConnection(self.transport)
+        self.proto.dataReceived(":alice1 PRIVMSG alice1 :\01ACTION smiles\01\r\n")
+        conversation = self.proto.chat.getConversation(
+            self.proto.getPerson("alice1"))
+        self.assertEqual(conversation.message, "smiles")
+
+        self.proto.dataReceived(":alice1 PRIVMSG #group1 :\01ACTION laughs\01\r\n")
+        groupConversation = self.proto.getGroupConversation("group1")
+        self.assertEqual(groupConversation.text, "laughs")
+
+        self.proto.setNick("alice")
+        self.proto.dataReceived(":alice PRIVMSG #group1 :\01ACTION cries\01\r\n")
+        groupConversation = self.proto.getGroupConversation("foo")
+        self.assertFalse(hasattr(groupConversation, "text"))
+        conversation = self.proto.chat.getConversation(
+            self.proto.getPerson("alice"))
+        self.assertFalse(hasattr(conversation, "message"))
+
+
+    def test_rplNamreply(self):
+        """
+        RPL_NAMREPLY server response (353) lists all the users in a channel.
+        RPL_ENDOFNAMES server response (363) is sent at the end of RPL_NAMREPLY
+        to indicate that there are no more names.
+        """
+        self.proto.makeConnection(self.transport)
+        self.proto.dataReceived(
+            ":example.com 353 z3p = #bnl :pSwede Dan- SkOyg @MrOp +MrPlus\r\n")
+        expectedInGroups = {'Dan-': ['bnl'],
+                            'pSwede': ['bnl'],
+                            'SkOyg': ['bnl'],
+                            'MrOp': ['bnl'],
+                            'MrPlus': ['bnl']}
+        expectedNamReplies = {
+            'bnl': ['pSwede', 'Dan-', 'SkOyg', 'MrOp', 'MrPlus']}
+        self.assertEqual(expectedInGroups, self.proto._ingroups)
+        self.assertEqual(expectedNamReplies, self.proto._namreplies)
+
+        self.proto.dataReceived(":example.com 366 alice #bnl :End of /NAMES list\r\n")
+        self.assertEqual({}, self.proto._namreplies)
+        groupConversation = self.proto.getGroupConversation("bnl")
+        self.assertEqual(expectedNamReplies['bnl'], groupConversation.members)

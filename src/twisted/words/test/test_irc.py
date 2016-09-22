@@ -13,27 +13,34 @@ from twisted.internet import protocol, task
 from twisted.python.filepath import FilePath
 from twisted.python.compat import unicode
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
-from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A
 
 
+class IRCTestCase(TestCase):
+    def assertEqualBufferValue(self, buf, val):
+        """
+        A buffer is always bytes, but sometimes
+        we need to compare it to a utf-8 unicode string
 
-def assertEqualBufferValue(bufferValue, val):
-    # A buffer is always bytes, but sometimes
-    # we need to compare it to a utf-8 unicode string
-    if isinstance(val, unicode):
-        bufferValue = bufferValue.decode("utf-8")
+        @param buf: the buffer
+        @type buf: L{bytes} or L{unicode} or L{list}
+        @param val: the value to compare
+        @type val: L{bytes} or L{unicode} or L{list}
+        """
+        bufferValue = buf
+        if isinstance(val, unicode):
+            bufferValue = bufferValue.decode("utf-8")
 
-    if isinstance(bufferValue, list):
-        if isinstance(val[0], unicode):
-            bufferValue = [buf.decode("utf8") for buf in bufferValue]
-    assert bufferValue == val, "%s != %s" % (bufferValue, val)
+        if isinstance(bufferValue, list):
+            if isinstance(val[0], unicode):
+                bufferValue = [b.decode("utf8") for b in bufferValue]
+        self.assertEqual(bufferValue, val)
 
 
 
-class ModeParsingTests(unittest.TestCase):
+class ModeParsingTests(IRCTestCase):
     """
     Tests for L{twisted.words.protocols.irc.parseModes}.
     """
@@ -188,7 +195,7 @@ class ModeParsingTests(unittest.TestCase):
 
 
 
-class MiscTests(unittest.TestCase):
+class MiscTests(IRCTestCase):
     """
     Tests for miscellaneous functions.
     """
@@ -212,7 +219,7 @@ class MiscTests(unittest.TestCase):
 
 
 
-class FormattedTextTests(unittest.TestCase):
+class FormattedTextTests(IRCTestCase):
     """
     Tests for parsing and assembling formatted IRC text.
     """
@@ -472,7 +479,7 @@ class FormattedTextTests(unittest.TestCase):
 
 
 
-class FormattingStateAttributeTests(unittest.TestCase):
+class FormattingStateAttributeTests(IRCTestCase):
     """
     Tests for L{twisted.words.protocols.irc._FormattingState}.
     """
@@ -514,7 +521,7 @@ stringSubjects = [
     ]
 
 
-class QuotingTests(unittest.TestCase):
+class QuotingTests(IRCTestCase):
     def test_lowquoteSanity(self):
         """
         Testing client-server level quote/dequote.
@@ -553,7 +560,7 @@ class Dispatcher(irc._CommandDispatcherMixin):
 
 
 
-class DispatcherTests(unittest.TestCase):
+class DispatcherTests(IRCTestCase):
     """
     Tests for L{irc._CommandDispatcherMixin}.
     """
@@ -589,7 +596,7 @@ class DispatcherTests(unittest.TestCase):
 
 
 
-class ServerSupportedFeatureTests(unittest.TestCase):
+class ServerSupportedFeatureTests(IRCTestCase):
     """
     Tests for L{ServerSupportedFeatures} and related functions.
     """
@@ -1025,7 +1032,7 @@ class IRCClientWithoutLogin(irc.IRCClient):
 
 
 
-class CTCPTests(unittest.TestCase):
+class CTCPTests(IRCTestCase):
     """
     Tests for L{twisted.words.protocols.irc.IRCClient} CTCP handling.
     """
@@ -1060,7 +1067,7 @@ class CTCPTests(unittest.TestCase):
         self.client.dataReceived(errQuery)
         reply = self.file.getvalue()
 
-        assertEqualBufferValue(reply, errReply)
+        self.assertEqualBufferValue(reply, errReply)
 
 
     def test_noNumbersVERSION(self):
@@ -1077,7 +1084,7 @@ class CTCPTests(unittest.TestCase):
                            'EOL': irc.CR + irc.LF,
                            'vname': self.client.versionName})
         reply = self.file.getvalue()
-        assertEqualBufferValue(reply, versionReply)
+        self.assertEqualBufferValue(reply, versionReply)
 
 
     def test_fullVERSION(self):
@@ -1098,7 +1105,7 @@ class CTCPTests(unittest.TestCase):
                            'vnum': self.client.versionNum,
                            'venv': self.client.versionEnv})
         reply = self.file.getvalue()
-        assertEqualBufferValue(reply, versionReply)
+        self.assertEqualBufferValue(reply, versionReply)
 
 
     def test_noDuplicateCTCPDispatch(self):
@@ -1115,7 +1122,7 @@ class CTCPTests(unittest.TestCase):
             'foo!bar@baz.quux', [
                 '#chan',
                 '%(X)sTESTTHIS%(X)sfoo%(X)sTESTTHIS%(X)s' % {'X': irc.X_DELIM}])
-        assertEqualBufferValue(self.file.getvalue(), '')
+        self.assertEqualBufferValue(self.file.getvalue(), '')
         self.assertEqual(self.called, 1)
 
 
@@ -1133,7 +1140,7 @@ class CTCPTests(unittest.TestCase):
             'foo!bar@baz.quux', [
                 '#chan',
                 '%(X)sNOTREAL%(X)s' % {'X': irc.X_DELIM}])
-        assertEqualBufferValue(self.file.getvalue(), '')
+        self.assertEqualBufferValue(self.file.getvalue(), '')
         self.assertEqual(
             self.calledWith,
             ('foo!bar@baz.quux', '#chan', 'NOTREAL', None))
@@ -1229,7 +1236,7 @@ def pop(dict, key, default):
 
 
 
-class ClientImplementationTests(unittest.TestCase):
+class ClientImplementationTests(IRCTestCase):
     def setUp(self):
         self.transport = StringTransport()
         self.client = NoticingClient()
@@ -1611,9 +1618,9 @@ class ClientImplementationTests(unittest.TestCase):
         self.assertEqual(self.client.hostname, 'foo')
 
         # Pump the clock enough to trigger one LoopingCall.
-        assertEqualBufferValue(self.transport.value(), '')
+        self.assertEqualBufferValue(self.transport.value(), '')
         self.clock.advance(self.client.heartbeatInterval)
-        assertEqualBufferValue(self.transport.value(), 'PING foo\r\n')
+        self.assertEqualBufferValue(self.transport.value(), 'PING foo\r\n')
 
         # When the connection is lost the heartbeat is stopped.
         self.transport.loseConnection()
@@ -1635,7 +1642,7 @@ class ClientImplementationTests(unittest.TestCase):
 
 
 
-class BasicServerFunctionalityTests(unittest.TestCase):
+class BasicServerFunctionalityTests(IRCTestCase):
     def setUp(self):
         self.f = StringIOWithoutClosing()
         self.t = protocol.FileWrapper(self.f)
@@ -1925,7 +1932,7 @@ class DummyClient(irc.IRCClient):
 
 
 
-class ClientInviteTests(unittest.TestCase):
+class ClientInviteTests(IRCTestCase):
     """
     Tests for L{IRCClient.invite}.
     """
@@ -1955,7 +1962,7 @@ class ClientInviteTests(unittest.TestCase):
 
 
 
-class ClientMsgTests(unittest.TestCase):
+class ClientMsgTests(IRCTestCase):
     """
     Tests for messages sent with L{twisted.words.protocols.irc.IRCClient}.
     """
@@ -2182,7 +2189,7 @@ class ClientMsgTests(unittest.TestCase):
 
 
 
-class ClientTests(TestCase):
+class ClientTests(IRCTestCase):
     """
     Tests for the protocol-level behavior of IRCClient methods intended to
     be called by application code.
@@ -2198,7 +2205,7 @@ class ClientTests(TestCase):
 
         # Sanity check - we don't want anything to have happened at this
         # point, since we're not in a test yet.
-        assertEqualBufferValue(self.transport.value(), "")
+        self.assertEqualBufferValue(self.transport.value(), "")
 
         self.addCleanup(self.transport.loseConnection)
         self.addCleanup(self.protocol.connectionLost, None)
@@ -2224,7 +2231,7 @@ class ClientTests(TestCase):
             'AWAY :%s' % (message,),
             '',
         ]
-        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_back(self):
@@ -2236,7 +2243,7 @@ class ClientTests(TestCase):
             'AWAY :',
             '',
         ]
-        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_whois(self):
@@ -2244,7 +2251,7 @@ class ClientTests(TestCase):
         L{IRCClient.whois} sends a WHOIS message.
         """
         self.protocol.whois('alice')
-        assertEqualBufferValue(
+        self.assertEqualBufferValue(
             self.transport.value().split(b'\r\n'),
             ['WHOIS alice', ''])
 
@@ -2255,7 +2262,7 @@ class ClientTests(TestCase):
         value is passed for the C{server} parameter.
         """
         self.protocol.whois('alice', 'example.org')
-        assertEqualBufferValue(
+        self.assertEqualBufferValue(
             self.transport.value().split(b'\r\n'),
             ['WHOIS example.org alice', ''])
 
@@ -2276,7 +2283,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_registerWithPassword(self):
@@ -2297,7 +2304,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_registerWithTakenNick(self):
@@ -2396,7 +2403,7 @@ class ClientTests(TestCase):
             'PRIVMSG %s :\01ACTION %s\01' % (target, action),
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
-        assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
 
 
     def test_noticedDoesntPrivmsg(self):
@@ -2436,7 +2443,7 @@ class CollectorClient(irc.IRCClient):
 
 
 
-class DccTests(unittest.TestCase):
+class DccTests(IRCTestCase):
     """
     Tests for C{dcc_*} methods.
     """
@@ -2569,7 +2576,7 @@ class DccTests(unittest.TestCase):
 
 
 
-class ServerToClientTests(TestCase):
+class ServerToClientTests(IRCTestCase):
     """
     Tests for the C{irc_*} methods sent from the server to the client.
     """
@@ -2678,7 +2685,7 @@ class ServerToClientTests(TestCase):
 
 
 
-class CTCPQueryTests(TestCase):
+class CTCPQueryTests(IRCTestCase):
     """
     Tests for the C{ctcpQuery_*} methods.
     """
@@ -2768,7 +2775,7 @@ class CTCPQueryTests(TestCase):
 
 
 
-class DccChatFactoryTests(unittest.TestCase):
+class DccChatFactoryTests(IRCTestCase):
     """
     Tests for L{DccChatFactory}.
     """
@@ -2785,7 +2792,7 @@ class DccChatFactoryTests(unittest.TestCase):
 
 
 
-class DccDescribeTests(unittest.TestCase):
+class DccDescribeTests(IRCTestCase):
     """
     Tests for L{dccDescribe}.
     """
@@ -2798,7 +2805,7 @@ class DccDescribeTests(unittest.TestCase):
 
 
 
-class DccFileReceiveTests(unittest.TestCase):
+class DccFileReceiveTests(IRCTestCase):
     """
     Tests for L{DccFileReceive}.
     """

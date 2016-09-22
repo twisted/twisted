@@ -7,12 +7,11 @@ Tests for IRC portions of L{twisted.words.service}.
 
 from twisted.cred import checkers, portal
 from twisted.test import proto_helpers
-from twisted.trial import unittest
 from twisted.words.protocols import irc
 from twisted.words.service import InMemoryWordsRealm, IRCFactory, IRCUser
-from twisted.words.test.test_irc import assertEqualBufferValue
+from twisted.words.test.test_irc import IRCTestCase
 
-class IRCUserTests(unittest.TestCase):
+class IRCUserTests(IRCTestCase):
     """
     Isolated tests for L{IRCUser}
     """
@@ -40,7 +39,7 @@ class IRCUserTests(unittest.TestCase):
         self.ircUser.irc_NICK("", ["mynick"])
         self.stringTransport.clear()
         self.ircUser.sendMessage("foo")
-        assertEqualBufferValue(self.stringTransport.value(), ":example.com foo mynick\r\n")
+        self.assertEqualBufferValue(self.stringTransport.value(), ":example.com foo mynick\r\n")
 
 
     def test_utf8Messages(self):
@@ -55,7 +54,7 @@ class IRCUserTests(unittest.TestCase):
         self.ircUser.irc_NICK("", [u"\u043d\u0438\u043a".encode('utf-8')])
         self.stringTransport.clear()
         self.ircUser.sendMessage(u"\u0442\u0435\u0441\u0442".encode('utf-8'))
-        assertEqualBufferValue(self.stringTransport.value(), expectedResult)
+        self.assertEqualBufferValue(self.stringTransport.value(), expectedResult)
 
 
     def test_invalidEncodingNick(self):
@@ -148,7 +147,7 @@ class MocksyIRCUser(IRCUser):
 
 BADTEXT = b'\xff'
 
-class IRCUserBadEncodingTests(unittest.TestCase):
+class IRCUserBadEncodingTests(IRCTestCase):
     """
     Verifies that L{IRCUser} sends the correct error messages back to clients
     when given indecipherable bytes
