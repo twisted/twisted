@@ -14,3 +14,5 @@ glyph (~glyph@172.99.77.232) left the channel ("Textual IRC Client: www.textuala
 <lukasa> I mean, look, my suspicion is that the solution to the problem of evil is probably not implementable within the twisted codebase.
 <lukasa> I'm not even entirely certain that it can be done in userspace.
 %
+<vshyba> Twisted is awesome, I feel like Neo in Matrix when he pauses bullets: self.transport.pauseProducing()
+%
