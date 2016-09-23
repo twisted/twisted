@@ -65,7 +65,7 @@ class IRCGroup(basesupport.AbstractGroup):
         if self.account.client is None:
             raise locals.OfflineError
         if meta and meta.get("style", None) == "emote":
-            self.account.client.me(self.name,text)
+            self.account.client.ctcpMakeQuery(self.name,[('ACTION', text)])
             return succeed(text)
         #standard shmandard, clients don't support plain escaped newlines!
         for line in text.split('\n'):
