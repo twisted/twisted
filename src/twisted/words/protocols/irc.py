@@ -2622,9 +2622,9 @@ class IRCClient(basic.LineReceiver):
             self.register(self.nickname)
 
     def dataReceived(self, data):
-        data = data.replace('\r', '')
         if isinstance(data, unicode):
             data = data.encode("utf-8")
+        data = data.replace(b'\r', b'')
         basic.LineReceiver.dataReceived(self, data)
 
 
