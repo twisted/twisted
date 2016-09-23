@@ -14,13 +14,14 @@ only specific tests for old API.
 from __future__ import absolute_import, division
 
 import sys, os, time, gc, weakref
+from collections import deque
 
 from io import BytesIO as StringIO
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
 from twisted.spread import pb, util, publish, jelly
-from twisted.internet import protocol, main, reactor
+from twisted.internet import protocol, main, reactor, address
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
@@ -28,6 +29,9 @@ from twisted.python import failure, log
 from twisted.python.compat import iterbytes, xrange, _PY3
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
+
+from twisted.test.proto_helpers import _FakeConnector
+
 
 
 class Dummy(pb.Viewable):
@@ -151,7 +155,6 @@ def connectServerAndClient(test, clientFactory, serverFactory):
         if not broker.disconnected:
             broker.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
-
     def disconnectClientFactory():
         # There's no connector, just a FileWrapper mediated by the
         # IOPump.  Fortunately PBClientFactory.clientConnectionLost
@@ -167,6 +170,70 @@ def connectServerAndClient(test, clientFactory, serverFactory):
     # Establish the connection
     pump.pump()
     return clientBroker, serverBroker, pump
+
+
+
+class _ReconnectingFakeConnectorState(object):
+    """
+    Manages connection notifications for a
+    L{_ReconnectingFakeConnector} instance.
+
+    @ivar notifications: pending L{Deferreds} that will fire when the
+        L{_ReconnectingFakeConnector}'s connect method is called
+    """
+
+    def __init__(self):
+        self.notifications = deque()
+
+
+    def notifyOnConnect(self):
+        """
+        Connection notification.
+
+        @return: A L{Deferred} that fires when this instance's
+            L{twisted.internet.interfaces.IConnector.connect} method
+            is called.
+        @rtype: L{Deferred}
+        """
+        notifier = Deferred()
+        self.notifications.appendleft(notifier)
+        return notifier
+
+
+    def notifyAll(self):
+        """
+        Fire all pending notifications.
+        """
+        while self.notifications:
+            self.notifications.pop().callback(self)
+
+
+
+class _ReconnectingFakeConnector(_FakeConnector):
+    """
+    A fake L{IConnector} that can fire L{Deferred}s when its
+    C{connect} method is called.
+    """
+
+    def __init__(self, address, state):
+        """
+        @param address: An L{IAddress} provider that represents this
+            connector's destination.
+        @type address: An L{IAddress} provider.
+
+        @param state: The state instance
+        @type state: L{_ReconnectingFakeConnectorState}
+        """
+        super(_ReconnectingFakeConnector, self).__init__(address)
+        self._state = state
+
+
+    def connect(self):
+        """
+        A C{connect} implementation that calls C{reconnectCallback}
+        """
+        super(_ReconnectingFakeConnector, self).connect()
+        self._state.notifyAll()
 
 
 
@@ -1269,58 +1336,98 @@ class NewCredTests(unittest.TestCase):
         """
         self.realm = TestRealm()
         self.portal = portal.Portal(self.realm)
-        self.factory = ConnectionNotifyServerFactory(self.portal)
-        self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-        self.portno = self.port.getHost().port
+        self.serverFactory = ConnectionNotifyServerFactory(self.portal)
+        self.clientFactory = pb.PBClientFactory()
 
 
-    def tearDown(self):
+    def establishClientAndServer(self, _ignored=None):
         """
-        Shut down the TCP port created by L{setUp}.
+        Connect a client obtained from C{clientFactory} and a server
+        obtained from the current server factory via an L{IOPump},
+        then assign them to the appropriate instance variables
+
+        @ivar clientFactory: the broker client factory
+        @ivar clientFactory: L{pb.PBClientFactory} instance
+
+        @ivar client: the client broker
+        @type client: L{pb.Broker}
+
+        @ivar server: the server broker
+        @type server: L{pb.Broker}
+
+        @ivar pump: the IOPump connecting the client and server
+        @type pump: L{IOPump}
+
+        @ivar connector: A connector whose connect method recreates
+            the above instance variables
+        @type connector: L{twisted.internet.base.IConnector}
         """
-        return self.port.stopListening()
+        self.client, self.server, self.pump = connectServerAndClient(
+            self, self.clientFactory, self.serverFactory)
+
+        self.connectorState = _ReconnectingFakeConnectorState()
+        self.connector = _ReconnectingFakeConnector(
+            address.IPv4Address('TCP', '127.0.0.1', 4321),
+            self.connectorState)
+        self.connectorState.notifyOnConnect().addCallback(
+            self.establishClientAndServer)
 
 
-    def getFactoryAndRootObject(self, clientFactory=pb.PBClientFactory):
+    def completeClientLostConnection(
+            self, reason=failure.Failure(main.CONNECTION_DONE)):
         """
-        Create a connection to the test server.
+        Asserts that the client broker's transport was closed and then
+        mimics the event loop by calling the broker's connectionLost
+        callback with C{reason}, followed by C{self.clientFactory}'s
+        C{clientConnectionLost}
 
-        @param clientFactory: the factory class used to create the connection.
-
-        @return: a tuple (C{factory}, C{deferred}), where factory is an
-            instance of C{clientFactory} and C{deferred} the L{Deferred} firing
-            with the PB root object.
+        @param reason: (optional) the reason to pass to the client
+            broker's connectionLost callback
+        @type reason: L{Failure}
         """
-        factory = clientFactory()
-        rootObjDeferred = factory.getRootObject()
-        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
-        self.addCleanup(connector.disconnect)
-        return factory, rootObjDeferred
+        self.assertTrue(self.client.transport.closed)
+        # simulate the reactor calling back the client's
+        # connectionLost after the loseConnection implied by
+        # clientFactory.disconnect
+        self.client.connectionLost(reason)
+        self.clientFactory.clientConnectionLost(self.connector, reason)
 
 
     def test_getRootObject(self):
         """
-        Assert only that L{PBClientFactory.getRootObject}'s Deferred fires with
-        a L{RemoteReference}.
+        Assert that L{PBClientFactory.getRootObject}'s Deferred fires with
+        a L{RemoteReference}, and that disconnecting it runs its
+        disconnection callbacks.
         """
-        factory, rootObjDeferred = self.getFactoryAndRootObject()
+        self.establishClientAndServer()
+        rootObjDeferred = self.clientFactory.getRootObject()
 
         def gotRootObject(rootObj):
             self.assertIsInstance(rootObj, pb.RemoteReference)
+            return rootObj
+
+        def disconnect(rootObj):
             disconnectedDeferred = Deferred()
             rootObj.notifyOnDisconnect(disconnectedDeferred.callback)
-            factory.disconnect()
+            self.clientFactory.disconnect()
+
+            self.completeClientLostConnection()
+
             return disconnectedDeferred
 
-        return rootObjDeferred.addCallback(gotRootObject)
+        rootObjDeferred.addCallback(gotRootObject)
+        rootObjDeferred.addCallback(disconnect)
+
+        return rootObjDeferred
 
 
     def test_deadReferenceError(self):
         """
         Test that when a connection is lost, calling a method on a
-        RemoteReference obtained from it raises DeadReferenceError.
+        RemoteReference obtained from it raises L{DeadReferenceError}.
         """
-        factory, rootObjDeferred = self.getFactoryAndRootObject()
+        self.establishClientAndServer()
+        rootObjDeferred = self.clientFactory.getRootObject()
 
         def gotRootObject(rootObj):
             disconnectedDeferred = Deferred()
@@ -1332,7 +1439,10 @@ class NewCredTests(unittest.TestCase):
                     rootObj.callRemote, 'method')
 
             disconnectedDeferred.addCallback(lostConnection)
-            factory.disconnect()
+            self.clientFactory.disconnect()
+
+            self.completeClientLostConnection()
+
             return disconnectedDeferred
 
         return rootObjDeferred.addCallback(gotRootObject)
@@ -1346,35 +1456,43 @@ class NewCredTests(unittest.TestCase):
         """
         class ReconnectOnce(pb.PBClientFactory):
             reconnectedAlready = False
+
             def clientConnectionLost(self, connector, reason):
                 reconnecting = not self.reconnectedAlready
                 self.reconnectedAlready = True
+                result = pb.PBClientFactory.clientConnectionLost(
+                    self, connector, reason, reconnecting)
                 if reconnecting:
                     connector.connect()
-                return pb.PBClientFactory.clientConnectionLost(
-                    self, connector, reason, reconnecting)
+                return result
 
-        factory, rootObjDeferred = self.getFactoryAndRootObject(ReconnectOnce)
+        self.clientFactory = ReconnectOnce()
+        self.establishClientAndServer()
+
+        rootObjDeferred = self.clientFactory.getRootObject()
 
         def gotRootObject(rootObj):
             self.assertIsInstance(rootObj, pb.RemoteReference)
 
             d = Deferred()
             rootObj.notifyOnDisconnect(d.callback)
-            factory.disconnect()
+            # request a disconnection
+            self.clientFactory.disconnect()
+            self.completeClientLostConnection()
 
             def disconnected(ign):
-                d = factory.getRootObject()
+                d = self.clientFactory.getRootObject()
 
                 def gotAnotherRootObject(anotherRootObj):
                     self.assertIsInstance(anotherRootObj, pb.RemoteReference)
-
                     d = Deferred()
                     anotherRootObj.notifyOnDisconnect(d.callback)
-                    factory.disconnect()
+                    self.clientFactory.disconnect()
+                    self.completeClientLostConnection()
                     return d
                 return d.addCallback(gotAnotherRootObject)
             return d.addCallback(disconnected)
+
         return rootObjDeferred.addCallback(gotRootObject)
 
 
@@ -1383,7 +1501,8 @@ class NewCredTests(unittest.TestCase):
         Test that if a Broker loses its connection without receiving any bytes,
         it doesn't raise any exceptions or log any errors.
         """
-        serverProto = self.factory.buildProtocol(('127.0.0.1', 12345))
+        self.establishClientAndServer()
+        serverProto = self.serverFactory.buildProtocol(('127.0.0.1', 12345))
         serverProto.makeConnection(protocol.FileWrapper(StringIO()))
         serverProto.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
@@ -1404,19 +1523,6 @@ class NewCredTests(unittest.TestCase):
         return self.assertFailure(loginDeferred, ConnectionRefusedError)
 
 
-    def _disconnect(self, ignore, factory):
-        """
-        Helper method disconnecting the given client factory and returning a
-        C{Deferred} that will fire when the server connection has noticed the
-        disconnection.
-        """
-        disconnectedDeferred = Deferred()
-        self.factory.protocolInstance.notifyOnDisconnect(
-            lambda: disconnectedDeferred.callback(None))
-        factory.disconnect()
-        return disconnectedDeferred
-
-
     def test_loginLogout(self):
         """
         Test that login can be performed with IUsernamePassword credentials and
@@ -1424,7 +1530,6 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
-        factory = pb.PBClientFactory()
         creds = credentials.UsernamePassword(b"user", b"pass")
 
         # NOTE: real code probably won't need anything where we have the
@@ -1434,19 +1539,34 @@ class NewCredTests(unittest.TestCase):
         # ignore it.
         mind = "BRAINS!"
 
-        d = factory.login(creds, mind)
+        loginCompleted = Deferred()
+
+        d = self.clientFactory.login(creds, mind)
         def cbLogin(perspective):
             self.assertTrue(self.realm.lastPerspective.loggedIn)
             self.assertIsInstance(perspective, pb.RemoteReference)
-            return self._disconnect(None, factory)
+            return loginCompleted
+
+        def cbDisconnect(ignored):
+            self.clientFactory.disconnect()
+            self.completeClientLostConnection()
+
         d.addCallback(cbLogin)
+        d.addCallback(cbDisconnect)
 
         def cbLogout(ignored):
             self.assertTrue(self.realm.lastPerspective.loggedOut)
         d.addCallback(cbLogout)
 
-        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
-        self.addCleanup(connector.disconnect)
+        self.establishClientAndServer()
+        self.pump.flush()
+        # The perspective passed to cbLogin has gone out of scope.
+        # Ensure its __del__ runs...
+        gc.collect()
+        # ...and send its decref message to the server
+        self.pump.flush()
+        # Now allow the client to disconnect.
+        loginCompleted.callback(None)
         return d
 
 
@@ -1472,23 +1592,31 @@ class NewCredTests(unittest.TestCase):
 
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(foo=b'bar'))
-        factory = pb.PBClientFactory()
-        d = factory.login(
+
+        d = self.clientFactory.login(
             credentials.UsernamePassword(b'foo', b'bar'), "BRAINS!")
 
         def cbLoggedIn(avatar):
             # Just wait for the logout to happen, as it should since the
             # reference to the avatar will shortly no longer exists.
             return loggedOut
+
         d.addCallback(cbLoggedIn)
         def cbLoggedOut(ignored):
             # Verify that the server broker's _localCleanup dict isn't growing
             # without bound.
-            self.assertEqual(self.factory.protocolInstance._localCleanup, {})
+            self.assertEqual(self.serverFactory.protocolInstance._localCleanup, {})
         d.addCallback(cbLoggedOut)
-        d.addCallback(self._disconnect, factory)
-        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
-        self.addCleanup(connector.disconnect)
+
+        self.establishClientAndServer()
+
+        # complete authentication
+        self.pump.flush()
+        # _PortalAuthChallenger and our Avatar should be dead by now;
+        # force a collection to trigger their __del__s
+        gc.collect()
+        # push their decref messages through
+        self.pump.flush()
         return d
 
 
@@ -1500,11 +1628,10 @@ class NewCredTests(unittest.TestCase):
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(
                 foo=b'bar', baz=b'quux'))
-        factory = pb.PBClientFactory()
 
-        firstLogin = factory.login(
+        firstLogin = self.clientFactory.login(
             credentials.UsernamePassword(b'foo', b'bar'), "BRAINS!")
-        secondLogin = factory.login(
+        secondLogin = self.clientFactory.login(
             credentials.UsernamePassword(b'baz', b'quux'), "BRAINS!")
         d = gatherResults([firstLogin, secondLogin])
         def cbLoggedIn(result):
@@ -1518,10 +1645,10 @@ class NewCredTests(unittest.TestCase):
             self.assertEqual(first, b'foo')
             self.assertEqual(second, b'baz')
         d.addCallback(cbAvatarIds)
-        d.addCallback(self._disconnect, factory)
 
-        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
-        self.addCleanup(connector.disconnect)
+        self.establishClientAndServer()
+        self.pump.flush()
+
         return d
 
 
@@ -1532,11 +1659,10 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
-        factory = pb.PBClientFactory()
 
-        firstLogin = factory.login(
+        firstLogin = self.clientFactory.login(
             credentials.UsernamePassword(b'nosuchuser', b'pass'))
-        secondLogin = factory.login(
+        secondLogin = self.clientFactory.login(
             credentials.UsernamePassword(b'user', b'wrongpass'))
 
         self.assertFailure(firstLogin, UnauthorizedLogin)
@@ -1546,11 +1672,11 @@ class NewCredTests(unittest.TestCase):
         def cleanup(ignore):
             errors = self.flushLoggedErrors(UnauthorizedLogin)
             self.assertEqual(len(errors), 2)
-            return self._disconnect(None, factory)
         d.addCallback(cleanup)
 
-        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
-        self.addCleanup(connector.disconnect)
+        self.establishClientAndServer()
+        self.pump.flush()
+
         return d
 
 
@@ -1561,8 +1687,7 @@ class NewCredTests(unittest.TestCase):
         credentials.
         """
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
-        factory = pb.PBClientFactory()
-        d = factory.login(credentials.Anonymous(), "BRAINS!")
+        d = self.clientFactory.login(credentials.Anonymous(), "BRAINS!")
 
         def cbLoggedIn(perspective):
             return perspective.callRemote('echo', 123)
@@ -1570,10 +1695,8 @@ class NewCredTests(unittest.TestCase):
 
         d.addCallback(self.assertEqual, 123)
 
-        d.addCallback(self._disconnect, factory)
-
-        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
-        self.addCleanup(connector.disconnect)
+        self.establishClientAndServer()
+        self.pump.flush()
         return d
 
 
@@ -1584,18 +1707,17 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
-        factory = pb.PBClientFactory()
-        d = factory.login(credentials.Anonymous(), "BRAINS!")
+        d = self.clientFactory.login(credentials.Anonymous(), "BRAINS!")
         self.assertFailure(d, UnhandledCredentials)
 
         def cleanup(ignore):
             errors = self.flushLoggedErrors(UnhandledCredentials)
             self.assertEqual(len(errors), 1)
-            return self._disconnect(None, factory)
         d.addCallback(cleanup)
 
-        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
-        self.addCleanup(connector.disconnect)
+        self.establishClientAndServer()
+        self.pump.flush()
+
         return d
 
 
@@ -1607,8 +1729,7 @@ class NewCredTests(unittest.TestCase):
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
-        factory = pb.PBClientFactory()
-        d = factory.login(credentials.Anonymous(), "BRAINS!")
+        d = self.clientFactory.login(credentials.Anonymous(), "BRAINS!")
 
         def cbLogin(perspective):
             return perspective.callRemote('echo', 123)
@@ -1616,10 +1737,9 @@ class NewCredTests(unittest.TestCase):
 
         d.addCallback(self.assertEqual, 123)
 
-        d.addCallback(self._disconnect, factory)
+        self.establishClientAndServer()
+        self.pump.flush()
 
-        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
-        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1631,8 +1751,7 @@ class NewCredTests(unittest.TestCase):
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
-        factory = pb.PBClientFactory()
-        d = factory.login(
+        d = self.clientFactory.login(
             credentials.UsernamePassword(b'user', b'pass'), "BRAINS!")
 
         def cbLogin(perspective):
@@ -1641,10 +1760,9 @@ class NewCredTests(unittest.TestCase):
 
         d.addCallback(self.assertEqual, 123)
 
-        d.addCallback(self._disconnect, factory)
+        self.establishClientAndServer()
+        self.pump.flush()
 
-        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
-        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1655,8 +1773,7 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
-        factory = pb.PBClientFactory()
-        d = factory.login(
+        d = self.clientFactory.login(
             credentials.UsernamePassword(b"user", b"pass"), "BRAINS!")
 
         def cbLogin(perspective):
@@ -1669,10 +1786,9 @@ class NewCredTests(unittest.TestCase):
 
         d.addCallback(self.assertTrue)
 
-        d.addCallback(self._disconnect, factory)
+        self.establishClientAndServer()
+        self.pump.flush()
 
-        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
-        self.addCleanup(connector.disconnect)
         return d
 
 
