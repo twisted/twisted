@@ -141,31 +141,6 @@ class RealmTests(unittest.TestCase):
         self.assertEqual(n, ["groupone", "grouptwo"])
 
 
-class TestGroup(object):
-    def __init__(self, name, size, topic):
-        self.name = name
-        self.size = lambda: size
-        self.meta = {'topic': topic}
-
-
-class TestUser(object):
-    def __init__(self, name, groups, signOn, lastMessage):
-        self.name = name
-        self.itergroups = lambda: iter([TestGroup(g, 3, b'Hello') for g in groups])
-        self.signOn = signOn
-        self.lastMessage = lastMessage
-
-
-class TestPortal(object):
-    def __init__(self):
-        self.logins = []
-
-
-    def login(self, credentials, mind, *interfaces):
-        d = Deferred()
-        self.logins.append((credentials, mind, interfaces, d))
-        return d
-
 
 class TestCaseUserAgg(object):
     def __init__(self, user, realm, factory, address=address.IPv4Address('TCP', '127.0.0.1', 54321)):
