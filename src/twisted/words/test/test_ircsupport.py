@@ -9,6 +9,7 @@ from twisted.test.proto_helpers import StringTransport
 
 from twisted.words.im.basechat import ChatUI, Conversation, GroupConversation
 from twisted.words.im.ircsupport import IRCAccount, IRCProto
+from twisted.words.im.locals import OfflineError
 from twisted.words.test.test_irc import IRCTestCase
 
 
@@ -234,7 +235,38 @@ class IRCProtoTests(IRCTestCase):
         self.assertEqual(expectedInGroups, self.proto._ingroups)
         self.assertEqual(expectedNamReplies, self.proto._namreplies)
 
-        self.proto.dataReceived(":example.com 366 alice #bnl :End of /NAMES list\r\n")
+        self.proto.dataReceived(
+            ":example.com 366 alice #bnl :End of /NAMES list\r\n")
         self.assertEqual({}, self.proto._namreplies)
         groupConversation = self.proto.getGroupConversation("bnl")
         self.assertEqual(expectedNamReplies['bnl'], groupConversation.members)
+
+
+    def test_rplTopic(self):
+        """
+        RPL_TOPIC server response (332) is sent when a channel's topic is changed
+        """
+        self.proto.makeConnection(self.transport)
+        self.proto.dataReceived(
+            ":example.com 332 alice, #foo :Some random topic\r\n")
+        self.assertEqual("Some random topic", self.proto._topics["foo"])
+
+
+    def test_sendMessage(self):
+        """
+        L{IRCPerson.sendMessage}
+        """
+        self.proto.makeConnection(self.transport)
+        person = self.proto.getPerson("alice")
+        self.assertRaises(OfflineError, person.sendMessage, "Some message")
+
+        person.account.client = self.proto
+        self.transport.clear()
+        person.sendMessage("Some message 2")
+        self.assertEqual(self.transport.io.getvalue(),
+            b'PRIVMSG alice :Some message 2\r\n')
+
+        self.transport.clear()
+        person.sendMessage("smiles", {"style": "emote"})
+        self.assertEqual(self.transport.io.getvalue(),
+            b'PRIVMSG alice :\x01ACTION smiles\x01\r\n')
