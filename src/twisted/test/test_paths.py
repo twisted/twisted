@@ -257,9 +257,25 @@ class FakeWindowsPath(filepath.FilePath):
         """
         @raise WindowsError: always.
         """
-        raise WindowsError(
-            ERROR_DIRECTORY,
-            "A directory's validness was called into question")
+        if _PY3:
+            # For Python 3.3 and higher, WindowsError is an alias for OSError.
+            # The first argument to the OSError constructor is errno, and the fourth
+            # argument is winerror.
+            # For further details, refer to:
+            # https://docs.python.org/3/library/exceptions.html#OSError
+            #
+            # On Windows, if winerror is set in the constructor,
+            # the errno value in the constructor is ignored, and OSError internally
+            # maps the winerror value to an errno value.
+            raise WindowsError(
+                None,
+                "A directory's validness was called into question",
+                self.path,
+                ERROR_DIRECTORY)
+        else:
+            raise WindowsError(
+                ERROR_DIRECTORY,
+                "A directory's validness was called into question")
 
 
 
@@ -276,6 +292,9 @@ class ListingCompatibilityTests(BytesTestCase):
         fwp = FakeWindowsPath(self.mktemp())
         self.assertRaises(filepath.UnlistableError, fwp.children)
         self.assertRaises(WindowsError, fwp.children)
+
+    if not platform.isWindows():
+        test_windowsErrorExcept.skip = "Only relevant on on Windows."
 
 
     def test_alwaysCatchOSError(self):

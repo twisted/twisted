@@ -16,7 +16,6 @@ import warnings
 from twisted.internet import endpoints
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
-from twisted.python.compat import _PY3
 from twisted.application.internet import StreamServerEndpointService
 
 
@@ -87,28 +86,19 @@ def service(description, factory, default=_DEFAULT, reactor=None):
 def listen(description, factory, default=None):
     """Listen on a port corresponding to a description
 
-    @type description: C{str}
+    @type description: L{str}
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
-    @type default: C{str} or L{None}
-    @rtype: C{twisted.internet.interfaces.IListeningPort}
+    @type default: L{str} or L{None}
+    @rtype: L{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable
     virtual circuit server.
 
-    See the documentation of the C{parse} function for description
-    of the semantics of the arguments.
+    @see: L{twisted.internet.endpoints.serverFromString}
     """
     from twisted.internet import reactor
-    name, args, kw = parse(description, factory, default)
+    name, args, kw = endpoints._parseServer(description, factory, default)
     return getattr(reactor, 'listen'+name)(*args, **kw)
 
 
 
 __all__ = ['parse', 'service', 'listen']
-
-if _PY3:
-    __all3__ = ['service']
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__

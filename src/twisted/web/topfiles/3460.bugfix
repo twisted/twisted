@@ -1,3 +1,0 @@
-A bug in twisted.web.server.Site.makeSession which may lead to predictable
-session IDs was fixed.  Session IDs are now generated securely using
-`os.urandom`.

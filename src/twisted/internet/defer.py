@@ -664,13 +664,19 @@ class Deferred:
 
 
     def __iter__(self):
+        return self
 
-        if getattr(self, "result", _NO_RESULT) is _NO_RESULT:
-            yield self
-        raise StopIteration(self.result)
 
-    # For PEP492/async + await
+    def __send__(self, value=None):
+        result = getattr(self, 'result', _NO_RESULT)
+        if result is _NO_RESULT:
+            return self
+        raise StopIteration(result)
+
+
+    # For PEP-492 support (async/await)
     __await__ = __iter__
+    __next__ = __send__
 
 
 

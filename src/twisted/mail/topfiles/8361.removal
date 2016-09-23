@@ -1,2 +1,0 @@
-twisted.mail.mail.DomainWithDefaultDict.has_key is now deprecated in favor of
-the `in` keyword.

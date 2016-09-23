@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_pb -*-
+# -*- test-case-name: twisted.spread.test.test_pb -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -27,14 +27,17 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 @author: Glyph Lefkowitz
 """
 
+from __future__ import absolute_import, division
+
 import random
-import types
 from hashlib import md5
 
 from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
+from twisted.python.compat import (unicode, _bytesChr as chr, xrange,
+                                   comparable, cmp)
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -43,7 +46,7 @@ from twisted.persisted import styles
 from twisted.python.components import registerAdapter
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
-from twisted.spread.jelly import jelly, unjelly, globalSecurity
+from twisted.spread.jelly import jelly, unjelly, globalSecurity, _newInstance
 from twisted.spread import banana
 
 from twisted.spread.flavors import Serializable
@@ -128,6 +131,7 @@ class RemoteError(Exception):
 
 
 
+@comparable
 class RemoteMethod:
     """
     This is a translucent reference to a remote message.
@@ -152,7 +156,7 @@ class RemoteMethod:
         """
         Asynchronously invoke a remote method.
         """
-        return self.obj.broker._sendMessage('',self.obj.perspective,
+        return self.obj.broker._sendMessage(b'', self.obj.perspective,
             self.obj.luid, self.name, args, kw)
 
 
@@ -258,6 +262,7 @@ class AsReferenceable(Referenceable):
 
 
 @implementer(IUnjellyable)
+@comparable
 class RemoteReference(Serializable, styles.Ephemeral):
     """
     A translucent reference to a remote object.
@@ -316,9 +321,9 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """
         if jellier.invoker:
             assert self.broker == jellier.invoker, "Can't send references to brokers other than their own."
-            return "local", self.luid
+            return b"local", self.luid
         else:
-            return "unpersistable", "References cannot be serialized"
+            return b"unpersistable", "References cannot be serialized"
 
     def unjellyFor(self, unjellier, unjellyList):
         self.__init__(unjellier.invoker.unserializingPerspective, unjellier.invoker, unjellyList[1], 1)
@@ -335,11 +340,13 @@ class RemoteReference(Serializable, styles.Ephemeral):
         @returns: a Deferred which will be fired when the result of
                   this remote call is received.
         """
+        if not isinstance(_name, bytes):
+            _name = _name.encode('utf8')
+
         # note that we use '_name' instead of 'name' so the user can call
         # remote methods with 'name' as a keyword parameter, like this:
         #  ref.callRemote("getPeopleNamed", count=12, name="Bob")
-
-        return self.broker._sendMessage('',self.perspective, self.luid,
+        return self.broker._sendMessage(b'', self.perspective, self.luid,
                                         _name, args, kw)
 
     def remoteMethod(self, key):
@@ -417,10 +424,10 @@ class CopyableFailure(failure.Failure, Copyable):
         state['frames'] = []
         state['stack'] = []
         state['value'] = str(self.value) # Exception instance
-        if isinstance(self.type, str):
+        if isinstance(self.type, bytes):
             state['type'] = self.type
         else:
-            state['type'] = reflect.qual(self.type) # Exception class
+            state['type'] = reflect.qual(self.type).encode('utf-8') # Exception class
         if self.unsafeTracebacks:
             state['traceback'] = self.getTraceback()
         else:
@@ -475,7 +482,7 @@ setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 
 def failure2Copyable(fail, unsafeTracebacks=0):
-    f = types.InstanceType(CopyableFailure, fail.__dict__)
+    f = _newInstance(CopyableFailure, fail.__dict__)
     f.unsafeTracebacks = unsafeTracebacks
     return f
 
@@ -557,12 +564,17 @@ class Broker(banana.Banana):
         """
         if isinstance(sexp, list):
             command = sexp[0]
+
+            if not isinstance(command, str):
+                command = command.decode('utf8')
+
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
+
             if method:
                 method(*sexp[1:])
             else:
-                self.sendCall("didNotUnderstand", command)
+                self.sendCall(b"didNotUnderstand", command)
         else:
             raise ProtocolError("Non-list expression received.")
 
@@ -595,7 +607,7 @@ class Broker(banana.Banana):
     def connectionReady(self):
         """Initialize. Called after Banana negotiation is done.
         """
-        self.sendCall("version", self.version)
+        self.sendCall(b"version", self.version)
         for notifier in self.connects:
             try:
                 notifier()
@@ -688,6 +700,9 @@ class Broker(banana.Banana):
             L{None} if there is no object which corresponds to the given
             identifier.
         """
+        if isinstance(luid, unicode):
+            luid = luid.encode('utf8')
+
         lob = self.localObjects.get(luid)
         if lob is None:
             return
@@ -727,6 +742,9 @@ class Broker(banana.Banana):
         This is how you specify a 'base' set of objects that the remote
         protocol can connect to.
         """
+        if isinstance(name, unicode):
+            name = name.encode('utf8')
+
         assert object is not None
         self.localObjects[name] = Local(object)
 
@@ -736,6 +754,9 @@ class Broker(banana.Banana):
         Note that this does not check the validity of the name, only
         creates a translucent reference for it.
         """
+        if isinstance(name, unicode):
+            name = name.encode('utf8')
+
         return RemoteReference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance, incref=0):
@@ -868,7 +889,7 @@ class Broker(banana.Banana):
                 rval.addCallbacks(pbc, pbe)
         else:
             rval = None
-        self.sendCall(prefix+"message", requestID, objectID, message, answerRequired, netArgs, netKw)
+        self.sendCall(prefix + b"message", requestID, objectID, message, answerRequired, netArgs, netKw)
         return rval
 
     def proto_message(self, requestID, objectID, message, answerRequired, netArgs, netKw):
@@ -882,6 +903,9 @@ class Broker(banana.Banana):
         Look up message based on object, unserialize the arguments, and
         invoke it with args, and send an 'answer' or 'error' response.
         """
+        if not isinstance(message, str):
+            message = message.decode('utf8')
+
         try:
             object = findObjMethod(objectID)
             if object is None:
@@ -921,7 +945,7 @@ class Broker(banana.Banana):
     def _sendAnswer(self, netResult, requestID):
         """(internal) Send an answer to a previously sent message.
         """
-        self.sendCall("answer", requestID, netResult)
+        self.sendCall(b"answer", requestID, netResult)
 
     def proto_answer(self, requestID, netResult):
         """(internal) Got an answer to a previously sent message.
@@ -965,7 +989,7 @@ class Broker(banana.Banana):
                 fail = failure2Copyable(fail, self.factory.unsafeTracebacks)
         if isinstance(fail, CopyableFailure):
             fail.unsafeTracebacks = self.factory.unsafeTracebacks
-        self.sendCall("error", requestID, self.serialize(fail))
+        self.sendCall(b"error", requestID, self.serialize(fail))
 
     def proto_error(self, requestID, fail):
         """(internal) Deal with an error.
@@ -981,7 +1005,7 @@ class Broker(banana.Banana):
     def sendDecRef(self, objectID):
         """(internal) Send a DECREF directive.
         """
-        self.sendCall("decref", objectID)
+        self.sendCall(b"decref", objectID)
 
     def proto_decref(self, objectID):
         """(internal) Decrement the reference count of an object.
@@ -989,6 +1013,8 @@ class Broker(banana.Banana):
         If the reference count is zero, it will free the reference to this
         object.
         """
+        if isinstance(objectID, unicode):
+            objectID = objectID.encode('utf8')
         refs = self.localObjects[objectID].decref()
         if refs == 0:
             puid = self.localObjects[objectID].object.processUniqueID()
@@ -1003,7 +1029,7 @@ class Broker(banana.Banana):
     def decCacheRef(self, objectID):
         """(internal) Send a DECACHE directive.
         """
-        self.sendCall("decache", objectID)
+        self.sendCall(b"decache", objectID)
 
     def proto_decache(self, objectID):
         """(internal) Decrement the reference count of a cached object.
@@ -1026,7 +1052,7 @@ class Broker(banana.Banana):
             puid = cacheable.processUniqueID()
             del self.remotelyCachedLUIDs[puid]
             del self.remotelyCachedObjects[objectID]
-            self.sendCall("uncache", objectID)
+            self.sendCall(b"uncache", objectID)
 
     def proto_uncache(self, objectID):
         """(internal) Tell the client it is now OK to uncache an object.
@@ -1057,7 +1083,7 @@ def respond(challenge, password):
 
 def challenge():
     """I return some random data."""
-    crap = ''
+    crap = b''
     for x in range(random.randrange(15,25)):
         crap = crap + chr(random.randint(65,90))
     crap = md5(crap).digest()
@@ -1157,8 +1183,8 @@ class PBClientFactory(protocol.ClientFactory):
         return root.callRemote("login", username).addCallback(
             self._cbResponse, password, client)
 
-    def _cbResponse(self, result, password, client):
-        (challenge, challenger) = result
+    def _cbResponse(self, challenges, password, client):
+        challenge, challenger = challenges
         return challenger.callRemote("respond", respond(challenge, password), client)
 
 

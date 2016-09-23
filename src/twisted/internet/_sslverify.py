@@ -1859,12 +1859,11 @@ class OpenSSLAcceptableCiphers(object):
 # - prefer any AES-GCM and ChaCha20 over any AES-CBC for better performance and
 #   security,
 # - prefer AES-GCM to ChaCha20 because AES hardware support is common,
-# - use 3DES as fallback which is secure but slow,
 # - disable NULL authentication, MD5 MACs and DSS for security reasons.
 #
 defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:"
-    "ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:"
+    "ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:"
     "!aNULL:!MD5:!DSS"
 )
 _defaultCurveName = u"prime256v1"

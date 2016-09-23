@@ -41,7 +41,7 @@ CAPABILITIES = [
 CAPABILITIES_SSL = "STLS"
 CAPABILITIES_UIDL = "UIDL"
 
- 
+
 INVALID_RESPONSE = "-ERR Unknown request"
 VALID_RESPONSE = "+OK Command Completed"
 AUTH_DECLINED = "-ERR LOGIN failed"
@@ -62,14 +62,18 @@ class POP3TestServer(basic.LineReceiver):
         self.tmpUser = None
         self.ctx = contextFactory
 
+
     def sendSTATResp(self, req):
         self.sendLine(STAT)
+
 
     def sendUIDLResp(self, req):
         self.sendLine(UIDL)
 
+
     def sendLISTResp(self, req):
         self.sendLine(LIST)
+
 
     def sendCapabilities(self):
         if self.caps is None:
@@ -100,8 +104,10 @@ class POP3TestServer(basic.LineReceiver):
         else:
             self.sendGreeting()
 
+
     def sendGreeting(self):
         self.sendLine(CONNECTION_MADE)
+
 
     def lineReceived(self, line):
         """Error Conditions"""
@@ -190,6 +196,7 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(UIDL)
 
+
     def startTLS(self):
         if self.ctx is None:
             self.getContext()
@@ -200,8 +207,10 @@ class POP3TestServer(basic.LineReceiver):
         else:
             self.sendLine('-ERR TLS not available')
 
+
     def disconnect(self):
         self.transport.loseConnection()
+
 
     def getContext(self):
         try:
@@ -230,6 +239,8 @@ slow - Wait 20 seconds after the connection is made to return a Server Greeting
 
 def printMessage(msg):
     print("Server Starting in %s mode" % msg)
+
+
 
 def processArg(arg):
 
@@ -267,7 +278,6 @@ def processArg(arg):
         global DROP_CONNECTION
         DROP_CONNECTION = True
         printMessage("Drop Connection")
-
 
     elif arg.lower() == 'bad_tls':
         global BAD_TLS_RESPONSE

@@ -76,7 +76,7 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
                             credentials.IUsernameHashedPassword)
 
     def __init__(self, **users):
-        self.users = users
+        self.users = {x.encode('ascii'):y for x, y in users.items()}
 
 
     def addUser(self, username, password):

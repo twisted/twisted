@@ -1316,51 +1316,6 @@ class FileSenderTests(unittest.TestCase):
 
 
 
-class GPSDeprecationTests(unittest.TestCase):
-    """
-    Contains tests to make sure twisted.protocols.gps is marked as deprecated.
-    """
-    if _PY3:
-        skip = "twisted.protocols.gps is not being ported to Python 3."
-
-
-    def test_GPSDeprecation(self):
-        """
-        L{twisted.protocols.gps} is deprecated since Twisted 15.2.
-        """
-        reflect.namedAny("twisted.protocols.gps")
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
-            "Use twisted.positioning instead.", warningsShown[0]['message'])
-
-
-    def test_RockwellDeprecation(self):
-        """
-        L{twisted.protocols.gps.rockwell} is deprecated since Twisted 15.2.
-        """
-        reflect.namedAny("twisted.protocols.gps.rockwell")
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
-            "Use twisted.positioning instead.", warningsShown[0]['message'])
-
-
-    def test_NMEADeprecation(self):
-        """
-        L{twisted.protocols.gps.nmea} is deprecated since Twisted 15.2.
-        """
-        reflect.namedAny("twisted.protocols.gps.nmea")
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
-            "Use twisted.positioning instead.", warningsShown[0]['message'])
-
-
-
 class MiceDeprecationTests(unittest.TestCase):
     """
     L{twisted.protocols.mice} is deprecated.
