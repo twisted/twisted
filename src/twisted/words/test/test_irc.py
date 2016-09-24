@@ -1651,11 +1651,14 @@ class BasicServerFunctionalityTests(IRCTestCase):
 
 
     def check(self, s):
+        """
+        Make sure that the internal buffer equals a specified value.
+
+        @param s: the value to compare against buffer
+        @type s: L{bytes} or L{unicode}
+        """
         bufferValue = self.f.getvalue()
         if isinstance(s, unicode):
-            # Convert bufferValue from bytes
-            # to unicode, so we can compare it to
-            # a unicode string.
             bufferValue = bufferValue.decode("utf-8")
         self.assertEqual(bufferValue, s)
 
