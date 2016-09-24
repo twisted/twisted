@@ -21,6 +21,7 @@ epoll = Reactor(
 kqueue = Reactor(
     'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
 
+
 __all__ = [
     "default", "select", "poll", "epoll", "kqueue",
 ]
@@ -30,8 +31,12 @@ if _PY3:
         'asyncio', 'twisted.internet.asyncioreactor',
         'asyncio integration reactor')
 
+    rubicon = Reactor(
+        'rubicon' , 'twisted.internet.rubiconreactor',
+        'CoreFoundation integration reactor.')
+
     __all__.extend([
-        "asyncio"
+        "asyncio", "rubicon"
     ])
 else:
     wx = Reactor(
