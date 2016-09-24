@@ -26,7 +26,6 @@ notPortedModules = [
     "twisted.conch.ui.ansi",
     "twisted.conch.ui.tkvt100",
     "twisted.internet._threadedselect",
-    "twisted.internet.cfreactor",
     "twisted.internet.glib2reactor",
     "twisted.internet.gtk2reactor",
     "twisted.internet.pyuisupport",
