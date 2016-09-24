@@ -1218,9 +1218,10 @@ class IRCClient(basic.LineReceiver):
 
 
     def _reallySendLine(self, line):
-        quoteLine = lowQuote(line) + '\r'
+        quoteLine = lowQuote(line)
         if isinstance(quoteLine, unicode):
             quoteLine = quoteLine.encode("utf-8")
+        quoteLine += b'\r'
         return basic.LineReceiver.sendLine(self, quoteLine)
 
     def sendLine(self, line):
