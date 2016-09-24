@@ -405,6 +405,8 @@ class IRC(protocol.Protocol):
         says CRLF.  (Also, the flexibility of LineReceiver to turn "line mode"
         on and off was not required.)
         """
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
         lines = (self.buffer + data).split(LF)
         # Put the (possibly empty) element after the last LF back in the
         # buffer
