@@ -317,7 +317,8 @@ class Key(object):
         @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the blob type is unknown.
         """
-        #decoding and splitting messes up ecdsa keys.
+        # ECDSA keys don't need base64 decoding which is required
+        # for RSA or DSA key.
         if data.startswith(b'ecdsa-sha2'):
             return cls(load_ssh_public_key(data, default_backend()))
         blob = decodebytes(data.split()[1])
