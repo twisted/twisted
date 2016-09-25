@@ -25,7 +25,7 @@ if [ ! -d "$target" ]; then
 fi
 
 # Make sure we have trunk on the local repo.
-git fetch origin trunk:refs/remotes/origin/trunk
+git fetch origin +refs/heads/trunk:refs/remotes/origin/trunk
 
 mkdir -p build/
 twistedchecker -f parseable $target > build/twistedchecker-branch.report
