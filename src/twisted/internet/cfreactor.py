@@ -167,34 +167,41 @@ class CFReactor(PosixReactorBase):
             )
             return
 
-        why = None
-        isRead = False
-        src, skt, readWriteDescriptor, rw = self._fdmap[fd]
-        try:
-            if readWriteDescriptor.fileno() == -1:
-                why = _NO_FILEDESC
-            else:
-                isRead = callbackType == kCFSocketReadCallBack
-                # CFSocket seems to deliver duplicate read/write notifications
-                # sometimes, especially a duplicate writability notification
-                # when first registering the socket.  This bears further
-                # investigation, since I may have been mis-interpreting the
-                # behavior I was seeing. (Running the full Twisted test suite,
-                # while thorough, is not always entirely clear.) Until this has
-                # been more thoroughly investigated , we consult our own
-                # reading/writing state flags to determine whether we should
-                # actually attempt a doRead/doWrite first.  -glyph
-                if isRead:
-                    if rw[_READ]:
-                        why = readWriteDescriptor.doRead()
+        def _drdw():
+
+            why = None
+            isRead = False
+            src, skt, readWriteDescriptor, rw = self._fdmap[fd]
+
+            try:
+                if readWriteDescriptor.fileno() == -1:
+                    why = _NO_FILEDESC
                 else:
-                    if rw[_WRITE]:
-                        why = readWriteDescriptor.doWrite()
-        except:
-            why = sys.exc_info()[1]
-            log.err()
-        if why:
-            self._disconnectSelectable(readWriteDescriptor, why, isRead)
+                    isRead = callbackType == kCFSocketReadCallBack
+                    # CFSocket seems to deliver duplicate read/write
+                    # notifications sometimes, especially a duplicate
+                    # writability notification when first registering the
+                    # socket.  This bears further investigation, since I may
+                    # have been mis-interpreting the behavior I was seeing.
+                    # (Running the full Twisted test suite, while thorough, is
+                    # not always entirely clear.) Until this has been more
+                    # thoroughly investigated , we consult our own
+                    # reading/writing state flags to determine whether we
+                    # should actually attempt a doRead/doWrite first.  -glyph
+                    if isRead:
+                        if rw[_READ]:
+                            why = readWriteDescriptor.doRead()
+                    else:
+                        if rw[_WRITE]:
+                            why = readWriteDescriptor.doWrite()
+            except:
+                why = sys.exc_info()[1]
+                log.err()
+            if why:
+                self._disconnectSelectable(readWriteDescriptor, why, isRead)
+
+        readWriteDescriptor = self._fdmap[fd][2]
+        log.callWithLogger(readWriteDescriptor, _drdw)
 
 
     def _watchFD(self, fd, descr, flag):
@@ -224,7 +231,7 @@ class CFReactor(PosixReactorBase):
                 kCFAllocatorDefault, fd,
                 kCFSocketReadCallBack | kCFSocketWriteCallBack |
                 kCFSocketConnectCallBack,
-                lambda *a: log.callWithLogger(self._socketCallback, *a), ctx
+                self._socketCallback, ctx
             )
             CFSocketSetSocketFlags(
                 cfs,
