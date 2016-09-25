@@ -15,8 +15,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
         brew install pyenv;
         pyenv install -s 3.5.2;
         pyenv global system 3.5.2;
-
-    elif
+    fi
 fi
 
 # Temporary workaround for https://github.com/pypa/setuptools/issues/776;
