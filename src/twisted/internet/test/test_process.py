@@ -340,6 +340,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
 
 
+    if platform.isMacOSX():
+        test_processExitedWithSignal.skip = (
+                "Test is flaky from a Darwin bug. See #8840.")
+
+
     def test_systemCallUninterruptedByChildExit(self):
         """
         If a child process exits while a system call is in progress, the system
@@ -599,6 +604,11 @@ sys.stdout.flush()""".format(twistedRoot.path))
                           " reapProcessHandlers")
 
         self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
+
+
+    if platform.isMacOSX():
+        test_processExitedRaises.skip = (
+            "Test is flaky from a Darwin bug. See #8840.")
 
 
 
