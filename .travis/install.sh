@@ -11,10 +11,15 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
 
     if [[ "${TOXENV}" == "py35-alldeps-withcov-macos,codecov-publish" ]]; then
 
-        brew upgrade;
+        brew update;
         brew install pyenv;
+        PYENV_ROOT="$HOME/.pyenv";
+        PATH="$PYENV_ROOT/bin:$PATH";
+        eval "$(pyenv init -)";
         pyenv install -s 3.5.2;
         pyenv global system 3.5.2;
+        pyenv rehash;
+
     fi
 fi
 
