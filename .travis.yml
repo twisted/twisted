@@ -65,6 +65,13 @@ matrix:
       # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
       osx_image: xcode8
       env: TOXENV=py35-alldeps-withcov-macos,codecov-publish
+    - language: generic
+      os: osx
+      osx_image: xcode8
+      # Test cfreactor explicitly
+      env:
+        - TOXENV=py35-alldeps-withcov-macos,codecov-publish
+        - TWISTED_REACTOR=cf
 
 
   allow_failures:
