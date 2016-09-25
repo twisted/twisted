@@ -224,7 +224,7 @@ class CFReactor(PosixReactorBase):
                 kCFAllocatorDefault, fd,
                 kCFSocketReadCallBack | kCFSocketWriteCallBack |
                 kCFSocketConnectCallBack,
-                self._socketCallback, ctx
+                lambda *a: log.callWithLogger(self._socketCallback, *a), ctx
             )
             CFSocketSetSocketFlags(
                 cfs,

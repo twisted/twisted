@@ -2,9 +2,6 @@
 set -e
 set -x
 
-if [[ "$(uname -s)" == "Darwin" ]]; then
-    # Initialize the virtualenv created at install time.
-    source ~/.venv/bin/activate
-fi
+echo $PATH
 
 tox -- $TOX_FLAGS
