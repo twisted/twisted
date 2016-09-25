@@ -477,7 +477,9 @@ class BufferingTests(unittest.TestCase):
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         self.addCleanup(port.stopListening)
 
-        reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
+        clientConnector = reactor.connectSSL('127.0.0.1', port.getHost().port,
+                                             client, cCTX)
+        self.addCleanup(clientConnector.disconnect)
 
         return clientProto.deferred.addCallback(
             self.assertEqual, b"+OK <some crap>\r\n")
@@ -724,4 +726,3 @@ if interfaces.IReactorSSL(reactor, None) is None:
                   DefaultOpenSSLContextFactoryTests,
                   ClientContextFactoryTests]:
         tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
-
