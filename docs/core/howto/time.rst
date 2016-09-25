@@ -130,61 +130,7 @@ As with all reactor-based code, in order for scheduling to work the reactor must
 
 
 
-Timing out outstanding tasks
-============================
+See also
+--------
 
-Let's say we have a :api:`twisted.internet.defer.Deferred <Deferred>` representing a task that may take a long time.
-We want to put an upper bound on that task, so we want the :api:`twisted.internet.defer.Deferred <Deferred>` to time
-out X seconds in the future.
-
-A convenient API to do so is :api:`twisted.internet.task.timeoutDeferred <twisted.internet.task.timeoutDeferred>`.
-By default, it will fail with a :api:`twisted.internet.error.TimeoutError <TimeoutError>` if the :api:`twisted.internet.defer.Deferred <Deferred>` hasn't fired (with either an errback or a callback) within ``timeout`` seconds.
-
-.. code-block:: python
-
-    import random
-    from twisted.internet import task
-
-    def f():
-        return "Hopefully this will be called in 3 seconds or less"
-
-    def main(reactor):
-        delay = random.uniform(1, 5)
-        d = task.deferLater(reactor, delay, f)
-        task.timeoutDeferred(d, 3, reactor)
-
-        def called(result):
-            print("{0} seconds later:".format(delay), result)
-        d.addBoth(called)
-
-        return d
-
-    # f() will be timed out if the random delay is greater than 3 seconds
-    task.react(main)
-
-
-:api:`twisted.internet.task.timeoutDeferred <timeoutDeferred>` uses the :api:`twisted.internet.defer.Deferred.cancel <Deferred.cancel>` function under the hood, but can distinguish between a user's call to :api:`twisted.internet.defer.Deferred.cancel <Deferred.cancel>` and a cancellation due to a timeout.
-By default, :api:`twisted.internet.task.timeoutDeferred <timeoutDeferred>` translates a :api:`twisted.internet.defer.CancelledError <CancelledError>` produced by the timeout into a :api:`twisted.internet.error.TimeoutError <TimeoutError>`.
-
-However, if you provided a custom cancellation callable when creating the :api:`twisted.internet.defer.Deferred <Deferred>`, then cancelling it may not produce a :api:`twisted.internet.defer.CancelledError <CancelledError>`.  In this case, the default behavior of :api:`twisted.internet.task.timeoutDeferred <timeoutDeferred>` is to preserve whatever callback or errback value your custom cancellation function produced.  This can be useful if, for instance, a cancellation or timeout should produce a default value instead of an error.
-
-:api:`twisted.internet.task.timeoutDeferred <timeoutDeferred>` also takes an optional callable ``onTimeoutCancel`` which is called immediately after the deferred times out.  ``onTimeoutCancel`` is not called if it the deferred is otherwise cancelled before the timeout. It takes an arbitrary value, which is the value of the deferred at that exact time (probably a :api:`twisted.internet.defer.CancelledError <CancelledError>` :api:`twisted.python.failure.Failure <Failure>`), and the ``timeout``.  This can be useful if, for instance, the cancellation or timeout does not result in an error but you want to log the timeout anyway.  It can also be used to alter the return value.
-
-.. code-block:: python
-
-    from twisted.internet import task, defer
-
-    def logTimeout(result, timeout):
-        print("Got {0!r} but actually timed out after {1} seconds".format(
-            result, timeout))
-        return result + " (timed out)"
-
-    def main(reactor):
-        # generate a deferred with a custom canceller function, and never
-        # never callback or errback it to guarantee it gets timed out
-        d = defer.Deferred(lambda c: c.callback("Everything's ok!"))
-        task.timeoutDeferred(d, 2, reactor, onTimeoutCancel=logTimeout)
-        d.addBoth(print)
-        return d
-
-    task.react(main)
+#. :ref:`Timing out Deferreds <core-howto-defer-deferreds-timeouts>`

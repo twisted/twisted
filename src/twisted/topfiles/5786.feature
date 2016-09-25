@@ -1,1 +1,1 @@
-The new function twisted.internet.task.timeoutDeferred enables timeouts of deferreds.
+Added twisted.internet.defer.Deferred.addTimeout method to enable timeouts of deferreds.
