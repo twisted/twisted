@@ -348,7 +348,11 @@ class WebClientTests(unittest.TestCase):
             proto.transport.loseConnection()
         if connections:
             msg("Some left-over connections; this test is probably buggy.")
-        return self.port.stopListening()
+        self.port.stopListening()
+
+        return self._waitUntilAllDisconnected(
+            reactor, list(self.wrapper.protocols.keys()) + [self.port])
+
 
     def getURL(self, path):
         host = "http://127.0.0.1:%d/" % self.portno

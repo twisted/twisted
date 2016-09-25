@@ -196,6 +196,9 @@ class ServerDNSTests(unittest.TestCase):
         for conn in self.factory.connections[:]:
             conn.transport.loseConnection()
 
+        return self._waitUntilAllDisconnected(
+            reactor, self.factory.connections[:])
+
 
     def namesTest(self, querying, expectedRecords):
         """

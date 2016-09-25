@@ -8,7 +8,7 @@ from __future__ import division, absolute_import
 
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
-from twisted.internet import protocol, reactor, interfaces, defer, task
+from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
 from twisted.python.reflect import requireModule
@@ -454,31 +454,19 @@ class BufferingTests(unittest.TestCase):
     clientProto = None
 
 
-    def _cleanUpSockets(self):
+    def tearDown(self):
         if self.serverProto.transport is not None:
             self.serverProto.transport.loseConnection()
         if self.clientProto.transport is not None:
             self.clientProto.transport.loseConnection()
 
-        d = defer.Deferred()
-        lc = None
-
-        def checkClosed():
-            if (not self.serverProto.transport.connected and
-                not self.clientProto.transport.connected):
-                d.callback(None)
-                lc.stop()
-
-        lc = task.LoopingCall(checkClosed)
-        lc.start(0)
-        return d
+        return self._waitUntilAllDisconnected(
+            reactor, [self.serverProto, self.clientProto])
 
 
     def test_openSSLBuffering(self):
         serverProto = self.serverProto = SingleLineServerProtocol()
         clientProto = self.clientProto = RecordingClientProtocol()
-
-        self.addCleanup(self._cleanUpSockets)
 
         server = protocol.ServerFactory()
         client = self.client = protocol.ClientFactory()
