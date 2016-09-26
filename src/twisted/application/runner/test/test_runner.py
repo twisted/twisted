@@ -17,6 +17,7 @@ from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
+from .._pidfile import PIDFile
 from .._runner import Runner, RunnerOptions
 
 import twisted.trial.unittest
@@ -42,7 +43,6 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
         self.pid = 1337
         self.pidFileContent = u"{}\n".format(self.pid).encode("utf-8")
-        self.patch(_runner, "getpid", lambda: self.pid)
 
         # Patch globalLogBeginner so that we aren't trying to install multiple
         # global log observers.
@@ -71,11 +71,9 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
         methodNames = [
             "killIfRequested",
-            "writePIDFile",
             "startLogging",
             "startReactor",
             "reactorExited",
-            "removePIDFile",
         ]
 
         for name in methodNames:
@@ -104,7 +102,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
     def test_killRequestedWithoutPIDFile(self):
         """
         L{Runner.killIfRequested} with L{RunnerOptions.kill} but without
-        L{RunnerOptions.pidFilePath}, exits with L{ExitStatus.EX_USAGE} and
+        L{RunnerOptions.pidFile}, exits with L{ExitStatus.EX_USAGE} and
         the expected message, and also doesn't indiscriminately murder anyone.
         """
         runner = Runner({RunnerOptions.kill: True})
@@ -118,13 +116,13 @@ class CommandTests(twisted.trial.unittest.TestCase):
     def test_killRequestedWithPIDFile(self):
         """
         L{Runner.killIfRequested} with both L{RunnerOptions.kill} and
-        L{RunnerOptions.pidFilePath} performs a targeted killing of the
+        L{RunnerOptions.pidFile} performs a targeted killing of the
         appropriate process.
         """
-        pidFilePath = DummyFilePath(self.pidFileContent)
+        pidFile = PIDFile(DummyFilePath(self.pidFileContent))
         runner = Runner({
             RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
+            RunnerOptions.pidFile: pidFile,
         })
         runner.killIfRequested()
 
@@ -136,13 +134,13 @@ class CommandTests(twisted.trial.unittest.TestCase):
     def test_killRequestedWithPIDFileCantOpen(self):
         """
         L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFilePath} that it can't read value exits with
+        L{RunnerOptions.pidFile} that it can't read value exits with
         L{ExitStatus.EX_IOERR}.
         """
-        pidFilePath = DummyFilePath(None)
+        pidFile = PIDFile(DummyFilePath(None))
         runner = Runner({
             RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
+            RunnerOptions.pidFile: pidFile,
         })
         runner.killIfRequested()
 
@@ -153,13 +151,13 @@ class CommandTests(twisted.trial.unittest.TestCase):
     def test_killRequestedWithPIDFileEmpty(self):
         """
         L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFilePath} containing no value exits with
+        L{RunnerOptions.pidFile} containing no value exits with
         L{ExitStatus.EX_DATAERR}.
         """
-        pidFilePath = DummyFilePath(b"")
+        pidFile = PIDFile(DummyFilePath(b""))
         runner = Runner({
             RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
+            RunnerOptions.pidFile: pidFile,
         })
         runner.killIfRequested()
 
@@ -170,42 +168,18 @@ class CommandTests(twisted.trial.unittest.TestCase):
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
         L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFilePath} containing a non-integer value exits
-        with L{ExitStatus.EX_DATAERR}.
+        L{RunnerOptions.pidFile} containing a non-integer value exits with
+        L{ExitStatus.EX_DATAERR}.
         """
-        pidFilePath = DummyFilePath(b"** totally not a number, dude **")
+        pidFile = PIDFile(DummyFilePath(b"** totally not a number, dude **"))
         runner = Runner({
             RunnerOptions.kill: True,
-            RunnerOptions.pidFilePath: pidFilePath,
+            RunnerOptions.pidFile: pidFile,
         })
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
         self.assertEqual(self.exit.message, "Invalid PID file.")
-
-
-    def test_writePIDFileWithPIDFile(self):
-        """
-        L{Runner.writePIDFile} with L{RunnerOptions.pidFilePath} writes a PID
-        file.
-        """
-        pidFilePath = DummyFilePath()
-        runner = Runner({RunnerOptions.pidFilePath: pidFilePath})
-        runner.writePIDFile()
-
-        self.assertEqual(pidFilePath.getContent(), self.pidFileContent)
-
-
-    def test_removePIDFileWithPIDFile(self):
-        """
-        L{Runner.removePIDFile} with L{RunnerOptions.pidFilePath} removes the
-        PID file.
-        """
-        pidFilePath = DummyFilePath()
-        runner = Runner({RunnerOptions.pidFilePath: pidFilePath})
-        runner.removePIDFile()
-
-        self.assertFalse(pidFilePath.exists())
 
 
     def test_startLogging(self):

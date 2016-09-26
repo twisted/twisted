@@ -6,9 +6,10 @@
 Twisted application runner.
 """
 
+from contextlib import contextmanager
 from sys import stderr
 from signal import SIGTERM
-from os import getpid, kill
+from os import kill
 
 from constantly import Names, NamedConstant
 
@@ -52,12 +53,18 @@ class Runner(object):
 
         Additional steps may be added over time, but the order won't change.
         """
+        pidFile = self.options.get(RunnerOptions.pidFile)
+        if pidFile is None:
+            @contextmanager
+            def noneContext():
+                yield None
+            pidFile = noneContext()
+
         self.killIfRequested()
-        self.writePIDFile()
-        self.startLogging()
-        self.startReactor()
-        self.reactorExited()
-        self.removePIDFile()
+        with pidFile:
+            self.startLogging()
+            self.startReactor()
+            self.reactorExited()
 
 
     def killIfRequested(self):
@@ -67,22 +74,18 @@ class Runner(object):
         This requires that L{RunnerOptions.pidFilePath} also be specified;
         exit with L{ExitStatus.EX_USAGE} if kill is requested with no PID file.
         """
-        pidFilePath = self.options.get(RunnerOptions.pidFilePath)
+        pidFile = self.options.get(RunnerOptions.pidFile)
 
         if self.options.get(RunnerOptions.kill, False):
-            if pidFilePath is None:
+            if pidFile is None:
                 exit(ExitStatus.EX_USAGE, "No PID file specified")
                 return  # When testing, patched exit doesn't exit
             else:
-                pid = ""
                 try:
-                    for pid in pidFilePath.open():
-                        break
+                    pid = pidFile.read()
                 except EnvironmentError:
                     exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
                     return  # When testing, patched exit doesn't exit
-                try:
-                    pid = int(pid)
                 except ValueError:
                     exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
                     return  # When testing, patched exit doesn't exit
@@ -94,27 +97,6 @@ class Runner(object):
 
             exit(ExitStatus.EX_OK)
             return  # When testing, patched exit doesn't exit
-
-
-    def writePIDFile(self):
-        """
-        Write a PID file for this application if L{RunnerOptions.pidFilePath}
-        is specified in C{self.options}.
-        """
-        pidFilePath = self.options.get(RunnerOptions.pidFilePath)
-        if pidFilePath is not None:
-            pid = getpid()
-            pidFilePath.setContent(u"{}\n".format(pid).encode("utf-8"))
-
-
-    def removePIDFile(self):
-        """
-        Remove the PID file for this application if L{RunnerOptions.pidFilePath}
-        is specified in C{self.options}.
-        """
-        pidFilePath = self.options.get(RunnerOptions.pidFilePath)
-        if pidFilePath is not None:
-            pidFilePath.remove()
 
 
     def startLogging(self):
@@ -196,9 +178,9 @@ class RunnerOptions(Names):
         Corresponding value: L{IReactorCore}.
     @type reactor: L{NamedConstant}
 
-    @cvar pidFilePath: The path to the PID file.
-        Corresponding value: L{IFilePath}.
-    @type pidFilePath: L{NamedConstant}
+    @cvar pidFile: The path to the PID file.
+        Corresponding value: L{PIDFile}.
+    @type pidFile: L{NamedConstant}
 
     @cvar kill: Whether this runner should kill an existing running instance.
         Corresponding value: L{bool}.
@@ -231,7 +213,7 @@ class RunnerOptions(Names):
     """
 
     reactor                = NamedConstant()
-    pidFilePath            = NamedConstant()
+    pidFile                = NamedConstant()
     kill                   = NamedConstant()
     defaultLogLevel        = NamedConstant()
     logFile                = NamedConstant()
