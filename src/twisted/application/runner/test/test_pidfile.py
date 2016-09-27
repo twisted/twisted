@@ -7,10 +7,12 @@ Tests for L{twisted.application.runner._pidfile}.
 
 import errno
 from os import getpid, name as SYSTEM_NAME
+from io import BytesIO
+
+from twisted.python.filepath import FilePath
 
 from ...runner import _pidfile
 from .._pidfile import PIDFile
-from .test_runner import DummyFilePath
 
 import twisted.trial.unittest
 from twisted.trial.unittest import SkipTest
@@ -221,3 +223,37 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
             self.assertEqual(pidFile.read(), getpid())
 
         self.assertFalse(pidFile.filePath.exists())
+
+
+
+class DummyFilePath(FilePath):
+    """
+    Stub for L{twisted.python.filepath.FilePath} which returns a stream
+    containing the given data when opened.
+    """
+
+    def __init__(self, content=None):
+        self.setContent(content)
+
+
+    def open(self, mode="r"):
+        if not self._exits:
+            raise OSError(errno.ENOENT, "No such file or directory")
+        return BytesIO(self._content)
+
+
+    def setContent(self, content):
+        self._exits = content is not None
+        self._content = content
+
+
+    def getContent(self):
+        return self._content
+
+
+    def remove(self):
+        self.setContent(None)
+
+
+    def exists(self):
+        return self._exits

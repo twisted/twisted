@@ -8,7 +8,6 @@ Tests for L{twisted.application.runner._runner}.
 from signal import SIGTERM
 from io import BytesIO
 
-from twisted.python.filepath import FilePath
 from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
     FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
@@ -19,6 +18,7 @@ from ...runner import _runner
 from .._exit import ExitStatus
 from .._pidfile import PIDFile
 from .._runner import Runner, RunnerOptions
+from .test_pidfile import DummyFilePath
 
 import twisted.trial.unittest
 
@@ -372,40 +372,6 @@ class DummyKill(object):
 
     def __call__(self, pid, sig):
         self.calls.append((pid, sig))
-
-
-
-class DummyFilePath(FilePath):
-    """
-    Stub for L{twisted.python.filepath.FilePath} which returns a stream
-    containing the given data when opened.
-    """
-
-    def __init__(self, content=None):
-        self.setContent(content)
-
-
-    def open(self, mode="r"):
-        if not self._exits:
-            raise EnvironmentError()
-        return BytesIO(self._content)
-
-
-    def setContent(self, content):
-        self._exits = content is not None
-        self._content = content
-
-
-    def getContent(self):
-        return self._content
-
-
-    def remove(self):
-        self.setContent(None)
-
-
-    def exists(self):
-        return self._exits
 
 
 
