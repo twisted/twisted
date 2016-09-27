@@ -145,6 +145,47 @@ class PIDFile(object):
 
 
 
+class NonePIDFile(PIDFile):
+    """
+    PID file implementation that does nothing.
+
+    This is meant to be used as a "active None" object in place of a PID file
+    when no PID file is desired.
+    """
+
+    def __init__(self):
+        pass
+
+
+    def read(self):
+        return None
+
+
+    def write(self, pid=None):
+        raise OSError(errno.EPERM, "Operation not permitted")
+
+
+    def remove(self):
+        raise OSError(errno.ENOENT, "No such file or directory")
+
+
+    def isRunning(self):
+        return False
+
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+
+
+nonePIDFile = NonePIDFile()
+
+
+
 class AlreadyRunningError(Exception):
     """
     Process is already running.

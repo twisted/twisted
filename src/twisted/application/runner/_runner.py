@@ -6,7 +6,6 @@
 Twisted application runner.
 """
 
-from contextlib import contextmanager
 from sys import stderr
 from signal import SIGTERM
 from os import kill
@@ -20,6 +19,7 @@ from twisted.logger import (
 )
 from twisted.internet import default as defaultReactor
 from ._exit import exit, ExitStatus
+from ._pidfile import nonePIDFile
 
 
 
@@ -43,12 +43,7 @@ class Runner(object):
         """
         Run this command.
         """
-        pidFile = self.options.get(RunnerOptions.pidFile)
-        if pidFile is None:
-            @contextmanager
-            def noneContext():
-                yield None
-            pidFile = noneContext()
+        pidFile = self.options.get(RunnerOptions.pidFile, nonePIDFile)
 
         self.killIfRequested()
         with pidFile:
