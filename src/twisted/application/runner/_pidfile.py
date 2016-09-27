@@ -53,12 +53,21 @@ class PIDFile(object):
         """
         Read the process ID stored in this PID file.
 
+        @return: The contained process ID, or C{None} if the PID file does not
+            exist.
+        @rtype: L{int}
+
         @raise EnvironmentError: If this PID file cannot be read.
         @raise ValueError: If this PID file's content is invalid.
         """
         pidString = b""
-        for pidString in self.filePath.open():
-            break
+        try:
+            for pidString in self.filePath.open():
+                break
+        except OSError as e:
+            if e.errno == errno.ENOENT:  # No such file
+                return None
+            raise
 
         return int(pidString)
 
@@ -70,6 +79,8 @@ class PIDFile(object):
         @param pid: A PID to store.  If C{None}, store the currently running
             process ID.
         @type pid: L{int}
+
+        @raise EnvironmentError: If this PID file cannot be written.
         """
         if pid is None:
             pid = getpid()
@@ -82,6 +93,8 @@ class PIDFile(object):
     def remove(self):
         """
         Remove this PID file.
+
+        @raise EnvironmentError: If this PID file cannot be removed.
         """
         self.filePath.remove()
 
@@ -98,12 +111,9 @@ class PIDFile(object):
         @raise EnvironmentError: If this PID file cannot be read.
         @raise ValueError: If this PID file's content is invalid.
         """
-        try:
-            pid = self.read()
-        except OSError as e:
-            if e.errno == errno.ENOENT:  # No such file
-                return False
-            raise
+        pid = self.read()
+        if pid is None:
+            return False
 
         try:
             kill(pid, 0)

@@ -7,6 +7,7 @@ Tests for L{twisted.application.runner._runner}.
 
 from signal import SIGTERM
 from io import BytesIO
+import errno
 
 from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
@@ -131,13 +132,19 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertIdentical(self.exit.message, None)
 
 
-    def test_killRequestedWithPIDFileCantOpen(self):
+    def test_killRequestedWithPIDFileCantRead(self):
         """
         L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} that it can't read value exits with
+        L{RunnerOptions.pidFile} that it can't read exits with
         L{ExitStatus.EX_IOERR}.
         """
         pidFile = PIDFile(DummyFilePath(None))
+
+        def read():
+            raise OSError(errno.EACCES, "Permission denied")
+
+        pidFile.read = read
+
         runner = Runner({
             RunnerOptions.kill: True,
             RunnerOptions.pidFile: pidFile,
