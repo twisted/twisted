@@ -98,7 +98,12 @@ class PIDFile(object):
         @raise EnvironmentError: If this PID file cannot be read.
         @raise ValueError: If this PID file's content is invalid.
         """
-        pid = self.read()
+        try:
+            pid = self.read()
+        except OSError as e:
+            if e.errno == errno.ENOENT:  # No such file
+                return False
+            raise
 
         try:
             kill(pid, 0)

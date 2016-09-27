@@ -210,6 +210,15 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertRaises(OSError, pidFile.isRunning)
 
 
+    def test_isRunningNoPIDFile(self):
+        """
+        L{PIDFile.isRunning} returns false if the PID file doesn't exist.
+        """
+        pidFile = PIDFile(DummyFilePath())
+
+        self.assertFalse(pidFile.isRunning())
+
+
     def test_contextManager(self):
         """
         When used as a context manager, a L{PIDFile} will store the current pid
