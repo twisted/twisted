@@ -81,6 +81,24 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.exited)
 
 
+    def test_runUsesPIDFile(self):
+        """
+        L{Runner.run} uses the provided PID file.
+        """
+        runner = DummyRunner({})
+        runner.run()
+
+        self.assertEqual(
+            runner.calledMethods,
+            [
+                "killIfRequested",
+                "startLogging",
+                "startReactor",
+                "reactorExited",
+            ]
+        )
+
+
     def test_runAlreadyRunning(self):
         """
         L{Runner.run} exits with L{ExitStatus.EX_USAGE} and the expected
@@ -383,6 +401,29 @@ class DummyRunner(Runner):
 
     def reactorExited(self):
         self.calledMethods.append("reactorExited")
+
+
+
+class DummyPIDFile(NonePIDFile):
+    """
+    Stub for L{PIDFile}.
+
+    Tracks context manager entry/exit without doing anything.
+    """
+    def __init__(self):
+        NonePIDFile.__init__(self)
+
+        self.entered = False
+        self.exited  = False
+
+
+    def __enter__(self):
+        self.entered = True
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.exited  = True
 
 
 
