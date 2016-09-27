@@ -68,23 +68,6 @@ class CommandTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} calls the expected methods in order.
         """
-        pidFile = DummyPIDFile()
-
-        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
-
-        self.assertFalse(pidFile.entered)
-        self.assertFalse(pidFile.exited)
-
-        runner.run()
-
-        self.assertTrue(pidFile.entered)
-        self.assertTrue(pidFile.exited)
-
-
-    def test_runUsesPIDFile(self):
-        """
-        L{Runner.run} uses the provided PID file.
-        """
         runner = DummyRunner({})
         runner.run()
 
@@ -97,6 +80,23 @@ class CommandTests(twisted.trial.unittest.TestCase):
                 "reactorExited",
             ]
         )
+
+
+    def test_runUsesPIDFile(self):
+        """
+        L{Runner.run} uses the provided PID file.
+        """
+        pidFile = DummyPIDFile()
+
+        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
+
+        self.assertFalse(pidFile.entered)
+        self.assertFalse(pidFile.exited)
+
+        runner.run()
+
+        self.assertTrue(pidFile.entered)
+        self.assertTrue(pidFile.exited)
 
 
     def test_runAlreadyRunning(self):
