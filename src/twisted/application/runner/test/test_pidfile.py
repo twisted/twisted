@@ -12,7 +12,7 @@ from io import BytesIO
 from twisted.python.filepath import FilePath
 
 from ...runner import _pidfile
-from .._pidfile import PIDFile
+from .._pidfile import PIDFile, AlreadyRunningError
 
 import twisted.trial.unittest
 from twisted.trial.unittest import SkipTest
@@ -232,6 +232,29 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
             self.assertEqual(pidFile.read(), getpid())
 
         self.assertFalse(pidFile.filePath.exists())
+
+
+    def test_contextManagerAlreadyRunning(self):
+        """
+        When used as a context manager, a L{PIDFile} will raise
+        L{AlreadyRunningError} if the there is already a running process with
+        the contained PID.
+        """
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1337)
+
+        def kill(pid, signal):
+            return  # Don't actually kill anything
+
+        self.patch(_pidfile, "kill", kill)
+
+        self.assertTrue(pidFile.isRunning())
+
+        def useContext():
+            with pidFile:
+                pass
+
+        self.assertRaises(AlreadyRunningError, useContext)
 
 
 

@@ -121,9 +121,31 @@ class PIDFile(object):
 
 
     def __enter__(self):
+        """
+        Enter a context using this PIDFile.
+
+        Writes the PID file with the PID of the running process.
+
+        @raise AlreadyRunningError: A process corresponding to the PID in this
+            PID file is already running.
+        """
+        if self.isRunning():
+            raise AlreadyRunningError()
         self.write()
         return self
 
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Exit a context using this PIDFile.
+
+        Removes the PID file.
+        """
         self.remove()
+
+
+
+class AlreadyRunningError(Exception):
+    """
+    Process is already running.
+    """
