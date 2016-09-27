@@ -17,7 +17,7 @@ from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
-from .._pidfile import PIDFile
+from .._pidfile import PIDFile, NonePIDFile
 from .._runner import Runner, RunnerOptions
 from .test_pidfile import DummyFilePath
 
@@ -64,28 +64,37 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.patch(_runner, "globalLogBeginner", self.globalLogBeginner)
 
 
-    def test_run(self):
+    def test_runInOrder(self):
         """
-        L{Runner.run} calls the documented methods in order.
+        L{Runner.run} calls the expected methods in order.
         """
-        called = []
+        pidFile = DummyPIDFile()
 
-        methodNames = [
-            "killIfRequested",
-            "startLogging",
-            "startReactor",
-            "reactorExited",
-        ]
+        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
 
-        for name in methodNames:
-            self.patch(
-                Runner, name, lambda self, name=name: called.append(name)
-            )
+        self.assertFalse(pidFile.entered)
+        self.assertFalse(pidFile.exited)
 
-        runner = Runner({})
         runner.run()
 
-        self.assertEqual(called, methodNames)
+        self.assertTrue(pidFile.entered)
+        self.assertTrue(pidFile.exited)
+
+
+    def test_runAlreadyRunning(self):
+        """
+        L{Runner.run} exits with L{ExitStatus.EX_USAGE} and the expected
+        message if a process is already running that corresponds to the given
+        PID file.
+        """
+        pidFile = PIDFile(DummyFilePath(self.pidFileContent))
+        pidFile.isRunning = lambda: True
+
+        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
+        runner.run()
+
+        self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
+        self.assertEqual(self.exit.message, "Already running.")
 
 
     def test_killNotRequested(self):
@@ -111,7 +120,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(self.kill.calls, [])
         self.assertEqual(self.exit.status, ExitStatus.EX_USAGE)
-        self.assertEqual(self.exit.message, "No PID file specified")
+        self.assertEqual(self.exit.message, "No PID file specified.")
 
 
     def test_killRequestedWithPIDFile(self):
@@ -345,6 +354,35 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(len(optionsSeen), 1)
         self.assertIdentical(optionsSeen[0], options)
+
+
+
+class DummyRunner(Runner):
+    """
+    Stub for L{Runner}.
+
+    Keep track of calls to some methods without actually doing anything.
+    """
+    def __init__(self, *args, **kwargs):
+        Runner.__init__(self, *args, **kwargs)
+
+        self.calledMethods = []
+
+
+    def killIfRequested(self):
+        self.calledMethods.append("killIfRequested")
+
+
+    def startLogging(self):
+        self.calledMethods.append("startLogging")
+
+
+    def startReactor(self):
+        self.calledMethods.append("startReactor")
+
+
+    def reactorExited(self):
+        self.calledMethods.append("reactorExited")
 
 
 

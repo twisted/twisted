@@ -19,7 +19,7 @@ from twisted.logger import (
 )
 from twisted.internet import default as defaultReactor
 from ._exit import exit, ExitStatus
-from ._pidfile import nonePIDFile
+from ._pidfile import nonePIDFile, AlreadyRunningError
 
 
 
@@ -46,10 +46,16 @@ class Runner(object):
         pidFile = self.options.get(RunnerOptions.pidFile, nonePIDFile)
 
         self.killIfRequested()
-        with pidFile:
-            self.startLogging()
-            self.startReactor()
-            self.reactorExited()
+
+        try:
+            with pidFile:
+                self.startLogging()
+                self.startReactor()
+                self.reactorExited()
+
+        except AlreadyRunningError:
+            exit(ExitStatus.EX_CONFIG, "Already running.")
+            return  # When testing, patched exit doesn't exit
 
 
     def killIfRequested(self):
@@ -63,7 +69,7 @@ class Runner(object):
 
         if self.options.get(RunnerOptions.kill, False):
             if pidFile is None:
-                exit(ExitStatus.EX_USAGE, "No PID file specified")
+                exit(ExitStatus.EX_USAGE, "No PID file specified.")
                 return  # When testing, patched exit doesn't exit
             else:
                 try:
