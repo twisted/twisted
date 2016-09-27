@@ -197,7 +197,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
     def test_isRunningUnknownErrno(self):
         """
         L{PIDFile.isRunning} re-raises L{OSError} if the attached C{errno}
-        value is not an expected one.
+        value from L{os.kill} is not an expected one.
         """
         pidFile = PIDFile(DummyFilePath())
         pidFile.write()
