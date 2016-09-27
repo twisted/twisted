@@ -62,7 +62,7 @@ class Runner(object):
         """
         Kill a running instance of this application if L{RunnerOptions.kill} is
         specified and L{True} in C{self.options}.
-        This requires that L{RunnerOptions.pidFilePath} also be specified;
+        This requires that L{RunnerOptions.pidFile} also be specified;
         exit with L{ExitStatus.EX_USAGE} if kill is requested with no PID file.
         """
         pidFile = self.options.get(RunnerOptions.pidFile)
