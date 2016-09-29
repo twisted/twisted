@@ -40,6 +40,8 @@ The Twisted sendmail application.
 def log(message, *args):
     sys.stderr.write(str(message) % args + '\n')
 
+
+
 class Options:
     """
     @type to: C{list} of C{str}
@@ -52,6 +54,8 @@ class Options:
     @ivar body: The object from which the message is to be read.
     """
 
+
+
 def getlogin():
     try:
         return os.getlogin()
@@ -60,6 +64,8 @@ def getlogin():
 
 
 _unsupportedOption = SystemExit("Unsupported option.")
+
+
 
 def parseOptions(argv):
     o = Options()
@@ -183,6 +189,8 @@ def parseOptions(argv):
     o.body = StringIO.StringIO(buffer.getvalue() + sys.stdin.read())
     return o
 
+
+
 class Configuration:
     """
     @ivar allowUIDs: A list of UIDs which are allowed to send mail.
@@ -222,6 +230,7 @@ class Configuration:
         self.domain = None
 
         self.defaultAccess = True
+
 
 
 def loadConfig(path):
@@ -286,8 +295,12 @@ def loadConfig(path):
 
     return c
 
+
+
 def success(result):
     reactor.stop()
+
+
 
 failed = None
 def failure(f):
@@ -295,10 +308,14 @@ def failure(f):
     reactor.stop()
     failed = f
 
+
+
 def sendmail(host, options, ident):
     d = smtp.sendmail(host, options.sender, options.to, options.body)
     d.addCallbacks(success, failure)
     reactor.run()
+
+
 
 def senderror(failure, options):
     recipient = [options.sender]
@@ -309,6 +326,8 @@ def senderror(failure, options):
 
     d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
+
+
 
 def deny(conf):
     uid = os.getuid()
@@ -337,6 +356,8 @@ def deny(conf):
             return True
 
     return not conf.defaultAccess
+
+
 
 def run():
     o = parseOptions(sys.argv[1:])
