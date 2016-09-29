@@ -345,7 +345,7 @@ class AttributeTests(_AttributeTestsMixin):
         self.attribute[u"unicode"]
         message = ("Calling _Attribute.__getitem__ with a unicode/str"
                    " object instead of a bytes object is deprecated"
-                   " since Twisted 16.4.1")
+                   " since Twisted 16.5.0")
         warnings = self.flushWarnings([self.test_unicodeDeprecation])
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])

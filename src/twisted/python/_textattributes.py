@@ -56,7 +56,7 @@ class _Attribute(FancyEqMixin, object):
         if isinstance(item, unicode):
             warnings.warn("Calling _Attribute.__getitem__ with a unicode/str"
                           " object instead of a bytes object is deprecated"
-                          " since Twisted 16.4.1",
+                          " since Twisted 16.5.0",
                           category=DeprecationWarning,
                           stacklevel=2)
             item = item.encode(sys.getdefaultencoding())
