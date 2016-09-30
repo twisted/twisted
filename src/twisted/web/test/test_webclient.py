@@ -347,12 +347,10 @@ class WebClientTests(unittest.TestCase):
             proto = connections.pop()
             msg("Closing %r" % (proto,))
             proto.transport.loseConnection()
-        if connections:
-            msg("Some left-over connections; this test is probably buggy.")
-        self.port.stopListening()
+        d = self.port.stopListening()
 
-        return waitUntilAllDisconnected(
-            reactor, list(self.wrapper.protocols.keys()) + [self.port])
+        return defer.DeferredList([waitUntilAllDisconnected(
+            reactor, list(self.wrapper.protocols.keys())), d])
 
 
     def getURL(self, path):
