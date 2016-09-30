@@ -849,8 +849,8 @@ def waitUntilAllDisconnected(reactor, protocols):
     the advice in
     I{https://jml.io/pages/how-to-disconnect-in-twisted-really.html} to heart.
 
-    @param reactor: The reactor to use.
-    @type reactor: L{IReactor}
+    @param reactor: The reactor to schedule the checks on.
+    @type reactor: L{IReactorTime}
 
     @param protocols: The protocols to wait for disconnecting.
     @type protocols: A L{list} of L{IProtocol}s.

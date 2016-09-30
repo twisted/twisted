@@ -18,7 +18,7 @@ from zope.interface import implementer
 # We can't import reactor at module-level because this code runs before trial
 # installs a user-specified reactor, installing the default reactor and
 # breaking reactor installation. See also #6047.
-from twisted.internet import defer, utils, task
+from twisted.internet import defer, utils
 from twisted.python import failure
 
 from twisted.trial import itrial, util
