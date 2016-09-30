@@ -2482,7 +2482,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addTimeout(10, clock)
 
-        # timeout happens before inner deferred is returned as a errback on d
+        # addTimeout is added first so that if d is timed out, d would be
+        # canceled before innerDeferred gets returned from an callback on d
         innerDeferred = defer.Deferred()
         dCallbacked = [None]
 
@@ -2493,12 +2494,13 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d.addCallback(onCallback)
         d.callback("results")
 
-        # callback happens immediately for d
+        # d is callbacked immediately, before innerDeferred is returned from
+        # the callback on d
         self.assertIsNot(None, dCallbacked[0])
         self.assertEqual(dCallbacked[0], "results")
 
         # The timeout never happens - if it did, d would have been cancelled,
-        # which would cancel innerDeferred too
+        # which would cancel innerDeferred too.
         clock.advance(15)
         self.assertNoResult(innerDeferred)
 
@@ -2506,7 +2508,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
     def test_successResultBeforeTimeoutCustom(self):
         """
         The L{defer.Deferred} callbacks with the result if it succeeds before
-        the timeout, even if a custon C{onTimeoutCancel} function is provided.
+        the timeout, even if a custom C{onTimeoutCancel} function is provided.
         No cancellation happens after the callback either, which could also
         cancel inner deferreds.
         """
@@ -2514,7 +2516,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addTimeout(10, clock, onTimeoutCancel=_overrideFunc)
 
-        # timeout happens before inner deferred is returned as a errback on d
+        # addTimeout is added first so that if d is timed out, d would be
+        # canceled before innerDeferred gets returned from an callback on d
         innerDeferred = defer.Deferred()
         dCallbacked = [None]
 
@@ -2525,7 +2528,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d.addCallback(onCallback)
         d.callback("results")
 
-        # callback happens immediately for d
+        # d is callbacked immediately, before innerDeferred is returned from
+        # the callback on d
         self.assertIsNot(None, dCallbacked[0])
         self.assertEqual(dCallbacked[0], "results")
 
@@ -2545,7 +2549,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addTimeout(10, clock)
 
-        # timeout happens before inner deferred is returned as a errback on d
+        # addTimeout is added first so that if d is timed out, d would be
+        # canceled before innerDeferred gets returned from an errback on d
         innerDeferred = defer.Deferred()
         dErrbacked = [None]
         error = ValueError("fail")
@@ -2557,7 +2562,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d.addErrback(onErrback)
         d.errback(error)
 
-        # errback happens immediately for d
+        # d is errbacked immediately, before innerDeferred is returned from the
+        # errback on d
         self.assertIsInstance(dErrbacked[0], failure.Failure)
         self.assertIs(dErrbacked[0].value, error)
 
@@ -2578,7 +2584,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addTimeout(10, clock, onTimeoutCancel=_overrideFunc)
 
-        # timeout happens before inner deferred is returned as a errback on d
+        # addTimeout is added first so that if d is timed out, d would be
+        # canceled before innerDeferred gets returned from an errback on d
         innerDeferred = defer.Deferred()
         dErrbacked = [None]
         error = ValueError("fail")
@@ -2590,7 +2597,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d.addErrback(onErrback)
         d.errback(error)
 
-        # errback happens immediately for d
+        # d is errbacked immediately, before innerDeferred is returned from the
+        # errback on d
         self.assertIsInstance(dErrbacked[0], failure.Failure)
         self.assertIs(dErrbacked[0].value, error)
 
@@ -2678,7 +2686,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addTimeout(10, clock)
 
-        # timeout happens before inner deferred is returned as a errback on d
+        # addTimeout is added first so that if d is timed out, d would be
+        # canceled before innerDeferred gets returned from an errback on d
         innerDeferred = defer.Deferred()
         dCanceled = [None]
 
@@ -2689,7 +2698,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d.addErrback(onErrback)
         d.cancel()
 
-        # cancellation happens immediately for d
+        # d is cancelled immediately, before innerDeferred is returned from the
+        # errback on d
         self.assertIsInstance(dCanceled[0], failure.Failure)
         self.assertIs(dCanceled[0].type, defer.CancelledError)
 
@@ -2710,7 +2720,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addTimeout(10, clock, onTimeoutCancel=_overrideFunc)
 
-        # timeout happens before inner deferred is returned as a errback on d
+        # addTimeout is added first so that if d is timed out, d would be
+        # canceled before innerDeferred gets returned from an errback on d
         innerDeferred = defer.Deferred()
         dCanceled = [None]
 
@@ -2721,7 +2732,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         d.addErrback(onErrback)
         d.cancel()
 
-        # cancellation happens immediately for d
+        # d is cancelled immediately, before innerDeferred is returned from the
+        # errback on d
         self.assertIsInstance(dCanceled[0], failure.Failure)
         self.assertIs(dCanceled[0].type, defer.CancelledError)
 
@@ -2742,5 +2754,168 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         self.assertNoResult(d)
 
         clock.advance(15)
+
+        self.assertEqual("OVERRIDDEN", self.successResultOf(d))
+
+    def test_errbackAddedBeforeTimeout(self):
+        """
+        An errback added before a timeout is added errbacks with a
+        L{defer.CancelledError} when the timeout fires.  If the
+        errback returns the L{defer.CancelledError}, it is translated
+        to a L{defer.TimeoutError} by the timeout implementation.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+
+        dErrbacked = [None]
+
+        def errback(f):
+            dErrbacked[0] = f
+            return f
+
+        d.addErrback(errback)
+        d.addTimeout(10, clock)
+
+        clock.advance(15)
+
+        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+
+        self.failureResultOf(d, defer.TimeoutError)
+
+
+    def test_errbackAddedBeforeTimeoutSuppressesCancellation(self):
+        """
+        An errback added before a timeout is added errbacks with a
+        L{defer.CancelledError} when the timeout fires.  If the
+        errback suppresses the L{defer.CancelledError}, the deferred
+        successfully completes.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+
+        dErrbacked = [None]
+
+        def errback(f):
+            dErrbacked[0] = f
+            f.trap(defer.CancelledError)
+
+        d.addErrback(errback)
+        d.addTimeout(10, clock)
+
+        clock.advance(15)
+
+        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+
+        self.successResultOf(d)
+
+
+    def test_errbackAddedBeforeTimeoutCustom(self):
+        """
+        An errback added before a timeout is added with a custom
+        timeout function errbacks with a L{defer.CancelledError} when
+        the timeout fires.  The timeout function runs if the errback
+        returns the L{defer.CancelledError}.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+
+        dErrbacked = [None]
+
+        def errback(f):
+            dErrbacked[0] = f
+            return f
+
+        d.addErrback(errback)
+        d.addTimeout(10, clock, _overrideFunc)
+
+        clock.advance(15)
+
+        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+
+        self.assertEqual("OVERRIDDEN", self.successResultOf(d))
+
+
+    def test_errbackAddedBeforeTimeoutSuppressesCancellationCustom(self):
+        """
+        An errback added before a timeout is added with a custom
+        timeout function errbacks with a L{defer.CancelledError} when
+        the timeout fires.  The timeout function runs if the errback
+        suppresses the L{defer.CancelledError}.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+
+        dErrbacked = [None]
+
+        def errback(f):
+            dErrbacked[0] = f
+
+        d.addErrback(errback)
+        d.addTimeout(10, clock, _overrideFunc)
+
+        clock.advance(15)
+
+        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+
+        self.assertEqual("OVERRIDDEN", self.successResultOf(d))
+
+
+    def test_callbackAddedToCancelerBeforeTimeout(self):
+        """
+        Given a deferred with a cancellation function that resumes the
+        callback chain, a callback that is added to the deferred
+        before a timeout is added to runs when the timeout fires.  The
+        deferred completes successfully, without a
+        L{defer.TimeoutError}.
+        """
+        clock = Clock()
+        success = "success"
+        d = defer.Deferred(lambda d: d.callback(success))
+
+        dCallbacked = [None]
+
+        def callback(value):
+            dCallbacked[0] = value
+            return value
+
+        d.addCallback(callback)
+        d.addTimeout(10, clock)
+
+        clock.advance(15)
+
+        self.assertEqual(dCallbacked[0], success)
+
+        self.assertIs(success, self.successResultOf(d))
+
+
+    def test_callbackAddedToCancelerBeforeTimeoutCustom(self):
+        """
+        Given a deferred with a cancellation function that resumes the
+        callback chain, a callback that is added to the deferred
+        before a timeout is added to runs when the timeout fires.  The
+        deferred completes successfully, without a
+        L{defer.TimeoutError}.  The timeout's custom timeout function
+        also runs.
+        """
+        clock = Clock()
+        success = "success"
+        d = defer.Deferred(lambda d: d.callback(success))
+
+        dCallbacked = [None]
+
+        def callback(value):
+            dCallbacked[0] = value
+            return value
+
+        d.addCallback(callback)
+        d.addTimeout(10, clock, onTimeoutCancel=_overrideFunc)
+
+        clock.advance(15)
+
+        self.assertEqual(dCallbacked[0], success)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
