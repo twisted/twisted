@@ -24,7 +24,8 @@ from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
-from twisted.test.proto_helpers import StringTransport
+from twisted.test.proto_helpers import (
+    StringTransport, waitUntilAllDisconnected)
 
 try:
     from twisted.internet import ssl
@@ -350,7 +351,7 @@ class WebClientTests(unittest.TestCase):
             msg("Some left-over connections; this test is probably buggy.")
         self.port.stopListening()
 
-        return self._waitUntilAllDisconnected(
+        return waitUntilAllDisconnected(
             reactor, list(self.wrapper.protocols.keys()) + [self.port])
 
 

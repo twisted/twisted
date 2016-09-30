@@ -14,6 +14,7 @@ from twisted.protocols import basic
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.test.proto_helpers import waitUntilAllDisconnected
 
 import os, errno
 
@@ -460,7 +461,7 @@ class BufferingTests(unittest.TestCase):
         if self.clientProto.transport is not None:
             self.clientProto.transport.loseConnection()
 
-        return self._waitUntilAllDisconnected(
+        return waitUntilAllDisconnected(
             reactor, [self.serverProto, self.clientProto])
 
 

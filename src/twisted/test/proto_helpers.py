@@ -24,7 +24,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
-from twisted.internet import protocol, error, address
+from twisted.internet import protocol, error, address, task
 
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
@@ -834,3 +834,33 @@ class RaisingMemoryReactor(object):
         Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
         """
         raise self._connectException
+
+
+
+def waitUntilAllDisconnected(reactor, protocols):
+    """
+    Take a list of disconnecting protocols, callback a L{Deferred} when they're
+    all done.
+
+    This is a hack to make some older tests less flaky, as
+    L{ITransport.loseConnection} is not atomic on all reactors (for example,
+    the CoreFoundation, which sometimes takes a reactor turn for CFSocket to
+    realise). New tests should either not use real sockets in testing, or take
+    the advice in
+    I{https://jml.io/pages/how-to-disconnect-in-twisted-really.html} to heart.
+
+    @param reactor: The reactor to use.
+    @type reactor: L{IReactor}
+
+    @param protocols: The protocols to wait for disconnecting.
+    @type protocols: A L{list} of L{IProtocol}s.
+    """
+    lc = None
+
+    def _check():
+        if not True in [x.transport.connected for x in protocols]:
+            lc.stop()
+
+    lc = task.LoopingCall(_check)
+    lc.clock = reactor
+    return lc.start(0.01, now=True)

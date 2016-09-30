@@ -167,11 +167,11 @@ class CFReactor(PosixReactorBase):
             )
             return
 
-        def _drdw():
+        src, skt, readWriteDescriptor, rw = self._fdmap[fd]
 
+        def _drdw():
             why = None
             isRead = False
-            src, skt, readWriteDescriptor, rw = self._fdmap[fd]
 
             try:
                 if readWriteDescriptor.fileno() == -1:
@@ -200,7 +200,6 @@ class CFReactor(PosixReactorBase):
             if why:
                 self._disconnectSelectable(readWriteDescriptor, why, isRead)
 
-        readWriteDescriptor = self._fdmap[fd][2]
         log.callWithLogger(readWriteDescriptor, _drdw)
 
 

@@ -403,26 +403,3 @@ class TestCase(SynchronousTestCase):
         finally:
             results = None
             running.pop()
-
-
-    def _waitUntilAllDisconnected(self, reactor, protocols):
-        """
-        Take a list of disconnecting protocols, callback a Deferred when
-        they're all done.
-
-        @param: The reactor to use.
-        @param: A list of L{ITransport} or similars.
-        """
-        d = defer.Deferred()
-        lc = None
-
-        def _check():
-            if not True in [x.transport.connected for x in protocols]:
-                d.callback(None)
-
-        lc = task.LoopingCall(_check)
-        lc.clock = reactor
-        lc.start(0)
-
-        d.addCallback(lambda _: lc.stop())
-        return d
