@@ -18,7 +18,6 @@ notPortedModules = [
     "twisted.conch.test.test_cftp",
     "twisted.conch.test.test_ckeygen",
     "twisted.conch.test.test_conch",
-    "twisted.conch.test.test_helper",
     "twisted.conch.test.test_manhole",
     "twisted.conch.test.test_tap",
     "twisted.conch.ttymodes",
