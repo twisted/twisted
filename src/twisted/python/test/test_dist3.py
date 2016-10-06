@@ -12,7 +12,7 @@ import twisted
 
 from twisted.trial.unittest import TestCase
 from twisted.python.compat import _PY3
-from twisted.python._dist3 import notPortedModules
+from twisted.python._setup import notPortedModules
 
 
 class ModulesToInstallTests(TestCase):
