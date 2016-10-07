@@ -1017,6 +1017,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
 
 
     def test_signAndVerifyDSA(self):
@@ -1027,6 +1028,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
 
 
     def test_signAndVerifyEC(self):
@@ -1044,8 +1046,11 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         signature521 = key521.sign(data)
 
         self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
         self.assertTrue(key384.public().verify(signature384, data))
+        self.assertTrue(key384.verify(signature384, data))
         self.assertTrue(key521.public().verify(signature521, data))
+        self.assertTrue(key521.verify(signature521, data))
 
 
     def test_verifyRSA(self):
