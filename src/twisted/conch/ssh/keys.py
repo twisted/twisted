@@ -956,6 +956,7 @@ class Key(object):
         'RSA', 'DSA' or 'EC'.
 
         @rtype: L{str}
+        @raises RuntimeError: If the object type is unknown.
         """
         if isinstance(
                 self._keyObject, (rsa.RSAPublicKey, rsa.RSAPrivateKey)):
@@ -1090,7 +1091,7 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-        type = self.type() #takes care of bad key type.
+        type = self.type()
         data = self.data()
         if type == 'RSA':
             return (common.NS(b'ssh-rsa') + common.MP(data['e']) +
@@ -1136,7 +1137,7 @@ class Key(object):
 
             identifier is the NIST standard curve name.
         """
-        type = self.type() #takes care of bad key type.
+        type = self.type()
         data = self.data()
         if type == 'RSA':
             return (common.NS(b'ssh-rsa') + common.MP(data['n']) +
@@ -1341,7 +1342,7 @@ class Key(object):
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
-        elif keyType == 'EC':
+        elif keyType == 'EC': # pragma: no branch
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1377,7 +1378,7 @@ class Key(object):
             signatureType, signature = common.getNS(signature)
         if signatureType != self.sshType():
             return False
-        keyType = self.type() #takes care of bad key type
+        keyType = self.type()
         if keyType == 'RSA':
             k = self._keyObject
             if not self.isPublic():
@@ -1398,10 +1399,10 @@ class Key(object):
             verifier = k.verifier(
                 signature, hashes.SHA1())
 
-        elif keyType == 'EC':
+        elif keyType == 'EC': # pragma: no branch
             k = self._keyObject
             if not self.isPublic():
-                k=k.public_key()
+                k = k.public_key()
             keySize = self.size()
             if keySize <= 256: # Hash size depends on key size
                 hashSize = hashes.SHA256()

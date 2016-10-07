@@ -208,7 +208,7 @@ class KeyTests(unittest.TestCase):
 
     def test_size(self):
         """
-        The size() method returns the size of key object in bits.
+        The L{keys.Key.size} method returns the size of key object in bits.
         """
         self.assertEqual(keys.Key(self.rsaObj).size(), 768)
         self.assertEqual(keys.Key(self.dsaObj).size(), 1024)
@@ -614,7 +614,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_dataError(self):
         """
-        The data() method raises RuntimeError for bad keys.
+        The L{keys.Key.data} method raises RuntimeError for bad keys.
         """
         badKey = keys.Key(b'')
         self.assertRaises(RuntimeError, badKey.data)
