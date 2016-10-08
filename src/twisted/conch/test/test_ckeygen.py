@@ -396,7 +396,7 @@ class KeyGenTests(TestCase):
         key.
         """
         filename = self.mktemp()
-        FilePath(filename).setContent('foobar')
+        FilePath(filename).setContent(b'foobar')
         error = self.assertRaises(
             SystemExit, changePassPhrase, {'filename': filename})
         self.assertEqual(
