@@ -10,7 +10,7 @@ import sys
 
 from io import BytesIO, StringIO
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import unicode, _PY3
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
@@ -254,8 +254,11 @@ class KeyGenTests(TestCase):
         pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh)
         displayPublicKey({'filename': filename})
+        displayed = self.stdout.getvalue().strip('\n')
+        if isinstance(displayed, unicode):
+            displayed = displayed.encode("ascii")
         self.assertEqual(
-            self.stdout.getvalue().strip('\n'),
+            displayed,
             pubKey.toString('openssh'))
 
 
@@ -268,8 +271,11 @@ class KeyGenTests(TestCase):
         pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         displayPublicKey({'filename': filename, 'pass': 'encrypted'})
+        displayed = self.stdout.getvalue().strip('\n')
+        if isinstance(displayed, unicode):
+            displayed = displayed.encode("ascii")
         self.assertEqual(
-            self.stdout.getvalue().strip('\n'),
+            displayed,
             pubKey.toString('openssh'))
 
 
@@ -283,8 +289,11 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         self.patch(getpass, 'getpass', lambda x: 'encrypted')
         displayPublicKey({'filename': filename})
+        displayed = self.stdout.getvalue().strip('\n')
+        if isinstance(displayed, unicode):
+            displayed = displayed.encode("ascii")
         self.assertEqual(
-            self.stdout.getvalue().strip('\n'),
+            displayed,
             pubKey.toString('openssh'))
 
 

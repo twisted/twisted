@@ -19,7 +19,7 @@ if getpass.getpass == getpass.unix_getpass:
 
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-from twisted.python.compat import raw_input
+from twisted.python.compat import raw_input, _PY3
 
 
 
@@ -203,7 +203,10 @@ def displayPublicKey(options):
             options['pass'] = getpass.getpass('Enter passphrase: ')
         key = keys.Key.fromFile(
             options['filename'], passphrase = options['pass'])
-    print(key.public().toString('openssh'))
+    displayKey = key.public().toString('openssh')
+    if _PY3:
+        displayKey = displayKey.decode("ascii")
+    print(displayKey)
 
 
 
