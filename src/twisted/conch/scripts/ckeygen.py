@@ -19,6 +19,7 @@ if getpass.getpass == getpass.unix_getpass:
 
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
+from twisted.python.compat import raw_input
 
 
 
