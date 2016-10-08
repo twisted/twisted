@@ -7,8 +7,10 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 
 import getpass
 import sys
-from StringIO import StringIO
 
+from io import BytesIO, StringIO
+
+from twisted.python.compat import _PY3
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
@@ -52,10 +54,12 @@ class KeyGenTests(TestCase):
     """
     def setUp(self):
         """
-        Patch C{sys.stdout} with a L{StringIO} instance to tests can make
-        assertions about what's printed.
+        Patch C{sys.stdout} so tests can make assertions about what's printed.
         """
-        self.stdout = StringIO()
+        if _PY3:
+            self.stdout = StringIO()
+        else:
+            self.stdout = BytesIO()
         self.patch(sys, 'stdout', self.stdout)
 
 
