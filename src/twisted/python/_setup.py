@@ -121,6 +121,7 @@ _EXTRAS_REQUIRE = {
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
+    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
@@ -128,7 +129,6 @@ _CONSOLE_SCRIPTS = [
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [
     "cftp = twisted.conch.scripts.cftp:run",
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "conch = twisted.conch.scripts.conch:run",
     "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
