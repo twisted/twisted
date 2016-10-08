@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-This module containts the trial distributed runner, the management class
+This module contains the trial distributed runner, the management class
 responsible for coordinating all of trial's behavior at the highest level.
 
 @since: 12.3
