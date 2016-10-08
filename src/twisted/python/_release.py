@@ -226,10 +226,7 @@ def getNextVersion(version, prerelease, patch, today):
     """
     micro = 0
     major = today.year - VERSION_OFFSET
-    if major != version.major:
-        minor = 0
-    else:
-        minor = version.minor + 1
+    minor = today.month
 
     if patch:
         micro = version.micro + 1
