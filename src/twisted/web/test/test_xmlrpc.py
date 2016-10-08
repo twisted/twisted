@@ -641,7 +641,7 @@ class XMLRPCUseDateTimeTests(SerializationConfigMixin, unittest.TestCase):
 
 class XMLRPCAuthenticatedTests(XMLRPCTests):
     """
-    Test with authenticated proxy. We run this with the same inout/ouput as
+    Test with authenticated proxy. We run this with the same input/output as
     above.
     """
     user = b"username"
