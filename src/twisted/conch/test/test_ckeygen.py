@@ -42,7 +42,7 @@ def makeGetpass(*passphrases):
     passphrases = iter(passphrases)
 
     def fakeGetpass(_):
-        return passphrases.next()
+        return next(passphrases)
 
     return fakeGetpass
 
