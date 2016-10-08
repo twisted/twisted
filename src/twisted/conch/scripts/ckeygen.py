@@ -185,7 +185,7 @@ def changePassPhrase(options):
     except (keys.EncryptedKeyError, keys.BadKeyError) as e:
         sys.exit('Could not change passphrase: %s' % (e,))
 
-    with open(options['filename'], 'w') as fd:
+    with open(options['filename'], 'wb') as fd:
         fd.write(newkeydata)
 
     print('Your identification has been saved with the new passphrase.')
