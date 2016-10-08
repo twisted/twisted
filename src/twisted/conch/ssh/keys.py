@@ -143,6 +143,10 @@ class Key(object):
         @rtype: L{Key}
         @return: The loaded key.
         """
+        if isinstance(data, unicode):
+            data = data.encode("ascii")
+        if isinstance(passphrase, unicode):
+             passphrase = passphrase.encode("ascii")
         if type is None:
             type = cls._guessStringType(data)
         if type is None:

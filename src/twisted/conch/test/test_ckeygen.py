@@ -408,10 +408,13 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(b'foobar')
         error = self.assertRaises(
             SystemExit, changePassPhrase, {'filename': filename})
-        self.assertEqual(
-            "Could not change passphrase: cannot guess the type of 'foobar'",
-            str(error))
-        self.assertEqual('foobar', FilePath(filename).getContent())
+
+        if _PY3:
+            expected = "Could not change passphrase: cannot guess the type of b'foobar'"
+        else:
+            expected = "Could not change passphrase: cannot guess the type of 'foobar'"
+        self.assertEqual(expected, str(error))
+        self.assertEqual(b'foobar', FilePath(filename).getContent())
 
 
     def test_changePassphraseCreateError(self):
@@ -455,9 +458,13 @@ class KeyGenTests(TestCase):
             SystemExit, changePassPhrase,
             {'filename': filename, 'newpass': 'newencrypt'})
 
-        self.assertEqual(
-            "Could not change passphrase: "
-            "cannot guess the type of ''", str(error))
+        if _PY3:
+            expected = (
+                "Could not change passphrase: cannot guess the type of b''")
+        else:
+            expected = (
+                "Could not change passphrase: cannot guess the type of ''")
+        self.assertEqual(expected, str(error))
 
         self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())
 
