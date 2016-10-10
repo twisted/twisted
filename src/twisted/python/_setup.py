@@ -218,12 +218,12 @@ def getSetupArgs(extensions=_EXTENSIONS):
         requirements = ["zope.interface >= 3.6.0"]
 
     requirements.append("constantly >= 15.1")
-    requirements.append("incremental >= 16.9.1")
+    requirements.append("incremental >= 16.10.0")
 
     arguments.update(dict(
         packages=find_packages("src"),
         use_incremental=True,
-        setup_requires=["incremental >= 16.9.1"],
+        setup_requires=["incremental >= 16.10.0"],
         install_requires=requirements,
         entry_points={
             'console_scripts': _CONSOLE_SCRIPTS
