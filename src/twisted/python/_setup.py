@@ -5,6 +5,10 @@
 """
 Setuptools convenience functionality.
 
+This file must not import anything from Twisted, as it is loaded by C{exec} in
+C{setup.py}. If you need compatibility functions for this code, duplicate them
+here.
+
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
     combinations of the packages can be created without the need to copy
@@ -36,12 +40,15 @@ from distutils.errors import CompileError
 from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
 
-from twisted import copyright
-from twisted.python.compat import _PY3
+# Do not replace this with t.p.compat imports, this file must not import
+# from Twisted. See the docstring.
+if sys.version_info < (3, 0):
+    _PY3 = False
+else:
+    _PY3 = True
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
-    version=copyright.version,
     description="An asynchronous networking framework written in Python",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
@@ -207,7 +214,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
         conditionalExtensions = extensions
     command_classes = {
         'build_ext': my_build_ext,
-        }
+    }
 
     if sys.version_info[0] >= 3:
         requirements = ["zope.interface >= 4.0.2"]
@@ -216,12 +223,15 @@ def getSetupArgs(extensions=_EXTENSIONS):
         requirements = ["zope.interface >= 3.6.0"]
 
     requirements.append("constantly >= 15.1")
+    requirements.append("incremental >= 16.10.0")
 
     arguments.update(dict(
         packages=find_packages("src"),
+        use_incremental=True,
+        setup_requires=["incremental >= 16.10.0"],
         install_requires=requirements,
         entry_points={
-            'console_scripts':  _CONSOLE_SCRIPTS
+            'console_scripts': _CONSOLE_SCRIPTS
         },
         cmdclass=command_classes,
         include_package_data=True,
