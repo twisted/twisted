@@ -138,9 +138,44 @@ class IRCUserTests(IRCTestCase):
                'w', 'n'])])
 
 
+    def test_PART(self):
+        """
+        irc_PART
+        """
+        self.ircUser.irc_NICK("testuser", ["mynick"])
+        response = self.response()
+        self.ircUser.transport.clear()
+        self.assertEqual(response[0][1], irc.RPL_MOTDSTART)
+        #self.assertEqual(response[0][1], irc.ERR_NOSUCHCHANNEL)
+        self.ircUser.irc_JOIN("testuser", ["somechannel"])
+        response = self.response()
+        self.ircUser.transport.clear()
+        self.assertEqual(response[0][1], irc.ERR_NOSUCHCHANNEL)
+        self.ircUser.irc_PART("testuser", [b"somechannel", b"booga"])
+        response = self.response()
+        self.ircUser.transport.clear()
+        self.assertEqual(response[0][1], irc.ERR_NOTONCHANNEL)
+        self.ircUser.irc_PART("testuser", [u"somechannel", u"booga"])
+        response = self.response()
+        self.ircUser.transport.clear()
+        self.assertEqual(response[0][1], irc.ERR_NOTONCHANNEL)
+
+
+    def test_NAMES(self):
+        """
+        irc_NAMES
+        """
+        self.ircUser.irc_NICK("", ["testuser"])
+        self.ircUser.irc_JOIN("", ["somechannel"])
+        self.ircUser.transport.clear()
+        self.ircUser.irc_NAMES("", ["somechannel"])
+        response = self.response()
+        self.assertEqual(response[0][1], irc.RPL_ENDOFNAMES)
+
 
 class MocksyIRCUser(IRCUser):
     def __init__(self):
+        self.realm = InMemoryWordsRealm("example.com")
         self.mockedCodes = []
 
     def sendMessage(self, code, *_, **__):
@@ -156,7 +191,7 @@ class IRCUserBadEncodingTests(IRCTestCase):
     # TODO: irc_NICK -- but NICKSERV is used for that, so it isn't as easy.
 
     def setUp(self):
-        self.ircuser = MocksyIRCUser()
+        self.ircUser = MocksyIRCUser()
 
     def assertChokesOnBadBytes(self, irc_x, error):
         """
@@ -169,8 +204,8 @@ class IRCUserBadEncodingTests(IRCTestCase):
         @param error: the error code irc_x should send. For example,
         irc.ERR_NOTONCHANNEL
         """
-        getattr(self.ircuser, 'irc_%s' % irc_x)(None, [BADTEXT])
-        self.assertEqual(self.ircuser.mockedCodes, [error])
+        getattr(self.ircUser, 'irc_%s' % irc_x)(None, [BADTEXT])
+        self.assertEqual(self.ircUser.mockedCodes, [error])
 
     # no such channel
 
@@ -226,7 +261,6 @@ class IRCUserBadEncodingTests(IRCTestCase):
         self.assertChokesOnBadBytes('WHOIS', irc.ERR_NOSUCHNICK)
 
     # not on channel
-
     def test_PART(self):
         """
         Tests that irc_PART sends ERR_NOTONCHANNEL if the target name can't

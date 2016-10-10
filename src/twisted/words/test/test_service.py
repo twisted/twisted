@@ -159,7 +159,7 @@ class TestCaseUserAgg(object):
 class IRCProtocolTests(unittest.TestCase):
     STATIC_USERS = [
         u'useruser', u'otheruser', u'someguy', u'firstuser', u'username',
-        u'userone', u'usertwo', u'userthree', u'someuser']
+        u'userone', u'usertwo', u'userthree', 'userfour', b'userfive', u'someuser']
 
 
     def setUp(self):
@@ -214,7 +214,7 @@ class IRCProtocolTests(unittest.TestCase):
         If messageType is defined, only messages of that type will be returned.
         """
         response = user.transport.value()
-        if isinstance(response, bytes):
+        if bytes != str and isinstance(response, bytes):
             response = response.decode("utf-8")
         response = response.splitlines()
         user.transport.clear()
@@ -389,6 +389,22 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(response[0][0], 'useruser!useruser@realmname')
         self.assertEqual(response[0][1], 'PART')
         self.assertEqual(response[0][2], ['#somechannel', 'goodbye stupidheads'])
+        self.assertEqual(response, event)
+
+        user.write(b'JOIN #somechannel\r\n')
+
+        user.transport.clear()
+        other.transport.clear()
+
+        user.write(b'PART #somechannel :goodbye stupidheads1\r\n')
+
+        response = self._response(user)
+        event = self._response(other)
+
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0][0], 'useruser!useruser@realmname')
+        self.assertEqual(response[0][1], 'PART')
+        self.assertEqual(response[0][2], ['#somechannel', 'goodbye stupidheads1'])
         self.assertEqual(response, event)
 
 
@@ -808,11 +824,15 @@ class PBProtocolTests(unittest.TestCase):
         mindtwo = TestMind()
         two = yield self._loggedInAvatar(u"two", b"p2", mindtwo)
 
+        mindThree = TestMind()
+        three = yield self._loggedInAvatar(b"three", b"p3", mindThree)
+
         yield self.realm.createGroup(u"foobar")
 
         groupone = yield one.join(u"foobar")
 
         yield two.join(u"foobar")
+        yield three.join(u"foobar")
 
         yield groupone.send({b"text": b"hello, monkeys"})
 
