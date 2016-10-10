@@ -29,7 +29,7 @@ toStdlibLogLevelMapping = {
 def _reverseLogLevelMapping():
     """
     Reverse the above mapping, adding both the numerical keys used above and
-    the cooresponding string keys also used by python logging.
+    the corresponding string keys also used by python logging.
     @return: the reversed mapping
     """
     mapping = {}

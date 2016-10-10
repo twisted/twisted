@@ -53,8 +53,8 @@ class FakeResolver(ResolverBase):
 
         results = [rr]
         authority = []
-        addtional = []
-        return defer.succeed((results, authority, addtional))
+        additional = []
+        return defer.succeed((results, authority, additional))
 
 
 
