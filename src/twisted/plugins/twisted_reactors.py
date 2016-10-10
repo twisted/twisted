@@ -21,8 +21,12 @@ epoll = Reactor(
 kqueue = Reactor(
     'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
 
+cf = Reactor(
+    'cf' , 'twisted.internet.cfreactor',
+    'CoreFoundation integration reactor.')
+
 __all__ = [
-    "default", "select", "poll", "epoll", "kqueue",
+    "default", "select", "poll", "epoll", "kqueue", "cf",
 ]
 
 if _PY3:
@@ -49,13 +53,10 @@ else:
     win32er = Reactor(
         'win32', 'twisted.internet.win32eventreactor',
         'Win32 WaitForMultipleObjects-based reactor.')
-    cf = Reactor(
-        'cf' , 'twisted.internet.cfreactor',
-        'CoreFoundation integration reactor.')
     iocp = Reactor(
         'iocp', 'twisted.internet.iocpreactor',
         'Win32 IO Completion Ports-based reactor.')
 
     __all__.extend([
-        "wx", "gi", "gtk2", "gtk3", "glib2", "glade", "win32er", "cf", "iocp"
+        "wx", "gi", "gtk2", "gtk3", "glib2", "glade", "win32er", "iocp"
     ])

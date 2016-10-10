@@ -1098,7 +1098,7 @@ class SimpleServer(imap4.IMAP4Server):
 
     def lineReceived(self, line):
         if self.timeoutTest:
-            #Do not send a respones
+            #Do not send a response
             return
 
         imap4.IMAP4Server.lineReceived(self, line)
