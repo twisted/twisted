@@ -130,8 +130,10 @@ Test Changes
 No code or data in a test package should be imported or used by a non-test package within Twisted.
 By doing so, there's no chance anything could access these objects by going through the public API.
 
-Test code and test helpers are considered private API and it should be imported outside
+Test code and test helpers are considered private API and it should not be imported outside
 of the Twisted testing infrastructure.
+As an exception to this, :api:`twisted.test.proto_helpers` is considered a public API
+(see `#6435 <https://twistedmatrix.com/trac/ticket/6435>`_ for more discussion).
 
 
 Private Changes
