@@ -8,7 +8,7 @@ testing purposes.
 
 from __future__ import division, absolute_import
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 

@@ -56,10 +56,11 @@ necessary VT102 control codes with L{assembleFormattedText}.
 @author: Jp Calderone
 """
 
+from incremental import Version
+
 from twisted.conch.insults import helper, insults
 from twisted.python import _textattributes
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 
 
 

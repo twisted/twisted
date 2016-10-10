@@ -205,6 +205,7 @@ verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
 
 from zope.interface import Interface, implementer
 from constantly import Flags, FlagConstant
+from incremental import Version
 
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
@@ -220,7 +221,6 @@ from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
 from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 
 
 def _sessionCounter(counter=itertools.count()):

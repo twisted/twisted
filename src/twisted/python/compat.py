@@ -692,7 +692,7 @@ def _constructMethod(cls, name, self):
 
 
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 from collections import OrderedDict

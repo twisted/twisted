@@ -9,10 +9,13 @@ from __future__ import division, absolute_import
 
 import sys
 import operator
+
 from io import BytesIO
+from tempfile import mkdtemp
 
 from twisted.python.versions import getVersionString, IncomparableVersions
-from twisted.python.versions import Version, _inf
+from twisted.python.versions import Version
+from incremental import _inf
 from twisted.python.filepath import FilePath
 
 from twisted.trial.unittest import SynchronousTestCase as TestCase
@@ -151,7 +154,7 @@ class VersionsTests(TestCase):
         string representation of the version including the prerelease.
         """
         self.assertEqual(repr(Version("dummy", 1, 2, 3, prerelease=4)),
-                          "Version('dummy', 1, 2, 3, prerelease=4)")
+                          "Version('dummy', 1, 2, 3, release_candidate=4)")
 
 
     def test_str(self):
@@ -168,7 +171,7 @@ class VersionsTests(TestCase):
         Calling C{str} on a version with a prerelease includes the prerelease.
         """
         self.assertEqual(str(Version("dummy", 1, 0, 0, prerelease=1)),
-                          "[dummy, version 1.0.0pre1]")
+                          "[dummy, version 1.0.0rc1]")
 
 
     def testShort(self):
@@ -226,7 +229,7 @@ class VersionsTests(TestCase):
         """
         self.assertEqual(
             getVersionString(Version("whatever", 8, 0, 0, prerelease=1)),
-            "whatever 8.0.0pre1")
+            "whatever 8.0.0rc1")
 
 
     def test_base(self):
@@ -241,7 +244,7 @@ class VersionsTests(TestCase):
         The base version includes 'preX' for versions with prereleases.
         """
         self.assertEqual(Version("foo", 1, 0, 0, prerelease=8).base(),
-                          "1.0.0pre8")
+                          "1.0.0rc8")
 
 
 
@@ -249,17 +252,13 @@ class FormatDiscoveryTests(TestCase):
     """
     Tests which discover the parsing method based on the imported module name.
     """
-    def mktemp(self):
-        return TestCase.mktemp(self).encode("utf-8")
-
-
     def setUp(self):
         """
         Create a temporary directory with a package structure in it.
         """
-        self.entry = FilePath(self.mktemp())
+        self.entry = FilePath(mkdtemp())
         self.preTestModules = sys.modules.copy()
-        sys.path.append(self.entry.path.decode('utf-8'))
+        sys.path.append(self.entry.path)
         pkg = self.entry.child(b"twisted_python_versions_package")
         pkg.makedirs()
         pkg.child(b"__init__.py").setContent(
@@ -275,7 +274,7 @@ class FormatDiscoveryTests(TestCase):
         """
         sys.modules.clear()
         sys.modules.update(self.preTestModules)
-        sys.path.remove(self.entry.path.decode('utf-8'))
+        sys.path.remove(self.entry.path)
 
 
     def checkSVNFormat(self, formatVersion, entriesText, expectedRevision):
