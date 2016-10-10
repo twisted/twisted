@@ -1,3 +1,7 @@
+"""
+Provides Twisted version information.
+"""
+
 # This file is auto-generated! Do not edit!
 # Use `python -m incremental.update Twisted` to change this file.
 
