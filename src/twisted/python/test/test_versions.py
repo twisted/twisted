@@ -252,10 +252,6 @@ class FormatDiscoveryTests(TestCase):
     """
     Tests which discover the parsing method based on the imported module name.
     """
-    def mktemp(self):
-        return TestCase.mktemp(self).encode("utf-8")
-
-
     def setUp(self):
         """
         Create a temporary directory with a package structure in it.
@@ -278,7 +274,7 @@ class FormatDiscoveryTests(TestCase):
         """
         sys.modules.clear()
         sys.modules.update(self.preTestModules)
-        sys.path.remove(self.entry.path.decode('utf-8'))
+        sys.path.remove(self.entry.path)
 
 
     def checkSVNFormat(self, formatVersion, entriesText, expectedRevision):
