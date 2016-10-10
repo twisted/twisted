@@ -79,7 +79,6 @@ class Group(object):
 
 
     def remove(self, user, reason=None):
-        assert reason is None or isinstance(reason, unicode)
         try:
             del self.users[user.name]
         except KeyError:
@@ -232,7 +231,6 @@ class IRCUser(irc.IRC):
 
 
     def userLeft(self, group, user, reason=None):
-        assert reason is None or isinstance(reason, unicode)
         self.part(
             "%s!%s@%s" % (user.name, user.name, self.hostname),
             '#' + group.name,
@@ -966,7 +964,6 @@ class PBMindReference(pb.RemoteReference):
             PBUser(self.realm, self.avatar, user))
 
     def userLeft(self, group, user, reason=None):
-        assert reason is None or isinstance(reason, unicode)
         return self.callRemote(
             'userLeft',
             PBGroup(self.realm, self.avatar, group),
@@ -1041,7 +1038,6 @@ class ChatAvatar(pb.Referenceable):
 
 
     def remote_join(self, groupName):
-        assert isinstance(groupName, unicode)
         def cbGroup(group):
             def cbJoin(ignored):
                 return PBGroup(self.avatar.realm, self.avatar, group)
@@ -1154,7 +1150,6 @@ class WordsRealm(object):
 
 
     def getGroup(self, name):
-        assert isinstance(name, unicode)
         if self.createGroupOnRequest:
             def ebGroup(err):
                 err.trap(ewords.DuplicateGroup)
@@ -1164,7 +1159,6 @@ class WordsRealm(object):
 
 
     def getUser(self, name):
-        assert isinstance(name, unicode)
         if self.createUserOnRequest:
             def ebUser(err):
                 err.trap(ewords.DuplicateUser)
@@ -1174,7 +1168,6 @@ class WordsRealm(object):
 
 
     def createUser(self, name):
-        assert isinstance(name, unicode)
         def cbLookup(user):
             return failure.Failure(ewords.DuplicateUser(name))
         def ebLookup(err):
@@ -1189,7 +1182,6 @@ class WordsRealm(object):
 
 
     def createGroup(self, name):
-        assert isinstance(name, unicode)
         def cbLookup(group):
             return failure.Failure(ewords.DuplicateGroup(name))
         def ebLookup(err):
@@ -1229,7 +1221,6 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def lookupUser(self, name):
-        assert isinstance(name, unicode)
         name = name.lower()
         try:
             user = self.users[name]
@@ -1240,7 +1231,6 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def lookupGroup(self, name):
-        assert isinstance(name, unicode)
         name = name.lower()
         try:
             group = self.groups[name]
