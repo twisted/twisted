@@ -1,6 +1,27 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.5.0rc1 (2016-10-10)
+====================================
+
+Features
+--------
+ - SSH key fingerprints can be generated using base64 encoded SHA256
+   hashes. (#8701)
+
+Bugfixes
+--------
+ - SSHUserAuthServer does not crash on keyboard interactive
+   authentication when running on Python 3 (#8771)
+ - twisted.conch.insults.insults.ServerProtocol no longer corrupts a
+   client's display when attempting to set the cursor position, and
+   its ECMA-48 terminal manipulation works on Python 3. (#8803)
+
+Other
+-----
+ - #8495, #8511, #8715, #8851
+
+
 Twisted Conch 16.4.1 (2016-09-07)
 =================================
 
