@@ -47,7 +47,7 @@ class CancelledError(Exception):
 
 class TimeoutError(Exception):
     """
-    This exception is deprecated.
+    This error is raised by default when a L{Deferred} times out.
     """
 
 
@@ -338,6 +338,68 @@ class Deferred:
         return self.addCallbacks(callback, callback,
                                  callbackArgs=args, errbackArgs=args,
                                  callbackKeywords=kw, errbackKeywords=kw)
+
+
+    def addTimeout(self, timeout, clock, onTimeoutCancel=None):
+        """
+        Time out this L{Deferred} by scheduling it to be cancelled after
+        C{timeout} seconds.
+
+        The timeout encompasses all the callbacks and errbacks added to this
+        L{defer.Deferred} before the call to L{addTimeout}, and none added
+        after the call.
+
+        If this L{Deferred} gets timed out, it errbacks with a L{TimeoutError},
+        unless a cancelable function was passed to its initialization or unless
+        a different C{onTimeoutCancel} callable is provided.
+
+        @param timeout: number of seconds to wait before timing out this
+            L{Deferred}
+        @type timeout: L{int}
+
+        @param clock: The object which will be used to schedule the timeout.
+        @type clock: L{twisted.internet.interfaces.IReactorTime}
+
+        @param onTimeoutCancel: A callable which is called immediately after
+            this L{Deferred} times out, and not if this L{Deferred} is
+            otherwise cancelled before the timeout. It takes an arbitrary
+            value, which is the value of this L{Deferred} at that exact point
+            in time (probably a L{CancelledError} L{Failure}), and the
+            C{timeout}.  The default callable (if none is provided) will
+            translate a L{CancelledError} L{Failure} into a L{TimeoutError}.
+        @type onTimeoutCancel: L{callable}
+
+        @return: C{self}.
+        @rtype: a L{Deferred}
+
+        @since: 16.5
+        """
+        timedOut = [False]
+
+        def timeItOut():
+            timedOut[0] = True
+            self.cancel()
+
+        delayedCall = clock.callLater(timeout, timeItOut)
+
+        def convertCancelled(value):
+            # if C{deferred} was timed out, call the translation function,
+            # if provdied, otherwise just use L{cancelledToTimedOutError}
+            if timedOut[0]:
+                toCall = onTimeoutCancel or _cancelledToTimedOutError
+                return toCall(value, timeout)
+            return value
+
+        self.addBoth(convertCancelled)
+
+        def cancelTimeout(result):
+            # stop the pending call to cancel the deferred if it's been fired
+            if delayedCall.active():
+                delayedCall.cancel()
+            return result
+
+        self.addBoth(cancelTimeout)
+        return self
 
 
     def chainDeferred(self, d):
@@ -675,6 +737,29 @@ class Deferred:
     # For PEP-492 support (async/await)
     __await__ = __iter__
     __next__ = __send__
+
+
+
+def _cancelledToTimedOutError(value, timeout):
+    """
+    A default translation function that translates L{Failure}s that are
+    L{CancelledError}s to L{TimeoutError}s.
+
+    @param value: Anything
+    @type value: Anything
+
+    @param timeout: The timeout
+    @type timeout: L{int}
+
+    @rtype: C{value}
+    @raise: L{TimeoutError}
+
+    @since: 16.5
+    """
+    if isinstance(value, failure.Failure):
+        value.trap(CancelledError)
+        raise TimeoutError(timeout, "Deferred")
+    return value
 
 
 

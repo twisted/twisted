@@ -896,7 +896,7 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
 
     def test_assertWarnsFilter(self):
         """
-        Test assertWarns on a warning filterd by default.
+        Test assertWarns on a warning filtered by default.
         """
         def deprecated(a):
             warnings.warn("Woo deprecated", category=PendingDeprecationWarning)
