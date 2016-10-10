@@ -828,12 +828,16 @@ class PBProtocolTests(unittest.TestCase):
         three = yield self._loggedInAvatar(b"three", b"p3", mindThree)
 
         yield self.realm.createGroup(u"foobar")
+        yield self.realm.createGroup(b"barfoo")
 
         groupone = yield one.join(u"foobar")
+        grouptwo = yield two.join(b"barfoo")
 
         yield two.join(u"foobar")
+        yield two.join(b"barfoo")
         yield three.join(u"foobar")
 
         yield groupone.send({b"text": b"hello, monkeys"})
 
         yield groupone.leave()
+        yield grouptwo.leave()
