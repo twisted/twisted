@@ -987,7 +987,10 @@ class PBGroup(pb.Referenceable):
         qual = reflect.qual(self.__class__)
         if isinstance(qual, unicode):
             qual = qual.encode("utf-8")
-        return qual, self.group.name.encode('utf-8'), jellier.invoker.registerReference(self)
+        group = self.group.name
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
+        return qual, group, jellier.invoker.registerReference(self)
 
 
     def remote_leave(self, reason=None):
