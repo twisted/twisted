@@ -5,6 +5,10 @@
 """
 Setuptools convenience functionality.
 
+This file must not import anything from Twisted, as it is loaded by C{exec} in
+C{setup.py}. If you need compatibility functions for this code,, duplicate them
+here.
+
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
     combinations of the packages can be created without the need to copy

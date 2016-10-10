@@ -283,9 +283,10 @@ Announce
   - ``#twisted`` topic on IRC (you'll need ops)
 
 5. Run ``python -m incremental Twisted --dev`` to add a `dev0` postfix.
-6. Merge the release branch into trunk, closing the release ticket at the same time.
-7. Close the release milestone (which should have no tickets in it).
-8. Open a milestone for the next release.
+6. Commit the dev0 update change.
+7. Merge the release branch into trunk, closing the release ticket at the same time.
+8. Close the release milestone (which should have no tickets in it).
+9. Open a milestone for the next release.
 
 
 Release announcement
