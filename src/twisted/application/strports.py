@@ -13,10 +13,11 @@ from __future__ import absolute_import, division
 
 import warnings
 
+from incremental import Version
+
+from twisted.application.internet import StreamServerEndpointService
 from twisted.internet import endpoints
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
-from twisted.application.internet import StreamServerEndpointService
 
 
 

@@ -41,7 +41,7 @@ from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
 
