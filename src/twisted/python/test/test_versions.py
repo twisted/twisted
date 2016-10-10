@@ -262,7 +262,7 @@ class FormatDiscoveryTests(TestCase):
         """
         self.entry = FilePath(mkdtemp())
         self.preTestModules = sys.modules.copy()
-        sys.path.append(self.entry.path.decode('utf-8'))
+        sys.path.append(self.entry.path)
         pkg = self.entry.child(b"twisted_python_versions_package")
         pkg.makedirs()
         pkg.child(b"__init__.py").setContent(
