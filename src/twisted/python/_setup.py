@@ -351,7 +351,6 @@ notPortedModules = [
     "twisted.conch.client.connect",
     "twisted.conch.client.direct",
     "twisted.conch.test.test_cftp",
-    "twisted.conch.test.test_ckeygen",
     "twisted.conch.test.test_conch",
     "twisted.conch.test.test_manhole",
     "twisted.conch.ui.__init__",
