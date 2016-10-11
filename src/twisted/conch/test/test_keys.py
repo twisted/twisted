@@ -36,7 +36,7 @@ from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest
 from twisted.python.compat import long, _PY3
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.filepath import FilePath
 
 
