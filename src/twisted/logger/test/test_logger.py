@@ -6,7 +6,6 @@ Test cases for L{twisted.logger._logger}.
 """
 
 from twisted.internet.defer import maybeDeferred
-from twisted.python.failure import Failure
 from twisted.trial import unittest
 
 from .._levels import InvalidLogLevelError
