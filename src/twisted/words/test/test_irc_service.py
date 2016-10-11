@@ -146,7 +146,6 @@ class IRCUserTests(IRCTestCase):
         response = self.response()
         self.ircUser.transport.clear()
         self.assertEqual(response[0][1], irc.RPL_MOTDSTART)
-        #self.assertEqual(response[0][1], irc.ERR_NOSUCHCHANNEL)
         self.ircUser.irc_JOIN("testuser", ["somechannel"])
         response = self.response()
         self.ircUser.transport.clear()
@@ -173,13 +172,16 @@ class IRCUserTests(IRCTestCase):
         self.assertEqual(response[0][1], irc.RPL_ENDOFNAMES)
 
 
+
 class MocksyIRCUser(IRCUser):
     def __init__(self):
         self.realm = InMemoryWordsRealm("example.com")
         self.mockedCodes = []
 
+
     def sendMessage(self, code, *_, **__):
         self.mockedCodes.append(code)
+
 
 BADTEXT = b'\xff'
 
@@ -192,6 +194,7 @@ class IRCUserBadEncodingTests(IRCTestCase):
 
     def setUp(self):
         self.ircUser = MocksyIRCUser()
+
 
     def assertChokesOnBadBytes(self, irc_x, error):
         """
@@ -207,7 +210,8 @@ class IRCUserBadEncodingTests(IRCTestCase):
         getattr(self.ircUser, 'irc_%s' % irc_x)(None, [BADTEXT])
         self.assertEqual(self.ircUser.mockedCodes, [error])
 
-    # no such channel
+    # No such channel
+
 
     def test_JOIN(self):
         """
@@ -216,12 +220,14 @@ class IRCUserBadEncodingTests(IRCTestCase):
         """
         self.assertChokesOnBadBytes('JOIN', irc.ERR_NOSUCHCHANNEL)
 
+
     def test_NAMES(self):
         """
         Tests that irc_NAMES sends ERR_NOSUCHCHANNEL if the channel name can't
         be decoded.
         """
         self.assertChokesOnBadBytes('NAMES', irc.ERR_NOSUCHCHANNEL)
+
 
     def test_TOPIC(self):
         """
@@ -230,6 +236,7 @@ class IRCUserBadEncodingTests(IRCTestCase):
         """
         self.assertChokesOnBadBytes('TOPIC', irc.ERR_NOSUCHCHANNEL)
 
+
     def test_LIST(self):
         """
         Tests that irc_LIST sends ERR_NOSUCHCHANNEL if the channel name can't
@@ -237,7 +244,8 @@ class IRCUserBadEncodingTests(IRCTestCase):
         """
         self.assertChokesOnBadBytes('LIST', irc.ERR_NOSUCHCHANNEL)
 
-    # no such nick
+    # No such nick
+
 
     def test_MODE(self):
         """
@@ -246,12 +254,14 @@ class IRCUserBadEncodingTests(IRCTestCase):
         """
         self.assertChokesOnBadBytes('MODE', irc.ERR_NOSUCHNICK)
 
+
     def test_PRIVMSG(self):
         """
         Tests that irc_PRIVMSG sends ERR_NOSUCHNICK if the target name can't
         be decoded.
         """
         self.assertChokesOnBadBytes('PRIVMSG', irc.ERR_NOSUCHNICK)
+
 
     def test_WHOIS(self):
         """
@@ -260,7 +270,9 @@ class IRCUserBadEncodingTests(IRCTestCase):
         """
         self.assertChokesOnBadBytes('WHOIS', irc.ERR_NOSUCHNICK)
 
-    # not on channel
+    # Not on channel
+
+
     def test_PART(self):
         """
         Tests that irc_PART sends ERR_NOTONCHANNEL if the target name can't
@@ -268,7 +280,8 @@ class IRCUserBadEncodingTests(IRCTestCase):
         """
         self.assertChokesOnBadBytes('PART', irc.ERR_NOTONCHANNEL)
 
-    # probably nothing
+    # Probably nothing
+
 
     def test_WHO(self):
         """
