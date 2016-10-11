@@ -487,7 +487,7 @@ Fixes
 -----
   - Quote usernames and passwords automatically in the IMAP client (#1411).
   - Improved parsing of literals in IMAP4 client and server (#1417).
-  - Recognize unsolicted FLAGS response in IMAP4 client (#1105).
+  - Recognize unsolicited FLAGS response in IMAP4 client (#1105).
   - Parse and respond to requests with multiple BODY arguments in IMAP4
     server (#1307).
   - Misc: #1356, #1290, #1602

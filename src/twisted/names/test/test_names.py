@@ -26,7 +26,8 @@ from twisted.names.client import Resolver
 from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
 
-from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
+from twisted.test.proto_helpers import (
+    StringTransport, MemoryReactorClock, waitUntilAllDisconnected)
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -195,6 +196,8 @@ class ServerDNSTests(unittest.TestCase):
         # available, though.
         for conn in self.factory.connections[:]:
             conn.transport.loseConnection()
+
+        return waitUntilAllDisconnected(reactor, self.factory.connections[:])
 
 
     def namesTest(self, querying, expectedRecords):
