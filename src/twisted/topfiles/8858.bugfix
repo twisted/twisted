@@ -1,0 +1,1 @@
+twisted.logger.jsonFileLogObserver no longer emits non-JSON data into its file in the case of tracebacks; additionally, twisted.logger.formatEventAsClassicLogText now includes traceback information for the log event it is passing.
