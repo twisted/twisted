@@ -270,7 +270,8 @@ class IRCUser(irc.IRC):
     password = None
 
     def irc_PASS(self, prefix, params):
-        """Password message -- Register a password.
+        """
+        Password message -- Register a password.
 
         Parameters: <password>
 
@@ -283,7 +284,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_NICK(self, prefix, params):
-        """Nick message -- Set your nickname.
+        """
+        Nick message -- Set your nickname.
 
         Parameters: <nickname>
 
@@ -319,7 +321,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_USER(self, prefix, params):
-        """User message -- Set your realname.
+        """
+        User message -- Set your realname.
 
         Parameters: <user> <mode> <unused> <realname>
         """
@@ -330,7 +333,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_NICKSERV_PRIVMSG(self, prefix, params):
-        """Send a (private) message.
+        """
+        Send a (private) message.
 
         Parameters: <msgtarget> <text to be sent>
         """
@@ -420,7 +424,8 @@ class IRCUser(irc.IRC):
     # Great, now that's out of the way, here's some of the interesting
     # bits
     def irc_PING(self, prefix, params):
-        """Ping message
+        """
+        Ping message
 
         Parameters: <server1> [ <server2> ]
         """
@@ -429,7 +434,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_QUIT(self, prefix, params):
-        """Quit
+        """
+        Quit
 
         Parameters: [ <Quit Message> ]
         """
@@ -461,7 +467,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_MODE(self, prefix, params):
-        """User mode message
+        """
+        User mode message
 
         Parameters: <nickname>
         *( ( "+" / "-" ) *( "i" / "w" / "o" / "O" / "r" ) )
@@ -502,7 +509,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_USERHOST(self, prefix, params):
-        """Userhost message
+        """
+        Userhost message
 
         Parameters: <nickname> *( SPACE <nickname> )
 
@@ -512,7 +520,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_PRIVMSG(self, prefix, params):
-        """Send a (private) message.
+        """
+        Send a (private) message.
 
         Parameters: <msgtarget> <text to be sent>
         """
@@ -545,7 +554,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_JOIN(self, prefix, params):
-        """Join message
+        """
+        Join message
 
         Parameters: ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] )
         """
@@ -581,7 +591,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_PART(self, prefix, params):
-        """Part message
+        """
+        Part message
 
         Parameters: <channel> *( "," <channel> ) [ <Part Message> ]
         """
@@ -621,7 +632,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_NAMES(self, prefix, params):
-        """Names message
+        """
+        Names message
 
         Parameters: [ <channel> *( "," <channel> ) [ <target> ] ]
         """
@@ -659,7 +671,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_TOPIC(self, prefix, params):
-        """Topic message
+        """
+        Topic message
 
         Parameters: <channel> [ <topic> ]
         """
@@ -735,7 +748,8 @@ class IRCUser(irc.IRC):
 
 
     def list(self, channels):
-        """Send a group of LIST response lines
+        """
+        Send a group of LIST response lines
 
         @type channel: C{list} of C{(str, int, str)}
         @param channel: Information about the channels being sent:
@@ -747,7 +761,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_LIST(self, prefix, params):
-        """List query
+        """
+        List query
 
         Return information about the indicated channels, or about all
         channels if none are specified.
@@ -804,7 +819,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_WHO(self, prefix, params):
-        """Who query
+        """
+        Who query
 
         Parameters: [ <mask> [ "o" ] ]
         """
@@ -851,7 +867,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_WHOIS(self, prefix, params):
-        """Whois query
+        """
+        Whois query
 
         Parameters: [ <target> ] <mask> *( "," <mask> )
         """
@@ -886,7 +903,8 @@ class IRCUser(irc.IRC):
 
     # Unsupported commands, here for legacy compatibility
     def irc_OPER(self, prefix, params):
-        """Oper message
+        """
+        Oper message
 
         Parameters: <name> <password>
         """
@@ -1122,7 +1140,8 @@ class WordsRealm(object):
 
 
     def addUser(self, user):
-        """Add the given user to this service.
+        """
+        Add the given user to this service.
 
         This is an internal method intended to be overridden by
         L{WordsRealm} subclasses, not called by external code.
@@ -1139,7 +1158,8 @@ class WordsRealm(object):
 
 
     def addGroup(self, group):
-        """Add the given group to this service.
+        """
+        Add the given group to this service.
 
         @type group: L{IGroup}
 
