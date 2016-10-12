@@ -93,48 +93,6 @@ class FileLogObserverTests(TestCase):
             self.assertEqual(fileHandle.flushes, 1)
 
 
-    def test_observeFailure(self):
-        """
-        If the C{"log_failure"} key exists in an event, the observer appends
-        the failure's traceback to the output.
-        """
-        with StringIO() as fileHandle:
-            observer = FileLogObserver(fileHandle, lambda e: unicode(e))
-
-            try:
-                1 / 0
-            except ZeroDivisionError:
-                failure = Failure()
-
-            event = dict(log_failure=failure)
-            observer(event)
-            output = fileHandle.getvalue()
-            self.assertTrue(
-                output.startswith("{0}\nTraceback ".format(unicode(event))),
-                "Incorrect output:\n{0}".format(output)
-            )
-
-
-    def test_observeFailureThatRaisesInGetTraceback(self):
-        """
-        If the C{"log_failure"} key exists in an event, and contains an object
-        that raises when you call it's C{getTraceback()}, then the observer
-        appends a message noting the problem, instead of raising.
-        """
-        with StringIO() as fileHandle:
-            observer = FileLogObserver(fileHandle, lambda e: unicode(e))
-
-            event = dict(log_failure=object())  # object has no getTraceback()
-            observer(event)
-            output = fileHandle.getvalue()
-            expected = (
-                "{0}\n(UNABLE TO OBTAIN TRACEBACK FROM EVENT)\n"
-                .format(unicode(event))
-            )
-            self.assertEqual(output, expected)
-
-
-
 class TextFileLogObserverTests(TestCase):
     """
     Tests for L{textFileLogObserver}.
@@ -166,6 +124,44 @@ class TextFileLogObserverTests(TestCase):
             observer = textFileLogObserver(fileHandle, timeFormat=u"%f")
             observer(dict(log_format=u"XYZZY", log_time=1.23456))
             self.assertEqual(fileHandle.getvalue(), u"234560 [-#-] XYZZY\n")
+
+
+    def test_observeFailure(self):
+        """
+        If the C{"log_failure"} key exists in an event, the observer appends
+        the failure's traceback to the output.
+        """
+        with StringIO() as fileHandle:
+            observer = textFileLogObserver(fileHandle)
+
+            try:
+                1 / 0
+            except ZeroDivisionError:
+                failure = Failure()
+
+            event = dict(log_failure=failure)
+            observer(event)
+            output = fileHandle.getvalue()
+            self.assertTrue(output.split("\n")[1].startswith("\tTraceback "),
+                            msg=repr(output))
+
+
+    def test_observeFailureThatRaisesInGetTraceback(self):
+        """
+        If the C{"log_failure"} key exists in an event, and contains an object
+        that raises when you call it's C{getTraceback()}, then the observer
+        appends a message noting the problem, instead of raising.
+        """
+        with StringIO() as fileHandle:
+            observer = textFileLogObserver(fileHandle)
+            event = dict(log_failure=object())  # object has no getTraceback()
+            observer(event)
+            output = fileHandle.getvalue()
+            expected = (
+                "{0}\n(UNABLE TO OBTAIN TRACEBACK FROM EVENT)\n"
+                .format(unicode(event))
+            )
+            self.assertEqual(output, expected)
 
 
 

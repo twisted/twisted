@@ -280,6 +280,23 @@ class FileLogObserverTests(TestCase):
         self.assertObserverWritesJSON(recordSeparator=u"")
 
 
+    def test_failureFormatting(self):
+        """
+        A L{FileLogObserver} created by L{jsonFileLogObserver} writes failures
+        serialized as JSON text to a file when it observes events.
+        """
+        io = StringIO()
+        logger = Logger(observer=jsonFileLogObserver(io))
+        try:
+            1 / 0
+        except:
+            logger.failure("failed as expected")
+        print("AN_VALUE", io.getvalue())
+        reader = StringIO(io.getvalue())
+        events = list(eventsFromJSONLogFile(reader))
+        self.assertEqual(len(events), 1)
+
+
 
 class LogFileReaderTests(TestCase):
     """
