@@ -17,9 +17,11 @@ from zope.interface import implementer
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 from twisted.logger import _loggerFor
+from twisted.python._oldstyle import _oldStyle
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
+@_oldStyle
 class Factory:
     """
     This is a factory which produces protocols.
@@ -221,6 +223,7 @@ class _InstanceFactory(ClientFactory):
 
 
 
+@_oldStyle
 class ClientCreator:
     """
     Client connections that do not require a factory.
@@ -468,6 +471,7 @@ class ServerFactory(Factory):
 
 
 
+@_oldStyle
 class BaseProtocol:
     """
     This is the abstract superclass of all protocols.
@@ -659,6 +663,7 @@ class ProcessProtocol(BaseProtocol):
 
 
 
+@_oldStyle
 class AbstractDatagramProtocol:
     """
     Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
@@ -775,6 +780,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
 
 
 @implementer(interfaces.ITransport)
+@_oldStyle
 class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
 

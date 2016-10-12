@@ -14,6 +14,7 @@ from twisted.protocols import basic
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.test.proto_helpers import waitUntilAllDisconnected
 
 import os, errno
 
@@ -460,6 +461,9 @@ class BufferingTests(unittest.TestCase):
         if self.clientProto.transport is not None:
             self.clientProto.transport.loseConnection()
 
+        return waitUntilAllDisconnected(
+            reactor, [self.serverProto, self.clientProto])
+
 
     def test_openSSLBuffering(self):
         serverProto = self.serverProto = SingleLineServerProtocol()
@@ -477,7 +481,9 @@ class BufferingTests(unittest.TestCase):
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         self.addCleanup(port.stopListening)
 
-        reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
+        clientConnector = reactor.connectSSL('127.0.0.1', port.getHost().port,
+                                             client, cCTX)
+        self.addCleanup(clientConnector.disconnect)
 
         return clientProto.deferred.addCallback(
             self.assertEqual, b"+OK <some crap>\r\n")
@@ -724,4 +730,3 @@ if interfaces.IReactorSSL(reactor, None) is None:
                   DefaultOpenSSLContextFactoryTests,
                   ClientContextFactoryTests]:
         tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
-
