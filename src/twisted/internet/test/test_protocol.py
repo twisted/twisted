@@ -420,14 +420,13 @@ class FactoryTests(TestCase):
         the L{repr} of the L{Factory} instance that is being stopped.
         """
         with capturingLogEventsFromGlobalLogPublisher() as events:
-            class MyFactory(Factory):
-                numPorts = 1
-            f = MyFactory()
+            f = Factory()
+            f.numPorts = 1
 
             f.doStop()
 
             assertGlobalLogEvent(
-                self, events[0], LogLevel.info, fullyQualifiedName(MyFactory),
+                self, events[0], LogLevel.info, fullyQualifiedName(Factory),
                 log_source=f, log_format='Stopping factory {factory!r}',
                 factory=f
             )
