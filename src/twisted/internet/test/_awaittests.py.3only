@@ -72,6 +72,22 @@ class AwaitTests(TestCase):
         self.assertEqual(res, "foo")
 
 
+    def test_delayedAwait(self):
+        """
+        L{ensureDeferred} allows a function to C{await} on a L{Deferred}.
+        """
+        d0 = Deferred()
+
+        async def run():
+            res = await d0
+            return res
+
+        d1 = ensureDeferred(run())
+        d0.callback("foo")
+        res = self.successResultOf(d1)
+        self.assertEqual(res, "foo")
+
+
     def test_exception(self):
         """
         An exception in a coroutine wrapped with L{ensureDeferred} will cause
