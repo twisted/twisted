@@ -464,6 +464,13 @@ class ReconnectingClientFactory(ClientFactory):
         return state
 
 
+    def buildProtocol(self, addr):
+        self.resetDelay()
+        p = self.protocol()
+        p.factory = self
+        return p
+
+
 
 class ServerFactory(Factory):
     """Subclass this to indicate that your protocol.Factory is only usable for servers.
