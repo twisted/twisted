@@ -23,13 +23,14 @@ import types
 import warnings
 from sys import exc_info
 from functools import wraps
+from incremental import Version
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
-from incremental import Version
+from twisted.python._oldstyle import _oldStyle
 
 log = Logger()
 
@@ -193,6 +194,7 @@ _CONTINUE = object()
 
 
 
+@_oldStyle
 class Deferred:
     """
     This is a callback which will be put off until later.
@@ -795,6 +797,7 @@ def ensureDeferred(coro):
 
 
 
+@_oldStyle
 class DebugInfo:
     """
     Deferred debug helper.
@@ -1067,7 +1070,7 @@ FAILURE = False
 
 
 ## deferredGenerator
-
+@_oldStyle
 class waitForDeferred:
     """
     See L{deferredGenerator}.
