@@ -145,9 +145,9 @@ class Key(object):
         @return: The loaded key.
         """
         if isinstance(data, unicode):
-            data = data.encode("ascii")
+            data = data.encode("utf-8")
         if isinstance(passphrase, unicode):
-             passphrase = passphrase.encode("ascii")
+             passphrase = passphrase.encode("utf-8")
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
@@ -1033,7 +1033,7 @@ class Key(object):
         @rtype: L{bytes}
         """
         if isinstance(extra, unicode):
-            extra = extra.encode("ascii")
+            extra = extra.encode("utf-8")
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
