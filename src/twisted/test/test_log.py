@@ -390,8 +390,8 @@ class LogPublisherTests(LogPublisherTestCaseMixin,
 
     def test_singleUnicode(self):
         """
-        L{log.LogPublisher.msg} encodes Unicode as ``ascii`` with the
-        ``backslashreplace`` on Python 2.
+        L{log.LogPublisher.msg} encodes Unicode as ``ascii`` with
+        ``backslashreplace`` error handling on Python 2.
 
         On Python 3, where Unicode is default message type, the
         message is logged normally.
