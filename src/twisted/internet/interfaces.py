@@ -181,6 +181,9 @@ class IHostnameResolver(Interface):
             L{twisted.internet.address.IPv6Address.type} and
             L{twisted.internet.address.IPv4Address.type}.
         @type transportSemantics: native L{str}
+
+        @return: The resolution in progress.
+        @rtype: L{IResolutionReceiver}
         """
 
 
