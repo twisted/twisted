@@ -173,7 +173,7 @@ class HostnameResolutionTest(UnitTest):
         getter = FakeAddrInfoGetter()
         receiver = ResultHolder(self)
         resolver = GAIResolver(reactor, pool, getter.getaddrinfo)
-        getter.addResultForHost(b"sample.example.com", ("4.3.2.1", 0))
+        getter.addResultForHost(u"sample.example.com", ("4.3.2.1", 0))
 
         resolution = resolver.resolveHostName(receiver, u"sample.example.com")
         self.assertIdentical(receiver._resolution, resolution)
