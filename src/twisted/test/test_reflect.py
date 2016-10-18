@@ -757,7 +757,7 @@ class ObjectGrepTests(unittest.TestCase):
 
     def test_dictionary(self):
         """
-        Test references search through a dictionnary, as a key or as a value.
+        Test references search through a dictionary, as a key or as a value.
         """
         o = object()
         d1 = {None: o}

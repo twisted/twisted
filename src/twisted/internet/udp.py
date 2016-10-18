@@ -52,6 +52,7 @@ else:
 # Twisted Imports
 from twisted.internet import base, defer, address
 from twisted.python import log, failure
+from twisted.python._oldstyle import _oldStyle
 from twisted.internet import abstract, error, interfaces
 
 
@@ -365,6 +366,7 @@ class Port(base.BasePort):
         """
         log.msg('(UDP Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
+        self.maxThroughput = -1
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()
         self.socket.close()
@@ -440,6 +442,7 @@ class Port(base.BasePort):
 
 
 
+@_oldStyle
 class MulticastMixin:
     """
     Implement multicast functionality.
