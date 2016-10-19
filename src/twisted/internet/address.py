@@ -89,6 +89,8 @@ class IPv6Address(_IPAddress):
     @type scopeID: L{int}
     """
 
+    compareAttributes = ('type', 'host', 'port', 'flowInfo', 'scopeID')
+
     def __init__(self, type, host, port, flowInfo=0, scopeID=0):
         super(IPv6Address, self).__init__(type, host, port)
         self.flowInfo = flowInfo

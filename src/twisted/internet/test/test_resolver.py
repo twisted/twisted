@@ -12,7 +12,9 @@ __metaclass__ = type
 
 from collections import defaultdict
 
-from socket import gaierror, EAI_NONAME, AF_INET, SOCK_STREAM, IPPROTO_TCP
+from socket import (
+    gaierror, EAI_NONAME, AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
+)
 from threading import local, Lock
 
 from zope.interface import implementer
@@ -28,7 +30,7 @@ from twisted.logger import Logger
 from twisted.python.threadpool import ThreadPool
 from twisted._threads import createMemoryWorker, Team, LockWorker
 
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet._resolver import GAIResolver
 
 
@@ -38,7 +40,7 @@ class DeterministicThreadPool(ThreadPool):
     """
     def __init__(self, team):
         """
-        
+        Create a L{DeterministicThreadPool} from a L{Team}.
         """
         self.min = 1
         self.max = 1
@@ -164,23 +166,58 @@ class HostnameResolutionTest(UnitTest):
     Tests for hostname resolution.
     """
 
+    def setUp(self):
+        """
+        Set up a L{GAIResolver}.
+        """
+        self.pool, self.worker = deterministicPool()
+        self.reactor, self.reactwork = deterministicReactorThreads()
+        self.getter = FakeAddrInfoGetter()
+        self.resolver = GAIResolver(self.reactor, self.pool,
+                                    self.getter.getaddrinfo)
+
+
     def test_resolveOneHost(self):
         """
-        Resolve an individual host.
+        Resolving an individual hostname that results in one address from
+        getaddrinfo results in a single call each to C{resolutionBegan},
+        C{addressResolved}, and C{resolutionComplete}.
         """
-        pool, worker = deterministicPool()
-        reactor, reactwork = deterministicReactorThreads()
-        getter = FakeAddrInfoGetter()
         receiver = ResultHolder(self)
-        resolver = GAIResolver(reactor, pool, getter.getaddrinfo)
-        getter.addResultForHost(u"sample.example.com", ("4.3.2.1", 0))
-
-        resolution = resolver.resolveHostName(receiver, u"sample.example.com")
+        self.getter.addResultForHost(u"sample.example.com", ("4.3.2.1", 0))
+        resolution = self.resolver.resolveHostName(receiver,
+                                                   u"sample.example.com")
         self.assertIdentical(receiver._resolution, resolution)
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, False)
-        worker()
-        reactwork()
+        self.worker()
+        self.reactwork()
         self.assertEqual(receiver._ended, True)
         self.assertEqual(receiver._addresses,
                          [IPv4Address('TCP', '4.3.2.1', 0)])
+
+
+    def test_resolveOneIPv6Host(self):
+        """
+        Resolving an individual hostname that results in one address from
+        getaddrinfo results in a single call each to C{resolutionBegan},
+        C{addressResolved}, and C{resolutionComplete}; C{addressResolved} will
+        receive an L{IPv6Address}.
+        """
+        receiver = ResultHolder(self)
+        flowInfo = 1
+        scopeID = 2
+        self.getter.addResultForHost(u"sample.example.com",
+                                     ("::1", 0, flowInfo, scopeID),
+                                     family=AF_INET6)
+        resolution = self.resolver.resolveHostName(receiver,
+                                                   u"sample.example.com")
+        self.assertIdentical(receiver._resolution, resolution)
+        self.assertEqual(receiver._started, True)
+        self.assertEqual(receiver._ended, False)
+        self.worker()
+        self.reactwork()
+        self.assertEqual(receiver._ended, True)
+        self.assertEqual(receiver._addresses,
+                         [IPv6Address('TCP', '::1', 0, flowInfo, scopeID)])
+

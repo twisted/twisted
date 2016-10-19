@@ -12,12 +12,13 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-from socket import getaddrinfo
+from socket import getaddrinfo, AF_INET, AF_INET6
 
 from zope.interface import implementer
+
 from twisted.internet.interfaces import IHostnameResolver, IHostResolution
 from twisted.internet.threads import deferToThreadPool
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
 
 
 @implementer(IHostResolution)
@@ -71,8 +72,10 @@ class GAIResolver(object):
         @d.addCallback
         def deliverResults(result):
             for family, socktype, proto, cannoname, sockaddr in result:
+                addrType = {AF_INET: IPv4Address,
+                            AF_INET6: IPv6Address}[family]
                 resolutionReceiver.addressResolved(
-                    IPv4Address('TCP', *sockaddr)
+                    addrType('TCP', *sockaddr)
                 )
             resolutionReceiver.resolutionComplete()
         return resolution
