@@ -729,7 +729,7 @@ class Deferred:
         return self
 
 
-    def __send__(self, value=None):
+    def send(self, value=None):
         result = getattr(self, 'result', _NO_RESULT)
         if result is _NO_RESULT:
             return self
@@ -738,7 +738,7 @@ class Deferred:
 
     # For PEP-492 support (async/await)
     __await__ = __iter__
-    __next__ = __send__
+    __next__ = send
 
 
 
