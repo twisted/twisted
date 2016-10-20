@@ -78,6 +78,7 @@ matrix:
     # twistedchecker job was introduce as an experimental job.
     # Once it is stable we can enforce it
     - env: TOXENV=txchecker-travis
+    - osx_image: xcode7.1
 
 
 addons:
