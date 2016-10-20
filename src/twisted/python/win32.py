@@ -24,7 +24,7 @@ except ImportError:
 
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
-from twisted.python.versions import Version
+from incremental import Version
 
 # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
 ERROR_FILE_NOT_FOUND = 2

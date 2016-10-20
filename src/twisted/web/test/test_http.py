@@ -7,7 +7,7 @@ Test HTTP support.
 
 from __future__ import absolute_import, division
 
-import random, cgi, base64
+import random, cgi, base64, calendar
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -43,6 +43,24 @@ class DateTimeTests(unittest.TestCase):
             time2 = http.stringToDatetime(timestr)
             self.assertEqual(time, time2)
 
+
+    def testStringToDatetime(self):
+        dateStrings = [
+            b"Sun, 06 Nov 1994 08:49:37 GMT",
+            b"06 Nov 1994 08:49:37 GMT",
+            b"Sunday, 06-Nov-94 08:49:37 GMT",
+            b"06-Nov-94 08:49:37 GMT",
+            b"Sunday, 06-Nov-1994 08:49:37 GMT",
+            b"06-Nov-1994 08:49:37 GMT",
+            b"Sun Nov  6 08:49:37 1994",
+            b"Nov  6 08:49:37 1994",
+        ]
+        dateInt = calendar.timegm((1994, 11, 6, 8, 49, 37, 6, 6, 0))
+        for dateString in dateStrings:
+            self.assertEqual(http.stringToDatetime(dateString), dateInt)
+        self.assertEqual(
+            http.stringToDatetime(b"Thursday, 29-Sep-16 17:15:29 GMT"),
+            calendar.timegm((2016, 9, 29, 17, 15, 29, 3, 273, 0)))
 
 
 class DummyHTTPHandler(http.Request):

@@ -41,7 +41,7 @@ from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.web.client import BrowserLikePolicyForHTTPS
 from twisted.web.error import SchemeNotSupported
 

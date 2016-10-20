@@ -365,6 +365,7 @@ class Port(base.BasePort):
         """
         log.msg('(UDP Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
+        self.maxThroughput = -1
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()
         self.socket.close()

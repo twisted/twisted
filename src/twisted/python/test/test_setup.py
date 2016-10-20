@@ -13,7 +13,7 @@ from setuptools.dist import Distribution
 import twisted
 from twisted.trial.unittest import TestCase
 
-from twisted.python import _setup, _dist3, filepath
+from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
@@ -313,7 +313,7 @@ class BuildPy3Tests(TestCase):
         # reduce the risk of getting false failures, while doing a minimum
         # level of patching.
         self.patch(
-            _dist3,
+            _setup,
             'notPortedModules',
             [
                 "twisted.spread.test.test_pbfailure",

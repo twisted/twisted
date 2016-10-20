@@ -78,7 +78,7 @@ class MinGroupConversation(basechat.GroupConversation):
     """
     This class is a minimal implementation of the abstract GroupConversation class.
 
-    This is all you need to override to listen in on a group conversaion.
+    This is all you need to override to listen in on a group conversation.
     """
     def show(self):
         """
