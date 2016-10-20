@@ -257,7 +257,7 @@ class KeyTests(unittest.TestCase):
                 None)
 
 
-    def test_isPublic():
+    def test_isPublic(self):
         """
         The L{keys.Key.isPublic} method returns True for public keys
         otherwise False.
