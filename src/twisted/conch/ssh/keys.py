@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Handling of RSA, DSA and EC keys.
+Handling of RSA, DSA, and EC keys.
 """
 
 from __future__ import absolute_import, division
@@ -953,7 +953,7 @@ class Key(object):
     def type(self):
         """
         Return the type of the object we wrap.  Currently this can only be
-        'RSA', 'DSA' or 'EC'.
+        'RSA', 'DSA', or 'EC'.
 
         @rtype: L{str}
         @raises RuntimeError: If the object type is unknown.

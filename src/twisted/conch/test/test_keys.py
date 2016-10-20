@@ -172,19 +172,19 @@ class KeyTests(unittest.TestCase):
             y=keydata.ECDatanistp256['y'],
             privateValue=keydata.ECDatanistp256['privateValue'],
             curve=keydata.ECDatanistp256['curve']
-            )._keyObject
+        )._keyObject
         self.ecObj384 = keys.Key._fromECComponents(
             x=keydata.ECDatanistp384['x'],
             y=keydata.ECDatanistp384['y'],
             privateValue=keydata.ECDatanistp384['privateValue'],
             curve=keydata.ECDatanistp384['curve']
-            )._keyObject
+        )._keyObject
         self.ecObj521 = keys.Key._fromECComponents(
             x=keydata.ECDatanistp521['x'],
             y=keydata.ECDatanistp521['y'],
             privateValue=keydata.ECDatanistp521['privateValue'],
             curve=keydata.ECDatanistp521['curve']
-            )._keyObject
+        )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
             b'\x00\x00`N\xac\xb4@qK\xa0(\xc3\xf2h \xd3\xdd\xee6Np\x9d_'
             b'\xb0>\xe3\x0c(L\x9d{\txUd|!\xf6m\x9c\xd3\x93\x842\x7fU'

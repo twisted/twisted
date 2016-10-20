@@ -1,1 +1,1 @@
-twisted.conch.ssh.keys supports EC keys
+twisted.conch.ssh.keys supports ECDSA keys
