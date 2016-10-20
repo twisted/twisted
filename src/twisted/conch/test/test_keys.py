@@ -257,6 +257,23 @@ class KeyTests(unittest.TestCase):
                 None)
 
 
+    def test_isPublic():
+        """
+        The L{keys.Key.isPublic} method returns True for public keys
+        otherwise False.
+        """
+        rsaKey = keys.Key.fromString(keydata.privateRSA_openssh)
+        dsaKey = keys.Key.fromString(keydata.privateDSA_openssh)
+        ecdsaKey = keys.Key.fromString(keydata.privateECDSA_openssh)
+        self.assertTrue(rsaKey.public().isPublic())
+        self.assertFalse(rsaKey.isPublic())
+        self.assertTrue(dsaKey.public().isPublic())
+        self.assertFalse(dsaKey.isPublic())
+        self.assertTrue(ecdsaKey.public().isPublic())
+        self.assertFalse(ecdsaKey.isPublic())
+
+
+
     def _testPublicPrivateFromString(self, public, private, type, data):
         self._testPublicFromString(public, type, data)
         self._testPrivateFromString(private, type, data)
