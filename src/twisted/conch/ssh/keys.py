@@ -15,6 +15,8 @@ import warnings
 from hashlib import md5, sha256
 import base64
 
+from incremental import Version
+
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -37,11 +39,10 @@ from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import (
-    iterbytes, long, izip, nativeString, _PY3,
+    iterbytes, long, izip, nativeString, unicode, _PY3,
     _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
-from twisted.python.versions import Version
 
 
 
@@ -143,6 +144,10 @@ class Key(object):
         @rtype: L{Key}
         @return: The loaded key.
         """
+        if isinstance(data, unicode):
+            data = data.encode("utf-8")
+        if isinstance(passphrase, unicode):
+             passphrase = passphrase.encode("utf-8")
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
@@ -1023,10 +1028,12 @@ class Key(object):
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
             encrypt with.
-        @type extra: L{bytes} or L{None}
+        @type extra: L{bytes} or L{unicode} or L{None}
 
         @rtype: L{bytes}
         """
+        if isinstance(extra, unicode):
+            extra = extra.encode("utf-8")
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))

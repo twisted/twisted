@@ -395,7 +395,7 @@ _months = [
 
 
 @implementer(interfaces.IConsumer)
-class DTP(object, protocol.Protocol):
+class DTP(protocol.Protocol, object):
     isConnected = False
 
     _cons = None
@@ -685,7 +685,7 @@ class FTPOverflowProtocol(basic.LineReceiver):
         self.transport.loseConnection()
 
 
-class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
+class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
     """
     Protocol Interpreter for the File Transfer Protocol
 

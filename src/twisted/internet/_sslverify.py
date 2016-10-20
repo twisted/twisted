@@ -19,6 +19,7 @@ except ImportError:
     SSL_CB_HANDSHAKE_DONE = 0x20
 
 from twisted.python import log
+from twisted.python._oldstyle import _oldStyle
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -205,6 +206,7 @@ verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
 
 from zope.interface import Interface, implementer
 from constantly import Flags, FlagConstant
+from incremental import Version
 
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
@@ -220,7 +222,6 @@ from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
 from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 
 
 def _sessionCounter(counter=itertools.count()):
@@ -415,6 +416,7 @@ DN = DistinguishedName
 
 
 
+@_oldStyle
 class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
@@ -759,6 +761,7 @@ class PrivateCertificate(Certificate):
                                                  digestAlgorithm)
 
 
+@_oldStyle
 class PublicKey:
     """
     A L{PublicKey} is a representation of the public part of a key pair.

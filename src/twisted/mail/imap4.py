@@ -15,7 +15,6 @@ To do::
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
-import base64
 import binascii
 import codecs
 import copy
@@ -27,10 +26,8 @@ import time
 
 import email.utils
 
-try:
-    import cStringIO as StringIO
-except:
-    import StringIO
+from itertools import chain
+from io import BytesIO
 
 from zope.interface import implementer
 
@@ -40,6 +37,10 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
+from twisted.python.compat import (
+    _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
+    _b64encodebytes as encodebytes,
+    intToBytes, iterbytes, long, nativeString, networkString, unicode)
 from twisted.internet import interfaces
 
 from twisted.cred import credentials
@@ -81,7 +82,7 @@ class MessageSet(object):
     """
     Essentially an infinite bitfield, with some extra features.
 
-    @type getnext: Function taking C{int} returning C{int}
+    @type getnext: Function taking L{int} returning L{int}
     @ivar getnext: A function that returns the next message number,
     used when iterating through the MessageSet. By default, a function
     returning the next integer is supplied, but as this can be rather
@@ -97,10 +98,10 @@ class MessageSet(object):
         """
         Create a new MessageSet()
 
-        @type start: Optional C{int}
+        @type start: Optional L{int}
         @param start: Start of range, or only message number
 
-        @type end: Optional C{int}
+        @type end: Optional L{int}
         @param end: End of range.
         """
         self._last = self._empty # Last message/UID in use
@@ -116,6 +117,7 @@ class MessageSet(object):
             self.clean()
         else:
             self.add(start,end)
+
 
     # Ooo.  A property.
     def last():
@@ -146,14 +148,15 @@ class MessageSet(object):
         return _getLast, _setLast, None, doc
     last = property(*last())
 
+
     def add(self, start, end=_empty):
         """
         Add another range
 
-        @type start: C{int}
+        @type start: L{int}
         @param start: Start of range, or only message number
 
-        @type end: Optional C{int}
+        @type end: Optional L{int}
         @param end: End of range.
         """
         if end is self._empty:
@@ -173,6 +176,7 @@ class MessageSet(object):
 
         self.ranges.append((start, end))
         self.clean()
+
 
     def __add__(self, other):
         if isinstance(other, MessageSet):
@@ -220,7 +224,7 @@ class MessageSet(object):
 
             oldl, oldh = l, h
 
-        self.ranges = filter(None, self.ranges)
+        self.ranges = [r for r in self.ranges if r]
 
 
     def __contains__(self, value):
@@ -246,11 +250,13 @@ class MessageSet(object):
                 if l is None:
                     break
 
+
     def __iter__(self):
         if self.ranges and self.ranges[0][0] is None:
             raise TypeError("Can't iterate; last value not set")
 
         return self._iterator()
+
 
     def __len__(self):
         res = 0
@@ -264,6 +270,7 @@ class MessageSet(object):
                 res += (h - l) + 1
 
         return res
+
 
     def __str__(self):
         p = []
@@ -279,8 +286,10 @@ class MessageSet(object):
                 p.append('%d:%d' % (low, high))
         return ','.join(p)
 
+
     def __repr__(self):
         return '<MessageSet %s>' % (str(self),)
+
 
     def __eq__(self, other):
         if isinstance(other, MessageSet):
@@ -288,11 +297,13 @@ class MessageSet(object):
         return False
 
 
+
 class LiteralString:
     def __init__(self, size, defered):
         self.size = size
         self.data = []
         self.defer = defered
+
 
     def write(self, data):
         self.size -= len(data)
@@ -308,11 +319,14 @@ class LiteralString:
                 self.data.append(data)
         return passon
 
+
     def callback(self, line):
         """
         Call deferred with data and rest of line
         """
         self.defer.callback((''.join(self.data), line))
+
+
 
 class LiteralFile:
     _memoryFileLimit = 1024 * 1024 * 10
@@ -323,7 +337,8 @@ class LiteralFile:
         if size > self._memoryFileLimit:
             self.data = tempfile.TemporaryFile()
         else:
-            self.data = StringIO.StringIO()
+            self.data = BytesIO()
+
 
     def write(self, data):
         self.size -= len(data)
@@ -339,6 +354,7 @@ class LiteralFile:
                 self.data.write(data)
         return passon
 
+
     def callback(self, line):
         """
         Call deferred with data and rest of line
@@ -347,8 +363,10 @@ class LiteralFile:
         self.defer.callback((self.data, line))
 
 
+
 class WriteBuffer:
-    """Buffer up a bunch of writes before sending them all to a transport at once.
+    """
+    Buffer up a bunch of writes before sending them all to a transport at once.
     """
     def __init__(self, transport, size=8192):
         self.bufferSize = size
@@ -356,11 +374,13 @@ class WriteBuffer:
         self._length = 0
         self._writes = []
 
+
     def write(self, s):
         self._length += len(s)
         self._writes.append(s)
         if self._length > self.bufferSize:
             self.flush()
+
 
     def flush(self):
         if self._writes:
@@ -369,10 +389,11 @@ class WriteBuffer:
             self._length = 0
 
 
+
 class Command:
-    _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH', 'NAMESPACE')
-    _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
-    _OK_RESPONSES = ('UIDVALIDITY', 'UNSEEN', 'READ-WRITE', 'READ-ONLY', 'UIDNEXT', 'PERMANENTFLAGS')
+    _1_RESPONSES = (b'CAPABILITY', b'FLAGS', b'LIST', b'LSUB', b'STATUS', b'SEARCH', b'NAMESPACE')
+    _2_RESPONSES = (b'EXISTS', b'EXPUNGE', b'FETCH', b'RECENT')
+    _OK_RESPONSES = (b'UIDVALIDITY', b'UNSEEN', b'READ-WRITE', b'READ-ONLY', b'UIDNEXT', b'PERMANENTFLAGS')
     defer = None
 
     def __init__(self, command, args=None, wantResponse=(),
@@ -383,10 +404,12 @@ class Command:
         self.continuation = lambda x: continuation(x, *contArgs, **contKw)
         self.lines = []
 
+
     def format(self, tag):
         if self.args is None:
-            return ' '.join((tag, self.command))
-        return ' '.join((tag, self.command, self.args))
+            return b' '.join((tag, self.command))
+        return b' '.join((tag, self.command, self.args))
+
 
     def finish(self, lastLine, unusedCallback):
         send = []
@@ -396,7 +419,7 @@ class Command:
             N = len(names)
             if (N >= 1 and names[0] in self._1_RESPONSES or
                 N >= 2 and names[1] in self._2_RESPONSES or
-                N >= 2 and names[0] == 'OK' and isinstance(names[1], list)
+                N >= 2 and names[0] == b'OK' and isinstance(names[1], list)
                and names[1][0] in self._OK_RESPONSES):
                 send.append(names)
             else:
@@ -412,15 +435,15 @@ class Command:
 # section of the IMAP4 RFC - <https://tools.ietf.org/html/rfc3501#section-9>.
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
-_SP = ' '
-_CTL = ''.join(chr(ch) for ch in range(0x21) + range(0x80, 0x100))
+_SP = b' '
+_CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
-_nonAtomChars = r'(){%*"\]' + _SP + _CTL
+_nonAtomChars = b'(){%*"\]' + _SP + _CTL
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
-_atomChars = ''.join(chr(ch) for ch in range(0x100) if chr(ch) not in _nonAtomChars)
+_atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
 
 @implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
@@ -434,7 +457,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         - Logout
     """
     # Identifier for this server software
-    IDENT = 'Twisted IMAP4rev1 Ready'
+    IDENT = b'Twisted IMAP4rev1 Ready'
 
     # Number of seconds before idle timeout
     # Initially 1 minute.  Raised to 30 minutes after login.
@@ -474,7 +497,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     # Search terms the implementation of which needs to be passed both the last
     # message identifier (UID) and the last sequence id.
-    _requiresLastMessageInfo = set(["OR", "NOT", "UID"])
+    _requiresLastMessageInfo = set([b"OR", b"NOT", b"UID"])
 
     state = 'unauth'
 
@@ -490,15 +513,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self._scheduler = scheduler
         self._queuedAsync = []
 
+
     def capabilities(self):
-        cap = {'AUTH': self.challengers.keys()}
+        cap = {b'AUTH': list(self.challengers.keys())}
         if self.ctx and self.canStartTLS:
             if not self.startedTLS and interfaces.ISSLTransport(self.transport, None) is None:
-                cap['LOGINDISABLED'] = None
-                cap['STARTTLS'] = None
-        cap['NAMESPACE'] = None
-        cap['IDLE'] = None
+                cap[b'LOGINDISABLED'] = None
+                cap[b'STARTTLS'] = None
+        cap[b'NAMESPACE'] = None
+        cap[b'IDLE'] = None
         return cap
+
 
     def connectionMade(self):
         self.tags = {}
@@ -506,14 +531,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(self.timeOut)
         self.sendServerGreeting()
 
+
     def connectionLost(self, reason):
         self.setTimeout(None)
         if self._onLogout:
             self._onLogout()
             self._onLogout = None
 
+
     def timeoutConnection(self):
-        self.sendLine('* BYE Autologout; connection idle too long')
+        self.sendLine(b'* BYE Autologout; connection idle too long')
         self.transport.loseConnection()
         if self.mbox:
             self.mbox.removeListener(self)
@@ -522,6 +549,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 maybeDeferred(cmbx.close).addErrback(log.err)
             self.mbox = None
         self.state = 'timeout'
+
 
     def rawDataReceived(self, data):
         self.resetTimeout()
@@ -541,6 +569,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is not None:
             self.blocked.extend(commands)
 
+
     def lineReceived(self, line):
         if self.blocked is not None:
             self.blocked.append(line)
@@ -552,8 +581,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             f(line)
         except Exception as e:
-            self.sendUntaggedResponse('BAD Server error: ' + str(e))
+            self.sendUntaggedResponse(b'BAD Server error: ' + networkString(str(e)))
             log.err()
+
 
     def parse_command(self, line):
         args = line.split(None, 2)
@@ -564,27 +594,29 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             tag, cmd = args
         elif len(args) == 1:
             tag = args[0]
-            self.sendBadResponse(tag, 'Missing command')
+            self.sendBadResponse(tag, b'Missing command')
             return None
         else:
-            self.sendBadResponse(None, 'Null command')
+            self.sendBadResponse(None, b'Null command')
             return None
 
         cmd = cmd.upper()
         try:
             return self.dispatchCommand(tag, cmd, rest)
         except IllegalClientResponse as e:
-            self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
+            self.sendBadResponse(tag, b'Illegal syntax: ' + networkString(str(e)))
         except IllegalOperation as e:
-            self.sendNegativeResponse(tag, 'Illegal operation: ' + str(e))
+            self.sendNegativeResponse(tag, b'Illegal operation: ' + networkString(str(e)))
         except IllegalMailboxEncoding as e:
-            self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
+            self.sendNegativeResponse(tag, b'Illegal mailbox name: ' + networkString(str(e)))
+
 
     def parse_pending(self, line):
         d = self._pendingLiteral
         self._pendingLiteral = None
         self.parseState = 'command'
         d.callback(line)
+
 
     def dispatchCommand(self, tag, cmd, rest, uid=None):
         f = self.lookupCommand(cmd)
@@ -593,10 +625,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             parseargs = f[1:]
             self.__doCommand(tag, fn, [self, tag], parseargs, rest, uid)
         else:
-            self.sendBadResponse(tag, 'Unsupported command')
+            self.sendBadResponse(tag, b'Unsupported command')
+
 
     def lookupCommand(self, cmd):
-        return getattr(self, '_'.join((self.state, cmd.upper())), None)
+        return getattr(self, '_'.join((self.state, nativeString(cmd.upper()))), None)
+
 
     def __doCommand(self, tag, handler, args, parseargs, line, uid):
         for (i, arg) in enumerate(parseargs):
@@ -618,23 +652,26 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             handler(*args)
 
+
     def __cbDispatch(self, result, tag, fn, args, parseargs, uid):
         (arg, rest) = result
         args.append(arg)
         self.__doCommand(tag, fn, args, parseargs, rest, uid)
 
+
     def __ebDispatch(self, failure, tag):
         if failure.check(IllegalClientResponse):
-            self.sendBadResponse(tag, 'Illegal syntax: ' + str(failure.value))
+            self.sendBadResponse(tag, b'Illegal syntax: ' + networkString(str(failure.value)))
         elif failure.check(IllegalOperation):
-            self.sendNegativeResponse(tag, 'Illegal operation: ' +
-                                      str(failure.value))
+            self.sendNegativeResponse(tag, b'Illegal operation: ' +
+                                      networkString(str(failure.value)))
         elif failure.check(IllegalMailboxEncoding):
-            self.sendNegativeResponse(tag, 'Illegal mailbox name: ' +
-                                      str(failure.value))
+            self.sendNegativeResponse(tag, b'Illegal mailbox name: ' +
+                                      networkString(str(failure.value)))
         else:
-            self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+            self.sendBadResponse(tag, b'Server error: ' + networkString(str(failure.value)))
             log.err(failure)
+
 
     def _stringLiteral(self, size):
         if size > self._literalStringLimit:
@@ -648,6 +685,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.setRawMode()
         return d
 
+
     def _fileLiteral(self, size):
         d = defer.Deferred()
         self.parseState = 'pending'
@@ -655,6 +693,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendContinuationRequest('Ready for %d octets of data' % size)
         self.setRawMode()
         return d
+
 
     def arg_astring(self, line):
         """
@@ -666,15 +705,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             raise IllegalClientResponse("Missing argument")
         d = None
         arg, rest = None, None
-        if line[0] == '"':
+        if line[0:1] == b'"':
             try:
-                spam, arg, rest = line.split('"',2)
+                spam, arg, rest = line.split(b'"',2)
                 rest = rest[1:] # Strip space
             except ValueError:
                 raise IllegalClientResponse("Unmatched quotes")
-        elif line[0] == '{':
+        elif line[0:1] == b'{':
             # literal
-            if line[-1] != '}':
+            if line[-1:] != b'}':
                 raise IllegalClientResponse("Malformed literal")
             try:
                 size = int(line[1:-1])
@@ -682,14 +721,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 raise IllegalClientResponse("Bad literal size: " + line[1:-1])
             d = self._stringLiteral(size)
         else:
-            arg = line.split(' ',1)
+            arg = line.split(b' ',1)
             if len(arg) == 1:
-                arg.append('')
+                arg.append(b'')
             arg, rest = arg
         return d or (arg, rest)
 
     # ATOM: Any CHAR except ( ) { % * " \ ] CTL SP (CHAR is 7bit)
-    atomre = re.compile(r'(?P<atom>[%s]+)( (?P<rest>.*$)|$)' % (re.escape(_atomChars),))
+    atomre = re.compile(b'(?P<atom>[' + re.escape(_atomChars) + b']+)( (?P<rest>.*$)|$)')
+
 
     def arg_atom(self, line):
         """
@@ -702,6 +742,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return m.group('atom'), m.group('rest')
         else:
             raise IllegalClientResponse("Malformed ATOM")
+
 
     def arg_plist(self, line):
         """
@@ -719,6 +760,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             raise IllegalClientResponse("Mismatched parenthesis")
 
         return (parseNestedParens(line[1:i],0), line[i+2:])
+
 
     def arg_literal(self, line):
         """
@@ -740,6 +782,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         return self._fileLiteral(size)
 
+
     def arg_searchkeys(self, line):
         """
         searchkeys
@@ -747,15 +790,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         query = parseNestedParens(line)
         # XXX Should really use list of search terms and parse into
         # a proper tree
+        return (query, b'')
 
-        return (query, '')
 
     def arg_seqset(self, line):
         """
         sequence-set
         """
         rest = ''
-        arg = line.split(' ',1)
+        arg = line.split(b' ',1)
         if len(arg) == 2:
             rest = arg[1]
         arg = arg[0]
@@ -765,21 +808,23 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except IllegalIdentifierError as e:
             raise IllegalClientResponse("Bad message number " + str(e))
 
+
     def arg_fetchatt(self, line):
         """
         fetch-att
         """
         p = _FetchParser()
         p.parseString(line)
-        return (p.result, '')
+        return (p.result, b'')
+
 
     def arg_flaglist(self, line):
         """
         Flag part of store-att-flag
         """
         flags = []
-        if line[0] == '(':
-            if line[-1] != ')':
+        if line[0:1] == b'(':
+            if line[-1:] != b')':
                 raise IllegalClientResponse("Mismatched parenthesis")
             line = line[1:-1]
 
@@ -787,21 +832,23 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             m = self.atomre.search(line)
             if not m:
                 raise IllegalClientResponse("Malformed flag")
-            if line[0] == '\\' and m.start() == 1:
-                flags.append('\\' + m.group('atom'))
+            if line[0:1] == b'\\' and m.start() == 1:
+                flags.append(b'\\' + m.group('atom'))
             elif m.start() == 0:
                 flags.append(m.group('atom'))
             else:
                 raise IllegalClientResponse("Malformed flag")
             line = m.group('rest')
 
-        return (flags, '')
+        return (flags, b'')
+
 
     def arg_line(self, line):
         """
         Command line of UID command
         """
-        return (line, '')
+        return (line, b'')
+
 
     def opt_plist(self, line):
         """
@@ -812,25 +859,27 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             return (None, line)
 
+
     def opt_datetime(self, line):
         """
         Optional date-time string
         """
-        if line.startswith('"'):
+        if line.startswith(b'"'):
             try:
-                spam, date, rest = line.split('"',2)
+                spam, date, rest = line.split(b'"',2)
             except IndexError:
                 raise IllegalClientResponse("Malformed date-time")
             return (date, rest[1:])
         else:
             return (None, line)
 
+
     def opt_charset(self, line):
         """
         Optional charset of SEARCH command
         """
-        if line[:7].upper() == 'CHARSET':
-            arg = line.split(' ',2)
+        if line[:7].upper() == b'CHARSET':
+            arg = line.split(b' ',2)
             if len(arg) == 1:
                 raise IllegalClientResponse("Missing charset identifier")
             if len(arg) == 2:
@@ -840,18 +889,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             return (None, line)
 
+
     def sendServerGreeting(self):
-        msg = '[CAPABILITY %s] %s' % (' '.join(self.listCapabilities()), self.IDENT)
+        #msg = '[CAPABILITY %s] %s' % (' '.join(self.listCapabilities()), self.IDENT)
+        msg = (b'[CAPABILITY ' + b' '.join(self.listCapabilities()) + b'] ' +
+              self.IDENT)
         self.sendPositiveResponse(message=msg)
 
-    def sendBadResponse(self, tag = None, message = ''):
-        self._respond('BAD', tag, message)
 
-    def sendPositiveResponse(self, tag = None, message = ''):
-        self._respond('OK', tag, message)
+    def sendBadResponse(self, tag = None, message = b''):
+        self._respond(b'BAD', tag, message)
 
-    def sendNegativeResponse(self, tag = None, message = ''):
-        self._respond('NO', tag, message)
+
+    def sendPositiveResponse(self, tag = None, message = b''):
+        self._respond(b'OK', tag, message)
+
+
+    def sendNegativeResponse(self, tag = None, message = b''):
+        self._respond(b'NO', tag, message)
+
 
     def sendUntaggedResponse(self, message, async=False):
         if not async or (self.blocked is None):
@@ -859,46 +915,51 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self._queuedAsync.append(message)
 
-    def sendContinuationRequest(self, msg = 'Ready for additional command text'):
+
+    def sendContinuationRequest(self, msg = b'Ready for additional command text'):
         if msg:
-            self.sendLine('+ ' + msg)
+            self.sendLine(b'+ ' + msg)
         else:
-            self.sendLine('+')
+            self.sendLine(b'+')
+
 
     def _respond(self, state, tag, message):
-        if state in ('OK', 'NO', 'BAD') and self._queuedAsync:
+        if state in (b'OK', b'NO', b'BAD') and self._queuedAsync:
             lines = self._queuedAsync
             self._queuedAsync = []
             for msg in lines:
                 self._respond(msg, None, None)
         if not tag:
-            tag = '*'
+            tag = b'*'
         if message:
-            self.sendLine(' '.join((tag, state, message)))
+            self.sendLine(b' '.join((tag, state, message)))
         else:
-            self.sendLine(' '.join((tag, state)))
+            self.sendLine(b' '.join((tag, state)))
+
 
     def listCapabilities(self):
-        caps = ['IMAP4rev1']
-        for c, v in self.capabilities().iteritems():
+        caps = [b'IMAP4rev1']
+        for c, v in self.capabilities().items():
             if v is None:
                 caps.append(c)
             elif len(v):
-                caps.extend([('%s=%s' % (c, cap)) for cap in v])
+                caps.extend([(c + b'=' + cap) for cap in v])
         return caps
 
+
     def do_CAPABILITY(self, tag):
-        self.sendUntaggedResponse('CAPABILITY ' + ' '.join(self.listCapabilities()))
-        self.sendPositiveResponse(tag, 'CAPABILITY completed')
+        self.sendUntaggedResponse(b'CAPABILITY ' + b' '.join(self.listCapabilities()))
+        self.sendPositiveResponse(tag, b'CAPABILITY completed')
 
     unauth_CAPABILITY = (do_CAPABILITY,)
     auth_CAPABILITY = unauth_CAPABILITY
     select_CAPABILITY = unauth_CAPABILITY
     logout_CAPABILITY = unauth_CAPABILITY
 
+
     def do_LOGOUT(self, tag):
-        self.sendUntaggedResponse('BYE Nice talking to you')
-        self.sendPositiveResponse(tag, 'LOGOUT successful')
+        self.sendUntaggedResponse(b'BYE Nice talking to you')
+        self.sendPositiveResponse(tag, b'LOGOUT successful')
         self.transport.loseConnection()
 
     unauth_LOGOUT = (do_LOGOUT,)
@@ -906,46 +967,51 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_LOGOUT = unauth_LOGOUT
     logout_LOGOUT = unauth_LOGOUT
 
+
     def do_NOOP(self, tag):
-        self.sendPositiveResponse(tag, 'NOOP No operation performed')
+        self.sendPositiveResponse(tag, b'NOOP No operation performed')
 
     unauth_NOOP = (do_NOOP,)
     auth_NOOP = unauth_NOOP
     select_NOOP = unauth_NOOP
     logout_NOOP = unauth_NOOP
 
+
     def do_AUTHENTICATE(self, tag, args):
         args = args.upper().strip()
         if args not in self.challengers:
-            self.sendNegativeResponse(tag, 'AUTHENTICATE method unsupported')
+            self.sendNegativeResponse(tag, b'AUTHENTICATE method unsupported')
         else:
             self.authenticate(self.challengers[args](), tag)
 
     unauth_AUTHENTICATE = (do_AUTHENTICATE, arg_atom)
 
+
     def authenticate(self, chal, tag):
         if self.portal is None:
-            self.sendNegativeResponse(tag, 'Temporary authentication failure')
+            self.sendNegativeResponse(tag, b'Temporary authentication failure')
             return
 
         self._setupChallenge(chal, tag)
+
 
     def _setupChallenge(self, chal, tag):
         try:
             challenge = chal.getChallenge()
         except Exception as e:
-            self.sendBadResponse(tag, 'Server error: ' + str(e))
+            self.sendBadResponse(tag, b'Server error: ' + networkString(str(e)))
         else:
-            coded = base64.encodestring(challenge)[:-1]
+            coded = encodebytes(challenge)[:-1]
             self.parseState = 'pending'
             self._pendingLiteral = defer.Deferred()
             self.sendContinuationRequest(coded)
             self._pendingLiteral.addCallback(self.__cbAuthChunk, chal, tag)
             self._pendingLiteral.addErrback(self.__ebAuthChunk, tag)
 
+
     def __cbAuthChunk(self, result, chal, tag):
         try:
-            uncoded = base64.decodestring(result)
+            uncoded = decodebytes(result)
         except binascii.Error:
             raise IllegalClientResponse("Malformed Response - not base64")
 
@@ -959,47 +1025,52 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag,), None, (tag,), None
             )
 
+
     def __cbAuthResp(self, result, tag):
         (iface, avatar, logout) = result
         assert iface is IAccount, "IAccount is the only supported interface"
         self.account = avatar
         self.state = 'auth'
         self._onLogout = logout
-        self.sendPositiveResponse(tag, 'Authentication successful')
+        self.sendPositiveResponse(tag, b'Authentication successful')
         self.setTimeout(self.POSTAUTH_TIMEOUT)
+
 
     def __ebAuthResp(self, failure, tag):
         if failure.check(UnauthorizedLogin):
-            self.sendNegativeResponse(tag, 'Authentication failed: unauthorized')
+            self.sendNegativeResponse(tag, b'Authentication failed: unauthorized')
         elif failure.check(UnhandledCredentials):
-            self.sendNegativeResponse(tag, 'Authentication failed: server misconfigured')
+            self.sendNegativeResponse(tag, b'Authentication failed: server misconfigured')
         else:
-            self.sendBadResponse(tag, 'Server error: login failed unexpectedly')
+            self.sendBadResponse(tag, b'Server error: login failed unexpectedly')
             log.err(failure)
 
+
     def __ebAuthChunk(self, failure, tag):
-        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
+        self.sendNegativeResponse(tag, b'Authentication failed: ' + networkString(str(failure.value)))
+
 
     def do_STARTTLS(self, tag):
         if self.startedTLS:
-            self.sendNegativeResponse(tag, 'TLS already negotiated')
+            self.sendNegativeResponse(tag, b'TLS already negotiated')
         elif self.ctx and self.canStartTLS:
-            self.sendPositiveResponse(tag, 'Begin TLS negotiation now')
+            self.sendPositiveResponse(tag, b'Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
             self.startedTLS = True
             self.challengers = self.challengers.copy()
-            if 'LOGIN' not in self.challengers:
-                self.challengers['LOGIN'] = LOGINCredentials
-            if 'PLAIN' not in self.challengers:
-                self.challengers['PLAIN'] = PLAINCredentials
+            if b'LOGIN' not in self.challengers:
+                self.challengers[b'LOGIN'] = LOGINCredentials
+            if b'PLAIN' not in self.challengers:
+                self.challengers[b'PLAIN'] = PLAINCredentials
         else:
-            self.sendNegativeResponse(tag, 'TLS not available')
+            self.sendNegativeResponse(tag, b'TLS not available')
 
     unauth_STARTTLS = (do_STARTTLS,)
 
+
     def do_LOGIN(self, tag, user, passwd):
-        if 'LOGINDISABLED' in self.capabilities():
-            self.sendBadResponse(tag, 'LOGIN is disabled before STARTTLS')
+        if b'LOGINDISABLED' in self.capabilities():
+            self.sendBadResponse(tag, b'LOGIN is disabled before STARTTLS')
             return
 
         maybeDeferred(self.authenticateLogin, user, passwd
@@ -1009,18 +1080,20 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     unauth_LOGIN = (do_LOGIN, arg_astring, arg_astring)
 
+
     def authenticateLogin(self, user, passwd):
-        """Lookup the account associated with the given parameters
+        """
+        Lookup the account associated with the given parameters
 
         Override this method to define the desired authentication behavior.
 
         The default behavior is to defer authentication to C{self.portal}
         if it is not None, or to deny the login otherwise.
 
-        @type user: C{str}
+        @type user: L{str}
         @param user: The username to lookup
 
-        @type passwd: C{str}
+        @type passwd: L{str}
         @param passwd: The password to login with
         """
         if self.portal:
@@ -1030,24 +1103,27 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             )
         raise UnauthorizedLogin()
 
+
     def __cbLogin(self, result, tag):
         (iface, avatar, logout) = result
         if iface is not IAccount:
-            self.sendBadResponse(tag, 'Server error: login returned unexpected value')
+            self.sendBadResponse(tag, b'Server error: login returned unexpected value')
             log.err("__cbLogin called with %r, IAccount expected" % (iface,))
         else:
             self.account = avatar
             self._onLogout = logout
-            self.sendPositiveResponse(tag, 'LOGIN succeeded')
+            self.sendPositiveResponse(tag, b'LOGIN succeeded')
             self.state = 'auth'
             self.setTimeout(self.POSTAUTH_TIMEOUT)
 
+
     def __ebLogin(self, failure, tag):
         if failure.check(UnauthorizedLogin):
-            self.sendNegativeResponse(tag, 'LOGIN failed')
+            self.sendNegativeResponse(tag, b'LOGIN failed')
         else:
-            self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+            self.sendBadResponse(tag, b'Server error: ' + networkString(str(failure.value)))
             log.err(failure)
+
 
     def do_NAMESPACE(self, tag):
         personal = public = shared = None
@@ -1056,11 +1132,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             personal = np.getPersonalNamespaces()
             public = np.getSharedNamespaces()
             shared = np.getSharedNamespaces()
-        self.sendUntaggedResponse('NAMESPACE ' + collapseNestedLists([personal, public, shared]))
-        self.sendPositiveResponse(tag, "NAMESPACE command completed")
+        self.sendUntaggedResponse(b'NAMESPACE ' + collapseNestedLists([personal, public, shared]))
+        self.sendPositiveResponse(tag, b"NAMESPACE command completed")
 
     auth_NAMESPACE = (do_NAMESPACE,)
     select_NAMESPACE = auth_NAMESPACE
+
 
     def _parseMbox(self, name):
         if isinstance(name, unicode):
@@ -1070,6 +1147,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except:
             log.err()
             raise IllegalMailboxEncoding(name)
+
 
     def _selectWork(self, tag, name, rw, cmdName):
         if self.mbox:
@@ -1086,9 +1164,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addErrback(self._ebSelectWork, cmdName, tag
             )
 
+
     def _ebSelectWork(self, failure, cmdName, tag):
-        self.sendBadResponse(tag, "%s failed: Server error" % (cmdName,))
+        self.sendBadResponse(tag, b"%s failed: Server error" % (cmdName,))
         log.err(failure)
+
 
     def _cbSelectWork(self, mbox, cmdName, tag):
         if mbox is None:
@@ -1099,21 +1179,21 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         flags = mbox.getFlags()
-        self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
-        self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
-        self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
-        self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
+        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
+        self.sendUntaggedResponse(intToBytes(mbox.getRecentCount()) + b' RECENT')
+        self.sendUntaggedResponse(b'FLAGS (' + b' '.join(flags) + b')')
+        self.sendPositiveResponse(None, b'[UIDVALIDITY ' + intToBytes(mbox.getUIDValidity()) + b']')
 
-        s = mbox.isWriteable() and 'READ-WRITE' or 'READ-ONLY'
+        s = mbox.isWriteable() and b'READ-WRITE' or b'READ-ONLY'
         mbox.addListener(self)
-        self.sendPositiveResponse(tag, '[%s] %s successful' % (s, cmdName))
+        self.sendPositiveResponse(tag, b'[' + s + b'] ' + cmdName + b' successful')
         self.state = 'select'
         self.mbox = mbox
 
-    auth_SELECT = ( _selectWork, arg_astring, 1, 'SELECT' )
+    auth_SELECT = ( _selectWork, arg_astring, 1, b'SELECT' )
     select_SELECT = auth_SELECT
 
-    auth_EXAMINE = ( _selectWork, arg_astring, 0, 'EXAMINE' )
+    auth_EXAMINE = ( _selectWork, arg_astring, 0, b'EXAMINE' )
     select_EXAMINE = auth_EXAMINE
 
 
@@ -1123,10 +1203,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.lastState = self.parseState
         self.parseState = 'idle'
 
+
     def parse_idle(self, *args):
         self.parseState = self.lastState
         del self.lastState
-        self.sendPositiveResponse(self.parseTag, "IDLE terminated")
+        self.sendPositiveResponse(self.parseTag, b"IDLE terminated")
         del self.parseTag
 
     select_IDLE = ( do_IDLE, )
@@ -1138,30 +1219,31 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             result = self.account.create(name)
         except MailboxException as c:
-            self.sendNegativeResponse(tag, str(c))
+            self.sendNegativeResponse(tag, networkString(str(c)))
         except:
-            self.sendBadResponse(tag, "Server error encountered while creating mailbox")
+            self.sendBadResponse(tag, b"Server error encountered while creating mailbox")
             log.err()
         else:
             if result:
-                self.sendPositiveResponse(tag, 'Mailbox created')
+                self.sendPositiveResponse(tag, b'Mailbox created')
             else:
-                self.sendNegativeResponse(tag, 'Mailbox not created')
+                self.sendNegativeResponse(tag, b'Mailbox not created')
 
     auth_CREATE = (do_CREATE, arg_astring)
     select_CREATE = auth_CREATE
 
+
     def do_DELETE(self, tag, name):
         name = self._parseMbox(name)
         if name.lower() == 'inbox':
-            self.sendNegativeResponse(tag, 'You cannot delete the inbox')
+            self.sendNegativeResponse(tag, b'You cannot delete the inbox')
             return
         try:
             self.account.delete(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
-            self.sendBadResponse(tag, "Server error encountered while deleting mailbox")
+            self.sendBadResponse(tag, b"Server error encountered while deleting mailbox")
             log.err()
         else:
             self.sendPositiveResponse(tag, 'Mailbox deleted')
@@ -1169,19 +1251,20 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     auth_DELETE = (do_DELETE, arg_astring)
     select_DELETE = auth_DELETE
 
+
     def do_RENAME(self, tag, oldname, newname):
         oldname, newname = [self._parseMbox(n) for n in (oldname, newname)]
         if oldname.lower() == 'inbox' or newname.lower() == 'inbox':
-            self.sendNegativeResponse(tag, 'You cannot rename the inbox, or rename another mailbox to inbox.')
+            self.sendNegativeResponse(tag, b'You cannot rename the inbox, or rename another mailbox to inbox.')
             return
         try:
             self.account.rename(oldname, newname)
         except TypeError:
-            self.sendBadResponse(tag, 'Invalid command syntax')
+            self.sendBadResponse(tag, b'Invalid command syntax')
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
-            self.sendBadResponse(tag, "Server error encountered while renaming mailbox")
+            self.sendBadResponse(tag, b"Server error encountered while renaming mailbox")
             log.err()
         else:
             self.sendPositiveResponse(tag, 'Mailbox renamed')
@@ -1189,35 +1272,38 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     auth_RENAME = (do_RENAME, arg_astring, arg_astring)
     select_RENAME = auth_RENAME
 
+
     def do_SUBSCRIBE(self, tag, name):
         name = self._parseMbox(name)
         try:
             self.account.subscribe(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
-            self.sendBadResponse(tag, "Server error encountered while subscribing to mailbox")
+            self.sendBadResponse(tag, b"Server error encountered while subscribing to mailbox")
             log.err()
         else:
-            self.sendPositiveResponse(tag, 'Subscribed')
+            self.sendPositiveResponse(tag, b'Subscribed')
 
     auth_SUBSCRIBE = (do_SUBSCRIBE, arg_astring)
     select_SUBSCRIBE = auth_SUBSCRIBE
+
 
     def do_UNSUBSCRIBE(self, tag, name):
         name = self._parseMbox(name)
         try:
             self.account.unsubscribe(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, str(m))
+            self.sendNegativeResponse(tag, networkString(str(m)))
         except:
-            self.sendBadResponse(tag, "Server error encountered while unsubscribing from mailbox")
+            self.sendBadResponse(tag, b"Server error encountered while unsubscribing from mailbox")
             log.err()
         else:
-            self.sendPositiveResponse(tag, 'Unsubscribed')
+            self.sendPositiveResponse(tag, b'Unsubscribed')
 
     auth_UNSUBSCRIBE = (do_UNSUBSCRIBE, arg_astring)
     select_UNSUBSCRIBE = auth_UNSUBSCRIBE
+
 
     def _listWork(self, tag, ref, mbox, sub, cmdName):
         mbox = self._parseMbox(mbox)
@@ -1226,6 +1312,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addErrback(self._ebListWork, tag
             )
 
+
     def _cbListWork(self, mailboxes, tag, sub, cmdName):
         for (name, box) in mailboxes:
             if not sub or self.account.isSubscribed(name):
@@ -1233,10 +1320,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 delim = box.getHierarchicalDelimiter()
                 resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name.encode('imap4-utf-7'))
                 self.sendUntaggedResponse(collapseNestedLists(resp))
-        self.sendPositiveResponse(tag, '%s completed' % (cmdName,))
+        self.sendPositiveResponse(tag, cmdName + b' completed')
+
 
     def _ebListWork(self, failure, tag):
-        self.sendBadResponse(tag, "Server error encountered while listing mailboxes.")
+        self.sendBadResponse(tag, b"Server error encountered while listing mailboxes.")
         log.err(failure)
 
     auth_LIST = (_listWork, arg_astring, arg_astring, 0, 'LIST')
@@ -1245,12 +1333,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     auth_LSUB = (_listWork, arg_astring, arg_astring, 1, 'LSUB')
     select_LSUB = auth_LSUB
 
+
     def do_STATUS(self, tag, mailbox, names):
         mailbox = self._parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox, 0
             ).addCallback(self._cbStatusGotMailbox, tag, mailbox, names
             ).addErrback(self._ebStatusGotMailbox, tag
             )
+
 
     def _cbStatusGotMailbox(self, mbox, tag, mailbox, names):
         if mbox:
@@ -1261,20 +1351,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendNegativeResponse(tag, "Could not open mailbox")
 
+
     def _ebStatusGotMailbox(self, failure, tag):
-        self.sendBadResponse(tag, "Server error encountered while opening mailbox.")
+        self.sendBadResponse(tag, b"Server error encountered while opening mailbox.")
         log.err(failure)
 
     auth_STATUS = (do_STATUS, arg_astring, arg_plist)
     select_STATUS = auth_STATUS
 
+
     def __cbStatus(self, status, tag, box):
-        line = ' '.join(['%s %s' % x for x in status.iteritems()])
-        self.sendUntaggedResponse('STATUS %s (%s)' % (box, line))
-        self.sendPositiveResponse(tag, 'STATUS complete')
+        line = ' '.join(['%s %s' % x for x in status.items()])
+        self.sendUntaggedResponse(b'STATUS ' + box.encode('imap4-utf-7') + b' ('+ line + b')')
+        self.sendPositiveResponse(tag, b'STATUS complete')
+
 
     def __ebStatus(self, failure, tag, box):
-        self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, str(failure.value)))
+        self.sendBadResponse(tag, b'STATUS '+ box + b' failed: ' +
+                             networkString(str(failure.value)))
+
 
     def do_APPEND(self, tag, mailbox, flags, date, message):
         mailbox = self._parseMbox(mailbox)
@@ -1282,6 +1377,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addCallback(self._cbAppendGotMailbox, tag, flags, date, message
             ).addErrback(self._ebAppendGotMailbox, tag
             )
+
 
     def _cbAppendGotMailbox(self, mbox, tag, flags, date, message):
         if not mbox:
@@ -1292,20 +1388,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbAppend, tag, mbox)
         d.addErrback(self.__ebAppend, tag)
 
+
     def _ebAppendGotMailbox(self, failure, tag):
-        self.sendBadResponse(tag, "Server error encountered while opening mailbox.")
+        self.sendBadResponse(tag, b"Server error encountered while opening mailbox.")
         log.err(failure)
 
     auth_APPEND = (do_APPEND, arg_astring, opt_plist, opt_datetime,
                    arg_literal)
     select_APPEND = auth_APPEND
 
+
     def __cbAppend(self, result, tag, mbox):
-        self.sendUntaggedResponse('%d EXISTS' % mbox.getMessageCount())
+        self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
         self.sendPositiveResponse(tag, 'APPEND complete')
 
+
     def __ebAppend(self, failure, tag):
-        self.sendBadResponse(tag, 'APPEND failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'APPEND failed: ' +
+                             networkString(str(failure.value)))
+
 
     def do_CHECK(self, tag):
         d = self.checkpoint()
@@ -1320,14 +1421,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             )
     select_CHECK = (do_CHECK,)
 
+
     def __cbCheck(self, result, tag):
-        self.sendPositiveResponse(tag, 'CHECK completed')
+        self.sendPositiveResponse(tag, b'CHECK completed')
+
 
     def __ebCheck(self, failure, tag):
-        self.sendBadResponse(tag, 'CHECK failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'CHECK failed: ' +
+                             networkString(str(failure.value)))
+
 
     def checkpoint(self):
-        """Called when the client issues a CHECK command.
+        """
+        Called when the client issues a CHECK command.
 
         This should perform any checkpoint operations required by the server.
         It may be a long running operation, but may not block.  If it returns
@@ -1335,6 +1441,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         when the deferred's callback (or errback) is invoked.
         """
         return None
+
 
     def do_CLOSE(self, tag):
         d = None
@@ -1353,14 +1460,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     select_CLOSE = (do_CLOSE,)
 
+
     def __cbClose(self, result, tag):
-        self.sendPositiveResponse(tag, 'CLOSE completed')
+        self.sendPositiveResponse(tag, b'CLOSE completed')
         self.mbox.removeListener(self)
         self.mbox = None
         self.state = 'auth'
 
+
     def __ebClose(self, failure, tag):
-        self.sendBadResponse(tag, 'CLOSE failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'CLOSE failed: ' +
+                             networkString(str(failure.value)))
+
 
     def do_EXPUNGE(self, tag):
         if self.mbox.isWriteable():
@@ -1368,18 +1479,22 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 self.__cbExpunge, self.__ebExpunge, (tag,), None, (tag,), None
             )
         else:
-            self.sendNegativeResponse(tag, 'EXPUNGE ignored on read-only mailbox')
+            self.sendNegativeResponse(tag, b'EXPUNGE ignored on read-only mailbox')
 
     select_EXPUNGE = (do_EXPUNGE,)
 
+
     def __cbExpunge(self, result, tag):
         for e in result:
-            self.sendUntaggedResponse('%d EXPUNGE' % e)
-        self.sendPositiveResponse(tag, 'EXPUNGE completed')
+            self.sendUntaggedResponse(intToBytes(e) + b' EXPUNGE')
+        self.sendPositiveResponse(tag, b'EXPUNGE completed')
+
 
     def __ebExpunge(self, failure, tag):
-        self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'EXPUNGE failed: ' +
+                             networkString(str(failure.value)))
         log.err(failure)
+
 
     def do_SEARCH(self, tag, charset, query, uid=0):
         sm = ISearchableMailbox(self.mbox, None)
@@ -1390,21 +1505,21 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             # that's not the ideal way to get all messages, there should be a
             # method on mailboxes that gives you all of them
-            s = parseIdList('1:*')
+            s = parseIdList(b'1:*')
             maybeDeferred(self.mbox.fetch, s, uid=uid
                           ).addCallback(self.__cbManualSearch,
                                         tag, self.mbox, query, uid
                           ).addErrback(self.__ebSearch, tag)
 
-
     select_SEARCH = (do_SEARCH, opt_charset, arg_searchkeys)
+
 
     def __cbSearch(self, result, tag, mbox, uid):
         if uid:
             result = map(mbox.getUID, result)
-        ids = ' '.join([str(i) for i in result])
-        self.sendUntaggedResponse('SEARCH ' + ids)
-        self.sendPositiveResponse(tag, 'SEARCH completed')
+        ids = b' '.join([str(i) for i in result])
+        self.sendUntaggedResponse(b'SEARCH ' + ids)
+        self.sendPositiveResponse(tag, b'SEARCH completed')
 
 
     def __cbManualSearch(self, result, tag, mbox, query, uid,
@@ -1413,24 +1528,24 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Apply the search filter to a set of messages. Send the response to the
         client.
 
-        @type result: C{list} of C{tuple} of (C{int}, provider of
+        @type result: L{list} of L{tuple} of (L{int}, provider of
             L{imap4.IMessage})
         @param result: A list two tuples of messages with their sequence ids,
             sorted by the ids in descending order.
 
-        @type tag: C{str}
+        @type tag: L{str}
         @param tag: A command tag.
 
         @type mbox: Provider of L{imap4.IMailbox}
         @param mbox: The searched mailbox.
 
-        @type query: C{list}
+        @type query: L{list}
         @param query: A list representing the parsed form of the search query.
 
         @param uid: A flag indicating whether the search is over message
             sequence numbers or UIDs.
 
-        @type searchResults: C{list}
+        @type searchResults: L{list}
         @param searchResults: The search results so far or L{None} if no
             results yet.
         """
@@ -1441,26 +1556,26 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         # result is a list of tuples (sequenceId, Message)
         lastSequenceId = result and result[-1][0]
         lastMessageId = result and result[-1][1].getUID()
-
-        for (i, (id, msg)) in zip(range(5), result):
+        for (i, (msgId, msg)) in list(zip(range(5), result)):
             # searchFilter and singleSearchStep will mutate the query.  Dang.
             # Copy it here or else things will go poorly for subsequent
             # messages.
-            if self._searchFilter(copy.deepcopy(query), id, msg,
+            if self._searchFilter(copy.deepcopy(query), msgId, msg,
                                   lastSequenceId, lastMessageId):
                 if uid:
-                    searchResults.append(str(msg.getUID()))
+                    searchResults.append(intToBytes(msg.getUID()))
                 else:
-                    searchResults.append(str(id))
+                    searchResults.append(intToBytes(msgId))
+
         if i == 4:
             from twisted.internet import reactor
             reactor.callLater(
-                0, self.__cbManualSearch, result[5:], tag, mbox, query, uid,
+                0, self.__cbManualSearch, list(result[5:]), tag, mbox, query, uid,
                 searchResults)
         else:
             if searchResults:
-                self.sendUntaggedResponse('SEARCH ' + ' '.join(searchResults))
-            self.sendPositiveResponse(tag, 'SEARCH completed')
+                self.sendUntaggedResponse(b'SEARCH ' + b' '.join(searchResults))
+            self.sendPositiveResponse(tag, b'SEARCH completed')
 
 
     def _searchFilter(self, query, id, msg, lastSequenceId, lastMessageId):
@@ -1474,11 +1589,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         @param msg: The message being checked.
 
-        @type lastSequenceId: C{int}
+        @type lastSequenceId: L{int}
         @param lastSequenceId: The highest sequence number of any message in
             the mailbox being searched.
 
-        @type lastMessageId: C{int}
+        @type lastMessageId: L{int}
         @param lastMessageId: The highest UID of any message in the mailbox
             being searched.
 
@@ -1492,14 +1607,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return True
 
 
-    def _singleSearchStep(self, query, id, msg, lastSequenceId, lastMessageId):
+    def _singleSearchStep(self, query, msgId, msg, lastSequenceId, lastMessageId):
         """
         Pop one search term from the beginning of C{query} (possibly more than
         one element) and return whether it matches the given message.
 
         @param query: A list representing the parsed form of the search query.
 
-        @param id: The sequence number of the message being checked.
+        @param msgId: The sequence number of the message being checked.
 
         @param msg: The message being checked.
 
@@ -1514,7 +1629,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         q = query.pop(0)
         if isinstance(q, list):
-            if not self._searchFilter(q, id, msg,
+            if not self._searchFilter(q, msgId, msg,
                                       lastSequenceId, lastMessageId):
                 return False
         else:
@@ -1524,58 +1639,61 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 # below) or it may be a message sequence set.  Here we
                 # recognize a message sequence set "N:M".
                 messageSet = parseIdList(c, lastSequenceId)
-                return id in messageSet
+                return msgId in messageSet
             else:
-                f = getattr(self, 'search_' + c, None)
+                f = getattr(self, 'search_' + nativeString(c), None)
                 if f is None:
-                    raise IllegalQueryError("Invalid search command %s" % c)
+                    raise IllegalQueryError("Invalid search command %s" % nativeString(c))
 
                 if c in self._requiresLastMessageInfo:
-                    result = f(query, id, msg, (lastSequenceId,
-                                                lastMessageId))
+                    result = f(query, msgId, msg, (lastSequenceId,
+                                                   lastMessageId))
                 else:
-                    result = f(query, id, msg)
+                    result = f(query, msgId, msg)
 
                 if not result:
                     return False
         return True
 
+
     def search_ALL(self, query, id, msg):
         """
         Returns C{True} if the message matches the ALL search key (always).
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed query string.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         """
         return True
 
+
     def search_ANSWERED(self, query, id, msg):
         """
         Returns C{True} if the message has been answered.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed query string.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         """
         return '\\Answered' in msg.getFlags()
 
+
     def search_BCC(self, query, id, msg):
         """
         Returns C{True} if the message has a BCC address matching the query.
 
-        @type query: A C{list} of C{str}
-        @param query: A list whose first element is a BCC C{str}
+        @type query: A L{list} of L{str}
+        @param query: A list whose first element is a BCC L{str}
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
@@ -1583,95 +1701,110 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         bcc = msg.getHeaders(False, 'bcc').get('bcc', '')
         return bcc.lower().find(query.pop(0).lower()) != -1
 
+
     def search_BEFORE(self, query, id, msg):
         date = parseTime(query.pop(0))
         return email.utils.parsedate(msg.getInternalDate()) < date
+
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
         return text.strFile(body, msg.getBodyFile(), False)
 
+
     def search_CC(self, query, id, msg):
         cc = msg.getHeaders(False, 'cc').get('cc', '')
         return cc.lower().find(query.pop(0).lower()) != -1
 
+
     def search_DELETED(self, query, id, msg):
         return '\\Deleted' in msg.getFlags()
+
 
     def search_DRAFT(self, query, id, msg):
         return '\\Draft' in msg.getFlags()
 
+
     def search_FLAGGED(self, query, id, msg):
         return '\\Flagged' in msg.getFlags()
+
 
     def search_FROM(self, query, id, msg):
         fm = msg.getHeaders(False, 'from').get('from', '')
         return fm.lower().find(query.pop(0).lower()) != -1
+
 
     def search_HEADER(self, query, id, msg):
         hdr = query.pop(0).lower()
         hdr = msg.getHeaders(False, hdr).get(hdr, '')
         return hdr.lower().find(query.pop(0).lower()) != -1
 
+
     def search_KEYWORD(self, query, id, msg):
         query.pop(0)
         return False
 
+
     def search_LARGER(self, query, id, msg):
         return int(query.pop(0)) < msg.getSize()
 
+
     def search_NEW(self, query, id, msg):
         return '\\Recent' in msg.getFlags() and '\\Seen' not in msg.getFlags()
+
 
     def search_NOT(self, query, id, msg, lastIDs):
         """
         Returns C{True} if the message does not match the query.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed form of the search query.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastIDs: C{tuple}
+        @type lastIDs: L{tuple}
         @param lastIDs: A tuple of (last sequence id, last message id).
-        The I{last sequence id} is an C{int} containing the highest sequence
+        The I{last sequence id} is an L{int} containing the highest sequence
         number of a message in the mailbox.  The I{last message id} is an
-        C{int} containing the highest UID of a message in the mailbox.
+        L{int} containing the highest UID of a message in the mailbox.
         """
         (lastSequenceId, lastMessageId) = lastIDs
         return not self._singleSearchStep(query, id, msg,
                                           lastSequenceId, lastMessageId)
 
+
     def search_OLD(self, query, id, msg):
         return '\\Recent' not in msg.getFlags()
+
 
     def search_ON(self, query, id, msg):
         date = parseTime(query.pop(0))
         return email.utils.parsedate(msg.getInternalDate()) == date
+
 
     def search_OR(self, query, id, msg, lastIDs):
         """
         Returns C{True} if the message matches any of the first two query
         items.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed form of the search query.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastIDs: C{tuple}
+        @type lastIDs: L{tuple}
         @param lastIDs: A tuple of (last sequence id, last message id).
-        The I{last sequence id} is an C{int} containing the highest sequence
+        The I{last sequence id} is an L{int} containing the highest sequence
         number of a message in the mailbox.  The I{last message id} is an
-        C{int} containing the highest UID of a message in the mailbox.
+        L{int} containing the highest UID of a message in the mailbox.
         """
         (lastSequenceId, lastMessageId) = lastIDs
         a = self._singleSearchStep(query, id, msg,
@@ -1680,22 +1813,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                                    lastSequenceId, lastMessageId)
         return a or b
 
+
     def search_RECENT(self, query, id, msg):
         return '\\Recent' in msg.getFlags()
 
+
     def search_SEEN(self, query, id, msg):
         return '\\Seen' in msg.getFlags()
+
 
     def search_SENTBEFORE(self, query, id, msg):
         """
         Returns C{True} if the message date is earlier than the query date.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
@@ -1704,11 +1840,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         date = email.utils.parsedate(date)
         return date < parseTime(query.pop(0))
 
+
     def search_SENTON(self, query, id, msg):
         """
         Returns C{True} if the message date is the same as the query date.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
@@ -1719,11 +1856,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         date = email.utils.parsedate(date)
         return date[:3] == parseTime(query.pop(0))[:3]
 
+
     def search_SENTSINCE(self, query, id, msg):
         """
         Returns C{True} if the message date is later than the query date.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
@@ -1734,75 +1872,90 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         date = email.utils.parsedate(date)
         return date > parseTime(query.pop(0))
 
+
     def search_SINCE(self, query, id, msg):
         date = parseTime(query.pop(0))
         return email.utils.parsedate(msg.getInternalDate()) > date
 
+
     def search_SMALLER(self, query, id, msg):
         return int(query.pop(0)) > msg.getSize()
+
 
     def search_SUBJECT(self, query, id, msg):
         subj = msg.getHeaders(False, 'subject').get('subject', '')
         return subj.lower().find(query.pop(0).lower()) != -1
+
 
     def search_TEXT(self, query, id, msg):
         # XXX - This must search headers too
         body = query.pop(0).lower()
         return text.strFile(body, msg.getBodyFile(), False)
 
+
     def search_TO(self, query, id, msg):
         to = msg.getHeaders(False, 'to').get('to', '')
         return to.lower().find(query.pop(0).lower()) != -1
+
 
     def search_UID(self, query, id, msg, lastIDs):
         """
         Returns C{True} if the message UID is in the range defined by the
         search query.
 
-        @type query: A C{list} of C{str}
+        @type query: A L{list} of L{str}
         @param query: A list representing the parsed form of the search
-            query. Its first element should be a C{str} that can be interpreted
+            query. Its first element should be a L{str} that can be interpreted
             as a sequence range, for example '2:4,5:*'.
 
-        @type id: C{int}
+        @type id: L{int}
         @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastIDs: C{tuple}
+        @type lastIDs: L{tuple}
         @param lastIDs: A tuple of (last sequence id, last message id).
-        The I{last sequence id} is an C{int} containing the highest sequence
+        The I{last sequence id} is an L{int} containing the highest sequence
         number of a message in the mailbox.  The I{last message id} is an
-        C{int} containing the highest UID of a message in the mailbox.
+        L{int} containing the highest UID of a message in the mailbox.
         """
         (lastSequenceId, lastMessageId) = lastIDs
         c = query.pop(0)
         m = parseIdList(c, lastMessageId)
         return msg.getUID() in m
 
+
     def search_UNANSWERED(self, query, id, msg):
         return '\\Answered' not in msg.getFlags()
+
 
     def search_UNDELETED(self, query, id, msg):
         return '\\Deleted' not in msg.getFlags()
 
+
     def search_UNDRAFT(self, query, id, msg):
         return '\\Draft' not in msg.getFlags()
 
+
     def search_UNFLAGGED(self, query, id, msg):
         return '\\Flagged' not in msg.getFlags()
+
 
     def search_UNKEYWORD(self, query, id, msg):
         query.pop(0)
         return False
 
+
     def search_UNSEEN(self, query, id, msg):
         return '\\Seen' not in msg.getFlags()
 
+
     def __ebSearch(self, failure, tag):
-        self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'SEARCH failed: ' +
+                             networkString(str(failure.value)))
         log.err(failure)
+
 
     def do_FETCH(self, tag, messages, query, uid=0):
         if query:
@@ -1813,15 +1966,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 ).addErrback(self.__ebFetch, tag
                 )
         else:
-            self.sendPositiveResponse(tag, 'FETCH complete')
+            self.sendPositiveResponse(tag, b'FETCH complete')
 
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
+
 
     def __cbFetch(self, results, tag, query, uid):
         if self.blocked is None:
             self.blocked = []
         try:
-            id, msg = results.next()
+            id, msg = next(results)
         except StopIteration:
             # The idle timeout was suspended while we delivered results,
             # restore it now.
@@ -1840,7 +1994,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             # suite.
             # XXX: Perhaps loopback should be fixed to not call the user code
             # synchronously in transport.write?
-            self.sendPositiveResponse(tag, 'FETCH completed')
+            self.sendPositiveResponse(tag, b'FETCH completed')
 
             # Instance state is now consistent again (ie, it is as though
             # the fetch command never ran), so allow any pending blocked
@@ -1852,6 +2006,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 ).addErrback(self.__ebSpewMessage
                 )
 
+
     def __ebSpewMessage(self, failure):
         # This indicates a programming error.
         # There's no reliable way to indicate anything to the client, since we
@@ -1860,15 +2015,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
         self.transport.loseConnection()
 
+
     def spew_envelope(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
+        _w(b'ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
+
 
     def spew_flags(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('FLAGS ' + '(%s)' % (' '.join(msg.getFlags())))
+        _w(b'FLAGS ' + b'(' + b' '.join(msg.getFlags()) + b')')
+
 
     def spew_internaldate(self, id, msg, _w=None, _f=None):
         if _w is None:
@@ -1890,32 +2048,36 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 sign = "-"
             odate = odate + sign + str(((abs(ttup[9]) // 3600) * 100 + (abs(ttup[9]) % 3600) // 60)).zfill(4)
-        _w('INTERNALDATE ' + _quote(odate))
+        _w(b'INTERNALDATE ' + _quote(odate))
+
 
     def spew_rfc822header(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
         hdrs = _formatHeaders(msg.getHeaders(True))
-        _w('RFC822.HEADER ' + _literal(hdrs))
+        _w(b'RFC822.HEADER ' + _literal(hdrs))
+
 
     def spew_rfc822text(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('RFC822.TEXT ')
+        _w(b'RFC822.TEXT ')
         _f()
         return FileProducer(msg.getBodyFile()
             ).beginProducing(self.transport
             )
 
+
     def spew_rfc822size(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('RFC822.SIZE ' + str(msg.getSize()))
+        _w(b'RFC822.SIZE ' + str(msg.getSize()))
+
 
     def spew_rfc822(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('RFC822 ')
+        _w(b'RFC822 ')
         _f()
         mf = IMessageFile(msg, None)
         if mf is not None:
@@ -1926,13 +2088,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).beginProducing(self.transport
             )
 
+
     def spew_uid(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w('UID ' + str(msg.getUID()))
+        _w(b'UID ' + str(msg.getUID()))
+
 
     def spew_bodystructure(self, id, msg, _w=None, _f=None):
-        _w('BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
+        _w(b'BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
+
 
     def spew_body(self, part, id, msg, _w=None, _f=None):
         if _w is None:
@@ -1948,18 +2113,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
             hdrs = _formatHeaders(hdrs)
-            _w(str(part) + ' ' + _literal(hdrs))
+            _w(part.__bytes__() + b' ' + _literal(hdrs))
         elif part.text:
-            _w(str(part) + ' ')
+            _w(part.__bytes__() + b' ')
             _f()
             return FileProducer(msg.getBodyFile()
                 ).beginProducing(self.transport
                 )
         elif part.mime:
             hdrs = _formatHeaders(msg.getHeaders(True))
-            _w(str(part) + ' ' + _literal(hdrs))
+            _w(part.__bytes__() + b' ' + _literal(hdrs))
         elif part.empty:
-            _w(str(part) + ' ')
+            _w(part.__bytes__() + b' ')
             _f()
             if part.part:
                 return FileProducer(msg.getBodyFile()
@@ -1972,26 +2137,27 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 return MessageProducer(msg, None, self._scheduler).beginProducing(self.transport)
 
         else:
-            _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
+            _w(b'BODY ' + collapseNestedLists([getBodyStructure(msg)]))
+
 
     def spewMessage(self, id, msg, query, uid):
         wbuf = WriteBuffer(self.transport)
         write = wbuf.write
         flush = wbuf.flush
         def start():
-            write('* %d FETCH (' % (id,))
+            write(b'* %d FETCH (' % (id,))
         def finish():
-            write(')\r\n')
+            write(b')\r\n')
         def space():
-            write(' ')
+            write(b' ')
 
         def spew():
             seenUID = False
             start()
             for part in query:
-                if part.type == 'uid':
+                if part.type == b'uid':
                     seenUID = True
-                if part.type == 'body':
+                if part.type == b'body':
                     yield self.spew_body(part, id, msg, write, flush)
                 else:
                     f = getattr(self, 'spew_' + part.type)
@@ -2005,18 +2171,21 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             flush()
         return self._scheduler(spew())
 
+
     def __ebFetch(self, failure, tag):
         self.setTimeout(self._oldTimeout)
         del self._oldTimeout
         log.err(failure)
-        self.sendBadResponse(tag, 'FETCH failed: ' + str(failure.value))
+        self.sendBadResponse(tag, b'FETCH failed: ' +
+                             networkString(str(failure.value)))
+
 
     def do_STORE(self, tag, messages, mode, flags, uid=0):
         mode = mode.upper()
-        silent = mode.endswith('SILENT')
-        if mode.startswith('+'):
+        silent = mode.endswith(b'SILENT')
+        if mode.startswith(b'+'):
             mode = 1
-        elif mode.startswith('-'):
+        elif mode.startswith(b'-'):
             mode = -1
         else:
             mode = 0
@@ -2027,19 +2196,24 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     select_STORE = (do_STORE, arg_seqset, arg_atom, arg_flaglist)
 
+
     def __cbStore(self, result, tag, mbox, uid, silent):
         if result and not silent:
-              for (k, v) in result.iteritems():
-                  if uid:
-                      uidstr = ' UID %d' % mbox.getUID(k)
-                  else:
-                      uidstr = ''
-                  self.sendUntaggedResponse('%d FETCH (FLAGS (%s)%s)' %
-                                            (k, ' '.join(v), uidstr))
-        self.sendPositiveResponse(tag, 'STORE completed')
+            for (k, v) in result.items():
+                if uid:
+                    uidstr = b' UID ' + intToBytes(mbox.getUID(k))
+                else:
+                    uidstr = b''
+                self.sendUntaggedResponse(intToBytes(k) +
+                                          b' FETCH (FLAGS ('+ b' '.join(v) + b')' +
+                                          uidstr + b')')
+        self.sendPositiveResponse(tag, b'STORE completed')
+
 
     def __ebStore(self, failure, tag):
-        self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+        self.sendBadResponse(tag, b'Server error: ' +
+                             networkString(str(failure.value)))
+
 
     def do_COPY(self, tag, messages, mailbox, uid=0):
         mailbox = self._parseMbox(mailbox)
@@ -2048,6 +2222,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addErrback(self._ebCopySelectedMailbox, tag
             )
     select_COPY = (do_COPY, arg_seqset, arg_astring)
+
 
     def _cbCopySelectedMailbox(self, mbox, tag, messages, mailbox, uid):
         if not mbox:
@@ -2059,8 +2234,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 ).addErrback(self.__ebCopy, tag
                 )
 
+
     def _ebCopySelectedMailbox(self, failure, tag):
-        self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+        self.sendBadResponse(tag, b'Server error: ' +
+                             networkString(str(failure.value)))
+
 
     def __cbCopy(self, messages, tag, mbox):
         # XXX - This should handle failures with a rollback or something
@@ -2095,6 +2273,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             addedDeferreds.append(d)
         return defer.DeferredList(addedDeferreds)
 
+
     def __cbCopied(self, deferredIds, tag, mbox):
         ids = []
         failures = []
@@ -2106,11 +2285,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if failures:
             self.sendNegativeResponse(tag, '[ALERT] Some messages were not copied')
         else:
-            self.sendPositiveResponse(tag, 'COPY completed')
+            self.sendPositiveResponse(tag, b'COPY completed')
+
 
     def __ebCopy(self, failure, tag):
-        self.sendBadResponse(tag, 'COPY failed:' + str(failure.value))
+        self.sendBadResponse(tag, b'COPY failed:' +
+                             networkString(str(failure.value)))
         log.err(failure)
+
 
     def do_UID(self, tag, command, line):
         command = command.upper()
@@ -2121,25 +2303,29 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.dispatchCommand(tag, command, line, uid=1)
 
     select_UID = (do_UID, arg_atom, arg_line)
+
+
     #
     # IMailboxListener implementation
     #
     def modeChanged(self, writeable):
         if writeable:
-            self.sendUntaggedResponse(message='[READ-WRITE]', async=True)
+            self.sendUntaggedResponse(message=b'[READ-WRITE]', async=True)
         else:
-            self.sendUntaggedResponse(message='[READ-ONLY]', async=True)
+            self.sendUntaggedResponse(message=b'[READ-ONLY]', async=True)
+
 
     def flagsChanged(self, newFlags):
-        for (mId, flags) in newFlags.iteritems():
-            msg = '%d FETCH (FLAGS (%s))' % (mId, ' '.join(flags))
+        for (mId, flags) in newFlags.items():
+            msg = intToBytes(mId) + b' FETCH (FLAGS (' +b' '.join(flags) + b'))'
             self.sendUntaggedResponse(msg, async=True)
+
 
     def newMessages(self, exists, recent):
         if exists is not None:
-            self.sendUntaggedResponse('%d EXISTS' % exists, async=True)
+            self.sendUntaggedResponse(intToBytes(exists) + b' EXISTS', async=True)
         if recent is not None:
-            self.sendUntaggedResponse('%d RECENT' % recent, async=True)
+            self.sendUntaggedResponse(intToBytes(recent) + b' RECENT', async=True)
 
 
 TIMEOUT_ERROR = error.TimeoutError()
@@ -2192,8 +2378,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self._parts = None
         self._lastCmd = None
 
+
     def registerAuthenticator(self, auth):
-        """Register a new form of authentication
+        """
+        Register a new form of authentication
 
         When invoking the authenticate() method of IMAP4Client, the first
         matching authentication scheme found will be used.  The ordering is
@@ -2204,6 +2392,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         side of this authentication scheme.
         """
         self.authenticators[auth.getName().upper()] = auth
+
 
     def rawDataReceived(self, data):
         if self.timeout > 0:
@@ -2228,6 +2417,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 #        print 'S:', repr(line)
 #        return basic.LineReceiver.sendLine(self, line)
 
+
     def _setupForLiteral(self, rest, octets):
         self._pendingBuffer = self.messageFile(octets)
         self._pendingSize = octets
@@ -2237,12 +2427,16 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             self._parts.extend([rest, '\r\n'])
         self.setRawMode()
 
+
     def connectionMade(self):
         if self.timeout > 0:
             self.setTimeout(self.timeout)
 
+
     def connectionLost(self, reason):
-        """We are no longer connected"""
+        """
+        We are no longer connected
+        """
         if self.timeout > 0:
             self.setTimeout(None)
         if self.queued is not None:
@@ -2253,7 +2447,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if self.tags is not None:
             tags = self.tags
             self.tags = None
-            for cmd in tags.itervalues():
+            for cmd in tags.values():
                 if cmd is not None and cmd.defer is not None:
                     cmd.defer.errback(reason)
 
@@ -2262,20 +2456,20 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         Attempt to parse a single line from the server.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: The line from the server, without the line delimiter.
 
         @raise IllegalServerResponse: If the line or some part of the line
             does not represent an allowed message from the server at this time.
         """
-#        print 'C: ' + repr(line)
+#        print('C: ' + repr(line))
         if self.timeout > 0:
             self.resetTimeout()
 
-        lastPart = line.rfind('{')
+        lastPart = line.rfind(b'{')
         if lastPart != -1:
             lastPart = line[lastPart + 1:]
-            if lastPart.endswith('}'):
+            if lastPart.endswith(b'}'):
                 # It's a literal a-comin' in
                 try:
                     octets = int(lastPart[:-1])
@@ -2296,9 +2490,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             # Since we didn't find a literal indicator, this expression
             # is done.
             self._parts.append(line)
-            tag, rest = self._tag, ''.join(self._parts)
+            tag, rest = self._tag, b''.join(self._parts)
             self._tag = self._parts = None
             self.dispatchCommand(tag, rest)
+
 
     def timeoutConnection(self):
         if self._lastCmd and self._lastCmd.defer is not None:
@@ -2313,17 +2508,20 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         self.transport.loseConnection()
 
+
     def _regularDispatch(self, line):
         parts = line.split(None, 1)
         if len(parts) != 2:
-            parts.append('')
+            parts.append(b'')
         tag, rest = parts
         self.dispatchCommand(tag, rest)
 
-    def messageFile(self, octets):
-        """Create a file to which an incoming message may be written.
 
-        @type octets: C{int}
+    def messageFile(self, octets):
+        """
+        Create a file to which an incoming message may be written.
+
+        @type octets: L{int}
         @param octets: The number of octets which will be written to the file
 
         @rtype: Any object which implements C{write(string)} and
@@ -2333,12 +2531,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if octets > self._memoryFileLimit:
             return tempfile.TemporaryFile()
         else:
-            return StringIO.StringIO()
+            return BytesIO()
+
 
     def makeTag(self):
-        tag = '%0.4X' % self.tagID
+        tag = (u'%0.4X' % self.tagID).encode("ascii")
         self.tagID += 1
         return tag
+
 
     def dispatchCommand(self, tag, rest):
         if self.state is None:
@@ -2352,23 +2552,24 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 log.err()
                 self.transport.loseConnection()
         else:
-            log.err("Cannot dispatch: %s, %s, %s" % (self.state, tag, rest))
+            log.err("Cannot dispatch: %s, %r, %r" % (self.state, tag, rest))
             self.transport.loseConnection()
+
 
     def response_UNAUTH(self, tag, rest):
         if self.state is None:
             # Server greeting, this is
             status, rest = rest.split(None, 1)
-            if status.upper() == 'OK':
+            if status.upper() == b'OK':
                 self.state = 'unauth'
-            elif status.upper() == 'PREAUTH':
+            elif status.upper() == b'PREAUTH':
                 self.state = 'auth'
             else:
                 # XXX - This is rude.
                 self.transport.loseConnection()
-                raise IllegalServerResponse(tag + ' ' + rest)
+                raise IllegalServerResponse(tag + b' ' + rest)
 
-            b, e = rest.find('['), rest.find(']')
+            b, e = rest.find(b'['), rest.find(b']')
             if b != -1 and e != -1:
                 self.serverGreeting(
                     self.__cbCapabilities(
@@ -2378,16 +2579,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self._defaultHandler(tag, rest)
 
+
     def response_AUTH(self, tag, rest):
         self._defaultHandler(tag, rest)
 
+
     def _defaultHandler(self, tag, rest):
-        if tag == '*' or tag == '+':
+        if tag == b'*' or tag == b'+':
             if not self.waiting:
                 self._extraInfo([parseNestedParens(rest)])
             else:
                 cmd = self.tags[self.waiting]
-                if tag == '+':
+                if tag == b'+':
                     cmd.continuation(rest)
                 else:
                     cmd.lines.append(rest)
@@ -2397,10 +2600,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             except KeyError:
                 # XXX - This is rude.
                 self.transport.loseConnection()
-                raise IllegalServerResponse(tag + ' ' + rest)
+                raise IllegalServerResponse(tag + b' ' + rest)
             else:
                 status, line = rest.split(None, 1)
-                if status == 'OK':
+                if status == b'OK':
                     # Give them this last line, too
                     cmd.finish(rest, self._extraInfo)
                 else:
@@ -2408,6 +2611,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 del self.tags[tag]
                 self.waiting = None
                 self._flushQueue()
+
 
     def _flushQueue(self):
         if self.queued:
@@ -2417,6 +2621,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             self.sendLine(cmd.format(t))
             self.waiting = t
 
+
     def _extraInfo(self, lines):
         # XXX - This is terrible.
         # XXX - Also, this should collapse temporally proximate calls into single
@@ -2425,18 +2630,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         recent = exists = None
         for response in lines:
             elements = len(response)
-            if elements == 1 and response[0] == ['READ-ONLY']:
+            if elements == 1 and response[0] == [b'READ-ONLY']:
                 self.modeChanged(False)
-            elif elements == 1 and response[0] == ['READ-WRITE']:
+            elif elements == 1 and response[0] == [b'READ-WRITE']:
                 self.modeChanged(True)
-            elif elements == 2 and response[1] == 'EXISTS':
+            elif elements == 2 and response[1] == b'EXISTS':
                 exists = int(response[0])
-            elif elements == 2 and response[1] == 'RECENT':
+            elif elements == 2 and response[1] == b'RECENT':
                 recent = int(response[0])
-            elif elements == 3 and response[1] == 'FETCH':
+            elif elements == 3 and response[1] == b'FETCH':
                 mId = int(response[0])
                 values = self._parseFetchPairs(response[2])
-                flags.setdefault(mId, []).extend(values.get('FLAGS', ()))
+                flags.setdefault(mId, []).extend(values.get(b'FLAGS', ()))
             else:
                 log.msg('Unhandled unsolicited response: %s' % (response,))
 
@@ -2444,6 +2649,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             self.flagsChanged(flags)
         if recent is not None or exists is not None:
             self.newMessages(exists, recent)
+
 
     def sendCommand(self, cmd):
         cmd.defer = defer.Deferred()
@@ -2457,8 +2663,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self._lastCmd = cmd
         return cmd.defer
 
+
     def getCapabilities(self, useCache=1):
-        """Request the capabilities available on this server.
+        """
+        Request the capabilities available on this server.
 
         This command is allowed in any state of connection.
 
@@ -2475,18 +2683,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         if useCache and self._capCache is not None:
             return defer.succeed(self._capCache)
-        cmd = 'CAPABILITY'
-        resp = ('CAPABILITY',)
+        cmd = b'CAPABILITY'
+        resp = (b'CAPABILITY',)
         d = self.sendCommand(Command(cmd, wantResponse=resp))
         d.addCallback(self.__cbCapabilities)
         return d
+
 
     def __cbCapabilities(self, result):
         (lines, tagline) = result
         caps = {}
         for rest in lines:
             for cap in rest[1:]:
-                parts = cap.split('=', 1)
+                parts = cap.split(b'=', 1)
                 if len(parts) == 1:
                     category, value = parts[0], None
                 else:
@@ -2502,8 +2711,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self._capCache = caps
         return caps
 
+
     def logout(self):
-        """Inform the server that we are done with the connection.
+        """
+        Inform the server that we are done with the connection.
 
         This command is allowed in any state of connection.
 
@@ -2511,9 +2722,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback will be invoked with None
         when the proper server acknowledgement has been received.
         """
-        d = self.sendCommand(Command('LOGOUT', wantResponse=('BYE',)))
+        d = self.sendCommand(Command(b'LOGOUT', wantResponse=(b'BYE',)))
         d.addCallback(self.__cbLogout)
         return d
+
 
     def __cbLogout(self, result):
         (lines, tagline) = result
@@ -2523,7 +2735,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def noop(self):
-        """Perform no operation.
+        """
+        Perform no operation.
 
         This command is allowed in any state of connection.
 
@@ -2531,15 +2744,17 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback will be invoked with a list
         of untagged status updates the server responds with.
         """
-        d = self.sendCommand(Command('NOOP'))
+        d = self.sendCommand(Command(b'NOOP'))
         d.addCallback(self.__cbNoop)
         return d
+
 
     def __cbNoop(self, result):
         # Conceivable, this is elidable.
         # It is, afterall, a no-op.
         (lines, tagline) = result
         return lines
+
 
     def startTLS(self, contextFactory=None):
         """
@@ -2567,7 +2782,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 "IMAP4Client requires a TLS context to "
                 "initiate the STARTTLS handshake"))
 
-        if 'STARTTLS' not in self._capCache:
+        if b'STARTTLS' not in self._capCache:
             return defer.fail(IMAP4Exception(
                 "Server does not support secure communication "
                 "via TLS / SSL"))
@@ -2578,14 +2793,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 "IMAP4Client transport does not implement "
                 "interfaces.ITLSTransport"))
 
-        d = self.sendCommand(Command('STARTTLS'))
+        d = self.sendCommand(Command(b'STARTTLS'))
         d.addCallback(self._startedTLS, contextFactory)
         d.addCallback(lambda _: self.getCapabilities())
         return d
 
 
     def authenticate(self, secret):
-        """Attempt to enter the authenticated state with the server
+        """
+        Attempt to enter the authenticated state with the server
 
         This command is allowed in the Non-Authenticated state.
 
@@ -2600,11 +2816,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbAuthenticate, secret)
         return d
 
+
     def __cbAuthenticate(self, caps, secret):
-        auths = caps.get('AUTH', ())
+        auths = caps.get(b'AUTH', ())
         for scheme in auths:
             if scheme.upper() in self.authenticators:
-                cmd = Command('AUTHENTICATE', scheme, (),
+                cmd = Command(b'AUTHENTICATE', scheme, (),
                               self.__cbContinueAuth, scheme,
                               secret)
                 return self.sendCommand(cmd)
@@ -2628,20 +2845,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbContinueAuth(self, rest, scheme, secret):
         try:
-            chal = base64.decodestring(rest + '\n')
+            chal = decodebytes(rest + b'\n')
         except binascii.Error:
-            self.sendLine('*')
+            self.sendLine(b'*')
             raise IllegalServerResponse(rest)
         else:
             auth = self.authenticators[scheme]
             chal = auth.challengeResponse(secret, chal)
-            self.sendLine(base64.encodestring(chal).strip())
+            self.sendLine(encodebytes(chal).strip())
+
 
     def __cbAuthTLS(self, caps, secret):
-        auths = caps.get('AUTH', ())
+        auths = caps.get(b'AUTH', ())
         for scheme in auths:
             if scheme.upper() in self.authenticators:
-                cmd = Command('AUTHENTICATE', scheme, (),
+                cmd = Command(b'AUTHENTICATE', scheme, (),
                               self.__cbContinueAuth, scheme,
                               secret)
                 return self.sendCommand(cmd)
@@ -2649,7 +2867,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def login(self, username, password):
-        """Authenticate with the server using a username and password
+        """
+        Authenticate with the server using a username and password
 
         This command is allowed in the Non-Authenticated state.  If the
         server supports the STARTTLS capability and our transport supports
@@ -2658,10 +2877,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         A more secure way to log in is to use C{startTLS} or
         C{authenticate} or both.
 
-        @type username: C{str}
+        @type username: L{str}
         @param username: The username to log in with
 
-        @type password: C{str}
+        @type password: L{str}
         @param password: The password to log in with
 
         @rtype: C{Deferred}
@@ -2672,12 +2891,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbLoginCaps, username, password)
         return d
 
+
     def serverGreeting(self, caps):
-        """Called when the server has sent us a greeting.
+        """
+        Called when the server has sent us a greeting.
 
         @type caps: C{dict}
         @param caps: Capabilities the server advertised in its greeting.
         """
+
 
     def _getContextFactory(self):
         if self.context is not None:
@@ -2690,6 +2912,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             context = ssl.ClientContextFactory()
             context.method = ssl.SSL.TLSv1_METHOD
             return context
+
 
     def __cbLoginCaps(self, capabilities, username, password):
         # If the server advertises STARTTLS, we might want to try to switch to TLS
@@ -2713,8 +2936,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         else:
             if nontlsTransport:
                 log.msg("Server has no TLS support. logging in over cleartext!")
-            args = ' '.join((_quote(username), _quote(password)))
-            return self.sendCommand(Command('LOGIN', args))
+            args = b' '.join((_quote(username), _quote(password)))
+            return self.sendCommand(Command(b'LOGIN', args))
+
 
     def _startedTLS(self, result, context):
         self.transport.startTLS(context)
@@ -2722,16 +2946,20 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self.startedTLS = True
         return result
 
+
     def __cbLoginTLS(self, result, username, password):
         args = ' '.join((_quote(username), _quote(password)))
-        return self.sendCommand(Command('LOGIN', args))
+        return self.sendCommand(Command(b'LOGIN', args))
+
 
     def __ebLoginTLS(self, failure):
         log.err(failure)
         return failure
 
+
     def namespace(self):
-        """Retrieve information about the namespaces available to this account
+        """
+        Retrieve information about the namespaces available to this account
 
         This command is allowed in the Authenticated and Selected states.
 
@@ -2744,11 +2972,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         which indicates a single personal namespace called '' with '/'
         as its hierarchical delimiter, and no shared or user namespaces.
         """
-        cmd = 'NAMESPACE'
-        resp = ('NAMESPACE',)
+        cmd = b'NAMESPACE'
+        resp = (b'NAMESPACE',)
         d = self.sendCommand(Command(cmd, wantResponse=resp))
         d.addCallback(self.__cbNamespace)
         return d
+
 
     def __cbNamespace(self, result):
         (lines, last) = result
@@ -2765,7 +2994,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The name of the mailbox to select
 
         @rtype: C{Deferred}
@@ -2791,20 +3020,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
                 UIDVALIDITY: An integer uniquely identifying this mailbox.
         """
-        cmd = 'SELECT'
+        cmd = b'SELECT'
         args = _prepareMailboxName(mailbox)
-        resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
+        resp = (b'FLAGS', b'EXISTS', b'RECENT', b'UNSEEN', b'PERMANENTFLAGS', b'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 1)
         return d
 
 
     def examine(self, mailbox):
-        """Select a mailbox in read-only mode
+        """
+        Select a mailbox in read-only mode
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The name of the mailbox to examine
 
         @rtype: C{Deferred}
@@ -2830,9 +3060,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
             'UIDVALIDITY': An integer uniquely identifying this mailbox.
         """
-        cmd = 'EXAMINE'
+        cmd = b'EXAMINE'
         args = _prepareMailboxName(mailbox)
-        resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
+        resp = (b'FLAGS', b'EXISTS', b'RECENT', b'UNSEEN', b'PERMANENTFLAGS', b'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 0)
         return d
@@ -2903,11 +3133,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def create(self, name):
-        """Create a new mailbox on the server
+        """
+        Create a new mailbox on the server
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The name of the mailbox to create.
 
         @rtype: C{Deferred}
@@ -2916,12 +3147,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         return self.sendCommand(Command('CREATE', _prepareMailboxName(name)))
 
+
     def delete(self, name):
-        """Delete a mailbox
+        """
+        Delete a mailbox
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The name of the mailbox to delete.
 
         @rtype: C{Deferred}
@@ -2930,15 +3163,17 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         return self.sendCommand(Command('DELETE', _prepareMailboxName(name)))
 
+
     def rename(self, oldname, newname):
-        """Rename a mailbox
+        """
+        Rename a mailbox
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type oldname: C{str}
+        @type oldname: L{str}
         @param oldname: The current name of the mailbox to rename.
 
-        @type newname: C{str}
+        @type newname: L{str}
         @param newname: The new name to give the mailbox.
 
         @rtype: C{Deferred}
@@ -2947,45 +3182,51 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         oldname = _prepareMailboxName(oldname)
         newname = _prepareMailboxName(newname)
-        return self.sendCommand(Command('RENAME', ' '.join((oldname, newname))))
+        return self.sendCommand(Command(b'RENAME', b' '.join((oldname, newname))))
+
 
     def subscribe(self, name):
-        """Add a mailbox to the subscription list
+        """
+        Add a mailbox to the subscription list
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The mailbox to mark as 'active' or 'subscribed'
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the subscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('SUBSCRIBE', _prepareMailboxName(name)))
+        return self.sendCommand(Command(b'SUBSCRIBE', _prepareMailboxName(name)))
+
 
     def unsubscribe(self, name):
-        """Remove a mailbox from the subscription list
+        """
+        Remove a mailbox from the subscription list
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type name: C{str}
+        @type name: L{str}
         @param name: The mailbox to unsubscribe
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the unsubscription
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('UNSUBSCRIBE', _prepareMailboxName(name)))
+        return self.sendCommand(Command(b'UNSUBSCRIBE', _prepareMailboxName(name)))
+
 
     def list(self, reference, wildcard):
-        """List a subset of the available mailboxes
+        """
+        List a subset of the available mailboxes
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type reference: C{str}
+        @type reference: L{str}
         @param reference: The context in which to interpret C{wildcard}
 
-        @type wildcard: C{str}
+        @type wildcard: L{str}
         @param wildcard: The pattern of mailbox names to match, optionally
         including either or both of the '*' and '%' wildcards.  '*' will
         match zero or more characters and cross hierarchical boundaries.
@@ -2993,34 +3234,37 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         single hierarchical level.
 
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a list of C{tuple}s,
-        the first element of which is a C{tuple} of mailbox flags, the second
+        @return: A deferred whose callback is invoked with a list of L{tuple}s,
+        the first element of which is a L{tuple} of mailbox flags, the second
         element of which is the hierarchy delimiter for this mailbox, and the
         third of which is the mailbox name; if the command is unsuccessful,
         the deferred's errback is invoked instead.
         """
-        cmd = 'LIST'
+        cmd = b'LIST'
         args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
-        resp = ('LIST',)
+        resp = (b'LIST',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self.__cbList, 'LIST')
+        d.addCallback(self.__cbList, b'LIST')
         return d
 
+
     def lsub(self, reference, wildcard):
-        """List a subset of the subscribed available mailboxes
+        """
+        List a subset of the subscribed available mailboxes
 
         This command is allowed in the Authenticated and Selected states.
 
-        The parameters and returned object are the same as for the C{list}
+        The parameters and returned object are the same as for the L{list}
         method, with one slight difference: Only mailboxes which have been
         subscribed can be included in the resulting list.
         """
-        cmd = 'LSUB'
+        cmd = b'LSUB'
         args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
-        resp = ('LSUB',)
+        resp = (b'LSUB',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbList, 'LSUB')
         return d
+
 
     def __cbList(self, result, command):
         (lines, last) = result
@@ -3031,16 +3275,17 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 results.append(tuple(parts[1:]))
         return results
 
+
     def status(self, mailbox, *names):
         """
         Retrieve the status of the given mailbox
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The name of the mailbox to query
 
-        @type *names: C{str}
+        @type *names: L{str}
         @param *names: The status names to query.  These may be any number of:
             C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
             C{'UNSEEN'}.
@@ -3052,12 +3297,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             C{names} is a key in the dictionary.  The value for each key is the
             corresponding response from the server.
         """
-        cmd = 'STATUS'
+        cmd = b'STATUS'
         args = "%s (%s)" % (_prepareMailboxName(mailbox), ' '.join(names))
-        resp = ('STATUS',)
+        resp = (b'STATUS',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbStatus)
         return d
+
 
     def __cbStatus(self, result):
         (lines, last) = result
@@ -3073,25 +3319,27 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 try:
                     status[k] = t(status[k])
                 except Exception as e:
-                    raise IllegalServerResponse('(%s %s): %s' % (k, status[k], str(e)))
+                    raise IllegalServerResponse('(' + k + ' '+ status[k] + '): ' + str(e))
         return status
 
+
     def append(self, mailbox, message, flags = (), date = None):
-        """Add the given message to the given mailbox.
+        """
+        Add the given message to the given mailbox.
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The mailbox to which to add this message.
 
         @type message: Any file-like object
         @param message: The message to add, in RFC822 format.  Newlines
         in this file should be \\r\\n-style.
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to associated with this message.
 
-        @type date: C{str}
+        @type date: L{str}
         @param date: The date to associate with this message.  This should
         be of the format DD-MM-YYYY HH:MM:SS +/-HHMM.  For example, in
         Eastern Standard Time, on July 1st 2004 at half past 1 PM,
@@ -3113,19 +3361,23 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             _prepareMailboxName(mailbox), ' '.join(flags),
             date, L
         )
-        d = self.sendCommand(Command('APPEND', cmd, (), self.__cbContinueAppend, message))
+        d = self.sendCommand(Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
         return d
+
 
     def __cbContinueAppend(self, lines, message):
         s = basic.FileSender()
         return s.beginFileTransfer(message, self.transport, None
             ).addCallback(self.__cbFinishAppend)
 
+
     def __cbFinishAppend(self, foo):
-        self.sendLine('')
+        self.sendLine(b'')
+
 
     def check(self):
-        """Tell the server to perform a checkpoint
+        """
+        Tell the server to perform a checkpoint
 
         This command is allowed in the Selected state.
 
@@ -3133,10 +3385,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
         """
-        return self.sendCommand(Command('CHECK'))
+        return self.sendCommand(Command(b'CHECK'))
+
 
     def close(self):
-        """Return the connection to the Authenticated state.
+        """
+        Return the connection to the Authenticated state.
 
         This command is allowed in the Selected state.
 
@@ -3148,11 +3402,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback is invoked when the command
         completes successfully or whose errback is invoked if it fails.
         """
-        return self.sendCommand(Command('CLOSE'))
+        return self.sendCommand(Command(b'CLOSE'))
 
 
     def expunge(self):
-        """Return the connection to the Authenticate state.
+        """
+        Return the connection to the Authenticate state.
 
         This command is allowed in the Selected state.
 
@@ -3165,8 +3420,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         'expunge' responses when this command is successful or whose errback
         is invoked otherwise.
         """
-        cmd = 'EXPUNGE'
-        resp = ('EXPUNGE',)
+        cmd = b'EXPUNGE'
+        resp = (b'EXPUNGE',)
         d = self.sendCommand(Command(cmd, wantResponse=resp))
         d.addCallback(self.__cbExpunge)
         return d
@@ -3182,7 +3437,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def search(self, *queries, **kwarg):
-        """Search messages in the currently selected mailbox
+        """
+        Search messages in the currently selected mailbox
 
         This command is allowed in the Selected state.
 
@@ -3198,11 +3454,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         the message sequence numbers return by the search, or whose errback
         will be invoked if there is an error.
         """
-        if kwarg.get('uid'):
-            cmd = 'UID SEARCH'
+        if kwarg.get(b'uid'):
+            cmd = b'UID SEARCH'
         else:
-            cmd = 'SEARCH'
-        args = ' '.join(queries)
+            cmd = b'SEARCH'
+        args = b' '.join(queries)
         d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
         d.addCallback(self.__cbSearch)
         return d
@@ -3212,17 +3468,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         (lines, end) = result
         ids = []
         for parts in lines:
-            if len(parts) > 0 and parts[0] == 'SEARCH':
+            if len(parts) > 0 and parts[0] == b'SEARCH':
                 ids.extend([self._intOrRaise(p, parts) for p in parts[1:]])
         return ids
 
 
     def fetchUID(self, messages, uid=0):
-        """Retrieve the unique identifier for one or more messages
+        """
+        Retrieve the unique identifier for one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3238,11 +3495,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchFlags(self, messages, uid=0):
-        """Retrieve the flags for one or more messages
+        """
+        Retrieve the flags for one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve flags.
 
         @type uid: C{bool}
@@ -3258,11 +3516,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchInternalDate(self, messages, uid=0):
-        """Retrieve the internal date associated with one or more messages
+        """
+        Retrieve the internal date associated with one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve the internal date.
 
         @type uid: C{bool}
@@ -3279,11 +3538,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchEnvelope(self, messages, uid=0):
-        """Retrieve the envelope data for one or more messages
+        """
+        Retrieve the envelope data for one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve envelope data.
 
         @type uid: C{bool}
@@ -3305,11 +3565,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchBodyStructure(self, messages, uid=0):
-        """Retrieve the structure of the body of one or more messages
+        """
+        Retrieve the structure of the body of one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: The messages for which to retrieve body structure
         data.
 
@@ -3334,11 +3595,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchSimplifiedBody(self, messages, uid=0):
-        """Retrieve the simplified body structure of one or more messages
+        """
+        Retrieve the simplified body structure of one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3356,11 +3618,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchMessage(self, messages, uid=0):
-        """Retrieve one or more entire messages
+        """
+        Retrieve one or more entire messages
 
         This command is allowed in the Selected state.
 
-        @type messages: L{MessageSet} or C{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3372,19 +3635,20 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A L{Deferred} which will fire with a C{dict} mapping message
             sequence numbers to C{dict}s giving message data for the
             corresponding message.  If C{uid} is true, the inner dictionaries
-            have a C{'UID'} key mapped to a C{str} giving the UID for the
-            message.  The text of the message is a C{str} associated with the
+            have a C{'UID'} key mapped to a L{str} giving the UID for the
+            message.  The text of the message is a L{str} associated with the
             C{'RFC822'} key in each dictionary.
         """
         return self._fetch(messages, useUID=uid, rfc822=1)
 
 
     def fetchHeaders(self, messages, uid=0):
-        """Retrieve headers of one or more messages
+        """
+        Retrieve headers of one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3400,11 +3664,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchBody(self, messages, uid=0):
-        """Retrieve body text of one or more messages
+        """
+        Retrieve body text of one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3420,11 +3685,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchSize(self, messages, uid=0):
-        """Retrieve the size, in octets, of one or more messages
+        """
+        Retrieve the size, in octets, of one or more messages
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3440,14 +3706,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchFull(self, messages, uid=0):
-        """Retrieve several different fields of one or more messages
+        """
+        Retrieve several different fields of one or more messages
 
         This command is allowed in the Selected state.  This is equivalent
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, C{fetchEnvelope}, and C{fetchSimplifiedBody}
         functions.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3466,13 +3733,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchAll(self, messages, uid=0):
-        """Retrieve several different fields of one or more messages
+        """
+        Retrieve several different fields of one or more messages
 
         This command is allowed in the Selected state.  This is equivalent
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, and C{fetchEnvelope} functions.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3491,13 +3759,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def fetchFast(self, messages, uid=0):
-        """Retrieve several different fields of one or more messages
+        """
+        Retrieve several different fields of one or more messages
 
         This command is allowed in the Selected state.  This is equivalent
         to issuing all of the C{fetchFlags}, C{fetchInternalDate}, and
         C{fetchSize} functions.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3546,15 +3815,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         responseParts = iter(fetchResponseList)
         while True:
             try:
-                key = responseParts.next()
+                key = next(responseParts)
             except StopIteration:
                 break
 
             try:
-                value = responseParts.next()
+                value = next(responseParts)
             except StopIteration:
                 raise IllegalServerResponse(
-                    "Not enough arguments", fetchResponseList)
+                    b"Not enough arguments", fetchResponseList)
 
             # The parsed forms of responses like:
             #
@@ -3609,7 +3878,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     value = responseParts.next()
                 except StopIteration:
                     raise IllegalServerResponse(
-                        "Not enough arguments", fetchResponseList)
+                        b"Not enough arguments", fetchResponseList)
 
                 # Handle partial ranges
                 if value.startswith('<') and value.endswith('>'):
@@ -3624,7 +3893,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                             value = responseParts.next()
                         except StopIteration:
                             raise IllegalServerResponse(
-                                "Not enough arguments", fetchResponseList)
+                                b"Not enough arguments", fetchResponseList)
 
             values[key] = value
         return values
@@ -3634,7 +3903,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         (lines, last) = result
         info = {}
         for parts in lines:
-            if len(parts) == 3 and parts[1] == 'FETCH':
+            if len(parts) == 3 and parts[1] == b'FETCH':
                 id = self._intOrRaise(parts[0], parts)
                 if id not in info:
                     info[id] = [parts[2]]
@@ -3642,22 +3911,22 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     info[id][0].extend(parts[2])
 
         results = {}
-        for (messageId, values) in info.iteritems():
+        for (messageId, values) in info.items():
             mapping = self._parseFetchPairs(values[0])
             results.setdefault(messageId, {}).update(mapping)
 
         flagChanges = {}
-        for messageId in results.keys():
+        for messageId in list(results.keys()):
             values = results[messageId]
-            for part in values.keys():
-                if part not in requestedParts and part == 'FLAGS':
-                    flagChanges[messageId] = values['FLAGS']
+            for part in list(values.keys()):
+                if part not in requestedParts and part == b'FLAGS':
+                    flagChanges[messageId] = values[b'FLAGS']
                     # Find flags in the result and get rid of them.
                     for i in range(len(info[messageId][0])):
-                        if info[messageId][0][i] == 'FLAGS':
+                        if info[messageId][0][i] == b'FLAGS':
                             del info[messageId][0][i:i+2]
                             break
-                    del values['FLAGS']
+                    del values[b'FLAGS']
                     if not values:
                         del results[messageId]
 
@@ -3673,30 +3942,31 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def fetchSpecific(self, messages, uid=0, headerType=None,
                       headerNumber=None, headerArgs=None, peek=None,
                       offset=None, length=None):
-        """Retrieve a specific section of one or more messages
+        """
+        Retrieve a specific section of one or more messages
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @type headerType: C{str}
+        @type headerType: L{str}
         @param headerType: If specified, must be one of HEADER,
         HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or TEXT, and will determine
         which part of the message is retrieved.  For HEADER.FIELDS and
         HEADER.FIELDS.NOT, C{headerArgs} must be a sequence of header names.
         For MIME, C{headerNumber} must be specified.
 
-        @type headerNumber: C{int} or C{int} sequence
+        @type headerNumber: L{int} or L{int} sequence
         @param headerNumber: The nested rfc822 index specifying the
         entity to retrieve.  For example, C{1} retrieves the first
         entity of the message, and C{(2, 1, 3}) retrieves the 3rd
         entity inside the first entity inside the second entity of
         the message.
 
-        @type headerArgs: A sequence of C{str}
+        @type headerArgs: A sequence of L{str}
         @param headerArgs: If C{headerType} is HEADER.FIELDS, these are the
         headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
         headers to exclude from retrieval.
@@ -3705,11 +3975,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param peek: If true, cause the server to not set the \\Seen
         flag on this message as a result of this command.
 
-        @type offset: C{int}
+        @type offset: L{int}
         @param offset: The number of octets at the beginning of the result
         to skip.
 
-        @type length: C{int}
+        @type length: L{int}
         @param length: The number of octets to retrieve.
 
         @rtype: C{Deferred}
@@ -3717,39 +3987,41 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message numbers to retrieved data, or whose errback is invoked
         if there is an error.
         """
-        fmt = '%s BODY%s[%s%s%s]%s'
+        #fmt = '%s BODY%s[%s%s%s]%s'
         if headerNumber is None:
-            number = ''
+            number = b''
         elif isinstance(headerNumber, int):
-            number = str(headerNumber)
+            number = intToBytes(headerNumber)
         else:
-            number = '.'.join(map(str, headerNumber))
+            number = b'.'.join([networkString(str(n)) for n in headerNumber])
         if headerType is None:
-            header = ''
+            header = b''
         elif number:
-            header = '.' + headerType
+            header = b'.' + headerType
         else:
+            assert isinstance(headerType, bytes), headerType
             header = headerType
-        if header and headerType not in ('TEXT', 'MIME'):
+        if header and headerType not in (b'TEXT', b'MIME'):
             if headerArgs is not None:
-                payload = ' (%s)' % ' '.join(headerArgs)
+                payload = b' (' + b' '.join(headerArgs) + b')'
             else:
-                payload = ' ()'
+                payload = b' ()'
         else:
-            payload = ''
+            payload = b''
         if offset is None:
-            extra = ''
+            extra = b''
         else:
-            extra = '<%d.%d>' % (offset, length)
-        fetch = uid and 'UID FETCH' or 'FETCH'
-        cmd = fmt % (messages, peek and '.PEEK' or '', number, header, payload, extra)
-        d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
+            extra = b'<' + intToBytes(offset) + b'.' + intToBytes(length) + b'>'
+        fetch = uid and b'UID FETCH' or b'FETCH'
+        cmd = messages + b' BODY' +  (peek and b'.PEEK' or b'') + b'[' + number + header + payload + b']' + extra
+        d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
         return d
 
 
     def _fetch(self, messages, useUID=0, **terms):
-        fetch = useUID and 'UID FETCH' or 'FETCH'
+        assert isinstance(messages, bytes), messages
+        fetch = useUID and b'UID FETCH' or b'FETCH'
 
         if 'rfc822text' in terms:
             del terms['rfc822text']
@@ -3761,20 +4033,22 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             del terms['rfc822header']
             terms['rfc822.header'] = True
 
-        cmd = '%s (%s)' % (messages, ' '.join([s.upper() for s in terms.keys()]))
-        d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
+        cmd = messages + b' (' + b' '.join([s.upper() for s in terms.keys()]) + b')'
+        d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, map(str.upper, terms.keys()), True)
         return d
 
+
     def setFlags(self, messages, flags, silent=1, uid=0):
-        """Set the flags for one or more messages.
+        """
+        Set the flags for one or more messages.
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
         @type silent: C{bool}
@@ -3790,17 +4064,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), 'FLAGS', silent, flags, uid)
+        return self._store(messages, b'FLAGS', silent, flags, uid)
+
 
     def addFlags(self, messages, flags, silent=1, uid=0):
-        """Add to the set flags for one or more messages.
+        """
+        Add to the set flags for one or more messages.
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
         @type silent: C{bool}
@@ -3816,17 +4092,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages),'+FLAGS', silent, flags, uid)
+        return self._store(messages, b'+FLAGS', silent, flags, uid)
+
 
     def removeFlags(self, messages, flags, silent=1, uid=0):
-        """Remove from the set flags for one or more messages.
+        """
+        Remove from the set flags for one or more messages.
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type flags: Any iterable of C{str}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
         @type silent: C{bool}
@@ -3842,31 +4120,32 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), '-FLAGS', silent, flags, uid)
+        return self._store(messages, b'-FLAGS', silent, flags, uid)
 
 
     def _store(self, messages, cmd, silent, flags, uid):
         if silent:
-            cmd = cmd + '.SILENT'
-        store = uid and 'UID STORE' or 'STORE'
-        args = ' '.join((messages, cmd, '(%s)' % ' '.join(flags)))
-        d = self.sendCommand(Command(store, args, wantResponse=('FETCH',)))
+            cmd = cmd + b'.SILENT'
+        store = uid and b'UID STORE' or b'STORE'
+        args = b' '.join((messages, cmd, b'('+ b' '.join(flags) + b')'))
+        d = self.sendCommand(Command(store, args, wantResponse=(b'FETCH',)))
         expected = ()
         if not silent:
-            expected = ('FLAGS',)
+            expected = (b'FLAGS',)
         d.addCallback(self._cbFetch, expected, True)
         return d
 
 
     def copy(self, messages, mailbox, uid):
-        """Copy the specified messages to the specified mailbox.
+        """
+        Copy the specified messages to the specified mailbox.
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: L{str}
         @param messages: A message sequence set
 
-        @type mailbox: C{str}
+        @type mailbox: L{str}
         @param mailbox: The mailbox to which to copy the messages
 
         @type uid: C{bool}
@@ -3879,9 +4158,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         is an error.
         """
         if uid:
-            cmd = 'UID COPY'
+            cmd = b'UID COPY'
         else:
-            cmd = 'COPY'
+            cmd = b'COPY'
         args = '%s %s' % (messages, _prepareMailboxName(mailbox))
         return self.sendCommand(Command(cmd, args))
 
@@ -3903,10 +4182,10 @@ def parseIdList(s, lastMessageId=None):
     """
     Parse a message set search key into a C{MessageSet}.
 
-    @type s: C{str}
+    @type s: L{str}
     @param s: A string description of an id list, for example "1:3, 4:*"
 
-    @type lastMessageId: C{int}
+    @type lastMessageId: L{int}
     @param lastMessageId: The last message sequence id or UID, depending on
         whether we are parsing the list in UID or sequence id context. The
         caller should pass in the correct value.
@@ -3915,19 +4194,19 @@ def parseIdList(s, lastMessageId=None):
     @return: A C{MessageSet} that contains the ids defined in the list
     """
     res = MessageSet()
-    parts = s.split(',')
+    parts = s.split(b',')
     for p in parts:
-        if ':' in p:
-            low, high = p.split(':', 1)
+        if b':' in p:
+            low, high = p.split(b':', 1)
             try:
-                if low == '*':
+                if low == b'*':
                     low = None
                 else:
-                    low = long(low)
-                if high == '*':
+                    low = int(low)
+                if high == b'*':
                     high = None
                 else:
-                    high = long(high)
+                    high = int(high)
                 if low is high is None:
                     # *:* does not make sense
                     raise IllegalIdentifierError(p)
@@ -3940,17 +4219,19 @@ def parseIdList(s, lastMessageId=None):
                 low = low or lastMessageId
 
                 # RFC says that 2:4 and 4:2 are equivalent
-                if low > high:
+                if low is not None and high is None:
+                    low, high = high, low
+                elif low > high:
                     low, high = high, low
                 res.extend((low, high))
             except ValueError:
                 raise IllegalIdentifierError(p)
         else:
             try:
-                if p == '*':
+                if p == b'*':
                     p = None
                 else:
-                    p = long(p)
+                    p = int(p)
                 if p is not None and p <= 0:
                     raise IllegalIdentifierError(p)
             except ValueError:
@@ -3971,7 +4252,8 @@ _NO_QUOTES = (
 )
 
 def Query(sorted=0, **kwarg):
-    """Create a query string
+    """
+    Create a query string
 
     Among the accepted keywords are::
 
@@ -4076,7 +4358,7 @@ def Query(sorted=0, **kwarg):
     easier.  The default is zero, and this should be acceptable for any
     application.
 
-    @rtype: C{str}
+    @rtype: L{str}
     @return: The formatted query string
     """
     cmd = []
@@ -4087,7 +4369,7 @@ def Query(sorted=0, **kwarg):
         v = kwarg[k]
         k = k.upper()
         if k in _SIMPLE_BOOL and v:
-           cmd.append(k)
+            cmd.append(k)
         elif k == 'HEADER':
             cmd.extend([k, v[0], '"%s"' % (v[1],)])
         elif k == 'KEYWORD' or k == 'UNKEYWORD':
@@ -4097,16 +4379,20 @@ def Query(sorted=0, **kwarg):
             v = string.translate(v, string.maketrans('', ''), _nonAtomChars)
             cmd.extend([k, v])
         elif k not in _NO_QUOTES:
-           cmd.extend([k, '"%s"' % (v,)])
+            cmd.extend([k, '"%s"' % (v,)])
         else:
-           cmd.extend([k, '%s' % (v,)])
+            cmd.extend([k, '%s' % (v,)])
     if len(cmd) > 1:
         return '(%s)' % ' '.join(cmd)
     else:
         return ' '.join(cmd)
 
+
+
 def Or(*args):
-    """The disjunction of two or more queries"""
+    """
+    The disjunction of two or more queries
+    """
     if len(args) < 2:
         raise IllegalQueryError(args)
     elif len(args) == 2:
@@ -4127,17 +4413,20 @@ def wildcardToRegexp(wildcard, delim=None):
         wildcard = wildcard.replace('%', '(?:(?:[^%s])*?)' % re.escape(delim))
     return re.compile(wildcard, re.I)
 
+
+
 def splitQuoted(s):
-    """Split a string into whitespace delimited tokens
+    """
+    Split a string into whitespace delimited tokens
 
     Tokens that would otherwise be separated but are surrounded by \"
     remain as a single token.  Any token that is not quoted and is
     equal to \"NIL\" is tokenized as L{None}.
 
-    @type s: C{str}
+    @type s: L{bytes}
     @param s: The string to be split
 
-    @rtype: C{list} of C{str}
+    @rtype: L{list} of L{bytes}
     @return: A list of the resulting tokens
 
     @raise MismatchedQuoting: Raised if an odd number of quotes are present
@@ -4146,23 +4435,23 @@ def splitQuoted(s):
     result = []
     word = []
     inQuote = inWord = False
-    for i, c in enumerate(s):
-        if c == '"':
-            if i and s[i-1] == '\\':
+    for i, c in enumerate(iterbytes(s)):
+        if c == b'"':
+            if i and s[i-1:i] == b'\\':
                 word.pop()
                 word.append('"')
             elif not inQuote:
                 inQuote = True
             else:
                 inQuote = False
-                result.append(''.join(word))
+                result.append(b''.join(word))
                 word = []
-        elif not inWord and not inQuote and c not in ('"' + string.whitespace):
+        elif not inWord and not inQuote and c not in (b'"' + string.whitespace.encode("ascii")):
             inWord = True
             word.append(c)
-        elif inWord and not inQuote and c in string.whitespace:
-            w = ''.join(word)
-            if w == 'NIL':
+        elif inWord and not inQuote and c in string.whitespace.encode("ascii"):
+            w = b''.join(word)
+            if w == b'NIL':
                 result.append(None)
             else:
                 result.append(w)
@@ -4174,8 +4463,8 @@ def splitQuoted(s):
     if inQuote:
         raise MismatchedQuoting(s)
     if inWord:
-        w = ''.join(word)
-        if w == 'NIL':
+        w = b''.join(word)
+        if w == b'NIL':
             result.append(None)
         else:
             result.append(w)
@@ -4199,6 +4488,8 @@ def splitOn(sequence, predicate, transformers):
     result.extend(transformers[mode](tmp))
     return result
 
+
+
 def collapseStrings(results):
     """
     Turns a list of length-one strings and lists into a list of longer
@@ -4206,10 +4497,10 @@ def collapseStrings(results):
 
     ['a', 'b', ['c', 'd']] is returned as ['ab', ['cd']]
 
-    @type results: C{list} of C{str} and C{list}
+    @type results: L{list} of L{str} and L{list}
     @param results: The list to be collapsed
 
-    @rtype: C{list} of C{str} and C{list}
+    @rtype: L{list} of L{str} and L{list}
     @return: A new list which is the collapsed form of C{results}
     """
     copy = []
@@ -4218,10 +4509,10 @@ def collapseStrings(results):
 
     pred = lambda e: isinstance(e, tuple)
     tran = {
-        0: lambda e: splitQuoted(''.join(e)),
-        1: lambda e: [''.join([i[0] for i in e])]
+        0: lambda e: splitQuoted(b''.join(e)),
+        1: lambda e: [b''.join([i[0] for i in e])]
     }
-    for (i, c, isList) in zip(range(len(results)), results, listsList):
+    for (i, c, isList) in zip(list(range(len(results))), results, listsList):
         if isList:
             if begun is not None:
                 copy.extend(splitOn(results[begun:i], pred, tran))
@@ -4234,13 +4525,15 @@ def collapseStrings(results):
     return copy
 
 
-def parseNestedParens(s, handleLiteral = 1):
-    """Parse an s-exp-like string into a more useful data structure.
 
-    @type s: C{str}
+def parseNestedParens(s, handleLiteral = 1):
+    """
+    Parse an s-exp-like string into a more useful data structure.
+
+    @type s: L{bytes}
     @param s: The s-exp-like string to parse
 
-    @rtype: C{list} of C{str} and C{list}
+    @rtype: L{list} of L{bytes} and L{list}
     @return: A list containing the tokens present in the input.
 
     @raise MismatchedNesting: Raised if the number or placement
@@ -4253,32 +4546,32 @@ def parseNestedParens(s, handleLiteral = 1):
         i = 0
         L = len(s)
         while i < L:
-            c = s[i]
+            c = s[i:i+1]
             if inQuote:
-                if c == '\\':
+                if c == b'\\':
                     contentStack[-1].append(s[i:i+2])
                     i += 2
                     continue
-                elif c == '"':
+                elif c == b'"':
                     inQuote = not inQuote
                 contentStack[-1].append(c)
                 i += 1
             else:
-                if c == '"':
+                if c == b'"':
                     contentStack[-1].append(c)
                     inQuote = not inQuote
                     i += 1
-                elif handleLiteral and c == '{':
-                    end = s.find('}', i)
+                elif handleLiteral and c == b'{':
+                    end = s.find(b'}', i)
                     if end == -1:
                         raise ValueError("Malformed literal")
                     literalSize = int(s[i+1:end])
                     contentStack[-1].append((s[end+3:end+3+literalSize],))
                     i = end + 3 + literalSize
-                elif c == '(' or c == '[':
+                elif c == b'(' or c == b'[':
                     contentStack.append([])
                     i += 1
-                elif c == ')' or c == ']':
+                elif c == b')' or c == b']':
                     contentStack[-2].append(contentStack.pop())
                     i += 1
                 else:
@@ -4290,29 +4583,40 @@ def parseNestedParens(s, handleLiteral = 1):
         raise MismatchedNesting(s)
     return collapseStrings(contentStack[0])
 
+
+
 def _quote(s):
-    return '"%s"' % (s.replace('\\', '\\\\').replace('"', '\\"'),)
+    return b'"' + s.replace(b'\\', b'\\\\').replace(b'"', b'\\"') + b'"'
+
+
 
 def _literal(s):
     return '{%d}\r\n%s' % (len(s), s)
+
+
 
 class DontQuoteMe:
     def __init__(self, value):
         self.value = value
 
+
     def __str__(self):
         return str(self.value)
 
-_ATOM_SPECIALS = '(){ %*"'
+
+
+_ATOM_SPECIALS = b'(){ %*"'
 def _needsQuote(s):
-    if s == '':
+    if s == b'':
         return 1
-    for c in s:
-        if c < '\x20' or c > '\x7f':
+    for c in iterbytes(s):
+        if c < b'\x20' or c > b'\x7f':
             return 1
         if c in _ATOM_SPECIALS:
             return 1
     return 0
+
+
 
 def _prepareMailboxName(name):
     name = name.encode('imap4-utf-7')
@@ -4320,12 +4624,17 @@ def _prepareMailboxName(name):
         return _quote(name)
     return name
 
+
+
 def _needsLiteral(s):
     # Change this to "return 1" to wig out stupid clients
-    return '\n' in s or '\r' in s or len(s) > 1000
+    return b'\n' in s or b'\r' in s or len(s) > 1000
+
+
 
 def collapseNestedLists(items):
-    """Turn a nested list structure into an s-exp-like string.
+    """
+    Turn a nested list structure into an s-exp-like string.
 
     Strings in C{items} will be sent as literals if they contain CR or LF,
     otherwise they will be quoted.  References to None in C{items} will be
@@ -4343,25 +4652,25 @@ def collapseNestedLists(items):
 
     @type items: Any iterable
 
-    @rtype: C{str}
+    @rtype: L{str}
     """
     pieces = []
     for i in items:
         if i is None:
-            pieces.extend([' ', 'NIL'])
+            pieces.extend([b' ', b'NIL'])
         elif isinstance(i, (DontQuoteMe, int, long)):
-            pieces.extend([' ', str(i)])
-        elif isinstance(i, (str, unicode)):
+            pieces.extend([b' ', networkString(str(i))])
+        elif isinstance(i, (bytes, unicode)):
             if _needsLiteral(i):
-                pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
+                pieces.extend([b' ', b'{', intToBytes(len(i)), b'}', IMAP4Server.delimiter, i])
             else:
-                pieces.extend([' ', _quote(i)])
+                pieces.extend([b' ', _quote(i)])
         elif hasattr(i, 'read'):
             d = i.read()
-            pieces.extend([' ', '{', str(len(d)), '}', IMAP4Server.delimiter, d])
+            pieces.extend([b' ', b'{', intToBytes(len(d)), b'}', IMAP4Server.delimiter, d])
         else:
-            pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
-    return ''.join(pieces[1:])
+            pieces.extend([b' ', b'(' + collapseNestedLists(i) + b')'])
+    return b''.join(pieces[1:])
 
 
 
@@ -4376,10 +4685,12 @@ class MemoryAccount(object):
         self.mailboxes = {}
         self.subscriptions = []
 
+
     def allocateID(self):
         id = self.top_id
         self.top_id += 1
         return id
+
 
     ##
     ## IAccount
@@ -4393,8 +4704,9 @@ class MemoryAccount(object):
         self.mailboxes[name] = mbox
         return 1
 
+
     def create(self, pathspec):
-        paths = filter(None, pathspec.split('/'))
+        paths = [path for path in pathspec.split('/') if path]
         for accum in range(1, len(paths)):
             try:
                 self.addMailbox('/'.join(paths[:accum]))
@@ -4407,11 +4719,14 @@ class MemoryAccount(object):
                 return False
         return True
 
+
     def _emptyMailbox(self, name, id):
         raise NotImplementedError
 
+
     def select(self, name, readwrite=1):
         return self.mailboxes.get(name.upper())
+
 
     def delete(self, name):
         name = name.upper()
@@ -4433,6 +4748,7 @@ class MemoryAccount(object):
         if self._inferiorNames(name) > 1:
             del self.mailboxes[name]
 
+
     def rename(self, oldname, newname):
         oldname = oldname.upper()
         newname = newname.upper()
@@ -4450,6 +4766,7 @@ class MemoryAccount(object):
             self.mailboxes[new] = self.mailboxes[old]
             del self.mailboxes[old]
 
+
     def _inferiorNames(self, name):
         inferiors = []
         for infname in self.mailboxes.keys():
@@ -4457,13 +4774,16 @@ class MemoryAccount(object):
                 inferiors.append(infname)
         return inferiors
 
+
     def isSubscribed(self, name):
         return name.upper() in self.subscriptions
+
 
     def subscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
             self.subscriptions.append(name)
+
 
     def unsubscribe(self, name):
         name = name.upper()
@@ -4471,19 +4791,23 @@ class MemoryAccount(object):
             raise MailboxException("Not currently subscribed to %s" % (name,))
         self.subscriptions.remove(name)
 
+
     def listMailboxes(self, ref, wildcard):
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
 
+
     ##
     ## INamespacePresenter
     ##
     def getPersonalNamespaces(self):
-        return [["", "/"]]
+        return [[b"", b"/"]]
+
 
     def getSharedNamespaces(self):
         return None
+
 
     def getOtherNamespaces(self):
         return None
@@ -4497,17 +4821,22 @@ _statusRequestDict = {
     'UIDVALIDITY': 'getUIDValidity',
     'UNSEEN': 'getUnseenCount'
 }
+
 def statusRequestHelper(mbox, names):
     r = {}
     for n in names:
         r[n] = getattr(mbox, _statusRequestDict[n.upper()])()
     return r
 
+
+
 def parseAddr(addr):
     if addr is None:
         return [(None, None, None),]
     addr = email.utils.getaddresses([addr])
     return [[fn or None, None] + address.split('@') for fn, address in addr]
+
+
 
 def getEnvelope(msg):
     headers = msg.getHeaders(True)
@@ -4525,6 +4854,8 @@ def getEnvelope(msg):
         reply_to and parseAddr(reply_to), to and parseAddr(to),
         cc and parseAddr(cc), bcc and parseAddr(bcc), in_reply_to, mid)
 
+
+
 def getLineCount(msg):
     # XXX - Super expensive, CACHE THIS VALUE FOR LATER RE-USE
     # XXX - This must be the number of lines in the ENCODED version
@@ -4533,10 +4864,13 @@ def getLineCount(msg):
         lines += 1
     return lines
 
+
+
 def unquote(s):
     if s[0] == s[-1] == '"':
         return s[1:-1]
     return s
+
 
 
 def _getContentType(msg):
@@ -4616,7 +4950,7 @@ class _MessageStructure(object):
         Parse a I{Content-Disposition} header into a two-sequence of the
         disposition and a flattened list of its parameters.
 
-        @return: L{None} if there is no disposition header value, a C{list} with
+        @return: L{None} if there is no disposition header value, a L{list} with
             two elements otherwise.
         """
         if disp:
@@ -4639,7 +4973,7 @@ class _MessageStructure(object):
             the corresponding parameter value.
         """
         if self.attrs:
-            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.iteritems()]
+            unquoted = [(k, unquote(v)) for (k, v) in self.attrs.items()]
             return [y for x in sorted(unquoted) for y in x]
         return None
 
@@ -4659,10 +4993,10 @@ class _SinglepartMessageStructure(_MessageStructure):
         @param message: An L{IMessagePart} provider which this structure object
             reports on.
 
-        @param main: A C{str} giving the main MIME type of the message (for
+        @param main: A L{str} giving the main MIME type of the message (for
             example, C{"text"}).
 
-        @param subtype: A C{str} giving the MIME subtype of the message (for
+        @param subtype: A L{str} giving the MIME subtype of the message (for
             example, C{"plain"}).
 
         @param attrs: A C{dict} giving the parameters of the I{Content-Type}
@@ -4799,7 +5133,7 @@ class _MultipartMessageStructure(_MessageStructure):
         @param message: An L{IMessagePart} provider which this structure object
             reports on.
 
-        @param subtype: A C{str} giving the MIME subtype of the message (for
+        @param subtype: A L{str} giving the MIME subtype of the message (for
             example, C{"plain"}).
 
         @param attrs: A C{dict} giving the parameters of the I{Content-Type}
@@ -4980,9 +5314,9 @@ def getBodyStructure(msg, extended=False):
 
 
 def _formatHeaders(headers):
-    hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v)
-            in headers.iteritems()]
-    hdrs = '\r\n'.join(hdrs) + '\r\n'
+    hdrs = [b': '.join((k.title(), b'\r\n'.join(v.splitlines()))) for (k, v)
+            in headers.items()]
+    hdrs = b'\r\n'.join(hdrs) + b'\r\n'
     return hdrs
 
 def subparts(m):
@@ -4994,8 +5328,11 @@ def subparts(m):
     except IndexError:
         pass
 
+
+
 def iterateInReactor(i):
-    """Consume an interator at most a single iteration per reactor iteration.
+    """
+    Consume an interator at most a single iteration per reactor iteration.
 
     If the iterator produces a Deferred, the next iteration will not occur
     until the Deferred fires, otherwise the next iteration will be taken
@@ -5009,7 +5346,7 @@ def iterateInReactor(i):
     d = defer.Deferred()
     def go(last):
         try:
-            r = i.next()
+            r = next(i)
         except StopIteration:
             d.callback(last)
         except:
@@ -5022,11 +5359,14 @@ def iterateInReactor(i):
     go(None)
     return d
 
+
+
 class MessageProducer:
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
 
     def __init__(self, msg, buffer = None, scheduler = None):
-        """Produce this message.
+        """
+        Produce this message.
 
         @param msg: The message I am to produce.
         @type msg: L{IMessage}
@@ -5044,35 +5384,37 @@ class MessageProducer:
         self.scheduler = scheduler
         self.write = self.buffer.write
 
+
     def beginProducing(self, consumer):
         self.consumer = consumer
         return self.scheduler(self._produce())
+
 
     def _produce(self):
         headers = self.msg.getHeaders(True)
         boundary = None
         if self.msg.isMultipart():
-            content = headers.get('content-type')
-            parts = [x.split('=', 1) for x in content.split(';')[1:]]
+            content = headers.get(b'content-type')
+            parts = [x.split(b'=', 1) for x in content.split(b';')[1:]]
             parts = dict([(k.lower().strip(), v) for (k, v) in parts])
-            boundary = parts.get('boundary')
+            boundary = parts.get(b'boundary')
             if boundary is None:
                 # Bastards
                 boundary = '----=_%f_boundary_%f' % (time.time(), random.random())
-                headers['content-type'] += '; boundary="%s"' % (boundary,)
+                headers[b'content-type'] += b'; boundary="'+ networkString(boundary) + b'"'
             else:
-                if boundary.startswith('"') and boundary.endswith('"'):
+                if boundary.startswith(b'"') and boundary.endswith(b'"'):
                     boundary = boundary[1:-1]
 
         self.write(_formatHeaders(headers))
-        self.write('\r\n')
+        self.write(b'\r\n')
         if self.msg.isMultipart():
             for p in subparts(self.msg):
-                self.write('\r\n--%s\r\n' % (boundary,))
+                self.write(b'\r\n--' + boundary + b'\r\n')
                 yield MessageProducer(p, self.buffer, self.scheduler
                     ).beginProducing(None
                     )
-            self.write('\r\n--%s--\r\n' % (boundary,))
+            self.write(b'\r\n--' + boundary + b'--\r\n' )
         else:
             f = self.msg.getBodyFile()
             while True:
@@ -5089,6 +5431,8 @@ class MessageProducer:
                 ).addCallback(lambda _: self
                 )
 
+
+
 class _FetchParser:
     class Envelope:
         # Response should be a list of fields from the message:
@@ -5104,33 +5448,41 @@ class _FetchParser:
         type = 'envelope'
         __str__ = lambda self: 'envelope'
 
+
     class Flags:
         type = 'flags'
         __str__ = lambda self: 'flags'
+
 
     class InternalDate:
         type = 'internaldate'
         __str__ = lambda self: 'internaldate'
 
+
     class RFC822Header:
         type = 'rfc822header'
         __str__ = lambda self: 'rfc822.header'
+
 
     class RFC822Text:
         type = 'rfc822text'
         __str__ = lambda self: 'rfc822.text'
 
+
     class RFC822Size:
         type = 'rfc822size'
         __str__ = lambda self: 'rfc822.size'
+
 
     class RFC822:
         type = 'rfc822'
         __str__ = lambda self: 'rfc822'
 
+
     class UID:
         type = 'uid'
         __str__ = lambda self: 'uid'
+
 
     class Body:
         type = 'body'
@@ -5142,55 +5494,68 @@ class _FetchParser:
         empty = False
         partialBegin = None
         partialLength = None
+
         def __str__(self):
-            base = 'BODY'
-            part = ''
-            separator = ''
+            return nativeString(self.__bytes__())
+
+        def __bytes__(self):
+            base = b'BODY'
+            part = b''
+            separator = b''
             if self.part:
-                part = '.'.join([str(x + 1) for x in self.part])
-                separator = '.'
+                part = b'.'.join([str(x + 1) for x in self.part])
+                separator = b'.'
 #            if self.peek:
 #                base += '.PEEK'
             if self.header:
                 base += '[%s%s%s]' % (part, separator, self.header,)
             elif self.text:
-                base += '[%s%sTEXT]' % (part, separator)
+                base += b'[' + part + separator + b'TEXT]'
             elif self.mime:
-                base += '[%s%sMIME]' % (part, separator)
+                base += b'[' + part + separator + b'MIME]'
             elif self.empty:
-                base += '[%s]' % (part,)
+                base += b'[' + part + b']'
             if self.partialBegin is not None:
-                base += '<%d.%d>' % (self.partialBegin, self.partialLength)
+                base += b'<' + intToBytes(self.partialBegin) + b'.' + intToBytes(self.partialLength) + b'>'
             return base
+
 
     class BodyStructure:
         type = 'bodystructure'
         __str__ = lambda self: 'bodystructure'
+
 
     # These three aren't top-level, they don't need type indicators
     class Header:
         negate = False
         fields = None
         part = None
+
         def __str__(self):
-            base = 'HEADER'
+            return nativeString(self.__bytes__())
+
+
+        def __bytes__(self):
+            base = b'HEADER'
             if self.fields:
-                base += '.FIELDS'
+                base += b'.FIELDS'
                 if self.negate:
-                    base += '.NOT'
+                    base += b'.NOT'
                 fields = []
                 for f in self.fields:
                     f = f.title()
                     if _needsQuote(f):
                         f = _quote(f)
                     fields.append(f)
-                base += ' (%s)' % ' '.join(fields)
+                base += b' (' + b' '.join(fields) + b')'
             if self.part:
-                base = '.'.join([str(x + 1) for x in self.part]) + '.' + base
+                base = b'.'.join([(x + 1).__bytes__() for x in self.part]) + b'.' + base
             return base
+
 
     class Text:
         pass
+
 
     class MIME:
         pass
@@ -5198,21 +5563,22 @@ class _FetchParser:
     parts = None
 
     _simple_fetch_att = [
-        ('envelope', Envelope),
-        ('flags', Flags),
-        ('internaldate', InternalDate),
-        ('rfc822.header', RFC822Header),
-        ('rfc822.text', RFC822Text),
-        ('rfc822.size', RFC822Size),
-        ('rfc822', RFC822),
-        ('uid', UID),
-        ('bodystructure', BodyStructure),
+        (b'envelope', Envelope),
+        (b'flags', Flags),
+        (b'internaldate', InternalDate),
+        (b'rfc822.header', RFC822Header),
+        (b'rfc822.text', RFC822Text),
+        (b'rfc822.size', RFC822Size),
+        (b'rfc822', RFC822),
+        (b'uid', UID),
+        (b'bodystructure', BodyStructure),
     ]
 
     def __init__(self):
         self.state = ['initial']
         self.result = []
-        self.remaining = ''
+        self.remaining = b''
+
 
     def parseString(self, s):
         s = self.remaining + s
@@ -5233,6 +5599,7 @@ class _FetchParser:
         finally:
             self.remaining = s
 
+
     def state_initial(self, s):
         # In the initial state, the literals "ALL", "FULL", and "FAST"
         # are accepted, as is a ( indicating the beginning of a fetch_att
@@ -5241,36 +5608,38 @@ class _FetchParser:
             return 0
 
         l = s.lower()
-        if l.startswith('all'):
+        if l.startswith(b'all'):
             self.result.extend((
                 self.Flags(), self.InternalDate(),
                 self.RFC822Size(), self.Envelope()
             ))
             return 3
-        if l.startswith('full'):
+        if l.startswith(b'full'):
             self.result.extend((
                 self.Flags(), self.InternalDate(),
                 self.RFC822Size(), self.Envelope(),
                 self.Body()
             ))
             return 4
-        if l.startswith('fast'):
+        if l.startswith(b'fast'):
             self.result.extend((
                 self.Flags(), self.InternalDate(), self.RFC822Size(),
             ))
             return 4
 
-        if l.startswith('('):
+        if l.startswith(b'('):
             self.state.extend(('close_paren', 'maybe_fetch_att', 'fetch_att'))
             return 1
 
         self.state.append('fetch_att')
         return 0
 
+
     def state_close_paren(self, s):
-        if s.startswith(')'):
+        if s.startswith(b')'):
             return 1
         raise Exception("Missing )")
+
 
     def state_whitespace(self, s):
         # Eat up all the leading whitespace
@@ -5282,10 +5651,12 @@ class _FetchParser:
                 break
         return i
 
+
     def state_maybe_fetch_att(self, s):
-        if not s.startswith(')'):
+        if not s.startswith(b')'):
             self.state.extend(('maybe_fetch_att', 'fetch_att', 'whitespace'))
         return 0
+
 
     def state_fetch_att(self, s):
         # Allowed fetch_att tokens are "ENVELOPE", "FLAGS", "INTERNALDATE",
@@ -5300,10 +5671,10 @@ class _FetchParser:
                 return len(name)
 
         b = self.Body()
-        if l.startswith('body.peek'):
+        if l.startswith(b'body.peek'):
             b.peek = True
             used = 9
-        elif l.startswith('body'):
+        elif l.startswith(b'body'):
             used = 4
         else:
             raise Exception("Nothing recognized in fetch_att: %s" % (l,))
@@ -5312,19 +5683,23 @@ class _FetchParser:
         self.state.extend(('got_body', 'maybe_partial', 'maybe_section'))
         return used
 
+
     def state_got_body(self, s):
         self.result.append(self.pending_body)
         del self.pending_body
         return 0
 
+
     def state_maybe_section(self, s):
-        if not s.startswith("["):
+        if not s.startswith(b"["):
             return 0
 
         self.state.extend(('section', 'part_number'))
         return 1
 
-    _partExpr = re.compile(r'(\d+(?:\.\d+)*)\.?')
+    _partExpr = re.compile(b'(\d+(?:\.\d+)*)\.?')
+
+
     def state_part_number(self, s):
         m = self._partExpr.match(s)
         if m is not None:
@@ -5334,6 +5709,7 @@ class _FetchParser:
             self.parts = []
             return 0
 
+
     def state_section(self, s):
         # Grab "HEADER]" or "HEADER.FIELDS (Header list)]" or
         # "HEADER.FIELDS.NOT (Header list)]" or "TEXT]" or "MIME]" or
@@ -5341,18 +5717,18 @@ class _FetchParser:
 
         l = s.lower()
         used = 0
-        if l.startswith(']'):
+        if l.startswith(b']'):
             self.pending_body.empty = True
             used += 1
-        elif l.startswith('header]'):
+        elif l.startswith(b'header]'):
             h = self.pending_body.header = self.Header()
             h.negate = True
             h.fields = ()
             used += 7
-        elif l.startswith('text]'):
+        elif l.startswith(b'text]'):
             self.pending_body.text = self.Text()
             used += 5
-        elif l.startswith('mime]'):
+        elif l.startswith(b'mime]'):
             self.pending_body.mime = self.MIME()
             used += 5
         else:
@@ -5371,10 +5747,12 @@ class _FetchParser:
         self.parts = None
         return used
 
+
     def state_finish_section(self, s):
         if not s.startswith(']'):
             raise Exception("section must end with ]")
         return 1
+
 
     def state_header_list(self, s):
         if not s.startswith('('):
@@ -5387,16 +5765,17 @@ class _FetchParser:
         self.pending_body.header.fields = map(str.upper, headers)
         return end + 1
 
+
     def state_maybe_partial(self, s):
         # Grab <number.number> or nothing at all
-        if not s.startswith('<'):
+        if not s.startswith(b'<'):
             return 0
-        end = s.find('>')
+        end = s.find(b'>')
         if end == -1:
             raise Exception("Found < but not >")
 
         partial = s[1:end]
-        parts = partial.split('.', 1)
+        parts = partial.split(b'.', 1)
         if len(parts) != 2:
             raise Exception("Partial specification did not include two .-delimited integers")
         begin, length = map(int, parts)
@@ -5404,6 +5783,8 @@ class _FetchParser:
         self.pending_body.partialLength = length
 
         return end + 1
+
+
 
 class FileProducer:
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
@@ -5413,6 +5794,7 @@ class FileProducer:
     def __init__(self, f):
         self.f = f
 
+
     def beginProducing(self, consumer):
         self.consumer = consumer
         self.produce = consumer.write
@@ -5420,10 +5802,11 @@ class FileProducer:
         self.consumer.registerProducer(self, False)
         return d
 
+
     def resumeProducing(self):
-        b = ''
+        b = b''
         if self.firstWrite:
-            b = '{%d}\r\n' % self._size()
+            b = b'{' + intToBytes(self._size()) + b'}\r\n'
             self.firstWrite = False
         if not self.f:
             return
@@ -5435,11 +5818,14 @@ class FileProducer:
         else:
             self.produce(b)
 
+
     def pauseProducing(self):
         pass
 
+
     def stopProducing(self):
         pass
+
 
     def _size(self):
         b = self.f.tell()
@@ -5447,6 +5833,8 @@ class FileProducer:
         e = self.f.tell()
         self.f.seek(b, 0)
         return e - b
+
+
 
 def parseTime(s):
     # XXX - This may require localization :(
@@ -5475,12 +5863,17 @@ def parseTime(s):
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
         )
 
+# we need to cast Python >=3.3 memoryview to chars (from unsigned bytes), but
+# cast is absent in previous versions: thus, the lambda returns the
+# memoryview instance while ignoring the format
+memory_cast = getattr(memoryview, "cast", lambda *x: x[0])
+
 def modified_base64(s):
     s_utf7 = s.encode('utf-7')
-    return s_utf7[1:-1].replace('/', ',')
+    return s_utf7[1:-1].replace(b'/', b',')
 
 def modified_unbase64(s):
-    s_utf7 = '+' + s.replace(',', '/') + '-'
+    s_utf7 = b'+' + s.replace(b',', b'/') + b'-'
     return s_utf7.decode('utf-7')
 
 def encoder(s, errors=None):
@@ -5493,63 +5886,72 @@ def encoder(s, errors=None):
 
     @param errors: Policy for handling encoding errors.  Currently ignored.
 
-    @return: C{tuple} of a C{str} giving the encoded bytes and an C{int}
+    @return: L{tuple} of a L{str} giving the encoded bytes and an L{int}
         giving the number of code units consumed from the input.
     """
-    r = []
+    r = bytearray()
     _in = []
+    valid_chars = set(map(chr, range(0x20,0x7f))) - {u"&"}
     for c in s:
-        if ord(c) in (range(0x20, 0x26) + range(0x27, 0x7f)):
+        if c in valid_chars:
             if _in:
-                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                r += b'&' + modified_base64(''.join(_in)) + b'-'
                 del _in[:]
-            r.append(str(c))
-        elif c == '&':
+            r.append(ord(c))
+        elif c == u'&':
             if _in:
-                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                r += b'&' + modified_base64(''.join(_in)) + b'-'
                 del _in[:]
-            r.append('&-')
+            r += b'&-'
         else:
             _in.append(c)
     if _in:
-        r.extend(['&', modified_base64(''.join(_in)), '-'])
-    return (''.join(r), len(s))
+        r.extend(b'&' + modified_base64(''.join(_in)) + b'-')
+    return (bytes(r), len(s))
+
+
+
 
 def decoder(s, errors=None):
     """
-    Decode the given C{str} using the IMAP4 specific variation of UTF-7.
+    Decode the given L{str} using the IMAP4 specific variation of UTF-7.
 
-    @type s: C{str}
+    @type s: L{str}
     @param s: The bytes to decode.
 
     @param errors: Policy for handling decoding errors.  Currently ignored.
 
-    @return: a C{tuple} of a C{unicode} string giving the text which was
-        decoded and an C{int} giving the number of bytes consumed from the
+    @return: a L{tuple} of a C{unicode} string giving the text which was
+        decoded and an L{int} giving the number of bytes consumed from the
         input.
     """
     r = []
     decode = []
+    s = memory_cast(memoryview(s), 'c')
     for c in s:
-        if c == '&' and not decode:
-            decode.append('&')
-        elif c == '-' and decode:
+        if c == b'&' and not decode:
+            decode.append(b'&')
+        elif c == b'-' and decode:
             if len(decode) == 1:
-                r.append('&')
+                r.append(u'&')
             else:
-                r.append(modified_unbase64(''.join(decode[1:])))
+                r.append(modified_unbase64(b''.join(decode[1:])))
             decode = []
         elif decode:
             decode.append(c)
         else:
-            r.append(c)
+            r.append(c.decode())
     if decode:
-        r.append(modified_unbase64(''.join(decode[1:])))
-    return (''.join(r), len(s))
+        r.append(modified_unbase64(b''.join(decode[1:])))
+    return (u''.join(r), len(s))
+
+
 
 class StreamReader(codecs.StreamReader):
     def decode(self, s, errors='strict'):
         return decoder(s)
+
+
 
 class StreamWriter(codecs.StreamWriter):
     def encode(self, s, errors='strict'):
@@ -5563,9 +5965,12 @@ except AttributeError:
 else:
     _codecInfo = _codecInfoClass(*_codecInfo)
 
+
+
 def imap4_utf_7(name):
     if name == 'imap4-utf-7':
         return _codecInfo
+
 codecs.register(imap4_utf_7)
 
 __all__ = [

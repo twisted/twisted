@@ -26,6 +26,8 @@ except ImportError:
 
 from zope.interface import providedBy, implementer, Interface
 
+from incremental import Version
+
 from twisted.conch import error
 from twisted.conch.ssh import keys
 from twisted.cred.checkers import ICredentialsChecker
@@ -37,7 +39,7 @@ from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
-from twisted.python.versions import Version
+
 
 
 

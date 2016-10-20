@@ -133,7 +133,7 @@ class CGIScript(resource.Resource):
         Run the cgi script.
 
         @type env: A C{dict} of C{str}, or L{None}
-        @param env: The environment variables to pass to the processs that will
+        @param env: The environment variables to pass to the process that will
             get spawned. See
             L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
             information about environments and process creation.
@@ -175,7 +175,7 @@ class FilteredScript(CGIScript):
         Run a script through the C{filter} executable.
 
         @type env: A C{dict} of C{str}, or L{None}
-        @param env: The environment variables to pass to the processs that will
+        @param env: The environment variables to pass to the process that will
             get spawned. See
             L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
             information about environments and process creation.
