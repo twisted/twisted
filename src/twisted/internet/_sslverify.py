@@ -19,6 +19,7 @@ except ImportError:
     SSL_CB_HANDSHAKE_DONE = 0x20
 
 from twisted.python import log
+from twisted.python._oldstyle import _oldStyle
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -415,6 +416,7 @@ DN = DistinguishedName
 
 
 
+@_oldStyle
 class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
@@ -759,6 +761,7 @@ class PrivateCertificate(Certificate):
                                                  digestAlgorithm)
 
 
+@_oldStyle
 class PublicKey:
     """
     A L{PublicKey} is a representation of the public part of a key pair.
