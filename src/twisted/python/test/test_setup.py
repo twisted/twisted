@@ -210,7 +210,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyserial', deps)
         self.assertIn('h2 >= 2.3.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-        self.assertIn('pyobjc', deps)
+        self.assertIn('pyobjc-core', deps)
 
 
     def test_extrasRequiresWindowsPlatformDeps(self):
