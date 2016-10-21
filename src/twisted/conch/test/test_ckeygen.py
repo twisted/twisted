@@ -5,11 +5,12 @@
 Tests for L{twisted.conch.scripts.ckeygen}.
 """
 
-import __builtin__
 import getpass
 import sys
-from StringIO import StringIO
 
+from io import BytesIO, StringIO
+
+from twisted.python.compat import unicode, _PY3
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
@@ -41,7 +42,7 @@ def makeGetpass(*passphrases):
     passphrases = iter(passphrases)
 
     def fakeGetpass(_):
-        return passphrases.next()
+        return next(passphrases)
 
     return fakeGetpass
 
@@ -53,10 +54,12 @@ class KeyGenTests(TestCase):
     """
     def setUp(self):
         """
-        Patch C{sys.stdout} with a L{StringIO} instance to tests can make
-        assertions about what's printed.
+        Patch C{sys.stdout} so tests can make assertions about what's printed.
         """
-        self.stdout = StringIO()
+        if _PY3:
+            self.stdout = StringIO()
+        else:
+            self.stdout = BytesIO()
         self.patch(sys, 'stdout', self.stdout)
 
 
@@ -231,7 +234,8 @@ class KeyGenTests(TestCase):
         base.makedirs()
         keyPath = base.child('custom_key').path
 
-        self.patch(__builtin__, 'raw_input', lambda _: keyPath)
+        import twisted.conch.scripts.ckeygen
+        self.patch(twisted.conch.scripts.ckeygen, 'raw_input', lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
         _saveKey(key, {'filename': None, 'no-passphrase': True,
             'format': 'md5-hex'})
@@ -250,8 +254,11 @@ class KeyGenTests(TestCase):
         pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh)
         displayPublicKey({'filename': filename})
+        displayed = self.stdout.getvalue().strip('\n')
+        if isinstance(displayed, unicode):
+            displayed = displayed.encode("ascii")
         self.assertEqual(
-            self.stdout.getvalue().strip('\n'),
+            displayed,
             pubKey.toString('openssh'))
 
 
@@ -264,8 +271,11 @@ class KeyGenTests(TestCase):
         pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         displayPublicKey({'filename': filename, 'pass': 'encrypted'})
+        displayed = self.stdout.getvalue().strip('\n')
+        if isinstance(displayed, unicode):
+            displayed = displayed.encode("ascii")
         self.assertEqual(
-            self.stdout.getvalue().strip('\n'),
+            displayed,
             pubKey.toString('openssh'))
 
 
@@ -279,8 +289,11 @@ class KeyGenTests(TestCase):
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         self.patch(getpass, 'getpass', lambda x: 'encrypted')
         displayPublicKey({'filename': filename})
+        displayed = self.stdout.getvalue().strip('\n')
+        if isinstance(displayed, unicode):
+            displayed = displayed.encode("ascii")
         self.assertEqual(
-            self.stdout.getvalue().strip('\n'),
+            displayed,
             pubKey.toString('openssh'))
 
 
@@ -392,13 +405,16 @@ class KeyGenTests(TestCase):
         key.
         """
         filename = self.mktemp()
-        FilePath(filename).setContent('foobar')
+        FilePath(filename).setContent(b'foobar')
         error = self.assertRaises(
             SystemExit, changePassPhrase, {'filename': filename})
-        self.assertEqual(
-            "Could not change passphrase: cannot guess the type of 'foobar'",
-            str(error))
-        self.assertEqual('foobar', FilePath(filename).getContent())
+
+        if _PY3:
+            expected = "Could not change passphrase: cannot guess the type of b'foobar'"
+        else:
+            expected = "Could not change passphrase: cannot guess the type of 'foobar'"
+        self.assertEqual(expected, str(error))
+        self.assertEqual(b'foobar', FilePath(filename).getContent())
 
 
     def test_changePassphraseCreateError(self):
@@ -442,9 +458,13 @@ class KeyGenTests(TestCase):
             SystemExit, changePassPhrase,
             {'filename': filename, 'newpass': 'newencrypt'})
 
-        self.assertEqual(
-            "Could not change passphrase: "
-            "cannot guess the type of ''", str(error))
+        if _PY3:
+            expected = (
+                "Could not change passphrase: cannot guess the type of b''")
+        else:
+            expected = (
+                "Could not change passphrase: cannot guess the type of ''")
+        self.assertEqual(expected, str(error))
 
         self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())
 
