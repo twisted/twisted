@@ -149,7 +149,7 @@ class TextFileLogObserverTests(TestCase):
     def test_observeFailureThatRaisesInGetTraceback(self):
         """
         If the C{"log_failure"} key exists in an event, and contains an object
-        that raises when you call it's C{getTraceback()}, then the observer
+        that raises when you call its C{getTraceback()}, then the observer
         appends a message noting the problem, instead of raising.
         """
         with StringIO() as fileHandle:
