@@ -291,7 +291,6 @@ class FileLogObserverTests(TestCase):
             1 / 0
         except:
             logger.failure("failed as expected")
-        print("AN_VALUE", io.getvalue())
         reader = StringIO(io.getvalue())
         events = list(eventsFromJSONLogFile(reader))
         self.assertEqual(len(events), 1)
