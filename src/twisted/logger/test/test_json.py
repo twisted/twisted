@@ -15,7 +15,7 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python.failure import Failure
 
-from .._observer import ILogObserver
+from .._observer import ILogObserver, LogPublisher
 from .._format import formatEvent
 from .._levels import LogLevel
 from .._flatten import extractField
@@ -286,7 +286,11 @@ class FileLogObserverTests(TestCase):
         serialized as JSON text to a file when it observes events.
         """
         io = StringIO()
-        logger = Logger(observer=jsonFileLogObserver(io))
+        publisher = LogPublisher()
+        before = []
+        publisher.addObserver(before.append)
+        publisher.addObserver(jsonFileLogObserver(io))
+        logger = Logger(observer=publisher)
         try:
             1 / 0
         except:
@@ -294,6 +298,20 @@ class FileLogObserverTests(TestCase):
         reader = StringIO(io.getvalue())
         events = list(eventsFromJSONLogFile(reader))
         self.assertEqual(len(events), 1)
+        self.assertEqual(len(before), 1)
+        [event] = events
+        [beforeEvent] = before
+        self.assertIn("log_failure", event)
+        f = event["log_failure"]
+        b = beforeEvent["log_failure"]
+        self.assertIsInstance(f, Failure)
+        deserializedTraceback = f.getTracebackObject()
+        previousTraceback = b.getTracebackObject()
+        def checkOneTraceback(tb):
+            self.assertEqual(tb.tb_frame.f_code.co_filename.rstrip("co"),
+                             __file__.rstrip("co"))
+        checkOneTraceback(previousTraceback)
+        checkOneTraceback(deserializedTraceback)
 
 
 
