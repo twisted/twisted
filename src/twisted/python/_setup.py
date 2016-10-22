@@ -86,14 +86,15 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    tls=['pyopenssl >= 16.0.0',
-         'service_identity',
-         'idna >= 0.6'],
-    conch=['gmpy',
-           'pyasn1',
-           'cryptography >= 0.9.1',
-           'appdirs >= 1.4.0',
-           ],
+    tls=[
+        'pyopenssl >= 16.0.0',
+        'service_identity',
+        'idna >= 0.6'],
+    conch=[
+        'pyasn1',
+        'cryptography >= 0.9.1',
+        'appdirs >= 1.4.0',
+    ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
@@ -128,6 +129,7 @@ _EXTRAS_REQUIRE = {
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
+    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
@@ -135,7 +137,6 @@ _CONSOLE_SCRIPTS = [
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [
     "cftp = twisted.conch.scripts.cftp:run",
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "conch = twisted.conch.scripts.conch:run",
     "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
@@ -361,7 +362,6 @@ notPortedModules = [
     "twisted.conch.client.connect",
     "twisted.conch.client.direct",
     "twisted.conch.test.test_cftp",
-    "twisted.conch.test.test_ckeygen",
     "twisted.conch.test.test_conch",
     "twisted.conch.test.test_manhole",
     "twisted.conch.ui.__init__",
