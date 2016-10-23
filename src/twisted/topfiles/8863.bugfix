@@ -1,0 +1,1 @@
+twisted.python.version now exports a version of Incremental that is 16.10.1 or higher, making t.p.v.Version package name comparisons case-insensitive.
