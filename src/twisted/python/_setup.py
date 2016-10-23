@@ -86,14 +86,15 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    tls=['pyopenssl >= 16.0.0',
-         'service_identity',
-         'idna >= 0.6'],
-    conch=['gmpy',
-           'pyasn1',
-           'cryptography >= 0.9.1',
-           'appdirs >= 1.4.0',
-           ],
+    tls=[
+        'pyopenssl >= 16.0.0',
+        'service_identity',
+        'idna >= 0.6'],
+    conch=[
+        'pyasn1',
+        'cryptography >= 0.9.1',
+        'appdirs >= 1.4.0',
+    ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
@@ -223,12 +224,12 @@ def getSetupArgs(extensions=_EXTENSIONS):
         requirements = ["zope.interface >= 3.6.0"]
 
     requirements.append("constantly >= 15.1")
-    requirements.append("incremental >= 16.10.0")
+    requirements.append("incremental >= 16.10.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
         use_incremental=True,
-        setup_requires=["incremental >= 16.10.0"],
+        setup_requires=["incremental >= 16.10.1"],
         install_requires=requirements,
         entry_points={
             'console_scripts': _CONSOLE_SCRIPTS
