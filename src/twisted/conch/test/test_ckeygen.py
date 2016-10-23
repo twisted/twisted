@@ -254,6 +254,24 @@ class KeyGenTests(TestCase):
             key)
 
 
+    def test_saveKeyECDSAEmptyPassphrase(self):
+        """
+        L{_saveKey} will choose an empty string for the passphrase if
+        no-passphrase is C{True}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ecdsa').path
+        key = Key.fromString(privateECDSA_openssh)
+        _saveKey(key, {'filename': filename, 'no-passphrase': True,
+            'format': 'md5-hex'})
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ecdsa').getContent(), None),
+            key)
+
+
+
     def test_saveKeyNoFilename(self):
         """
         When no path is specified, it will ask for the path used to store the
