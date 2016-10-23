@@ -25,7 +25,7 @@ else:
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.conch.test.keydata import (
-    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted)
+    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted, privateECDSA_openssh)
 
 
 
@@ -161,6 +161,35 @@ class KeyGenTests(TestCase):
             key)
         self.assertEqual(
             Key.fromString(base.child('id_rsa.pub').getContent()),
+            key.public())
+
+
+    def test_saveKeyECDSA(self):
+        """
+        L{_saveKey} writes the private and public parts of a key to two
+        different files and writes a report of this to standard out.
+        Test with ECDSA key.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ecdsa').path
+        key = Key.fromString(privateECDSA_openssh)
+        _saveKey(key, {'filename': filename, 'pass': 'passphrase',
+            'format': 'md5-hex'})
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
+            "e2:3b:e8:1c:f8:c9:c7:de:8b:c0:00:68:2e:c9:2c:8a\n" % (
+                filename,
+                filename))
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ecdsa').getContent(), None, 'passphrase'),
+            key)
+        self.assertEqual(
+            Key.fromString(base.child('id_ecdsa.pub').getContent()),
             key.public())
 
 
