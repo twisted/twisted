@@ -287,8 +287,8 @@ class FileLogObserverTests(TestCase):
         """
         io = StringIO()
         publisher = LogPublisher()
-        before = []
-        publisher.addObserver(before.append)
+        logged = []
+        publisher.addObserver(logged.append)
         publisher.addObserver(jsonFileLogObserver(io))
         logger = Logger(observer=publisher)
         try:
@@ -296,22 +296,20 @@ class FileLogObserverTests(TestCase):
         except:
             logger.failure("failed as expected")
         reader = StringIO(io.getvalue())
-        events = list(eventsFromJSONLogFile(reader))
-        self.assertEqual(len(events), 1)
-        self.assertEqual(len(before), 1)
-        [event] = events
-        [beforeEvent] = before
-        self.assertIn("log_failure", event)
-        f = event["log_failure"]
-        b = beforeEvent["log_failure"]
-        self.assertIsInstance(f, Failure)
-        deserializedTraceback = f.getTracebackObject()
-        previousTraceback = b.getTracebackObject()
-        def checkOneTraceback(tb):
-            self.assertEqual(tb.tb_frame.f_code.co_filename.rstrip("co"),
-                             __file__.rstrip("co"))
-        checkOneTraceback(previousTraceback)
-        checkOneTraceback(deserializedTraceback)
+        deserialized = list(eventsFromJSONLogFile(reader))
+        def checkEvents(logEvents):
+            self.assertEqual(len(logEvents), 1)
+            [failureEvent] = logEvents
+            self.assertIn("log_failure", failureEvent)
+            failureObject = failureEvent["log_failure"]
+            self.assertIsInstance(failureObject, Failure)
+            tracebackObject = failureObject.getTracebackObject()
+            self.assertEqual(
+                tracebackObject.tb_frame.f_code.co_filename.rstrip("co"),
+                __file__.rstrip("co")
+            )
+        checkEvents(logged)
+        checkEvents(deserialized)
 
 
 
