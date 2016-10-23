@@ -1,6 +1,22 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.5.0rc2 (2016-10-23)
+===================================
+
+Bugfixes
+--------
+ - twisted.logger.jsonFileLogObserver no longer emits non-JSON
+   tracebacks into its file; additionally,
+   twisted.logger.formatEventAsClassicLogText now includes traceback
+   information for the log event it formats. (#8858)
+ - twisted.python.version now exports a version of Incremental that is
+   16.10.1 or higher, making t.p.v.Version package name comparisons
+   case-insensitive. (#8863)
+ - twisted.python.reflect.safe_str encodes unicode as ascii with
+   backslashreplace error handling on Python 2. (#8864)
+
+
 Twisted Core 16.5.0rc1 (2016-10-10)
 ===================================
 
