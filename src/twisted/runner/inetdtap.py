@@ -15,7 +15,7 @@ import pwd, grp, socket
 from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.internet.protocol import ServerFactory
 from twisted.application import internet, service as appservice
 

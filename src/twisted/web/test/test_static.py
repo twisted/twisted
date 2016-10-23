@@ -1220,7 +1220,7 @@ class RangeTests(TestCase):
 
     def test_multipleRangeRequest(self):
         """
-        The response to a request for multipe bytes ranges is a MIME-ish
+        The response to a request for multiple bytes ranges is a MIME-ish
         multipart response.
         """
         startEnds = [(0, 2), (20, 30), (40, 50)]
@@ -1246,7 +1246,7 @@ class RangeTests(TestCase):
 
     def test_multipleRangeRequestWithRangeOverlappingEnd(self):
         """
-        The response to a request for multipe bytes ranges is a MIME-ish
+        The response to a request for multiple bytes ranges is a MIME-ish
         multipart response, even when one of the ranged falls off the end of
         the resource.
         """

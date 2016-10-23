@@ -1184,12 +1184,12 @@ class SynchronousTestCase(_Assertions):
         deprecated.
 
         @param version: A 2-sequence of (since, replacement), where C{since} is
-            a the first L{version<twisted.python.versions.Version>} that C{f}
+            a the first L{version<incremental.Version>} that C{f}
             should have been deprecated since, and C{replacement} is a suggested
             replacement for the deprecated functionality, as described by
             L{twisted.python.deprecate.deprecated}.  If there is no suggested
             replacement, this parameter may also be simply a
-            L{version<twisted.python.versions.Version>} by itself.
+            L{version<incremental.Version>} by itself.
 
         @param f: The deprecated function to call.
 

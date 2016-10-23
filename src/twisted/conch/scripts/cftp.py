@@ -868,7 +868,7 @@ version                         Print the SFTP version.
         else:
             return ret[0], ret[1]
 
-StdioClient.__dict__['cmd_?'] = StdioClient.cmd_HELP
+setattr(StdioClient, 'cmd_?', StdioClient.cmd_HELP)
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -928,4 +928,3 @@ class SSHSession(channel.SSHChannel):
 
 if __name__ == '__main__':
     run()
-
