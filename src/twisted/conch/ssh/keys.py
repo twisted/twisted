@@ -1211,7 +1211,7 @@ class Key(object):
                 return (self._keyObject.public_bytes(
                     serialization.Encoding.OpenSSH,
                     serialization.PublicFormat.OpenSSH
-                    ).encode('ascii') + extra).strip()
+                    ) + extra).strip()
 
             b64Data = encodebytes(self.blob()).replace(b'\n', b'')
             if not extra:
@@ -1226,7 +1226,7 @@ class Key(object):
                     return self._keyObject.private_bytes(
                         serialization.Encoding.PEM,
                         serialization.PrivateFormat.TraditionalOpenSSL,
-                        serialization.NoEncryption()).encode('ascii')
+                        serialization.NoEncryption())
                 else:
                     return self._keyObject.private_bytes(
                         serialization.Encoding.PEM,
