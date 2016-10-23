@@ -29,7 +29,7 @@ class GeneralOptions(usage.Options):
 
     longdesc = "ckeygen manipulates public/private keys in various ways."
 
-    optParameters = [['bits', 'b', 1024, 'Number of bits in the key to create.'],
+    optParameters = [['bits', 'b', None, 'Number of bits in the key to create.'],
                      ['filename', 'f', None, 'Filename of the key file.'],
                      ['type', 't', None, 'Specify type of key to create.'],
                      ['comment', 'C', None, 'Provide new comment.'],
@@ -44,7 +44,7 @@ class GeneralOptions(usage.Options):
                 ['showpub', 'y', 'Read private key file and print public key.']]
 
     compData = usage.Completions(
-        optActions={"type": usage.CompleteList(["rsa", "dsa"])})
+        optActions={"type": usage.CompleteList(["rsa", "dsa", "ecdsa"])})
 
 
 
@@ -63,8 +63,11 @@ def run():
             generateRSAkey(options)
         elif options['type'] == 'dsa':
             generateDSAkey(options)
+        elif options['type'] == 'ecdsa':
+            generateECDSAkey(options)
         else:
-            sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
+            sys.exit(
+                'Key type was %s, must be one of: rsa, dsa, ecdsa' % options['type'])
     elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
@@ -102,6 +105,8 @@ def generateRSAkey(options):
     from cryptography.hazmat.primitives.asymmetric import rsa
 
     print('Generating public/private rsa key pair.')
+    if not options['bits']:
+        options['bits'] = 1024
     keyPrimitive = rsa.generate_private_key(
         key_size=int(options['bits']),
         public_exponent=65537,
@@ -117,9 +122,28 @@ def generateDSAkey(options):
     from cryptography.hazmat.primitives.asymmetric import dsa
 
     print('Generating public/private dsa key pair.')
+    if not options['bits']:
+        options['bits'] = 1024
     keyPrimitive = dsa.generate_private_key(
         key_size=int(options['bits']),
-        backed=default_backend(),
+        backend=default_backend(),
+        )
+    key = keys.Key(keyPrimitive)
+    _saveKey(key, options)
+
+
+def generateECDSAkey(options):
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    print('Generating public/private ecdsa key pair.')
+    if not options['bits']:
+        options['bits'] = 256
+    # OpenSSL supports only nistp curves.
+    curve  = 'nistp' + str(options['bits'])
+    keyPrimitive = ec.generate_private_key(
+        curve=keys._curveTable[curve],
+        backend=default_backend()
         )
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
@@ -220,7 +244,7 @@ def _saveKey(key, options):
     @param options:
     @type options: L{dict}
     """
-    keyTypeName = key.type().lower()
+    keyTypeName = 'ecdsa' if key.type() == 'EC' else key.type().lower()
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
         newPath = raw_input(
