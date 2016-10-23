@@ -1024,7 +1024,7 @@ class PBGroupReference(pb.RemoteReference):
     def unjellyFor(self, unjellier, unjellyList):
         clsName, name, ref = unjellyList
         self.name = name
-        if isinstance(self.name, bytes):
+        if bytes != str and isinstance(self.name, bytes):
             self.name = self.name.decode('utf-8')
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
