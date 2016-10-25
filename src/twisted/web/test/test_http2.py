@@ -515,9 +515,8 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         def validate(streamID):
             frames = framesFromBytes(b.value())
 
-            # One Settings frame, 8 WindowUpdate frames, one Headers frame,
-            # and two Data frames
-            self.assertEqual(len(frames), 12)
+            # One Settings frame, one Headers frame and two Data frames.
+            self.assertEqual(len(frames), 4)
             self.assertTrue(all(f.stream_id == 1 for f in frames[-3:]))
 
             self.assertTrue(
@@ -573,9 +572,8 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         def validate(streamID):
             frames = framesFromBytes(b.value())
 
-            # One Settings frame, 8 WindowUpdate frames, one Headers frame,
-            # and two Data frames
-            self.assertEqual(len(frames), 12)
+            # One Settings frame, one Headers frame, and two Data frames
+            self.assertEqual(len(frames), 4)
             self.assertTrue(all(f.stream_id == 1 for f in frames[-3:]))
 
             self.assertTrue(
@@ -629,10 +627,10 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         def validate(results):
             frames = framesFromBytes(b.value())
 
-            # We expect 1 Settings frame for the connection, and then 11 frames
-            # *per stream* (8 WindowUpdate frames, 1 Headers frame,
-            # 2 Data frames).
-            self.assertEqual(len(frames), 1 + (11 * 40))
+            # We expect 1 Settings frame for the connection, and then 3 frames
+            # *per stream* (1 Headers frame, 2 Data frames). This doesn't send
+            # enough data to trigger a window update.
+            self.assertEqual(len(frames), 1 + (3 * 40))
 
             # Let's check the data is ok. We need the non-WindowUpdate frames
             # for each stream.
@@ -810,17 +808,17 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTrue(request._data, b"hello world, it's http/2!")
 
         # *That* will have also caused the H2Connection object to emit almost
-        # all the data it needs. That'll be a Headers frame, as well as two
-        # WindowUpdate frames.
+        # all the data it needs. That'll be a Headers frame, as well as the
+        # original SETTINGS frame.
         frames = framesFromBytes(b.value())
-        self.assertEqual(len(frames), 4)
+        self.assertEqual(len(frames), 2)
 
         def validate(streamID):
             # Confirm that the response is ok.
             frames = framesFromBytes(b.value())
 
             # The only new frames here are the two Data frames.
-            self.assertEqual(len(frames), 6)
+            self.assertEqual(len(frames), 4)
             self.assertTrue('END_STREAM' in frames[-1].flags)
 
         return a._streamCleanupCallbacks[1].addCallback(validate)
@@ -867,13 +865,12 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             # Confirm that the response is ok.
             frames = framesFromBytes(b.value())
 
-            # We expect a Settings frame, two WindowUpdate frames, and a
-            # RstStream frame.
-            self.assertEqual(len(frames), 4)
+            # We expect a Settings frame and a RstStream frame.
+            self.assertEqual(len(frames), 2)
             self.assertTrue(
-                isinstance(frames[3], hyperframe.frame.RstStreamFrame)
+                isinstance(frames[-1], hyperframe.frame.RstStreamFrame)
             )
-            self.assertEqual(frames[3].stream_id, 1)
+            self.assertEqual(frames[-1].stream_id, 1)
 
         return cleanupCallback.addCallback(validate)
 
@@ -2090,10 +2087,16 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyHTTPHandler
 
         # Send the request, but instead of the last frame send a RST_STREAM
-        # frame instead.
+        # frame instead. This needs to be very long to actually force the
+        # WINDOW_UPDATE frames out.
+        frameData = [b'\x00' * (2**14)] * 4
+        bodyLength = "{}".format(sum(len(data) for data in frameData))
+        headers = (
+            self.postRequestHeaders[:-1] + [('content-length', bodyLength)]
+        )
         frames = buildRequestFrames(
-            headers=self.postRequestHeaders,
-            data=self.postRequestData,
+            headers=headers,
+            data=frameData,
             frameFactory=frameFactory
         )
         del frames[-1]
@@ -2111,16 +2114,16 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Twisted doesn't have any problems.
         a.dataReceived(requestBytes)
 
-        # Check the frames we got. We expect WINDOW_UPDATE frames only for the
+        # Check the frames we got. We expect a WINDOW_UPDATE frame only for the
         # connection, because Twisted knew the stream was going to be reset.
         frames = framesFromBytes(transport.value())
 
-        # Check that the only WINDOW_UPDATE frames came for the connection.
+        # Check that the only WINDOW_UPDATE frame came for the connection.
         windowUpdateFrameIDs = [
             f.stream_id for f in frames
             if isinstance(f, hyperframe.frame.WindowUpdateFrame)
         ]
-        self.assertEqual([0, 0, 0], windowUpdateFrameIDs)
+        self.assertEqual([0], windowUpdateFrameIDs)
 
         # While we're here: we shouldn't have received HEADERS or DATA for this
         # either.
