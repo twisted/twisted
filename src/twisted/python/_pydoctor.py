@@ -179,7 +179,7 @@ def versionToUsefulObject(version):
     """
     Change an AST C{Version()} to a real one.
     """
-    from twisted.python.versions import Version
+    from incremental import Version
 
     return Version(*[x.value for x in version.asList()[1:] if x])
 

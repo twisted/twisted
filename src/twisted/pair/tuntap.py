@@ -19,7 +19,7 @@ from constantly import Flags, FlagConstant
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.util import FancyEqMixin, FancyStrMixin
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecated
 from twisted.python import log
@@ -251,7 +251,7 @@ class TuntapPort(abstract.FileDescriptor):
 
 
     def __repr__(self):
-        args = (self.protocol.__class__,)
+        args = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:

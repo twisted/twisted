@@ -33,7 +33,8 @@ from twisted.application import internet
 
 
 class ManagedRelayerMixin:
-    """SMTP Relayer which notifies a manager
+    """
+    SMTP Relayer which notifies a manager
 
     Notify the manager about successful mail, failed mail
     and broken connections
@@ -43,7 +44,8 @@ class ManagedRelayerMixin:
 
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        """called when e-mail has been sent
+        """
+        called when e-mail has been sent
 
         we will always get 0 or 1 addresses.
         """
@@ -57,7 +59,8 @@ class ManagedRelayerMixin:
 
 
     def connectionLost(self, reason):
-        """called when connection is broken
+        """
+        called when connection is broken
 
         notify manager we will try to send no more e-mail
         """

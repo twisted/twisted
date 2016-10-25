@@ -203,6 +203,7 @@ class FakeSMTPServer(basic.LineReceiver):
             self.sendLine(self.clientData.pop())
 
 
+
 class SMTPClientTests(unittest.TestCase, LoopbackMixin):
     """
     Tests for L{smtp.SMTPClient}.
@@ -363,8 +364,10 @@ class DummyProto:
 class DummySMTP(DummyProto, smtp.SMTP):
     dummyMixinBase = smtp.SMTP
 
+
 class DummyESMTP(DummyProto, smtp.ESMTP):
     dummyMixinBase = smtp.ESMTP
+
 
 class AnotherTestCase:
     serverClass = None
@@ -457,9 +460,12 @@ To: foo
         a.setTimeout(None)
 
 
+
 class AnotherESMTPTests(AnotherTestCase, unittest.TestCase):
     serverClass = DummyESMTP
     clientClass = MyESMTPClient
+
+
 
 class AnotherSMTPTests(AnotherTestCase, unittest.TestCase):
     serverClass = DummySMTP
@@ -594,6 +600,7 @@ class SMTPHelperTests(unittest.TestCase):
             self.assertFalse(m in d)
             d[m] = None
 
+
     def testQuoteAddr(self):
         cases = [
             ['user@host.name', '<user@host.name>'],
@@ -606,9 +613,11 @@ class SMTPHelperTests(unittest.TestCase):
         for (c, e) in cases:
             self.assertEqual(smtp.quoteaddr(c), e)
 
+
     def testUser(self):
         u = smtp.User('user@host', 'helo.host.name', None, None)
         self.assertEqual(str(u), 'user@host')
+
 
     def testXtextEncoding(self):
         cases = [
@@ -658,6 +667,7 @@ class SMTPHelperTests(unittest.TestCase):
 class NoticeTLSClient(MyESMTPClient):
     tls = False
 
+
     def esmtpState_starttls(self, code, resp):
         MyESMTPClient.esmtpState_starttls(self, code, resp)
         self.tls = True
@@ -667,6 +677,7 @@ class NoticeTLSClient(MyESMTPClient):
 class TLSTests(unittest.TestCase, LoopbackMixin):
     if sslSkip is not None:
         skip = sslSkip
+
 
     def testTLS(self):
         clientCTX = ClientTLSContext()
@@ -1515,6 +1526,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
     def setUp(self):
         self.clientProtocol = smtp.ESMTPClient(
             b"testpassword", None, b"testuser")
+
 
     def test_requireHELOFallbackOperates(self):
         """

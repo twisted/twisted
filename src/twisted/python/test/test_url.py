@@ -170,7 +170,7 @@ class TestURL(TestCase):
 
     def test_repr(self):
         """
-        L{URL.__repr__} will display the canoncial form of the URL, wrapped in
+        L{URL.__repr__} will display the canonical form of the URL, wrapped in
         a L{URL.fromText} invocation, so that it is C{eval}-able but still easy
         to read.
         """

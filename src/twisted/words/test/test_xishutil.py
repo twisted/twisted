@@ -102,7 +102,7 @@ class EventDispatcherTests(unittest.TestCase):
         """
         Test adding two observers for the same query.
 
-        When the event is dispath both of the observers need to be called.
+        When the event is dispatched both of the observers need to be called.
         """
         d = EventDispatcher()
         cb1 = CallbackTracker()
