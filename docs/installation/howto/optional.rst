@@ -30,7 +30,6 @@ The following optional dependencies are supported:
     * `idna`_
 
 * **conch** - packages for working with conch/SSH.
-    * `gmpy`_
     * `pyasn1`_
     * `cryptography`_
 
@@ -57,7 +56,6 @@ The following optional dependencies are supported:
 .. _pydoctor: https://pypi.python.org/pypi/pydoctor
 .. _pyOpenSSL: https://pypi.python.org/pypi/pyOpenSSL
 .. _service_identity: https://pypi.python.org/pypi/service_identity
-.. _gmpy: https://pypi.python.org/pypi/gmpy/1.17
 .. _pyasn1: https://pypi.python.org/pypi/pyasn1
 .. _cryptography: https://pypi.python.org/pypi/cryptography
 .. _SOAPpy: https://pypi.python.org/pypi/SOAPpy

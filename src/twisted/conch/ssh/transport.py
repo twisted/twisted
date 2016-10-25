@@ -16,7 +16,7 @@ import binascii
 import hmac
 import struct
 import zlib
-import re
+import base64
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
@@ -27,7 +27,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
+from twisted.python.compat import nativeString, networkString, iterbytes, _bytesChr as chr
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
@@ -1267,7 +1267,7 @@ class SSHServerTransport(SSHTransportBase):
 
         #Get the curve instance
         try:
-            curve = keys.curveTable['ecdsa' + self.kexAlg[4:]]
+            curve = keys._curveTable['ecdsa' + self.kexAlg[4:]]
         except KeyError:
             raise UnsupportedAlgorithm('unused-key')
         
@@ -1561,7 +1561,7 @@ class SSHClientTransport(SSHTransportBase):
         if _kex.isEllipticCurve(self.kexAlg):
             try:
                 # Find the base curve info
-                self.curve = keys.curveTable['ecdsa' + self.kexAlg[4:]]
+                self.curve = keys._curveTable['ecdsa' + self.kexAlg[4:]]
             except KeyError:
                 raise UnsupportedAlgorithm('unused-key')
             
@@ -1647,8 +1647,8 @@ class SSHClientTransport(SSHTransportBase):
         # Get the host public key, the raw ECDH public key bytes and the signature
         hostKey, pubKey, signature, packet = getNS(packet, 3)
 
-        fingerprint = b':'.join([binascii.hexlify(ch) for ch in
-                                 iterbytes(md5(hostKey).digest())])
+        fingerprint = nativeString(base64.b64encode(
+                sha256(hostKey).digest()))
         d = self.verifyHostKey(hostKey, fingerprint)
         d.addCallback(_continue_KEX_ECDH_REPLY, hostKey, pubKey, signature)
         d.addErrback(
