@@ -475,6 +475,12 @@ class SSHTransportBase(protocol.Protocol):
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
     supportedPublicKeys = [b'ssh-rsa', b'ssh-dss']
+
+    #Add the supported EC keys, and change the name from ecdh* to ecdsa*
+    for eckey in supportedKeyExchanges:
+        if 'ecdh' in eckey:
+            supportedPublicKeys += [eckey.replace("ecdh", "ecdsa")]
+
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
     supportedVersions = (b'1.99', b'2.0')
@@ -1255,19 +1261,12 @@ class SSHServerTransport(SSHTransportBase):
         #Get the raw client public key.
         pktPub, packet = getNS(packet)
 
-
         #Get the host's public and private keys
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        #Get the base curve info
-        try:
-            shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
-        except AttributeError:
-            raise UnsupportedAlgorithm(self.kexAlg)
-
         #Get the curve instance
-        curve = keys.curveTable[shortKex]
+        curve = keys.curveTable['ecdsa' + self.kexAlg[4:]]
         
         #Generate the private key
         ecPriv = ec.generate_private_key(curve, default_backend())
@@ -1558,14 +1557,8 @@ class SSHClientTransport(SSHTransportBase):
         # Are we using ECDH?
         if _kex.isEllipticCurve(self.kexAlg):
             #Find the base curve info
-            try:
-                shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
-            except AttributeError:
-                raise UnsupportedAlgorithm(self.kexAlg)
-
-            #Get the curve
-            self.curve = keys.curveTable[shortKex]
-
+            self.curve = keys.curveTable['ecdsa' + self.kexAlg[4:]]
+            
             #Generate the keys
             self.ecPriv = ec.generate_private_key(self.curve, default_backend())
             self.ecPub = self.ecPriv.public_key()
@@ -1635,6 +1628,7 @@ class SSHClientTransport(SSHTransportBase):
             h.update(NS(self.ecPub.public_numbers().encode_point()))
             h.update(NS(pubKey))
             h.update(sharedSecret)
+
             exchangeHash = h.digest()
 
             if not keys.Key.fromString(theirECHost).verify(signature, exchangeHash):

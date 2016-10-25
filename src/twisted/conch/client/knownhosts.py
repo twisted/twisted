@@ -24,7 +24,7 @@ from twisted.python import log
 from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.conch.ssh.keys import Key, BadKeyError
+from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
 from twisted.python.compat import nativeString
 
 
@@ -482,13 +482,19 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
+
+                keytype = key.type()
+
+                if keytype is "EC":
+                    keytype = "ECDSA"
+
                 prompt = (
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
-                    "RSA key fingerprint is %s.\n"
+                    "%s key fingerprint is SHA256:%s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (nativeString(hostname), nativeString(ip),
-                     key.fingerprint()))
+                    (nativeString(hostname), nativeString(ip), keytype,
+                     key.fingerprint(format=FingerprintFormats.SHA256_BASE64)))
                 proceed = ui.prompt(prompt.encode(sys.getdefaultencoding()))
                 return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)
