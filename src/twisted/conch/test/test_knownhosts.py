@@ -861,7 +861,7 @@ class KnownHostsDatabaseTests(TestCase):
             b"The authenticity of host 'sample-host.example.com (4.3.2.1)' "
             b"can't be established.\n"
             b"RSA key fingerprint is "
-            b"89:4e:cc:8c:57:83:96:48:ef:63:ad:ee:99:00:4c:8f.\n"
+            b"SHA256:mS7mDBGhewdzJkaKRkx+wMjUdZb/GzvgcdoYjX5Js9I=.\n"
             b"Are you sure you want to continue connecting (yes/no)? ")
         return ui, l, hostsFile
 
@@ -1249,7 +1249,7 @@ class DefaultAPITests(TestCase):
             [b"The authenticity of host 'fake.example.com (9.8.7.6)' "
              b"can't be established.\n"
              b"RSA key fingerprint is "
-             b"57:a1:c2:a1:07:a0:2b:f4:ce:b5:e5:b7:ae:cc:e1:99.\n"
+             b"SHA256:vD0YydsNIUYJa7yLZl3tIL8h0vZvQ8G+HPG7JLmQV0s=.\n"
              b"Are you sure you want to continue connecting (yes/no)? "],
              self.fakeFile.outchunks)
         return self.assertFailure(d, UserRejectedKey)
