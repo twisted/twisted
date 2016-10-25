@@ -99,7 +99,7 @@ _EXTRA_OPTIONS = dict(
     serial=['pyserial'],
     osx=['pyobjc'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.3.0, < 3.0',
+    http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
