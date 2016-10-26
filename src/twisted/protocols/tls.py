@@ -499,6 +499,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             self._lostTLSConnection = True
         reason = self._reason or reason
         self._reason = None
+        self.connected = False
         ProtocolWrapper.connectionLost(self, reason)
 
 
@@ -920,5 +921,3 @@ class TLSMemoryBIOFactory(WrappingFactory):
             self._applyProtocolNegotiation(connection)
             connection.set_accept_state()
         return connection
-
-

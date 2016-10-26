@@ -1,0 +1,1 @@
+twisted.internet.defer.Deferred now implements send, not __send__, which means that it is now a conforming generator.

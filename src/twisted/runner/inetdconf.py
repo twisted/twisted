@@ -7,7 +7,7 @@ Parser for inetd.conf files
 """
 
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from incremental import Version
 
 
 # Various exceptions

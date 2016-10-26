@@ -27,6 +27,15 @@ from twisted.python import util
 from twisted.mail.interfaces import (IClientAuthentication,
                                      IMessageSMTP as IMessage,
                                      IMessageDeliveryFactory, IMessageDelivery)
+from twisted.mail._cred import (CramMD5ClientAuthenticator, LOGINAuthenticator,
+                                LOGINCredentials as _lcredentials)
+from twisted.mail._except import (
+    AUTHDeclinedError, AUTHRequiredError, AddressError,
+    AuthenticationError, EHLORequiredError, ESMTPClientError,
+    SMTPAddressError, SMTPBadRcpt, SMTPBadSender, SMTPClientError,
+    SMTPConnectError, SMTPDeliveryError, SMTPError, SMTPServerError,
+    SMTPTimeoutError, SMTPTLSError as TLSError, TLSRequiredError,
+    SMTPProtocolError)
 
 from twisted import cred
 from twisted.python.runtime import platform
@@ -70,154 +79,6 @@ else:
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(xrange(200,300))
 
-class SMTPError(Exception):
-    pass
-
-
-
-class SMTPClientError(SMTPError):
-    """Base class for SMTP client errors.
-    """
-    def __init__(self, code, resp, log=None, addresses=None, isFatal=False, retry=False):
-        """
-        @param code: The SMTP response code associated with this error.
-        @param resp: The string response associated with this error.
-
-        @param log: A string log of the exchange leading up to and including
-            the error.
-        @type log: L{str}
-
-        @param isFatal: A boolean indicating whether this connection can
-            proceed or not.  If True, the connection will be dropped.
-
-        @param retry: A boolean indicating whether the delivery should be
-            retried.  If True and the factory indicates further retries are
-            desirable, they will be attempted, otherwise the delivery will
-            be failed.
-        """
-        self.code = code
-        self.resp = resp
-        self.log = log
-        self.addresses = addresses
-        self.isFatal = isFatal
-        self.retry = retry
-
-
-    def __str__(self):
-        if self.code > 0:
-            res = ["%.3d %s" % (self.code, self.resp)]
-        else:
-            res = [self.resp]
-        if self.log:
-            res.append(self.log)
-            res.append('')
-        return '\n'.join(res)
-
-
-class ESMTPClientError(SMTPClientError):
-    """Base class for ESMTP client errors.
-    """
-
-class EHLORequiredError(ESMTPClientError):
-    """The server does not support EHLO.
-
-    This is considered a non-fatal error (the connection will not be
-    dropped).
-    """
-
-class AUTHRequiredError(ESMTPClientError):
-    """Authentication was required but the server does not support it.
-
-    This is considered a non-fatal error (the connection will not be
-    dropped).
-    """
-
-class TLSRequiredError(ESMTPClientError):
-    """Transport security was required but the server does not support it.
-
-    This is considered a non-fatal error (the connection will not be
-    dropped).
-    """
-
-class AUTHDeclinedError(ESMTPClientError):
-    """The server rejected our credentials.
-
-    Either the username, password, or challenge response
-    given to the server was rejected.
-
-    This is considered a non-fatal error (the connection will not be
-    dropped).
-    """
-
-class AuthenticationError(ESMTPClientError):
-    """An error occurred while authenticating.
-
-    Either the server rejected our request for authentication or the
-    challenge received was malformed.
-
-    This is considered a non-fatal error (the connection will not be
-    dropped).
-    """
-
-class TLSError(ESMTPClientError):
-    """An error occurred while negiotiating for transport security.
-
-    This is considered a non-fatal error (the connection will not be
-    dropped).
-    """
-
-class SMTPConnectError(SMTPClientError):
-    """Failed to connect to the mail exchange host.
-
-    This is considered a fatal error.  A retry will be made.
-    """
-    def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=True):
-        SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
-
-class SMTPTimeoutError(SMTPClientError):
-    """Failed to receive a response from the server in the expected time period.
-
-    This is considered a fatal error.  A retry will be made.
-    """
-    def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=True):
-        SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
-
-class SMTPProtocolError(SMTPClientError):
-    """The server sent a mangled response.
-
-    This is considered a fatal error.  A retry will not be made.
-    """
-    def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=False):
-        SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
-
-class SMTPDeliveryError(SMTPClientError):
-    """Indicates that a delivery attempt has had an error.
-    """
-
-class SMTPServerError(SMTPError):
-    def __init__(self, code, resp):
-        self.code = code
-        self.resp = resp
-
-    def __str__(self):
-        return "%.3d %s" % (self.code, self.resp)
-
-class SMTPAddressError(SMTPServerError):
-    def __init__(self, addr, code, resp):
-        SMTPServerError.__init__(self, code, resp)
-        self.addr = Address(addr)
-
-    def __str__(self):
-        return "%.3d <%s>... %s" % (self.code, self.addr, self.resp)
-
-class SMTPBadRcpt(SMTPAddressError):
-    def __init__(self, addr, code=550,
-                 resp='Cannot receive for specified address'):
-        SMTPAddressError.__init__(self, addr, code, resp)
-
-class SMTPBadSender(SMTPAddressError):
-    def __init__(self, addr, code=550, resp='Sender not acceptable'):
-        SMTPAddressError.__init__(self, addr, code, resp)
 
 def rfc822date(timeinfo=None,local=1):
     """
@@ -258,14 +119,19 @@ def rfc822date(timeinfo=None,local=1):
         timeinfo[0], timeinfo[3], timeinfo[4], timeinfo[5],
         tzhr, tzmin)
 
+
+
 def idGenerator():
     i = 0
     while True:
         yield i
         i += 1
 
+
+
 def messageid(uniq=None, N=idGenerator().next):
-    """Return a globally unique random string in RFC 2822 Message-ID format
+    """
+    Return a globally unique random string in RFC 2822 Message-ID format
 
     <datetime.pid.random@host.dom.ain>
 
@@ -281,8 +147,11 @@ def messageid(uniq=None, N=idGenerator().next):
 
     return '<%s.%s.%s%s.%s@%s>' % (datetime, pid, rand, uniq, N(), DNSNAME)
 
+
+
 def quoteaddr(addr):
-    """Turn an email address, possibly with realname part etc, into
+    """
+    Turn an email address, possibly with realname part etc, into
     a form suitable for and SMTP envelope.
     """
 
@@ -299,8 +168,6 @@ def quoteaddr(addr):
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
-class AddressError(SMTPError):
-    "Parse error in address"
 
 # Character classes for parsing addresses
 atom = r"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
@@ -324,6 +191,7 @@ class Address:
                           |''' + atom + r''' # atom character
                           )+|.) # or any single character''',re.X)
     atomre = re.compile(atom) # match any one atom character
+
 
     def __init__(self, addr, defaultDomain=None):
         if isinstance(addr, User):
@@ -379,8 +247,11 @@ class Address:
 
     dequotebs = re.compile(r'\\(.)')
 
+
     def dequote(self,addr):
-        """Remove RFC-2821 quotes from address."""
+        """
+        Remove RFC-2821 quotes from address.
+        """
         res = []
 
         atl = filter(None,self.tstring.split(str(addr)))
@@ -395,21 +266,25 @@ class Address:
 
         return ''.join(res)
 
+
     def __str__(self):
         if self.local or self.domain:
             return '@'.join((self.local, self.domain))
         else:
             return ''
 
+
     def __repr__(self):
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 
+
+
 class User:
-    """Hold information about and SMTP message recipient,
+    """
+    Hold information about and SMTP message recipient,
     including information on where the message came from
     """
-
     def __init__(self, destination, helo, protocol, orig):
         host = getattr(protocol, 'host', None)
         self.dest = Address(destination, host)
@@ -420,8 +295,10 @@ class User:
         else:
             self.orig = Address(orig, host)
 
+
     def __getstate__(self):
-        """Helper for pickle.
+        """
+        Helper for pickle.
 
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
@@ -472,13 +349,16 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.delivery = delivery
         self.deliveryFactory = deliveryFactory
 
+
     def timeoutConnection(self):
         msg = '%s Timeout. Try talking faster next time!' % (self.host,)
         self.sendCode(421, msg)
         self.transport.loseConnection()
 
+
     def greeting(self):
         return '%s NO UCE NO UBE NO RELAY PROBES' % (self.host,)
+
 
     def connectionMade(self):
         # Ensure user-code always gets something sane for _helo
@@ -491,8 +371,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.sendCode(220, self.greeting())
         self.setTimeout(self.timeout)
 
+
     def sendCode(self, code, message=''):
-        "Send an SMTP code with a message."
+        """
+        Send an SMTP code with a message.
+        """
         lines = message.splitlines()
         lastline = lines[-1:]
         for line in lines[:-1]:
@@ -500,9 +383,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.sendLine('%3.3d %s' % (code,
                                     lastline and lastline[0] or ''))
 
+
     def lineReceived(self, line):
         self.resetTimeout()
         return getattr(self, 'state_' + self.mode)(line)
+
 
     def state_COMMAND(self, line):
         # Ignore leading and trailing whitespace, as well as an arbitrary
@@ -520,11 +405,14 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             self.sendSyntaxError()
 
+
     def sendSyntaxError(self):
         self.sendCode(500, 'Error: bad syntax')
 
+
     def lookupMethod(self, command):
         return getattr(self, 'do_' + command.upper(), None)
+
 
     def lineLengthExceeded(self, line):
         if self.mode is DATA:
@@ -534,8 +422,10 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             del self.__messages
         self.sendCode(500, 'Line too long')
 
+
     def do_UNKNOWN(self, rest):
         self.sendCode(500, 'Command not implemented')
+
 
     def do_HELO(self, rest):
         peer = self.transport.getPeer()
@@ -547,6 +437,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._from = None
         self._to = []
         self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, host))
+
 
     def do_QUIT(self, rest):
         self.sendCode(221, 'See you later')
@@ -628,11 +519,13 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             callbackArgs=(user,)
         )
 
+
     def _cbToValidate(self, to, user=None, code=250, msg='Recipient address accepted'):
         if user is None:
             user = to
         self._to.append((user, to))
         self.sendCode(code, msg)
+
 
     def _ebToValidate(self, failure):
         if failure.check(SMTPBadRcpt, SMTPServerError):
@@ -644,6 +537,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 'Requested action aborted: local error in processing'
             )
 
+
     def _disconnect(self, msgs):
         for msg in msgs:
             try:
@@ -651,6 +545,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             except:
                 log.msg("msg raised exception from connectionLost")
                 log.err()
+
 
     def do_DATA(self, rest):
         if self._from is None or (not self._to):
@@ -692,6 +587,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             fmt = 'Receiving message for delivery: from=%s to=%s'
             log.msg(fmt % (origin, [str(u) for (u, f) in recipients]))
 
+
     def connectionLost(self, reason):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
         # Ideally, if we (rather than the other side) lose the connection,
@@ -712,10 +608,12 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self._onLogout = None
         self.setTimeout(None)
 
+
     def do_RSET(self, rest):
         self._from = None
         self._to = []
         self.sendCode(250, 'I remember nothing.')
+
 
     def dataLineReceived(self, line):
         if line[:1] == '.':
@@ -761,6 +659,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             for message in self.__messages:
                 message.connectionLost()
     state_DATA = dataLineReceived
+
 
     def _messageHandled(self, resultList):
         failures = 0
@@ -881,6 +780,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.delivery.validateTo(user)
         raise SMTPBadRcpt(user)
 
+
     def receivedHeader(self, helo, origin, recipients):
         if self.delivery is not None:
             return self.delivery.receivedHeader(helo, origin, recipients)
@@ -900,7 +800,9 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
 
 class SMTPFactory(protocol.ServerFactory):
-    """Factory for SMTP."""
+    """
+    Factory for SMTP.
+    """
 
     # override in instances or subclasses
     domain = DNSNAME
@@ -912,11 +814,14 @@ class SMTPFactory(protocol.ServerFactory):
     def __init__(self, portal = None):
         self.portal = portal
 
+
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.portal = self.portal
         p.host = self.domain
         return p
+
+
 
 class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     """
@@ -946,12 +851,14 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.code = -1
         self.log = util.LineLog(logsize)
 
+
     def sendLine(self, line):
         # Log sendLine only if you are in debug mode for performance
         if self.debug:
             self.log.append('>>> ' + line)
 
         basic.LineReceiver.sendLine(self,line)
+
 
     def connectionMade(self):
         self.setTimeout(self.timeout)
@@ -960,16 +867,21 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self._okresponse = self.smtpState_helo
         self._failresponse = self.smtpConnectionFailed
 
+
     def connectionLost(self, reason=protocol.connectionDone):
-        """We are no longer connected"""
+        """
+        We are no longer connected
+        """
         self.setTimeout(None)
         self.mailFile = None
+
 
     def timeoutConnection(self):
         self.sendError(
             SMTPTimeoutError(
                 -1, "Timeout waiting for SMTP server response",
                  self.log.str()))
+
 
     def lineReceived(self, line):
         self.resetTimeout()
@@ -1006,8 +918,10 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.resp = []
         return why
 
+
     def smtpConnectionFailed(self, code, resp):
         self.sendError(SMTPConnectError(code, resp, self.log.str()))
+
 
     def smtpTransferFailed(self, code, resp):
         if code < 0:
@@ -1015,10 +929,12 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.smtpState_msgSent(code, resp)
 
+
     def smtpState_helo(self, code, resp):
         self.sendLine('HELO ' + self.identity)
         self._expected = SUCCESS
         self._okresponse = self.smtpState_from
+
 
     def smtpState_from(self, code, resp):
         self._from = self.getMailFrom()
@@ -1031,8 +947,10 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             # All messages have been sent, disconnect
             self._disconnectFromServer()
 
+
     def smtpState_disconnect(self, code, resp):
         self.transport.loseConnection()
+
 
     def smtpState_to(self, code, resp):
         self.toAddresses = iter(self.getMailTo())
@@ -1042,6 +960,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self._expected = xrange(0,1000)
         self.lastAddress = None
         return self.smtpState_toOrData(0, '')
+
 
     def smtpState_toOrData(self, code, resp):
         if self.lastAddress is not None:
@@ -1059,6 +978,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
                 return self.smtpState_msgSent(code,'No recipients accepted')
         else:
             self.sendLine('RCPT TO:%s' % quoteaddr(self.lastAddress))
+
 
     def smtpState_data(self, code, resp):
         s = basic.FileSender()
@@ -1082,6 +1002,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self._expected = SUCCESS
         self._okresponse = self.smtpState_from
 
+
     ##
     ## Helpers for FileSender
     ##
@@ -1096,6 +1017,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.resetTimeout()
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
 
+
     def finishedFileTransfer(self, lastsent):
         if lastsent != '\n':
             line = '\r\n.'
@@ -1103,22 +1025,31 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             line = '.'
         self.sendLine(line)
 
+
     ##
     # these methods should be overridden in subclasses
     def getMailFrom(self):
-        """Return the email address the mail is from."""
+        """
+        Return the email address the mail is from.
+        """
         raise NotImplementedError
+
 
     def getMailTo(self):
-        """Return a list of emails to send to."""
+        """
+        Return a list of emails to send to.
+        """
         raise NotImplementedError
 
+
     def getMailData(self):
-        """Return file-like object containing data of message to be sent.
+        """
+        Return file-like object containing data of message to be sent.
 
         Lines in the file should be delimited by '\\n'.
         """
         raise NotImplementedError
+
 
     def sendError(self, exc):
         """
@@ -1138,7 +1069,8 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        """Called when an attempt to send an email is completed.
+        """
+        Called when an attempt to send an email is completed.
 
         If some addresses were accepted, code and resp are the response
         to the DATA command. If no addresses were accepted, code is -1
@@ -1152,6 +1084,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         @param log: is the SMTP session log
         """
         raise NotImplementedError
+
 
     def _disconnectFromServer(self):
         self._expected = xrange(0, 1000)
@@ -1574,7 +1507,6 @@ class ESMTPClient(SMTPClient):
 
 
 class ESMTP(SMTP):
-
     ctx = None
     canStartTLS = False
     startedTLS = False
@@ -1588,6 +1520,7 @@ class ESMTP(SMTP):
         self.challengers = chal
         self.authenticated = False
         self.ctx = contextFactory
+
 
     def connectionMade(self):
         SMTP.connectionMade(self)
@@ -1605,11 +1538,13 @@ class ESMTP(SMTP):
             ext['STARTTLS'] = None
         return ext
 
+
     def lookupMethod(self, command):
         m = SMTP.lookupMethod(self, command)
         if m is None:
             m = getattr(self, 'ext_' + command.upper(), None)
         return m
+
 
     def listExtensions(self):
         r = []
@@ -1621,6 +1556,7 @@ class ESMTP(SMTP):
             else:
                 r.append(c)
         return '\n'.join(r)
+
 
     def do_EHLO(self, rest):
         peer = self.transport.getPeer().host
@@ -1635,6 +1571,7 @@ class ESMTP(SMTP):
             )
         )
 
+
     def ext_STARTTLS(self, rest):
         if self.startedTLS:
             self.sendCode(503, 'TLS already negotiated')
@@ -1644,6 +1581,7 @@ class ESMTP(SMTP):
             self.startedTLS = True
         else:
             self.sendCode(454, 'TLS not available')
+
 
     def ext_AUTH(self, rest):
         if self.authenticated:
@@ -1745,7 +1683,8 @@ class ESMTP(SMTP):
 
 
 class SenderMixin:
-    """Utility class for sending emails easily.
+    """
+    Utility class for sending emails easily.
 
     Use with SMTPSenderFactory or ESMTPSenderFactory.
     """
@@ -1758,11 +1697,14 @@ class SenderMixin:
         else:
             return None
 
+
     def getMailTo(self):
         return self.factory.toEmail
 
+
     def getMailData(self):
         return self.factory.file
+
 
     def sendError(self, exc):
         # Call the base class to close the connection with the SMTP server
@@ -1777,6 +1719,7 @@ class SenderMixin:
             (not exc.retry and not (exc.code >= 400 and exc.code < 500))):
             self.factory.sendFinished = True
             self.factory.result.errback(exc)
+
 
     def sentMail(self, code, resp, numOk, addresses, log):
         # Do not retry, the SMTP server acknowledged the request
@@ -1795,11 +1738,13 @@ class SenderMixin:
             self.factory.result.callback((numOk, addresses))
 
 
+
 class SMTPSender(SenderMixin, SMTPClient):
     """
     SMTP protocol that sends a single email based on information it
     gets from its factory, a L{SMTPSenderFactory}.
     """
+
 
 
 class SMTPSenderFactory(protocol.ClientFactory):
@@ -1856,15 +1801,19 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.retries = -retries
         self.timeout = timeout
 
+
     def _removeDeferred(self, result):
         del self.result
         return result
 
+
     def clientConnectionFailed(self, connector, err):
         self._processConnectionError(connector, err)
 
+
     def clientConnectionLost(self, connector, err):
         self._processConnectionError(connector, err)
+
 
     def _processConnectionError(self, connector, err):
         self.currentProtocol = None
@@ -1883,6 +1832,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
                 err.value = SMTPConnectError(-1, "Unable to connect to server.")
             self.result.errback(err.value)
 
+
     def buildProtocol(self, addr):
         p = self.protocol(self.domain, self.nEmails*2+2)
         p.factory = self
@@ -1890,6 +1840,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.currentProtocol = p
         self.result.addBoth(self._removeProtocol)
         return p
+
 
     def _removeProtocol(self, result):
         """
@@ -1905,9 +1856,6 @@ class SMTPSenderFactory(protocol.ClientFactory):
         return result
 
 
-
-from twisted.mail.imap4 import CramMD5ClientAuthenticator, LOGINAuthenticator
-from twisted.mail.imap4 import LOGINCredentials as _lcredentials
 
 class LOGINCredentials(_lcredentials):
     """
@@ -1929,8 +1877,10 @@ class PLAINAuthenticator:
     def __init__(self, user):
         self.user = user
 
+
     def getName(self):
         return "PLAIN"
+
 
     def challengeResponse(self, secret, chal=1):
         if chal == 1:
@@ -1956,11 +1906,13 @@ class ESMTPSender(SenderMixin, ESMTPClient):
 
         self._registerAuthenticators()
 
+
     def _registerAuthenticators(self):
         # Register Authenticator in order from most secure to least secure
         self.registerAuthenticator(CramMD5ClientAuthenticator(self.username))
         self.registerAuthenticator(LOGINAuthenticator(self.username))
         self.registerAuthenticator(PLAINAuthenticator(self.username))
+
 
     def _getContextFactory(self):
         if self.context is not None:
@@ -2094,6 +2046,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
         # It's not a file
         msg = StringIO(str(msg))
 
+
     def cancel(d):
         """
         Cancel the L{twisted.mail.smtp.sendmail} call, tell the factory not to
@@ -2137,6 +2090,7 @@ def xtext_encode(s, errors=None):
     return (''.join(r), len(s))
 
 
+
 def xtext_decode(s, errors=None):
     """
     Decode the xtext-encoded string C{s}.
@@ -2155,13 +2109,19 @@ def xtext_decode(s, errors=None):
             i += 1
     return (''.join(r), len(s))
 
+
+
 class xtextStreamReader(codecs.StreamReader):
     def decode(self, s, errors='strict'):
         return xtext_decode(s)
 
+
+
 class xtextStreamWriter(codecs.StreamWriter):
     def decode(self, s, errors='strict'):
         return xtext_encode(s)
+
+
 
 def xtext_codec(name):
     if name == 'xtext':

@@ -124,9 +124,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
 
 
-
-class PostfixTCPMapDictServerFactory(protocol.ServerFactory,
-                                     UserDict):
+class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
     """An in-memory dictionary factory for PostfixTCPMapServer."""
 
     protocol = PostfixTCPMapServer

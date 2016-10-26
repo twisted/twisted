@@ -11,27 +11,20 @@ import os
 import twisted
 
 from twisted.trial.unittest import TestCase
-from twisted.python.dist3 import modulesToInstall, testDataFiles
+from twisted.python.compat import _PY3
+from twisted.python._setup import notPortedModules
 
 
 class ModulesToInstallTests(TestCase):
     """
-    Tests for L{modulesToInstall}.
+    Tests for L{notPortedModules}.
     """
-    def test_sanityCheck(self):
-        """
-        L{modulesToInstall} includes some obvious module names.
-        """
-        self.assertIn("twisted.internet.reactor", modulesToInstall)
-        self.assertIn("twisted.python.test.test_dist3", modulesToInstall)
-
-
     def test_exist(self):
         """
-        All modules listed in L{modulesToInstall} exist.
+        All modules listed in L{notPortedModules} exist on Py2.
         """
         root = os.path.dirname(os.path.dirname(twisted.__file__))
-        for module in modulesToInstall:
+        for module in notPortedModules:
             segments = module.split(".")
             segments[-1] += ".py"
             path = os.path.join(root, *segments)
@@ -41,13 +34,22 @@ class ModulesToInstallTests(TestCase):
                             os.path.exists(packagePath),
                             "Module {0} does not exist".format(module))
 
-
-    def test_dataFileExist(self):
+    def test_notexist(self):
         """
-        All data files in L{testDataFiles} exist.
+        All modules listed in L{notPortedModules} do not exist on Py3.
         """
         root = os.path.dirname(os.path.dirname(twisted.__file__))
-        for file in testDataFiles:
-            self.assertTrue(os.path.exists(
-                os.path.join(root, os.path.sep.join(file.split(".")) + ".py")),
-                            "Data file {0} does not exist".format(file))
+        for module in notPortedModules:
+            segments = module.split(".")
+            segments[-1] += ".py"
+            path = os.path.join(root, *segments)
+            alternateSegments = module.split(".") + ["__init__.py"]
+            packagePath = os.path.join(root, *alternateSegments)
+            self.assertFalse(os.path.exists(path) or
+                             os.path.exists(packagePath),
+                             "Module {0} exists".format(module))
+
+    if _PY3:
+        test_exist.skip = "Only on Python 2"
+    else:
+        test_notexist.skip = "Only on Python 3"

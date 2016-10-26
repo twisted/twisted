@@ -11,7 +11,7 @@ from cgi import escape
 from twisted.python import log
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
+from incremental import Version
 
 
 

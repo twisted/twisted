@@ -428,7 +428,7 @@ class ZshArgumentsGenerator(object):
 
         @type buildShort: C{bool}
         @param buildShort: May be True to indicate we're building an excludes
-            string for the short option that correspondes to the given long opt.
+            string for the short option that corresponds to the given long opt.
 
         @return: The generated C{str}
         """

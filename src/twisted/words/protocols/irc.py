@@ -2611,7 +2611,7 @@ class IRCClient(basic.LineReceiver):
         """
         log.msg(s + '\n')
 
-    ### Protocool methods
+    ### Protocol methods
 
     def connectionMade(self):
         self.supported = ServerSupportedFeatures()

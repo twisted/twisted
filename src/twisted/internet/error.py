@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 import socket
 
 from twisted.python import deprecate
-from twisted.python.versions import Version
+from incremental import Version
 
 
 
