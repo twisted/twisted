@@ -9,21 +9,14 @@ from __future__ import absolute_import, division
 
 import errno
 
+from zope.interface import implementer
+
 from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner
-<<<<<<< HEAD:src/twisted/internet/iocpreactor/abstract.py
 from twisted.python import failure
 from twisted.python.compat import unicode
 
-from zope.interface import implementer
-import errno
-=======
 from twisted.internet.tcp import lazyByteSlice
-from twisted.python import failure, log
-from twisted.python.compat import unicode, _PY3
-
-from zope.interface import implementer
->>>>>>> iocp-stdlib:twisted/internet/iocpreactor/abstract.py
 
 from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
 from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
