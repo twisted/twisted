@@ -478,7 +478,7 @@ class SSHTransportBase(protocol.Protocol):
 
     #Add the supported EC keys, and change the name from ecdh* to ecdsa*
     for eckey in supportedKeyExchanges:
-        if 'ecdh' in eckey:
+        if eckey.find('ecdh') != -1:
             supportedPublicKeys += [eckey.replace("ecdh", "ecdsa")]
 
     supportedCompressions = [b'none', b'zlib']
