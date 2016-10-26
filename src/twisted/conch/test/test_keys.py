@@ -762,15 +762,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Key.fromString generates ECDSA keys from blobs.
         """
+        from cryptography import utils
+
         ecPublicData = {
             'x': keydata.ECDatanistp256['x'],
             'y': keydata.ECDatanistp256['y'],
             'curve': keydata.ECDatanistp256['curve']
             }
-        ecblob = (
-            common.NS(ecPublicData['curve']) +
-            common.MP(ecPublicData['x']) +
-            common.MP(ecPublicData['y'])
+
+        ecblob = (common.NS(ecPublicData['curve']) +
+                  common.NS(ecPublicData['curve'][-8:]) +
+                  common.NS(b'\x04' + utils.int_to_bytes(ecPublicData['x'],  32) +
+                          utils.int_to_bytes(ecPublicData['y'],  32))
             )
 
         eckey = keys.Key.fromString(ecblob)
@@ -876,12 +879,16 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Return the over-the-wire SSH format of the EC public key.
         """
+        from cryptography import utils
+
+        byte_length = (self.ecObj.curve.key_size + 7) // 8
         self.assertEqual(
             keys.Key(self.ecObj).blob(),
             common.NS(keydata.ECDatanistp256['curve']) +
-            common.MP(self.ecObj.private_numbers().public_numbers.x) +
-            common.MP(self.ecObj.private_numbers().public_numbers.y)
-            )
+            common.NS(keydata.ECDatanistp256['curve'][-8:]) +
+            common.NS(b'\x04' + utils.int_to_bytes(self.ecObj.private_numbers().public_numbers.x, byte_length) +
+                      utils.int_to_bytes(self.ecObj.private_numbers().public_numbers.y, byte_length))
+        )
 
 
     def test_blobNoKey(self):

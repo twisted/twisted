@@ -23,8 +23,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key, load_ssh_public_key)
+from cryptography import utils
 
 try:
+
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
@@ -249,10 +251,9 @@ class Key(object):
         elif keyType in _curveTable:
             # First we have to make an EllipticCuvePublicNumbers from the provided curve and points,
             # then turn it into a public key object.
-            newKey = cls(
-                ec.EllipticCurvePublicNumbers.from_encoded_point(_curveTable[keyType], common.getNS(rest,2)[1]).public_key(
-                    default_backend()))
-            return newKey
+            return cls(
+                ec.EllipticCurvePublicNumbers.from_encoded_point(_curveTable[keyType],
+                                        common.getNS(rest, 2)[1]).public_key(default_backend()))
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -1043,16 +1044,19 @@ class Key(object):
         elif isinstance(self._keyObject, ec.EllipticCurvePublicKey):
             numbers = self._keyObject.public_numbers()
             return {
+                "x": numbers.x,
+                "y": numbers.y,
                 "curve": self.sshType(),
-                "n": numbers.encode_point()
             }
         elif isinstance(self._keyObject, ec.EllipticCurvePrivateKey):
             numbers = self._keyObject.private_numbers()
             return {
+                "x": numbers.public_numbers.x,
+                "y": numbers.public_numbers.y,
+                "privateValue": numbers.private_value,
                 "curve": self.sshType(),
-                "p": numbers.public_numbers,
-                "x": numbers.private_value
             }
+
         else:
             raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
 
@@ -1094,9 +1098,10 @@ class Key(object):
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']))
         elif type == 'EC':
-            b = (common.NS(data["curve"]) + common.NS(data["curve"][-8:]) +
-                 common.NS(data["n"]))
-            return b
+            byte_length = (self._keyObject.curve.key_size + 7) // 8
+            return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
+                        common.NS(b'\x04' + utils.int_to_bytes(data['x'], byte_length) +
+                utils.int_to_bytes(data['y'], byte_length)))
         else:
             raise BadKeyError("unknown key type %s" % (type,))
 
@@ -1145,8 +1150,8 @@ class Key(object):
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
         elif type == 'EC':
-            return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
-                    common.NS(data['p']) + common.MP(data['X']))
+            return (common.NS(data['curve']) + common.MP(data['x']) +
+                    common.MP(data['y']) + common.MP(data['privateValue']))
         else:
             raise BadKeyError("unknown key type %s" % (type,))
 
