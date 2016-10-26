@@ -417,7 +417,7 @@ class Key(object):
             keyData = decodebytes(b64Data)
 
         if kind == b'EC':
-            #ECDSA keys don't need base64 decoding which is required
+            # ECDSA keys don't need base64 decoding which is required
             # for RSA or DSA key.
             return cls(load_pem_private_key(data, passphrase, default_backend()))
 
@@ -1211,7 +1211,7 @@ class Key(object):
                 return (self._keyObject.public_bytes(
                     serialization.Encoding.OpenSSH,
                     serialization.PublicFormat.OpenSSH
-                    ) + extra).strip()
+                    ) + b' ' + extra).strip()
 
             b64Data = encodebytes(self.blob()).replace(b'\n', b'')
             if not extra:
@@ -1220,9 +1220,9 @@ class Key(object):
         else:
 
             if self.type() == 'EC':
-                #EC keys has complex ASN.1 structure hence we do this this way.
+                # EC keys has complex ASN.1 structure hence we do this this way.
                 if not extra:
-                    #unencrypted private key
+                    # unencrypted private key
                     encryptor = serialization.NoEncryption()
                 else:
                     encryptor = serialization.BestAvailableEncryption(extra)
