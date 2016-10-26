@@ -16,7 +16,7 @@ import binascii
 import hmac
 import struct
 import zlib
-import base64
+#import base64
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
@@ -523,9 +523,9 @@ class SSHTransportBase(protocol.Protocol):
         """
         if self.service:
             self.service.serviceStopped()
-        if hasattr(self, 'avatar'):
+        if hasattr(self, b'avatar'):
             self.logoutFunction()
-        log.msg('connection lost')
+        log.msg(b'connection lost')
 
 
     def connectionMade(self):
@@ -1286,7 +1286,7 @@ class SSHServerTransport(SSHTransportBase):
             try:
                 curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
             except KeyError:
-                raise UnsupportedAlgorithm('unused-key')
+                raise UnsupportedAlgorithm(b'unused-key')
 
             # Generate the private key
             ecPriv = ec.generate_private_key(curve, default_backend())
@@ -1575,7 +1575,7 @@ class SSHClientTransport(SSHTransportBase):
             # Maybe no common protocols were agreed.
             return
         # Curve25519
-        if self.kexAlg.find("curve25519") >= 0:
+        if self.kexAlg.find(b'curve25519') >= 0:
             # Genereate the curve25519 key pair
             self.ecPriv = curve25519.Private()
             self.ecPub = self.ecPriv.get_public()
@@ -1589,7 +1589,7 @@ class SSHClientTransport(SSHTransportBase):
                 # Find the base curve info
                 self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
             except KeyError:
-                raise UnsupportedAlgorithm('unused-key')
+                raise UnsupportedAlgorithm(b'unused-key')
 
             #Generate the keys
             self.ecPriv = ec.generate_private_key(self.curve, default_backend())
@@ -1679,6 +1679,7 @@ class SSHClientTransport(SSHTransportBase):
 
             if not keys.Key.fromString(theirECHost).verify(signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, b'bad signature')
+                return
 
             self._keySetup(sharedSecret, exchangeHash)
 

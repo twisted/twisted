@@ -112,6 +112,41 @@ publicECDSA_openssh = (b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAA"
 b"AAIbmlzdHAyNTYAAABBBKimX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v"
 b"46We1hLMyz6ObUBYgkN/34n42F4vpeA= comment")
 
+privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIEyU1YOT2JxxofwbJXIjGftdNcJK55aQdNrhIt2xYQz0oAoGCCqGSM49
+AwEHoUQDQgAEqKZfUNnv5CPRKl948xujWlvrIaQBvmXt24LWXznnIPu0R9B+qTtt
+zu/jpZ7WEszLPo5tQFiCQ3/fifjYXi+l4A==
+-----END EC PRIVATE KEY-----"""
+
+
+privateECDSA_openssh521 = b"""-----BEGIN EC PRIVATE KEY-----
+MIHcAgEBBEIAjn0lSVF6QweS4bjOGP9RHwqxUiTastSE0MVuLtFvkxygZqQ712oZ
+ewMvqKkxthMQgxzSpGtRBcmkL7RqZ94+18qgBwYFK4EEACOhgYkDgYYABAFpX/6B
+mxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7M+TQctdlR2Xv/J+AgIeVGmB
+j2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja0P7DMTE0EV8X
+f09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw==
+-----END EC PRIVATE KEY-----"""
+
+publicECDSA_openssh521 = (b"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA"
+b"1MjEAAAAIbmlzdHA1MjEAAACFBAFpX/6BmxxglwD+VpEvw0hcyxVzLxNnMGzxZGF7xmNj8nlF7"
+b"M+TQctdlR2Xv/J+AgIeVGmBj2p84bkV9jBzrUNJEACsJjttZw8NbUrhxjkLT/3rMNtuwjE4vLja"
+b"0P7DMTE0EV8Xf09ETdku/z/1tOSSrSvRwmUcM9nQUJtHHAZlr5Q0fw== comment")
+
+privateECDSA_openssh384 = b"""-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
+LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
+Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
+G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
+-----END EC PRIVATE KEY-----"""
+
+publicECDSA_openssh384 = (b"ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzOD"
+b"QAAAAIbmlzdHAzODQAAABhBNTXuwD0/kVHBKScpwWyOOyTT4TcJ5c9hfROT8zQcrc+lZBaCs7wl"
+b"1Ec/14UT07/bc/wG6bAW3sX8C8+ULNV3flV+toVPSjhwJYbRGqlD6enfVoqZ4myGRxgAsRyGdT61A== comment")
+
+publicECDSA_openssh = (b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAA"
+b"AAIbmlzdHAyNTYAAABBBKimX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v"
+b"46We1hLMyz6ObUBYgkN/34n42F4vpeA= comment")
+
 publicRSA_openssh = (b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBE"
 b"vLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYL"
 b"h5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment")

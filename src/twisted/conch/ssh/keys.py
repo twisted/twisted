@@ -1415,11 +1415,21 @@ class Key(object):
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)
 
+            if type(rb[0]) is str:
+                rcomp = ord(rb[0])
+            else:
+                rcomp = rb[0]
+
             # If the MSB is set, prepend a null byte for correct formatting.
-            if rb[0] & 0x80:
+            if rcomp & 0x80:
                 rb = b"\x00" + rb
 
-            if sb[0] & 0x80:
+            if type(sb[0]) is str:
+                scomp = ord(sb[0])
+            else:
+                scomp = sb[0]
+
+            if scomp & 0x80:
                 sb = b"\x00" + sb
 
             ret = common.NS(common.NS(rb) + common.NS(sb))
