@@ -1223,15 +1223,14 @@ class Key(object):
                 #EC keys has complex ASN.1 structure hence we do this this way.
                 if not extra:
                     #unencrypted private key
-                    return self._keyObject.private_bytes(
-                        serialization.Encoding.PEM,
-                        serialization.PrivateFormat.TraditionalOpenSSL,
-                        serialization.NoEncryption())
+                    encryptor = serialization.NoEncryption()
                 else:
-                    return self._keyObject.private_bytes(
-                        serialization.Encoding.PEM,
-                        serialization.PrivateFormat.TraditionalOpenSSL,
-                        serialization.BestAvailableEncryption(extra))
+                    encryptor = serialization.BestAvailableEncryption(extra)
+
+                return self._keyObject.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryptor)
 
             lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
                                b' PRIVATE KEY-----'))]
