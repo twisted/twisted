@@ -11,19 +11,13 @@ import os
 import sys
 import setuptools
 
-
-# Tell Twisted not to enforce zope.interface requirement on import, since
-# we're going to have to import twisted.python._setup and can rely on
-# setuptools to install dependencies.
-setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
-
 if __name__ == "__main__":
-    # Make sure we can import the setup helpers.
-    if os.path.exists('src/twisted/'):
-        sys.path.insert(0, 'src')
 
-    from twisted.python._setup import getSetupArgs
+    _setup = {}
+    with open('src/twisted/python/_setup.py') as f:
+        exec(f.read(), _setup)
+
     try:
-        setuptools.setup(**getSetupArgs())
+        setuptools.setup(**_setup["getSetupArgs"]())
     except KeyboardInterrupt:
         sys.exit(1)

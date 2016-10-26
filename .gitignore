@@ -1,4 +1,5 @@
 *.egg-info/
+.eggs/
 *.o
 *.py[co]
 *.so

@@ -31,7 +31,7 @@ from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.failure import Failure
-from twisted.python.versions import Version
+from incremental import Version
 
 from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString

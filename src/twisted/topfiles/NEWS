@@ -641,7 +641,7 @@ Improved Documentation
  - Twisted Trial's how-to documentation now has a link to Twisted's
    contribution guidelines and has been reformatted. (#7475)
  - Fixed a path error in the make.bat file for building Sphinx
-   documentation, so that it is now possible to build the documenation
+   documentation, so that it is now possible to build the documentation
    using make.bat on Windows. (#7542)
 
 Deprecations and Removals
@@ -1592,7 +1592,7 @@ Bugfixes
    --inplace' will compile the extension and cause the test to both
    run and pass. (#4331)
  - twisted.python.logfile.LogFile now raises a descriptive exception
-   when passed a log  directoy which does not exist. (#4701)
+   when passed a log  directory which does not exist. (#4701)
  - Fixed a bug where Inotify will fail to add a filepatch to watchlist
    after it has been added/ignored previously. (#4708)
  - IPv4Address and UNIXAddress object comparison operators fixed

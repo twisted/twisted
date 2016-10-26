@@ -1108,7 +1108,7 @@ class MoreNamedLetters(Names):
 
 class ValuedLetters(Values):
     """
-    Some more letters, with cooresponding unicode values.
+    Some more letters, with corresponding unicode values.
     """
     # Note u'\u0391' < u'\u03dc' > u'\u0396'.  We are ensuring here that the
     # definition is order different from the order of the values, which lets us
