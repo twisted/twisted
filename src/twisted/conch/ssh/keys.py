@@ -17,7 +17,7 @@ import base64
 
 from incremental import Version
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
@@ -1365,11 +1365,11 @@ class Key(object):
             sb = int_to_bytes(s)
 
             # If the MSB is set, prepend a null byte for correct formatting.
-            if ord(rb[0]) & 0x80:
-                rb = "\x00" + rb
+            if rb[0] & 0x80:
+                rb = b"\x00" + rb
 
-            if ord(sb[0]) & 0x80:
-                sb = "\x00" + sb
+            if sb[0] & 0x80:
+                sb = b"\x00" + sb
 
             ret = common.NS(common.NS(rb) + common.NS(sb))
         else:

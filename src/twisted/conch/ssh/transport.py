@@ -479,8 +479,8 @@ class SSHTransportBase(protocol.Protocol):
 
     #Add the supported EC keys, and change the name from ecdh* to ecdsa*
     for eckey in supportedKeyExchanges:
-        if eckey.find('ecdh') != -1:
-            supportedPublicKeys += [eckey.replace("ecdh", "ecdsa")]
+        if eckey.find(b'ecdh') != -1:
+            supportedPublicKeys += [eckey.replace(b'ecdh', b'ecdsa')]
 
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
@@ -1268,7 +1268,7 @@ class SSHServerTransport(SSHTransportBase):
 
         #Get the curve instance
         try:
-            curve = keys._curveTable['ecdsa' + self.kexAlg[4:]]
+            curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
         except KeyError:
             raise UnsupportedAlgorithm('unused-key')
         
@@ -1562,7 +1562,7 @@ class SSHClientTransport(SSHTransportBase):
         if _kex.isEllipticCurve(self.kexAlg):
             try:
                 # Find the base curve info
-                self.curve = keys._curveTable['ecdsa' + self.kexAlg[4:]]
+                self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
             except KeyError:
                 raise UnsupportedAlgorithm('unused-key')
             
