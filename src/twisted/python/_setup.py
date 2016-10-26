@@ -296,7 +296,8 @@ class build_ext_twisted(build_ext.build_ext):
             self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
 
         self.extensions = [
-            x for x in self.conditionalExtensions if x.condition(self)
+            x for x in self.conditionalExtensions
+            if hasattr(x, "condition") and x.condition(self)
         ]
 
         for ext in self.extensions:
