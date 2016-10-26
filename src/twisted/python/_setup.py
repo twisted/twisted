@@ -191,7 +191,8 @@ def getCFFIModules():
     cffiModules = []
 
     if os.name == "nt":
-        cffiModules.append("twisted/internet/iocpreactor/iocp_build.py:ffi")
+        cffiModules.append(
+            "src/twisted/internet/iocpreactor/iocp_build.py:ffi")
 
     return cffiModules
 
