@@ -21,19 +21,16 @@ def recv(long s, object bufflist, object obj, unsigned long flags = 0):
             PyObject_AsWriteBuffer(<object>buffers[i], <void **>&ws_buf[i].buf, &size)
             ws_buf[i].len = <DWORD>size
 
-        ov = makeOV()
-        if obj is not None:
-            ov.obj = <PyObject *>obj
+        ov = makeOV(obj, bufflist)
 
         rc = WSARecv(s, ws_buf, <DWORD>buffcount, &bytes, &flags, <OVERLAPPED *>ov, NULL)
 
         if rc == SOCKET_ERROR:
             rc = WSAGetLastError()
             if rc != ERROR_IO_PENDING:
-                PyMem_Free(ov)
+                unmakeOV(ov)
                 return rc, 0
 
-        Py_XINCREF(obj)
         return rc, bytes
     finally:
         PyMem_Free(ws_buf)
@@ -59,18 +56,15 @@ def recvfrom(long s, object buff, object addr_buff, object addr_len_buff, object
 
     c_addr_len_buff[0] = c_addr_buff_len
 
-    ov = makeOV()
-    if obj is not None:
-        ov.obj = <PyObject *>obj
+    ov = makeOV(obj, (buff, addr_buff, addr_len_buff))
 
     rc = WSARecvFrom(s, &ws_buf, 1, &bytes, &flags, c_addr_buff, c_addr_len_buff, <OVERLAPPED *>ov, NULL)
 
     if rc == SOCKET_ERROR:
         rc = WSAGetLastError()
         if rc != ERROR_IO_PENDING:
-            PyMem_Free(ov)
+            unmakeOV(ov)
             return rc, 0
 
-    Py_XINCREF(obj)
     return rc, bytes
 
