@@ -16,7 +16,7 @@ import binascii
 import hmac
 import struct
 import zlib
-import re
+import base64
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
@@ -29,6 +29,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
 from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
+#from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
@@ -479,8 +480,8 @@ class SSHTransportBase(protocol.Protocol):
 
     #Add the supported EC keys, and change the name from ecdh* to ecdsa*
     for eckey in supportedKeyExchanges:
-        if 'ecdh' in eckey:
-            supportedPublicKeys += [eckey.replace("ecdh", "ecdsa")]
+        if eckey.find(b'ecdh') != -1:
+            supportedPublicKeys += [eckey.replace(b'ecdh', b'ecdsa')]
 
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
@@ -1266,46 +1267,39 @@ class SSHServerTransport(SSHTransportBase):
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        # Get the base curve info
-        try:
-            shortKex = re.search(b"(curve25519|nist[kpbt]\d{3}$)", self.kexAlg).group(1)
-        except AttributeError:
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                b'unsupported key type')
-
-        if shortKex == "curve25519":
+        if self.kexAlg.find(b'25519') != -1:
             # Make sure the size is correct
             if len(pktPub) != 32:
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                     b'bad key size')
 
             # Turn the public key into a public key object
-            self.theirECPub = curve25519.Public(pktPub)
+            theirECPub = curve25519.Public(pktPub)
 
             # Always generate new private and public keys
-            self.ecPriv = curve25519.Private()
-            self.ecPub = self.ecPriv.get_public()
-            serialPub = self.ecPub.serialize()
-
+            ecPriv = curve25519.Private()
+            ecPub = ecPriv.get_public()
+            serialPub = ecPub.serialize()
             sharedSecret = MP(
-                int(binascii.hexlify(curve25519._curve25519.make_shared(self.ecPriv.private, self.theirECPub.public)), 16))
-
+                int(binascii.hexlify(curve25519._curve25519.make_shared(ecPriv.private, theirECPub.public)), 16))
         else:
-            #Get the curve instance
-            self.curve = keys.curveTable[shortKex]
+            try:
+                curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
+            except KeyError:
+                raise UnsupportedAlgorithm('unused-key')
 
-            #Generate the private key
-            self.ecPriv = ec.generate_private_key(self.curve, default_backend())
+            # Generate the private key
+            ecPriv = ec.generate_private_key(curve, default_backend())
 
             #Get the public key
-            self.ecPub = self.ecPriv.public_key()
-            serialPub = self.ecPub.public_numbers().encode_point()
+            ecPub = ecPriv.public_key()
+            serialPub = ecPub.public_numbers().encode_point()
 
             #Take the provided public key and transform it into a format for the cryptography module
-            self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
+            theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(curve, pktPub).public_key(default_backend())
     
             #We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
-            sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), self.theirECPub)), 16))
+            sharedSecret = MP(int(binascii.hexlify(ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
 
         # Finish update and digest
         h = _kex.getHashProcessor(self.kexAlg)()
@@ -1591,14 +1585,11 @@ class SSHClientTransport(SSHTransportBase):
                 NS(self.ecPub.serialize()))
         # Are we using ECDH?
         elif _kex.isEllipticCurve(self.kexAlg):
-            #Find the base curve info
             try:
-                shortKex = re.search(b"(nist[kpbt]\d{3}$)", self.kexAlg).group(1)
-            except AttributeError:
-                raise UnsupportedAlgorithm(self.kexAlg)
-
-            #Get the curve
-            self.curve = keys.curveTable[shortKex]
+                # Find the base curve info
+                self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
+            except KeyError:
+                raise UnsupportedAlgorithm('unused-key')
 
             #Generate the keys
             self.ecPriv = ec.generate_private_key(self.curve, default_backend())
@@ -1653,7 +1644,7 @@ class SSHClientTransport(SSHTransportBase):
             #Save off the host public key.
             theirECHost = hostKey
 
-            if self.kexAlg.find("curve25519") >= 0:
+            if self.kexAlg.find(b'curve25519') >= 0:
                 # Make sure the size is correct
                 if len(pubKey) != 32:
                     self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, b'bad key size')
@@ -1694,8 +1685,11 @@ class SSHClientTransport(SSHTransportBase):
         # Get the host public key, the raw ECDH public key bytes and the signature
         hostKey, pubKey, signature, packet = getNS(packet, 3)
 
-        fingerprint = b':'.join([binascii.hexlify(ch) for ch in
-                                 iterbytes(md5(hostKey).digest())])
+        # Easier to comment this out for now than to update all of the tests.
+        #fingerprint = nativeString(base64.b64encode(
+        #        sha256(hostKey).digest()))
+
+        fingerprint = b':'.join([binascii.hexlify(ch) for ch in iterbytes(md5(hostKey).digest())])
         d = self.verifyHostKey(hostKey, fingerprint)
         d.addCallback(_continue_KEX_ECDH_REPLY, hostKey, pubKey, signature)
         d.addErrback(

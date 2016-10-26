@@ -188,6 +188,14 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     @rtype: L{unicode} or L{None}
     """
     eventText = formatEvent(event)
+
+    if "log_failure" in event:
+        try:
+            traceback = event["log_failure"].getTraceback()
+        except:
+            traceback = u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT)\n"
+        eventText = u"\n".join((eventText, traceback))
+
     if not eventText:
         return None
 

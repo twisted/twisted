@@ -17,7 +17,7 @@ except ImportError:
 from functools import wraps
 
 from twisted.python.compat import _PY3, unicode
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 # For backwards compatibility, some things import this, so just link it

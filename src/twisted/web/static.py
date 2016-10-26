@@ -30,7 +30,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from twisted.python.url import URL
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecated
 
 if _PY3:

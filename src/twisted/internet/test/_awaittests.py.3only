@@ -91,8 +91,8 @@ class AwaitTests(TestCase):
 
     def test_twoDeep(self):
         """
-        An exception in a coroutine wrapped with L{ensureDeferred} will cause
-        the returned L{Deferred} to fire with a failure.
+        A coroutine wrapped with L{ensureDeferred} that awaits a L{Deferred}
+        suspends its execution until the inner L{Deferred} fires.
         """
         reactor = Clock()
         sections = []
@@ -100,7 +100,7 @@ class AwaitTests(TestCase):
         async def runone():
             sections.append(2)
             d = Deferred()
-            reactor.callLater(1, d.callback, None)
+            reactor.callLater(1, d.callback, 2)
             await d
             sections.append(3)
             return "Yay!"
@@ -111,7 +111,7 @@ class AwaitTests(TestCase):
             result = await runone()
             sections.append(4)
             d = Deferred()
-            reactor.callLater(1, d.callback, None)
+            reactor.callLater(1, d.callback, 1)
             await d
             sections.append(5)
             return result

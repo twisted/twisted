@@ -5,7 +5,7 @@
 Chat protocols.
 """
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 

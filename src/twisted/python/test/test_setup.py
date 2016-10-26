@@ -13,7 +13,7 @@ from setuptools.dist import Distribution
 import twisted
 from twisted.trial.unittest import TestCase
 
-from twisted.python import _setup, dist3, filepath
+from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
@@ -138,7 +138,6 @@ class OptionalDependenciesTests(TestCase):
         work.
         """
         deps = _EXTRAS_REQUIRE['conch']
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
@@ -186,7 +185,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -206,7 +204,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -226,7 +223,6 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
-        self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -294,13 +290,14 @@ class BuildPy3Tests(TestCase):
     """
     Tests for L{BuildPy3}.
     """
+    maxDiff = None
 
     if not _PY3:
         skip = "BuildPy3 setuptools command used with Python 3 only."
 
     def test_find_package_modules(self):
         """
-        Will filter the found modules including only the modules listed in
+        Will filter the found modules excluding the modules listed in
         L{twisted.python.dist3}.
         """
         distribution = Distribution()
@@ -312,37 +309,27 @@ class BuildPy3Tests(TestCase):
         # reduce the risk of getting false failures, while doing a minimum
         # level of patching.
         self.patch(
-            dist3,
-            'modulesToInstall',
+            _setup,
+            'notPortedModules',
             [
-                "twisted.spread.banana",
-                "twisted.test.__init__",
-                "twisted.test.iosim",
-                "twisted.test.test_abstract",
-                ],
-            )
-        self.patch(
-            dist3,
-            'testDataFiles',
-            [
-                "twisted.python.test.pullpipe",
-                "twisted.test.mock_win32process",
-                ],
+                "twisted.spread.test.test_pbfailure",
+            ],
             )
         twistedPackageDir = filepath.FilePath(twisted.__file__).parent()
-        packageDir = twistedPackageDir.child("test")
+        packageDir = twistedPackageDir.child("spread").child("test")
 
-        result = builder.find_package_modules('twisted.test', packageDir.path)
+        result = builder.find_package_modules('twisted.spread.test',
+                                              packageDir.path)
 
         self.assertEqual(sorted([
-            ('twisted.test', 'test_abstract',
-                packageDir.child('test_abstract.py').path),
-            ('twisted.test', '__init__',
+            ('twisted.spread.test', '__init__',
                 packageDir.child('__init__.py').path),
-            ('twisted.test', 'iosim',
-                packageDir.child('iosim.py').path),
-            ('twisted.test', 'mock_win32process',
-                packageDir.child('mock_win32process.py').path),
+            ('twisted.spread.test', 'test_banana',
+                packageDir.child('test_banana.py').path),
+            ('twisted.spread.test', 'test_jelly',
+                packageDir.child('test_jelly.py').path),
+            ('twisted.spread.test', 'test_pb',
+                packageDir.child('test_pb.py').path),
             ]),
             sorted(result),
-            )
+        )

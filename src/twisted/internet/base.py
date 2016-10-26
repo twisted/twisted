@@ -25,6 +25,7 @@ from twisted.python import log, failure, reflect
 from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
+from twisted.python._oldstyle import _oldStyle
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
@@ -32,6 +33,7 @@ from twisted.python import threadable
 
 
 @implementer(IDelayedCall)
+@_oldStyle
 class DelayedCall:
 
     # enable .debug to record creator call stack, and it will be logged if
@@ -279,6 +281,7 @@ class ThreadedResolver(object):
 
 
 @implementer(IResolverSimple)
+@_oldStyle
 class BlockingResolver:
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
@@ -1016,6 +1019,7 @@ if platform.supportsThreads():
 
 
 @implementer(IConnector)
+@_oldStyle
 class BaseConnector:
     """Basic implementation of connector.
 

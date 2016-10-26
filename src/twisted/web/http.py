@@ -93,7 +93,7 @@ from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, protocol, address
 from twisted.internet.defer import Deferred

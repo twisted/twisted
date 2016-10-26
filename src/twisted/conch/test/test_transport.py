@@ -1440,6 +1440,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             b'\x00' + b'\x00\x00\x00\x00')
 
         self.proto.ssh_KEXINIT(kexmsg)
+        self.assertRaises(AttributeError)
         self.assertRaises(UnsupportedAlgorithm)
 
     def test_KEXDH_INIT_GROUP1(self):

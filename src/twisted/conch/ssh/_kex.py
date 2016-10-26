@@ -177,7 +177,7 @@ _kexAlgorithms = {
     b"ecdh-sha2-nistk409": _ECDH384(),
     b"ecdh-sha2-nistb409": _ECDH384(),
     b"ecdh-sha2-nistt571": _ECDH512(),
-    b"curve25519-sha256@libssh.org" : _ECDH256()
+    b"curve25519-sha256@libssh.org": _ECDH256()
     }
 
 
