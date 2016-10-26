@@ -27,7 +27,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.compat import nativeString, networkString, iterbytes, _bytesChr as chr
+from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
+#from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
