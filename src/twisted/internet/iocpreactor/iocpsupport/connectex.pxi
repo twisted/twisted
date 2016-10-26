@@ -29,19 +29,15 @@ def connect(long s, object addr, object obj):
         raise ValueError, 'unsupported address family'
     name.sa_family = family
 
-    ov = makeOV()
-    if obj is not None:
-        ov.obj = <PyObject *>obj
+    ov = makeOV(obj)
 
     rc = lpConnectEx(s, name, namelen, NULL, 0, NULL, <OVERLAPPED *>ov)
 
     if not rc:
         rc = WSAGetLastError()
         if rc != ERROR_IO_PENDING:
-            PyMem_Free(ov)
+            unmakeOV(ov)
             return rc
 
-    # operation is in progress
-    Py_XINCREF(obj)
     return 0
 
