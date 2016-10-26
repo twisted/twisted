@@ -1679,9 +1679,8 @@ class SSHClientTransport(SSHTransportBase):
 
             if not keys.Key.fromString(theirECHost).verify(signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, b'bad signature')
-                return
-
-            self._keySetup(sharedSecret, exchangeHash)
+            else:
+                self._keySetup(sharedSecret, exchangeHash)
 
         # Get the host public key, the raw ECDH public key bytes and the signature
         hostKey, pubKey, signature, packet = getNS(packet, 3)
