@@ -970,58 +970,19 @@ class MPTests(unittest.TestCase):
         self.assertRaises(struct.error, self.getMP, b'\x02\x00')
 
 
-
-class PyMPTests(MPTests):
+class GMPYInstallDeprecationTests(unittest.TestCase):
     """
-    Tests for the python implementation of L{common.getMP}.
-    """
-    getMP = staticmethod(common.getMP_py)
-
-
-
-class GMPYMPTests(MPTests):
-    """
-    Tests for the gmpy implementation of L{common.getMP}.
-    """
-    getMP = staticmethod(common._fastgetMP)
-
-
-class BuiltinPowHackTests(unittest.TestCase):
-    """
-    Tests that the builtin pow method is still correct after
-    L{twisted.conch.ssh.common} monkeypatches it to use gmpy.
+    Tests for the deprecation of former GMPY accidental public API.
     """
 
-    def test_floatBase(self):
+    def test_deprecated(self):
         """
-        pow gives the correct result when passed a base of type float with a
-        non-integer value.
+        L{twisted.conch.ssh.common.install} is deprecated.
         """
-        self.assertEqual(6.25, pow(2.5, 2))
-
-    def test_intBase(self):
-        """
-        pow gives the correct result when passed a base of type int.
-        """
-        self.assertEqual(81, pow(3, 4))
-
-    def test_longBase(self):
-        """
-        pow gives the correct result when passed a base of type long.
-        """
-        self.assertEqual(81, pow(3, 4))
-
-    def test_mpzBase(self):
-        """
-        pow gives the correct result when passed a base of type gmpy.mpz.
-        """
-        if gmpy is None:
-            raise unittest.SkipTest('gmpy not available')
-        self.assertEqual(81, pow(gmpy.mpz(3), 4))
-
-
-try:
-    import gmpy
-except ImportError:
-    GMPYMPTests.skip = "gmpy not available"
-    gmpy = None
+        common.install()
+        warnings = self.flushWarnings([self.test_deprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(
+            warnings[0]["message"],
+            "twisted.conch.ssh.common.install was deprecated in Twisted 16.5.0"
+        )

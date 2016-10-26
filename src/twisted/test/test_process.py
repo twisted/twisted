@@ -1187,6 +1187,11 @@ class PosixProcessBase(object):
         return d
 
 
+    if runtime.platform.isMacOSX():
+        test_executionError.skip = (
+            "Test is flaky from a Darwin bug. See #8840.")
+
+
     def test_errorInProcessEnded(self):
         """
         The handler which reaps a process is removed when the process is

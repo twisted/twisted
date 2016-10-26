@@ -33,7 +33,7 @@ from zope.interface import Interface, Attribute, implementer
 from twisted.python.compat import comparable, cmp, unicode
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
-from twisted.python.versions import Version
+from incremental import Version
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY

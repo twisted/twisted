@@ -59,7 +59,7 @@ from twisted.internet import protocol, defer, reactor
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
-from twisted.python.versions import Version
+from incremental import Version
 
 if not skipSSL:
     from twisted.internet.ssl import platformTrust, VerificationError

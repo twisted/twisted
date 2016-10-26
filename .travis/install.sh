@@ -8,6 +8,20 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     python -m pip install --user virtualenv
     python -m virtualenv ~/.venv
     source ~/.venv/bin/activate
+
+    if [[ "${TOXENV}" == "py35-alldeps-withcov-macos,codecov-publish" ]]; then
+
+        brew update;
+        brew upgrade openssl;
+        brew install pyenv;
+        PYENV_ROOT="$HOME/.pyenv";
+        PATH="$PYENV_ROOT/bin:$PATH";
+        eval "$(pyenv init -)";
+        pyenv install -s 3.5.2;
+        pyenv global system 3.5.2;
+        pyenv rehash;
+
+    fi
 fi
 
 # Temporary workaround for https://github.com/pypa/setuptools/issues/776;
