@@ -120,5 +120,5 @@ def win32GetLinkLocalIPv6Addresses():
             byref(retBytes))
         if ret:
             raise RuntimeError("WSAAddressToString failure")
-        retList.append(nativeString(string_at(addressStringBuf)))
+        retList.append(nativeString(wstring_at(addressStringBuf)))
     return [addr for addr in retList if '%' in addr]
