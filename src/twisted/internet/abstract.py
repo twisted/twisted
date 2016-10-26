@@ -337,7 +337,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
 
     def write(self, data):
-        """Reliably write some data.
+        """
+        Reliably write some data.
 
         The data is buffered until the underlying file descriptor is ready
         for writing. If there is more than C{self.bufferSize} data in the
@@ -384,7 +385,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
 
     def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
-        """Close the connection at the next available opportunity.
+        """
+        Close the connection at the next available opportunity.
 
         Call this to cause this FileDescriptor to lose its connection.  It will
         first write any data that it has buffered.

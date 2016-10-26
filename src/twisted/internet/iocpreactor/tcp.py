@@ -5,7 +5,12 @@
 TCP support for IOCP reactor
 """
 
-import socket, operator, errno, struct
+from __future__ import absolute_import, division
+
+import socket
+import operator
+import errno
+import struct
 
 from zope.interface import implementer, classImplements
 
@@ -15,9 +20,11 @@ from twisted.internet.abstract import _LogOwner, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
 from twisted.python import log, failure, reflect
-from twisted.python.compat import _PY3, nativeString
+from twisted.python.compat import unicode, _PY3, nativeString
 
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
+from twisted.internet.iocpreactor import abstract
+from twisted.internet.iocpreactor import _overlapped
+
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
 from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
 from twisted.internet.iocpreactor.const import SO_UPDATE_CONNECT_CONTEXT
@@ -29,6 +36,17 @@ try:
     from twisted.internet._newtls import startTLS as _startTLS
 except ImportError:
     _startTLS = None
+
+
+def _semiBuffer(data, start=0, end=-1):
+
+    if end == -1:
+        end = len(data) - 1
+    if _PY3:
+        return data[start:end]
+    else:
+        return buffer(data, start, end)
+
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
@@ -44,6 +62,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         C{True} to indicate that TLS has been started and that operations must
         be routed through the L{TLSMemoryBIOProtocol} instance.
     """
+
     TLS = False
 
 
@@ -75,18 +94,17 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         self.protocol.dataReceived(rbuffer)
 
 
-    def readFromHandle(self, bufflist, evt):
-        return _iocp.recv(self.getFileHandle(), bufflist, evt)
+    def readFromHandle(self, len, evt):
+        return _overlapped.recv(self.socket, len, evt)
 
 
     def writeToHandle(self, buff, evt):
         """
-        Send C{buff} to current file handle using C{_iocp.send}. The buffer
+        Send C{buff} to current file handle using C{_overlapped.send}. The buffer
         sent is limited to a size of C{self.SEND_LIMIT}.
         """
-        writeView = memoryview(buff)
-        return _iocp.send(self.getFileHandle(),
-            writeView[0:self.SEND_LIMIT].tobytes(), evt)
+        return _overlapped.send(self.getFileHandle(),
+            _semiBuffer(buff, 0, self.SEND_LIMIT), evt)
 
 
     def _closeWriteConnection(self):
@@ -290,7 +308,8 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         self.reactor.removeActiveHandle(self)
 
 
-    def cbConnect(self, rc, data, evt):
+
+    def cbConnect(self, rc, _bytes, evt):
         if rc:
             rc = connectExErrors.get(rc, rc)
             self.failIfNotConnected(error.getConnectError((rc,
@@ -323,11 +342,10 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
             # this happens if we connector.stopConnecting in
             # factory.startedConnecting
             return
-        assert _iocp.have_connectex
         self.reactor.addActiveHandle(self)
-        evt = _iocp.Event(self.cbConnect, self)
+        evt = _overlapped.Event(self.cbConnect, self)
+        rc = _overlapped.connect(self.socket, self.realAddress, evt)
 
-        rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
         if rc and rc != ERROR_IO_PENDING:
             self.cbConnect(rc, 0, evt)
 
@@ -475,6 +493,7 @@ class Port(_SocketCloser, _LogOwner):
         self.doAccept()
 
 
+
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
         """
         Stop accepting connections on this port.
@@ -555,6 +574,7 @@ class Port(_SocketCloser, _LogOwner):
 
 
     def handleAccept(self, rc, evt):
+
         if self.disconnecting or self.disconnected:
             return False
 
@@ -568,17 +588,9 @@ class Port(_SocketCloser, _LogOwner):
             evt.newskt.setsockopt(
                 socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                 struct.pack('P', self.socket.fileno()))
-            family, lAddr, rAddr = _iocp.get_accept_addrs(evt.newskt.fileno(),
-                                                          evt.buff)
-            if not _PY3:
-                # In _makesockaddr(), we use the Win32 API which
-                # gives us an address of the form: (unicode host, port).
-                # Only on Python 2 do we need to convert it to a
-                # non-unicode str.
-                # On Python 3, we leave it alone as unicode.
-                lAddr = (nativeString(lAddr[0]), lAddr[1])
-                rAddr = (nativeString(rAddr[0]), rAddr[1])
-            assert family == self.addressFamily
+            rAddr = evt.newskt.getpeername()
+            lAddr = evt.newskt.getsockname()
+            assert evt.newskt.family == self.addressFamily
 
             protocol = self.factory.buildProtocol(
                 self._addressType('TCP', rAddr[0], rAddr[1]))
@@ -596,14 +608,12 @@ class Port(_SocketCloser, _LogOwner):
 
 
     def doAccept(self):
-        evt = _iocp.Event(self.cbAccept, self)
 
-        # see AcceptEx documentation
-        evt.buff = buff = bytearray(2 * (self.addrLen + 16))
+        evt = _overlapped.Event(self.cbAccept, self)
+        evt.newskt = self.reactor.createSocket(self.addressFamily,
+                                               self.socketType)
 
-        evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
-                                                        self.socketType)
-        rc = _iocp.accept(self.socket.fileno(), newskt.fileno(), buff, evt)
+        rc = _overlapped.accept(self.socket, evt.newskt, evt)
 
         if rc and rc != ERROR_IO_PENDING:
             self.handleAccept(rc, evt)

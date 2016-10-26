@@ -14,7 +14,6 @@ from zope.interface import implementer
 
 from twisted.internet.interfaces import (IHalfCloseableProtocol, ITransport,
                                          IConsumer, IPushProducer, IAddress)
-
 from twisted.internet import _pollingfile, main
 from twisted.python.failure import Failure
 

@@ -5,7 +5,13 @@
 UDP support for IOCP reactor
 """
 
-import socket, operator, struct, warnings, errno
+from __future__ import absolute_import, division
+
+import socket
+import operator
+import struct
+import warnings
+import errno
 
 from zope.interface import implementer
 
@@ -17,8 +23,8 @@ from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
 from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
 from twisted.internet.iocpreactor.const import ERROR_PORT_UNREACHABLE
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
-
+from twisted.internet.iocpreactor import abstract
+from twisted.internet.iocpreactor import _overlapped
 
 
 @implementer(IReadWriteHandle, interfaces.IListeningPort,
@@ -32,7 +38,6 @@ class Port(abstract.FileHandle):
     """
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
-    dynamicReadBuffers = False
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
@@ -55,10 +60,6 @@ class Port(abstract.FileHandle):
         abstract.FileHandle.__init__(self, reactor)
 
         skt = socket.socket(self.addressFamily, self.socketType)
-        addrLen = _iocp.maxAddrLen(skt.fileno())
-        self.addressBuffer = bytearray(addrLen)
-        # WSARecvFrom takes an int
-        self.addressLengthBuffer = bytearray(struct.calcsize('i'))
 
 
     def _setAddressFamily(self):
@@ -129,39 +130,37 @@ class Port(abstract.FileHandle):
         self.reactor.addActiveHandle(self)
 
 
-    def cbRead(self, rc, data, evt):
+    def cbRead(self, rc, bytesRead, evt):
         if self.reading:
-            self.handleRead(rc, data, evt)
+            self.handleRead(rc, bytesRead, evt)
             self.doRead()
 
 
-    def handleRead(self, rc, data, evt):
+    def handleRead(self, rc, bytesRead, evt):
         if rc in (errno.WSAECONNREFUSED, errno.WSAECONNRESET,
                   ERROR_CONNECTION_REFUSED, ERROR_PORT_UNREACHABLE):
             if self._connectedAddr:
                 self.protocol.connectionRefused()
+        elif rc in [0, 234]:
+            # 234 == More data to be read
+            try:
+                result = evt.overlapped.getresult()[0:bytesRead]
+                addr = evt.overlapped.getRecvAddress()
+                self.protocol.datagramReceived(result, addr)
+            except:
+                log.err()
         elif rc:
             log.msg("error in recvfrom -- %s (%s)" %
                     (errno.errorcode.get(rc, 'unknown error'), rc))
-        else:
-            try:
-                self.protocol.datagramReceived(bytes(evt.buff[:data]),
-                    _iocp.makesockaddr(evt.addr_buff))
-            except:
-                log.err()
 
 
     def doRead(self):
-        evt = _iocp.Event(self.cbRead, self)
+        evt = _overlapped.Event(self.cbRead, self)
 
-        evt.buff = buff = self._readBuffers[0]
-        evt.addr_buff = addr_buff = self.addressBuffer
-        evt.addr_len_buff = addr_len_buff = self.addressLengthBuffer
-        rc, data = _iocp.recvfrom(self.getFileHandle(), buff,
-                                   addr_buff, addr_len_buff, evt)
+        rc, bytesRead = _overlapped.recvfrom(self.socket, self.readBufferSize, evt)
 
         if rc and rc != ERROR_IO_PENDING:
-            self.handleRead(rc, data, evt)
+            self.handleRead(rc, bytesRead, evt)
 
 
     def write(self, datagram, addr=None):
@@ -404,7 +403,6 @@ class MulticastMixin:
         """
         return self.reactor.resolve(addr).addCallback(self._joinAddr1,
                                                       interface, 0)
-
 
 
 @implementer(interfaces.IMulticastTransport)

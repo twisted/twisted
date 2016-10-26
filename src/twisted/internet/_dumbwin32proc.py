@@ -201,7 +201,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     raise
                 newenv = {}
                 for key, value in items(env):
-
                     key = _maybeMBCS(key)
                     value = _maybeMBCS(value)
 

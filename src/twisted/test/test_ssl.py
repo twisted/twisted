@@ -2,8 +2,9 @@
 # See LICENSE for details.
 
 """
-Tests for twisted SSL support.
+Tests for Twisted SSL support.
 """
+
 from __future__ import division, absolute_import
 
 from twisted.python.filepath import FilePath
@@ -16,7 +17,8 @@ from twisted.python.runtime import platform
 from twisted.test.test_tcp import ProperlyCloseFilesMixin
 from twisted.test.proto_helpers import waitUntilAllDisconnected
 
-import os, errno
+import os
+import errno
 
 try:
     from OpenSSL import SSL, crypto
@@ -182,13 +184,13 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 512)
+    pkey.generate_key(crypto.TYPE_RSA, 2048)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
     subject.OU = organizationalUnit
     req.set_pubkey(pkey)
-    req.sign(pkey, "md5")
+    req.sign(pkey, "sha256")
 
     # Here comes the actual certificate
     cert = crypto.X509()
@@ -198,7 +200,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     cert.set_issuer(req.get_subject())
     cert.set_subject(req.get_subject())
     cert.set_pubkey(req.get_pubkey())
-    cert.sign(pkey, "md5")
+    cert.sign(pkey, "sha256")
 
     return pkey, req, cert
 

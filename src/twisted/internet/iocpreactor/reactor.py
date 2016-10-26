@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.internet.test.test_iocp -*-
+# -*- test-case-name: twisted.internet.test.test_overlapped -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,7 +15,7 @@ from twisted.python import log, failure
 from twisted.internet._dumbwin32proc import Process
 from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 
-from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor import _overlapped
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
 from twisted.internet.iocpreactor import tcp, udp
 
@@ -51,12 +51,11 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
                   _ThreadedWin32EventsMixin):
 
-
     port = None
 
     def __init__(self):
         base.ReactorBase.__init__(self)
-        self.port = _iocp.CompletionPort()
+        self.port = _overlapped.CompletionPort(self)
         self.handles = set()
 
 
@@ -98,18 +97,18 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
             timeout = MAX_TIMEOUT
         else:
             timeout = min(MAX_TIMEOUT, int(1000*timeout))
-        rc, numBytes, key, evt = self.port.getEvent(timeout)
+        rc, _bytes, key, evt = self.port.getEvent(timeout)
         while 1:
             if rc == WAIT_TIMEOUT:
                 break
             if key != KEY_WAKEUP:
                 assert key == KEY_NORMAL
                 log.callWithLogger(evt.owner, self._callEventCallback,
-                                   rc, numBytes, evt)
+                                   rc, _bytes, evt)
                 processed_events += 1
             if processed_events >= EVENTS_PER_LOOP:
                 break
-            rc, numBytes, key, evt = self.port.getEvent(0)
+            rc, _bytes, key, evt = self.port.getEvent(0)
 
 
     def _callEventCallback(self, rc, numBytes, evt):

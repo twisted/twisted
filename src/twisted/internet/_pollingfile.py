@@ -10,6 +10,7 @@ select() - this is pretty much only useful on Windows.
 from __future__ import absolute_import, division
 
 from zope.interface import implementer
+
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.python.compat import unicode
 

@@ -5,17 +5,40 @@
 Abstract file handle class
 """
 
+from __future__ import absolute_import, division
+
+import errno
+
 from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner
+<<<<<<< HEAD:src/twisted/internet/iocpreactor/abstract.py
 from twisted.python import failure
 from twisted.python.compat import unicode
 
 from zope.interface import implementer
 import errno
+=======
+from twisted.internet.tcp import lazyByteSlice
+from twisted.python import failure, log
+from twisted.python.compat import unicode, _PY3
+
+from zope.interface import implementer
+>>>>>>> iocp-stdlib:twisted/internet/iocpreactor/abstract.py
 
 from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
 from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor import _overlapped
+
+
+def _semiBuffer(data, start=0, end=-1):
+
+    if end == -1:
+        end = len(data) - 1
+    if _PY3:
+        return data[start:end]
+    else:
+        return buffer(data, start, end)
+
 
 
 @implementer(interfaces.IPushProducer, interfaces.IConsumer,
@@ -24,9 +47,10 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     """
     File handle that can read and write asynchronously
     """
+
     # read stuff
     maxReadBuffers = 16
-    readBufferSize = 4096
+    readBufferSize = 16384*8
     reading = False
     dynamicReadBuffers = True # set this to false if subclass doesn't do iovecs
     _readNextBuffer = 0
@@ -59,51 +83,42 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     def _dispatchData(self):
         """
         Dispatch previously read data. Return True if self.reading and we don't
-        have any more data
+        have any more data.
         """
         if not self._readSize:
             return self.reading
+
         size = self._readSize
-        full_buffers = size // self.readBufferSize
-        while self._readNextBuffer < full_buffers:
-            self.dataReceived(self._readBuffers[self._readNextBuffer])
-            self._readNextBuffer += 1
-            if not self.reading:
-                return False
-        remainder = size % self.readBufferSize
-        if remainder:
-            self.dataReceived(self._readBuffers[full_buffers][0:remainder])
-        if self.dynamicReadBuffers:
-            total_buffer_size = self.readBufferSize * len(self._readBuffers)
-            # we have one buffer too many
-            if size < total_buffer_size - self.readBufferSize:
-                del self._readBuffers[-1]
-            # we filled all buffers, so allocate one more
-            elif (size == total_buffer_size and
-                  len(self._readBuffers) < self.maxReadBuffers):
-                self._readBuffers.append(bytearray(self.readBufferSize))
+        content = b"".join(self._readBuffers)
+
+        self._readBuffers = []
         self._readNextBuffer = 0
         self._readSize = 0
+
+        self.dataReceived(content)
+
         return self.reading
 
 
-    def _cbRead(self, rc, data, evt):
+    def _cbRead(self, rc, _bytes, evt):
         self._readScheduledInOS = False
-        if self._handleRead(rc, data, evt):
+        if self._handleRead(rc, _bytes, evt):
             self.doRead()
 
 
-    def _handleRead(self, rc, data, evt):
+    def _handleRead(self, rc, _bytes, evt):
         """
         Returns False if we should stop reading for now
         """
         if self.disconnected:
             return False
+
         # graceful disconnection
-        if (not (rc or data)) or rc in (errno.WSAEDISCON, ERROR_HANDLE_EOF):
+        if (rc == 0 and _bytes == 0) or rc in (errno.WSAEDISCON, ERROR_HANDLE_EOF):
             self.reactor.removeActiveHandle(self)
             self.readConnectionLost(failure.Failure(main.CONNECTION_DONE))
             return False
+
         # XXX: not handling WSAEWOULDBLOCK
         # ("too many outstanding overlapped I/O requests")
         elif rc:
@@ -112,25 +127,27 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                                     (errno.errorcode.get(rc, 'unknown'), rc))))
             return False
         else:
-            assert self._readSize == 0
+            self._readBuffers.append(
+                evt.overlapped.getresult()[0:_bytes])
+
+            assert self._readSize == 0, self._readBuffers
             assert self._readNextBuffer == 0
-            self._readSize = data
+            self._readSize = _bytes
             return self._dispatchData()
 
 
     def doRead(self):
-        evt = _iocp.Event(self._cbRead, self)
+        evt = _overlapped.Event(self._cbRead, self)
 
-        evt.buff = buff = self._readBuffers
-        rc, numBytesRead = self.readFromHandle(buff, evt)
+        rc, bytesRead = self.readFromHandle(self.readBufferSize, evt)
 
-        if not rc or rc == ERROR_IO_PENDING:
+        if rc == ERROR_IO_PENDING:
             self._readScheduledInOS = True
         else:
-            self._handleRead(rc, numBytesRead, evt)
+            self._handleRead(rc, bytesRead, evt)
 
 
-    def readFromHandle(self, bufflist, evt):
+    def readFromHandle(self, len, evt):
         raise NotImplementedError() # TODO: this should default to ReadFile
 
 
@@ -187,17 +204,18 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self.doWrite()
 
 
-    def _cbWrite(self, rc, numBytesWritten, evt):
-        if self._handleWrite(rc, numBytesWritten, evt):
+    def _cbWrite(self, rc, _bytes, evt):
+        if self._handleWrite(rc, _bytes, evt):
             self.doWrite()
 
 
-    def _handleWrite(self, rc, numBytesWritten, evt):
+    def _handleWrite(self, rc, _bytes, evt):
         """
         Returns false if we should stop writing for now
         """
         if self.disconnected or self._writeDisconnected:
             return False
+
         # XXX: not handling WSAEWOULDBLOCK
         # ("too many outstanding overlapped I/O requests")
         if rc:
@@ -206,7 +224,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                                     (errno.errorcode.get(rc, 'unknown'), rc))))
             return False
         else:
-            self.offset += numBytesWritten
+            self.offset += _bytes
             # If there is nothing left to send,
             if self.offset == len(self.dataBuffer) and not self._tempDataLen:
                 self.dataBuffer = b""
@@ -233,26 +251,30 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
     def doWrite(self):
-        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
+
+        from twisted.internet.abstract import _concatenate
+
+        if (len(self.dataBuffer) - self.offset) < self.SEND_LIMIT:
             # If there is currently less than SEND_LIMIT bytes left to send
             # in the string, extend it with the array data.
-            self.dataBuffer = (self.dataBuffer[self.offset:] +
-                               b"".join(self._tempDataBuffer))
+            self.dataBuffer = _concatenate(self.dataBuffer, self.offset,
+                                           self._tempDataBuffer)
             self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
 
-        evt = _iocp.Event(self._cbWrite, self)
+        evt = _overlapped.Event(self._cbWrite, self)
 
         # Send as much data as you can.
         if self.offset:
-            sendView = memoryview(self.dataBuffer)
-            evt.buff = buff = sendView[self.offset:]
+            buff = _concatenate(self.dataBuffer, self.offset, [])
         else:
-            evt.buff = buff = self.dataBuffer
-        rc, data = self.writeToHandle(buff, evt)
-        if rc and rc != ERROR_IO_PENDING:
-            self._handleWrite(rc, data, evt)
+            buff = self.dataBuffer
+
+        rc, bytesWritten = self.writeToHandle(buff, evt)
+
+        if rc != ERROR_IO_PENDING:
+            self._handleWrite(rc, bytesWritten, evt)
 
 
     def writeToHandle(self, buff, evt):
@@ -260,7 +282,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
     def write(self, data):
-        """Reliably write some data.
+        """
+        Reliably write some data.
 
         The data is buffered until his file descriptor is ready for writing.
         """
@@ -310,7 +333,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self.reactor = reactor
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
-        self._readBuffers = [bytearray(self.readBufferSize)]
+        self._readBuffers = []
 
 
     def connectionLost(self, reason):
@@ -324,7 +347,6 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
         Clean up state here, but make sure to call back up to FileDescriptor.
         """
-
         self.disconnected = True
         self.connected = False
         if self.producer is not None:
@@ -358,7 +380,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             if self._writeDisconnected:
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
-                self.stopWriting
+                self.stopWriting()
                 self.connectionLost(_connDone)
             else:
                 self.stopReading()

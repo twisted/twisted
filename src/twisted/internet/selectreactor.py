@@ -21,7 +21,9 @@ from twisted.python.runtime import platformType
 
 
 def win32select(r, w, e, timeout=None):
-    """Win32 select wrapper."""
+    """
+    C{select()} wrapper for Windows.
+    """
     if not (r or w):
         # windows select() exits immediately when no sockets
         if timeout is None:

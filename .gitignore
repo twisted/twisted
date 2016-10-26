@@ -1,7 +1,7 @@
 *.egg-info/
 .eggs/
 *.o
-*.py[co]
+*.py[cod]
 *.so
 *.DS_Store
 _trial_temp*/
