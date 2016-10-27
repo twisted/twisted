@@ -1180,19 +1180,19 @@ class Key(object):
         """
         type = self.type()
         data = self.data()
-        if type == b'RSA':
+        if type == 'RSA':
             return (common.NS(b'ssh-rsa') + common.MP(data['n']) +
                     common.MP(data['e']) + common.MP(data['d']) +
                     common.MP(data['u']) + common.MP(data['p']) +
                     common.MP(data['q']))
-        elif type == b'DSA':
+        elif type == 'DSA':
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        elif type == b'EC':
+        elif type == 'EC':
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['privateValue']))
-        elif type == b'ED25519':
+        elif type == 'ED25519':
             return (common.NS(b'ssh-ed25519') + common.NS(data))
         else:
             raise BadKeyError("unknown key type %s" % (type,))
@@ -1382,13 +1382,13 @@ class Key(object):
         @return: A signature for the given data.
         """
         keyType = self.type()  # takes care of bad key type.
-        if keyType == b'RSA':
+        if keyType == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
             signer.update(data)
             ret = common.NS(signer.finalize())
 
-        elif keyType == b'DSA':
+        elif keyType == 'DSA':
             signer = self._keyObject.signer(hashes.SHA1())
             signer.update(data)
             signature = signer.finalize()
@@ -1398,7 +1398,7 @@ class Key(object):
             # are just numbers, and could be any length from 0 to 160 bits.
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
-        elif keyType == b'EC':  # pragma: no branch
+        elif keyType == 'EC':  # pragma: no branch
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1433,7 +1433,7 @@ class Key(object):
                 sb = b"\x00" + sb
 
             ret = common.NS(common.NS(rb) + common.NS(sb))
-        elif keyType == b'ED25519':
+        elif keyType == 'ED25519':
             sk = nacl.signing.SigningKey(self._keyObject.serialize())
             ret = common.NS(sk.sign(data)[:nacl.bindings.crypto_sign_BYTES])
         else:
@@ -1514,7 +1514,7 @@ class Key(object):
         verifier.update(data)
         try:
             verifier.verify()
-        except InvalidSignature:
+        except:
             return False
         else:
             return True

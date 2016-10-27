@@ -523,7 +523,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         if self.service:
             self.service.serviceStopped()
-        if hasattr(self, b'avatar'):
+        if hasattr(self, 'avatar'):
             self.logoutFunction()
         log.msg(b'connection lost')
 
