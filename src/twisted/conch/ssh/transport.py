@@ -16,7 +16,7 @@ import binascii
 import hmac
 import struct
 import zlib
-import base64
+#import base64
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
