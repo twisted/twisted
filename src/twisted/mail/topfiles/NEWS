@@ -1,19 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Mail 16.5.0rc1 (2016-10-10)
-===================================
-
-Deprecations and Removals
--------------------------
- - twisted.mail.protocols.DomainSMTP and DomainESMTP, deprecated since
-   2003, have been removed. (#8772)
-
-Other
------
- - #6289, #8525, #8786, #8830
-
-
 Twisted Mail 16.4.1 (2016-09-07)
 ================================
 

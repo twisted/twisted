@@ -1,24 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Web 16.5.0rc1 (2016-10-10)
-==================================
-
-Bugfixes
---------
- - twisted.web.client.HTTPConnectionPool and anything that uses it,
-   like twisted.web.client.Agent, have had their logic for resuming
-   transports changed so that transports are resumed after state
-   machine transitions are complete, rather than before. This change
-   allows the HTTP client infrastructure to work with alternative HTTP
-   implementations such as HTTP/2 which may be able to deliver a
-   complete response synchronously when producing is resumed. (#8720)
-
-Other
------
- - #8519, #8530, #8629, #8707, #8777, #8778, #8844
-
-
 Twisted Web 16.4.1 (2016-09-07)
 ===============================
 
