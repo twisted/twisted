@@ -391,28 +391,28 @@ class Key(object):
         kind = lines[0][11:-17]
         if lines[1].startswith(b'Proc-Type: 4,ENCRYPTED'):
             if not passphrase:
-                raise EncryptedKeyError(b'Passphrase must be provided '
-                                        b'for an encrypted key')
+                raise EncryptedKeyError('Passphrase must be provided '
+                                        'for an encrypted key')
 
             # Determine cipher and initialization vector
             try:
                 _, cipherIVInfo = lines[2].split(b' ', 1)
                 cipher, ivdata = cipherIVInfo.rstrip().split(b',', 1)
             except ValueError:
-                raise BadKeyError(b'invalid DEK-info %r' % (lines[2],))
+                raise BadKeyError('invalid DEK-info %r' % (lines[2],))
 
             if cipher == b'AES-128-CBC':
                 algorithmClass = algorithms.AES
                 keySize = 16
                 if len(ivdata) != 32:
-                    raise BadKeyError(b'AES encrypted key with a bad IV')
+                    raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
                 algorithmClass = algorithms.TripleDES
                 keySize = 24
                 if len(ivdata) != 16:
-                    raise BadKeyError(b'DES encrypted key with a bad IV')
+                    raise BadKeyError('DES encrypted key with a bad IV')
             else:
-                raise BadKeyError(b'unknown encryption type %r' % (cipher,))
+                raise BadKeyError('unknown encryption type %r' % (cipher,))
 
             # Extract keyData for decoding
             iv = bytes(bytearray([int(ivdata[i:i + 2], 16)
@@ -449,7 +449,7 @@ class Key(object):
                 decodedKey = berDecoder.decode(keyData)[0]
             except PyAsn1Error as e:
                 raise BadKeyError(
-                    b'Failed to decode key (Bad Passphrase?): %s' % (e,))
+                    'Failed to decode key (Bad Passphrase?): %s' % (e,))
 
             if kind == b'RSA':
                 if len(decodedKey) == 2:  # Alternate RSA key
@@ -1301,16 +1301,16 @@ class Key(object):
         type = self.type()
 
         # No support for EC keys yet.
-        if self.type() == b'EC':
+        if self.type() == 'EC':
             raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
 
         if self.isPublic():
-            if type == b'RSA':
+            if type == 'RSA':
                 keyData = sexpy.pack([[b'public-key',
                                        [b'rsa-pkcs1-sha1',
                                         [b'n', common.MP(data['n'])[4:]],
                                         [b'e', common.MP(data['e'])[4:]]]]])
-            elif type == b'DSA':
+            elif type == 'DSA':
                 keyData = sexpy.pack([[b'public-key',
                                        [b'dsa',
                                         [b'p', common.MP(data['p'])[4:]],
@@ -1322,7 +1322,7 @@ class Key(object):
             return (b'{' + encodebytes(keyData).replace(b'\n', b'') +
                     b'}')
         else:
-            if type == b'RSA':
+            if type == 'RSA':
                 p, q = data['p'], data['q']
                 return sexpy.pack([[b'private-key',
                                     [b'rsa-pkcs1',
@@ -1336,7 +1336,7 @@ class Key(object):
                                      [b'b', common.MP(
                                          data['d'] % (p - 1))[4:]],
                                      [b'c', common.MP(data['u'])[4:]]]]])
-            elif type == b'DSA':
+            elif type == 'DSA':
                 return sexpy.pack([[b'private-key',
                                     [b'dsa',
                                      [b'p', common.MP(data['p'])[4:]],
