@@ -84,6 +84,22 @@ class VersionsTests(TestCase):
         self.assertTrue(vb == vb)
 
 
+    def test_versionComparisonCaseInsensitive(self):
+        """
+        Version packages are compared case insensitively.
+        """
+        va = Version("twisted", 1, 0, 0)
+        vb = Version("Twisted", 0, 1, 0)
+        self.assertTrue(va > vb)
+        self.assertTrue(vb < va)
+        self.assertTrue(va >= vb)
+        self.assertTrue(vb <= va)
+        self.assertTrue(va != vb)
+        self.assertTrue(vb == Version("twisted", 0, 1, 0))
+        self.assertTrue(vb == Version("TWISted", 0, 1, 0))
+        self.assertTrue(vb == vb)
+
+
     def test_comparingPrereleasesWithReleases(self):
         """
         Prereleases are always less than versions without prereleases.

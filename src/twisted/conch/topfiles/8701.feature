@@ -1,1 +1,0 @@
-SSH key fingerprints can be generated using base64 encoded SHA256 hashes.

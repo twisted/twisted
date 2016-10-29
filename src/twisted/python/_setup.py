@@ -86,19 +86,20 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    tls=['pyopenssl >= 16.0.0',
-         'service_identity',
-         'idna >= 0.6'],
-    conch=['gmpy',
-           'pyasn1',
-           'cryptography >= 0.9.1',
-           'appdirs >= 1.4.0',
-           ],
+    tls=[
+        'pyopenssl >= 16.0.0',
+        'service_identity',
+        'idna >= 0.6'],
+    conch=[
+        'pyasn1',
+        'cryptography >= 0.9.1',
+        'appdirs >= 1.4.0',
+    ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.3.0, < 3.0',
+    http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
@@ -128,6 +129,7 @@ _EXTRAS_REQUIRE = {
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
+    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
@@ -135,7 +137,6 @@ _CONSOLE_SCRIPTS = [
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [
     "cftp = twisted.conch.scripts.cftp:run",
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "conch = twisted.conch.scripts.conch:run",
     "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
@@ -223,12 +224,12 @@ def getSetupArgs(extensions=_EXTENSIONS):
         requirements = ["zope.interface >= 3.6.0"]
 
     requirements.append("constantly >= 15.1")
-    requirements.append("incremental >= 16.10.0")
+    requirements.append("incremental >= 16.10.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
         use_incremental=True,
-        setup_requires=["incremental >= 16.10.0"],
+        setup_requires=["incremental >= 16.10.1"],
         install_requires=requirements,
         entry_points={
             'console_scripts': _CONSOLE_SCRIPTS
@@ -361,7 +362,6 @@ notPortedModules = [
     "twisted.conch.client.connect",
     "twisted.conch.client.direct",
     "twisted.conch.test.test_cftp",
-    "twisted.conch.test.test_ckeygen",
     "twisted.conch.test.test_conch",
     "twisted.conch.test.test_manhole",
     "twisted.conch.ui.__init__",

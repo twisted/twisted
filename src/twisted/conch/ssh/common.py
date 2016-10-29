@@ -7,6 +7,7 @@ Common functions for the SSH classes.
 
 Maintainer: Paul Swartz
 """
+
 from __future__ import absolute_import, division
 
 import struct
@@ -14,7 +15,11 @@ import struct
 from twisted.conch.ssh._cryptography_backports import (
     intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
 
-from twisted.python.compat import _PY3, long
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
+
+__all__ = ["NS", "getNS", "MP", "getMP", "ffs"]
+
 
 
 def NS(t):
@@ -87,56 +92,8 @@ def ffs(c, s):
 
 
 
-getMP_py = getMP
-MP_py = MP
-_MPpow_py = _MPpow
-pyPow = pow
-
-
-
-def _fastgetMP(data, count=1):
-    mp = []
-    c = 0
-    for i in range(count):
-        length = struct.unpack('!L', data[c:c + 4])[0]
-        mp.append(long(
-            gmpy.mpz(data[c + 4:c + 4 + length][::-1] + b'\x00', 256)))
-        c += length + 4
-    return tuple(mp) + (data[c:],)
-
-
-
-def _fastMP(i):
-    i2 = gmpy.mpz(i).binary()[::-1]
-    return struct.pack('!L', len(i2)) + i2
-
-
-
-def _fastMPpow(x, y, z=None):
-    r = pyPow(gmpy.mpz(x), y, z).binary()[::-1]
-    return struct.pack('!L', len(r)) + r
-
-
-
+@deprecated(Version("Twisted", 16, 5, 0))
 def install():
-    global getMP, MP, _MPpow
-    getMP = _fastgetMP
-    MP = _fastMP
-    _MPpow = _fastMPpow
-    # XXX: We override builtin pow so that other code can benefit too.
-    # This is monkeypatching, and therefore VERY BAD.
-    def _fastpow(x, y, z=None, mpz=gmpy.mpz):
-        if type(x) in (long, int):
-            x = mpz(x)
-        return pyPow(x, y, z)
-    if _PY3:
-        __builtins__['pow'] = _fastpow
-    else:
-        import __builtin__
-        __builtin__.pow = _fastpow
-
-try:
-    import gmpy
-    install()
-except ImportError:
+    # This used to install gmpy, but is technically public API, so just do
+    # nothing.
     pass

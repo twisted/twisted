@@ -1,0 +1,2 @@
+The IOCP reactor no longer transmits the contents of uninitialized memory when
+writing large amounts of data.
