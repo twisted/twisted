@@ -187,7 +187,7 @@ class HostnameResolutionTest(UnitTest):
         self.getter.addResultForHost(u"sample.example.com", ("4.3.2.1", 0))
         resolution = self.resolver.resolveHostName(receiver,
                                                    u"sample.example.com")
-        self.assertIdentical(receiver._resolution, resolution)
+        self.assertIs(receiver._resolution, resolution)
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, False)
         self.worker()
@@ -212,7 +212,7 @@ class HostnameResolutionTest(UnitTest):
                                      family=AF_INET6)
         resolution = self.resolver.resolveHostName(receiver,
                                                    u"sample.example.com")
-        self.assertIdentical(receiver._resolution, resolution)
+        self.assertIs(receiver._resolution, resolution)
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, False)
         self.worker()
