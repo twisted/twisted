@@ -221,3 +221,20 @@ class HostnameResolutionTest(UnitTest):
         self.assertEqual(receiver._addresses,
                          [IPv6Address('TCP', '::1', 0, flowInfo, scopeID)])
 
+
+    def test_gaierror(self):
+        """
+        Resolving a hostname that results in C{getaddrinfo} raising a
+        L{gaierror} will result in the L{IResolutionReceiver} receiving a call
+        to C{resolutionComplete} with no C{addressResolved} calls in between;
+        no failure is logged.
+        """
+        receiver = ResultHolder(self)
+        resolution = self.resolver.resolveHostName(receiver,
+                                                   u"sample.example.com")
+        self.assertIs(receiver._resolution, resolution)
+        self.worker()
+        self.reactwork()
+        self.assertEqual(receiver._started, True)
+        self.assertEqual(receiver._ended, True)
+        self.assertEqual(receiver._addresses, [])
