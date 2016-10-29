@@ -20,6 +20,7 @@ import shutil
 
 from datetime import date
 from io import BytesIO as StringIO
+from urllib2 import urlopen
 
 from twisted.trial.unittest import TestCase
 
@@ -56,6 +57,29 @@ else:
         pydoctorSkip = "Pydoctor is too old."
     else:
         pydoctorSkip = skip
+
+
+from twisted.python._release import intersphinxURLs
+
+def checkIntersphinxSkip():
+    """
+    Determine if we should skip the intersphinx tests.
+
+    @return: a skip message if we can't retrieve any of the relevant URLs.
+    """
+    skip = ""
+    for iu in intersphinxURLs:
+        try:
+            opened = urlopen(iu)
+        except Exception as e:
+            skip += "could not retrieve {} because {}\n".format(iu, e)
+        else:
+            opened.close()
+    if skip:
+        return skip
+
+if not pydoctorSkip:
+    pydoctorSkip = checkIntersphinxSkip()
 
 
 if not skip and which("sphinx-build"):
