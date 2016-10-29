@@ -49,8 +49,6 @@ class DeterministicThreadPool(ThreadPool, object):
         self._team = team
 
 
-errorLogger = Logger()
-
 def deterministicPool():
     """
     Create a deterministic threadpool.
@@ -59,12 +57,9 @@ def deterministicPool():
         C{work} is called, do the work.
     """
     worker, doer = createMemoryWorker()
-    def logIt():
-        failure = Failure()
-        errorLogger.failure("thread call failed", failure)
     return (
         DeterministicThreadPool(Team(LockWorker(Lock(), local()),
-                                     (lambda: worker), logIt)),
+                                     (lambda: worker), lambda: None)),
         doer
     )
 
@@ -158,6 +153,26 @@ class ResultHolder(object):
         Hostname resolution is complete.
         """
         self._ended = True
+
+
+
+class HelperTests(UnitTest):
+    """
+    Tests for error cases of helpers used in this module.
+    """
+
+    def test_logErrorsInThreads(self):
+        """
+        L{DeterministicThreadPool} will log any exceptions that its "thread"
+        workers encounter.
+        """
+        self.pool, self.worker = deterministicPool()
+        def divideByZero():
+            return 1 / 0
+        self.pool.callInThread(divideByZero)
+        self.worker()
+        self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
+
 
 
 
