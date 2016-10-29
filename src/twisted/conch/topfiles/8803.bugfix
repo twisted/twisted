@@ -1,1 +1,0 @@
-twisted.conch.insults.insults.ServerProtocol no longer corrupts a client's display when attempting to set the cursor position, and its ECMA-48 terminal manipulation works on Python 3.
