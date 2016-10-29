@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel now resumes producing on finished, non-persistent connections. This prevents HTTP/1 servers using TLS from leaking a CLOSE_WAIT socket per request.
