@@ -12,7 +12,7 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-from socket import getaddrinfo, AF_INET, AF_INET6
+from socket import getaddrinfo, AF_INET, AF_INET6, gaierror
 
 from zope.interface import implementer
 
@@ -65,8 +65,12 @@ class GAIResolver(object):
         """
         @see: L{IHostnameResolver.resolveHostName}
         """
-        d = deferToThreadPool(self._reactor, self._threadpool,
-                              self._getaddrinfo, hostName, portNumber)
+        def get():
+            try:
+                return self._getaddrinfo(hostName, portNumber)
+            except gaierror:
+                return []
+        d = deferToThreadPool(self._reactor, self._threadpool, get)
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
         @d.addCallback
