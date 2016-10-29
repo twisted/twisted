@@ -24,8 +24,6 @@ from twisted.internet.interfaces import IResolutionReceiver
 from twisted.trial.unittest import (
     SynchronousTestCase as UnitTest
 )
-from twisted.python.failure import Failure
-from twisted.logger import Logger
 
 from twisted.python.threadpool import ThreadPool
 from twisted._threads import createMemoryWorker, Team, LockWorker
