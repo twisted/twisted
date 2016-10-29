@@ -1,1 +1,0 @@
-SSHUserAuthServer does not crash on keyboard interactive authentication when running on Python 3

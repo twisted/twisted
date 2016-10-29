@@ -101,7 +101,7 @@ _EXTRA_OPTIONS = dict(
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.3.0, < 3.0',
+    http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
@@ -226,12 +226,12 @@ def getSetupArgs(extensions=_EXTENSIONS):
         requirements = ["zope.interface >= 3.6.0"]
 
     requirements.append("constantly >= 15.1")
-    requirements.append("incremental >= 16.10.0")
+    requirements.append("incremental >= 16.10.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
         use_incremental=True,
-        setup_requires=["incremental >= 16.10.0"],
+        setup_requires=["incremental >= 16.10.1"],
         install_requires=requirements,
         entry_points={
             'console_scripts': _CONSOLE_SCRIPTS
