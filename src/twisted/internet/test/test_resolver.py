@@ -34,7 +34,7 @@ from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet._resolver import GAIResolver
 
 
-class DeterministicThreadPool(ThreadPool):
+class DeterministicThreadPool(ThreadPool, object):
     """
     Create a deterministic L{ThreadPool} object.
     """
