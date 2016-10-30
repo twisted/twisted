@@ -813,18 +813,18 @@ def ensureDeferred(coro):
     if version_info >= (3, 4, 0):
         from asyncio import iscoroutine
 
-        if iscoroutine(func) or isinstance(func, GeneratorType):
-            return _inlineCallbacks(None, func, Deferred())
+        if iscoroutine(coro) or isinstance(coro, GeneratorType):
+            return _inlineCallbacks(None, coro, Deferred())
 
     elif version_info >= (3, 3, 0):
-        if isinstance(func, GeneratorType):
-            return _inlineCallbacks(None, func, Deferred())
+        if isinstance(coro, GeneratorType):
+            return _inlineCallbacks(None, coro, Deferred())
 
-    if not isinstance(func, Deferred):
-        raise ValueError("%r is not a coroutine or a Deferred" % (func,))
+    if not isinstance(coro, Deferred):
+        raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
 
     # Must be a Deferred
-    return func
+    return coro
 
 
 
