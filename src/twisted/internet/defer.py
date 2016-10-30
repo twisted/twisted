@@ -21,7 +21,7 @@ from __future__ import division, absolute_import, print_function
 import traceback
 import types
 import warnings
-from sys import exc_info
+from sys import exc_info, version_info
 from functools import wraps
 from incremental import Version
 
@@ -733,7 +733,13 @@ class Deferred:
         result = getattr(self, 'result', _NO_RESULT)
         if result is _NO_RESULT:
             return self
-        raise StopIteration(result)
+        if isinstance(result, failure.Failure):
+            # Clear the failure on debugInfo so it doesn't raise "unhandled
+            # exception"
+            self._debugInfo.failResult = None
+            raise result.value
+        else:
+            raise StopIteration(result)
 
 
     # For PEP-492 support (async/await)
@@ -767,7 +773,10 @@ def _cancelledToTimedOutError(value, timeout):
 
 def ensureDeferred(coro):
     """
-    Transform a coroutine that uses L{Deferred}s into a L{Deferred} itself.
+    Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
+    wrapping it in a L{Deferred} that will fire on success/failure of the
+    coroutine. If a Deferred is passed to this function, it will be returned
+    directly (mimicing C{asyncio}'s C{ensure_future} function).
 
     Coroutine functions return a coroutine object, similar to how generators
     work. This function turns that coroutine into a Deferred, meaning that it
@@ -792,8 +801,31 @@ def ensureDeferred(coro):
             return d
 
         react(main)
+
+    @param coro: The coroutine object to schedule, or a L{Deferred}.
+    @type coro: A Python 3.5+ C{async def} C{coroutine}, a Python 3.3+
+        C{yield from} using L{types.GeneratorType}, or a L{Deferred}.
+
+    @rtype: L{Deferred}
     """
-    return _inlineCallbacks(None, coro, Deferred())
+    from types import GeneratorType
+
+    if version_info >= (3, 4, 0):
+        from asyncio import iscoroutine
+
+        if iscoroutine(func) or isinstance(func, GeneratorType):
+            return _inlineCallbacks(None, func, Deferred())
+
+    elif version_info >= (3, 3, 0):
+        if isinstance(func, GeneratorType):
+            return _inlineCallbacks(None, func, Deferred())
+
+    if not isinstance(func, Deferred):
+        raise ValueError("%r is not a coroutine or a Deferred" % (func,))
+
+    # Must be a Deferred
+    return func
+
 
 
 
