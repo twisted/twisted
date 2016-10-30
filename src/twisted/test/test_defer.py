@@ -2919,3 +2919,27 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         self.assertEqual(dCallbacked[0], success)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
+
+
+
+class EnsureDeferredTests(unittest.TestCase):
+    """
+    Tests for L{twisted.internet.defer.ensureDeferred}.
+    """
+
+    def test_passesThroughDeferreds(self):
+        """
+        L{defer.ensureDeferred} will pass through a Deferred unchanged.
+        """
+        d = defer.Deferred()
+        d2 = defer.ensureDeferred(d)
+        self.assertIs(d, d2)
+
+
+    def test_willNotAllowNonDeferredOrCoroutine(self):
+        """
+        Passing L{defer.ensureDeferred} a non-coroutine and a non-Deferred will
+        raise a L{ValueError}.
+        """
+        with self.assertRaises(ValueError) as e:
+            defer.ensureDeferred("something")
