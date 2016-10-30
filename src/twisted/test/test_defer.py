@@ -2941,5 +2941,5 @@ class EnsureDeferredTests(unittest.TestCase):
         Passing L{defer.ensureDeferred} a non-coroutine and a non-Deferred will
         raise a L{ValueError}.
         """
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ValueError):
             defer.ensureDeferred("something")
