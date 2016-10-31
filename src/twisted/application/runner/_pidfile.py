@@ -54,8 +54,8 @@ class PIDFile(object):
             exist.
         @rtype: L{int}
 
-        @raise L{EnvironmentError}: If this PID file cannot be read.
-        @raise L{ValueError}: If this PID file's content is invalid.
+        @raise EnvironmentError: If this PID file cannot be read.
+        @raise ValueError: If this PID file's content is invalid.
         """
         pidString = b""
         try:
@@ -79,7 +79,7 @@ class PIDFile(object):
         @param pid: A PID to store.
         @type pid: L{int}
 
-        @raise L{EnvironmentError}: If this PID file cannot be written.
+        @raise EnvironmentError: If this PID file cannot be written.
         """
         self.filePath.setContent(self.format(pid=pid))
 
@@ -88,7 +88,7 @@ class PIDFile(object):
         """
         Store the PID of the current process in this PID file.
 
-        @raise L{EnvironmentError}: If this PID file cannot be written.
+        @raise EnvironmentError: If this PID file cannot be written.
         """
         self.write(getpid())
 
@@ -97,7 +97,7 @@ class PIDFile(object):
         """
         Remove this PID file.
 
-        @raise L{EnvironmentError}: If this PID file cannot be removed.
+        @raise EnvironmentError: If this PID file cannot be removed.
         """
         self.filePath.remove()
 
@@ -111,8 +111,8 @@ class PIDFile(object):
         PID is currently running; false otherwise.
         @rtype: L{bool}
 
-        @raise L{EnvironmentError}: If this PID file cannot be read.
-        @raise L{ValueError}: If this PID file's content is invalid.
+        @raise EnvironmentError: If this PID file cannot be read.
+        @raise InvalidPIDFileError: If this PID file's content is invalid.
         """
         try:
             pid = self.read()
