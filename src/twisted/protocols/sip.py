@@ -240,8 +240,7 @@ class Via(object):
         elif self.rportValue is not None:
             s += ";rport=%s" % (self.rport,)
 
-        etc = self.otherParams.items()
-        etc.sort()
+        etc = sorted(self.otherParams.items())
         for k, v in etc:
             if v is None:
                 s += ";" + k
