@@ -90,7 +90,7 @@ statusCodes = {
 
     500: "Internal Server Error",
     501: "Not Implemented",
-    502: "Bad Gateway", # no donut
+    502: "Bad Gateway", # No donut
     503: "Service Unavailable",
     504: "Server Time-out",
     505: "SIP Version not supported",
@@ -277,7 +277,7 @@ def parseViaHeader(value):
     else:
         result["host"] = by
     for p in params:
-        # it's the comment-striping dance!
+        # It's the comment-striping dance!
         p = p.strip().split(" ", 1)
         if len(p) == 1:
             p, comment = p[0], ""
@@ -434,7 +434,7 @@ def parseAddress(address, host=None, port=None, clean=0):
     @param clean: remove unnecessary info, usually for From and To headers.
     """
     address = address.strip()
-    # simple 'sip:foo' case
+    # Simple 'sip:foo' case
     if address.startswith("sip:"):
         return "", parseURL(address, host=host, port=port), {}
     params = {}
@@ -454,7 +454,7 @@ def parseAddress(address, host=None, port=None, clean=0):
             k, v = l.split("=")
             params[k] = v
     if clean:
-        # rfc 2543 6.21
+        # RFC 2543 6.21
         url.ttl = None
         url.headers = {}
         url.transport = None
@@ -488,7 +488,7 @@ class Message:
     length = None
 
     def __init__(self):
-        self.headers = OrderedDict() # map name to list of values
+        self.headers = OrderedDict() # Map name to list of values
         self.body = ""
         self.finished = 0
 
@@ -583,7 +583,7 @@ class MessagesParser(basic.LineReceiver):
     version = "SIP/2.0"
     acceptResponses = 1
     acceptRequests = 1
-    state = "firstline" # or "headers", "body" or "invalid"
+    state = "firstline" # Or "headers", "body" or "invalid"
 
     debug = 0
 
@@ -594,8 +594,8 @@ class MessagesParser(basic.LineReceiver):
 
     def reset(self, remainingData=""):
         self.state = "firstline"
-        self.length = None # body length
-        self.bodyReceived = 0 # how much of the body we received
+        self.length = None # Body length
+        self.bodyReceived = 0 # How much of the body we received
         self.message = None
         self.header = None
         self.setLineMode(remainingData)
@@ -607,7 +607,9 @@ class MessagesParser(basic.LineReceiver):
 
 
     def dataDone(self):
-        # clear out any buffered data that may be hanging around
+        """
+        Clear out any buffered data that may be hanging around.
+        """
         self.clearLineBuffer()
         if self.state == "firstline":
             return
@@ -615,13 +617,13 @@ class MessagesParser(basic.LineReceiver):
             self.reset()
             return
         if self.length == None:
-            # no content-length header, so end of data signals message done
+            # No content-length header, so end of data signals message done
             self.messageDone()
         elif self.length < self.bodyReceived:
-            # aborted in the middle
+            # Aborted in the middle
             self.reset()
         else:
-            # we have enough data and message wasn't finished? something is wrong
+            # We have enough data and message wasn't finished? something is wrong
             raise RuntimeError("this should never happen")
 
 
@@ -661,7 +663,7 @@ class MessagesParser(basic.LineReceiver):
                 self.invalidMessage()
                 return
             if a == "SIP/2.0" and self.acceptResponses:
-                # response
+                # Response
                 try:
                     code = int(b)
                 except ValueError:
@@ -678,12 +680,12 @@ class MessagesParser(basic.LineReceiver):
         else:
             assert self.state == "headers"
         if line:
-            # multiline header
+            # Multiline header
             if line.startswith(" ") or line.startswith("\t"):
                 name, value = self.header
                 self.header = name, (value + line.lstrip())
             else:
-                # new header
+                # New header
                 if self.header:
                     self.message.addHeader(*self.header)
                     self.header = None
@@ -919,7 +921,7 @@ class Proxy(Base):
 
     PORT = PORT
 
-    locator = None # object implementing ILocator
+    locator = None # Object implementing ILocator
 
     def __init__(self, host=None, port=PORT):
         """
@@ -941,7 +943,7 @@ class Proxy(Base):
 
 
     def handle_request(self, message, addr):
-        # send immediate 100/trying message before processing
+        # Send immediate 100/trying message before processing
         #self.deliverResponse(self.responseFromRequest(100, message))
         f = getattr(self, "handle_%s_request" % message.method, None)
         if f is None:
@@ -977,14 +979,14 @@ class Proxy(Base):
 
         viaHeader = self.getVia()
         if viaHeader.toString() in message.headers["via"]:
-            # must be a loop, so drop message
+            # Must be a loop, so drop message
             log.msg("Dropping looped message.")
             return
 
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
 
-        # this is broken and needs refactoring to use cred
+        # This is broken and needs refactoring to use cred
         d = self.locator.getAddress(uri)
         d.addCallback(self.sendMessage, message)
         d.addErrback(self._cantForwardRequest, message)
@@ -992,7 +994,7 @@ class Proxy(Base):
 
     def _cantForwardRequest(self, error, message):
         error.trap(LookupError)
-        del message.headers["via"][0] # this'll be us
+        del message.headers["via"][0] # This'll be us
         self.deliverResponse(self.responseFromRequest(404, message))
 
 
@@ -1027,14 +1029,14 @@ class Proxy(Base):
         """
         v = parseViaHeader(message.headers["via"][0])
         if (v.host, v.port) != (self.host, self.port):
-            # we got a message not intended for us?
+            # We got a message not intended for us?
             # XXX note this check breaks if we have multiple external IPs
             # yay for suck protocols
             log.msg("Dropping incorrectly addressed message")
             return
         del message.headers["via"][0]
         if not message.headers["via"]:
-            # this message is addressed to us
+            # This message is addressed to us
             self.gotResponse(message, addr)
             return
         self.deliverResponse(message)
@@ -1079,7 +1081,7 @@ class RegisterProxy(Proxy):
 
     portal = None
 
-    registry = None # should implement IRegistry
+    registry = None # Should implement IRegistry
 
     authorizers = {}
 
@@ -1236,8 +1238,8 @@ class InMemoryRegistry:
     A simplistic registry for a specific domain.
     """
     def __init__(self, domain):
-        self.domain = domain # the domain we handle registration for
-        self.users = {} # map username to (IDelayedCall for expiry, address URI)
+        self.domain = domain # The domain we handle registration for
+        self.users = {} # Map username to (IDelayedCall for expiry, address URI)
 
 
     def getAddress(self, userURI):
