@@ -12,7 +12,7 @@ from io import BytesIO
 from twisted.python.filepath import FilePath
 
 from ...runner import _pidfile
-from .._pidfile import PIDFile, AlreadyRunningError
+from .._pidfile import PIDFile, AlreadyRunningError, InvalidPIDFileError
 
 import twisted.trial.unittest
 from twisted.trial.unittest import SkipTest
@@ -44,20 +44,22 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_readWithoutPID(self):
         """
-        L{PIDFile.read} raises ValueError when given an empty file path.
+        L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
+        path.
         """
         pidFile = PIDFile(DummyFilePath(b""))
 
-        self.assertRaises(ValueError, pidFile.read)
+        self.assertRaises(InvalidPIDFileError, pidFile.read)
 
 
     def test_readWithBogusPID(self):
         """
-        L{PIDFile.read} raises ValueError when given an invalid file path.
+        L{PIDFile.read} raises L{InvalidPIDFileError} when given an invalid
+        file path.
         """
         pidFile = PIDFile(DummyFilePath(b"not a pid"))
 
-        self.assertRaises(ValueError, pidFile.read)
+        self.assertRaises(InvalidPIDFileError, pidFile.read)
 
 
     def test_writeDefault(self):
@@ -85,7 +87,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_writePIDInvalid(self):
         """
-        L{PIDFile.write} raises ValueError when given an invalid PID.
+        L{PIDFile.write} raises L{ValueError} when given an invalid PID.
         """
         pidFile = PIDFile(DummyFilePath())
 

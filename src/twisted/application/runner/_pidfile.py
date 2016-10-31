@@ -66,7 +66,10 @@ class PIDFile(object):
                 return None
             raise
 
-        return int(pidString)
+        try:
+            return int(pidString)
+        except ValueError:
+            raise InvalidPIDFileError("non-integer PID value in PID file")
 
 
     def write(self, pid=None):
@@ -196,4 +199,11 @@ nonePIDFile = NonePIDFile()
 class AlreadyRunningError(Exception):
     """
     Process is already running.
+    """
+
+
+
+class InvalidPIDFileError(Exception):
+    """
+    PID file contents are invalid.
     """

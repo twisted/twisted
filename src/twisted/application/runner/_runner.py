@@ -19,7 +19,7 @@ from twisted.logger import (
 )
 from twisted.internet import default as defaultReactor
 from ._exit import exit, ExitStatus
-from ._pidfile import nonePIDFile, AlreadyRunningError
+from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError
 
 
 
@@ -77,7 +77,7 @@ class Runner(object):
                 except EnvironmentError:
                     exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
                     return  # When testing, patched exit doesn't exit
-                except ValueError:
+                except InvalidPIDFileError:
                     exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
                     return  # When testing, patched exit doesn't exit
 
