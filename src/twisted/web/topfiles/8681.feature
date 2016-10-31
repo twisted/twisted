@@ -1,0 +1,1 @@
+twisted.web.server.Site's HTTP/2 server support now emits vastly fewer WINDOW_UPDATE frames than previously.

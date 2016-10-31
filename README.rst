@@ -1,4 +1,4 @@
-Twisted 16.4.1
+Twisted 16.5.0
 ==============
 
 |pypi|
@@ -8,14 +8,10 @@ Twisted 16.4.1
 
 .. code::
 
-    <@glyph> wait
-    <@glyph> twisted.reviews is ... $24... dollars...
-    <@glyph> okay I did it
-    <@glyph> I think I might be falling off the wagon
-    * idnar flips the "days since glyph has bought a vanity domain name" counter back over to zero
+    <runciter> it's a consultancy about nothing
+    <meejah> we could call it Scrumfeld
 
-
-For information on what's new in Twisted 16.4.1, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.5.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
