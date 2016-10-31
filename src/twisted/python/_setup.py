@@ -97,9 +97,11 @@ _EXTRA_OPTIONS = dict(
     ],
     soap=['soappy'],
     serial=['pyserial'],
-    osx=['pyobjc'],
+    osx=['pyobjc-core',
+         'pyobjc-framework-CFNetwork',
+         'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.3.0, < 3.0',
+    http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
