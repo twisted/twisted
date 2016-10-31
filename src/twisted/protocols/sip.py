@@ -20,6 +20,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
+from twisted.python.compat import _PY3, unicode
 
 PORT = 5060
 
@@ -582,6 +583,8 @@ class MessagesParser(basic.LineReceiver):
 
     def dataReceived(self, data):
         try:
+            if isinstance(data, unicode):
+                data = data.encode("utf-8")
             basic.LineReceiver.dataReceived(self, data)
         except:
             log.err()
@@ -595,6 +598,9 @@ class MessagesParser(basic.LineReceiver):
         self.invalidMessage()
 
     def lineReceived(self, line):
+        if _PY3 and isinstance(line, bytes):
+            line = line.decode("utf-8")
+
         if self.state == "firstline":
             while line.startswith("\n") or line.startswith("\r"):
                 line = line[1:]
@@ -666,6 +672,8 @@ class MessagesParser(basic.LineReceiver):
 
     def rawDataReceived(self, data):
         assert self.state in ("body", "invalid")
+        if _PY3 and isinstance(data, bytes):
+            data = data.decode("utf-8")
         if self.state == "invalid":
             return
         if self.length == None:
@@ -753,7 +761,10 @@ class Base(protocol.DatagramProtocol):
             raise RuntimeError("only UDP currently supported")
         if self.debug:
             log.msg("Sending %r to %r" % (message.toString(), destURL))
-        self.transport.write(message.toString(), (destURL.host, destURL.port or self.PORT))
+        data = message.toString()
+        if isinstance(data, unicode):
+            data = data.encode("utf-8")
+        self.transport.write(data, (destURL.host, destURL.port or self.PORT))
 
     def handle_request(self, message, addr):
         """Override to define behavior for requests received
