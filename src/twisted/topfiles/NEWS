@@ -1,6 +1,91 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.5.0 (2016-10-28)
+================================
+
+Features
+--------
+ - Added twisted.internet.defer.Deferred.addTimeout method to enable
+   timeouts of deferreds. (#5786)
+ - Perspective Broker (the twisted.spread package) has been ported to
+   Python 3 (#7598)
+ - 'yield from' can now be used on Deferreds inside generators, when
+   the generator is wrapped with
+   twisted.internet.defer.ensureDeferred. (#8087)
+ - twisted.internet.asyncioreactor has been added, which is a Twisted
+   reactor on top of Python 3.4+'s native asyncio reactor. It can be
+   selected by passing "--reactor=asyncio" to Twisted tools (twistd,
+   Trial, etc) on platforms that support it (Python 3.4+). (#8367)
+ - twisted.python.zippath now works on Windows with Python 3. (#8747)
+ - twisted.internet.cfreactor is ported to Python 3 and supported on
+   2.7 and 3.5+. (#8838)
+
+Bugfixes
+--------
+ - twisted.internet.test.test_iocp and twisted.internet.test.test_tcp
+   have been fixed to work under Python 3 with the Windows IOCP
+   reactor (#8631)
+ - Arguments to processes on Windows are now passed mbcs-encoded
+   arguments.  This prevents process-related tests from hanging on
+   Windows with Python 3. (#8735)
+ - Client and server TLS connections made via the client TLS endpoint
+   and the server SSL endpoint, as well as any other code that uses
+   twisted.internet.ssl.CertificateOptions, no longer accept 3DES-
+   based cipher suites by default, to defend against SWEET32. (#8781)
+ - twisted.logger.jsonFileLogObserver no longer emits non-JSON
+   tracebacks into its file; additionally,
+   twisted.logger.formatEventAsClassicLogText now includes traceback
+   information for the log event it formats. (#8858)
+ - twisted.python.version now exports a version of Incremental that is
+   16.10.1 or higher, making t.p.v.Version package name comparisons
+   case-insensitive. (#8863)
+ - twisted.python.reflect.safe_str encodes unicode as ascii with
+   backslashreplace error handling on Python 2. (#8864)
+
+Improved Documentation
+----------------------
+ - The twisted.internet.interfaces.IProtocol.dataReceived() method
+   takes one parameter of type bytes.  This has been clarified in the
+   doc string. (#8763)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python.constants is deprecated in preference to constantly
+   on PyPI, which is the same code rolled into its own package.
+   (#7351)
+ - twisted.python.dist3 has been made private API. (#8761)
+ - When the source code is checked out, bin/trial is no longer in the
+   tree.  Developers working on the Twisted source code itself should
+   either (1) run all tests under tox, or (2) run 'python setup.py
+   develop' to install trial before running any tests. (#8765)
+ - twisted.protocols.gps, deprecated since Twisted 15.2, has been
+   removed. (#8787)
+
+Other
+-----
+ - #4926, #7868, #8209, #8214, #8271, #8308, #8324, #8348, #8367,
+   #8377, #8378, #8379, #8380, #8381, #8383, #8385, #8387, #8388,
+   #8389, #8391, #8392, #8393, #8394, #8397, #8406, #8410, #8412,
+   #8413, #8414, #8421, #8425, #8426, #8430, #8432, #8434, #8435,
+   #8437, #8438, #8439, #8444, #8451, #8452, #8453, #8454, #8456,
+   #8457, #8459, #8462, #8463, #8465, #8468, #8469, #8479, #8482,
+   #8483, #8486, #8490, #8493, #8494, #8496, #8497, #8498, #8499,
+   #8501, #8503, #8504, #8507, #8508, #8510, #8513, #8514, #8515,
+   #8516, #8517, #8520, #8521, #8522, #8523, #8524, #8527, #8528,
+   #8529, #8531, #8532, #8534, #8536, #8537, #8538, #8543, #8544,
+   #8548, #8552, #8553, #8554, #8555, #8557, #8560, #8563, #8565,
+   #8568, #8569, #8572, #8573, #8574, #8580, #8581, #8582, #8586,
+   #8589, #8590, #8592, #8593, #8598, #8603, #8604, #8606, #8609,
+   #8615, #8616, #8617, #8618, #8619, #8621, #8622, #8624, #8627,
+   #8628, #8630, #8632, #8634, #8640, #8644, #8645, #8646, #8647,
+   #8662, #8664, #8666, #8668, #8671, #8672, #8677, #8678, #8684,
+   #8691, #8702, #8705, #8706, #8716, #8719, #8724, #8725, #8727,
+   #8734, #8741, #8749, #8752, #8754, #8755, #8756, #8757, #8758,
+   #8767, #8773, #8776, #8779, #8780, #8785, #8788, #8789, #8790,
+   #8792, #8793, #8799, #8808, #8817, #8839, #8845, #8852
+
+
 Twisted Core 16.4.1 (2016-09-07)
 ================================
 
