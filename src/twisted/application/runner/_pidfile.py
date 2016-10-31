@@ -54,8 +54,8 @@ class PIDFile(object):
             exist.
         @rtype: L{int}
 
-        @raise EnvironmentError: If this PID file cannot be read.
-        @raise ValueError: If this PID file's content is invalid.
+        @raise L{EnvironmentError}: If this PID file cannot be read.
+        @raise L{ValueError}: If this PID file's content is invalid.
         """
         pidString = b""
         try:
@@ -77,7 +77,7 @@ class PIDFile(object):
             process ID.
         @type pid: L{int}
 
-        @raise EnvironmentError: If this PID file cannot be written.
+        @raise L{EnvironmentError}: If this PID file cannot be written.
         """
         if pid is None:
             pid = getpid()
@@ -91,7 +91,7 @@ class PIDFile(object):
         """
         Remove this PID file.
 
-        @raise EnvironmentError: If this PID file cannot be removed.
+        @raise L{EnvironmentError}: If this PID file cannot be removed.
         """
         self.filePath.remove()
 
@@ -105,8 +105,8 @@ class PIDFile(object):
         PID is currently running; false otherwise.
         @rtype: L{bool}
 
-        @raise EnvironmentError: If this PID file cannot be read.
-        @raise ValueError: If this PID file's content is invalid.
+        @raise L{EnvironmentError}: If this PID file cannot be read.
+        @raise L{ValueError}: If this PID file's content is invalid.
         """
         pid = self.read()
         if pid is None:
