@@ -63,7 +63,7 @@ class PIDFile(object):
                 break
         except OSError as e:
             if e.errno == errno.ENOENT:  # No such file
-                return None
+                raise NoPIDFound("PID file does not exist")
             raise
 
         try:
@@ -111,8 +111,9 @@ class PIDFile(object):
         @raise L{EnvironmentError}: If this PID file cannot be read.
         @raise L{ValueError}: If this PID file's content is invalid.
         """
-        pid = self.read()
-        if pid is None:
+        try:
+            pid = self.read()
+        except NoPIDFound:
             return False
 
         try:
@@ -206,4 +207,11 @@ class AlreadyRunningError(Exception):
 class InvalidPIDFileError(Exception):
     """
     PID file contents are invalid.
+    """
+
+
+
+class NoPIDFound(Exception):
+    """
+    No PID found in PID file.
     """
