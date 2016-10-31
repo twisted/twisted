@@ -20,7 +20,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3, iteritems, unicode
 
 PORT = 5060
 
@@ -999,7 +999,7 @@ class RegisterProxy(Proxy):
 
     def unauthorized(self, message, host, port):
         m = self.responseFromRequest(401, message)
-        for (scheme, auth) in self.authorizers.iteritems():
+        for (scheme, auth) in iteritems(self.authorizers):
             chal = auth.getChallenge((host, port))
             if chal is None:
                 value = '%s realm="%s"' % (scheme.title(), self.host)
