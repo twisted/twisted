@@ -113,6 +113,8 @@ class PIDFile(object):
 
         @raise EnvironmentError: If this PID file cannot be read.
         @raise InvalidPIDFileError: If this PID file's content is invalid.
+        @raise StalePIDFileError: If this PID file's content refers to a PID
+            for which there is no corresponding running process.
         """
         try:
             pid = self.read()
@@ -123,9 +125,9 @@ class PIDFile(object):
             kill(pid, 0)
         except OSError as e:
             if e.errno == errno.ESRCH:  # No such process
-                self._log.info("Removing stale PID file: {log_source}")
-                self.remove()
-                return False
+                raise StalePIDFileError(
+                    "PID file refers to non-existing process"
+                )
             elif e.errno == errno.EPERM:  # Not permitted to kill
                 return True
             else:
@@ -143,8 +145,11 @@ class PIDFile(object):
         @raise AlreadyRunningError: A process corresponding to the PID in this
             PID file is already running.
         """
-        if self.isRunning():
-            raise AlreadyRunningError()
+        try:
+            if self.isRunning():
+                raise AlreadyRunningError()
+        except StalePIDFileError:
+            self._log.info("Replacing stale PID file: {log_source}")
         self.writeRunningPID()
         return self
 
@@ -210,6 +215,14 @@ class AlreadyRunningError(Exception):
 class InvalidPIDFileError(Exception):
     """
     PID file contents are invalid.
+    """
+
+
+
+class StalePIDFileError(Exception):
+    """
+    PID file contents are valid, but there is no process with the referenced
+    PID.
     """
 
 

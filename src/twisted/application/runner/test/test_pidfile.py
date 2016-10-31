@@ -13,7 +13,8 @@ from twisted.python.filepath import FilePath
 
 from ...runner import _pidfile
 from .._pidfile import (
-    PIDFile, AlreadyRunningError, InvalidPIDFileError, NoPIDFound
+    PIDFile, AlreadyRunningError, InvalidPIDFileError, StalePIDFileError,
+    NoPIDFound,
 )
 
 import twisted.trial.unittest
@@ -148,8 +149,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_isRunningDoesNotExist(self):
         """
-        L{PIDFile.isRunning} returns false for a process that does not exist
-        (errno=ESRCH).
+        L{PIDFile.isRunning} raises L{StalePIDFileError} for a process that
+        does not exist (errno=ESRCH).
         """
         pidFile = PIDFile(DummyFilePath())
         pidFile.write(1337)
@@ -159,7 +160,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
         self.patch(_pidfile, "kill", kill)
 
-        self.assertFalse(pidFile.isRunning())
+        self.assertRaises(StalePIDFileError, pidFile.isRunning)
 
 
     def test_isRunningNotAllowed(self):
@@ -239,6 +240,26 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
             self.assertEqual(pidFile.read(), getpid())
 
         self.assertFalse(pidFile.filePath.exists())
+
+
+    def test_contextManagerDoesntExist(self):
+        """
+        When used as a context manager, a L{PIDFile} will replace the
+        underlying PIDFile rather than raising L{AlreadyRunningError} if the
+        contained PID file exists but refers to a non-running PID.
+        """
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.write(1337)
+
+        def kill(pid, signal):
+            raise OSError(errno.ESRCH, "No such process")
+
+        self.patch(_pidfile, "kill", kill)
+
+        self.assertRaises(StalePIDFileError, pidFile.isRunning)
+
+        with pidFile:
+            self.assertEqual(pidFile.read(), getpid())
 
 
     def test_contextManagerAlreadyRunning(self):
