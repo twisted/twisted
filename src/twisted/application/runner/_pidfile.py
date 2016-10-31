@@ -35,7 +35,7 @@ class PIDFile(object):
         @return: Formatted PID file contents.
         @rtype: L{bytes}
         """
-        return u"{}\n".format(pid).encode("utf-8")
+        return u"{}\n".format(int(pid)).encode("utf-8")
 
 
     def __init__(self, filePath):
@@ -72,22 +72,25 @@ class PIDFile(object):
             raise InvalidPIDFileError("non-integer PID value in PID file")
 
 
-    def write(self, pid=None):
+    def write(self, pid):
         """
         Store a PID in this PID file.
 
-        @param pid: A PID to store.  If C{None}, store the currently running
-            process ID.
+        @param pid: A PID to store.
         @type pid: L{int}
 
         @raise L{EnvironmentError}: If this PID file cannot be written.
         """
-        if pid is None:
-            pid = getpid()
-        else:
-            pid = int(pid)
-
         self.filePath.setContent(self.format(pid=pid))
+
+
+    def writeRunningPID(self):
+        """
+        Store the PID of the current process in this PID file.
+
+        @raise L{EnvironmentError}: If this PID file cannot be written.
+        """
+        self.write(getpid())
 
 
     def remove(self):
@@ -142,7 +145,7 @@ class PIDFile(object):
         """
         if self.isRunning():
             raise AlreadyRunningError()
-        self.write()
+        self.writeRunningPID()
         return self
 
 

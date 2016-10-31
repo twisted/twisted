@@ -75,17 +75,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertEqual(pid, pidFile.read())
 
 
-    def test_writeDefault(self):
-        """
-        L{PIDFile.write} with no C{pid} argument stores the PID for the current
-            process.
-        """
-        pidFile = PIDFile(DummyFilePath())
-        pidFile.write()
-
-        self.assertEqual(pidFile.read(), getpid())
-
-
     def test_writePID(self):
         """
         L{PIDFile.write} stores the given PID.
@@ -105,6 +94,16 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath())
 
         self.assertRaises(ValueError, pidFile.write, u"burp")
+
+
+    def test_writeRunningPID(self):
+        """
+        L{PIDFile.writeRunningPID} stores the PID for the current process.
+        """
+        pidFile = PIDFile(DummyFilePath())
+        pidFile.writeRunningPID()
+
+        self.assertEqual(pidFile.read(), getpid())
 
 
     def test_remove(self):
@@ -142,7 +141,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         testing of our chosen method for probing the existence of a process.
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write()
+        pidFile.writeRunningPID()
 
         self.assertTrue(pidFile.isRunning())
 
@@ -208,7 +207,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         value from L{os.kill} is not an expected one.
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write()
+        pidFile.writeRunningPID()
 
         def kill(pid, signal):
             raise OSError(errno.EEXIST, "File exists")
