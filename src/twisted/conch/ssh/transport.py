@@ -525,7 +525,7 @@ class SSHTransportBase(protocol.Protocol):
             self.service.serviceStopped()
         if hasattr(self, 'avatar'):
             self.logoutFunction()
-        log.msg(b'connection lost')
+        log.msg('connection lost')
 
 
     def connectionMade(self):
@@ -1286,7 +1286,7 @@ class SSHServerTransport(SSHTransportBase):
             try:
                 curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
             except KeyError:
-                raise UnsupportedAlgorithm(b'unused-key')
+                raise UnsupportedAlgorithm('unused-key')
 
             # Generate the private key
             ecPriv = ec.generate_private_key(curve, default_backend())
@@ -1589,7 +1589,7 @@ class SSHClientTransport(SSHTransportBase):
                 # Find the base curve info
                 self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
             except KeyError:
-                raise UnsupportedAlgorithm(b'unused-key')
+                raise UnsupportedAlgorithm('unused-key')
 
             #Generate the keys
             self.ecPriv = ec.generate_private_key(self.curve, default_backend())
