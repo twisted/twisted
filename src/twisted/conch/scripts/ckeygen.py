@@ -141,7 +141,7 @@ def generateECDSAkey(options):
         options['bits'] = 256
     # OpenSSH supports only nistp curves.
     # See https://www.openssh.com/txt/release-5.7
-    curve  = 'nistp' + str(options['bits'])
+    curve  = b'nistp' + str(options['bits']).encode('ascii')
     keyPrimitive = ec.generate_private_key(
         curve=keys._curveTable[curve],
         backend=default_backend()

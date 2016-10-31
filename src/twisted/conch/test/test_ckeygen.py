@@ -18,7 +18,8 @@ if requireModule('cryptography') and requireModule('pyasn1'):
         BadFingerPrintFormat, FingerprintFormats)
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint,
-        _saveKey, enumrepresentation)
+        _saveKey, enumrepresentation,
+        generateRSAkey, generateDSAkey, generateECDSAkey)
 else:
     skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
 
@@ -134,6 +135,42 @@ class KeyGenTests(TestCase):
             printFingerprint({'filename': filename, 'format':'sha-base64'})
         self.assertEqual('Unsupported fingerprint format: sha-base64',
             em.exception.args[0])
+
+
+
+    def _testgeneratekey(self, generator, keyType, keySize):
+        """
+        L{generateRSAkey}, L{generateDSAkey}, L{generateECSAkey} generates public/private
+        keypair according to specfied parameter and calls L{_saveKey} on the generated key.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        if keyType == 'EC':
+            filenameString = 'id_ecdsa'
+        else:
+            filenameString = 'id_' + keyType.lower()
+        filename = base.child(filenameString).path
+        generator({'filename': filename, 'pass': 'passphrase', 'format': 'md5-hex',
+            'bits': keySize})
+        if keySize is None:
+            if keyType == 'EC':
+                keySize = 256
+            else:
+                keySize = 1024
+        privKey = Key.fromString(base.child(filenameString).getContent(), None, 'passphrase')
+        pubKey = Key.fromString(base.child(filenameString + '.pub').getContent())
+        self.assertEqual(privKey.type(), keyType)
+        self.assertTrue(pubKey.isPublic())
+        self.assertEqual(pubKey.size(), keySize)
+
+
+    def test_keygenerator(self):
+        self._testgeneratekey(generateECDSAkey, 'EC', 384)
+        self._testgeneratekey(generateECDSAkey, 'EC', None)
+        self._testgeneratekey(generateRSAkey, 'RSA', 2048)
+        self._testgeneratekey(generateRSAkey, 'RSA', None)
+        self._testgeneratekey(generateDSAkey, 'DSA', 2048)
+        self._testgeneratekey(generateDSAkey, 'DSA', None)
 
 
     def test_saveKey(self):
