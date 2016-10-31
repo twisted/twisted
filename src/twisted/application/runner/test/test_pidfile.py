@@ -31,13 +31,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertEqual(PIDFile.format(pid=1337), b"1337\n")
 
 
-    def test_formatWithoutPID(self):
-        """
-        L{PIDFile.format} returns the expected format when not given a PID.
-        """
-        self.assertEqual(PIDFile.format(), b"")
-
-
     def test_readWithPID(self):
         """
         L{PIDFile.read} returns the PID from the given file path.

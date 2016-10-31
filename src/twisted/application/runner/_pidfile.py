@@ -25,7 +25,7 @@ class PIDFile(object):
 
 
     @staticmethod
-    def format(pid=None):
+    def format(pid):
         """
         Format a PID file's content.
 
@@ -35,10 +35,7 @@ class PIDFile(object):
         @return: Formatted PID file contents.
         @rtype: L{bytes}
         """
-        if pid is not None:
-            return u"{}\n".format(pid).encode("utf-8")
-        else:
-            return b""
+        return u"{}\n".format(pid).encode("utf-8")
 
 
     def __init__(self, filePath):
