@@ -7,7 +7,6 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 
 import getpass
 import sys
-import argparse
 
 from io import BytesIO, StringIO
 
@@ -69,8 +68,8 @@ class KeyGenTests(TestCase):
     def test_runecdsa(self):
         sys.argv = ['ckeygen', '-t', 'ecdsa', '-f', 'test_ecdsa']
         run()
-        privKey = Key.fromString(base.child('test_ecdsa').getContent(), None, 'passphrase')
-        pubKey = Key.fromString(base.child('test_ecdsa.pub').getContent())
+        privKey = Key.fromFile('test_ecdsa')
+        pubKey = Key.fromFile('test_ecdsa.pub')
         self.assertEqual(privKey.type(), 'EC')
         self.assertTrue(pubKey.isPublic())
 
@@ -79,8 +78,8 @@ class KeyGenTests(TestCase):
     def test_rundsa(self):
         sys.argv = ['ckeygen', '-t', 'dsa', '-f', 'test_dsa']
         run()
-        privKey = Key.fromString(base.child('test_dsa').getContent(), None, 'passphrase')
-        pubKey = Key.fromString(base.child('test_dsa.pub').getContent())
+        privKey = Key.fromFile('test_dsa')
+        pubKey = Key.fromFile('test_dsa.pub')
         self.assertEqual(privKey.type(), 'DSA')
         self.assertTrue(pubKey.isPublic())
 
@@ -89,8 +88,8 @@ class KeyGenTests(TestCase):
     def test_rundsa(self):
         sys.argv = ['ckeygen', '-t', 'rsa', '-f', 'test_rsa']
         run()
-        privKey = Key.fromString(base.child('test_rsa').getContent(), None, 'passphrase')
-        pubKey = Key.fromString(base.child('test_rsa.pub').getContent())
+        privKey = Key.fromFile('test_rsa')
+        pubKey = Key.fromFile('test_rsa.pub')
         self.assertEqual(privKey.type(), 'RSA')
         self.assertTrue(pubKey.isPublic())
 
