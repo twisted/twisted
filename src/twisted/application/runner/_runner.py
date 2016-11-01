@@ -169,7 +169,7 @@ class RunnerOptions(Names):
         Corresponding value: L{IReactorCore}.
     @type reactor: L{NamedConstant}
 
-    @cvar pidFile: The path to the PID file.
+    @cvar pidFile: The PID file to use.
         Corresponding value: L{PIDFile}.
     @type pidFile: L{NamedConstant}
 
