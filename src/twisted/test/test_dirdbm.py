@@ -87,14 +87,15 @@ class DirDbmTests(unittest.TestCase):
         assert dbitems == copyitems, ".copyTo().items() didn't match: %s != %s" % (repr(dbkeys), repr(copyitems))
 
         d2.clear()
-        assert len(d2.keys()) == len(d2.values()) == len(d2.items()) == 0, ".clear() failed"
+        assert (len(list(d2.keys())) == len(d2.values()) ==
+                len(d2.items()) == 0, ".clear() failed")
         shutil.rmtree(copyPath)
 
         # delete items
         for k, v in self.items:
             del d[k]
             self.assertNotIn(k, d, "key is still in database, even though we deleted it")
-        assert len(d.keys()) == 0, "database has keys"
+        assert len(list(d.keys())) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
 
