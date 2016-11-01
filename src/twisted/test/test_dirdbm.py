@@ -10,6 +10,7 @@ from base64 import b64decode
 
 from twisted.trial import unittest
 from twisted.persisted import dirdbm
+from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 
 
@@ -37,6 +38,9 @@ class DirDbmTests(unittest.TestCase):
         s['key'] = 'value'
         rebuild.rebuild(dirdbm)
         # print s['key']
+    if _PY3:
+        testRebuildInteraction.skip=(
+            "Does not work on Python 3 (https://tm.tl/8887)")
 
 
     def testDbm(self):
