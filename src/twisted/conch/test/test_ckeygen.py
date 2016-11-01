@@ -7,6 +7,7 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 
 import getpass
 import sys
+import subprocess
 
 from io import BytesIO, StringIO
 
@@ -66,38 +67,38 @@ class KeyGenTests(TestCase):
 
 
     def test_runecdsa(self):
-        sys.argv = ['ckeygen', '-t', 'ecdsa', '-f', 'test_ecdsa', '--no-passphrase']
-        run()
-        privKey = Key.fromFile('test_ecdsa')
-        pubKey = Key.fromFile('test_ecdsa.pub')
+        filename = self.mktemp()
+        subprocess.call(['ckeygen', '-t', 'ecdsa', '-f', filename, '--no-passphrase'])
+        privKey = Key.fromFile(filename)
+        pubKey = Key.fromFile(filename + '.pub')
         self.assertEqual(privKey.type(), 'EC')
         self.assertTrue(pubKey.isPublic())
 
 
 
     def test_rundsa(self):
-        sys.argv = ['ckeygen', '-t', 'dsa', '-f', 'test_dsa', '--no-passphrase']
-        run()
-        privKey = Key.fromFile('test_dsa')
-        pubKey = Key.fromFile('test_dsa.pub')
+        filename = self.mktemp()
+        subprocess.call(['ckeygen', '-t', 'dsa', '-f', filename, '--no-passphrase'])
+        privKey = Key.fromFile(filename)
+        pubKey = Key.fromFile(filename + '.pub')
         self.assertEqual(privKey.type(), 'DSA')
         self.assertTrue(pubKey.isPublic())
 
 
 
     def test_runrsa(self):
-        sys.argv = ['ckeygen', '-t', 'rsa', '-f', 'test_rsa', '--no-passphrase']
-        run()
-        privKey = Key.fromFile('test_rsa')
-        pubKey = Key.fromFile('test_rsa.pub')
+        filename = self.mktemp()
+        subprocess.call(['ckeygen', '-t', 'rsa', '-f', filename, '--no-passphrase'])
+        privKey = Key.fromFile(filename)
+        pubKey = Key.fromFile(filename + '.pub')
         self.assertEqual(privKey.type(), 'RSA')
         self.assertTrue(pubKey.isPublic())
 
 
     def test_runBadKeytype(self):
-        sys.argv = ['ckeygen', '-t', 'foo', '-f', 'test_foo']
+        filename = self.mktemp()
         with self.assertRaises(SystemExit) as em:
-            run()
+            subprocess.call(['ckeygen', '-t', 'foo', '-f', filename])
         self.assertEqual(
             'Key type was foo, must be one of: rsa, dsa, ecdsa',
             em.exception.args[0])
