@@ -9,7 +9,6 @@ PID file.
 import errno
 from os import getpid, kill
 
-from twisted.python.filepath import IFilePath
 from twisted.logger import Logger
 
 
@@ -43,7 +42,7 @@ class PIDFile(object):
         @param filePath: The path to the PID file on disk.
         @type filePath: L{IFilePath}
         """
-        self.filePath = IFilePath(filePath)
+        self.filePath = filePath
 
 
     def read(self):
