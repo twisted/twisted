@@ -7,9 +7,14 @@ Session Initialization Protocol tests.
 """
 
 from twisted.cred import portal, checkers
-from twisted.internet import asyncioreactor, defer, reactor
+from twisted.internet import defer, reactor
 from twisted.protocols import sip
 from twisted.trial import unittest
+
+try:
+    from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+except:
+    AsyncioSelectorReactor = None
 
 from zope.interface import implementer
 
@@ -607,7 +612,7 @@ class RegistrationTests(unittest.TestCase):
         #
         # XX: See http://tm.tl/8886
         #
-        if type(reactor) != asyncioreactor.AsyncioSelectorReactor:
+        if type(reactor) != AsyncioSelectorReactor:
             self.assertTrue(
                 int(m.headers["expires"][0]) in (3600, 3601, 3599, 3598))
         self.assertEqual(len(self.registry.users), 1)
