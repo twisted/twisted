@@ -20,14 +20,14 @@ class DirDbmTests(unittest.TestCase):
     def setUp(self):
         self.path = FilePath(self.mktemp())
         self.dbm = dirdbm.open(self.path.path)
-        self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
+        self.items = ((b'abc', b'foo'), (b'/lalal', b'\000\001'), (b'\000\012', b'baz'))
 
 
     def testAll(self):
         k = b64decode("//==")
-        self.dbm[k] = "a"
-        self.dbm[k] = "a"
-        self.assertEqual(self.dbm[k], "a")
+        self.dbm[k] = b"a"
+        self.dbm[k] = b"a"
+        self.assertEqual(self.dbm[k], b"a")
 
 
     def testRebuildInteraction(self):
@@ -35,7 +35,7 @@ class DirDbmTests(unittest.TestCase):
         from twisted.python import rebuild
 
         s = dirdbm.Shelf('dirdbm.rebuild.test')
-        s['key'] = 'value'
+        s[b'key'] = b'value'
         rebuild.rebuild(dirdbm)
         # print s['key']
     if _PY3:
@@ -62,7 +62,7 @@ class DirDbmTests(unittest.TestCase):
 
         # check non existent key
         try:
-            d["XXX"]
+            d[b"XXX"]
         except KeyError:
             pass
         else:
@@ -115,28 +115,28 @@ class DirDbmTests(unittest.TestCase):
         # write(). I consider this a kernel bug, but it is beyond the scope
         # of this test. Thus we keep the range of acceptability to 3 seconds time.
         # -warner
-        self.dbm["k"] = "v"
-        self.assertTrue(abs(time.time() - self.dbm.getModificationTime("k")) <= 3)
+        self.dbm[b"k"] = b"v"
+        self.assertTrue(abs(time.time() - self.dbm.getModificationTime(b"k")) <= 3)
 
 
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash"""
-        k = self.dbm._encode("key1")
+        k = self.dbm._encode(b"key1")
         with self.path.child(k + b".rpl").open(mode="wb") as f:
-            f.write("value")
+            f.write(b"value")
 
-        k2 = self.dbm._encode("key2")
+        k2 = self.dbm._encode(b"key2")
         with self.path.child(k2).open(mode="wb") as f:
-            f.write("correct")
+            f.write(b"correct")
         with self.path.child(k2 + b".rpl").open(mode="wb") as f:
-            f.write("wrong")
+            f.write(b"wrong")
 
         with self.path.child("aa.new").open(mode="wb") as f:
-            f.write("deleted")
+            f.write(b"deleted")
 
         dbm = dirdbm.DirDBM(self.path.path)
-        assert dbm["key1"] == "value"
-        assert dbm["key2"] == "correct"
+        assert dbm[b"key1"] == b"value"
+        assert dbm[b"key2"] == b"correct"
         assert not self.path.globChildren("*.new")
         assert not self.path.globChildren("*.rpl")
 
@@ -166,8 +166,8 @@ class ShelfTests(DirDbmTests):
     def setUp(self):
         self.path = FilePath(self.mktemp())
         self.dbm = dirdbm.Shelf(self.path.path)
-        self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'),
-                      ('int', 12), ('float', 12.0), ('tuple', (None, 12)))
+        self.items = ((b'abc', b'foo'), (b'/lalal', b'\000\001'), (b'\000\012', b'baz'),
+                      (b'int', 12), (b'float', 12.0), (b'tuple', (None, 12)))
 
 
 testCases = [DirDbmTests, ShelfTests]
