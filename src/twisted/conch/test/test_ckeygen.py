@@ -7,6 +7,7 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 
 import getpass
 import sys
+import argparse
 
 from io import BytesIO, StringIO
 
@@ -18,7 +19,7 @@ if requireModule('cryptography') and requireModule('pyasn1'):
         BadFingerPrintFormat, FingerprintFormats)
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint,
-        _saveKey, enumrepresentation,
+        _saveKey, enumrepresentation, run,
         generateRSAkey, generateDSAkey, generateECDSAkey)
 else:
     skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
@@ -62,6 +63,46 @@ class KeyGenTests(TestCase):
         else:
             self.stdout = BytesIO()
         self.patch(sys, 'stdout', self.stdout)
+
+
+
+    def test_runecdsa(self):
+        sys.argv = ['ckeygen', '-t', 'ecdsa', '-f', 'test_ecdsa']
+        run()
+        privKey = Key.fromString(base.child('test_ecdsa').getContent(), None, 'passphrase')
+        pubKey = Key.fromString(base.child('test_ecdsa.pub').getContent())
+        self.assertEqual(privKey.type(), 'EC')
+        self.assertTrue(pubKey.isPublic())
+
+
+
+    def test_rundsa(self):
+        sys.argv = ['ckeygen', '-t', 'dsa', '-f', 'test_dsa']
+        run()
+        privKey = Key.fromString(base.child('test_dsa').getContent(), None, 'passphrase')
+        pubKey = Key.fromString(base.child('test_dsa.pub').getContent())
+        self.assertEqual(privKey.type(), 'DSA')
+        self.assertTrue(pubKey.isPublic())
+
+
+
+    def test_rundsa(self):
+        sys.argv = ['ckeygen', '-t', 'rsa', '-f', 'test_rsa']
+        run()
+        privKey = Key.fromString(base.child('test_rsa').getContent(), None, 'passphrase')
+        pubKey = Key.fromString(base.child('test_rsa.pub').getContent())
+        self.assertEqual(privKey.type(), 'RSA')
+        self.assertTrue(pubKey.isPublic())
+
+
+    def test_runBadKeytype(self):
+        sys.argv = ['ckeygen', '-t', 'foo', '-f', 'test_foo']
+        with self.assertRaises(SystemExit) as em:
+            run()
+        self.assertEqual(
+            'Key type was foo, must be one of: rsa, dsa, ecdsa',
+            em.exception.args[0])
+
 
 
     def test_enumrepresentation(self):
