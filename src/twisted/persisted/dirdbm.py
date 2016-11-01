@@ -135,13 +135,13 @@ class DirDBM:
         assert type(v) == bytes, "DirDBM value must be bytes"
         k = self._encode(k)
 
-        # we create a new file with extension .new, write the data to it, and
+        # We create a new file with extension .new, write the data to it, and
         # if the write succeeds delete the old file and rename the new one.
         old = self._dnamePath.child(k)
         if old.exists():
-            new = old.siblingExtension(".rpl") # replacement entry
+            new = old.siblingExtension(".rpl") # Replacement entry
         else:
-            new = old.siblingExtension(".new") # new entry
+            new = old.siblingExtension(".new") # New entry
         try:
             self._writeFile(new, v)
         except:
