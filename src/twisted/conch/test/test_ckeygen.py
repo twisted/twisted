@@ -85,7 +85,7 @@ class KeyGenTests(TestCase):
 
 
 
-    def test_rundsa(self):
+    def test_runrsa(self):
         sys.argv = ['ckeygen', '-t', 'rsa', '-f', 'test_rsa']
         run()
         privKey = Key.fromFile('test_rsa')
