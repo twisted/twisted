@@ -5,19 +5,20 @@
 Test cases for dirdbm module.
 """
 
-import os, shutil, glob
+import os, shutil
 from base64 import b64decode
 
 from twisted.trial import unittest
 from twisted.persisted import dirdbm
+from twisted.python.filepath import FilePath
 
 
 
 class DirDbmTests(unittest.TestCase):
 
     def setUp(self):
-        self.path = self.mktemp()
-        self.dbm = dirdbm.open(self.path)
+        self.path = FilePath(self.mktemp())
+        self.dbm = dirdbm.open(self.path.path)
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
 
 
@@ -116,23 +117,23 @@ class DirDbmTests(unittest.TestCase):
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash"""
         k = self.dbm._encode("key1")
-        with open(os.path.join(self.path, k + ".rpl"), "wb") as f:
+        with self.path.child(k + b".rpl").open(mode="wb") as f:
             f.write("value")
 
         k2 = self.dbm._encode("key2")
-        with open(os.path.join(self.path, k2), "wb") as f:
+        with self.path.child(k2).open(mode="wb") as f:
             f.write("correct")
-        with open(os.path.join(self.path, k2 + ".rpl"), "wb") as f:
+        with self.path.child(k2 + b".rpl").open(mode="wb") as f:
             f.write("wrong")
 
-        with open(os.path.join(self.path, "aa.new"), "wb") as f:
+        with self.path.child("aa.new").open(mode="wb") as f:
             f.write("deleted")
 
-        dbm = dirdbm.DirDBM(self.path)
+        dbm = dirdbm.DirDBM(self.path.path)
         assert dbm["key1"] == "value"
         assert dbm["key2"] == "correct"
-        assert not glob.glob(os.path.join(self.path, "*.new"))
-        assert not glob.glob(os.path.join(self.path, "*.rpl"))
+        assert not self.path.globChildren("*.new")
+        assert not self.path.globChildren("*.rpl")
 
 
     def test_nonStringKeys(self):
@@ -158,8 +159,8 @@ class DirDbmTests(unittest.TestCase):
 class ShelfTests(DirDbmTests):
 
     def setUp(self):
-        self.path = self.mktemp()
-        self.dbm = dirdbm.Shelf(self.path)
+        self.path = FilePath(self.mktemp())
+        self.dbm = dirdbm.Shelf(self.path.path)
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'),
                       ('int', 12), ('float', 12.0), ('tuple', (None, 12)))
 
