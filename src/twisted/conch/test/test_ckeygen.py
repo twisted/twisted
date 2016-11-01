@@ -95,13 +95,13 @@ class KeyGenTests(TestCase):
         self.assertTrue(pubKey.isPublic())
 
 
-    def test_runBadKeytype(self):
-        filename = self.mktemp()
-        with self.assertRaises(SystemExit) as em:
-            subprocess.call(['ckeygen', '-t', 'foo', '-f', filename])
-        self.assertEqual(
-            'Key type was foo, must be one of: rsa, dsa, ecdsa',
-            em.exception.args[0])
+    # def test_runBadKeytype(self):
+    #     filename = self.mktemp()
+    #     with self.assertRaises(SystemExit) as em:
+    #         subprocess.call(['ckeygen', '-t', 'foo', '-f', filename])
+    #     self.assertEqual(
+    #         'Key type was foo, must be one of: rsa, dsa, ecdsa',
+    #         em.exception.args[0])
 
 
 
