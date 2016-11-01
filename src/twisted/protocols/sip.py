@@ -110,9 +110,9 @@ specialCases = {
 
 
 def dashCapitalize(s):
-    '''
-    Capitalize a string, making sure to treat - as a word separator
-    '''
+    """
+    Capitalize a string, making sure to treat '-' as a word separator
+    """
     return '-'.join([ x.capitalize() for x in s.split('-')])
 
 
