@@ -297,13 +297,13 @@ class DummyFilePath(FilePath):
 
 
     def open(self, mode="r"):
-        if not self._exits:
+        if not self._exists:
             raise OSError(errno.ENOENT, "No such file or directory")
         return BytesIO(self._content)
 
 
     def setContent(self, content):
-        self._exits = content is not None
+        self._exists = content is not None
         self._content = content
 
 
@@ -316,4 +316,4 @@ class DummyFilePath(FilePath):
 
 
     def exists(self):
-        return self._exits
+        return self._exists
