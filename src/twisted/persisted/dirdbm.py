@@ -38,8 +38,10 @@ except NameError:
     _open = open
 
 
+
 class DirDBM:
-    """A directory with a DBM interface.
+    """
+    A directory with a DBM interface.
 
     This class presents a hash-like interface to a directory of small,
     flat files. It can only use strings as keys or values.
@@ -73,19 +75,25 @@ class DirDBM:
                 else:
                     os.rename(f, old)
 
+
     def _encode(self, k):
-        """Encode a key so it can be used as a filename.
+        """
+        Encode a key so it can be used as a filename.
         """
         # NOTE: '_' is NOT in the base64 alphabet!
         return base64.encodestring(k).replace(b'\n', b'_').replace(b"/", b"-")
 
+
     def _decode(self, k):
-        """Decode a filename to get the key.
+        """
+        Decode a filename to get the key.
         """
         return base64.decodestring(k.replace(b'_', b'\n').replace(b"-", b"/"))
 
+
     def _readFile(self, path):
-        """Read in the contents of a file.
+        """
+        Read in the contents of a file.
 
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
@@ -93,8 +101,10 @@ class DirDBM:
             s = f.read()
         return s
 
+
     def _writeFile(self, path, data):
-        """Write data to a file.
+        """
+        Write data to a file.
 
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
@@ -102,11 +112,13 @@ class DirDBM:
             f.write(data)
             f.flush()
 
+
     def __len__(self):
         """
         @return: The number of key/value pairs in this Shelf
         """
         return len(self._dnamePath.listdir())
+
 
     def __setitem__(self, k, v):
         """
@@ -139,6 +151,7 @@ class DirDBM:
             if (old.exists()): old.remove()
             new.moveTo(old)
 
+
     def __getitem__(self, k):
         """
         C{dirdbm[k]}
@@ -157,6 +170,7 @@ class DirDBM:
         except:
             raise KeyError(k)
 
+
     def __delitem__(self, k):
         """
         C{del dirdbm[foo]}
@@ -172,11 +186,13 @@ class DirDBM:
         try:    self._dnamePath.child(k).remove()
         except (OSError, IOError): raise KeyError(self._decode(k))
 
+
     def keys(self):
         """
         @return: a C{list} of filenames (keys).
         """
         return map(self._decode, self._dnamePath.asBytesMode().listdir())
+
 
     def values(self):
         """
@@ -188,6 +204,7 @@ class DirDBM:
             vals.append(self[key])
         return vals
 
+
     def items(self):
         """
         @return: a C{list} of 2-tuples containing key/value pairs.
@@ -197,6 +214,7 @@ class DirDBM:
         for key in keys:
             items.append((key, self[key]))
         return items
+
 
     def has_key(self, key):
         """
@@ -210,6 +228,7 @@ class DirDBM:
         key = self._encode(key)
         return self._dnamePath.child(key).isfile()
 
+
     def setdefault(self, key, value):
         """
         @type key: bytes
@@ -222,6 +241,7 @@ class DirDBM:
             self[key] = value
             return value
         return self[key]
+
 
     def get(self, key, default = None):
         """
@@ -238,6 +258,7 @@ class DirDBM:
         else:
             return default
 
+
     def __contains__(self, key):
         """
         C{key in dirdbm}
@@ -251,6 +272,7 @@ class DirDBM:
         key = self._encode(key)
         return self._dnamePath.child(key).isfile()
 
+
     def update(self, dict):
         """
         Add all the key/value pairs in C{dict} to this dirdbm.  Any conflicting
@@ -261,6 +283,7 @@ class DirDBM:
         """
         for key, val in dict.items():
             self[key]=val
+
 
     def copyTo(self, path):
         """
@@ -282,6 +305,7 @@ class DirDBM:
             d[k] = self[k]
         return d
 
+
     def clear(self):
         """
         Delete all key/value pairs in this dirdbm.
@@ -289,10 +313,12 @@ class DirDBM:
         for k in self.keys():
             del self[k]
 
+
     def close(self):
         """
         Close this dbm: no-op, for dbm-style interface compliance.
         """
+
 
     def getModificationTime(self, key):
         """
@@ -309,8 +335,10 @@ class DirDBM:
             raise KeyError(key)
 
 
+
 class Shelf(DirDBM):
-    """A directory with a DBM shelf interface.
+    """
+    A directory with a DBM shelf interface.
 
     This class presents a hash-like interface to a directory of small,
     flat files. Keys must be strings, but values can be any given object.
@@ -329,6 +357,7 @@ class Shelf(DirDBM):
         v = pickle.dumps(v)
         DirDBM.__setitem__(self, k, v)
 
+
     def __getitem__(self, k):
         """
         C{dirdbm[foo]}
@@ -341,6 +370,7 @@ class Shelf(DirDBM):
         @raise KeyError: Raised if the given key does not exist
         """
         return pickle.loads(DirDBM.__getitem__(self, k))
+
 
 
 def open(file, flag = None, mode = None):
