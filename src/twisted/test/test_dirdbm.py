@@ -46,7 +46,7 @@ class DirDbmTests(unittest.TestCase):
     def testDbm(self):
         d = self.dbm
 
-        # insert keys
+        # Insert keys
         keys = []
         values = set()
         for k, v in self.items:
@@ -55,12 +55,12 @@ class DirDbmTests(unittest.TestCase):
             values.add(v)
         keys.sort()
 
-        # check they exist
+        # Check they exist
         for k, v in self.items:
             self.assertIn(k, d)
             self.assertEqual(d[k], v)
 
-        # check non existent key
+        # Check non existent key
         try:
             d[b"XXX"]
         except KeyError:
@@ -68,7 +68,7 @@ class DirDbmTests(unittest.TestCase):
         else:
             assert 0, "didn't raise KeyError on non-existent key"
 
-        # check keys(), values() and items()
+        # Check keys(), values() and items()
         dbkeys = list(d.keys())
         dbvalues = set(d.values())
         dbitems = set(d.items())
@@ -95,7 +95,7 @@ class DirDbmTests(unittest.TestCase):
                 len(d2.items()) == 0, ".clear() failed")
         shutil.rmtree(copyPath)
 
-        # delete items
+        # Delete items
         for k, v in self.items:
             del d[k]
             self.assertNotIn(k, d, "key is still in database, even though we deleted it")
@@ -106,7 +106,7 @@ class DirDbmTests(unittest.TestCase):
 
     def testModificationTime(self):
         import time
-        # the mtime value for files comes from a different place than the
+        # The mtime value for files comes from a different place than the
         # gettimeofday() system call. On linux, gettimeofday() can be
         # slightly ahead (due to clock drift which gettimeofday() takes into
         # account but which open()/write()/close() do not), and if we are
@@ -120,7 +120,9 @@ class DirDbmTests(unittest.TestCase):
 
 
     def testRecovery(self):
-        """DirDBM: test recovery from directory after a faked crash"""
+        """
+        DirDBM: test recovery from directory after a faked crash
+        """
         k = self.dbm._encode(b"key1")
         with self.path.child(k + b".rpl").open(mode="wb") as f:
             f.write(b"value")
