@@ -66,7 +66,7 @@ class KeyGenTests(TestCase):
 
 
     def test_runecdsa(self):
-        sys.argv = ['ckeygen', '-t', 'ecdsa', '-f', 'test_ecdsa']
+        sys.argv = ['ckeygen', '-t', 'ecdsa', '-f', 'test_ecdsa', '--no-passphrase']
         run()
         privKey = Key.fromFile('test_ecdsa')
         pubKey = Key.fromFile('test_ecdsa.pub')
@@ -76,7 +76,7 @@ class KeyGenTests(TestCase):
 
 
     def test_rundsa(self):
-        sys.argv = ['ckeygen', '-t', 'dsa', '-f', 'test_dsa']
+        sys.argv = ['ckeygen', '-t', 'dsa', '-f', 'test_dsa', '--no-passphrase']
         run()
         privKey = Key.fromFile('test_dsa')
         pubKey = Key.fromFile('test_dsa.pub')
@@ -86,7 +86,7 @@ class KeyGenTests(TestCase):
 
 
     def test_runrsa(self):
-        sys.argv = ['ckeygen', '-t', 'rsa', '-f', 'test_rsa']
+        sys.argv = ['ckeygen', '-t', 'rsa', '-f', 'test_rsa', '--no-passphrase']
         run()
         privKey = Key.fromFile('test_rsa')
         pubKey = Key.fromFile('test_rsa.pub')
