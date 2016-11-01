@@ -6,6 +6,7 @@ Test cases for dirdbm module.
 """
 
 import os, shutil, glob
+from base64 import b64decode
 
 from twisted.trial import unittest
 from twisted.persisted import dirdbm
@@ -21,7 +22,7 @@ class DirDbmTests(unittest.TestCase):
 
 
     def testAll(self):
-        k = "//==".decode("base64")
+        k = b64decode("//==")
         self.dbm[k] = "a"
         self.dbm[k] = "a"
         self.assertEqual(self.dbm[k], "a")
