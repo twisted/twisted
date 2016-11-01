@@ -30,6 +30,8 @@ try:
 except ImportError:
     import pickle
 
+from twisted.python.filepath import FilePath
+
 try:
     _open
 except NameError:
@@ -49,8 +51,9 @@ class DirDBM:
         @param name: Base path to use for the directory storage.
         """
         self.dname = os.path.abspath(name)
-        if not os.path.isdir(self.dname):
-            os.mkdir(self.dname)
+        self._dnamePath = FilePath(name)
+        if not self._dnamePath.isdir():
+            self._dnamePath.createDirectory()
         else:
             # Run recovery, in case we crashed. we delete all files ending
             # with ".new". Then we find all files who end with ".rpl". If a
@@ -60,9 +63,9 @@ class DirDBM:
             # but before renaming the replacement entry.
             #
             # NOTE: '.' is NOT in the base64 alphabet!
-            for f in glob.glob(os.path.join(self.dname, "*.new")):
+            for f in glob.glob(self._dnamePath.child("*.new").path):
                 os.remove(f)
-            replacements = glob.glob(os.path.join(self.dname, "*.rpl"))
+            replacements = glob.glob(self._dnamePath.child("*.rpl").path)
             for f in replacements:
                 old = f[:-4]
                 if os.path.exists(old):
@@ -86,7 +89,7 @@ class DirDBM:
 
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        with _open(path, "rb") as f:
+        with _open(path.path, "rb") as f:
             s = f.read()
         return s
 
@@ -95,7 +98,7 @@ class DirDBM:
 
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        with _open(path, "wb") as f:
+        with _open(path.path, "wb") as f:
             f.write(data)
             f.flush()
 
@@ -103,7 +106,7 @@ class DirDBM:
         """
         @return: The number of key/value pairs in this Shelf
         """
-        return len(os.listdir(self.dname))
+        return len(self._dnamePath.listdir())
 
     def __setitem__(self, k, v):
         """
@@ -122,19 +125,19 @@ class DirDBM:
 
         # we create a new file with extension .new, write the data to it, and
         # if the write succeeds delete the old file and rename the new one.
-        old = os.path.join(self.dname, k.decode("ascii"))
-        if os.path.exists(old):
-            new = old + ".rpl" # replacement entry
+        old = self._dnamePath.child(k)
+        if old.exists():
+            new = old.siblingExtension(".rpl") # replacement entry
         else:
-            new = old + ".new" # new entry
+            new = old.siblingExtension(".new") # new entry
         try:
             self._writeFile(new, v)
         except:
-            os.remove(new)
+            new.remove()
             raise
         else:
-            if os.path.exists(old): os.remove(old)
-            os.rename(new, old)
+            if (old.exists()): old.remove()
+            new.moveTo(old)
 
     def __getitem__(self, k):
         """
@@ -148,7 +151,7 @@ class DirDBM:
         @raise KeyError: Raised when there is no such key
         """
         assert type(k) == bytes, "DirDBM key must be bytes"
-        path = os.path.join(self.dname, self._encode(k))
+        path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
         except:
@@ -166,14 +169,14 @@ class DirDBM:
         """
         assert type(k) == bytes, "DirDBM key must be bytes"
         k = self._encode(k)
-        try:    os.remove(os.path.join(self.dname, k))
+        try:    self._dnamePath.child(k).remove()
         except (OSError, IOError): raise KeyError(self._decode(k))
 
     def keys(self):
         """
         @return: a C{list} of filenames (keys).
         """
-        return map(self._decode, os.listdir(self.dname))
+        return map(self._decode, self._dnamePath.asBytesMode().listdir())
 
     def values(self):
         """
@@ -205,7 +208,7 @@ class DirDBM:
         """
         assert type(key) == bytes, "DirDBM key must be bytes"
         key = self._encode(key)
-        return os.path.isfile(os.path.join(self.dname, key))
+        return self._dnamePath.child(key).isfile()
 
     def setdefault(self, key, value):
         """
@@ -246,7 +249,7 @@ class DirDBM:
         """
         assert type(key) == bytes, "DirDBM key must be bytes"
         key = self._encode(key)
-        return os.path.isfile(os.path.join(self.dname, key))
+        return self._dnamePath.child(key).isfile()
 
     def update(self, dict):
         """
@@ -270,10 +273,10 @@ class DirDBM:
         @rtype: C{DirDBM}
         @return: The dirdbm this dirdbm was copied to.
         """
-        path = os.path.abspath(path)
-        assert path != self.dname
+        path = FilePath(path)
+        assert path != self._dnamePath
 
-        d = self.__class__(path)
+        d = self.__class__(path.path)
         d.clear()
         for k in self.keys():
             d[k] = self[k]
@@ -299,9 +302,9 @@ class DirDBM:
         @raise KeyError: Raised when there is no such key
         """
         assert type(key) == bytes, "DirDBM key must be bytes"
-        path = os.path.join(self.dname, self._encode(key))
-        if os.path.isfile(path):
-            return os.path.getmtime(path)
+        path = self._dnamePath.child(self._encode(key))
+        if path.isfile():
+            return path.getModificationTime()
         else:
             raise KeyError(key)
 
