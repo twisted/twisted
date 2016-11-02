@@ -1,1 +1,0 @@
-Client and server TLS connections made via the client TLS endpoint and the server SSL endpoint, as well as any other code that uses twisted.internet.ssl.CertificateOptions, no longer accept 3DES-based cipher suites by default, to defend against SWEET32.
