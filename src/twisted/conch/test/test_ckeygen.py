@@ -19,8 +19,7 @@ if requireModule('cryptography') and requireModule('pyasn1'):
         BadFingerPrintFormat, FingerprintFormats)
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint,
-        _saveKey, enumrepresentation,
-        generateRSAkey, generateDSAkey, generateECDSAkey)
+        _saveKey, enumrepresentation)
 else:
     skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
 
