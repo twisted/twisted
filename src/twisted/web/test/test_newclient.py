@@ -861,10 +861,10 @@ class HTTPClientParserTests(TestCase):
         protocol.dataReceived(sample103Response)
 
         # The response should have been erased
-        self.assertTrue(protocol.response is None)
+        self.assertTrue(getattr(protocol, 'response', None) is None)
         self.assertEqual(protocol.state, STATUS)
-        self.assertEqual(len(protocol.headers), 0)
-        self.assertEqual(len(protocol.connHeaders), 0)
+        self.assertEqual(len(list(protocol.headers.getAllRawHeaders())), 0)
+        self.assertEqual(len(list(protocol.connHeaders.getAllRawHeaders())), 0)
         self.assertTrue(protocol._everReceivedData)
 
 
