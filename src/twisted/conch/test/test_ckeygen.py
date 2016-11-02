@@ -83,11 +83,11 @@ class KeyGenTests(TestCase):
 
 
     def test_keygeneration(self):
-        self._testrun('ecdsa', 384)
+        self._testrun('ecdsa', '384')
         self._testrun('ecdsa')
-        self._testrun('dsa', 2048)
+        self._testrun('dsa', '2048')
         self._testrun('dsa')
-        self._testrun('rsa', 2048)
+        self._testrun('rsa', '2048')
         self._testrun('rsa')
 
 
