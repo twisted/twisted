@@ -66,33 +66,30 @@ class KeyGenTests(TestCase):
 
 
 
-    def test_runecdsa(self):
+    def _testrun(self, keyType, keySize=None):
         filename = self.mktemp()
-        subprocess.call(['ckeygen', '-t', 'ecdsa', '-f', filename, '--no-passphrase'])
+        if keySize is None:
+            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase'])
+        else:
+            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase',
+                '-b', keySize])
         privKey = Key.fromFile(filename)
         pubKey = Key.fromFile(filename + '.pub')
-        self.assertEqual(privKey.type(), 'EC')
+        if keyType == 'ecdsa':
+            self.assertEqual(privKey.type(), 'EC')
+        else:
+            self.assertEqual(privKey.type(), keyType.upper())
         self.assertTrue(pubKey.isPublic())
 
 
+    def test_keygeneration(self):
+        self._testrun('ecdsa', 384)
+        self._testrun('ecdsa')
+        self._testrun('dsa', 2048)
+        self._testrun('dsa')
+        self._testrun('rsa', 2048)
+        self._testrun('rsa')
 
-    def test_rundsa(self):
-        filename = self.mktemp()
-        subprocess.call(['ckeygen', '-t', 'dsa', '-f', filename, '--no-passphrase'])
-        privKey = Key.fromFile(filename)
-        pubKey = Key.fromFile(filename + '.pub')
-        self.assertEqual(privKey.type(), 'DSA')
-        self.assertTrue(pubKey.isPublic())
-
-
-
-    def test_runrsa(self):
-        filename = self.mktemp()
-        subprocess.call(['ckeygen', '-t', 'rsa', '-f', filename, '--no-passphrase'])
-        privKey = Key.fromFile(filename)
-        pubKey = Key.fromFile(filename + '.pub')
-        self.assertEqual(privKey.type(), 'RSA')
-        self.assertTrue(pubKey.isPublic())
 
 
     def test_runBadKeytype(self):
@@ -174,41 +171,6 @@ class KeyGenTests(TestCase):
         self.assertEqual('Unsupported fingerprint format: sha-base64',
             em.exception.args[0])
 
-
-
-    def _testgeneratekey(self, generator, keyType, keySize):
-        """
-        L{generateRSAkey}, L{generateDSAkey}, L{generateECSAkey} generates public/private
-        keypair according to specfied parameter and calls L{_saveKey} on the generated key.
-        """
-        base = FilePath(self.mktemp())
-        base.makedirs()
-        if keyType == 'EC':
-            filenameString = 'id_ecdsa'
-        else:
-            filenameString = 'id_' + keyType.lower()
-        filename = base.child(filenameString).path
-        generator({'filename': filename, 'pass': 'passphrase', 'format': 'md5-hex',
-            'bits': keySize})
-        if keySize is None:
-            if keyType == 'EC':
-                keySize = 256
-            else:
-                keySize = 1024
-        privKey = Key.fromString(base.child(filenameString).getContent(), None, 'passphrase')
-        pubKey = Key.fromString(base.child(filenameString + '.pub').getContent())
-        self.assertEqual(privKey.type(), keyType)
-        self.assertTrue(pubKey.isPublic())
-        self.assertEqual(pubKey.size(), keySize)
-
-
-    def test_keygenerator(self):
-        self._testgeneratekey(generateECDSAkey, 'EC', 384)
-        self._testgeneratekey(generateECDSAkey, 'EC', None)
-        self._testgeneratekey(generateRSAkey, 'RSA', 2048)
-        self._testgeneratekey(generateRSAkey, 'RSA', None)
-        self._testgeneratekey(generateDSAkey, 'DSA', 2048)
-        self._testgeneratekey(generateDSAkey, 'DSA', None)
 
 
     def test_saveKey(self):
