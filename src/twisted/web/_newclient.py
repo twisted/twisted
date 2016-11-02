@@ -455,6 +455,16 @@ class HTTPClientParser(HTTPParser):
         Figure out how long the response body is going to be by examining
         headers and stuff.
         """
+        if 100 <= self.response.code < 200:
+            # RFC 7231 Section 6.2 says that if we receive a 1XX status code
+            # and aren't expecting it, we MAY ignore it. That's what we're
+            # going to do. We reset the parser here, but we leave
+            # _everReceivedData in its True state because we have, in fact,
+            # received data.
+            self.connectionMade()
+            del self.response
+            return
+
         if (self.response.code in self.NO_BODY_CODES
             or self.request.method == b'HEAD'):
             self.response.length = 0
