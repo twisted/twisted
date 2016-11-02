@@ -23,6 +23,14 @@ from twisted.python.compat import raw_input, _PY3
 
 
 
+_supportedKeytypes = dict()
+def _support(keyType):
+    def assignkeygenerator(keygenerator):
+        _supportedKeytypes[keyType] = keygenerator
+    return assignkeygenerator
+
+
+
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ckeygen [options]
  """
@@ -44,7 +52,7 @@ class GeneralOptions(usage.Options):
                 ['showpub', 'y', 'Read private key file and print public key.']]
 
     compData = usage.Completions(
-        optActions={"type": usage.CompleteList(["rsa", "dsa", "ecdsa"])})
+        optActions={"type": usage.CompleteList(list(_supportedKeytypes.keys()))})
 
 
 
@@ -59,15 +67,13 @@ def run():
     log.discardLogs()
     log.deferr = handleError # HACK
     if options['type']:
-        if options['type'] == 'rsa':
-            generateRSAkey(options)
-        elif options['type'] == 'dsa':
-            generateDSAkey(options)
-        elif options['type'] == 'ecdsa':
-            generateECDSAkey(options)
+        if options['type'].lower() in _supportedKeytypes:
+            print('Generating public/private %s key pair.' % (options['type']))
+            _supportedKeytypes[options['type'].lower()](options)
         else:
             sys.exit(
-                'Key type was %s, must be one of: rsa, dsa, ecdsa' % options['type'])
+                'Key type was %s, must be one of %s'
+                    % (options['type'], ', '.join(_supportedKeytypes.keys())))
     elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
@@ -99,12 +105,11 @@ def handleError():
     raise
 
 
-
+@_support('rsa')
 def generateRSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    print('Generating public/private rsa key pair.')
     if not options['bits']:
         options['bits'] = 1024
     keyPrimitive = rsa.generate_private_key(
@@ -117,11 +122,11 @@ def generateRSAkey(options):
 
 
 
+@_support('dsa')
 def generateDSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dsa
 
-    print('Generating public/private dsa key pair.')
     if not options['bits']:
         options['bits'] = 1024
     keyPrimitive = dsa.generate_private_key(
@@ -132,11 +137,12 @@ def generateDSAkey(options):
     _saveKey(key, options)
 
 
+
+@_support('ecdsa')
 def generateECDSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
 
-    print('Generating public/private ecdsa key pair.')
     if not options['bits']:
         options['bits'] = 256
     # OpenSSH supports only nistp curves.
