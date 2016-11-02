@@ -11,6 +11,11 @@ from twisted.internet import defer, reactor
 from twisted.protocols import sip
 from twisted.trial import unittest
 
+try:
+    from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+except:
+    AsyncioSelectorReactor = None
+
 from zope.interface import implementer
 
 
@@ -103,22 +108,29 @@ class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
 
+
+
 class MessageParsingTests(unittest.TestCase):
     def setUp(self):
         self.l = []
         self.parser = sip.MessagesParser(self.l.append)
 
+
     def feedMessage(self, message):
         self.parser.dataReceived(message)
         self.parser.dataDone()
 
+
     def validateMessage(self, m, method, uri, headers, body):
-        """Validate Requests."""
+        """
+        Validate Requests.
+        """
         self.assertEqual(m.method, method)
         self.assertEqual(m.uri.toString(), uri)
         self.assertEqual(m.headers, headers)
         self.assertEqual(m.body, body)
         self.assertEqual(m.finished, 1)
+
 
     def testSimple(self):
         l = self.l
@@ -128,6 +140,7 @@ class MessageParsingTests(unittest.TestCase):
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
             "abcd")
+
 
     def testTwoMessages(self):
         l = self.l
@@ -142,6 +155,7 @@ class MessageParsingTests(unittest.TestCase):
                              {"from": ["mo"], "to": ["joe"]},
                              "1234")
 
+
     def testGarbage(self):
         l = self.l
         self.feedMessage(request3)
@@ -150,6 +164,7 @@ class MessageParsingTests(unittest.TestCase):
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
             "1234")
+
 
     def testThreeInOne(self):
         l = self.l
@@ -168,6 +183,7 @@ class MessageParsingTests(unittest.TestCase):
             {"from": ["foo"], "to": ["bar"], "content-length": ["4"]},
             "1234")
 
+
     def testShort(self):
         l = self.l
         self.feedMessage(request_short)
@@ -176,6 +192,7 @@ class MessageParsingTests(unittest.TestCase):
             l[0], "INVITE", "sip:foo",
             {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
             "abcd")
+
 
     def testSimpleResponse(self):
         l = self.l
@@ -216,12 +233,15 @@ class MessageParsingTests(unittest.TestCase):
 
 
 class MessageParsingFeedDataCharByCharTests(MessageParsingTests):
-    """Same as base class, but feed data char by char."""
+    """
+    Same as base class, but feed data char by char.
+    """
 
     def feedMessage(self, message):
         for c in message:
             self.parser.dataReceived(c)
         self.parser.dataDone()
+
 
 
 class MakeMessageTests(unittest.TestCase):
@@ -233,6 +253,7 @@ class MakeMessageTests(unittest.TestCase):
             r.toString(),
             "INVITE sip:foo SIP/2.0\r\nFoo: bar\r\n\r\n")
 
+
     def testResponse(self):
         r = sip.Response(200, "OK")
         r.addHeader("foo", "bar")
@@ -242,9 +263,11 @@ class MakeMessageTests(unittest.TestCase):
             r.toString(),
             "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-Length: 4\r\n\r\n1234")
 
+
     def testStatusCode(self):
         r = sip.Response(200)
         self.assertEqual(r.toString(), "SIP/2.0 200 OK\r\n\r\n")
+
 
 
 class ViaTests(unittest.TestCase):
@@ -253,12 +276,14 @@ class ViaTests(unittest.TestCase):
         s = v.toString()
         self.assertEqual(s, sip.parseViaHeader(s).toString())
 
+
     def testExtraWhitespace(self):
         v1 = sip.parseViaHeader('SIP/2.0/UDP 192.168.1.1:5060')
         v2 = sip.parseViaHeader('SIP/2.0/UDP     192.168.1.1:5060')
         self.assertEqual(v1.transport, v2.transport)
         self.assertEqual(v1.host, v2.host)
         self.assertEqual(v1.port, v2.port)
+
 
     def test_complex(self):
         """
@@ -282,6 +307,7 @@ class ViaTests(unittest.TestCase):
                           ";ttl=16;branch=a7c6a8dlze;maddr=224.2.0.1")
         self.checkRoundtrip(v)
 
+
     def test_simple(self):
         """
         Test parsing a simple Via header.
@@ -301,6 +327,7 @@ class ViaTests(unittest.TestCase):
         self.assertEqual(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
         self.checkRoundtrip(v)
+
 
     def testSimpler(self):
         v = sip.Via("example.com")
@@ -365,12 +392,12 @@ class ViaTests(unittest.TestCase):
 
 
     def test_unknownParams(self):
-       """
-       Parsing and serializing Via headers with unknown parameters should work.
-       """
-       s = "SIP/2.0/UDP example.com:5060;branch=a12345b;bogus;pie=delicious"
-       v = sip.parseViaHeader(s)
-       self.assertEqual(v.toString(), s)
+        """
+        Parsing and serializing Via headers with unknown parameters should work.
+        """
+        s = "SIP/2.0/UDP example.com:5060;branch=a12345b;bogus;pie=delicious"
+        v = sip.parseViaHeader(s)
+        self.assertEqual(v.toString(), s)
 
 
 
@@ -385,6 +412,7 @@ class URLTests(unittest.TestCase):
             ]:
             self.assertEqual(sip.parseURL(url).toString(), url)
 
+
     def testComplex(self):
         s = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
              "ttl=12;maddr=1.2.3.4;blah;goo=bar?a=b&c=d")
@@ -396,6 +424,7 @@ class URLTests(unittest.TestCase):
                      ("maddr", "1.2.3.4"), ("other", ["blah", "goo=bar"]),
                      ("headers", {"a": "b", "c": "d"})]:
             self.assertEqual(getattr(url, k), v)
+
 
 
 class ParseTests(unittest.TestCase):
@@ -416,15 +445,19 @@ class ParseTests(unittest.TestCase):
             self.assertEqual(gparams, params)
 
 
+
 @implementer(sip.ILocator)
 class DummyLocator:
     def getAddress(self, logicalURL):
         return defer.succeed(sip.URL("server.com", port=5060))
 
+
+
 @implementer(sip.ILocator)
 class FailingLocator:
     def getAddress(self, logicalURL):
         return defer.fail(LookupError())
+
 
 
 class ProxyTests(unittest.TestCase):
@@ -434,6 +467,7 @@ class ProxyTests(unittest.TestCase):
         self.proxy.locator = DummyLocator()
         self.sent = []
         self.proxy.sendMessage = lambda dest, msg: self.sent.append((dest, msg))
+
 
     def testRequestForward(self):
         r = sip.Request("INVITE", "sip:foo")
@@ -475,6 +509,7 @@ class ProxyTests(unittest.TestCase):
         self.proxy.datagramReceived(r.toString(), ("1.1.1.1", 5060))
         self.assertEqual(len(self.sent), 0)
 
+
     def testResponseForward(self):
         r = sip.Response(200)
         r.addHeader("via", sip.Via("127.0.0.1").toString())
@@ -485,6 +520,7 @@ class ProxyTests(unittest.TestCase):
         self.assertEqual((dest.host, dest.port), ("client.com", 1234))
         self.assertEqual(m.code, 200)
         self.assertEqual(m.headers["via"], ["SIP/2.0/UDP client.com:1234"])
+
 
     def testReceivedResponseForward(self):
         r = sip.Response(200)
@@ -497,6 +533,7 @@ class ProxyTests(unittest.TestCase):
         dest, m = self.sent[0]
         self.assertEqual((dest.host, dest.port), ("client.com", 5060))
 
+
     def testResponseToUs(self):
         r = sip.Response(200)
         r.addHeader("via", sip.Via("127.0.0.1").toString())
@@ -508,12 +545,14 @@ class ProxyTests(unittest.TestCase):
         self.assertEqual(len(m.headers.get("via", [])), 0)
         self.assertEqual(m.code, 200)
 
+
     def testLoop(self):
         r = sip.Request("INVITE", "sip:foo")
         r.addHeader("via", sip.Via("1.2.3.4").toString())
         r.addHeader("via", sip.Via("127.0.0.1").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
         self.assertEqual(self.sent, [])
+
 
     def testCantForwardRequest(self):
         r = sip.Request("INVITE", "sip:foo")
@@ -544,12 +583,14 @@ class RegistrationTests(unittest.TestCase):
             d.cancel()
         del self.proxy
 
+
     def register(self):
         r = sip.Request("REGISTER", "sip:bell.example.com")
         r.addHeader("to", "sip:joe@bell.example.com")
         r.addHeader("contact", "sip:joe@client.com:1234")
         r.addHeader("via", sip.Via("client.com").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
+
 
     def unregister(self):
         r = sip.Request("REGISTER", "sip:bell.example.com")
@@ -559,6 +600,7 @@ class RegistrationTests(unittest.TestCase):
         r.addHeader("expires", "0")
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
 
+
     def testRegister(self):
         self.register()
         dest, m = self.sent[0]
@@ -567,8 +609,12 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(m.headers["via"], ["SIP/2.0/UDP client.com:5060"])
         self.assertEqual(m.headers["to"], ["sip:joe@bell.example.com"])
         self.assertEqual(m.headers["contact"], ["sip:joe@client.com:5060"])
-        self.assertTrue(
-            int(m.headers["expires"][0]) in (3600, 3601, 3599, 3598))
+        #
+        # XX: See http://tm.tl/8886
+        #
+        if type(reactor) != AsyncioSelectorReactor:
+            self.assertTrue(
+                int(m.headers["expires"][0]) in (3600, 3601, 3599, 3598))
         self.assertEqual(len(self.registry.users), 1)
         dc, uri = self.registry.users["joe"]
         self.assertEqual(uri.toString(), "sip:joe@client.com:5060")
@@ -577,6 +623,7 @@ class RegistrationTests(unittest.TestCase):
         d.addCallback(lambda desturl : (desturl.host, desturl.port))
         d.addCallback(self.assertEqual, ('client.com', 5060))
         return d
+
 
     def testUnregister(self):
         self.register()
@@ -599,6 +646,7 @@ class RegistrationTests(unittest.TestCase):
         p.registerChecker(c)
         self.proxy.portal = p
 
+
     def testFailedAuthentication(self):
         self.addPortal()
         self.register()
@@ -608,6 +656,7 @@ class RegistrationTests(unittest.TestCase):
         dest, m = self.sent[0]
         self.assertEqual(m.code, 401)
 
+
     def testWrongDomainRegister(self):
         r = sip.Request("REGISTER", "sip:wrong.com")
         r.addHeader("to", "sip:joe@bell.example.com")
@@ -615,6 +664,7 @@ class RegistrationTests(unittest.TestCase):
         r.addHeader("via", sip.Via("client.com").toString())
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
         self.assertEqual(len(self.sent), 0)
+
 
     def testWrongToDomainRegister(self):
         r = sip.Request("REGISTER", "sip:bell.example.com")
@@ -624,12 +674,14 @@ class RegistrationTests(unittest.TestCase):
         self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
         self.assertEqual(len(self.sent), 0)
 
+
     def testWrongDomainLookup(self):
         self.register()
         url = sip.URL(username="joe", host="foo.com")
         d = self.proxy.locator.getAddress(url)
         self.assertFailure(d, LookupError)
         return d
+
 
     def testNoContactLookup(self):
         self.register()
@@ -639,6 +691,7 @@ class RegistrationTests(unittest.TestCase):
         return d
 
 
+
 class Client(sip.Base):
 
     def __init__(self):
@@ -646,9 +699,11 @@ class Client(sip.Base):
         self.received = []
         self.deferred = defer.Deferred()
 
+
     def handle_response(self, response, addr):
         self.received.append(response)
         self.deferred.callback(self.received)
+
 
 
 class LiveTests(unittest.TestCase):
@@ -673,6 +728,7 @@ class LiveTests(unittest.TestCase):
         d2 = defer.maybeDeferred(self.serverPort.stopListening)
         return defer.gatherResults([d1, d2])
 
+
     def testRegister(self):
         p = self.clientPort.getHost().port
         r = sip.Request("REGISTER", "sip:bell.example.com")
@@ -688,6 +744,7 @@ class LiveTests(unittest.TestCase):
             self.assertEqual(r.code, 200)
         d.addCallback(check)
         return d
+
 
     def test_amoralRPort(self):
         """
