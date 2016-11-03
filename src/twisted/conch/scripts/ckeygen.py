@@ -9,6 +9,7 @@ Implementation module for the `ckeygen` command.
 from __future__ import print_function
 
 import sys, os, getpass, socket
+from functools import wraps
 if getpass.getpass == getpass.unix_getpass:
     try:
         import termios # hack around broken termios
@@ -27,6 +28,7 @@ supportedKeyTypes = dict()
 def _keyGenerator(keyType):
     def assignkeygenerator(keygenerator):
         supportedKeyTypes[keyType] = keygenerator
+        @wraps(keygenerator)
         def wrapper(*args, **kwargs):
             keygenerator(*args, **kwargs)
         return wrapper
