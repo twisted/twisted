@@ -23,10 +23,13 @@ from twisted.python.compat import raw_input, _PY3
 
 
 
-_supportedKeytypes = dict()
-def _support(keyType):
+supportedKeyTypes = dict()
+def _keyGenerator(keyType):
     def assignkeygenerator(keygenerator):
-        _supportedKeytypes[keyType] = keygenerator
+        supportedKeyTypes[keyType] = keygenerator
+        def wrapper(*args, **kwargs):
+            keygenerator(*args, **kwargs)
+        return wrapper
     return assignkeygenerator
 
 
@@ -52,7 +55,7 @@ class GeneralOptions(usage.Options):
                 ['showpub', 'y', 'Read private key file and print public key.']]
 
     compData = usage.Completions(
-        optActions={"type": usage.CompleteList(list(_supportedKeytypes.keys()))})
+        optActions={"type": usage.CompleteList(list(supportedKeyTypes.keys()))})
 
 
 
@@ -67,13 +70,13 @@ def run():
     log.discardLogs()
     log.deferr = handleError # HACK
     if options['type']:
-        if options['type'].lower() in _supportedKeytypes:
+        if options['type'].lower() in supportedKeyTypes:
             print('Generating public/private %s key pair.' % (options['type']))
-            _supportedKeytypes[options['type'].lower()](options)
+            supportedKeyTypes[options['type'].lower()](options)
         else:
             sys.exit(
                 'Key type was %s, must be one of %s'
-                    % (options['type'], ', '.join(_supportedKeytypes.keys())))
+                    % (options['type'], ', '.join(supportedKeyTypes.keys())))
     elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
@@ -105,7 +108,7 @@ def handleError():
     raise
 
 
-@_support('rsa')
+@_keyGenerator('rsa')
 def generateRSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import rsa
@@ -122,7 +125,7 @@ def generateRSAkey(options):
 
 
 
-@_support('dsa')
+@_keyGenerator('dsa')
 def generateDSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dsa
@@ -138,7 +141,7 @@ def generateDSAkey(options):
 
 
 
-@_support('ecdsa')
+@_keyGenerator('ecdsa')
 def generateECDSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -251,7 +254,8 @@ def _saveKey(key, options):
     @param options:
     @type options: L{dict}
     """
-    keyTypeName = 'ecdsa' if key.type() == 'EC' else key.type().lower()
+    KeyTypeMapping = {'EC': 'ecdsa', 'RSA': 'rsa', 'DSA': 'dsa'}
+    keyTypeName = KeyTypeMapping[key.type()]
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
         newPath = raw_input(
