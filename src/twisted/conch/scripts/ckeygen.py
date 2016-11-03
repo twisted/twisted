@@ -119,7 +119,7 @@ def generateDSAkey(options):
     print('Generating public/private dsa key pair.')
     keyPrimitive = dsa.generate_private_key(
         key_size=int(options['bits']),
-        backed=default_backend(),
+        backend=default_backend(),
         )
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
