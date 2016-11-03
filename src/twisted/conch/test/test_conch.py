@@ -117,7 +117,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     """
 
     deferred = None
-    buf = ''
+    buf = b''
 
     def _getDeferred(self):
         d, self.deferred = self.deferred, None
@@ -139,7 +139,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
                 ConchError("exit code was not 0: %s" %
                                  reason.value.exitCode))
         else:
-            buf = self.buf.replace('\r\n', '\n')
+            buf = self.buf.replace(b'\r\n', b'\n')
             self._getDeferred().callback(buf)
 
 
@@ -289,7 +289,7 @@ class ConchServerSetupMixin:
     if not pyasn1:
         skip = "Cannot run without PyASN1"
 
-    realmFactory = staticmethod(lambda: ConchTestRealm('testuser'))
+    realmFactory = staticmethod(lambda: ConchTestRealm(b'testuser'))
 
     def _createFiles(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
@@ -443,10 +443,12 @@ class RekeyAvatar(ConchUser):
             if i == 60:
                 call.stop()
                 transport.session.conn.sendRequest(
-                    transport.session, 'exit-status', '\x00\x00\x00\x00')
+                    transport.session, b'exit-status', b'\x00\x00\x00\x00')
                 transport.loseConnection()
             else:
-                transport.write("line #%02d\n" % (i,))
+                line = "line #%02d\n" % (i,)
+                line = line.encode("utf-8")
+                transport.write(line)
 
         # The timing for this loop is an educated guess (and/or the result of
         # experimentation) to exercise the case where a packet is generated
@@ -490,9 +492,9 @@ class RekeyTestsMixin(ConchServerSetupMixin):
         process = ConchTestOpenSSHProcess()
         d = self.execute("", process, '-o RekeyLimit=2K')
         def finished(result):
-            self.assertEqual(
-                result,
-                '\n'.join(['line #%02d' % (i,) for i in range(60)]) + '\n')
+            expectedResult = '\n'.join(['line #%02d' % (i,) for i in range(60)]) + '\n'
+            expectedResult = expectedResult.encode("utf-8")
+            self.assertEqual(result, expectedResult)
         d.addCallback(finished)
         return d
 
@@ -571,7 +573,7 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         """
         d = self.execute('echo hello', ConchTestOpenSSHProcess(),
                          '-oKexAlgorithms=' + keyExchangeAlgo)
-        return d.addCallback(self.assertEqual, 'hello\n')
+        return d.addCallback(self.assertEqual, b'hello\n')
 
 
     def test_DH_GROUP1(self):
