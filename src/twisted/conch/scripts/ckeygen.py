@@ -74,7 +74,12 @@ def run():
     if options['type']:
         if options['type'].lower() in supportedKeyTypes:
             print('Generating public/private %s key pair.' % (options['type']))
-            supportedKeyTypes[options['type'].lower()](options)
+            if options['type'].lower() == 'rsa':
+                generateRSAkey(options)
+            elif options['type'].lower() == 'dsa':
+                generateDSAkey(options)
+            else:
+                generateECDSAkey(options)
         else:
             sys.exit(
                 'Key type was %s, must be one of %s'
