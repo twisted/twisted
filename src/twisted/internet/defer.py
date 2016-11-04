@@ -730,6 +730,10 @@ class Deferred:
 
 
     def send(self, value=None):
+        if self.paused:
+            # If we're paused, we have no result to give
+            return self
+
         result = getattr(self, 'result', _NO_RESULT)
         if result is _NO_RESULT:
             return self
