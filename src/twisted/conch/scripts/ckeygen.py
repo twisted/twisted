@@ -27,10 +27,10 @@ from twisted.python.compat import raw_input, _PY3
 supportedKeyTypes = dict()
 def _keyGenerator(keyType):
     def assignkeygenerator(keygenerator):
-        supportedKeyTypes[keyType] = keygenerator
         @wraps(keygenerator)
         def wrapper(*args, **kwargs):
-            supportedKeyTypes[keyType](*args, **kwargs)
+            return keygenerator(*args, **kwargs)
+        supportedKeyTypes[keyType] = wrapper
         return wrapper
     return assignkeygenerator
 
