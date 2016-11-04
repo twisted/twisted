@@ -140,3 +140,27 @@ class YieldFromTests(TestCase):
 
         res = self.successResultOf(ensureDeferred(test()))
         self.assertEqual(res, 1)
+
+
+    def test_chained(self):
+        """
+        Yielding from a paused & chained Deferred will give the result when it
+        has one.
+        """
+        reactor = Clock()
+
+        def test():
+            d = Deferred()
+            d2 = Deferred()
+            d.addCallback(lambda ignored: d2)
+
+            d.callback(None)
+            reactor.callLater(0, d2.callback, "bye")
+            res = yield from d
+            return res
+
+        d = ensureDeferred(test())
+        reactor.advance(0.1)
+
+        res = self.successResultOf(d)
+        self.assertEqual(res, "bye")
