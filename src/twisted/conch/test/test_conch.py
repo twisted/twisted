@@ -7,16 +7,17 @@ from itertools import count
 
 from zope.interface import implementer
 
+from twisted.conch.error import ConchError
+from twisted.conch.avatar import ConchUser
+from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
+from twisted.python.compat import unicode
 from twisted.trial import unittest
-from twisted.conch.error import ConchError
-from twisted.conch.avatar import ConchUser
-from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 
 try:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
@@ -97,7 +98,7 @@ class Echo(protocol.Protocol):
 
     def dataReceived(self, data):
         self.transport.write(data)
-        if '\n' in data:
+        if b'\n' in data:
             self.transport.loseConnection()
 
 
@@ -208,7 +209,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
         and then (after the reactor has spun) send it a KILL signal.
         """
         self.buffer = buffer
-        self.transport.write('\x03')
+        self.transport.write(b'\x03')
         self.transport.loseConnection()
         reactor.callLater(0, self._reallyDie)
 
@@ -251,7 +252,7 @@ class ConchTestForwardingPort(protocol.Protocol):
 
 
     def connectionMade(self):
-        self.buffer = ''
+        self.buffer = b''
         self.transport.write(self.data)
 
 
@@ -378,7 +379,7 @@ class ForwardingMixin(ConchServerSetupMixin):
         server.
         """
         d = self.execute('echo goodbye', ConchTestOpenSSHProcess())
-        return d.addCallback(self.assertEqual, 'goodbye\n')
+        return d.addCallback(self.assertEqual, b'goodbye\n')
 
 
     def test_localToRemoteForwarding(self):
@@ -387,11 +388,11 @@ class ForwardingMixin(ConchServerSetupMixin):
         specified port on the server.
         """
         localPort = self._getFreePort()
-        process = ConchTestForwardingProcess(localPort, 'test\n')
+        process = ConchTestForwardingProcess(localPort, b'test\n')
         d = self.execute('', process,
                          sshArgs='-N -L%i:127.0.0.1:%i'
                          % (localPort, self.echoPort))
-        d.addCallback(self.assertEqual, 'test\n')
+        d.addCallback(self.assertEqual, b'test\n')
         return d
 
 
@@ -401,11 +402,11 @@ class ForwardingMixin(ConchServerSetupMixin):
         to a port locally.
         """
         localPort = self._getFreePort()
-        process = ConchTestForwardingProcess(localPort, 'test\n')
+        process = ConchTestForwardingProcess(localPort, b'test\n')
         d = self.execute('', process,
                          sshArgs='-N -R %i:127.0.0.1:%i'
                          % (localPort, self.echoPort))
-        d.addCallback(self.assertEqual, 'test\n')
+        d.addCallback(self.assertEqual, b'test\n')
         return d
 
 
@@ -547,7 +548,12 @@ class OpenSSHClientMixin:
                        ' 127.0.0.1 ' + remoteCommand
             port = self.conchServer.getHost().port
             cmds = (cmdline % port).split()
-            reactor.spawnProcess(process, which('ssh')[0], cmds)
+            encodedCmds = []
+            for cmd in cmds:
+                if isinstance(cmd, unicode):
+                    cmd = cmd.encode("utf-8")
+                encodedCmds.append(cmd)
+            reactor.spawnProcess(process, which('ssh')[0], encodedCmds)
             return process.deferred
         return d.addCallback(hasPAKT)
 
@@ -623,11 +629,11 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
         Forwarding of arbitrary IPv6 TCP connections via SSH.
         """
         localPort = self._getFreePort()
-        process = ConchTestForwardingProcess(localPort, 'test\n')
+        process = ConchTestForwardingProcess(localPort, b'test\n')
         d = self.execute('', process,
                          sshArgs='-N -L%i:[::1]:%i'
                          % (localPort, self.echoPortV6))
-        d.addCallback(self.assertEqual, 'test\n')
+        d.addCallback(self.assertEqual, b'test\n')
         return d
 
 
@@ -669,7 +675,20 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         log.msg(str(cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        reactor.spawnProcess(process, sys.executable, cmds, env=env)
+        encodedCmds = []
+        encodedEnv = {}
+        for cmd in cmds:
+            if isinstance(cmd, unicode):
+                cmd = cmd.encode("utf-8")
+            encodedCmds.append(cmd)
+        for var in env:
+            val = env[var]
+            if isinstance(var, unicode):
+                var = var.encode("utf-8")
+            if isinstance(val, unicode):
+                val = val.encode("utf-8")
+            encodedEnv[var] = val
+        reactor.spawnProcess(process, sys.executable, encodedCmds, env=encodedEnv)
         return process.deferred
 
 
@@ -679,7 +698,7 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         """
         def cb_check_log(result):
             logContent = logPath.getContent()
-            self.assertIn('Log opened.', logContent)
+            self.assertIn(b'Log opened.', logContent)
 
         logPath = filepath.FilePath(self.mktemp())
 
@@ -689,6 +708,6 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
             conchArgs=['--log', '--logfile', logPath.path]
             )
 
-        d.addCallback(self.assertEqual, 'goodbye\n')
+        d.addCallback(self.assertEqual, b'goodbye\n')
         d.addCallback(cb_check_log)
         return d
