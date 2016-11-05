@@ -237,6 +237,7 @@ class ProcessMonitor(service.Service):
     def startProcess(self, name, proto = None):
         """
         @param name: The name of the process to be started
+        @param proto: A custom L{twisted.internet.interfaces.ILoggingProcessProtocol} object
         """
         # If a protocol instance already exists, it means the process is
         # already running
