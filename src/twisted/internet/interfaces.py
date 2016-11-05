@@ -1911,6 +1911,13 @@ class IProcessProtocol(Interface):
             L{twisted.internet.error.ProcessTerminated}.
         """
 
+class ILoggingProcessProtocol(IProcessProtocol):
+    """
+    Interface for process-related logging handlers.
+    """
+    service = Attribute("blah")
+    name = Attribute("blah")
+
 
 
 class IHalfCloseableProtocol(Interface):

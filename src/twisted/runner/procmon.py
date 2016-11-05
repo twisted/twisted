@@ -5,10 +5,13 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
+from zope.interface import implementer
+
 from twisted.python import log
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
+from twisted.internet import interfaces
 
 class DummyTransport:
 
@@ -25,6 +28,7 @@ class LineLogger(basic.LineReceiver):
         log.msg('[%s] %s' % (self.tag, line))
 
 
+@implementer(interfaces.ILoggingProcessProtocol)
 class LoggingProtocol(protocol.ProcessProtocol):
 
     service = None
@@ -230,7 +234,7 @@ class ProcessMonitor(service.Service):
                                                          name)
 
 
-    def startProcess(self, name):
+    def startProcess(self, name, proto = None):
         """
         @param name: The name of the process to be started
         """
@@ -241,7 +245,8 @@ class ProcessMonitor(service.Service):
 
         args, uid, gid, env = self.processes[name]
 
-        proto = LoggingProtocol()
+        if proto is None:
+            proto = LoggingProtocol()
         proto.service = self
         proto.name = name
         self.protocols[name] = proto

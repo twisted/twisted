@@ -5,11 +5,16 @@
 Tests for L{twisted.runner.procmon}.
 """
 
+from zope.interface.verify import verifyObject
+from zope.interface import implementer
+
 from twisted.trial import unittest
+from twisted.internet.protocol import ProcessProtocol
 from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
 from twisted.internet.error import (ProcessDone, ProcessTerminated,
                                     ProcessExitedAlready)
 from twisted.internet.task import Clock
+from twisted.internet import interfaces
 from twisted.python.failure import Failure
 from twisted.test.proto_helpers import MemoryReactor
 
@@ -207,6 +212,9 @@ class ProcmonTests(unittest.TestCase):
         self.assertRaises(KeyError, self.pm.removeProcess, "foo")
 
 
+    def test_interface_LoggingProtocol(self):
+        self.assertTrue(verifyObject(interfaces.ILoggingProcessProtocol, LoggingProtocol()))
+
     def test_startProcess(self):
         """
         When a process has been started, an instance of L{LoggingProtocol} will
@@ -217,6 +225,19 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         self.pm.startProcess("foo")
         self.assertIsInstance(self.pm.protocols["foo"], LoggingProtocol)
+        self.assertIn("foo", self.pm.timeStarted.keys())
+
+    def test_startProcessAlternateLoggingProtocol(self):
+        """
+        Allow starting a process with a custom
+        L{twisted.internet.interfaces.ILoggingProcessProtocol}.
+        """
+        @implementer(interfaces.ILoggingProcessProtocol)
+        class DummyProtocol(ProcessProtocol): pass
+
+        self.pm.addProcess("foo", ["foo"])
+        self.pm.startProcess("foo", DummyProtocol())
+        self.assertIsInstance(self.pm.protocols["foo"], DummyProtocol)
         self.assertIn("foo", self.pm.timeStarted.keys())
 
 
