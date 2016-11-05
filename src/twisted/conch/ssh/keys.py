@@ -384,7 +384,7 @@ class Key(object):
 
             if cipher in (b'AES-128-CBC', b'AES-256-CBC'):
                 algorithmClass = algorithms.AES
-                keySize = 16
+                keySize = int(int(cipher.split(b'-')[1])/8)
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
@@ -416,16 +416,14 @@ class Key(object):
             b64Data = b''.join(lines[1:-1])
             keyData = decodebytes(b64Data)
 
-        if kind == b'EC':
-            # ECDSA keys don't need base64 decoding which is required
-            # for RSA or DSA key.
-            return cls(load_pem_private_key(data, passphrase, default_backend()))
-
         try:
             decodedKey = berDecoder.decode(keyData)[0]
         except PyAsn1Error as e:
             raise BadKeyError(
                 'Failed to decode key (Bad Passphrase?): %s' % (e,))
+
+        if kind == b'EC':
+            return cls(load_pem_private_key(data, passphrase, default_backend()))
 
         if kind == b'RSA':
             if len(decodedKey) == 2:  # Alternate RSA key
