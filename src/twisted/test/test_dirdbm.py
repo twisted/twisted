@@ -5,7 +5,7 @@
 Test cases for dirdbm module.
 """
 
-import os, shutil
+import shutil
 from base64 import b64decode
 
 from twisted.trial import unittest
