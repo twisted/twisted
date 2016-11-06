@@ -104,7 +104,8 @@ class DirDbmTests(unittest.TestCase):
 
         d2.clear()
         self.assertTrue(len(d2.keys()) == len(d2.values()) ==
-                        len(d2.items()) == 0, ".clear() failed")
+                        len(d2.items()) == len(d2) == 0, ".clear() failed")
+        self.assertNotEqual(len(d), len(d2))
         shutil.rmtree(copyPath)
 
         # Delete items
@@ -114,6 +115,7 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(len(d.keys()), 0, "database has keys")
         self.assertEqual(len(d.values()), 0, "database has values")
         self.assertEqual(len(d.items()), 0, "database has items")
+        self.assertEqual(len(d), 0, "database has items")
 
 
     def testModificationTime(self):
