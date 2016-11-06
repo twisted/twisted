@@ -74,9 +74,15 @@ class DirDbmTests(unittest.TestCase):
         dbitems = set(d.items())
         dbkeys.sort()
         items = set(self.items)
-        assert keys == dbkeys, ".keys() output didn't match: %s != %s" % (repr(keys), repr(dbkeys))
-        assert values == dbvalues, ".values() output didn't match: %s != %s" % (repr(values), repr(dbvalues))
-        assert items == dbitems, "items() didn't match: %s != %s" % (repr(items), repr(dbitems))
+        self.assertEqual(keys, dbkeys,
+                         ".keys() output didn't match: %s != %s" %
+                         (repr(keys), repr(dbkeys)))
+        self.assertEqual(values, dbvalues,
+                         ".values() output didn't match: %s != %s" %
+                         (repr(values), repr(dbvalues)))
+        self.assertEqual(items, dbitems,
+                         "items() didn't match: %s != %s" %
+                         (repr(items), repr(dbitems)))
 
         copyPath = self.mktemp()
         d2 = d.copyTo(copyPath)
@@ -86,22 +92,28 @@ class DirDbmTests(unittest.TestCase):
         copyitems = set(d.items())
         copykeys.sort()
 
-        assert dbkeys == copykeys, ".copyTo().keys() didn't match: %s != %s" % (repr(dbkeys), repr(copykeys))
-        assert dbvalues == copyvalues, ".copyTo().values() didn't match: %s != %s" % (repr(dbvalues), repr(copyvalues))
-        assert dbitems == copyitems, ".copyTo().items() didn't match: %s != %s" % (repr(dbkeys), repr(copyitems))
+        self.assertEqual(dbkeys, copykeys,
+                         ".copyTo().keys() didn't match: %s != %s" %
+                         (repr(dbkeys), repr(copykeys)))
+        self.assertEqual(dbvalues, copyvalues,
+                         ".copyTo().values() didn't match: %s != %s" %
+                         (repr(dbvalues), repr(copyvalues)))
+        self.assertEqual(dbitems, copyitems,
+                         ".copyTo().items() didn't match: %s != %s" %
+                         (repr(dbkeys), repr(copyitems)))
 
         d2.clear()
-        assert len(d2.keys()) == len(d2.values()) == \
-               len(d2.items()) == 0, ".clear() failed"
+        self.assertTrue(len(d2.keys()) == len(d2.values()) ==
+                        len(d2.items()) == 0, ".clear() failed")
         shutil.rmtree(copyPath)
 
         # Delete items
         for k, v in self.items:
             del d[k]
             self.assertNotIn(k, d, "key is still in database, even though we deleted it")
-        assert len(d.keys()) == 0, "database has keys"
-        assert len(d.values()) == 0, "database has values"
-        assert len(d.items()) == 0, "database has items"
+        self.assertEqual(len(d.keys()), 0, "database has keys")
+        self.assertEqual(len(d.values()), 0, "database has values")
+        self.assertEqual(len(d.items()), 0, "database has items")
 
 
     def testModificationTime(self):
@@ -137,10 +149,10 @@ class DirDbmTests(unittest.TestCase):
             f.write(b"deleted")
 
         dbm = dirdbm.DirDBM(self.path.path)
-        assert dbm[b"key1"] == b"value"
-        assert dbm[b"key2"] == b"correct"
-        assert not self.path.globChildren("*.new")
-        assert not self.path.globChildren("*.rpl")
+        self.assertEqual(dbm[b"key1"], b"value")
+        self.assertEqual(dbm[b"key2"], b"correct")
+        self.assertFalse(self.path.globChildren("*.new"))
+        self.assertFalse(self.path.globChildren("*.rpl"))
 
 
     def test_nonStringKeys(self):
