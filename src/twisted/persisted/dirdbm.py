@@ -221,7 +221,7 @@ class DirDBM:
         @type key: bytes
         @param key: The key to test
 
-        @return: A true value if this dirdbm has the specified key, a faluse
+        @return: A true value if this dirdbm has the specified key, a false
         value otherwise.
         """
         assert type(key) == bytes, "DirDBM key must be bytes"
@@ -251,7 +251,7 @@ class DirDBM:
         @param default: The value to return if the given key does not exist
 
         @return: The value associated with C{key} or C{default} if not
-        C{self.has_key(key)}
+        L{DirDBM.has_key(key)}
         """
         if key in self:
             return self[key]
@@ -261,16 +261,9 @@ class DirDBM:
 
     def __contains__(self, key):
         """
-        C{key in dirdbm}
-
-        @type key: str
-        @param key: The key to test
-
-        @return: A true value if C{self.has_key(key)}, a false value otherwise.
+        L{DirDBM.has_key}
         """
-        assert type(key) == bytes, "DirDBM key must be bytes"
-        key = self._encode(key)
-        return self._dnamePath.child(key).isfile()
+        return self.has_key(key)
 
 
     def update(self, dict):
