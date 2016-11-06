@@ -189,14 +189,14 @@ class DirDBM:
 
     def keys(self):
         """
-        @return: a C{list} of filenames (keys).
+        @return: a L{list} of filenames (keys).
         """
         return map(self._decode, self._dnamePath.asBytesMode().listdir())
 
 
     def values(self):
         """
-        @return: a C{list} of file-contents (values).
+        @return: a L{list} of file-contents (values).
         """
         vals = []
         keys = self.keys()
@@ -207,7 +207,7 @@ class DirDBM:
 
     def items(self):
         """
-        @return: a C{list} of 2-tuples containing key/value pairs.
+        @return: a L{list} of 2-tuples containing key/value pairs.
         """
         items = []
         keys = self.keys()
@@ -275,8 +275,8 @@ class DirDBM:
 
     def update(self, dict):
         """
-        Add all the key/value pairs in C{dict} to this dirdbm.  Any conflicting
-        keys will be overwritten with the values from C{dict}.
+        Add all the key/value pairs in L{dict} to this dirdbm.  Any conflicting
+        keys will be overwritten with the values from L{dict}.
 
         @type dict: mapping
         @param dict: A mapping of key/value pairs to add to this dirdbm.
@@ -289,7 +289,7 @@ class DirDBM:
         """
         Copy the contents of this dirdbm to the dirdbm at C{path}.
 
-        @type path: C{str}
+        @type path: L{str}
         @param path: The path of the dirdbm to copy to.  If a dirdbm
         exists at the destination path, it is cleared first.
 
