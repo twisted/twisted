@@ -131,6 +131,7 @@ class DirDbmTests(unittest.TestCase):
         # -warner
         self.dbm[b"k"] = b"v"
         self.assertTrue(abs(time.time() - self.dbm.getModificationTime(b"k")) <= 3)
+        self.assertRaises(KeyError, self.dbm.getModificationTime, b"nokey")
 
 
     def testRecovery(self):
@@ -174,6 +175,18 @@ class DirDbmTests(unittest.TestCase):
         self.assertRaises(TypeError, self.dbm.__contains__, 2)
         self.assertRaises(TypeError, self.dbm.getModificationTime, 2)
 
+
+    def test_failSet(self):
+        """
+        Failure path when setting an item.
+        """
+        def _writeFail(path, data):
+            path.setContent(data)
+            raise IOError("fail to write")
+
+        self.dbm[b"failkey"] = b"test"
+        self.patch(self.dbm, "_writeFile", _writeFail)
+        self.assertRaises(IOError, self.dbm.__setitem__, b"failkey", b"test2")
 
 
 class ShelfTests(DirDbmTests):
