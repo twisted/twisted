@@ -131,8 +131,10 @@ class DirDBM:
         @type v: bytes
         @param v: value to associate with C{k}
         """
-        assert type(k) == bytes, "DirDBM key must be bytes"
-        assert type(v) == bytes, "DirDBM value must be bytes"
+        if not type(k) == bytes:
+            raise TypeError("DirDBM key must be bytes")
+        if not type(v) == bytes:
+            raise TypeError("DirDBM value must be bytes")
         k = self._encode(k)
 
         # We create a new file with extension .new, write the data to it, and
@@ -163,7 +165,8 @@ class DirDBM:
         @return: The value associated with C{k}
         @raise KeyError: Raised when there is no such key
         """
-        assert type(k) == bytes, "DirDBM key must be bytes"
+        if not type(k) == bytes:
+            raise TypeError("DirDBM key must be bytes")
         path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
@@ -181,7 +184,8 @@ class DirDBM:
 
         @raise KeyError: Raised when there is no such key
         """
-        assert type(k) == bytes, "DirDBM key must be bytes"
+        if not type(k) == bytes:
+            raise TypeError("DirDBM key must be bytes")
         k = self._encode(k)
         try:    self._dnamePath.child(k).remove()
         except (OSError, IOError): raise KeyError(self._decode(k))
@@ -224,7 +228,8 @@ class DirDBM:
         @return: A true value if this dirdbm has the specified key, a false
         value otherwise.
         """
-        assert type(key) == bytes, "DirDBM key must be bytes"
+        if not type(key) == bytes:
+            raise TypeError("DirDBM key must be bytes")
         key = self._encode(key)
         return self._dnamePath.child(key).isfile()
 
@@ -320,7 +325,8 @@ class DirDBM:
         @return: Last modification date (seconds since epoch) of entry C{key}
         @raise KeyError: Raised when there is no such key
         """
-        assert type(key) == bytes, "DirDBM key must be bytes"
+        if not type(key) == bytes:
+            raise TypeError("DirDBM key must be bytes")
         path = self._dnamePath.child(self._encode(key))
         if path.isfile():
             return path.getModificationTime()

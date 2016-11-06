@@ -146,20 +146,19 @@ class DirDbmTests(unittest.TestCase):
     def test_nonStringKeys(self):
         """
         L{dirdbm.DirDBM} operations only support string keys: other types
-        should raise a C{AssertionError}. This really ought to be a
-        C{TypeError}, but it'll stay like this for backward compatibility.
+        should raise a L{TypeError}.
         """
-        self.assertRaises(AssertionError, self.dbm.__setitem__, 2, "3")
+        self.assertRaises(TypeError, self.dbm.__setitem__, 2, "3")
         try:
-            self.assertRaises(AssertionError, self.dbm.__setitem__, "2", 3)
+            self.assertRaises(TypeError, self.dbm.__setitem__, "2", 3)
         except unittest.FailTest:
             # dirdbm.Shelf.__setitem__ supports non-string values
             self.assertIsInstance(self.dbm, dirdbm.Shelf)
-        self.assertRaises(AssertionError, self.dbm.__getitem__, 2)
-        self.assertRaises(AssertionError, self.dbm.__delitem__, 2)
-        self.assertRaises(AssertionError, self.dbm.has_key, 2)
-        self.assertRaises(AssertionError, self.dbm.__contains__, 2)
-        self.assertRaises(AssertionError, self.dbm.getModificationTime, 2)
+        self.assertRaises(TypeError, self.dbm.__getitem__, 2)
+        self.assertRaises(TypeError, self.dbm.__delitem__, 2)
+        self.assertRaises(TypeError, self.dbm.has_key, 2)
+        self.assertRaises(TypeError, self.dbm.__contains__, 2)
+        self.assertRaises(TypeError, self.dbm.getModificationTime, 2)
 
 
 
