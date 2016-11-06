@@ -167,7 +167,7 @@ class DirDBM:
         path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
-        except:
+        except (OSError, IOError):
             raise KeyError(k)
 
 
