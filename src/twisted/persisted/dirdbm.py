@@ -191,7 +191,7 @@ class DirDBM:
         """
         @return: a L{list} of filenames (keys).
         """
-        return map(self._decode, self._dnamePath.asBytesMode().listdir())
+        return list(map(self._decode, self._dnamePath.asBytesMode().listdir()))
 
 
     def values(self):

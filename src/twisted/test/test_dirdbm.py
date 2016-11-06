@@ -69,7 +69,7 @@ class DirDbmTests(unittest.TestCase):
             assert 0, "didn't raise KeyError on non-existent key"
 
         # Check keys(), values() and items()
-        dbkeys = list(d.keys())
+        dbkeys = d.keys()
         dbvalues = set(d.values())
         dbitems = set(d.items())
         dbkeys.sort()
@@ -81,7 +81,7 @@ class DirDbmTests(unittest.TestCase):
         copyPath = self.mktemp()
         d2 = d.copyTo(copyPath)
 
-        copykeys = list(d.keys())
+        copykeys = d.keys()
         copyvalues = set(d.values())
         copyitems = set(d.items())
         copykeys.sort()
@@ -91,15 +91,15 @@ class DirDbmTests(unittest.TestCase):
         assert dbitems == copyitems, ".copyTo().items() didn't match: %s != %s" % (repr(dbkeys), repr(copyitems))
 
         d2.clear()
-        assert (len(list(d2.keys())) == len(d2.values()) ==
-                len(d2.items()) == 0, ".clear() failed")
+        assert len(d2.keys()) == len(d2.values()) == \
+               len(d2.items()) == 0, ".clear() failed"
         shutil.rmtree(copyPath)
 
         # Delete items
         for k, v in self.items:
             del d[k]
             self.assertNotIn(k, d, "key is still in database, even though we deleted it")
-        assert len(list(d.keys())) == 0, "database has keys"
+        assert len(d.keys()) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
 
