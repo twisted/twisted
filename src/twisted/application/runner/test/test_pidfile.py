@@ -9,7 +9,7 @@ import errno
 from os import getpid, name as SYSTEM_NAME
 from io import BytesIO
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.python.filepath import FilePath
 
@@ -35,10 +35,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile} conforms to L{IPIDFile}.
         """
         pidFile = PIDFile(DummyFilePath())
-        try:
-            verifyObject(IPIDFile, pidFile)
-        except BrokenMethodImplementation as e:
-            self.fail(e)
+        verifyObject(IPIDFile, pidFile)
 
 
     def test_formatWithPID(self):
@@ -323,13 +320,10 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_interface(self):
         """
-        L{PIDFile} conforms to L{IPIDFile}.
+        L{NonePIDFile} conforms to L{IPIDFile}.
         """
         pidFile = NonePIDFile()
-        try:
-            verifyObject(IPIDFile, pidFile)
-        except BrokenMethodImplementation as e:
-            self.fail(e)
+        verifyObject(IPIDFile, pidFile)
 
 
     def test_read(self):
