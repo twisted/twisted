@@ -76,6 +76,21 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertEqual(pid, pidFile.read())
 
 
+    def test_readOpenRaisesOSErrorNotENOENT(self):
+        """
+        L{PIDFile.read} re-raises L{OSError} if the associated C{errno} is
+        anything other than L{errno.ENOENT}.
+        """
+        def oops(mode="r"):
+            raise OSError(errno.EIO, "I/O error")
+
+        self.patch(DummyFilePath, "open", oops)
+
+        pidFile = PIDFile(DummyFilePath())
+
+        self.assertRaises(OSError, pidFile.read)
+
+
     def test_writePID(self):
         """
         L{PIDFile.write} stores the given PID.
