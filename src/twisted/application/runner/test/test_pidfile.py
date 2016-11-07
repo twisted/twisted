@@ -345,6 +345,17 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         self.assertEqual(error.errno, errno.EPERM)
 
 
+    def test_writeRunningPID(self):
+        """
+        L{NonePIDFile.writeRunningPID} raises L{OSError} with an errno of
+        L{errno.EPERM}.
+        """
+        pidFile = NonePIDFile()
+
+        error = self.assertRaises(OSError, pidFile.writeRunningPID)
+        self.assertEqual(error.errno, errno.EPERM)
+
+
     def test_remove(self):
         """
         L{NonePIDFile.remove} raises L{OSError} with an errno of L{errno.EPERM}.
