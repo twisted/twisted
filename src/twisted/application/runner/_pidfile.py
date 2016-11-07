@@ -49,10 +49,10 @@ class PIDFile(object):
         """
         Read the process ID stored in this PID file.
 
-        @return: The contained process ID, or C{None} if the PID file does not
-            exist.
+        @return: The contained process ID.
         @rtype: L{int}
 
+        @raise NoPIDFound: If this PID file does not exist.
         @raise EnvironmentError: If this PID file cannot be read.
         @raise ValueError: If this PID file's content is invalid.
         """
