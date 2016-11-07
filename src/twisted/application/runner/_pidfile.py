@@ -176,7 +176,7 @@ class NonePIDFile(PIDFile):
 
 
     def read(self):
-        return None
+        raise NoPIDFound("PID file does not exist")
 
 
     def write(self, pid=None):
