@@ -322,7 +322,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         """
         pidFile = NonePIDFile()
 
-        error = self.assertRaises(OSError, pidFile.write)
+        error = self.assertRaises(OSError, pidFile.write, 0)
         self.assertEqual(error.errno, errno.EPERM)
 
 

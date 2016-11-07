@@ -179,7 +179,7 @@ class NonePIDFile(PIDFile):
         raise NoPIDFound("PID file does not exist")
 
 
-    def write(self, pid=None):
+    def write(self, pid):
         raise OSError(errno.EPERM, "Operation not permitted")
 
 
