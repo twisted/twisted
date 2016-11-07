@@ -400,7 +400,7 @@ class DummyFilePath(FilePath):
     def open(self, mode="r"):
         if not self._exists:
             raise OSError(errno.ENOENT, "No such file or directory")
-        return BytesIO(self._content)
+        return BytesIO(self.getContent())
 
 
     def setContent(self, content):
