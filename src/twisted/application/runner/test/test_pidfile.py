@@ -88,7 +88,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
         pidFile = PIDFile(DummyFilePath())
 
-        self.assertRaises(OSError, pidFile.read)
+        error = self.assertRaises(OSError, pidFile.read)
+        self.assertEquals(error.errno, errno.EIO)
 
 
     def test_writePID(self):
