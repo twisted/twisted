@@ -9,15 +9,99 @@ PID file.
 import errno
 from os import getpid, kill
 
+from zope.interface import Interface, implementer
+
 from twisted.logger import Logger
 
 
 
-class PIDFile(object):
+class IPIDFile(Interface):
     """
     PID file.
 
     Manages a file that remembers a process ID.
+    """
+
+    def read():
+        """
+        Read the process ID stored in this PID file.
+
+        @return: The contained process ID.
+        @rtype: L{int}
+
+        @raise NoPIDFound: If this PID file does not exist.
+        @raise EnvironmentError: If this PID file cannot be read.
+        @raise ValueError: If this PID file's content is invalid.
+        """
+
+
+    def write(pid):
+        """
+        Store a PID in this PID file.
+
+        @param pid: A PID to store.
+        @type pid: L{int}
+
+        @raise EnvironmentError: If this PID file cannot be written.
+        """
+
+
+    def writeRunningPID():
+        """
+        Store the PID of the current process in this PID file.
+
+        @raise EnvironmentError: If this PID file cannot be written.
+        """
+
+
+    def remove():
+        """
+        Remove this PID file.
+
+        @raise EnvironmentError: If this PID file cannot be removed.
+        """
+
+
+    def isRunning():
+        """
+        Determine whether there is a running process corresponding to the PID
+        in this PID file.
+
+        @return: True if this PID file contains a PID and a process with that
+        PID is currently running; false otherwise.
+        @rtype: L{bool}
+
+        @raise EnvironmentError: If this PID file cannot be read.
+        @raise InvalidPIDFileError: If this PID file's content is invalid.
+        @raise StalePIDFileError: If this PID file's content refers to a PID
+            for which there is no corresponding running process.
+        """
+
+
+    def __enter__():
+        """
+        Enter a context using this PIDFile.
+
+        Writes the PID file with the PID of the running process.
+
+        @raise AlreadyRunningError: A process corresponding to the PID in this
+            PID file is already running.
+        """
+
+
+    def __exit__(exc_type, exc_value, traceback):
+        """
+        Exit a context using this PIDFile.
+
+        Removes the PID file.
+        """
+
+
+
+@implementer(IPIDFile)
+class PIDFile(object):
+    """
+    Concrete implementation of L{IPIDFile} based on C{IFilePath}.
     """
 
     _log = Logger()
@@ -46,16 +130,6 @@ class PIDFile(object):
 
 
     def read(self):
-        """
-        Read the process ID stored in this PID file.
-
-        @return: The contained process ID.
-        @rtype: L{int}
-
-        @raise NoPIDFound: If this PID file does not exist.
-        @raise EnvironmentError: If this PID file cannot be read.
-        @raise ValueError: If this PID file's content is invalid.
-        """
         pidString = b""
         try:
             for pidString in self.filePath.open():
@@ -72,49 +146,18 @@ class PIDFile(object):
 
 
     def write(self, pid):
-        """
-        Store a PID in this PID file.
-
-        @param pid: A PID to store.
-        @type pid: L{int}
-
-        @raise EnvironmentError: If this PID file cannot be written.
-        """
         self.filePath.setContent(self.format(pid=pid))
 
 
     def writeRunningPID(self):
-        """
-        Store the PID of the current process in this PID file.
-
-        @raise EnvironmentError: If this PID file cannot be written.
-        """
         self.write(getpid())
 
 
     def remove(self):
-        """
-        Remove this PID file.
-
-        @raise EnvironmentError: If this PID file cannot be removed.
-        """
         self.filePath.remove()
 
 
     def isRunning(self):
-        """
-        Determine whether there is a running process corresponding to the PID
-        in this PID file.
-
-        @return: True if this PID file contains a PID and a process with that
-        PID is currently running; false otherwise.
-        @rtype: L{bool}
-
-        @raise EnvironmentError: If this PID file cannot be read.
-        @raise InvalidPIDFileError: If this PID file's content is invalid.
-        @raise StalePIDFileError: If this PID file's content refers to a PID
-            for which there is no corresponding running process.
-        """
         try:
             pid = self.read()
         except NoPIDFound:
@@ -136,14 +179,6 @@ class PIDFile(object):
 
 
     def __enter__(self):
-        """
-        Enter a context using this PIDFile.
-
-        Writes the PID file with the PID of the running process.
-
-        @raise AlreadyRunningError: A process corresponding to the PID in this
-            PID file is already running.
-        """
         try:
             if self.isRunning():
                 raise AlreadyRunningError()
@@ -154,16 +189,12 @@ class PIDFile(object):
 
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Exit a context using this PIDFile.
-
-        Removes the PID file.
-        """
         self.remove()
 
 
 
-class NonePIDFile(PIDFile):
+@implementer(IPIDFile)
+class NonePIDFile(object):
     """
     PID file implementation that does nothing.
 
@@ -181,6 +212,10 @@ class NonePIDFile(PIDFile):
 
     def write(self, pid):
         raise OSError(errno.EPERM, "Operation not permitted")
+
+
+    def writeRunningPID(self):
+        self.write(0)
 
 
     def remove(self):

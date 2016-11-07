@@ -170,7 +170,7 @@ class RunnerOptions(Names):
     @type reactor: L{NamedConstant}
 
     @cvar pidFile: The PID file to use.
-        Corresponding value: L{PIDFile}.
+        Corresponding value: L{IPIDFile}.
     @type pidFile: L{NamedConstant}
 
     @cvar kill: Whether this runner should kill an existing running instance.
