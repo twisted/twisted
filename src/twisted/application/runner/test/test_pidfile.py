@@ -14,7 +14,7 @@ from twisted.python.filepath import FilePath
 from ...runner import _pidfile
 from .._pidfile import (
     PIDFile, AlreadyRunningError, InvalidPIDFileError, StalePIDFileError,
-    NoPIDFound,
+    NonePIDFile, NoPIDFound,
 )
 
 import twisted.trial.unittest
@@ -89,7 +89,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath())
 
         error = self.assertRaises(OSError, pidFile.read)
-        self.assertEquals(error.errno, errno.EIO)
+        self.assertEqual(error.errno, errno.EIO)
 
 
     def test_writePID(self):
@@ -299,6 +299,61 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
                 pass
 
         self.assertRaises(AlreadyRunningError, useContext)
+
+
+
+class NonePIDFileTests(twisted.trial.unittest.TestCase):
+    """
+    Tests for L{NonePIDFile}.
+    """
+
+    def test_read(self):
+        """
+        L{NonePIDFile.read} raises L{NoPIDFound}.
+        """
+        pidFile = NonePIDFile()
+
+        self.assertRaises(NoPIDFound, pidFile.read)
+
+
+    def test_write(self):
+        """
+        L{NonePIDFile.write} raises L{OSError} with an errno of L{errno.EPERM}.
+        """
+        pidFile = NonePIDFile()
+
+        error = self.assertRaises(OSError, pidFile.write)
+        self.assertEqual(error.errno, errno.EPERM)
+
+
+    def test_remove(self):
+        """
+        L{NonePIDFile.remove} raises L{OSError} with an errno of L{errno.EPERM}.
+        """
+        pidFile = NonePIDFile()
+
+        error = self.assertRaises(OSError, pidFile.remove)
+        self.assertEqual(error.errno, errno.ENOENT)
+
+
+    def test_isRunning(self):
+        """
+        L{NonePIDFile.isRunning} returns L{False}.
+        """
+        pidFile = NonePIDFile()
+
+        self.assertEqual(pidFile.isRunning(), False)
+
+
+    def test_contextManager(self):
+        """
+        When used as a context manager, a L{NonePIDFile} doesn't raise, despite
+        not existing.
+        """
+        pidFile = NonePIDFile()
+
+        with pidFile:
+            pass
 
 
 
