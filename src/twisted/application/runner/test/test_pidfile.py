@@ -305,11 +305,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
         self.assertTrue(pidFile.isRunning())
 
-        def useContext():
-            with pidFile:
-                pass
-
-        self.assertRaises(AlreadyRunningError, useContext)
+        self.assertRaises(AlreadyRunningError, pidFile.__enter__)
 
 
 
