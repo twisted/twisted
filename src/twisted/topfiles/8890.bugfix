@@ -1,0 +1,1 @@
+Deferreds that are paused or chained on other Deferreds will now return a result when yielded/awaited in a twisted.internet.defer.ensureDeferred-wrapped coroutine, instead of returning the Deferred it was chained to.
