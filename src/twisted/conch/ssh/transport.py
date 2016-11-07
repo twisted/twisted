@@ -35,22 +35,6 @@ from twisted.conch.ssh.common import (
 )
 
 
-# change after PR533.
-_curveTable = {
-    b'nistp256' : ec.SECP256R1(),
-    b'nistp384' : ec.SECP384R1(),
-    b'nistp521' : ec.SECP521R1(),
-    b'nistk163' : ec.SECT163K1(),
-    b'nistp192' : ec.SECP192R1(),
-    b'nistp224' : ec.SECP224R1(),
-    b'nistk233' : ec.SECT233K1(),
-    b'nistb233' : ec.SECT233R1(),
-    b'nistk283' : ec.SECT283K1(),
-    b'nistk409' : ec.SECT409K1(),
-    b'nistb409' : ec.SECT409R1(),
-    b'nistt571' : ec.SECT571K1()
-    }
-
 
 def _getRandomNumber(random, bits):
     """
@@ -489,7 +473,8 @@ class SSHTransportBase(protocol.Protocol):
     ]
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
-    supportedPublicKeys = [b'ssh-rsa', b'ssh-dss']
+    supportedPublicKeys = [b'ssh-rsa', b'ssh-dss'] +
+                        [b'ecdsa-sha2-' + list(keys._curveTable.keys)]
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
     supportedVersions = (b'1.99', b'2.0')
@@ -1272,33 +1257,25 @@ class SSHServerTransport(SSHTransportBase):
 
         @return: None.
         """
-        #Get the raw client public key.
+        # Get the raw client public key.
         clientECDHpubKey, packet = getNS(packet)
 
 
-        #Get the host's public and private keys
+        # Get the host's public and private keys
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        #Get the base curve info
-        #key generation can be done using keys.Key.<somemethod> after PR533.
-        shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
 
-        #Get the curve instance
-        curve = _curveTable[shortKex]
-
-        #Generate the private key
-        ecPriv = ec.generate_private_key(curve, default_backend())
+        # Generate the private key
+        ecPriv = keys.Key.fromString(privHostKey)
 
         #Get the public key
         ecPub = ecPriv.public_key()
         encPub = ecPub.public_numbers().encode_point()
 
-        #Take the provided public key and transform it into a format for the cryptography module
-        serverECDHpublicKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
-            curve, clientECDHpubKey).public_key(default_backend())
+        serverECDHpublicKey = keys.Key.fromString(clientECDHpubKey)
 
-        #We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
+        # We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
         sharedSecret = MP(int(binascii.hexlify(
             ecPriv.exchange(ec.ECDH(), serverECDHpublicKey)), 16))
 
@@ -1581,11 +1558,10 @@ class SSHClientTransport(SSHTransportBase):
 
         if _kex.isEllipticCurve(self.kexAlg):
             # We agreed on elliptic curve key exchange algorithm.
-            # key generation can be changed using keys.Key.<somemethod> after PR533
             shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
 
             #Get the curve
-            self._curve = _curveTable[shortKex]
+            self._curve = keys._curveTable[shortKex]
 
             #Generate the keys
             self._ecPriv = ec.generate_private_key(self._curve, default_backend())
@@ -1640,8 +1616,7 @@ class SSHClientTransport(SSHTransportBase):
 
             # Take the provided public key and transform it into a format for the cryptography module
             #can be changed after PR533. use keys.Key.<somemethod>
-            serverKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
-                self._curve, pubKey).public_key(default_backend())
+            serverKey = keys.Key.fromString(pubKey)
 
             # We need to convert to hex, so we can convert to an int so we can make a multiple precision int.
             sharedSecret = MP(int(binascii.hexlify(
