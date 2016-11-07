@@ -473,8 +473,8 @@ class SSHTransportBase(protocol.Protocol):
     ]
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
-    supportedPublicKeys = [b'ssh-rsa', b'ssh-dss'] +
-                        [b'ecdsa-sha2-' + list(keys._curveTable.keys)]
+    supportedPublicKeys = ([b'ssh-rsa', b'ssh-dss'] +
+                        [b'ecdsa-sha2-' + list(keys._curveTable.keys)])
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
     supportedVersions = (b'1.99', b'2.0')
