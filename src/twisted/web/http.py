@@ -1616,10 +1616,17 @@ class _NoPushProducer(object):
 
 
 
-@implementer(interfaces.ITransport)
+@implementer(interfaces.ITransport,
+             interfaces.IPushProducer,
+             interfaces.IConsumer)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
+
+    The L{HTTPChannel} provides L{interfaces.ITransport} and
+    L{interfaces.IConsumer} to the L{Request} objects it creates. It also
+    implements L{interfaces.IPushProducer} to C{self.transport}, allowing the
+    transport to pause it.
 
     @ivar MAX_LENGTH: Maximum length for initial request line and each line
         from the header.
@@ -2082,6 +2089,56 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @return: L{None}
         """
         return self.transport.unregisterProducer()
+
+
+    # Implementation of IPushProducer.
+    def stopProducing(self):
+        """
+        Stop producing data.
+
+        The HTTPChannel doesn't *actually* implement this, beacuse the
+        assumption is that it will only be called just before C{loseConnection}
+        is called. There's nothing sensible we can do other than call
+        C{loseConnection} anyway.
+        """
+        pass
+
+
+    def pauseProducing(self):
+        """
+        Pause producing data.
+
+        This will be called by the transport when the send buffers have been
+        filled up. We want to simultaneously pause the producing L{Request}
+        object and also pause our transport.
+
+        The logic behind pausing the transport is specifically to avoid issues
+        like https://twistedmatrix.com/trac/ticket/8868. In this case, our
+        inability to send does not prevent us handling more requests, which
+        means we increasingly queue up more responses in our send buffer
+        without end. The easiest way to handle this is to ensure that if we are
+        unable to send our responses, we will not read further data from the
+        connection until the client pulls some data out. This is a bit of a
+        blunt instrument, but it's ok.
+
+        Note that this potentially interacts with timeout handling in a
+        positive way. Once the transport is paused the client may run into a
+        timeout which will cause us to tear the connection down. That's a good
+        thing!
+        """
+        pass
+
+
+    def resumeProducing(self):
+        """
+        Resume producing data.
+
+        This will be called by the transport when the send buffer has dropped
+        enough to actually send more data. When this happens we can unpause any
+        outstanding L{Request} producers we have, and also unpause our
+        transport.
+        """
+        pass
 
 
     def _send100Continue(self):
