@@ -943,6 +943,35 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(protocol.response.length, 123)
 
 
+    def test_ignored1XXResponseCausesLog(self):
+        """
+        When a 1XX response is ignored, Twisted emits a log.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+
+        # Catch the logs.
+        logs = []
+        log.addObserver(logs.append)
+        self.addCleanup(log.removeObserver, logs.append)
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response)
+
+        self.assertEqual(
+            logs[0]['message'][0], 'Ignoring unexpected 103 response'
+        )
+
+
 
 class SlowRequest:
     """

@@ -461,6 +461,9 @@ class HTTPClientParser(HTTPParser):
             # going to do. We reset the parser here, but we leave
             # _everReceivedData in its True state because we have, in fact,
             # received data.
+            log.msg(
+                "Ignoring unexpected {} response".format(self.response.code)
+            )
             self.connectionMade()
             del self.response
             return
