@@ -1,0 +1,1 @@
+Deferreds awaited/yielded from in a twisted.internet.defer.ensureDeferred wrapped coroutine will now properly raise exceptions. Additionally, it more closely models asyncio.ensure_future and will pass through Deferreds.
