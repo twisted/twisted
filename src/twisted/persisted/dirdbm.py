@@ -187,7 +187,8 @@ class DirDBM:
         if not type(k) == bytes:
             raise TypeError("DirDBM key must be bytes")
         k = self._encode(k)
-        try:    self._dnamePath.child(k).remove()
+        try:
+            self._dnamePath.child(k).remove()
         except (OSError, IOError): raise KeyError(self._decode(k))
 
 
