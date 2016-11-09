@@ -840,6 +840,138 @@ class HTTPClientParserTests(TestCase):
             self.assertIsInstance, ResponseFailed)
 
 
+    def test_1XXResponseIsSwallowed(self):
+        """
+        If a response in the 1XX range is received it just gets swallowed and
+        the parser resets itself.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response)
+
+        # The response should have been erased
+        self.assertTrue(getattr(protocol, 'response', None) is None)
+        self.assertEqual(protocol.state, STATUS)
+        self.assertEqual(len(list(protocol.headers.getAllRawHeaders())), 0)
+        self.assertEqual(len(list(protocol.connHeaders.getAllRawHeaders())), 0)
+        self.assertTrue(protocol._everReceivedData)
+
+
+    def test_1XXFollowedByFinalResponseOnlyEmitsFinal(self):
+        """
+        When a 1XX response is swallowed, the final response that follows it is
+        the only one that gets sent to the application.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+        following200Response = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'Content-Length: 123\r\n'
+            b'\r\n'
+        )
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response + following200Response)
+
+        self.assertEqual(protocol.response.code, 200)
+        self.assertEqual(
+            protocol.response.headers,
+            Headers({}))
+        self.assertEqual(
+            protocol.connHeaders,
+            Headers({b'content-length': [b'123']}))
+        self.assertEqual(protocol.response.length, 123)
+
+
+    def test_multiple1XXResponsesAreIgnored(self):
+        """
+        It is acceptable for multiple 1XX responses to come through, all of
+        which get ignored.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+        following200Response = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'Content-Length: 123\r\n'
+            b'\r\n'
+        )
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(
+            sample103Response +
+            sample103Response +
+            sample103Response +
+            following200Response
+        )
+
+        self.assertEqual(protocol.response.code, 200)
+        self.assertEqual(
+            protocol.response.headers,
+            Headers({}))
+        self.assertEqual(
+            protocol.connHeaders,
+            Headers({b'content-length': [b'123']}))
+        self.assertEqual(protocol.response.length, 123)
+
+
+    def test_ignored1XXResponseCausesLog(self):
+        """
+        When a 1XX response is ignored, Twisted emits a log.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+
+        # Catch the logs.
+        logs = []
+        log.addObserver(logs.append)
+        self.addCleanup(log.removeObserver, logs.append)
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response)
+
+        self.assertEqual(
+            logs[0]['message'][0], 'Ignoring unexpected 103 response'
+        )
+
+
 
 class SlowRequest:
     """
