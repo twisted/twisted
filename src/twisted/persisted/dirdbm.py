@@ -267,7 +267,7 @@ class DirDBM:
 
     def __contains__(self, key):
         """
-        L{DirDBM.has_key}
+        @see: L{DirDBM.has_key}
         """
         return self.has_key(key)
 
