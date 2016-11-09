@@ -1258,22 +1258,25 @@ class SSHServerTransport(SSHTransportBase):
         @return: None.
         """
         # Get the raw client public key.
-        clientECDHpubKey, packet = getNS(packet)
+        clientECDHpublicKey, foo = getNS(packet)
 
 
         # Get the host's public and private keys
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
+        shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
+
 
         # Generate the private key
-        ecPriv = keys.Key.fromString(privHostKey)
+        ecPriv = ec.generate_private_key(keys._curveTable[shortKex], default_backend())
 
         #Get the public key
         ecPub = ecPriv.public_key()
         encPub = ecPub.public_numbers().encode_point()
 
-        serverECDHpublicKey = keys.Key.fromString(clientECDHpubKey)
+        serverECDHpublicKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
+            keys._curveTable[shortKex], clientECDHpubKey).public_key(default_backend())
 
         # We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
         sharedSecret = MP(int(binascii.hexlify(
@@ -1286,7 +1289,7 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(pubHostKey.blob()))
-        h.update(NS(clientECDHpubKey))
+        h.update(NS(clientECDHpublicKey))
         h.update(NS(encPub))
         h.update(sharedSecret)
         exchangeHash = h.digest()
@@ -1616,7 +1619,8 @@ class SSHClientTransport(SSHTransportBase):
 
             # Take the provided public key and transform it into a format for the cryptography module
             #can be changed after PR533. use keys.Key.<somemethod>
-            serverKey = keys.Key.fromString(pubKey)
+            serverKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
+                self._curve, pubKey).public_key(default_backend())
 
             # We need to convert to hex, so we can convert to an int so we can make a multiple precision int.
             sharedSecret = MP(int(binascii.hexlify(
