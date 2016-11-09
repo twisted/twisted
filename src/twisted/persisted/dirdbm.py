@@ -170,7 +170,7 @@ class DirDBM:
         path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
-        except (OSError, IOError):
+        except (EnvironmentError):
             raise KeyError(k)
 
 
@@ -189,7 +189,8 @@ class DirDBM:
         k = self._encode(k)
         try:
             self._dnamePath.child(k).remove()
-        except (OSError, IOError): raise KeyError(self._decode(k))
+        except (EnvironmentError):
+            raise KeyError(self._decode(k))
 
 
     def keys(self):
