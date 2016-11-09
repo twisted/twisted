@@ -1276,7 +1276,7 @@ class SSHServerTransport(SSHTransportBase):
         encPub = ecPub.public_numbers().encode_point()
 
         serverECDHpublicKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
-            keys._curveTable[shortKex], clientECDHpubKey).public_key(default_backend())
+            keys._curveTable[shortKex], clientECDHpublicKey).public_key(default_backend())
 
         # We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
         sharedSecret = MP(int(binascii.hexlify(
