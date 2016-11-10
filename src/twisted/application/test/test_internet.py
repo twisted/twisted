@@ -622,6 +622,23 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(d)
 
 
+    def test_startServiceWaitsForDisconnect(self):
+        """
+        When L{ClientService} is restarted after having been connected, it
+        waits to start connecting until after having disconnected.
+        """
+        cq, service = self.makeReconnector()
+        d = service.stopService()
+        self.assertNoResult(d)
+        protocol = cq.constructedProtocols[0]
+        self.assertEqual(protocol.transport.disconnecting, True)
+        service.startService()
+        self.assertNoResult(d)
+        self.assertEqual(len(cq.constructedProtocols), 1)
+        protocol.connectionLost(Failure(Exception()))
+        self.assertEqual(len(cq.constructedProtocols), 2)
+
+
     def test_startServiceWhileStopping(self):
         """
         When L{ClientService} is stopping - that is,
