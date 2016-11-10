@@ -547,7 +547,6 @@ class _ClientMachine(object):
         self._connectionInProgress = succeed(None)
         self._loseConnection = _noop
 
-        self._currentConnection = None
         self._awaitingConnected = []
 
         self._stopWaiters = []
@@ -556,12 +555,8 @@ class _ClientMachine(object):
     @_machine.state(initial=True)
     def _init(self):
         """
-        The service is not running.
+        The service has not been started.
         """
-
-    @_machine.state()
-    def _stopped(self):
-        pass
 
     @_machine.state()
     def _connecting(self):
@@ -572,7 +567,7 @@ class _ClientMachine(object):
     @_machine.state()
     def _waiting(self):
         """
-        The service is waiting for the reconnecting period
+        The service is waiting for the reconnection period
         before reconnecting.
         """
 
@@ -594,48 +589,10 @@ class _ClientMachine(object):
         The service is disconnecting and has been asked to restart.
         """
 
-    @_machine.input()
-    def _clientConnect(self, protocol):
-        self._failedAttempts = 0
-
-    @_machine.output()
-    def _notifyWaiters(self, protocol):
-        self._loseConnection = protocol.transport.loseConnection
-        self._currentConnection = protocol._protocol
-        self._unawait(self._currentConnection)
-
-    @_machine.input()
-    def _clientDisconnect(self):
-        pass
-
-    @_machine.output()
-    def _do_clientDisconnect(self):
-        self._currentConnection = None
-        self._loseConnection = _noop
-
-
-    @_machine.input()
-    def _retry(self):
-        pass
-
-    @_machine.input()
-    def _connectionFailed(self):
-        pass
-
-    @_machine.output()
-    def _do_retry(self):
-        self._failedAttempts += 1
-        delay = self._timeoutForAttempt(self._failedAttempts)
-        self._log.info("Scheduling retry {attempt} to connect {endpoint} "
-                       "in {delay} seconds.", attempt=self._failedAttempts,
-                       endpoint=self._endpoint, delay=delay)
-        self._stopRetry = self._clock.callLater(delay, self._reconnect).cancel
-
-
-
-    @_machine.input()
-    def _reconnect(self):
+    @_machine.state()
+    def _stopped(self):
         """
+        The service has been stopped an is disconnected.
         """
 
     @_machine.input()
@@ -646,64 +603,155 @@ class _ClientMachine(object):
         self._failedAttempts = 0
 
     @_machine.output()
-    def _connectNow(self):
-        factoryProxy = _DisconnectFactory(self._factory, lambda _: self._clientDisconnect())
+    def _connect(self):
+        """
+        Start a connection attempt.
+        """
+        factoryProxy = _DisconnectFactory(self._factory, lambda _: self._clientDisconnected())
 
-        self._stopRetry = _noop
         self._connectionInProgress = (self._endpoint.connect(factoryProxy)
-                                      .addCallback(self._clientConnect)
+                                      .addCallback(self._connectionMade)
                                       .addErrback(lambda _: self._connectionFailed()))
+
 
     @_machine.input()
     def stop(self):
         """
+        Stop trying to connect and disconnect any current connection.
         """
 
     @_machine.output()
-    def _do_stopService(self):
-        self._stopRetry()
-        self._stopRetry = _noop
-        print self._connectionFailed
-        self._connectionInProgress.cancel()
-        self._loseConnection()
-        self._currentConnection = None
+    def _waitForStop(self):
+        """
+        Return a deferred that will fire when the service has
+        finished disconnecting.
+        """
+        self._stopWaiters.append(Deferred())
+        return self._stopWaiters[-1]
 
+    @_machine.output()
+    def _stopConnecting(self):
+        """
+        Stop pending connection attempt.
+        """
+        self._connectionInProgress.cancel()
+
+    @_machine.output()
+    def _stopRetrying(self):
+        """
+        Stop pending attempt to reconnect.
+        """
+        self._retryCall.cancel()
+        del self._retryCall
+
+    @_machine.output()
+    def _disconnect(self):
+        """
+        Disconnect the current connection.
+        """
+        self._currentConnection.transport.loseConnection()
+
+    @_machine.input()
+    def _connectionMade(self, protocol):
+        """
+        A connection has been made.
+        """
+
+    @_machine.output()
+    def _notifyWaiters(self, protocol):
+        """
+        Notify all pending requests for a connection that a connection has
+        been made.
+        """
+        # This should be in resetFailedAttemps but the signature doesn't
+        # match.
+        self._failedAttempts = 0
+
+        self._currentConnection = protocol._protocol
+        self._unawait(self._currentConnection)
+
+
+    @_machine.input()
+    def _connectionFailed(self):
+        """
+        The current connection attempt failed.
+        """
+
+    @_machine.output()
+    def _wait(self):
+        """
+        Schedule a retry attempt.
+        """
+        self._failedAttempts += 1
+        delay = self._timeoutForAttempt(self._failedAttempts)
+        self._log.info("Scheduling retry {attempt} to connect {endpoint} "
+                       "in {delay} seconds.", attempt=self._failedAttempts,
+                       endpoint=self._endpoint, delay=delay)
+        self._retryCall = self._clock.callLater(delay, self._reconnect)
+
+    @_machine.input()
+    def _reconnect(self):
+        """
+        The wait between connection attempts is done.
+        """
+
+    @_machine.input()
+    def _clientDisconnected(self):
+        """
+        The current connection has been disconnected.
+        """
+
+    @_machine.output()
+    def _forgetConnection(self):
+        """
+        Forget the current connection.
+        """
+        del self._currentConnection
 
     @_machine.output()
     def _cancelConnectWaiters(self):
-        self._stopped = True
+        """
+        Notify all pending requests for a connection that no more
+        connections are expected.
+        """
         self._unawait(Failure(CancelledError()))
 
     @_machine.output()
     def _finishStopping(self):
+        """
+        Notify all deferreds waiting on the service stopping.
+        """
         self._stopWaiters, waiting = [], self._stopWaiters
         for w in waiting:
             w.callback(None)
 
-    @_machine.output()
-    def _waitForStop(self):
-        self._stopWaiters.append(Deferred())
-        return self._stopWaiters[-1]
-
-
-    @_machine.input()
-    def _disconnect(self):
-        pass
 
     @_machine.input()
     def whenConnected(self):
-        pass
+        """
+        Request a deferred that will fire with a connected
+        protocol.
+        """
 
     @_machine.output()
-    def currentConnection(self):
+    def _currentConnection(self):
+        """
+        Return the currently connected protocol.
+        """
         return succeed(self._currentConnection)
 
     @_machine.output()
-    def noConnection(self):
+    def _noConnection(self):
+        """
+        Notify the caller that no connection is expected."
+        """
         return fail(CancelledError())
 
     @_machine.output()
-    def awaitingConnection(self):
+    def _awaitingConnection(self):
+        """
+        Return a deferred that will fire with the next connected protocol.
+        """
         result = Deferred()
         self._awaitingConnected.append(result)
         return result
@@ -719,41 +767,85 @@ class _ClientMachine(object):
             w.callback(value)
 
 
-    next = lambda _: list(_)[0]
-    _connecting.upon(_connectionFailed, enter=_waiting, outputs=[_do_retry])
+    firstResult = lambda _: list(_)[0]
+    _init.upon(start, enter=_connecting,
+               outputs=[_connect])
+    _init.upon(stop, enter=_init,
+               outputs=[])
+
     _connecting.upon(start, enter=_connecting, outputs=[])
-    _connecting.upon(stop, enter=_disconnecting, outputs=[_waitForStop, _do_stopService], collector=next)
-    _connecting.upon(_clientConnect, enter=_connected, outputs=[_notifyWaiters])
-    _connecting.upon(whenConnected, enter=_connecting, outputs=[awaitingConnection], collector=next)
+    _connecting.upon(stop, enter=_disconnecting,
+                     outputs=[_waitForStop, _stopConnecting],
+                     collector=firstResult)
+    _connecting.upon(_connectionMade, enter=_connected,
+                     outputs=[_notifyWaiters])
+    _connecting.upon(_connectionFailed, enter=_waiting,
+                     outputs=[_wait])
 
-    _connected.upon(stop, enter=_disconnecting, outputs=[_waitForStop, _do_stopService], collector=next)
-    _connected.upon(_clientDisconnect, enter=_waiting, outputs=[_do_clientDisconnect, _do_retry])
-    _connected.upon(whenConnected, enter=_connected, outputs=[currentConnection], collector=next)
+    _waiting.upon(start, enter=_waiting,
+                  outputs=[])
+    _waiting.upon(stop, enter=_disconnecting,
+                  outputs=[_waitForStop, _stopRetrying],
+                  collector=firstResult)
+    _waiting.upon(_reconnect, enter=_connecting,
+                  outputs=[_connect])
 
-    _init.upon(_retry, enter=_init, outputs=[])
-    _init.upon(start, enter=_connecting, outputs=[_connectNow])
-    _init.upon(stop, enter=_init, outputs=[])
-    _init.upon(whenConnected, enter=_init, outputs=[awaitingConnection], collector=next)
+    _connected.upon(start, enter=_connected,
+                    outputs=[])
+    _connected.upon(stop, enter=_disconnecting,
+                    outputs=[_waitForStop, _disconnect],
+                    collector=firstResult)
+    _connected.upon(_clientDisconnected, enter=_waiting,
+                    outputs=[_forgetConnection, _wait])
 
-    _stopped.upon(_retry, enter=_stopped, outputs=[])
-    _stopped.upon(start, enter=_connecting, outputs=[_connectNow])
-    _stopped.upon(stop, enter=_stopped, outputs=[])
-    _stopped.upon(whenConnected, enter=_stopped, outputs=[noConnection], collector=next)
+    _disconnecting.upon(start, enter=_disconnecting_restart,
+                        outputs=[])
+    _disconnecting.upon(stop, enter=_disconnecting,
+                        outputs=[])
+    _disconnecting.upon(_clientDisconnected, enter=_stopped,
+                        outputs=[_cancelConnectWaiters,
+                                 _finishStopping,
+                                 _forgetConnection])
+    _disconnecting.upon(_connectionFailed, enter=_stopped,
+                        outputs=[_cancelConnectWaiters, _finishStopping])
 
-    _waiting.upon(_reconnect, enter=_connecting, outputs=[_connectNow])
-    _waiting.upon(stop, enter=_disconnecting, outputs=[_waitForStop, _do_stopService], collector=next)
-    _waiting.upon(whenConnected, enter=_waiting, outputs=[awaitingConnection], collector=next)
+    _disconnecting_restart.upon(start, enter=_disconnecting_restart,
+                                outputs=[])
+    _disconnecting_restart.upon(stop, enter=_disconnecting,
+                                outputs=[])
+    _disconnecting_restart.upon(_clientDisconnected, enter=_connecting,
+                                outputs=[_finishStopping, _connect])
+    _disconnecting_restart.upon(_connectionFailed, enter=_stopped,
+                                outputs=[_finishStopping, _connect])
 
-    _disconnecting.upon(start, enter=_disconnecting_restart, outputs=[])
-    _disconnecting.upon(_clientDisconnect, enter=_stopped, outputs=[_cancelConnectWaiters, _finishStopping, _do_clientDisconnect])
-    _disconnecting.upon(_connectionFailed, enter=_stopped, outputs=[_cancelConnectWaiters, _finishStopping])
-    _disconnecting.upon(whenConnected, enter=_disconnecting, outputs=[noConnection], collector=next)
+    _stopped.upon(start, enter=_connecting,
+                  outputs=[_connect])
+    _stopped.upon(stop, enter=_stopped,
+                  outputs=[])
 
-    _disconnecting_restart.upon(stop, enter=_disconnecting, outputs=[])
-    _disconnecting_restart.upon(_clientDisconnect, enter=_connecting, outputs=[_finishStopping, _connectNow])
-    _disconnecting_restart.upon(_connectionFailed, enter=_stopped, outputs=[_finishStopping, _connectNow])
-    _disconnecting_restart.upon(whenConnected, enter=_disconnecting_restart, outputs=[awaitingConnection], collector=next)
-    del next
+    _init.upon(whenConnected, enter=_init,
+               outputs=[_awaitingConnection],
+               collector=firstResult)
+    _connecting.upon(whenConnected, enter=_connecting,
+                     outputs=[_awaitingConnection],
+                     collector=firstResult)
+    _waiting.upon(whenConnected, enter=_waiting,
+                  outputs=[_awaitingConnection],
+                  collector=firstResult)
+    _connected.upon(whenConnected, enter=_connected,
+                    outputs=[_currentConnection],
+                    collector=firstResult)
+    _disconnecting.upon(whenConnected, enter=_disconnecting,
+                        outputs=[_noConnection],
+                        collector=firstResult)
+    _disconnecting_restart.upon(whenConnected, enter=_disconnecting_restart,
+                                outputs=[_awaitingConnection],
+                                collector=firstResult)
+    _stopped.upon(whenConnected, enter=_stopped,
+                  outputs=[_noConnection],
+                  collector=firstResult)
+
+    del firstResult
 
 
 
