@@ -48,7 +48,7 @@ from twisted.application import service
 from twisted.internet import task
 from twisted.python.failure import Failure
 from twisted.internet.defer import (
-    CancelledError, gatherResults, Deferred, succeed, fail
+    CancelledError, Deferred, succeed, fail
 )
 
 from automat import MethodicalMachine
