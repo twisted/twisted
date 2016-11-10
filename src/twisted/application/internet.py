@@ -884,7 +884,7 @@ class _ClientMachine(object):
                     outputs=[_currentConnection],
                     collector=firstResult)
     _disconnecting.upon(whenConnected, enter=_disconnecting,
-                        outputs=[_noConnection],
+                        outputs=[_awaitingConnection],
                         collector=firstResult)
     _restarting.upon(whenConnected, enter=_restarting,
                      outputs=[_awaitingConnection],

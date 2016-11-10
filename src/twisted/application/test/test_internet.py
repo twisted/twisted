@@ -651,8 +651,9 @@ class ClientServiceTests(SynchronousTestCase):
         first = cq.constructedProtocols[0]
         stopped = service.stopService()
         self.assertNoResult(stopped)
-        service.startService()
         nextProtocol = service.whenConnected()
+        self.assertNoResult(nextProtocol)
+        service.startService()
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
         self.assertEqual(first.transport.disconnecting, True)
