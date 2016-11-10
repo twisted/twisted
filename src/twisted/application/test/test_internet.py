@@ -550,6 +550,7 @@ class ClientServiceTests(SynchronousTestCase):
         nkw = {}
         nkw.update(clock=Clock())
         nkw.update(kw)
+        clock = nkw['clock']
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
 
         # `endpointForTesting` is totally generic to any LLPI client that uses
@@ -576,7 +577,7 @@ class ClientServiceTests(SynchronousTestCase):
                 service.stopService()
             # Ensure that we don't leave any state in the reactor after
             # stopService.
-            self.assertEqual(service._clock.getDelayedCalls(), [])
+            self.assertEqual(clock.getDelayedCalls(), [])
         self.addCleanup(stop)
         if startService:
             service.startService()
