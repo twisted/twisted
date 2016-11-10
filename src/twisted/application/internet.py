@@ -524,33 +524,37 @@ _defaultPolicy = backoffPolicy()
 
 
 
-def _noop():
-    """
-    Do nothing; this stands in for C{transport.loseConnection()} and
-    C{DelayedCall.cancel()} when L{ClientService} is in a state where there's
-    nothing to do.
-    """
-
-
 class _ClientMachine(object):
+    """
+    State machine for maintaining a single outgoing connection to an
+    endpoint.
+
+    @see: L{ClientService}
+    """
 
     _machine = MethodicalMachine()
 
     def __init__(self, endpoint, factory, retryPolicy, clock, log):
+        """
+        @see L{ClientService.__init__}
+
+        @param log: The logger for the L{ClientService} instance this
+            state machine is assoicated to.
+        @type log: L{Logger}
+        """
         self._endpoint = endpoint
         self._failedAttempts = 0
         self._stopped = False
         self._factory = factory
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
-        self._stopRetry = _noop
         self._connectionInProgress = succeed(None)
-        self._loseConnection = _noop
 
         self._awaitingConnected = []
 
         self._stopWaiters = []
         self._log = log
+
 
     @_machine.state(initial=True)
     def _init(self):
@@ -564,6 +568,7 @@ class _ClientMachine(object):
         The service has started connecting.
         """
 
+
     @_machine.state()
     def _waiting(self):
         """
@@ -571,11 +576,13 @@ class _ClientMachine(object):
         before reconnecting.
         """
 
+
     @_machine.state()
     def _connected(self):
         """
         The service is connected.
         """
+
 
     @_machine.state()
     def _disconnecting(self):
@@ -583,11 +590,13 @@ class _ClientMachine(object):
         The service is disconnecting after being asked to shutdown.
         """
 
+
     @_machine.state()
-    def _disconnecting_restart(self):
+    def _restarting(self):
         """
         The service is disconnecting and has been asked to restart.
         """
+
 
     @_machine.state()
     def _stopped(self):
@@ -595,30 +604,45 @@ class _ClientMachine(object):
         The service has been stopped an is disconnected.
         """
 
+
     @_machine.input()
     def start(self):
         """
         Start this L{ClientService}, initiating the connection retry loop.
         """
-        self._failedAttempts = 0
+
 
     @_machine.output()
     def _connect(self):
         """
         Start a connection attempt.
         """
-        factoryProxy = _DisconnectFactory(self._factory, lambda _: self._clientDisconnected())
+        factoryProxy = _DisconnectFactory(self._factory,
+                                          lambda _: self._clientDisconnected())
 
-        self._connectionInProgress = (self._endpoint.connect(factoryProxy)
-                                      .addCallback(self._connectionMade)
-                                      .addErrback(lambda _: self._connectionFailed()))
+        self._connectionInProgress = (
+            self._endpoint.connect(factoryProxy)
+            .addCallback(self._connectionMade)
+            .addErrback(lambda _: self._connectionFailed()))
+
+
+    @_machine.output()
+    def _resetFailedAttempts(self):
+        """
+        Reset the number of failed attempts.
+        """
+        self._failedAttempts = 0
 
 
     @_machine.input()
     def stop(self):
         """
         Stop trying to connect and disconnect any current connection.
+
+        @return: a L{Deferred} that fires when all outstanding connections are
+            closed and all in-progress connection attempts halted.
         """
+
 
     @_machine.output()
     def _waitForStop(self):
@@ -629,12 +653,14 @@ class _ClientMachine(object):
         self._stopWaiters.append(Deferred())
         return self._stopWaiters[-1]
 
+
     @_machine.output()
     def _stopConnecting(self):
         """
         Stop pending connection attempt.
         """
         self._connectionInProgress.cancel()
+
 
     @_machine.output()
     def _stopRetrying(self):
@@ -644,6 +670,7 @@ class _ClientMachine(object):
         self._retryCall.cancel()
         del self._retryCall
 
+
     @_machine.output()
     def _disconnect(self):
         """
@@ -651,11 +678,16 @@ class _ClientMachine(object):
         """
         self._currentConnection.transport.loseConnection()
 
+
     @_machine.input()
     def _connectionMade(self, protocol):
         """
         A connection has been made.
+
+        @param protocol: The protocol of the connection.
+        @type protocol: L{IProtocol}
         """
+
 
     @_machine.output()
     def _notifyWaiters(self, protocol):
@@ -663,7 +695,7 @@ class _ClientMachine(object):
         Notify all pending requests for a connection that a connection has
         been made.
         """
-        # This should be in resetFailedAttemps but the signature doesn't
+        # This should be in _resetFailedAttempts but the signature doesn't
         # match.
         self._failedAttempts = 0
 
@@ -677,6 +709,7 @@ class _ClientMachine(object):
         The current connection attempt failed.
         """
 
+
     @_machine.output()
     def _wait(self):
         """
@@ -689,17 +722,20 @@ class _ClientMachine(object):
                        endpoint=self._endpoint, delay=delay)
         self._retryCall = self._clock.callLater(delay, self._reconnect)
 
+
     @_machine.input()
     def _reconnect(self):
         """
         The wait between connection attempts is done.
         """
 
+
     @_machine.input()
     def _clientDisconnected(self):
         """
         The current connection has been disconnected.
         """
+
 
     @_machine.output()
     def _forgetConnection(self):
@@ -708,6 +744,7 @@ class _ClientMachine(object):
         """
         del self._currentConnection
 
+
     @_machine.output()
     def _cancelConnectWaiters(self):
         """
@@ -715,6 +752,7 @@ class _ClientMachine(object):
         connections are expected.
         """
         self._unawait(Failure(CancelledError()))
+
 
     @_machine.output()
     def _finishStopping(self):
@@ -729,9 +767,15 @@ class _ClientMachine(object):
     @_machine.input()
     def whenConnected(self):
         """
-        Request a deferred that will fire with a connected
-        protocol.
+        Retrieve the currently-connected L{Protocol}, or the next one to
+        connect.
+
+        @return: a Deferred that fires with a protocol produced by the factory
+            passed to C{__init__}
+        @rtype: L{Deferred} firing with L{IProtocol} or failing with
+            L{CancelledError} the service is stopped.
         """
+
 
     @_machine.output()
     def _currentConnection(self):
@@ -740,12 +784,14 @@ class _ClientMachine(object):
         """
         return succeed(self._currentConnection)
 
+
     @_machine.output()
     def _noConnection(self):
         """
         Notify the caller that no connection is expected."
         """
         return fail(CancelledError())
+
 
     @_machine.output()
     def _awaitingConnection(self):
@@ -755,6 +801,7 @@ class _ClientMachine(object):
         result = Deferred()
         self._awaitingConnected.append(result)
         return result
+
 
     def _unawait(self, value):
         """
@@ -766,6 +813,7 @@ class _ClientMachine(object):
         for w in waiting:
             w.callback(value)
 
+    # State Transitions
 
     firstResult = lambda _: list(_)[0]
     _init.upon(start, enter=_connecting,
@@ -798,8 +846,8 @@ class _ClientMachine(object):
     _connected.upon(_clientDisconnected, enter=_waiting,
                     outputs=[_forgetConnection, _wait])
 
-    _disconnecting.upon(start, enter=_disconnecting_restart,
-                        outputs=[])
+    _disconnecting.upon(start, enter=_restarting,
+                        outputs=[_resetFailedAttempts])
     _disconnecting.upon(stop, enter=_disconnecting,
                         outputs=[])
     _disconnecting.upon(_clientDisconnected, enter=_stopped,
@@ -809,14 +857,14 @@ class _ClientMachine(object):
     _disconnecting.upon(_connectionFailed, enter=_stopped,
                         outputs=[_cancelConnectWaiters, _finishStopping])
 
-    _disconnecting_restart.upon(start, enter=_disconnecting_restart,
-                                outputs=[])
-    _disconnecting_restart.upon(stop, enter=_disconnecting,
-                                outputs=[])
-    _disconnecting_restart.upon(_clientDisconnected, enter=_connecting,
-                                outputs=[_finishStopping, _connect])
-    _disconnecting_restart.upon(_connectionFailed, enter=_stopped,
-                                outputs=[_finishStopping, _connect])
+    _restarting.upon(start, enter=_restarting,
+                     outputs=[])
+    _restarting.upon(stop, enter=_disconnecting,
+                     outputs=[])
+    _restarting.upon(_clientDisconnected, enter=_connecting,
+                     outputs=[_finishStopping, _connect])
+    _restarting.upon(_connectionFailed, enter=_stopped,
+                     outputs=[_finishStopping, _connect])
 
     _stopped.upon(start, enter=_connecting,
                   outputs=[_connect])
@@ -838,16 +886,14 @@ class _ClientMachine(object):
     _disconnecting.upon(whenConnected, enter=_disconnecting,
                         outputs=[_noConnection],
                         collector=firstResult)
-    _disconnecting_restart.upon(whenConnected, enter=_disconnecting_restart,
-                                outputs=[_awaitingConnection],
-                                collector=firstResult)
+    _restarting.upon(whenConnected, enter=_restarting,
+                     outputs=[_awaitingConnection],
+                     collector=firstResult)
     _stopped.upon(whenConnected, enter=_stopped,
                   outputs=[_noConnection],
                   collector=firstResult)
 
     del firstResult
-
-
 
 
 
