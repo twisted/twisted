@@ -2159,7 +2159,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         is called. There's nothing sensible we can do other than call
         C{loseConnection} anyway.
         """
-        pass
+        if self._requestProducer is not None:
+            self._requestProducer.stopProducing()
 
 
     def pauseProducing(self):
