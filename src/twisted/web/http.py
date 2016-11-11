@@ -1652,11 +1652,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         while processing an outstanding request.
     @type _dataBuffer: L{list} of L{bytes}
 
-    @ivar _producer: Either the transport, if it provides
+    @ivar _networkProducer: Either the transport, if it provides
         L{interfaces.IPushProducer}, or a null implementation of
         L{interfaces.IPushProducer}. Used to attempt to prevent the transport
         from producing excess data when we're responding to a request.
-    @type _producer: L{interfaces.IPushProducer}
+    @type _networkProducer: L{interfaces.IPushProducer}
     """
 
     maxHeaders = 500
@@ -1685,7 +1685,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         self.setTimeout(self.timeOut)
-        self._producer = interfaces.IPushProducer(
+        self._networkProducer = interfaces.IPushProducer(
             self.transport, _NoPushProducer()
         )
 
@@ -1845,7 +1845,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._savedTimeOut = self.setTimeout(None)
 
         # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        self._producer.pauseProducing()
+        self._networkProducer.pauseProducing()
         self._handlingRequest = True
 
         req = self.requests[-1]
@@ -1931,7 +1931,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if request != self.requests[0]: raise TypeError
         del self.requests[0]
 
-        self._producer.resumeProducing()
+        self._networkProducer.resumeProducing()
 
         if self.persistent:
             self._handlingRequest = False
