@@ -74,6 +74,7 @@ class StdioInteractingSessionTests(unittest.TestCase):
     if StdioInteractingSession is None:
         skip = _reason
 
+
     def test_eofReceived(self):
         """
         L{twisted.conch.scripts.conch.SSHSession.eofReceived} loses the
@@ -237,7 +238,6 @@ class ConchTestForwardingPort(protocol.Protocol):
     received back to the L{ConchTestForwardingProcess} once the connection
     is ended.
     """
-
 
     def __init__(self, protocol, data):
         """
@@ -510,6 +510,7 @@ class OpenSSHClientMixin:
     if not which('ssh'):
         skip = "no ssh command-line client available"
 
+
     def execute(self, remoteCommand, process, sshArgs=''):
         """
         Connects to the SSH server started in L{ConchServerSetupMixin.setUp} by
@@ -657,6 +658,7 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
     """
     if runtime.platformType == 'win32':
         skip = "can't run cmdline client on win32"
+
 
     def execute(self, remoteCommand, process, sshArgs='', conchArgs=None):
         """

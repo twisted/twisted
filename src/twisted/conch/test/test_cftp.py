@@ -80,6 +80,7 @@ class ListingTests(TestCase):
     if getattr(time, 'tzset', None) is None:
         skip = "Cannot test timestamp formatting code without time.tzset"
 
+
     def setUp(self):
         """
         Patch the L{ls} module's time function so the results of L{lsLine} are
@@ -767,9 +768,11 @@ class FileTransferTestRealm:
     def __init__(self, testDir):
         self.testDir = testDir
 
+
     def requestAvatar(self, avatarID, mind, *interfaces):
         a = FileTransferTestAvatar(self.testDir)
         return interfaces[0], a, lambda: None
+
 
 
 class SFTPTestProcess(protocol.ProcessProtocol):
@@ -790,6 +793,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self._expectingCommand = None
         self._processEnded = False
 
+
     def clearBuffer(self):
         """
         Clear any buffered data received from stdout. Should be private.
@@ -797,6 +801,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self.buffer = b''
         self._linesReceived = []
         self._lineBuffer = b''
+
 
     def outReceived(self, data):
         """
@@ -815,6 +820,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self.buffer += data
         self._checkForCommand()
 
+
     def _checkForCommand(self):
         prompt = b'cftp> '
         if self._expectingCommand and self._lineBuffer == prompt:
@@ -825,17 +831,20 @@ class SFTPTestProcess(protocol.ProcessProtocol):
             d, self._expectingCommand = self._expectingCommand, None
             d.callback(buf)
 
+
     def errReceived(self, data):
         """
         Called by Twisted when the cftp client prints data to stderr.
         """
         log.msg('err: %s' % data)
 
+
     def getBuffer(self):
         """
         Return the contents of the buffer of data received from stdout.
         """
         return self.buffer
+
 
     def runCommand(self, command):
         """
@@ -855,6 +864,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self.transport.write(command + b'\n')
         return self._expectingCommand
 
+
     def runScript(self, commands):
         """
         Run each command in sequence and return a Deferred that fires when all
@@ -869,6 +879,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         sem = defer.DeferredSemaphore(1)
         dl = [sem.run(self.runCommand, command) for command in commands]
         return defer.gatherResults(dl)
+
 
     def killProcess(self):
         """
@@ -885,6 +896,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self.transport.signalProcess('KILL')
         return self.onProcessEnd
 
+
     def processEnded(self, reason):
         """
         Called by Twisted when the cftp client process ends.
@@ -893,6 +905,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         if self.onProcessEnd:
             d, self.onProcessEnd = self.onProcessEnd, None
             d.callback(None)
+
 
 
 class CFTPClientTestBase(SFTPTestBase):
@@ -906,6 +919,7 @@ class CFTPClientTestBase(SFTPTestBase):
             f.write(b'127.0.0.1 ' + test_ssh.publicRSA_openssh)
         return SFTPTestBase.setUp(self)
 
+
     def startServer(self):
         realm = FileTransferTestRealm(self.testDir)
         p = portal.Portal(realm)
@@ -913,6 +927,7 @@ class CFTPClientTestBase(SFTPTestBase):
         fac = test_ssh.ConchTestServerFactory()
         fac.portal = p
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+
 
     def stopServer(self):
         if not hasattr(self.server.factory, 'proto'):
@@ -923,8 +938,10 @@ class CFTPClientTestBase(SFTPTestBase):
         d.addCallback(self._cbStopServer)
         return d
 
+
     def _cbStopServer(self, ignored):
         return defer.maybeDeferred(self.server.stopListening)
+
 
     def tearDown(self):
         for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
@@ -984,16 +1001,19 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
                              env=encodedEnv)
         return d
 
+
     def tearDown(self):
         d = self.stopServer()
         d.addCallback(lambda _: self.processProtocol.killProcess())
         return d
+
 
     def _killProcess(self, ignored):
         try:
             self.processProtocol.transport.signalProcess('KILL')
         except error.ProcessExitedAlready:
             pass
+
 
     def runCommand(self, command):
         """
@@ -1003,6 +1023,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         return self.processProtocol.runCommand(command)
 
+
     def runScript(self, *commands):
         """
         Run the given commands with the cftp client. Returns a C{Deferred}
@@ -1010,6 +1031,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         payload is a list of output for each command.
         """
         return self.processProtocol.runScript(commands)
+
 
     def testCdPwd(self):
         """
@@ -1034,6 +1056,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d.addCallback(self.assertEqual,
                       [homeDir.path, os.getcwd(), '', homeDir.path])
         return d
+
 
     def testChAttrs(self):
         """
@@ -1084,6 +1107,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             helpText = helpText.encode("utf-8")
         d.addCallback(self.assertEqual, helpText)
         return d
+
 
     def assertFilesEqual(self, name1, name2, msg=None):
         """
@@ -1310,9 +1334,11 @@ class OurServerBatchFileTests(CFTPClientTestBase):
         CFTPClientTestBase.setUp(self)
         self.startServer()
 
+
     def tearDown(self):
         CFTPClientTestBase.tearDown(self)
         return self.stopServer()
+
 
     def _getBatchOutput(self, f):
         fn = self.mktemp()
@@ -1344,6 +1370,7 @@ class OurServerBatchFileTests(CFTPClientTestBase):
 
         return d
 
+
     def testBatchFile(self):
         """Test whether batch file function of cftp ('cftp -b batchfile').
         This works by treating the file as a list of commands to be run.
@@ -1352,6 +1379,7 @@ class OurServerBatchFileTests(CFTPClientTestBase):
 ls
 exit
 """
+
         def _cbCheckResult(res):
             res = res.split(b'\n')
             log.msg('RES %s' % repr(res))
@@ -1363,6 +1391,7 @@ exit
         d.addCallback(_cbCheckResult)
         return d
 
+
     def testError(self):
         """Test that an error in the batch file stops running the batch.
         """
@@ -1370,12 +1399,14 @@ exit
 pwd
 exit
 """
+
         def _cbCheckResult(res):
             self.assertNotIn(self.testDir.asBytesMode().path, res)
 
         d = self._getBatchOutput(cmds)
         d.addCallback(_cbCheckResult)
         return d
+
 
     def testIgnoredError(self):
         """Test that a minus sign '-' at the front of a line ignores

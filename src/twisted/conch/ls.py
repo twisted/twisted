@@ -8,7 +8,7 @@ import stat
 from time import time, strftime, localtime
 from twisted.python.compat import _PY3
 
-# locale-independent month names to use instead of strftime's
+# Locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(list(zip(
         list(range(1, 13)),
         "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split())))
@@ -30,19 +30,19 @@ def lsLine(name, s):
     elif stat.S_ISLNK(ft): perms[0] = ord('l')
     elif stat.S_ISSOCK(ft): perms[0] = ord('s')
     else: perms[0] = ord('!')
-    # user
+    # User
     if mode&stat.S_IRUSR:perms[1] = ord('r')
     if mode&stat.S_IWUSR:perms[2] = ord('w')
     if mode&stat.S_IXUSR:perms[3] = ord('x')
-    # group
+    # Group
     if mode&stat.S_IRGRP:perms[4] = ord('r')
     if mode&stat.S_IWGRP:perms[5] = ord('w')
     if mode&stat.S_IXGRP:perms[6] = ord('x')
-    # other
+    # Other
     if mode&stat.S_IROTH:perms[7] = ord('r')
     if mode&stat.S_IWOTH:perms[8] = ord('w')
     if mode&stat.S_IXOTH:perms[9] = ord('x')
-    # suid/sgid
+    # Suid/sgid
     if mode&stat.S_ISUID:
         if perms[3] == ord('x'): perms[3] = ord('s')
         else: perms[3] = ord('S')
@@ -67,10 +67,10 @@ def lsLine(name, s):
         str(s.st_size).rjust(8),
         ' ',
     ]
-    # need to specify the month manually, as strftime depends on locale
+    # Need to specify the month manually, as strftime depends on locale
     ttup = localtime(s.st_mtime)
     sixmonths = 60 * 60 * 24 * 7 * 26
-    if s.st_mtime + sixmonths < time(): # last edited more than 6mo ago
+    if s.st_mtime + sixmonths < time(): # Last edited more than 6mo ago
         strtime = strftime("%%s %d  %Y ", ttup)
     else:
         strtime = strftime("%%s %d %H:%M ", ttup)
