@@ -2168,7 +2168,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         timeout which will cause us to tear the connection down. That's a good
         thing!
         """
-        pass
+        # The first step is to tell any producer we might currently have
+        # registered to stop producing. If we can slow our applications down
+        # we should.
+        if self._requestProducer is not None:
+            self._requestProducer.pauseProducing()
+
+        # The next step here is to pause our own transport, as discussed in the
+        # docstring.
+        self._networkProducer.pauseProducing()
 
 
     def resumeProducing(self):
@@ -2180,7 +2188,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         outstanding L{Request} producers we have, and also unpause our
         transport.
         """
-        pass
+        if self._requestProducer is not None:
+            self._requestProducer.resumeProducing()
+
+        self._networkProducer.resumeProducing()
 
 
     def _send100Continue(self):
