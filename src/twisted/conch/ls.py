@@ -6,7 +6,7 @@ import array
 import stat
 
 from time import time, strftime, localtime
-from twisted.python.compat import networkString
+from twisted.python.compat import _PY3
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(list(zip(
@@ -50,16 +50,23 @@ def lsLine(name, s):
         if perms[6] == ord('x'): perms[6] = ord('s')
         else: perms[6] = ord('S')
 
-    lsresult = [
-        perms.tostring(),
-        networkString(str(s.st_nlink)).rjust(5),
-        b' ',
-        networkString(str(s.st_uid)).ljust(9),
-        networkString(str(s.st_gid)).ljust(9),
-        networkString(str(s.st_size)).rjust(8),
-        b' ',
-    ]
+    if _PY3:
+        if isinstance(name, bytes):
+            name = name.decode("utf-8")
+        lsPerms = perms.tobytes()
+        lsPerms = lsPerms.decode("utf-8")
+    else:
+        lsPerms = perms.tostring()
 
+    lsresult = [
+        lsPerms,
+        str(s.st_nlink).rjust(5),
+        ' ',
+        str(s.st_uid).ljust(9),
+        str(s.st_gid).ljust(9),
+        str(s.st_size).rjust(8),
+        ' ',
+    ]
     # need to specify the month manually, as strftime depends on locale
     ttup = localtime(s.st_mtime)
     sixmonths = 60 * 60 * 24 * 7 * 26
@@ -67,10 +74,10 @@ def lsLine(name, s):
         strtime = strftime("%%s %d  %Y ", ttup)
     else:
         strtime = strftime("%%s %d %H:%M ", ttup)
-    lsresult.append(networkString(strtime % (_MONTH_NAMES[ttup[1]],)))
+    lsresult.append(strtime % (_MONTH_NAMES[ttup[1]],))
 
     lsresult.append(name)
-    return b''.join(lsresult)
+    return ''.join(lsresult)
 
 
 __all__ = ['lsLine']

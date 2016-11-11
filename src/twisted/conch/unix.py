@@ -29,6 +29,7 @@ from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import components, log
+from twisted.python.compat import nativeString
 
 try:
     import utmp
@@ -370,7 +371,7 @@ class SFTPServerForUnixConchUser:
 
     def _absPath(self, path):
         home = self.avatar.getHomeDir()
-        return os.path.abspath(os.path.join(home, path))
+        return os.path.join(nativeString(home.path), nativeString(path))
 
 
     def gotVersion(self, otherVersion, extData):

@@ -279,7 +279,12 @@ while os.path.dirname(path) != path:
 
 from twisted.conch.scripts.%s import run
 run()""" % mod]
-    return start + list(args)
+    madeArgs = []
+    for arg in start + list(args):
+        if isinstance(arg, unicode):
+            arg = arg.encode("utf-8")
+        madeArgs.append(arg)
+    return madeArgs
 
 
 
