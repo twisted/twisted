@@ -645,6 +645,149 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(callbackResult[1], "Callback Result")
 
 
+    def test_extractCurrentResult(self):
+        """
+        L{defer.extractCurrentResult} extracts the results from a Deferred that
+        has already had its callback function called.
+        """
+        result = object()
+
+        d = defer.Deferred()
+        d.callback(result)
+
+        self.assertIs(defer.extractCurrentResult(d), result)
+
+
+    def test_extractCurrentResultRaisesFailureException(self):
+        """
+        L{defer.extractCurrentResult} raises the original exception if the
+        result of the deferred is a failure.
+        """
+        d = defer.Deferred()
+        d.errback(ValueError())
+
+        self.assertRaises(ValueError, defer.extractCurrentResult, d)
+
+
+    def test_extractCurrentResultReturnsFailureWithNoRaises(self):
+        """
+        L{deferextractCurrentResult} returns the failure instance if
+        raises=False.
+        """
+        d = defer.Deferred()
+        d.errback(ValueError())
+
+        result = defer.extractCurrentResult(d, raises=False)
+
+        self.assertIsInstance(result, failure.Failure)
+        self.assertIsInstance(result.value, ValueError)
+
+
+    def test_extractCurrentResultWithoutResultsNotCaughtByException(self):
+        """
+        L{defer.extractCurrentResult} raises a L{defer.NoCurrentResult}
+        exception which is not caught when catching L{Exception}.
+        """
+        def inner(d):
+            try:
+                defer.extractCurrentResult(d)
+            except Exception:
+                return "error"
+            return "success"
+
+        d = defer.Deferred()
+        self.assertRaises(defer.NoCurrentResult, inner, d)
+
+        # In order to get 100% patch coverage we need to excerise the "error"
+        # and "success" paths. This is not actually testing the functionality
+        # of extractCurrentResult but is testing the functionality of the test
+        # function `inner`.
+        d = defer.Deferred()
+        d.errback(Exception())
+        self.assertEqual(inner(d), "error")
+        d = defer.Deferred()
+        d.callback(None)
+        self.assertEqual(inner(d), "success")
+
+
+    def test_extractCurrentResultPreservesCallbackChain(self):
+        """
+        L{defer.extractCurrentResult} chains the value that will be passed into
+        the next function of the callback chain if passthrough=True.
+        """
+        result1 = object()
+        result2 = object()
+
+        d = defer.Deferred()
+        d.callback(result1)
+
+        self.assertIs(defer.extractCurrentResult(d, passthrough=True), result1)
+
+        def cb(r):
+            self.assertIs(r, result1)
+            return result2
+
+        d.addCallback(cb)
+
+        self.assertIs(defer.extractCurrentResult(d), result2)
+
+
+    def test_extractCurrentResultRaisesErrorIfPending(self):
+        """
+        L{defer.extractCurrentResult} raises an error if there currently any
+        pending work to be done on the L{Deferred}.
+        """
+        d = defer.Deferred()
+
+        self.assertRaises(defer.NoCurrentResult, defer.extractCurrentResult, d)
+
+
+    def test_extractCurrentResultRaisesErrorIfPendingChainedDeferred(self):
+        """
+        L{defer.extractCurrentResult} raises an error if there is currently any
+        pending work to be done on the L{Deferred} if it is via a chained
+        L{Deferred}.
+        """
+        result = object()
+
+        d = defer.Deferred()
+        d.callback(result)
+
+        self.assertIs(defer.extractCurrentResult(d), result)
+
+        d2 = defer.Deferred()
+        d.addCallback(lambda _: d2)
+
+        self.assertRaises(defer.NoCurrentResult, defer.extractCurrentResult, d)
+
+
+    def test_extractCurrentResultDoesntPassthroughResults(self):
+        """
+        L{defer.extractCurrentResult} does not pass through results.
+        """
+        result = object()
+
+        d = defer.Deferred()
+        d.callback(result)
+
+        self.assertIs(defer.extractCurrentResult(d), result)
+        self.assertIs(defer.extractCurrentResult(d), None)
+
+
+    def test_extractCurrentResultDoesntPassthroughErrorResults(self):
+        """
+        L{defer.extractCurrentResult} does not pass through errors.
+        """
+        d = defer.Deferred()
+        d.errback(ValueError())
+
+        # Reach inside the deferred and pull out the result.
+        result = d.result
+
+        self.assertIs(defer.extractCurrentResult(d, raises=False), result)
+        self.assertIs(defer.extractCurrentResult(d), None)
+
+
     def test_maybeDeferredSync(self):
         """
         L{defer.maybeDeferred} should retrieve the result of a synchronous
