@@ -2003,7 +2003,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._dataBuffer = []
             self.setLineMode(data)
         else:
-            self.transport.loseConnection()
+            self.loseConnection()
 
 
     def timeoutConnection(self):
@@ -2015,7 +2015,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
-        self._networkProducer.unregisterProducer()
 
 
     def isSecure(self):
@@ -2109,6 +2108,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
+        self._networkProducer.unregisterProducer()
         return self.transport.loseConnection()
 
 
@@ -2260,7 +2260,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.transport.loseConnection()
+        self.loseConnection()
 
 
 
