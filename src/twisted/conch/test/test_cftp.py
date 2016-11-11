@@ -1164,8 +1164,9 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         successfully removed. Also check the output of the put command.
         """
         # XXX - not actually a unit test
-        expectedOutput = (b'Transferred %s/testfile1 to %s/test"file2' %
-            (self.testDir.asBytesMode().path, self.testDir.asBytesMode().path))
+        expectedOutput = (b'Transferred ' + self.testDir.asBytesMode().path +
+                          b'/testfile1 to ' + self.testDir.asBytesMode().path +
+                          b'/test"file2')
         def _checkPut(result):
             self.assertFilesEqual(self.testDir.child('testfile1'),
                                   self.testDir.child('test"file2'))
