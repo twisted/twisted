@@ -99,6 +99,7 @@ from twisted.internet import interfaces, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
 from twisted.protocols import policies, basic
+from twisted.protocols.tls import _PullToPush
 
 from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
@@ -1657,6 +1658,26 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         L{interfaces.IPushProducer}. Used to attempt to prevent the transport
         from producing excess data when we're responding to a request.
     @type _networkProducer: L{interfaces.IPushProducer}
+
+    @ivar _requestProducer: If the L{Request} object or anything it calls
+        registers itself as an L{interfaces.IProducer}, it will be stored here.
+        This is used to create a producing pipeline: pause/resume producing
+        methods will be propagated from the C{transport}, through the
+        L{HTTPChannel} instance, to the c{_requestProducer}.
+
+        The reason we proxy through the producing methods rather than the old
+        behaviour (where we literally just set the L{Request} object as the
+        producer on the transport) is because we want to be able to exert
+        backpressure on the client to prevent it from sending in arbitrarily
+        many requests without ever reading responses. Essentially, if the
+        client never reads our responses we will eventually stop reading its
+        requests.
+    @type _requestProducer: L{interfaces.IPushProducer}
+
+    @ivar _requestProducerStreaming: A boolean that tracks whether the producer
+        on the L{Request} side of this channel has registered itself as a
+        L{interfaces.IPushProducer} or an L{interfaces.IPullProducer}.
+    @type _requestProducerStreaming: L{bool} or L{None}
     """
 
     maxHeaders = 500
@@ -1674,6 +1695,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _savedTimeOut = None
     _receivedHeaderCount = 0
     _receivedHeaderSize = 0
+    _requestProducer = None
+    _requestProducerStreaming = None
 
     def __init__(self):
         # the request queue
@@ -2079,7 +2102,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
-        return self.transport.registerProducer(producer, streaming)
+        if self._requestProducer is not None:
+            raise RuntimeError(
+                "Cannot register producer %s, because producer %s was never "
+                "unregistered." % (producer, self.producer))
+
+        if not streaming:
+            producer = _PullToPush(producer)
+
+        self._requestProducer = producer
+        self._requestProducerStreaming = streaming
+
+        if not streaming:
+            producer.startStreaming()
 
 
     def unregisterProducer(self):
@@ -2088,7 +2123,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
-        return self.transport.unregisterProducer()
+        if self._requestProducer is None:
+            return
+
+        if not self._requestProducerStreaming:
+            self._requestProducer.stopStreaming()
+
+        self._requestProducer = None
+        self._requestProducerStreaming = None
 
 
     # Implementation of IPushProducer.
