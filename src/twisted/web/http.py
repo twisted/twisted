@@ -1692,6 +1692,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         on the L{Request} side of this channel has registered itself as a
         L{interfaces.IPushProducer} or an L{interfaces.IPullProducer}.
     @type _requestProducerStreaming: L{bool} or L{None}
+
+    @ivar _waitingForTransport: A boolean that tracks whether the transport has
+        asked us to stop producing. This is used to keep track of what we're
+        waiting for: if the transport has asked us to stop producing then we
+        don't want to unpause the transport until it asks us to produce again.
+    @type _waitingForTransport: L{bool}
+
+    @ivar _waitingForResponse: A boolean that tracks whether we have
+        temporarily paused the transport while we wait for the response to be
+        generated. This is used to keep track of what we're waiting for: if the
+        transport asks us to start producing but we're still waiting for a
+        response, we don't want to resume that transport.
+    @type _waitingForResponse: L{bool}
     """
 
     maxHeaders = 500
@@ -1711,6 +1724,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _receivedHeaderSize = 0
     _requestProducer = None
     _requestProducerStreaming = None
+    _waitingForTransport = False
+    _waitingForResponse = False
 
     def __init__(self):
         # the request queue
@@ -1883,7 +1898,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._savedTimeOut = self.setTimeout(None)
 
         # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        self._networkProducer.pauseProducing()
+        self._waitingForResponse = True
+        if not self._waitingForTransport:
+            self._networkProducer.pauseProducing()
         self._handlingRequest = True
 
         req = self.requests[-1]
@@ -1969,7 +1986,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if request != self.requests[0]: raise TypeError
         del self.requests[0]
 
-        self._networkProducer.resumeProducing()
+        # We should only resume the producer if we're not waiting for the
+        # transport.
+        self._waitingForResponse = False
+        if not self._waitingForTransport:
+            self._networkProducer.resumeProducing()
 
         if self.persistent:
             self._handlingRequest = False
@@ -2185,6 +2206,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         timeout which will cause us to tear the connection down. That's a good
         thing!
         """
+        self._waitingForTransport = True
+
         # The first step is to tell any producer we might currently have
         # registered to stop producing. If we can slow our applications down
         # we should.
@@ -2193,7 +2216,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # The next step here is to pause our own transport, as discussed in the
         # docstring.
-        self._networkProducer.pauseProducing()
+        if not self._waitingForResponse:
+            self._networkProducer.pauseProducing()
 
 
     def resumeProducing(self):
@@ -2205,10 +2229,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         outstanding L{Request} producers we have, and also unpause our
         transport.
         """
+        self._waitingForTransport = False
+
         if self._requestProducer is not None:
             self._requestProducer.resumeProducing()
 
-        self._networkProducer.resumeProducing()
+        # We only want to resume the network producer if we're not currently
+        # waiting for a response to show up.
+        if not self._waitingForResponse:
+            self._networkProducer.resumeProducing()
 
 
     def _send100Continue(self):
