@@ -1616,6 +1616,20 @@ class _NoPushProducer(object):
         pass
 
 
+    def registerProducer(self, producer, streaming):
+        """
+        Register to receive data from a producer.
+        """
+        pass
+
+
+    def unregisterProducer(self):
+        """
+        Stop consuming data from a producer, without disconnecting.
+        """
+        pass
+
+
 
 @implementer(interfaces.ITransport,
              interfaces.IPushProducer,
@@ -1711,6 +1725,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._networkProducer = interfaces.IPushProducer(
             self.transport, _NoPushProducer()
         )
+        self._networkProducer.registerProducer(self, True)
 
 
     def lineReceived(self, line):
@@ -1979,6 +1994,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+        self._networkProducer.unregisterProducer()
 
 
     def isSecure(self):
