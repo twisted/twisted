@@ -30,27 +30,32 @@ try:
 except ImportError:
     import pickle
 
+from twisted.python.filepath import FilePath
+
 try:
     _open
 except NameError:
     _open = open
 
 
+
 class DirDBM:
-    """A directory with a DBM interface.
-    
+    """
+    A directory with a DBM interface.
+
     This class presents a hash-like interface to a directory of small,
     flat files. It can only use strings as keys or values.
     """
-    
+
     def __init__(self, name):
         """
         @type name: str
         @param name: Base path to use for the directory storage.
         """
         self.dname = os.path.abspath(name)
-        if not os.path.isdir(self.dname):
-            os.mkdir(self.dname)
+        self._dnamePath = FilePath(name)
+        if not self._dnamePath.isdir():
+            self._dnamePath.createDirectory()
         else:
             # Run recovery, in case we crashed. we delete all files ending
             # with ".new". Then we find all files who end with ".rpl". If a
@@ -60,124 +65,144 @@ class DirDBM:
             # but before renaming the replacement entry.
             #
             # NOTE: '.' is NOT in the base64 alphabet!
-            for f in glob.glob(os.path.join(self.dname, "*.new")):
+            for f in glob.glob(self._dnamePath.child("*.new").path):
                 os.remove(f)
-            replacements = glob.glob(os.path.join(self.dname, "*.rpl"))
+            replacements = glob.glob(self._dnamePath.child("*.rpl").path)
             for f in replacements:
                 old = f[:-4]
                 if os.path.exists(old):
                     os.remove(f)
                 else:
                     os.rename(f, old)
-    
+
+
     def _encode(self, k):
-        """Encode a key so it can be used as a filename.
+        """
+        Encode a key so it can be used as a filename.
         """
         # NOTE: '_' is NOT in the base64 alphabet!
-        return base64.encodestring(k).replace('\n', '_').replace("/", "-")
-    
+        return base64.encodestring(k).replace(b'\n', b'_').replace(b"/", b"-")
+
+
     def _decode(self, k):
-        """Decode a filename to get the key.
         """
-        return base64.decodestring(k.replace('_', '\n').replace("-", "/"))
-    
+        Decode a filename to get the key.
+        """
+        return base64.decodestring(k.replace(b'_', b'\n').replace(b"-", b"/"))
+
+
     def _readFile(self, path):
-        """Read in the contents of a file.
-        
+        """
+        Read in the contents of a file.
+
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        with _open(path, "rb") as f:
+        with _open(path.path, "rb") as f:
             s = f.read()
         return s
-    
+
+
     def _writeFile(self, path, data):
-        """Write data to a file.
-        
+        """
+        Write data to a file.
+
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        with _open(path, "wb") as f:
+        with _open(path.path, "wb") as f:
             f.write(data)
             f.flush()
-    
+
+
     def __len__(self):
         """
         @return: The number of key/value pairs in this Shelf
         """
-        return len(os.listdir(self.dname))
+        return len(self._dnamePath.listdir())
+
 
     def __setitem__(self, k, v):
         """
         C{dirdbm[k] = v}
         Create or modify a textfile in this directory
 
-        @type k: str
+        @type k: bytes
         @param k: key to set
-        
-        @type v: str
+
+        @type v: bytes
         @param v: value to associate with C{k}
         """
-        assert type(k) == str, "DirDBM key must be a string"
-        assert type(v) == str, "DirDBM value must be a string"
+        if not type(k) == bytes:
+            raise TypeError("DirDBM key must be bytes")
+        if not type(v) == bytes:
+            raise TypeError("DirDBM value must be bytes")
         k = self._encode(k)
-        
-        # we create a new file with extension .new, write the data to it, and
+
+        # We create a new file with extension .new, write the data to it, and
         # if the write succeeds delete the old file and rename the new one.
-        old = os.path.join(self.dname, k)
-        if os.path.exists(old):
-            new = old + ".rpl" # replacement entry
+        old = self._dnamePath.child(k)
+        if old.exists():
+            new = old.siblingExtension(".rpl") # Replacement entry
         else:
-            new = old + ".new" # new entry
+            new = old.siblingExtension(".new") # New entry
         try:
             self._writeFile(new, v)
         except:
-            os.remove(new)
+            new.remove()
             raise
         else:
-            if os.path.exists(old): os.remove(old)
-            os.rename(new, old)
+            if (old.exists()): old.remove()
+            new.moveTo(old)
+
 
     def __getitem__(self, k):
         """
         C{dirdbm[k]}
         Get the contents of a file in this directory as a string.
-        
-        @type k: str
+
+        @type k: bytes
         @param k: key to lookup
-        
+
         @return: The value associated with C{k}
         @raise KeyError: Raised when there is no such key
         """
-        assert type(k) == str, "DirDBM key must be a string"
-        path = os.path.join(self.dname, self._encode(k))
+        if not type(k) == bytes:
+            raise TypeError("DirDBM key must be bytes")
+        path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
-        except:
+        except (EnvironmentError):
             raise KeyError(k)
+
 
     def __delitem__(self, k):
         """
         C{del dirdbm[foo]}
         Delete a file in this directory.
-        
-        @type k: str
+
+        @type k: bytes
         @param k: key to delete
-        
+
         @raise KeyError: Raised when there is no such key
         """
-        assert type(k) == str, "DirDBM key must be a string"
+        if not type(k) == bytes:
+            raise TypeError("DirDBM key must be bytes")
         k = self._encode(k)
-        try:    os.remove(os.path.join(self.dname, k))
-        except (OSError, IOError): raise KeyError(self._decode(k))
+        try:
+            self._dnamePath.child(k).remove()
+        except (EnvironmentError):
+            raise KeyError(self._decode(k))
+
 
     def keys(self):
         """
-        @return: a C{list} of filenames (keys).
+        @return: a L{list} of filenames (keys).
         """
-        return map(self._decode, os.listdir(self.dname))
+        return list(map(self._decode, self._dnamePath.asBytesMode().listdir()))
+
 
     def values(self):
         """
-        @return: a C{list} of file-contents (values).
+        @return: a L{list} of file-contents (values).
         """
         vals = []
         keys = self.keys()
@@ -185,9 +210,10 @@ class DirDBM:
             vals.append(self[key])
         return vals
 
+
     def items(self):
         """
-        @return: a C{list} of 2-tuples containing key/value pairs.
+        @return: a L{list} of 2-tuples containing key/value pairs.
         """
         items = []
         keys = self.keys()
@@ -195,23 +221,26 @@ class DirDBM:
             items.append((key, self[key]))
         return items
 
+
     def has_key(self, key):
         """
-        @type key: str
+        @type key: bytes
         @param key: The key to test
-        
-        @return: A true value if this dirdbm has the specified key, a faluse
+
+        @return: A true value if this dirdbm has the specified key, a false
         value otherwise.
         """
-        assert type(key) == str, "DirDBM key must be a string"
+        if not type(key) == bytes:
+            raise TypeError("DirDBM key must be bytes")
         key = self._encode(key)
-        return os.path.isfile(os.path.join(self.dname, key))
+        return self._dnamePath.child(key).isfile()
+
 
     def setdefault(self, key, value):
         """
-        @type key: str
+        @type key: bytes
         @param key: The key to lookup
-        
+
         @param value: The value to associate with key if key is not already
         associated with a value.
         """
@@ -220,64 +249,62 @@ class DirDBM:
             return value
         return self[key]
 
+
     def get(self, key, default = None):
         """
-        @type key: str
+        @type key: bytes
         @param key: The key to lookup
-        
+
         @param default: The value to return if the given key does not exist
-        
+
         @return: The value associated with C{key} or C{default} if not
-        C{self.has_key(key)}
+        L{DirDBM.has_key(key)}
         """
         if key in self:
             return self[key]
         else:
             return default
 
+
     def __contains__(self, key):
         """
-        C{key in dirdbm}
-
-        @type key: str
-        @param key: The key to test
-                
-        @return: A true value if C{self.has_key(key)}, a false value otherwise.
+        @see: L{DirDBM.has_key}
         """
-        assert type(key) == str, "DirDBM key must be a string"
-        key = self._encode(key)
-        return os.path.isfile(os.path.join(self.dname, key))
+        return self.has_key(key)
+
 
     def update(self, dict):
         """
-        Add all the key/value pairs in C{dict} to this dirdbm.  Any conflicting
-        keys will be overwritten with the values from C{dict}.
+        Add all the key/value pairs in L{dict} to this dirdbm.  Any conflicting
+        keys will be overwritten with the values from L{dict}.
 
         @type dict: mapping
         @param dict: A mapping of key/value pairs to add to this dirdbm.
         """
         for key, val in dict.items():
             self[key]=val
-            
+
+
     def copyTo(self, path):
         """
         Copy the contents of this dirdbm to the dirdbm at C{path}.
-        
-        @type path: C{str}
+
+        @type path: L{str}
         @param path: The path of the dirdbm to copy to.  If a dirdbm
         exists at the destination path, it is cleared first.
-        
+
         @rtype: C{DirDBM}
         @return: The dirdbm this dirdbm was copied to.
         """
-        path = os.path.abspath(path)
-        assert path != self.dname
-        
-        d = self.__class__(path)
+        path = FilePath(path)
+        assert path != self._dnamePath
+
+        d = self.__class__(path.path)
         d.clear()
         for k in self.keys():
             d[k] = self[k]
         return d
+
 
     def clear(self):
         """
@@ -286,33 +313,38 @@ class DirDBM:
         for k in self.keys():
             del self[k]
 
+
     def close(self):
         """
         Close this dbm: no-op, for dbm-style interface compliance.
         """
 
+
     def getModificationTime(self, key):
         """
         Returns modification time of an entry.
-        
+
         @return: Last modification date (seconds since epoch) of entry C{key}
         @raise KeyError: Raised when there is no such key
         """
-        assert type(key) == str, "DirDBM key must be a string"
-        path = os.path.join(self.dname, self._encode(key))
-        if os.path.isfile(path):
-            return os.path.getmtime(path)
+        if not type(key) == bytes:
+            raise TypeError("DirDBM key must be bytes")
+        path = self._dnamePath.child(self._encode(key))
+        if path.isfile():
+            return path.getModificationTime()
         else:
             raise KeyError(key)
 
 
+
 class Shelf(DirDBM):
-    """A directory with a DBM shelf interface.
-    
+    """
+    A directory with a DBM shelf interface.
+
     This class presents a hash-like interface to a directory of small,
     flat files. Keys must be strings, but values can be any given object.
     """
-    
+
     def __setitem__(self, k, v):
         """
         C{shelf[foo] = bar}
@@ -326,24 +358,26 @@ class Shelf(DirDBM):
         v = pickle.dumps(v)
         DirDBM.__setitem__(self, k, v)
 
+
     def __getitem__(self, k):
         """
         C{dirdbm[foo]}
         Get and unpickle the contents of a file in this directory.
-        
-        @type k: str
+
+        @type k: bytes
         @param k: The key to lookup
-        
+
         @return: The value associated with the given key
         @raise KeyError: Raised if the given key does not exist
         """
         return pickle.loads(DirDBM.__getitem__(self, k))
 
 
+
 def open(file, flag = None, mode = None):
     """
     This is for 'anydbm' compatibility.
-    
+
     @param file: The parameter to pass to the DirDBM constructor.
 
     @param flag: ignored
