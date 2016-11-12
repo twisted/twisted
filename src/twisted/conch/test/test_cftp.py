@@ -1373,7 +1373,8 @@ class OurServerBatchFileTests(CFTPClientTestBase):
 
 
     def testBatchFile(self):
-        """Test whether batch file function of cftp ('cftp -b batchfile').
+        """
+        Test whether batch file function of cftp ('cftp -b batchfile').
         This works by treating the file as a list of commands to be run.
         """
         cmds = """pwd
@@ -1394,7 +1395,8 @@ exit
 
 
     def testError(self):
-        """Test that an error in the batch file stops running the batch.
+        """
+        Test that an error in the batch file stops running the batch.
         """
         cmds = """chown 0 missingFile
 pwd
@@ -1410,7 +1412,8 @@ exit
 
 
     def testIgnoredError(self):
-        """Test that a minus sign '-' at the front of a line ignores
+        """
+        Test that a minus sign '-' at the front of a line ignores
         any errors.
         """
         cmds = """-chown 0 missingFile
