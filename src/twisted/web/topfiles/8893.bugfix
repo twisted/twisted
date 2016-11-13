@@ -1,0 +1,1 @@
+twisted.web._http.H2Stream's getHost and getPeer implementations now actually return the host and peer instead of None.

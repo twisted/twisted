@@ -9,6 +9,7 @@ Implementation module for the `ckeygen` command.
 from __future__ import print_function
 
 import sys, os, getpass, socket
+from functools import wraps
 if getpass.getpass == getpass.unix_getpass:
     try:
         import termios # hack around broken termios
@@ -23,13 +24,25 @@ from twisted.python.compat import raw_input, _PY3
 
 
 
+supportedKeyTypes = dict()
+def _keyGenerator(keyType):
+    def assignkeygenerator(keygenerator):
+        @wraps(keygenerator)
+        def wrapper(*args, **kwargs):
+            return keygenerator(*args, **kwargs)
+        supportedKeyTypes[keyType] = wrapper
+        return wrapper
+    return assignkeygenerator
+
+
+
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ckeygen [options]
  """
 
     longdesc = "ckeygen manipulates public/private keys in various ways."
 
-    optParameters = [['bits', 'b', 1024, 'Number of bits in the key to create.'],
+    optParameters = [['bits', 'b', None, 'Number of bits in the key to create.'],
                      ['filename', 'f', None, 'Filename of the key file.'],
                      ['type', 't', None, 'Specify type of key to create.'],
                      ['comment', 'C', None, 'Provide new comment.'],
@@ -44,7 +57,7 @@ class GeneralOptions(usage.Options):
                 ['showpub', 'y', 'Read private key file and print public key.']]
 
     compData = usage.Completions(
-        optActions={"type": usage.CompleteList(["rsa", "dsa"])})
+        optActions={"type": usage.CompleteList(list(supportedKeyTypes.keys()))})
 
 
 
@@ -59,12 +72,13 @@ def run():
     log.discardLogs()
     log.deferr = handleError # HACK
     if options['type']:
-        if options['type'] == 'rsa':
-            generateRSAkey(options)
-        elif options['type'] == 'dsa':
-            generateDSAkey(options)
+        if options['type'].lower() in supportedKeyTypes:
+            print('Generating public/private %s key pair.' % (options['type']))
+            supportedKeyTypes[options['type'].lower()](options)
         else:
-            sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
+            sys.exit(
+                'Key type was %s, must be one of %s'
+                    % (options['type'], ', '.join(supportedKeyTypes.keys())))
     elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
@@ -96,12 +110,13 @@ def handleError():
     raise
 
 
-
+@_keyGenerator('rsa')
 def generateRSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    print('Generating public/private rsa key pair.')
+    if not options['bits']:
+        options['bits'] = 1024
     keyPrimitive = rsa.generate_private_key(
         key_size=int(options['bits']),
         public_exponent=65537,
@@ -112,14 +127,35 @@ def generateRSAkey(options):
 
 
 
+@_keyGenerator('dsa')
 def generateDSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dsa
 
-    print('Generating public/private dsa key pair.')
+    if not options['bits']:
+        options['bits'] = 1024
     keyPrimitive = dsa.generate_private_key(
         key_size=int(options['bits']),
-        backed=default_backend(),
+        backend=default_backend(),
+        )
+    key = keys.Key(keyPrimitive)
+    _saveKey(key, options)
+
+
+
+@_keyGenerator('ecdsa')
+def generateECDSAkey(options):
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    if not options['bits']:
+        options['bits'] = 256
+    # OpenSSH supports only nistp curves.
+    # See https://www.openssh.com/txt/release-5.7
+    curve  = b'nistp' + str(options['bits']).encode('ascii')
+    keyPrimitive = ec.generate_private_key(
+        curve=keys._curveTable[curve],
+        backend=default_backend()
         )
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
@@ -220,7 +256,8 @@ def _saveKey(key, options):
     @param options:
     @type options: L{dict}
     """
-    keyTypeName = key.type().lower()
+    KeyTypeMapping = {'EC': 'ecdsa', 'RSA': 'rsa', 'DSA': 'dsa'}
+    keyTypeName = KeyTypeMapping[key.type()]
     if not options['filename']:
         defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
         newPath = raw_input(

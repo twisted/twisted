@@ -17,6 +17,7 @@ from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
 from twisted.web.test.test_http import DummyHTTPHandler, DelayedHTTPHandler
+from twisted.internet.address import IPv4Address
 
 skipH2 = None
 
@@ -2259,6 +2260,44 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
             isinstance(frames[-1], hyperframe.frame.DataFrame)
         )
         self.assertFalse(a._stillProducing)
+
+
+    def test_passthroughHostAndPeer(self):
+        """
+        A L{H2Stream} object correctly passes through host and peer information
+        from its L{H2Connection}.
+        """
+        hostAddress = IPv4Address("TCP", "17.52.24.8", 443)
+        peerAddress = IPv4Address("TCP", "17.188.0.12", 32008)
+
+        frameFactory = FrameFactory()
+        transport = StringTransport(
+            hostAddress=hostAddress, peerAddress=peerAddress
+        )
+        connection = H2Connection()
+        connection.requestFactory = DummyHTTPHandler
+        connection.makeConnection(transport)
+
+        frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
+        requestBytes = frameFactory.clientConnectionPreface()
+        requestBytes += b''.join(frame.serialize() for frame in frames)
+
+        for byte in iterbytes(requestBytes):
+            connection.dataReceived(byte)
+
+        # The stream is present. Go grab the stream object.
+        stream = connection.streams[1]
+        self.assertEqual(stream.getHost(), hostAddress)
+        self.assertEqual(stream.getPeer(), peerAddress)
+
+        # Allow the stream to finish up and check the result.
+        cleanupCallback = connection._streamCleanupCallbacks[1]
+
+        def validate(*args):
+            self.assertEqual(stream.getHost(), hostAddress)
+            self.assertEqual(stream.getPeer(), peerAddress)
+
+        return cleanupCallback.addCallback(validate)
 
 
 
