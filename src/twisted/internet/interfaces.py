@@ -89,7 +89,7 @@ class IHostResolution(Interface):
     An L{IHostResolution} represents represents an in-progress recursive query
     for a DNS name.
 
-    @since: 16.6
+    @since: 16.7
     """
 
     name = Attribute(
@@ -110,7 +110,7 @@ class IResolutionReceiver(Interface):
     An L{IResolutionReceiver} receives the results of a hostname resolution in
     progress, initiated by an L{IHostnameResolver}.
 
-    @since: 16.6
+    @since: 16.7
     """
 
     def resolutionBegan(resolutionInProgress):
@@ -147,7 +147,7 @@ class IHostnameResolver(Interface):
     An L{IHostnameResolver} can resolve a host name and port number into a
     series of L{IAddress} objects.
 
-    @since: 16.6
+    @since: 16.7
     """
 
     def resolveHostName(resolutionReceiver, hostName, portNumber=0,
@@ -1518,9 +1518,14 @@ class IReactorCore(Interface):
         """
 
 
+
 class IReactorPluggableResolver(Interface):
     """
-    A reactor with a pluggable name resolver interface.
+    An L{IReactorPluggableResolver} is a reactor which can be customized with
+    an L{IResolverSimple}.  This is a fairly limited interface, that supports
+    only IPv4; you should use L{IReactorPluggableNameResolver} instead.
+
+    @see: L{IReactorPluggableNameResolver}
     """
 
     def installResolver(resolver):
@@ -1531,7 +1536,34 @@ class IReactorPluggableResolver(Interface):
         @param resolver: The new resolver to use.
 
         @return: The previously installed resolver.
+        @rtype: L{IResolverSimple}
         """
+
+
+
+class IReactorPluggableNameResolver(Interface):
+    """
+    An L{IReactorPluggableNameResolver} is a reactor whose name resolver can be
+    set to a user-supplied object.
+    """
+
+    resolver = Attribute(
+        """
+        Read-only attribute; the resolver installed with L{installResolver}.
+        """
+    )
+
+    def installResolver(resolver):
+        """
+        Set the internal resolver to use for name lookups.
+
+        @type resolver: An object implementing the L{IResolverSimple} interface
+        @param resolver: The new resolver to use.
+
+        @return: The previously installed resolver.
+        @rtype: L{IHostnameResolver}
+        """
+
 
 
 class IReactorDaemonize(Interface):
