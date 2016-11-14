@@ -7,7 +7,6 @@ from itertools import count
 
 from zope.interface import implementer
 
-from twisted.conch.client import options
 from twisted.conch.error import ConchError
 from twisted.conch.avatar import ConchUser
 from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
