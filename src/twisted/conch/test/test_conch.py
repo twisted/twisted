@@ -735,11 +735,11 @@ class ConchOptions(unittest.TestCase):
         self.assertIn("Unknown mac type", e.code)
         opts = options.ConchOptions()
         opts.opt_macs("hmac-sha2-512")
-        self.assertEqual(opts['macs'], ["hmac-sha2-512"])
+        self.assertEqual(opts['macs'], [b"hmac-sha2-512"])
         opts.opt_macs(b"hmac-sha2-512")
-        self.assertEqual(opts['macs'], ["hmac-sha2-512"])
+        self.assertEqual(opts['macs'], [b"hmac-sha2-512"])
         opts.opt_macs("hmac-sha2-256,hmac-sha1,hmac-md5")
-        self.assertEqual(opts['macs'], ["hmac-sha2-256", "hmac-sha1", "hmac-md5"])
+        self.assertEqual(opts['macs'], [b"hmac-sha2-256", b"hmac-sha1", b"hmac-md5"])
 
 
     def test_host_key_algorithms(self):
@@ -751,9 +751,9 @@ class ConchOptions(unittest.TestCase):
         self.assertIn("Unknown host key type", e.code)
         opts = options.ConchOptions()
         opts.opt_host_key_algorithms("ssh-rsa")
-        self.assertEqual(opts['host-key-algorithms'], ["ssh-rsa"])
+        self.assertEqual(opts['host-key-algorithms'], [b"ssh-rsa"])
         opts.opt_host_key_algorithms(b"ssh-dss")
-        self.assertEqual(opts['host-key-algorithms'], ["ssh-dss"])
+        self.assertEqual(opts['host-key-algorithms'], [b"ssh-dss"])
         opts.opt_host_key_algorithms("ssh-rsa,ssh-dss")
-        self.assertEqual(opts['host-key-algorithms'], ["ssh-rsa", "ssh-dss"])
+        self.assertEqual(opts['host-key-algorithms'], [b"ssh-rsa", b"ssh-dss"])
 
