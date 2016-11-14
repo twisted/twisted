@@ -1698,13 +1698,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
     @type _waitingForTransport: L{bool}
-
-    @ivar _waitingForResponse: A boolean that tracks whether we have
-        temporarily paused the transport while we wait for the response to be
-        generated. This is used to keep track of what we're waiting for: if the
-        transport asks us to start producing but we're still waiting for a
-        response, we don't want to resume that transport.
-    @type _waitingForResponse: L{bool}
     """
 
     maxHeaders = 500
@@ -1725,7 +1718,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducer = None
     _requestProducerStreaming = None
     _waitingForTransport = False
-    _waitingForResponse = False
 
     def __init__(self):
         # the request queue
@@ -1897,11 +1889,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
 
+        self._handlingRequest = True
+
         # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        self._waitingForResponse = True
         if not self._waitingForTransport:
             self._networkProducer.pauseProducing()
-        self._handlingRequest = True
 
         req = self.requests[-1]
         req.requestReceived(command, path, version)
@@ -1988,7 +1980,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # We should only resume the producer if we're not waiting for the
         # transport.
-        self._waitingForResponse = False
         if not self._waitingForTransport:
             self._networkProducer.resumeProducing()
 
@@ -2216,7 +2207,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # The next step here is to pause our own transport, as discussed in the
         # docstring.
-        if not self._waitingForResponse:
+        if not self._handlingRequest:
             self._networkProducer.pauseProducing()
 
 
@@ -2236,7 +2227,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # We only want to resume the network producer if we're not currently
         # waiting for a response to show up.
-        if not self._waitingForResponse:
+        if not self._handlingRequest:
             self._networkProducer.resumeProducing()
 
 
