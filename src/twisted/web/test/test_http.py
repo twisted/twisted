@@ -2909,3 +2909,149 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                     "twisted.web.http.Request.noLongerQueued was deprecated "
                     "in Twisted 16.3.0")},
                          sub(["category", "message"], warnings[0]))
+
+
+
+class ChannelProductionTests(unittest.TestCase):
+    """
+    Tests for the way HTTPChannel manages backpressure.
+    """
+    request = (
+        b'GET / HTTP/1.1\r\n'
+        b'Host: localhost\r\n'
+        b'\r\n'
+    )
+
+
+    def test_HTTPChannelIsAProducer(self):
+        """
+        L{HTTPChannel} registers itself as a producer with its transport when a
+        connection is made.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+
+        self.assertEqual(transport.producer, channel)
+        self.assertTrue(transport.streaming)
+
+
+    def test_HTTPChannelUnregistersSelfWhenCallingLoseConnection(self):
+        """
+        L{HTTPChannel} unregisters itself when it has loseConnection called.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+        channel.loseConnection()
+
+        self.assertIs(transport.producer, None)
+        self.assertIs(transport.streaming, None)
+
+
+    def test_HTTPChannelPropagatesProducingFromTransportToTransport(self):
+        """
+        When L{HTTPChannel} has C{pauseProducing} called on it by the transport
+        it will call C{pauseProducing} on the transport. When unpaused, the
+        L{HTTPChannel} will call C{resumeProducing} on its transport.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+
+        # The transport starts in producing state.
+        self.assertEqual(transport.producerState, 'producing')
+
+        # Pause producing. The transport should now be paused as well.
+        channel.pauseProducing()
+        self.assertEqual(transport.producerState, 'paused')
+
+        # Resume producing. The transport should be unpaused.
+        channel.resumeProducing()
+        self.assertEqual(transport.producerState, 'producing')
+
+
+    def test_HTTPChannelPropagatesPausedProductionToRequest(self):
+        """
+        If a L{Request} object has registered itself as a producer with a
+        L{HTTPChannel} object, and the L{HTTPChannel} object is paused, both
+        the transport and L{Request} objects get paused.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DelayedHTTPHandler
+        channel.makeConnection(transport)
+
+        # Feed a request in to spawn a Request object, then grab it.
+        channel.dataReceived(self.request)
+        request = channel.requests[0]
+
+        # Register a dummy producer.
+        producer = DummyProducer()
+        request.registerProducer(producer, True)
+
+        # Note that the transport is paused while it waits for a response.
+        # The dummy producer, however, is unpaused.
+        self.assertEqual(transport.producerState, 'paused')
+        self.assertEqual(producer.events, [])
+
+        # The transport now pauses production. This causes the producer to be
+        # paused. The transport stays paused.
+        channel.pauseProducing()
+        self.assertEqual(transport.producerState, 'paused')
+        self.assertEqual(producer.events, ['pause'])
+
+        # The transport has become unblocked and resumes production. This
+        # unblocks the dummy producer, but leaves the transport blocked.
+        channel.resumeProducing()
+        self.assertEqual(transport.producerState, 'paused')
+        self.assertEqual(producer.events, ['pause', 'resume'])
+
+        # Unregister the producer and then complete the response. Because the
+        # channel is not paused, the transport now gets unpaused.
+        request.unregisterProducer()
+        request.delayedProcess()
+        self.assertEqual(transport.producerState, 'producing')
+
+
+    def test_HTTPChannelStaysPausedWhenRequestCompletes(self):
+        """
+        If a L{Request} object completes its response while the transport is
+        paused, the L{HTTPChannel} does not resume the transport.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DelayedHTTPHandler
+        channel.makeConnection(transport)
+
+        # Feed a request in to spawn a Request object, then grab it.
+        channel.dataReceived(self.request)
+        request = channel.requests[0]
+
+        # Register a dummy producer.
+        producer = DummyProducer()
+        request.registerProducer(producer, True)
+
+        # Note that the transport is paused while it waits for a response.
+        # The dummy producer, however, is unpaused.
+        self.assertEqual(transport.producerState, 'paused')
+        self.assertEqual(producer.events, [])
+
+        # The transport now pauses production. This causes the producer to be
+        # paused. The transport stays paused.
+        channel.pauseProducing()
+        self.assertEqual(transport.producerState, 'paused')
+        self.assertEqual(producer.events, ['pause'])
+
+        # Unregister the producer and then complete the response. Because the
+        # channel is still paused, the transport stays paused
+        request.unregisterProducer()
+        request.delayedProcess()
+        self.assertEqual(transport.producerState, 'paused')
+
+        # At this point the channel is resumed, and so is the transport.
+        channel.resumeProducing()
+        self.assertEqual(transport.producerState, 'producing')
