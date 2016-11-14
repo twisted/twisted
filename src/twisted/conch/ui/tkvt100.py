@@ -8,9 +8,13 @@
 Maintainer: Paul Swartz
 """
 
-import Tkinter, tkFont
-import ansi
+try:
+    import tkinter as Tkinter
+    import tkinter.font as tkFont
+except ImportError:
+    import Tkinter, tkFont
 import string
+from . import ansi
 
 ttyFont = None#tkFont.Font(family = 'Courier', size = 10)
 fontWidth, fontHeight = None,None#max(map(ttyFont.measure, string.letters+string.digits)), int(ttyFont.metrics()['linespace'])
