@@ -15,7 +15,7 @@ from twisted.conch.ssh import session, forwarding, channel
 from twisted.conch.client.default import isInKnownHosts
 from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3
 
 import os, sys, getpass, struct, base64, signal
 
