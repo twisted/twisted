@@ -586,6 +586,31 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(a.factory, b"Foo")
 
 
+    def test_unregistersProducer(self):
+        """
+        The L{_GenericHTTPChannelProtocol} will unregister its proxy channel
+        from the transport if upgrade is negotiated.
+        """
+        transport = StringTransport()
+        transport.negotiatedProtocol = b'h2'
+
+        genericProtocol = http._genericHTTPChannelProtocolFactory(b'')
+        genericProtocol.requestFactory = DummyHTTPHandler
+        genericProtocol.makeConnection(transport)
+
+        # We expect the transport has a underlying channel registered as
+        # a producer.
+        self.assertIs(transport.producer, genericProtocol._channel)
+
+        # Force the upgrade.
+        genericProtocol.dataReceived(b'P')
+
+        # The transport should now have no producer.
+        self.assertIs(transport.producer, None)
+    if not http.H2_ENABLED:
+        test_unregistersProducer.skip = "HTTP/2 support not present"
+
+
 
 class HTTPLoopbackTests(unittest.TestCase):
 
