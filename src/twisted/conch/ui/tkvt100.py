@@ -31,7 +31,7 @@ class VT100Frame(Tkinter.Frame):
     def __init__(self, *args, **kw):
         global ttyFont, fontHeight, fontWidth
         ttyFont = tkFont.Font(family = 'Courier', size = 10)
-        fontWidth = max(map(ttyFont.measure, string.letters+string.digits))
+        fontWidth = max(map(ttyFont.measure, string.ascii_letters+string.digits))
         fontHeight = int(ttyFont.metrics()['linespace'])
         self.width = kw.get('width', 80)
         self.height = kw.get('height', 25)
