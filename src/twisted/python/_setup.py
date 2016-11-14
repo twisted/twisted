@@ -362,9 +362,6 @@ _isCPython = _checkCPython()
 
 notPortedModules = [
     "twisted.conch.test.test_manhole",
-    "twisted.conch.ui.__init__",
-    "twisted.conch.ui.ansi",
-    "twisted.conch.ui.tkvt100",
     "twisted.internet._threadedselect",
     "twisted.internet.glib2reactor",
     "twisted.internet.gtk2reactor",
