@@ -137,8 +137,9 @@ if _PY3:
 else:
     _intTypes = (int, long)
 
-# A common request timeout -- 5 minutes.
-_REQUEST_TIMEOUT = 5 * 60
+# A common request timeout -- 1 minute. This is roughly what nginx uses, and
+# so it seems to be a good choice for us too.
+_REQUEST_TIMEOUT = 1 * 60
 
 protocol_version = "HTTP/1.1"
 
