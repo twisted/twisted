@@ -1415,6 +1415,8 @@ class Key(object):
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)
 
+            # int_to_bytes returns rb[0] as a str in python2
+            # and an as int in python3
             if type(rb[0]) is str:
                 rcomp = ord(rb[0])
             else:
