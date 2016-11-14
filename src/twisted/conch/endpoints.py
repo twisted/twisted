@@ -765,6 +765,7 @@ class _NewConnectionHelper(object):
     @classmethod
     def _knownHosts(cls):
         """
+
         @return: A L{KnownHostsFile} instance pointed at the user's personal
             I{known hosts} file.
         @type: L{KnownHostsFile}
@@ -830,6 +831,7 @@ class _ExistingConnectionHelper(object):
 
     def secureConnection(self):
         """
+
         @return: A L{Deferred} that fires synchronously with the
             already-established connection object.
         """
