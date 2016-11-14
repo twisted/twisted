@@ -134,6 +134,7 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
+    "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
@@ -142,7 +143,6 @@ _CONSOLE_SCRIPTS = [
 _CONSOLE_SCRIPTS_PY2 = [
     "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
-    "tkconch = twisted.conch.scripts.tkconch:run",
     ]
 
 if not _PY3:
