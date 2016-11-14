@@ -340,14 +340,10 @@ class AbortSSLConnectionTests(ReactorBuilder, AbortConnectionMixin, ContextGener
 
     def buildReactor(self):
         reactor = ReactorBuilder.buildReactor(self)
-        try:
-            from twisted.protocols import tls
-        except ImportError:
-            return reactor
+        from twisted.internet import producer_helpers
 
         # Patch twisted.protocols.tls to use this reactor, until we get
         # around to fixing #5206, or the TLS code uses an explicit reactor:
-        from twisted.internet import producer_helpers
         cooperator = Cooperator(
             scheduler=lambda x: reactor.callLater(0.00001, x))
         self.patch(producer_helpers, "cooperate", cooperator.cooperate)
