@@ -1045,6 +1045,9 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d = self.runScript('pwd', 'lpwd', 'cd testDirectory', 'cd ..', 'pwd')
 
         def cmdOutput(output):
+            """
+            Callback function for handling command output.
+            """
             cmds = []
             for cmd in output:
                 if _PY3 and isinstance(cmd, bytes):
