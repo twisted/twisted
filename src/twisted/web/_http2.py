@@ -34,10 +34,10 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
+from twisted.internet.producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
-from twisted.protocols.tls import _PullToPush
 
 
 # This API is currently considered private.
