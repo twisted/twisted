@@ -59,11 +59,11 @@ class UnixConchUser(ConchUser):
         self.otherGroups = l
         self.listeners = {}  # Dict mapping (interface, port) -> listener
         self.channelLookup.update(
-                {"session": session.SSHSession,
-                 "direct-tcpip": forwarding.openConnectForwardingClient})
+                {b"session": session.SSHSession,
+                 b"direct-tcpip": forwarding.openConnectForwardingClient})
 
         self.subsystemLookup.update(
-                {"sftp": filetransfer.FileTransferServer})
+                {b"sftp": filetransfer.FileTransferServer})
 
 
     def getUserGroupId(self):
