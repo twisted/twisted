@@ -3028,6 +3028,44 @@ class ChannelProductionTests(unittest.TestCase):
         self.assertIs(channel._requestProducer, None)
 
 
+    def test_HTTPChannelStopWithNoRequestOutstanding(self):
+        """
+        If there is no request producer currently registered, C{stopProducing}
+        does nothing.
+        """
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyHTTPHandler
+        )
+
+        channel.unregisterProducer()
+        self.assertIs(channel._requestProducer, None)
+
+
+    def test_HTTPChannelStopRequestProducer(self):
+        """
+        If there is a request producer registered with L{HTTPChannel}, calling
+        C{stopProducing} causes that producer to be stopped as well.
+        """
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DelayedHTTPHandler
+        )
+
+        # Feed a request in to spawn a Request object, then grab it.
+        channel.dataReceived(self.request)
+        request = channel.requests[0]
+
+        # Register a dummy producer.
+        producer = DummyProducer()
+        request.registerProducer(producer, True)
+
+        # The dummy producer is currently unpaused.
+        self.assertEqual(producer.events, [])
+
+        # The transport now stops production. This stops the request producer.
+        channel.stopProducing()
+        self.assertEqual(producer.events, ['stop'])
+
+
     def test_HTTPChannelPropagatesProducingFromTransportToTransport(self):
         """
         When L{HTTPChannel} has C{pauseProducing} called on it by the transport
