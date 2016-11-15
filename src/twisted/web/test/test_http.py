@@ -3048,6 +3048,20 @@ class ChannelProductionTests(unittest.TestCase):
         )
 
 
+    def test_HTTPChannelCanUnregisterWithNoProducer(self):
+        """
+        If there is no producer, the L{HTTPChannel} can still have
+        C{unregisterProducer} called.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+
+        channel.unregisterProducer()
+        self.assertIs(channel._requestProducer, None)
+
+
     def test_HTTPChannelPropagatesProducingFromTransportToTransport(self):
         """
         When L{HTTPChannel} has C{pauseProducing} called on it by the transport
