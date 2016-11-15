@@ -15,7 +15,8 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, intToBytes
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
     IReactorCore, IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket,
@@ -834,6 +835,47 @@ class RaisingMemoryReactor(object):
         Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
         """
         raise self._connectException
+
+
+
+class NonStreamingProducer(object):
+    """
+    A pull producer which writes 10 times only.
+    """
+
+    counter = 0
+    stopped = False
+
+    def __init__(self, consumer):
+        self.consumer = consumer
+        self.result = Deferred()
+
+    def resumeProducing(self):
+        if self.counter < 10:
+            self.consumer.write(intToBytes(self.counter))
+            self.counter += 1
+            if self.counter == 10:
+                self.consumer.unregisterProducer()
+                self._done()
+        else:
+            if self.consumer is None:
+                raise RuntimeError("BUG: resume after unregister/stop.")
+
+
+    def pauseProducing(self):
+        raise RuntimeError("BUG: pause should never be called.")
+
+
+    def _done(self):
+        self.consumer = None
+        d = self.result
+        del self.result
+        d.callback(None)
+
+
+    def stopProducing(self):
+        self.stopped = True
+        self._done()
 
 
 
