@@ -2976,6 +2976,22 @@ class ChannelProductionTests(unittest.TestCase):
         self.assertIs(transport.streaming, None)
 
 
+    def test_HTTPChannelRejectsMultipleProducers(self):
+        """
+        If two producers are registered on a L{HTTPChannel} without the first
+        being unregistered, a L{RuntimeError} is thrown.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+
+        channel.registerProducer(DummyProducer(), True)
+        self.assertRaises(
+            RuntimeError, channel.registerProducer, DummyProducer(), True
+        )
+
+
     def test_HTTPChannelPropagatesProducingFromTransportToTransport(self):
         """
         When L{HTTPChannel} has C{pauseProducing} called on it by the transport

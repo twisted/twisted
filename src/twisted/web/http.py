@@ -2133,7 +2133,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self._requestProducer is not None:
             raise RuntimeError(
                 "Cannot register producer %s, because producer %s was never "
-                "unregistered." % (producer, self.producer))
+                "unregistered." % (producer, self._requestProducer))
 
         if not streaming:
             producer = _PullToPush(producer)
