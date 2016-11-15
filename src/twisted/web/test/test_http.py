@@ -3080,3 +3080,43 @@ class ChannelProductionTests(unittest.TestCase):
         # At this point the channel is resumed, and so is the transport.
         channel.resumeProducing()
         self.assertEqual(transport.producerState, 'producing')
+
+
+    def test_HTTPChannelToleratesDataWhenTransportPaused(self):
+        """
+        If the L{HTTPChannel} has paused the transport, it still tolerates
+        receiving data, and does not attempt to pause the transport again.
+        """
+        class NoDoublePauseTransport(StringTransport):
+            """
+            A version of L{StringTransport} that fails tests if it is paused
+            while already paused.
+            """
+            def pauseProducing(self):
+                if self.producerState == 'paused':
+                    raise RuntimeError("Transport was paused twice!")
+                StringTransport.pauseProducing(self)
+
+        transport = NoDoublePauseTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandler
+        channel.makeConnection(transport)
+
+        # The transport starts in producing state.
+        self.assertEqual(transport.producerState, 'producing')
+
+        # Pause producing. The transport should now be paused as well.
+        channel.pauseProducing()
+        self.assertEqual(transport.producerState, 'paused')
+
+        # Write in a request, even though the transport is paused.
+        channel.dataReceived(self.request)
+
+        # The transport is still paused, but we have tried to write the
+        # response out.
+        self.assertEqual(transport.producerState, 'paused')
+        self.assertTrue(transport.value().startswith(b'HTTP/1.1 200 OK\r\n'))
+
+        # Resume producing. The transport should be unpaused.
+        channel.resumeProducing()
+        self.assertEqual(transport.producerState, 'producing')
