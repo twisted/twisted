@@ -3192,3 +3192,35 @@ class ChannelProductionTests(unittest.TestCase):
         # Resume producing. The transport should be unpaused.
         channel.resumeProducing()
         self.assertEqual(transport.producerState, 'producing')
+
+
+    def test_HTTPChannelToleratesPullProducers(self):
+        """
+        If the L{HTTPChannel} has a L{IPullProducer} registered with it it can
+        adapt that producer into an L{IPushProducer}.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyPullProducerHandler
+        channel.makeConnection(transport)
+
+        channel.dataReceived(self.request)
+        responseComplete = channel.requests[0]._actualProducer.result
+
+        def validate(ign):
+            responseBody = transport.value().split(b'\r\n\r\n', 1)[1]
+            expectedResponseBody = (
+                b'1\r\n0\r\n'
+                b'1\r\n1\r\n'
+                b'1\r\n2\r\n'
+                b'1\r\n3\r\n'
+                b'1\r\n4\r\n'
+                b'1\r\n5\r\n'
+                b'1\r\n6\r\n'
+                b'1\r\n7\r\n'
+                b'1\r\n8\r\n'
+                b'1\r\n9\r\n'
+            )
+            self.assertEqual(responseBody, expectedResponseBody)
+
+        return responseComplete.addCallback(validate)
