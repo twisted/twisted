@@ -24,12 +24,68 @@ from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
+from twisted.internet.defer import Deferred
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.test_internet import DummyProducer
 from twisted.web.test.requesthelper import DummyChannel
+
+
+
+class NonStreamingProducer(object):
+    """
+    A pull producer which writes 10 times only.
+    """
+
+    counter = 0
+    stopped = False
+
+    def __init__(self, consumer):
+        self.consumer = consumer
+        self.result = Deferred()
+
+    def resumeProducing(self):
+        if self.counter < 10:
+            self.consumer.write(intToBytes(self.counter))
+            self.counter += 1
+            if self.counter == 10:
+                self.consumer.unregisterProducer()
+                self._done()
+        else:
+            if self.consumer is None:
+                raise RuntimeError("BUG: resume after unregister/stop.")
+
+
+    def pauseProducing(self):
+        raise RuntimeError("BUG: pause should never be called.")
+
+
+    def _done(self):
+        self.consumer = None
+        d = self.result
+        del self.result
+        d.callback(None)
+
+
+    def stopProducing(self):
+        self.stopped = True
+        self._done()
+
+
+
+class DummyPullProducerHandler(http.Request):
+    """
+    An HTTP request handler that registers a dummy pull producer to serve the
+    body.
+
+    The owner must call C{finish} to complete the response.
+    """
+    def process(self):
+        self._actualProducer = NonStreamingProducer(self)
+        self.setResponseCode(200)
+        self.registerProducer(self._actualProducer, False)
 
 
 
