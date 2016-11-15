@@ -3004,15 +3004,26 @@ class ChannelProductionTests(unittest.TestCase):
     )
 
 
+    def buildChannelAndTransport(self, transport, requestFactory):
+        """
+        Setup a L{HTTPChannel} and a transport and associate them.
+        """
+        transport = transport
+        channel = http.HTTPChannel()
+        channel.requestFactory = requestFactory
+        channel.makeConnection(transport)
+
+        return channel, transport
+
+
     def test_HTTPChannelIsAProducer(self):
         """
         L{HTTPChannel} registers itself as a producer with its transport when a
         connection is made.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyHTTPHandler
+        )
 
         self.assertEqual(transport.producer, channel)
         self.assertTrue(transport.streaming)
@@ -3022,10 +3033,9 @@ class ChannelProductionTests(unittest.TestCase):
         """
         L{HTTPChannel} unregisters itself when it has loseConnection called.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyHTTPHandler
+        )
         channel.loseConnection()
 
         self.assertIs(transport.producer, None)
@@ -3037,10 +3047,9 @@ class ChannelProductionTests(unittest.TestCase):
         If two producers are registered on a L{HTTPChannel} without the first
         being unregistered, a L{RuntimeError} is thrown.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyHTTPHandler
+        )
 
         channel.registerProducer(DummyProducer(), True)
         self.assertRaises(
@@ -3053,10 +3062,9 @@ class ChannelProductionTests(unittest.TestCase):
         If there is no producer, the L{HTTPChannel} can still have
         C{unregisterProducer} called.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyHTTPHandler
+        )
 
         channel.unregisterProducer()
         self.assertIs(channel._requestProducer, None)
@@ -3068,10 +3076,9 @@ class ChannelProductionTests(unittest.TestCase):
         it will call C{pauseProducing} on the transport. When unpaused, the
         L{HTTPChannel} will call C{resumeProducing} on its transport.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyHTTPHandler
+        )
 
         # The transport starts in producing state.
         self.assertEqual(transport.producerState, 'producing')
@@ -3091,10 +3098,9 @@ class ChannelProductionTests(unittest.TestCase):
         L{HTTPChannel} object, and the L{HTTPChannel} object is paused, both
         the transport and L{Request} objects get paused.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DelayedHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DelayedHTTPHandler
+        )
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
@@ -3133,10 +3139,9 @@ class ChannelProductionTests(unittest.TestCase):
         If a L{Request} object completes its response while the transport is
         paused, the L{HTTPChannel} does not resume the transport.
         """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DelayedHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DelayedHTTPHandler
+        )
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
@@ -3183,10 +3188,9 @@ class ChannelProductionTests(unittest.TestCase):
                     raise RuntimeError("Transport was paused twice!")
                 StringTransport.pauseProducing(self)
 
-        transport = NoDoublePauseTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
+        channel, transport = self.buildChannelAndTransport(
+            NoDoublePauseTransport(), DummyHTTPHandler
+        )
 
         # The transport starts in producing state.
         self.assertEqual(transport.producerState, 'producing')
@@ -3213,6 +3217,9 @@ class ChannelProductionTests(unittest.TestCase):
         If the L{HTTPChannel} has a L{IPullProducer} registered with it it can
         adapt that producer into an L{IPushProducer}.
         """
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DummyPullProducerHandler
+        )
         transport = StringTransport()
         channel = http.HTTPChannel()
         channel.requestFactory = DummyPullProducerHandler
