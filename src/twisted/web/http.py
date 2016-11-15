@@ -2136,7 +2136,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 "unregistered." % (producer, self._requestProducer))
 
         if not streaming:
-            producer = _PullToPush(producer)
+            producer = _PullToPush(producer, self)
 
         self._requestProducer = producer
         self._requestProducerStreaming = streaming
