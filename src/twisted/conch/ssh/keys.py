@@ -1199,11 +1199,6 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-
-        # No support for EC keys yet.
-        if self.type() == 'EC':
-            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-
         data = self.data()
         if self.isPublic():
             if self.type() == 'EC':
