@@ -1,0 +1,1 @@
+twisted.web.Agent now tolerates receiving unexpected status codes in the 100 range by discarding them, which is what RFC 7231 recommends doing.
