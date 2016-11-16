@@ -3184,6 +3184,11 @@ class ChannelProductionTests(unittest.TestCase):
                     raise RuntimeError("Transport was paused twice!")
                 StringTransport.pauseProducing(self)
 
+        # Confirm that pausing a NoDoublePauseTransport twice fails.
+        transport = NoDoublePauseTransport()
+        transport.pauseProducing()
+        self.assertRaises(RuntimeError, transport.pauseProducing)
+
         channel, transport = self.buildChannelAndTransport(
             NoDoublePauseTransport(), DummyHTTPHandler
         )
