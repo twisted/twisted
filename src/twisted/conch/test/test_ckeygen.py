@@ -7,6 +7,7 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 
 import getpass
 import sys
+import subprocess
 
 from io import BytesIO, StringIO
 
@@ -25,7 +26,7 @@ else:
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.conch.test.keydata import (
-    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted)
+    publicRSA_openssh, privateRSA_openssh, privateRSA_openssh_encrypted, privateECDSA_openssh)
 
 
 
@@ -61,6 +62,40 @@ class KeyGenTests(TestCase):
         else:
             self.stdout = BytesIO()
         self.patch(sys, 'stdout', self.stdout)
+
+
+
+    def _testrun(self, keyType, keySize=None):
+        filename = self.mktemp()
+        if keySize is None:
+            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase'])
+        else:
+            subprocess.call(['ckeygen', '-t', keyType, '-f', filename, '--no-passphrase',
+                '-b', keySize])
+        privKey = Key.fromFile(filename)
+        pubKey = Key.fromFile(filename + '.pub')
+        if keyType == 'ecdsa':
+            self.assertEqual(privKey.type(), 'EC')
+        else:
+            self.assertEqual(privKey.type(), keyType.upper())
+        self.assertTrue(pubKey.isPublic())
+
+
+    def test_keygeneration(self):
+        self._testrun('ecdsa', '384')
+        self._testrun('ecdsa')
+        self._testrun('dsa', '2048')
+        self._testrun('dsa')
+        self._testrun('rsa', '2048')
+        self._testrun('rsa')
+
+
+
+    def test_runBadKeytype(self):
+        filename = self.mktemp()
+        with self.assertRaises(subprocess.CalledProcessError):
+            subprocess.check_call(['ckeygen', '-t', 'foo', '-f', filename])
+
 
 
     def test_enumrepresentation(self):
@@ -136,6 +171,7 @@ class KeyGenTests(TestCase):
             em.exception.args[0])
 
 
+
     def test_saveKey(self):
         """
         L{_saveKey} writes the private and public parts of a key to two
@@ -161,6 +197,35 @@ class KeyGenTests(TestCase):
             key)
         self.assertEqual(
             Key.fromString(base.child('id_rsa.pub').getContent()),
+            key.public())
+
+
+    def test_saveKeyECDSA(self):
+        """
+        L{_saveKey} writes the private and public parts of a key to two
+        different files and writes a report of this to standard out.
+        Test with ECDSA key.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ecdsa').path
+        key = Key.fromString(privateECDSA_openssh)
+        _saveKey(key, {'filename': filename, 'pass': 'passphrase',
+            'format': 'md5-hex'})
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "Your identification has been saved in %s\n"
+            "Your public key has been saved in %s.pub\n"
+            "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
+            "1e:ab:83:a6:f2:04:22:99:7c:64:14:d2:ab:fa:f5:16\n" % (
+                filename,
+                filename))
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ecdsa').getContent(), None, 'passphrase'),
+            key)
+        self.assertEqual(
+            Key.fromString(base.child('id_ecdsa.pub').getContent()),
             key.public())
 
 
@@ -223,6 +288,24 @@ class KeyGenTests(TestCase):
             key.fromString(
                 base.child('id_rsa').getContent(), None, b''),
             key)
+
+
+    def test_saveKeyECDSAEmptyPassphrase(self):
+        """
+        L{_saveKey} will choose an empty string for the passphrase if
+        no-passphrase is C{True}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_ecdsa').path
+        key = Key.fromString(privateECDSA_openssh)
+        _saveKey(key, {'filename': filename, 'no-passphrase': True,
+            'format': 'md5-hex'})
+        self.assertEqual(
+            key.fromString(
+                base.child('id_ecdsa').getContent(), None),
+            key)
+
 
 
     def test_saveKeyNoFilename(self):

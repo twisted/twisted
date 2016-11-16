@@ -401,7 +401,7 @@ class Key(object):
             except ValueError:
                 raise BadKeyError('invalid DEK-info %r' % (lines[2],))
 
-            if cipher == b'AES-128-CBC':
+            if cipher in (b'AES-128-CBC', b'AES-256-CBC'):
                 algorithmClass = algorithms.AES
                 keySize = 16
                 if len(ivdata) != 32:
@@ -445,6 +445,11 @@ class Key(object):
             pr.private = key
             return cls(pr)
         else:
+            if kind == b'EC':
+                # ECDSA keys don't need base64 decoding which is required
+                # for RSA or DSA key.
+                return cls(load_pem_private_key(data, passphrase, default_backend()))
+
             try:
                 decodedKey = berDecoder.decode(keyData)[0]
             except PyAsn1Error as e:
@@ -490,8 +495,6 @@ class Key(object):
                         )
                     ).private_key(backend=default_backend())
                 )
-            elif kind == b'EC':
-                return cls(load_pem_private_key(data, passphrase, default_backend()))
             else:
                 raise BadKeyError("unknown key type %s" % (kind,))
 
@@ -944,8 +947,8 @@ class Key(object):
         """
         The fingerprint of a public key consists of the output of the
         message-digest algorithm in the specified format.
-        Supported formats include L{FingerprintFormats.MD5-HEX} and
-        L{FingerprintFormats.SHA256-BASE64}
+        Supported formats include L{FingerprintFormats.MD5_HEX} and
+        L{FingerprintFormats.SHA256_BASE64}
 
         The input to the algorithm is the public key data as specified by [RFC4253].
 
@@ -960,7 +963,7 @@ class Key(object):
 
         @param format: Format for fingerprint generation. Consists
             hash function and representation format.
-            Default is L{FingerprintFormats.MD5-HEX}
+            Default is L{FingerprintFormats.MD5_HEX}
 
         @since: 8.2
 
@@ -1238,18 +1241,35 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-
-        # No support for EC keys yet.
-        if self.type() == 'EC':
-            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-
         data = self.data()
         if self.isPublic():
+            if self.type() == 'EC':
+                if not extra:
+                    extra = b''
+                return (self._keyObject.public_bytes(
+                    serialization.Encoding.OpenSSH,
+                    serialization.PublicFormat.OpenSSH
+                    ) + b' ' + extra).strip()
+
             b64Data = encodebytes(self.blob()).replace(b'\n', b'')
             if not extra:
                 extra = b''
             return (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
         else:
+
+            if self.type() == 'EC':
+                # EC keys has complex ASN.1 structure hence we do this this way.
+                if not extra:
+                    # unencrypted private key
+                    encryptor = serialization.NoEncryption()
+                else:
+                    encryptor = serialization.BestAvailableEncryption(extra)
+
+                return self._keyObject.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryptor)
+
             lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
                                b' PRIVATE KEY-----'))]
             if self.type() == 'RSA':
