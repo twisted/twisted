@@ -155,7 +155,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 # See comment above modify call in _add.
                 self._poller.modify(fd, flags)
             else:
-                if selectables.has_key(fd):
+                if fd in selectables:
                     del selectables[fd]
                 # See comment above _control call in _add.
                 self._poller.unregister(fd)
