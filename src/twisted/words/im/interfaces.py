@@ -68,8 +68,6 @@ class IAccount(Interface):
         @rtype: L{Person<IPerson>}
         """
 
-
-
 class IClient(Interface):
 
     account = Attribute('The L{IAccount} I am a Client for')
@@ -97,10 +95,8 @@ class IClient(Interface):
     def getGroupConversation(name, hide=0):
         pass
 
-
     def getPerson(name):
         pass
-
 
 
 class IPerson(Interface):
@@ -115,14 +111,12 @@ class IPerson(Interface):
         @type account: I{Account}
         """
 
-
     def isOnline():
         """
         Am I online right now?
 
         @rtype: boolean
         """
-
 
     def getStatus():
         """
@@ -131,12 +125,10 @@ class IPerson(Interface):
         @return: L{locals.StatusEnum}
         """
 
-
     def getIdleTime():
         """
         @rtype: string (XXX: How about a scalar?)
         """
-
 
     def sendMessage(text, metadata=None):
         """
@@ -145,7 +137,6 @@ class IPerson(Interface):
         @type text: string
         @type metadata: dict
         """
-
 
 
 class IGroup(Interface):
@@ -169,14 +160,12 @@ class IGroup(Interface):
         @type account: L{Account<IAccount>}
         """
 
-
     def setTopic(text):
         """
         Set this Groups topic on the server.
 
         @type text: string
         """
-
 
     def sendGroupMessage(text, metadata=None):
         """
@@ -191,18 +180,15 @@ class IGroup(Interface):
                 - C{'emote'}: indicates this is an action
         """
 
-
     def join():
         """
         Join this group.
         """
 
-
     def leave():
         """
         Depart this group.
         """
-
 
 
 class IConversation(Interface):
@@ -215,33 +201,26 @@ class IConversation(Interface):
         @type person: L{IPerson}
         """
 
-
     def show():
         """
         doesn't seem like it belongs in this interface.
         """
-
 
     def hide():
         """
         nor this neither.
         """
 
-
     def sendText(text, metadata):
         pass
 
-
     def showMessage(text, metadata):
         pass
-
 
     def changedNick(person, newnick):
         """
         @param person: XXX Shouldn't this always be Conversation.person?
         """
-
-
 
 class IGroupConversation(Interface):
 
@@ -250,26 +229,21 @@ class IGroupConversation(Interface):
         doesn't seem like it belongs in this interface.
         """
 
-
     def hide():
         """
         nor this neither.
         """
 
-
     def sendText(text, metadata):
         pass
 
-
     def showGroupMessage(sender, text, metadata):
         pass
-
 
     def setGroupMembers(members):
         """
         Sets the list of members in the group and displays it to the user.
         """
-
 
     def setTopic(topic, author):
         """
@@ -279,7 +253,6 @@ class IGroupConversation(Interface):
         @type author: string (XXX: Not Person?)
         """
 
-
     def memberJoined(member):
         """
         Adds the given member to the list of members in the group conversation
@@ -287,7 +260,6 @@ class IGroupConversation(Interface):
 
         @type member: string (XXX: Not Person?)
         """
-
 
     def memberChangedNick(oldnick, newnick):
         """
@@ -298,7 +270,6 @@ class IGroupConversation(Interface):
         @type newnick: string
         """
 
-
     def memberLeft(member):
         """
         Deletes the given member from the list of members in the group
@@ -306,7 +277,6 @@ class IGroupConversation(Interface):
 
         @type member: string (XXX: Not Person?)
         """
-
 
 
 class IChatUI(Interface):
@@ -318,14 +288,12 @@ class IChatUI(Interface):
         @type client: L{Client<IClient>}
         """
 
-
     def unregisterAccountClient(client):
         """
         Notifies user that an account has been signed off or disconnected.
 
         @type client: L{Client<IClient>}
         """
-
 
     def getContactsList():
         """
@@ -347,7 +315,6 @@ class IChatUI(Interface):
         @rtype: L{Conversation<IConversation>}
         """
 
-
     def getGroupConversation(group, Class, stayHidden=0):
         """
         For the given group object, returns the group conversation window or
@@ -359,7 +326,6 @@ class IChatUI(Interface):
 
         @rtype: L{GroupConversation<interfaces.IGroupConversation>}
         """
-
 
     def getPerson(name, client):
         """
@@ -373,7 +339,6 @@ class IChatUI(Interface):
         @rtype: L{Person<IPerson>}
         """
 
-
     def getGroup(name, client):
         """
         Get a Group for a client.
@@ -385,7 +350,6 @@ class IChatUI(Interface):
 
         @rtype: L{Group<IGroup>}
         """
-
 
     def contactChangedNick(oldnick, newnick):
         """

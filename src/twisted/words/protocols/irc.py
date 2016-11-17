@@ -39,14 +39,13 @@ import operator
 import string, socket
 import textwrap
 import shlex
-from functools import reduce
 from os import path
 
 from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
-from twisted.python.compat import unicode, xrange
+from twisted.python.compat import xrange
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -89,7 +88,7 @@ def parsemsg(s):
     trailing = []
     if not s:
         raise IRCBadMessage("Empty line.")
-    if s[0:1] == ':':
+    if s[0] == ':':
         prefix, s = s[1:].split(' ', 1)
     if s.find(' :') != -1:
         s, trailing = s.split(' :', 1)
@@ -262,11 +261,10 @@ class IRC(protocol.Protocol):
 
 
     def sendLine(self, line):
-        line = line + CR + LF
-        if isinstance(line, unicode):
-            useEncoding = self.encoding if self.encoding else "utf-8"
-            line = line.encode(useEncoding)
-        self.transport.write(line)
+        if self.encoding is not None:
+            if not isinstance(line, bytes):
+                line = line.encode(self.encoding)
+        self.transport.write("%s%s%s" % (line, CR, LF))
 
 
     def sendMessage(self, command, *parameter_list, **prefix):
@@ -339,6 +337,9 @@ class IRC(protocol.Protocol):
         if tags:
             tagStr = self._stringTags(tags)
             line = "@%s %s" % (tagStr, line)
+        if self.encoding is None:
+            # Either pass bytes to sendLine, or have sendLine do the translation
+            line = line.encode("utf-8")
         self.sendLine(line)
 
         if len(parameters) > 15:
@@ -405,8 +406,6 @@ class IRC(protocol.Protocol):
         says CRLF.  (Also, the flexibility of LineReceiver to turn "line mode"
         on and off was not required.)
         """
-        if isinstance(data, bytes):
-            data = data.decode("utf-8")
         lines = (self.buffer + data).split(LF)
         # Put the (possibly empty) element after the last LF back in the
         # buffer
@@ -770,10 +769,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             # CHANMODES, but we're defaulting it here to handle the case where
             # the IRC server doesn't send us any ISUPPORT information, since
             # IRCClient.getChannelModeParams relies on this value.
-            'CHANMODES': self._parseChanModesParam(['b', '', 'lk', ''])}
+            'CHANMODES': self._parseChanModesParam(['b', '', 'lk'])}
 
 
-    @classmethod
     def _splitParamArgs(cls, params, valueProcessor=None):
         """
         Split ISUPPORT parameter arguments.
@@ -804,9 +802,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
                 a, b = param.split(':', 1)
                 yield a, valueProcessor(b)
         return list(_parse())
+    _splitParamArgs = classmethod(_splitParamArgs)
 
 
-    @classmethod
     def _unescapeParamValue(cls, value):
         """
         Unescape an ISUPPORT parameter.
@@ -831,9 +829,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         if '\\x' not in value:
             return value
         return ''.join(_unescape())
+    _unescapeParamValue = classmethod(_unescapeParamValue)
 
 
-    @classmethod
     def _splitParam(cls, param):
         """
         Split an ISUPPORT parameter.
@@ -846,10 +844,10 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         if '=' not in param:
             param += '='
         key, value = param.split('=', 1)
-        return key, [cls._unescapeParamValue(v) for v in value.split(',')]
+        return key, map(cls._unescapeParamValue, value.split(','))
+    _splitParam = classmethod(_splitParam)
 
 
-    @classmethod
     def _parsePrefixParam(cls, prefix):
         """
         Parse the ISUPPORT "PREFIX" parameter.
@@ -870,9 +868,9 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         symbols = zip(symbols, xrange(len(symbols)))
         modes = modes[1:]
         return dict(zip(modes, symbols))
+    _parsePrefixParam = classmethod(_parsePrefixParam)
 
 
-    @classmethod
     def _parseChanModesParam(self, params):
         """
         Parse the ISUPPORT "CHANMODES" parameter.
@@ -886,6 +884,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
                     len(names), len(params)))
         items = map(lambda key, value: (key, value or ''), names, params)
         return dict(items)
+    _parseChanModesParam = classmethod(_parseChanModesParam)
 
 
     def getFeature(self, feature, default=None):
@@ -1205,7 +1204,7 @@ class IRCClient(basic.LineReceiver):
     _queue = None
     _queueEmptying = None
 
-    delimiter = b'\n' # b'\r\n' will also work (see dataReceived)
+    delimiter = '\n' # '\r\n' will also work (see dataReceived)
 
     __pychecker__ = 'unusednames=params,prefix,channel'
 
@@ -1218,11 +1217,7 @@ class IRCClient(basic.LineReceiver):
 
 
     def _reallySendLine(self, line):
-        quoteLine = lowQuote(line)
-        if isinstance(quoteLine, unicode):
-            quoteLine = quoteLine.encode("utf-8")
-        quoteLine += b'\r'
-        return basic.LineReceiver.sendLine(self, quoteLine)
+        return basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
 
     def sendLine(self, line):
         if self.lineRate is None:
@@ -2625,17 +2620,9 @@ class IRCClient(basic.LineReceiver):
             self.register(self.nickname)
 
     def dataReceived(self, data):
-        if isinstance(data, unicode):
-            data = data.encode("utf-8")
-        data = data.replace(b'\r', b'')
-        basic.LineReceiver.dataReceived(self, data)
-
+        basic.LineReceiver.dataReceived(self, data.replace('\r', ''))
 
     def lineReceived(self, line):
-        if bytes != str and isinstance(line, bytes):
-            # decode bytes from transport to unicode
-            line = line.decode("utf-8")
-
         line = lowDequote(line)
         try:
             prefix, command, params = parsemsg(line)
@@ -2667,7 +2654,7 @@ class IRCClient(basic.LineReceiver):
         # parameter.
         params = ['', '']
         prefixes = self.supported.getFeature('PREFIX', {})
-        params[0] = params[1] = ''.join(prefixes.keys())
+        params[0] = params[1] = ''.join(prefixes.iterkeys())
 
         chanmodes = self.supported.getFeature('CHANMODES')
         if chanmodes is not None:
@@ -2715,7 +2702,7 @@ def dccParseAddress(address):
         pass
     else:
         try:
-            address = int(address)
+            address = long(address)
         except ValueError:
             raise IRCBadMessage("Indecipherable address %r" % (address,))
         else:
@@ -2911,7 +2898,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
     delimiter = CR + NL
     client = None
     remoteParty = None
-    buffer = b""
+    buffer = ""
 
     def __init__(self, client, queryData=None):
         """
@@ -2991,7 +2978,7 @@ def dccDescribe(data):
         pass
     else:
         try:
-            address = int(address)
+            address = long(address)
         except ValueError:
             pass
         else:

@@ -9,38 +9,17 @@ import errno
 import operator
 import time
 
-from twisted.internet import protocol, task
-from twisted.python.filepath import FilePath
-from twisted.python.compat import unicode
-from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
+from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A
-
-
-class IRCTestCase(TestCase):
-    def assertEqualBufferValue(self, buf, val):
-        """
-        A buffer is always bytes, but sometimes
-        we need to compare it to a utf-8 unicode string
-
-        @param buf: the buffer
-        @type buf: L{bytes} or L{unicode} or L{list}
-        @param val: the value to compare
-        @type val: L{bytes} or L{unicode} or L{list}
-        """
-        bufferValue = buf
-        if isinstance(val, unicode):
-            bufferValue = bufferValue.decode("utf-8")
-
-        if isinstance(bufferValue, list):
-            if isinstance(val[0], unicode):
-                bufferValue = [b.decode("utf8") for b in bufferValue]
-        self.assertEqual(bufferValue, val)
+from twisted.internet import protocol, task
+from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
+from twisted.python.filepath import FilePath
 
 
 
-class ModeParsingTests(IRCTestCase):
+class ModeParsingTests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.irc.parseModes}.
     """
@@ -195,7 +174,7 @@ class ModeParsingTests(IRCTestCase):
 
 
 
-class MiscTests(IRCTestCase):
+class MiscTests(unittest.TestCase):
     """
     Tests for miscellaneous functions.
     """
@@ -219,7 +198,7 @@ class MiscTests(IRCTestCase):
 
 
 
-class FormattedTextTests(IRCTestCase):
+class FormattedTextTests(unittest.TestCase):
     """
     Tests for parsing and assembling formatted IRC text.
     """
@@ -479,7 +458,7 @@ class FormattedTextTests(IRCTestCase):
 
 
 
-class FormattingStateAttributeTests(IRCTestCase):
+class FormattingStateAttributeTests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.irc._FormattingState}.
     """
@@ -521,7 +500,7 @@ stringSubjects = [
     ]
 
 
-class QuotingTests(IRCTestCase):
+class QuotingTests(unittest.TestCase):
     def test_lowquoteSanity(self):
         """
         Testing client-server level quote/dequote.
@@ -560,7 +539,7 @@ class Dispatcher(irc._CommandDispatcherMixin):
 
 
 
-class DispatcherTests(IRCTestCase):
+class DispatcherTests(unittest.TestCase):
     """
     Tests for L{irc._CommandDispatcherMixin}.
     """
@@ -596,7 +575,7 @@ class DispatcherTests(IRCTestCase):
 
 
 
-class ServerSupportedFeatureTests(IRCTestCase):
+class ServerSupportedFeatureTests(unittest.TestCase):
     """
     Tests for L{ServerSupportedFeatures} and related functions.
     """
@@ -692,7 +671,7 @@ class ServerSupportedFeatureTests(IRCTestCase):
         """
         _parseChanModesParam = irc.ServerSupportedFeatures._parseChanModesParam
         self.assertEqual(
-            _parseChanModesParam(['', '', '', '']),
+            _parseChanModesParam([]),
             {'addressModes': '',
              'param': '',
              'setParam': '',
@@ -706,7 +685,7 @@ class ServerSupportedFeatureTests(IRCTestCase):
              'noParam': 'imnpst'})
 
         self.assertEqual(
-            _parseChanModesParam(['b', 'k', 'l', '']),
+            _parseChanModesParam(['b', 'k', 'l']),
             {'addressModes': 'b',
              'param': 'k',
              'setParam': 'l',
@@ -813,14 +792,14 @@ class ServerSupportedFeatureTests(IRCTestCase):
         self._testFeatureDefault('CHANMODES', [('CHANMODES', 'b,,lk,ha,ha')])
 
         self.assertEqual(
-            self._parseFeature('CHANMODES', ',,,'),
+            self._parseFeature('CHANMODES', ''),
             {'addressModes': '',
              'param': '',
              'setParam': '',
              'noParam': ''})
 
         self.assertEqual(
-            self._parseFeature('CHANMODES', ',A,,'),
+            self._parseFeature('CHANMODES', ',A'),
             {'addressModes': '',
              'param': 'A',
              'setParam': '',
@@ -1032,7 +1011,7 @@ class IRCClientWithoutLogin(irc.IRCClient):
 
 
 
-class CTCPTests(IRCTestCase):
+class CTCPTests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.irc.IRCClient} CTCP handling.
     """
@@ -1067,7 +1046,7 @@ class CTCPTests(IRCTestCase):
         self.client.dataReceived(errQuery)
         reply = self.file.getvalue()
 
-        self.assertEqualBufferValue(reply, errReply)
+        self.assertEqual(errReply, reply)
 
 
     def test_noNumbersVERSION(self):
@@ -1084,7 +1063,7 @@ class CTCPTests(IRCTestCase):
                            'EOL': irc.CR + irc.LF,
                            'vname': self.client.versionName})
         reply = self.file.getvalue()
-        self.assertEqualBufferValue(reply, versionReply)
+        self.assertEqual(versionReply, reply)
 
 
     def test_fullVERSION(self):
@@ -1105,7 +1084,7 @@ class CTCPTests(IRCTestCase):
                            'vnum': self.client.versionNum,
                            'venv': self.client.versionEnv})
         reply = self.file.getvalue()
-        self.assertEqualBufferValue(reply, versionReply)
+        self.assertEqual(versionReply, reply)
 
 
     def test_noDuplicateCTCPDispatch(self):
@@ -1122,7 +1101,9 @@ class CTCPTests(IRCTestCase):
             'foo!bar@baz.quux', [
                 '#chan',
                 '%(X)sTESTTHIS%(X)sfoo%(X)sTESTTHIS%(X)s' % {'X': irc.X_DELIM}])
-        self.assertEqualBufferValue(self.file.getvalue(), '')
+        self.assertEqual(
+            self.file.getvalue(),
+            '')
         self.assertEqual(self.called, 1)
 
 
@@ -1140,7 +1121,9 @@ class CTCPTests(IRCTestCase):
             'foo!bar@baz.quux', [
                 '#chan',
                 '%(X)sNOTREAL%(X)s' % {'X': irc.X_DELIM}])
-        self.assertEqualBufferValue(self.file.getvalue(), '')
+        self.assertEqual(
+            self.file.getvalue(),
+            '')
         self.assertEqual(
             self.calledWith,
             ('foo!bar@baz.quux', '#chan', 'NOTREAL', None))
@@ -1236,7 +1219,7 @@ def pop(dict, key, default):
 
 
 
-class ClientImplementationTests(IRCTestCase):
+class ClientImplementationTests(unittest.TestCase):
     def setUp(self):
         self.transport = StringTransport()
         self.client = NoticingClient()
@@ -1618,9 +1601,9 @@ class ClientImplementationTests(IRCTestCase):
         self.assertEqual(self.client.hostname, 'foo')
 
         # Pump the clock enough to trigger one LoopingCall.
-        self.assertEqualBufferValue(self.transport.value(), '')
+        self.assertEqual(self.transport.value(), '')
         self.clock.advance(self.client.heartbeatInterval)
-        self.assertEqualBufferValue(self.transport.value(), 'PING foo\r\n')
+        self.assertEqual(self.transport.value(), 'PING foo\r\n')
 
         # When the connection is lost the heartbeat is stopped.
         self.transport.loseConnection()
@@ -1642,7 +1625,7 @@ class ClientImplementationTests(IRCTestCase):
 
 
 
-class BasicServerFunctionalityTests(IRCTestCase):
+class BasicServerFunctionalityTests(unittest.TestCase):
     def setUp(self):
         self.f = StringIOWithoutClosing()
         self.t = protocol.FileWrapper(self.f)
@@ -1651,16 +1634,7 @@ class BasicServerFunctionalityTests(IRCTestCase):
 
 
     def check(self, s):
-        """
-        Make sure that the internal buffer equals a specified value.
-
-        @param s: the value to compare against buffer
-        @type s: L{bytes} or L{unicode}
-        """
-        bufferValue = self.f.getvalue()
-        if isinstance(s, unicode):
-            bufferValue = bufferValue.decode("utf-8")
-        self.assertEqual(bufferValue, s)
+        self.assertEqual(self.f.getvalue(), s)
 
 
     def test_sendMessage(self):
@@ -1683,7 +1657,7 @@ class BasicServerFunctionalityTests(IRCTestCase):
         U{RFC 1459 <https://tools.ietf.org/html/rfc1459.html#section-2.3>}.
         """
         self.p.sendCommand(u"CMD", (u"param1", u"param2"))
-        self.check("CMD param1 param2\r\n")
+        self.check(b"CMD param1 param2\r\n")
 
 
     def test_sendUnicodeCommand(self):
@@ -1692,7 +1666,7 @@ class BasicServerFunctionalityTests(IRCTestCase):
         in UTF-8.
         """
         self.p.sendCommand(u"CMD", (u"param\u00b9", u"param\u00b2"))
-        self.check(b"CMD param\xc2\xb9 param\xc2\xb2\r\n")
+        self.check("CMD param\xc2\xb9 param\xc2\xb2\r\n")
 
 
     def test_sendMessageNoCommand(self):
@@ -1764,15 +1738,15 @@ class BasicServerFunctionalityTests(IRCTestCase):
             u"ccc": None,
             u"example.com/ddd": u"eee"
         }
-        expectedTags = (b"aaa=bbb", b"ccc", b"example.com/ddd=eee")
+        expectedTags = ("aaa=bbb", "ccc", "example.com/ddd=eee")
         self.p.sendCommand(u"CMD", (u"param1", u"param2"), u"irc.example.com",
             sendTags)
         outMsg = self.f.getvalue()
-        outTagStr, outLine = outMsg.split(b' ', 1)
+        outTagStr, outLine = outMsg.split(' ', 1)
 
         # We pull off the leading '@' sign so that the split tags can be
         # compared with what we expect.
-        outTags = outTagStr[1:].split(b';')
+        outTags = outTagStr[1:].split(';')
 
         self.assertEqual(outLine, b":irc.example.com CMD param1 param2\r\n")
         self.assertEqual(sorted(expectedTags), sorted(outTags))
@@ -1842,15 +1816,15 @@ class BasicServerFunctionalityTests(IRCTestCase):
             u"aaa": u"bbb",
             u"ccc": u"test\r\n \\;;"
         }
-        expectedTags = (b"aaa=bbb", b"ccc=test\\r\\n\\s\\\\\\:\\:")
+        expectedTags = ("aaa=bbb", "ccc=test\\r\\n\\s\\\\\\:\\:")
         self.p.sendCommand(u"CMD", (u"param1", u"param2"), u"irc.example.com",
             sendTags)
         outMsg = self.f.getvalue()
-        outTagStr, outLine = outMsg.split(b" ", 1)
+        outTagStr, outLine = outMsg.split(" ", 1)
 
         # We pull off the leading '@' sign so that the split tags can be
         # compared with what we expect.
-        outTags = outTagStr[1:].split(b";")
+        outTags = outTagStr[1:].split(";")
 
         self.assertEqual(sorted(outTags), sorted(expectedTags))
 
@@ -1935,7 +1909,7 @@ class DummyClient(irc.IRCClient):
 
 
 
-class ClientInviteTests(IRCTestCase):
+class ClientInviteTests(unittest.TestCase):
     """
     Tests for L{IRCClient.invite}.
     """
@@ -1965,7 +1939,7 @@ class ClientInviteTests(IRCTestCase):
 
 
 
-class ClientMsgTests(IRCTestCase):
+class ClientMsgTests(unittest.TestCase):
     """
     Tests for messages sent with L{twisted.words.protocols.irc.IRCClient}.
     """
@@ -2192,7 +2166,7 @@ class ClientMsgTests(IRCTestCase):
 
 
 
-class ClientTests(IRCTestCase):
+class ClientTests(TestCase):
     """
     Tests for the protocol-level behavior of IRCClient methods intended to
     be called by application code.
@@ -2208,7 +2182,7 @@ class ClientTests(IRCTestCase):
 
         # Sanity check - we don't want anything to have happened at this
         # point, since we're not in a test yet.
-        self.assertEqualBufferValue(self.transport.value(), "")
+        self.assertEqual(self.transport.value(), "")
 
         self.addCleanup(self.transport.loseConnection)
         self.addCleanup(self.protocol.connectionLost, None)
@@ -2218,10 +2192,7 @@ class ClientTests(IRCTestCase):
         """
         Return the last IRC message in the transport buffer.
         """
-        line = transport.value()
-        if bytes != str and isinstance(line, bytes):
-            line = line.decode("utf-8")
-        return line.split('\r\n')[-2]
+        return transport.value().split('\r\n')[-2]
 
 
     def test_away(self):
@@ -2234,7 +2205,7 @@ class ClientTests(IRCTestCase):
             'AWAY :%s' % (message,),
             '',
         ]
-        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_back(self):
@@ -2246,7 +2217,7 @@ class ClientTests(IRCTestCase):
             'AWAY :',
             '',
         ]
-        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_whois(self):
@@ -2254,8 +2225,8 @@ class ClientTests(IRCTestCase):
         L{IRCClient.whois} sends a WHOIS message.
         """
         self.protocol.whois('alice')
-        self.assertEqualBufferValue(
-            self.transport.value().split(b'\r\n'),
+        self.assertEqual(
+            self.transport.value().split('\r\n'),
             ['WHOIS alice', ''])
 
 
@@ -2265,8 +2236,8 @@ class ClientTests(IRCTestCase):
         value is passed for the C{server} parameter.
         """
         self.protocol.whois('alice', 'example.org')
-        self.assertEqualBufferValue(
-            self.transport.value().split(b'\r\n'),
+        self.assertEqual(
+            self.transport.value().split('\r\n'),
             ['WHOIS example.org alice', ''])
 
 
@@ -2286,7 +2257,7 @@ class ClientTests(IRCTestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_registerWithPassword(self):
@@ -2307,7 +2278,7 @@ class ClientTests(IRCTestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_registerWithTakenNick(self):
@@ -2406,7 +2377,7 @@ class ClientTests(IRCTestCase):
             'PRIVMSG %s :\01ACTION %s\01' % (target, action),
             'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
             '']
-        self.assertEqualBufferValue(self.transport.value().split(b'\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_noticedDoesntPrivmsg(self):
@@ -2446,7 +2417,7 @@ class CollectorClient(irc.IRCClient):
 
 
 
-class DccTests(IRCTestCase):
+class DccTests(unittest.TestCase):
     """
     Tests for C{dcc_*} methods.
     """
@@ -2579,7 +2550,7 @@ class DccTests(IRCTestCase):
 
 
 
-class ServerToClientTests(IRCTestCase):
+class ServerToClientTests(TestCase):
     """
     Tests for the C{irc_*} methods sent from the server to the client.
     """
@@ -2688,7 +2659,7 @@ class ServerToClientTests(IRCTestCase):
 
 
 
-class CTCPQueryTests(IRCTestCase):
+class CTCPQueryTests(TestCase):
     """
     Tests for the C{ctcpQuery_*} methods.
     """
@@ -2778,7 +2749,7 @@ class CTCPQueryTests(IRCTestCase):
 
 
 
-class DccChatFactoryTests(IRCTestCase):
+class DccChatFactoryTests(unittest.TestCase):
     """
     Tests for L{DccChatFactory}.
     """
@@ -2795,7 +2766,7 @@ class DccChatFactoryTests(IRCTestCase):
 
 
 
-class DccDescribeTests(IRCTestCase):
+class DccDescribeTests(unittest.TestCase):
     """
     Tests for L{dccDescribe}.
     """
@@ -2808,7 +2779,7 @@ class DccDescribeTests(IRCTestCase):
 
 
 
-class DccFileReceiveTests(IRCTestCase):
+class DccFileReceiveTests(unittest.TestCase):
     """
     Tests for L{DccFileReceive}.
     """
