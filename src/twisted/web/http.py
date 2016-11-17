@@ -2241,12 +2241,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _timeOut: A timeout value to pass to the backing channel.
     @type _timeOut: L{int} or L{None}
+
+    @ivar _callLater: A value for the C{callLater} callback.
+    @type _callLater: L{callable}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
     _factory = None
     _site = None
     _timeOut = None
+    _callLater = None
 
 
     @property
@@ -2296,6 +2300,17 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._channel.timeOut = value
 
 
+    @property
+    def callLater(self):
+        return self._channel.callLater
+
+
+    @callLater.setter
+    def callLater(self, value):
+        self._callLater = value
+        self._channel.callLater = value
+
+
     def dataReceived(self, data):
         """
         An override of L{IProtocol.dataReceived} that checks what protocol we're
@@ -2321,6 +2336,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.site = self._site
                 self._channel.factory = self._factory
                 self._channel.timeOut = self._timeOut
+                self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
@@ -2407,6 +2423,14 @@ class HTTPFactory(protocol.ServerFactory):
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
+
+        # This is a bit of a hack to ensure that the HTTPChannel timeouts
+        # occur on the same reactor as the one we're using here. This could
+        # ideally be resolved by passing the reactor more generally to the
+        # HTTPChannel, but that won't work for the TimeoutMixin until we fix
+        # https://twistedmatrix.com/trac/ticket/8488
+        p.callLater = self._reactor.callLater
+
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
         p.timeOut = self.timeOut
