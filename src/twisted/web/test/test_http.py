@@ -595,8 +595,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
         factory = http.HTTPFactory(reactor=clock)
         protocol = factory.buildProtocol(None)
 
-        self.assertIs(protocol.callLater, clock.callLater)
-        self.assertIs(protocol._channel.callLater, clock.callLater)
+        self.assertEqual(protocol.callLater, clock.callLater)
+        self.assertEqual(protocol._channel.callLater, clock.callLater)
 
      
     def test_genericHTTPChannelCallLaterUpgrade(self):
@@ -609,8 +609,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
         factory = http.HTTPFactory(reactor=clock)
         protocol = factory.buildProtocol(None)
 
-        self.assertIs(protocol.callLater, clock.callLater)
-        self.assertIs(protocol._channel.callLater, clock.callLater)
+        self.assertEqual(protocol.callLater, clock.callLater)
+        self.assertEqual(protocol._channel.callLater, clock.callLater)
 
         transport = StringTransport()
         transport.negotiatedProtocol = b'h2'
@@ -620,8 +620,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
         # Send a byte to make it think the handshake is done.
         protocol.dataReceived(b'P')
 
-        self.assertIs(protocol.callLater, clock.callLater)
-        self.assertIs(protocol._channel.callLater, clock.callLater)
+        self.assertEqual(protocol.callLater, clock.callLater)
+        self.assertEqual(protocol._channel.callLater, clock.callLater)
     if not http.H2_ENABLED:
         test_genericHTTPChannelCallLaterUpgrade.skip = (
             "HTTP/2 support not present"
