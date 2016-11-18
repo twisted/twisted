@@ -41,6 +41,11 @@ _typesToAF = {
     frozenset([IPv4Address, IPv6Address]): AF_UNSPEC,
 }
 
+_afToType = {
+    AF_INET: IPv4Address,
+    AF_INET6: IPv6Address,
+}
+
 
 
 @implementer(IHostnameResolver)
@@ -103,8 +108,7 @@ class GAIResolver(object):
         @d.addCallback
         def deliverResults(result):
             for family, socktype, proto, cannoname, sockaddr in result:
-                addrType = {AF_INET: IPv4Address,
-                            AF_INET6: IPv6Address}[family]
+                addrType = _afToType[family]
                 resolutionReceiver.addressResolved(
                     addrType('TCP', *sockaddr)
                 )
