@@ -219,13 +219,6 @@ class InsecurePath(Exception):
 
 
 
-class IGNOREME(object):
-    """
-    
-    """
-    
-
-
 class LinkError(Exception):
     """
     An error with symlinks - either that there are cyclical symlinks or that
