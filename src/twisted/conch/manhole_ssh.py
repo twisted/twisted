@@ -18,13 +18,15 @@ from twisted.conch.insults import insults
 
 
 class _Glue:
-    """A feeble class for making one attribute look like another.
+    """
+    A feeble class for making one attribute look like another.
 
     This should be replaced with a real class at some point, probably.
     Try not to write new code that uses it.
     """
     def __init__(self, **kw):
         self.__dict__.update(kw)
+
 
     def __getattr__(self, name):
         raise AttributeError(self.name, "has no attribute", name)
@@ -70,14 +72,17 @@ class TerminalSession(components.Adapter):
     def getPty(self, term, windowSize, attrs):
         self.height, self.width = windowSize[:2]
 
+
     def openShell(self, proto):
         self.transportFactory(
             proto, self.chainedProtocolFactory(),
             iconch.IConchUser(self.original),
             self.width, self.height)
 
+
     def execCommand(self, proto, cmd):
         raise econch.ConchError("Cannot execute commands")
+
 
     def closed(self):
         pass
@@ -112,9 +117,11 @@ class TerminalRealm:
 
         return user
 
+
     def __init__(self, transportFactory=None):
         if transportFactory is not None:
             self.transportFactory = transportFactory
+
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         for i in interfaces:
