@@ -9,7 +9,7 @@ These tests can only work and be imported on Python 3!
 
 import types
 
-from twisted.internet.defer import Deferred, ensureDeferred
+from twisted.internet.defer import Deferred, ensureDeferred, fail
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import Clock
 
@@ -124,3 +124,43 @@ class YieldFromTests(TestCase):
 
         res = self.successResultOf(d)
         self.assertEqual(res, "Yay!")
+
+
+    def test_reraise(self):
+        """
+        Yielding from an already failed Deferred will raise the exception.
+        """
+        def test():
+            try:
+                yield from fail(ValueError("Boom"))
+            except ValueError as e:
+                self.assertEqual(e.args, ("Boom",))
+                return 1
+            return 0
+
+        res = self.successResultOf(ensureDeferred(test()))
+        self.assertEqual(res, 1)
+
+
+    def test_chained(self):
+        """
+        Yielding from a paused & chained Deferred will give the result when it
+        has one.
+        """
+        reactor = Clock()
+
+        def test():
+            d = Deferred()
+            d2 = Deferred()
+            d.addCallback(lambda ignored: d2)
+
+            d.callback(None)
+            reactor.callLater(0, d2.callback, "bye")
+            res = yield from d
+            return res
+
+        d = ensureDeferred(test())
+        reactor.advance(0.1)
+
+        res = self.successResultOf(d)
+        self.assertEqual(res, "bye")
