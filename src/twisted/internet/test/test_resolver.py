@@ -251,3 +251,19 @@ class HostnameResolutionTest(UnitTest):
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, True)
         self.assertEqual(receiver._addresses, [])
+
+
+    def test_resolveOnlyIPv4(self):
+        """
+        When passed an C{addressTypes} parameter containing only
+        L{IPv4Address}, L{GAIResolver} will pass C{AF_INET} to C{getaddrinfo}.
+        """
+        receiver = ResultHolder(self)
+        resolution = self.resolver.resolveHostName(
+            receiver, u"sample.example.com", addressTypes=[IPv4Address]
+        )
+        self.assertIs(receiver._resolution, resolution)
+        self.worker()
+        self.reactwork()
+        host, port, family, socktype, proto, flags = self.getter.calls[0]
+        self.assertEqual(socktype, AF_INET)
