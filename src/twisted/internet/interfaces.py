@@ -1547,17 +1547,18 @@ class IReactorPluggableNameResolver(Interface):
     set to a user-supplied object.
     """
 
-    resolver = Attribute(
+    nameResolver = Attribute(
         """
         Read-only attribute; the resolver installed with L{installResolver}.
+        An L{IHostnameResolver}.
         """
     )
 
-    def installResolver(resolver):
+    def installNameResolver(resolver):
         """
         Set the internal resolver to use for name lookups.
 
-        @type resolver: An object implementing the L{IResolverSimple} interface
+        @type resolver: An object providing the L{IHostnameResolver} interface.
         @param resolver: The new resolver to use.
 
         @return: The previously installed resolver.
