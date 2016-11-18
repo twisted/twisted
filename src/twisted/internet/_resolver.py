@@ -34,6 +34,7 @@ class HostResolution(object):
         self.name = name
 
 
+
 @implementer(IHostnameResolver)
 class GAIResolver(object):
     """
@@ -64,6 +65,21 @@ class GAIResolver(object):
 
     def resolveHostName(self, resolutionReceiver, hostName, portNumber=0,
                         addressTypes=None, transportSemantics='TCP'):
+        """
+        See L{IHostnameResolver.resolveHostName}
+
+        @param resolutionReceiver: see interface
+
+        @param hostName: see interface
+
+        @param portNumber: see interface
+
+        @param addressTypes: see interface
+
+        @param transportSemantics: see interface
+
+        @return: see interface
+        """
         def get():
             try:
                 return self._getaddrinfo(hostName, portNumber)
