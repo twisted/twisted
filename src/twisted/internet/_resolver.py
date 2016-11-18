@@ -35,11 +35,12 @@ class HostResolution(object):
 
 
 
+_any = frozenset([IPv4Address, IPv6Address])
+
 _typesToAF = {
     frozenset([IPv4Address]): AF_INET,
     frozenset([IPv6Address]): AF_INET6,
-    frozenset([IPv4Address, IPv6Address]): AF_UNSPEC,
-    None: AF_UNSPEC,
+    _any: AF_UNSPEC,
 }
 
 _afToType = {
@@ -94,7 +95,7 @@ class GAIResolver(object):
 
         @return: see interface
         """
-        addressFamily = _typesToAF[None if addressTypes is None
+        addressFamily = _typesToAF[_any if addressTypes is None
                                    else frozenset(addressTypes)]
         def get():
             try:
