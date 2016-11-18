@@ -1,0 +1,1 @@
+twisted.web._http2.H2Stream now receives its site and factory on its constructor, ensuring that any Request it builds from its requestFactory can immediately retrieve those objects.
