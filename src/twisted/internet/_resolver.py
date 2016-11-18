@@ -94,8 +94,8 @@ class GAIResolver(object):
 
         @return: see interface
         """
-        addressFamily = _typesToAF[frozenset(addressTypes)
-                                   if addressTypes is not None else None]
+        addressFamily = _typesToAF[None if addressTypes is None
+                                   else frozenset(addressTypes)]
         def get():
             try:
                 return self._getaddrinfo(hostName, portNumber, addressFamily)
