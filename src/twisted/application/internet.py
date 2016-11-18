@@ -568,7 +568,6 @@ class _ClientMachine(object):
         The service has started connecting.
         """
 
-
     @_machine.state()
     def _waiting(self):
         """
@@ -576,13 +575,11 @@ class _ClientMachine(object):
         before reconnecting.
         """
 
-
     @_machine.state()
     def _connected(self):
         """
         The service is connected.
         """
-
 
     @_machine.state()
     def _disconnecting(self):
@@ -590,13 +587,11 @@ class _ClientMachine(object):
         The service is disconnecting after being asked to shutdown.
         """
 
-
     @_machine.state()
     def _restarting(self):
         """
         The service is disconnecting and has been asked to restart.
         """
-
 
     @_machine.state()
     def _stopped(self):
@@ -604,13 +599,11 @@ class _ClientMachine(object):
         The service has been stopped an is disconnected.
         """
 
-
     @_machine.input()
     def start(self):
         """
         Start this L{ClientService}, initiating the connection retry loop.
         """
-
 
     @_machine.output()
     def _connect(self):
@@ -642,7 +635,6 @@ class _ClientMachine(object):
         @return: a L{Deferred} that fires when all outstanding connections are
             closed and all in-progress connection attempts halted.
         """
-
 
     @_machine.output()
     def _waitForStop(self):
@@ -709,7 +701,6 @@ class _ClientMachine(object):
         The current connection attempt failed.
         """
 
-
     @_machine.output()
     def _wait(self):
         """
@@ -729,13 +720,11 @@ class _ClientMachine(object):
         The wait between connection attempts is done.
         """
 
-
     @_machine.input()
     def _clientDisconnected(self):
         """
         The current connection has been disconnected.
         """
-
 
     @_machine.output()
     def _forgetConnection(self):
@@ -775,7 +764,6 @@ class _ClientMachine(object):
         @rtype: L{Deferred} firing with L{IProtocol} or failing with
             L{CancelledError} the service is stopped.
         """
-
 
     @_machine.output()
     def _currentConnection(self):
