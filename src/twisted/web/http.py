@@ -137,6 +137,10 @@ if _PY3:
 else:
     _intTypes = (int, long)
 
+# A common request timeout -- 1 minute. This is roughly what nginx uses, and
+# so it seems to be a good choice for us too.
+_REQUEST_TIMEOUT = 1 * 60
+
 protocol_version = "HTTP/1.1"
 
 CACHED = """Magic constant returned by http.Request methods to set cache
@@ -2435,10 +2439,10 @@ class HTTPFactory(protocol.ServerFactory):
 
     logPath = None
 
-    timeOut = 60 * 60 * 12
+    timeOut = _REQUEST_TIMEOUT
 
-    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None,
-                 reactor=None):
+    def __init__(self, logPath=None, timeout=_REQUEST_TIMEOUT,
+                 logFormatter=None, reactor=None):
         """
         @param logFormatter: An object to format requests into log lines for
             the access log.
