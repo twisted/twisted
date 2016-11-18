@@ -43,6 +43,8 @@ class GAIResolver(object):
 
     def __init__(self, reactor, threadpool=None, getaddrinfo=getaddrinfo):
         """
+        Create a L{GAIResolver}.
+
         @param reactor: the reactor to schedule result-delivery on
         @type reactor: L{IReactorThreads}
 
@@ -62,9 +64,6 @@ class GAIResolver(object):
 
     def resolveHostName(self, resolutionReceiver, hostName, portNumber=0,
                         addressTypes=None, transportSemantics='TCP'):
-        """
-        @see: L{IHostnameResolver.resolveHostName}
-        """
         def get():
             try:
                 return self._getaddrinfo(hostName, portNumber)
