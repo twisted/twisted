@@ -641,6 +641,8 @@ class _ClientMachine(object):
         """
         Return a deferred that will fire when the service has
         finished disconnecting.
+
+        @return: L{Deferred} that fires when the service has finished disconnecting.
         """
         self._stopWaiters.append(Deferred())
         return self._stopWaiters[-1]
@@ -686,6 +688,9 @@ class _ClientMachine(object):
         """
         Notify all pending requests for a connection that a connection has
         been made.
+
+        @param protocol: The protocol of the connection.
+        @type protocol: L{IProtocol}
         """
         # This should be in _resetFailedAttempts but the signature doesn't
         # match.
@@ -769,6 +774,8 @@ class _ClientMachine(object):
     def _currentConnection(self):
         """
         Return the currently connected protocol.
+
+        @return: L{Deferred} that is fired with currently connected protocol.
         """
         return succeed(self._currentConnection)
 
@@ -776,7 +783,9 @@ class _ClientMachine(object):
     @_machine.output()
     def _noConnection(self):
         """
-        Notify the caller that no connection is expected."
+        Notify the caller that no connection is expected.
+
+        @return: L{Deferred} that is fired with L{CancelledError}.
         """
         return fail(CancelledError())
 
@@ -785,6 +794,8 @@ class _ClientMachine(object):
     def _awaitingConnection(self):
         """
         Return a deferred that will fire with the next connected protocol.
+
+        @return: L{Deferred} that will fire with the next connected protocol.
         """
         result = Deferred()
         self._awaitingConnected.append(result)
