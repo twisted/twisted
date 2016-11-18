@@ -405,14 +405,21 @@ class SillyResolverSimple(object):
     """
     def __init__(self):
         """
-        
+        Create a L{SillyResolverSimple} with a queue of requests it is working
+        on.
         """
         self._requests = []
 
 
     def getHostByName(self, name, timeout=()):
         """
-        Implement L{IResolverSimple.getHostByName}
+        Implement L{IResolverSimple.getHostByName}.
+
+        @param name: see L{IResolverSimple.getHostByName}.
+
+        @param timeout: see L{IResolverSimple.getHostByName}.
+
+        @return: see L{IResolverSimple.getHostByName}.
         """
         self._requests.append(Deferred())
         return self._requests[-1]
