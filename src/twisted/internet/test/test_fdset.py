@@ -130,6 +130,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         except KeyError:
             self.fail("removeReader() raised KeyError unexpectedly")
 
+
     def test_addWriter(self):
         """
         C{reactor.addWriter()} accepts an L{IWriteDescriptor} provider and
@@ -201,6 +202,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         # Getting here means the right thing happened probably.
 
+
     def test_removeWriter_selectables_nokey(self):
         """
         L{reactor.removeWriter()} accepts an L{IWriteDescriptor} provider
@@ -215,6 +217,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             reactor.removeWriter(fd)
         except KeyError:
             self.fail("removeWriter() raised KeyError unexpectedly")
+
 
     def test_getWriters(self):
         """
