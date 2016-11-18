@@ -125,10 +125,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor.addReader(fd)
         reactor._selectables = {}
 
-        try:
-            reactor.removeReader(fd)
-        except KeyError:
-            self.fail("removeReader() raised KeyError unexpectedly")
+        reactor.removeReader(fd)
 
 
     def test_addWriter(self):
@@ -213,10 +210,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         reactor.addWriter(fd)
         reactor._selectables = {}
 
-        try:
-            reactor.removeWriter(fd)
-        except KeyError:
-            self.fail("removeWriter() raised KeyError unexpectedly")
+        reactor.removeWriter(fd)
 
 
     def test_getWriters(self):
