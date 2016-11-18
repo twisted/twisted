@@ -206,6 +206,28 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(len(protocol.requests), 1)
 
 
+    def test_requestBodyDefaultTimeout(self):
+        """
+        L{HTTPChannel}'s default timeout is 60 seconds.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        factory = http.HTTPFactory()
+        protocol = factory.buildProtocol(None)
+
+        # This is a terrible violation of the abstraction later of
+        # _genericHTTPChannelProtocol, but we need to do it because
+        # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # See https://twistedmatrix.com/trac/ticket/8488
+        protocol._channel.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        clock.advance(59)
+        self.assertFalse(transport.disconnecting)
+        clock.advance(1)
+        self.assertTrue(transport.disconnecting)
+
+
     def test_noPipeliningApi(self):
         """
         Test that a L{http.Request} subclass with no queued kwarg works as
