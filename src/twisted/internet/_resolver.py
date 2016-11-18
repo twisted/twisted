@@ -39,6 +39,7 @@ _typesToAF = {
     frozenset([IPv4Address]): AF_INET,
     frozenset([IPv6Address]): AF_INET6,
     frozenset([IPv4Address, IPv6Address]): AF_UNSPEC,
+    None: AF_UNSPEC,
 }
 
 _afToType = {
@@ -93,9 +94,8 @@ class GAIResolver(object):
 
         @return: see interface
         """
-        if addressTypes is None:
-            addressTypes = [IPv4Address, IPv6Address]
-        addressFamily = _typesToAF[frozenset(addressTypes)]
+        addressFamily = _typesToAF[frozenset(addressTypes)
+                                   if addressTypes is not None else None]
         def get():
             try:
                 return self._getaddrinfo(hostName, portNumber, addressFamily)
