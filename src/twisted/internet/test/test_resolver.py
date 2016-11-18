@@ -125,11 +125,14 @@ class FakeAddrInfoGetter(object):
                          socktype=SOCK_STREAM, proto=IPPROTO_TCP,
                          canonname=b""):
         """
-        Add a result for a given hostname.
+        Add a result for a given hostname.  When this hostname is resolved, the
+        result will be a L{list} of all results C{addResultForHost} has been
+        called with using that hostname so far.
 
         @param host: The hostname to give this result for.  This will be the
             next result from L{FakeAddrInfoGetter.getaddrinfo} when passed this
             host.
+
         @type canonname: native L{str}
 
         @param sockaddr: The resulting socket address; should be a 2-tuple for
@@ -363,3 +366,29 @@ class HostnameResolutionTests(UnitTest):
         self.assertEqual(socktypeU, SOCK_DGRAM)
 
 
+    def test_socketTypeToAddressType(self):
+        """
+        When L{GAIResolver} receives a C{SOCK_DGRAM} result from
+        C{getaddrinfo}, it returns a C{'TCP'} L{IPv4Address} or L{IPv6Address};
+        if it receives C{SOCK_STREAM} then it returns a C{'UDP'} type of same.
+        """
+        receiver = ResultHolder(self)
+        flowInfo = 1
+        scopeID = 2
+        for socktype in SOCK_STREAM, SOCK_DGRAM:
+            self.getter.addResultForHost(
+                "example.com", ("::1", 0, flowInfo, scopeID), family=AF_INET6,
+                socktype=socktype
+            )
+            self.getter.addResultForHost(
+                "example.com", ("127.0.0.3", 0), family=AF_INET,
+                socktype=socktype
+            )
+        self.resolver.resolveHostName(receiver, u"example.com")
+        self.doThreadWork()
+        self.doReactorWork()
+        stream4, stream6, dgram4, dgram6 = receiver._addresses
+        self.assertEqual(stream4.type, 'TCP')
+        self.assertEqual(stream6.type, 'TCP')
+        self.assertEqual(dgram4.type, 'UDP')
+        self.assertEqual(dgram6.type, 'UDP')

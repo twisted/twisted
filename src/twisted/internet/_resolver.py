@@ -54,6 +54,11 @@ _transportToSocket = {
     'UDP': SOCK_DGRAM,
 }
 
+_socktypeToType = {
+    SOCK_STREAM: 'TCP',
+    SOCK_DGRAM: 'UDP',
+}
+
 
 
 @implementer(IHostnameResolver)
@@ -118,7 +123,7 @@ class GAIResolver(object):
             for family, socktype, proto, cannoname, sockaddr in result:
                 addrType = _afToType[family]
                 resolutionReceiver.addressResolved(
-                    addrType('TCP', *sockaddr)
+                    addrType(_socktypeToType.get(socktype, 'TCP'), *sockaddr)
                 )
             resolutionReceiver.resolutionComplete()
         return resolution
