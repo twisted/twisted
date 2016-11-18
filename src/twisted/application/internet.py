@@ -682,7 +682,6 @@ class _ClientMachine(object):
         @type protocol: L{IProtocol}
         """
 
-
     @_machine.output()
     def _notifyWaiters(self, protocol):
         """
