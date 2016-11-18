@@ -1425,6 +1425,45 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertNotIn(1, a._streamCleanupCallbacks)
 
 
+    def test_RequestRequiringFactorySiteInConstructor(self):
+        """
+        A custom L{Request} subclass that requires the site and factory in the
+        constructor is able to get them.
+        """
+        d = defer.Deferred()
+
+        class SuperRequest(DummyHTTPHandler):
+            def __init__(self, *args, **kwargs):
+                DummyHTTPHandler.__init__(self, *args, **kwargs)
+                d.callback((self.channel.site, self.channel.factory))
+
+        factory = FrameFactory()
+        transport = StringTransport()
+        connection = H2Connection()
+        httpFactory = http.HTTPFactory()
+        connection.requestFactory = SuperRequest
+
+        # Create some sentinels to look for.
+        connection.factory = httpFactory
+        connection.site = object()
+
+        def validateFactoryAndSite(args):
+            site, factory = args
+            self.assertIs(site, connection.site)
+            self.assertIs(factory, connection.factory)
+        d.addCallback(validateFactoryAndSite)
+
+        requestBytes = factory.clientConnectionPreface()
+        requestBytes += buildRequestBytes(self.getRequestHeaders, [], factory)
+        connection.makeConnection(transport)
+        connection.dataReceived(requestBytes)
+
+        # We need to wait for the stream cleanup callback to drain the
+        # response.
+        cleanupCallback = connection._streamCleanupCallbacks[1]
+        return defer.gatherResults([d, cleanupCallback])
+
+
 
 class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
     """
