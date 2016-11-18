@@ -2269,44 +2269,95 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @property
     def requestFactory(self):
+        """
+        A callable to use to build L{IRequest} objects.
+
+        Retries the object from the current backing channel.
+        """
         return self._channel.requestFactory
 
 
     @requestFactory.setter
     def requestFactory(self, value):
+        """
+        A callable to use to build L{IRequest} objects.
+
+        Sets the object on the backing channel and also stores the value for
+        propagation to any new channel.
+
+        @param value: The new callable to use.
+        @type value: A L{callable} returning L{IRequest}
+        """
         self._requestFactory = value
         self._channel.requestFactory = value
 
 
     @property
     def site(self):
+        """
+        A reference to the creating L{twisted.web.server.Site} object.
+
+        Returns the site object from the backing channel.
+        """
         return self._channel.site
 
 
     @site.setter
     def site(self, value):
+        """
+        A reference to the creating L{twisted.web.server.Site} object.
+
+        Sets the object on the backing channel and also stores the value for
+        propagation to any new channel.
+
+        @param value: The L{twisted.web.server.Site} object to set.
+        @type value: L{twisted.web.server.Site}
+        """
         self._site = value
         self._channel.site = value
 
 
     @property
     def timeOut(self):
+        """
+        The idle timeout for the backing channel.
+        """
         return self._channel.timeOut
 
 
     @timeOut.setter
     def timeOut(self, value):
+        """
+        The idle timeout for the backing channel.
+
+        Sets the idle timeout on both the backing channel and stores it for
+        propagation to any new backing channel.
+
+        @param value: The timeout to set.
+        @type value: L{int} or L{float}
+        """
         self._timeOut = value
         self._channel.timeOut = value
 
 
     @property
     def callLater(self):
+        """
+        A value for the C{callLater} callback. This callback is used by the
+        L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
+        """
         return self._channel.callLater
 
 
     @callLater.setter
     def callLater(self, value):
+        """
+        Sets the value for the C{callLater} callback. This callback is used by
+        the L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
+
+        @param value: The new callback to use.
+        @type value: L{callable}
+        """
         self._callLater = value
         self._channel.callLater = value
 
