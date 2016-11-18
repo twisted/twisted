@@ -35,14 +35,19 @@ class FileWrapper:
     def __init__(self, o):
         self.o = o
 
+
     def flush(self):
         pass
+
 
     def write(self, data):
         self.o.addOutput(data.replace('\r\n', '\n'))
 
+
     def writelines(self, lines):
         self.write(''.join(lines))
+
+
 
 class ManholeInterpreter(code.InteractiveInterpreter):
     """Interactive Interpreter with special output and Deferred support.
@@ -65,9 +70,11 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self.filename = filename
         self.resetBuffer()
 
+
     def resetBuffer(self):
         """Reset the input buffer."""
         self.buffer = []
+
 
     def push(self, line):
         """Push a line to the interpreter.
@@ -90,6 +97,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
             self.resetBuffer()
         return more
 
+
     def runcode(self, *a, **kw):
         orighook, sys.displayhook = sys.displayhook, self.displayhook
         try:
@@ -100,6 +108,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
                 sys.stdout = origout
         finally:
             sys.displayhook = orighook
+
 
     def displayhook(self, obj):
         self.locals['_'] = obj
@@ -120,18 +129,23 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         elif obj is not None:
             self.write(repr(obj))
 
+
     def _cbDisplayDeferred(self, result, k, obj):
         self.write("Deferred #%d called back: %r" % (k, result), True)
         del self._pendingDeferreds[id(obj)]
         return result
+
 
     def _ebDisplayDeferred(self, failure, k, obj):
         self.write("Deferred #%d failed: %r" % (k, failure.getErrorMessage()), True)
         del self._pendingDeferreds[id(obj)]
         return failure
 
+
     def write(self, data, async=False):
         self.handler.addOutput(data, async)
+
+
 
 CTRL_C = '\x03'
 CTRL_D = '\x04'
@@ -139,6 +153,8 @@ CTRL_BACKSLASH = '\x1c'
 CTRL_L = '\x0c'
 CTRL_A = '\x01'
 CTRL_E = '\x05'
+
+
 
 class Manhole(recvline.HistoricRecvLine):
     """Mediator between a fancy line source and an interactive interpreter.
@@ -156,6 +172,7 @@ class Manhole(recvline.HistoricRecvLine):
         recvline.HistoricRecvLine.__init__(self)
         if namespace is not None:
             self.namespace = namespace.copy()
+
 
     def connectionMade(self):
         recvline.HistoricRecvLine.connectionMade(self)

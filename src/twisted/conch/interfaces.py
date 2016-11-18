@@ -54,6 +54,8 @@ class IConchUser(Interface):
         The method is called with arguments of windowSize, maxPacket, data.
         """
 
+
+
 class ISession(Interface):
 
     def getPty(term, windowSize, modes):
@@ -94,6 +96,7 @@ class ISession(Interface):
         """
 
 
+
 class ISFTPServer(Interface):
     """
     SFTP subsystem for server-side communication.
@@ -107,6 +110,7 @@ class ISFTPServer(Interface):
         The avatar returned by the Realm that we are authenticated with,
         and represents the logged-in user.
         """)
+
 
     def gotVersion(otherVersion, extData):
         """
@@ -122,6 +126,7 @@ class ISFTPServer(Interface):
         by the server.
         """
         return {}
+
 
     def openFile(filename, flags, attrs):
         """
@@ -153,6 +158,7 @@ class ISFTPServer(Interface):
         with the object.
         """
 
+
     def removeFile(filename):
         """
         Remove the given file.
@@ -162,6 +168,7 @@ class ISFTPServer(Interface):
 
         @param filename: the name of the file as a string.
         """
+
 
     def renameFile(oldpath, newpath):
         """
@@ -175,6 +182,7 @@ class ISFTPServer(Interface):
         @param newpath: the new file name.
         """
 
+
     def makeDirectory(path, attrs):
         """
         Make a directory.
@@ -186,6 +194,7 @@ class ISFTPServer(Interface):
         @param attrs: a dictionary of attributes to create the directory with.
         Its meaning is the same as the attrs in the L{openFile} method.
         """
+
 
     def removeDirectory(path):
         """
@@ -199,6 +208,7 @@ class ISFTPServer(Interface):
 
         @param path: the directory to remove.
         """
+
 
     def openDirectory(path):
         """
@@ -231,6 +241,7 @@ class ISFTPServer(Interface):
         @param path: the directory to open.
         """
 
+
     def getAttrs(path, followLinks):
         """
         Return the attributes for the given path.
@@ -244,6 +255,7 @@ class ISFTPServer(Interface):
         return attributes for the specified path.
         """
 
+
     def setAttrs(path, attrs):
         """
         Set the attributes for the path.
@@ -256,6 +268,7 @@ class ISFTPServer(Interface):
         L{openFile}.
         """
 
+
     def readLink(path):
         """
         Find the root of a set of symbolic links.
@@ -265,6 +278,7 @@ class ISFTPServer(Interface):
 
         @param path: the path of the symlink to read.
         """
+
 
     def makeLink(linkPath, targetPath):
         """
@@ -277,6 +291,7 @@ class ISFTPServer(Interface):
         @param targetPath: the path of the target of the link as a string.
         """
 
+
     def realPath(path):
         """
         Convert any path to an absolute path.
@@ -286,6 +301,7 @@ class ISFTPServer(Interface):
 
         @param path: the path to convert as a string.
         """
+
 
     def extendedRequest(extendedName, extendedData):
         """
@@ -338,6 +354,7 @@ class IKnownHostEntry(Interface):
 
     def toString():
         """
+
         @return: a serialized string representation of this entry, suitable for
         inclusion in a known_hosts file.  (Newline not included.)
 
@@ -360,6 +377,7 @@ class ISFTPFile(Interface):
         Deferred that is called back when the close succeeds.
         """
 
+
     def readChunk(offset, length):
         """
         Read from the file.
@@ -375,6 +393,7 @@ class ISFTPFile(Interface):
         this should read the requested number (up to the end of the file).
         """
 
+
     def writeChunk(offset, data):
         """
         Write to the file.
@@ -386,6 +405,7 @@ class ISFTPFile(Interface):
         @param data: a string that is the data to write.
         """
 
+
     def getAttrs():
         """
         Return the attributes for the file.
@@ -393,6 +413,7 @@ class ISFTPFile(Interface):
         This method returns a dictionary in the same format as the attrs
         argument to L{openFile} or a L{Deferred} that is called back with same.
         """
+
 
     def setAttrs(attrs):
         """
@@ -404,5 +425,3 @@ class ISFTPFile(Interface):
         @param attrs: a dictionary in the same format as the attrs argument to
         L{openFile}.
         """
-
-

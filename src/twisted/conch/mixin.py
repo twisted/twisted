@@ -14,7 +14,8 @@ collapse numerous small writes into a single larger one.
 from twisted.internet import reactor
 
 class BufferingMixin:
-    """Mixin which adds write buffering.
+    """
+    Mixin which adds write buffering.
     """
     _delayedWriteCall = None
     data = None
@@ -46,7 +47,8 @@ class BufferingMixin:
 
 
     def flush(self):
-        """Flush the buffer immediately.
+        """
+        Flush the buffer immediately.
         """
         self._delayedWriteCall = None
         self.transport.writeSequence(self.data)
