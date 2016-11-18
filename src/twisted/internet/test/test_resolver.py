@@ -238,7 +238,7 @@ class HostnameResolutionTests(UnitTest):
         self.pool, self.doThreadWork = deterministicPool()
         self.reactor, self.doReactorWork = deterministicReactorThreads()
         self.getter = FakeAddrInfoGetter()
-        self.resolver = GAIResolver(self.reactor, self.pool,
+        self.resolver = GAIResolver(self.reactor, lambda: self.pool,
                                     self.getter.getaddrinfo)
 
 
@@ -503,7 +503,7 @@ class LegacyCompatibilityTests(UnitTest, object):
         self.pool, self.doThreadWork = deterministicPool()
         self.reactor, self.doReactorWork = deterministicReactorThreads()
         self.getter = FakeAddrInfoGetter()
-        self.resolver = GAIResolver(self.reactor, self.pool,
+        self.resolver = GAIResolver(self.reactor, lambda: self.pool,
                                     self.getter.getaddrinfo)
         simpleResolver = ComplexResolverSimplifier(self.resolver)
         self.getter.addResultForHost('example.com', ('192.168.3.4', 4321))
@@ -544,8 +544,6 @@ class ReactorInstallationTests(UnitTest, object):
         self.assertIs(reactor.nameResolver._getaddrinfo, getaddrinfo)
         self.assertIsInstance(reactor.resolver, ComplexResolverSimplifier)
         self.assertIs(reactor.nameResolver._reactor, reactor)
-        self.assertIs(reactor.nameResolver._threadpool,
-                      reactor.getThreadPool())
         self.assertIs(reactor.resolver._nameResolver, reactor.nameResolver)
 
 

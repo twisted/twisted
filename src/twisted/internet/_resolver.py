@@ -72,24 +72,26 @@ class GAIResolver(object):
     L{getaddrinfo} in a thread.
     """
 
-    def __init__(self, reactor, threadpool=None, getaddrinfo=getaddrinfo):
+    def __init__(self, reactor, getThreadPool=None, getaddrinfo=getaddrinfo):
         """
         Create a L{GAIResolver}.
 
         @param reactor: the reactor to schedule result-delivery on
         @type reactor: L{IReactorThreads}
 
-        @param threadpool: the thread pool to use for scheduling name
-            resolutions.  If not supplied, the use the given C{reactor}'s
-            thread pool.
-        @type threadpool: L{twisted.internet.threads}
+        @param getThreadPool: a function to retrieve the thread pool to use for
+            scheduling name resolutions.  If not supplied, the use the given
+            C{reactor}'s thread pool.
+        @type getThreadPool: 0-argument callable returning a
+            L{twisted.python.threadpool.ThreadPool}
 
         @param getaddrinfo: a reference to the L{getaddrinfo} to use - mainly
             parameterized for testing.
         @type getaddrinfo: callable with the same signature as L{getaddrinfo}
         """
         self._reactor = reactor
-        self._threadpool = threadpool
+        self._getThreadPool = (reactor.getThreadPool if getThreadPool is None
+                               else getThreadPool)
         self._getaddrinfo = getaddrinfo
 
 
@@ -110,6 +112,7 @@ class GAIResolver(object):
 
         @return: see interface
         """
+        pool = self._getThreadPool()
         addressFamily = _typesToAF[_any if addressTypes is None
                                    else frozenset(addressTypes)]
         socketType = _transportToSocket[transportSemantics]
@@ -119,7 +122,7 @@ class GAIResolver(object):
                                          socketType)
             except gaierror:
                 return []
-        d = deferToThreadPool(self._reactor, self._threadpool, get)
+        d = deferToThreadPool(self._reactor, pool, get)
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
         @d.addCallback

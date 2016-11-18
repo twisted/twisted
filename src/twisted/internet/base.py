@@ -977,8 +977,9 @@ class ReactorBase(object):
         threadpoolShutdownID = None
 
         def _initThreads(self):
+            self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
-            self.installNameResolver(_GAIResolver(self, self.getThreadPool()))
+
 
         def callFromThread(self, f, *args, **kw):
             """
