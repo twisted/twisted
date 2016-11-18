@@ -219,7 +219,11 @@ class InsecurePath(Exception):
 
 
 
-
+class IGNOREME(object):
+    """
+    
+    """
+    
 
 
 class LinkError(Exception):
