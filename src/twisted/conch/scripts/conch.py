@@ -335,12 +335,12 @@ class SSHConnection(connection.SSHConnection):
 
 class SSHSession(channel.SSHChannel):
 
-    name = 'session'
+    name = b'session'
 
     def channelOpen(self, foo):
         log.msg('session %s open' % self.id)
         if options['agent']:
-            d = self.conn.sendRequest(self, 'auth-agent-req@openssh.com', '', wantReply=1)
+            d = self.conn.sendRequest(self, b'auth-agent-req@openssh.com', b'', wantReply=1)
             d.addBoth(lambda x:log.msg(x))
         if options['noshell']: return
         if (options['command'] and options['tty']) or not options['notty']:
@@ -355,7 +355,7 @@ class SSHSession(channel.SSHChannel):
         self.stdio = stdio.StandardIO(c)
         fd = 0
         if options['subsystem']:
-            self.conn.sendRequest(self, 'subsystem', \
+            self.conn.sendRequest(self, b'subsystem', \
                 common.NS(options['command']))
         elif options['command']:
             if options['tty']:
@@ -363,9 +363,9 @@ class SSHSession(channel.SSHChannel):
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
-                self.conn.sendRequest(self, 'pty-req', ptyReqData)
+                self.conn.sendRequest(self, b'pty-req', ptyReqData)
                 signal.signal(signal.SIGWINCH, self._windowResized)
-            self.conn.sendRequest(self, 'exec', \
+            self.conn.sendRequest(self, b'exec', \
                 common.NS(options['command']))
         else:
             if not options['notty']:
@@ -373,9 +373,9 @@ class SSHSession(channel.SSHChannel):
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
-                self.conn.sendRequest(self, 'pty-req', ptyReqData)
+                self.conn.sendRequest(self, b'pty-req', ptyReqData)
                 signal.signal(signal.SIGWINCH, self._windowResized)
-            self.conn.sendRequest(self, 'shell', '')
+            self.conn.sendRequest(self, b'shell', b'')
             #if hasattr(conn.transport, 'transport'):
             #    conn.transport.transport.setTcpNoDelay(1)
 
@@ -456,7 +456,7 @@ class SSHSession(channel.SSHChannel):
         winsz = fcntl.ioctl(0, tty.TIOCGWINSZ, '12345678')
         winSize = struct.unpack('4H', winsz)
         newSize = winSize[1], winSize[0], winSize[2], winSize[3]
-        self.conn.sendRequest(self, 'window-change', struct.pack('!4L', *newSize))
+        self.conn.sendRequest(self, b'window-change', struct.pack('!4L', *newSize))
 
 
 class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel): pass

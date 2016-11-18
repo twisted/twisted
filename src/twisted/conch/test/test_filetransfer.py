@@ -24,7 +24,8 @@ from twisted.conch.ssh import common, connection, filetransfer, session
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import components
-from twisted.python.compat import long, networkString
+from twisted.python.compat import long
+from twisted.python.filepath import FilePath
 
 
 class TestAvatar(avatar.ConchUser):
@@ -53,7 +54,7 @@ class FileTransferTestAvatar(TestAvatar):
         self.homeDir = homeDir
 
     def getHomeDir(self):
-        return os.path.join(networkString(os.getcwd()), self.homeDir)
+        return FilePath(os.getcwd()).preauthChild(self.homeDir.path)
 
 
 class ConchSessionForTestAvatar:
@@ -88,22 +89,22 @@ if unix:
 class SFTPTestBase(unittest.TestCase):
 
     def setUp(self):
-        self.testDir = networkString(self.mktemp())
+        self.testDir = FilePath(self.mktemp())
         # Give the testDir another level so we can safely "cd .." from it in
         # tests.
-        self.testDir = os.path.join(self.testDir, b'extra')
-        os.makedirs(os.path.join(self.testDir, b'testDirectory'))
+        self.testDir = self.testDir.child('extra')
+        self.testDir.child('testDirectory').makedirs(True)
 
-        with open(os.path.join(self.testDir, b'testfile1'), 'wb') as f:
+        with self.testDir.child('testfile1').open(mode='wb') as f:
             f.write(b'a'*10+b'b'*10)
             with open('/dev/urandom', 'rb') as f2:
                 f.write(f2.read(1024*64)) # random data
-        os.chmod(os.path.join(self.testDir, b'testfile1'), 0o644)
-        with open(os.path.join(self.testDir, b'testRemoveFile'), 'wb') as f:
+        self.testDir.child('testfile1').chmod(0o644)
+        with self.testDir.child('testRemoveFile').open(mode='wb') as f:
             f.write(b'a')
-        with open(os.path.join(self.testDir, b'testRenameFile'), 'wb') as f:
+        with self.testDir.child('testRenameFile').open(mode='wb') as f:
             f.write(b'a')
-        with open(os.path.join(self.testDir, b'.testHiddenFile'), 'wb') as f:
+        with self.testDir.child('.testHiddenFile').open(mode='wb') as f:
             f.write(b'a')
 
 
@@ -197,7 +198,7 @@ class OurServerOurClientTests(SFTPTestBase):
         A directory opened with C{openDirectory} is close when the connection
         is lost.
         """
-        d = self.client.openDirectory(b'')
+        d = self.client.openDirectory('')
         self._emptyBuffers()
 
         def _getFiles(openDir):
@@ -452,18 +453,20 @@ class OurServerOurClientTests(SFTPTestBase):
         def _readLink(_):
             d = self.client.readLink(b'testLink')
             self._emptyBuffers()
+            testFile = FilePath(os.getcwd()).preauthChild(self.testDir.path)
+            testFile = testFile.child('testfile1')
             d.addCallback(
                 self.assertEqual,
-                os.path.join(
-                    networkString(os.getcwd()), self.testDir, b'testfile1'))
+                testFile.path)
             return d
         def _realPath(_):
             d = self.client.realPath(b'testLink')
             self._emptyBuffers()
+            testLink = FilePath(os.getcwd()).preauthChild(self.testDir.path)
+            testLink = testLink.child('testfile1')
             d.addCallback(
                 self.assertEqual,
-                os.path.join(
-                    networkString(os.getcwd()), self.testDir, b'testfile1'))
+                testLink.path)
             return d
         d.addCallback(_readLink)
         d.addCallback(_realPath)
