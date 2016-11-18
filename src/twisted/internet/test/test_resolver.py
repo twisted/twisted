@@ -13,12 +13,13 @@ __metaclass__ = type
 from collections import defaultdict
 
 from socket import (
-    gaierror, EAI_NONAME, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
-    SOCK_DGRAM, IPPROTO_TCP
+    getaddrinfo, gaierror, EAI_NONAME, AF_INET, AF_INET6, AF_UNSPEC,
+    SOCK_STREAM, SOCK_DGRAM, IPPROTO_TCP
 )
 from threading import local, Lock
 
 from zope.interface import implementer
+from zope.interface.verify import verifyObject
 
 from twisted.internet.interfaces import IResolutionReceiver, IResolverSimple
 
@@ -30,10 +31,13 @@ from twisted.python.threadpool import ThreadPool
 from twisted._threads import createMemoryWorker, Team, LockWorker
 
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet._resolver import GAIResolver, SimpleResolverComplexifier
+from twisted.internet._resolver import (
+    GAIResolver, SimpleResolverComplexifier, ComplexResolverSimplifier
+)
 
 from twisted.internet.defer import Deferred
 from twisted.internet.error import DNSLookupError
+from twisted.internet.base import ReactorBase
 
 
 class DeterministicThreadPool(ThreadPool, object):
@@ -488,3 +492,70 @@ class LegacyCompatibilityTests(UnitTest, object):
         self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
         self.assertEqual(receiver._ended, True)
         self.assertEqual(receiver._addresses, [])
+
+
+    def test_simplifier(self):
+        """
+        L{ComplexResolverSimplifier} translates an L{IHostnameResolver} into an
+        L{IResolverSimple} for applications that still expect the old
+        interfaces to be in place.
+        """
+        self.pool, self.doThreadWork = deterministicPool()
+        self.reactor, self.doReactorWork = deterministicReactorThreads()
+        self.getter = FakeAddrInfoGetter()
+        self.resolver = GAIResolver(self.reactor, self.pool,
+                                    self.getter.getaddrinfo)
+        simpleResolver = ComplexResolverSimplifier(self.resolver)
+        self.getter.addResultForHost('example.com', ('192.168.3.4', 4321))
+        success = simpleResolver.getHostByName('example.com')
+        failure = simpleResolver.getHostByName('nx.example.com')
+        self.doThreadWork()
+        self.doReactorWork()
+        self.doThreadWork()
+        self.doReactorWork()
+        self.assertEqual(self.failureResultOf(failure).type, DNSLookupError)
+        self.assertEqual(self.successResultOf(success), '192.168.3.4')
+
+
+
+class JustEnoughReactor(ReactorBase, object):
+    """
+    Just enough subclass implementation to be a valid L{ReactorBase} subclass.
+    """
+    def installWaker(self):
+        """
+        Do nothing.
+        """
+
+
+
+class ReactorInstallationTests(UnitTest, object):
+    """
+    Tests for installing old and new resolvers onto a L{ReactorBase} (from
+    which all of Twisted's reactor implementations derive).
+    """
+
+    def test_defaultToGAIResolver(self):
+        """
+        L{ReactorBase} defaults to using a L{GAIResolver}.
+        """
+        reactor = JustEnoughReactor()
+        self.assertIsInstance(reactor.nameResolver, GAIResolver)
+        self.assertIs(reactor.nameResolver._getaddrinfo, getaddrinfo)
+        self.assertIsInstance(reactor.resolver, ComplexResolverSimplifier)
+        self.assertIs(reactor.nameResolver._reactor, reactor)
+        self.assertIs(reactor.nameResolver._threadpool,
+                      reactor.getThreadPool())
+        self.assertIs(reactor.resolver._nameResolver, reactor.nameResolver)
+
+
+    def test_installingOldStyleResolver(self):
+        """
+        L{ReactorBase} will wrap an L{IResolverSimple} in a complexifier.
+        """
+        reactor = JustEnoughReactor()
+        it = SillyResolverSimple()
+        verifyObject(IResolverSimple, reactor.installResolver(it))
+        self.assertIsInstance(reactor.nameResolver, SimpleResolverComplexifier)
+        self.assertIs(reactor.nameResolver._simpleResolver, it)
+

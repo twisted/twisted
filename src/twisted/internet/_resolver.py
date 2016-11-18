@@ -17,8 +17,10 @@ from socket import (getaddrinfo, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IHostnameResolver, IHostResolution
+from twisted.internet.interfaces import (IHostnameResolver, IHostResolution,
+                                         IResolverSimple, IResolutionReceiver)
 from twisted.internet.error import DNSLookupError
+from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.logger import Logger
@@ -179,3 +181,76 @@ class SimpleResolverComplexifier(object):
             resolutionReceiver.resolutionComplete()
         onAddress.addCallback(finish)
         return resolution
+
+
+
+@implementer(IResolutionReceiver)
+class FirstOneWins(object):
+    """
+    An L{IResolutionReceiver} which fires a L{Deferred} with its first result.
+    """
+
+    def __init__(self, deferred):
+        """
+        @param deferred: The L{Deferred} to fire when the first resolution
+            result arrives.
+        """
+        self._deferred = deferred
+        self._resolved = False
+
+
+    def resolutionBegan(self, resolution):
+        """
+        
+        """
+        self._resolution = resolution
+
+
+    def addressResolved(self, address):
+        """
+        
+        """
+        if self._resolved:
+            return
+        self._resolved = True
+        self._deferred.callback(address.host)
+
+
+    def resolutionComplete(self):
+        """
+        
+        """
+        if self._resolved:
+            return
+        self._deferred.errback(DNSLookupError(self._resolution.name))
+
+
+
+@implementer(IResolverSimple)
+class ComplexResolverSimplifier(object):
+    """
+    A converter from L{IHostnameResolver} to L{IResolverSimple}
+    """
+    def __init__(self, nameResolver):
+        """
+        Create a L{ComplexResolverSimplifier} with an L{IHostnameResolver}.
+
+        @param nameResolver: The L{IHostnameResolver} to use.
+        """
+        self._nameResolver = nameResolver
+
+
+    def getHostByName(self, name, timeouts=()):
+        """
+        See L{IResolverSimple.getHostByName}
+
+        @param name: see L{IResolverSimple.getHostByName}
+
+        @param timeouts: see L{IResolverSimple.getHostByName}
+
+        @return: see L{IResolverSimple.getHostByName}
+        """
+        result = Deferred()
+        self._nameResolver.resolveHostName(FirstOneWins(result), name, 0,
+                                           [IPv4Address])
+        return result
