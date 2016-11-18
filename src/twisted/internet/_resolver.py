@@ -18,8 +18,10 @@ from socket import (getaddrinfo, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IHostnameResolver, IHostResolution
+from twisted.internet.error import DNSLookupError
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.logger import Logger
 
 
 @implementer(IHostResolution)
@@ -126,4 +128,54 @@ class GAIResolver(object):
                     addrType(_socktypeToType.get(socktype, 'TCP'), *sockaddr)
                 )
             resolutionReceiver.resolutionComplete()
+        return resolution
+
+
+
+@implementer(IHostnameResolver)
+class SimpleResolverComplexifier(object):
+    """
+    A converter from L{IResolverSimple} to L{IHostnameResolver}.
+    """
+
+    _log = Logger()
+
+    def __init__(self, simpleResolver):
+        """
+        Construct a L{SimpleResolverComplexifier} with an L{IResolverSimple}.
+        """
+        self._simpleResolver = simpleResolver
+
+
+    def resolveHostName(self, resolutionReceiver, hostName, portNumber=0,
+                        addressTypes=None, transportSemantics='TCP'):
+        """
+        See L{IHostnameResolver.resolveHostName}
+
+        @param resolutionReceiver: see interface
+
+        @param hostName: see interface
+
+        @param portNumber: see interface
+
+        @param addressTypes: see interface
+
+        @param transportSemantics: see interface
+
+        @return: see interface
+        """
+        resolution = HostResolution(hostName)
+        resolutionReceiver.resolutionBegan(resolution)
+        onAddress = self._simpleResolver.getHostByName(hostName)
+        def addressReceived(address):
+            resolutionReceiver.addressResolved(IPv4Address('TCP', address, 0))
+        def errorReceived(error):
+            if not error.check(DNSLookupError):
+                self._log.failure("while looking up {name} with {resolver}",
+                                  error, name=hostName,
+                                  resolver=self._simpleResolver)
+        onAddress.addCallbacks(addressReceived, errorReceived)
+        def finish(result):
+            resolutionReceiver.resolutionComplete()
+        onAddress.addCallback(finish)
         return resolution

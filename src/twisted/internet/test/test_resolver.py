@@ -20,7 +20,7 @@ from threading import local, Lock
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IResolutionReceiver
+from twisted.internet.interfaces import IResolutionReceiver, IResolverSimple
 
 from twisted.trial.unittest import (
     SynchronousTestCase as UnitTest
@@ -30,7 +30,10 @@ from twisted.python.threadpool import ThreadPool
 from twisted._threads import createMemoryWorker, Team, LockWorker
 
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet._resolver import GAIResolver
+from twisted.internet._resolver import GAIResolver, SimpleResolverComplexifier
+
+from twisted.internet.defer import Deferred
+from twisted.internet.error import DNSLookupError
 
 
 class DeterministicThreadPool(ThreadPool, object):
@@ -392,3 +395,89 @@ class HostnameResolutionTests(UnitTest):
         self.assertEqual(stream6.type, 'TCP')
         self.assertEqual(dgram4.type, 'UDP')
         self.assertEqual(dgram6.type, 'UDP')
+
+
+
+@implementer(IResolverSimple)
+class SillyResolverSimple(object):
+    """
+    Trivial implementation of L{IResolverSimple}
+    """
+    def __init__(self):
+        """
+        
+        """
+        self._requests = []
+
+
+    def getHostByName(self, name, timeout=()):
+        """
+        Implement L{IResolverSimple.getHostByName}
+        """
+        self._requests.append(Deferred())
+        return self._requests[-1]
+
+
+
+class LegacyCompatibilityTests(UnitTest, object):
+    """
+    Older applications may supply an object to the reactor via
+    C{installResolver} that only provides L{IResolverSimple}.
+    L{SimpleResolverComplexifier} is a wrapper for an L{IResolverSimple}.
+    """
+
+    def test_success(self):
+        """
+        L{SimpleResolverComplexifier} translates C{resolveHostName} into
+        L{IResolutionReceiver.addressResolved}.
+        """
+        simple = SillyResolverSimple()
+        complex = SimpleResolverComplexifier(simple)
+        receiver = ResultHolder(self)
+        self.assertEqual(receiver._started, False)
+        complex.resolveHostName(receiver, u"example.com")
+        self.assertEqual(receiver._started, True)
+        self.assertEqual(receiver._ended, False)
+        self.assertEqual(receiver._addresses, [])
+        simple._requests[0].callback("192.168.1.1")
+        self.assertEqual(receiver._addresses,
+                         [IPv4Address('TCP', '192.168.1.1', 0)])
+        self.assertEqual(receiver._ended, True)
+
+
+    def test_failure(self):
+        """
+        L{SimpleResolverComplexifier} translates a known error result from
+        L{IResolverSimple.resolveHostName} into an empty result.
+        """
+        simple = SillyResolverSimple()
+        complex = SimpleResolverComplexifier(simple)
+        receiver = ResultHolder(self)
+        self.assertEqual(receiver._started, False)
+        complex.resolveHostName(receiver, u"example.com")
+        self.assertEqual(receiver._started, True)
+        self.assertEqual(receiver._ended, False)
+        self.assertEqual(receiver._addresses, [])
+        simple._requests[0].errback(DNSLookupError("nope"))
+        self.assertEqual(receiver._ended, True)
+        self.assertEqual(receiver._addresses, [])
+
+
+    def test_error(self):
+        """
+        L{SimpleResolverComplexifier} translates an unknown error result from
+        L{IResolverSimple.resolveHostName} into an empty result and a logged
+        error.
+        """
+        simple = SillyResolverSimple()
+        complex = SimpleResolverComplexifier(simple)
+        receiver = ResultHolder(self)
+        self.assertEqual(receiver._started, False)
+        complex.resolveHostName(receiver, u"example.com")
+        self.assertEqual(receiver._started, True)
+        self.assertEqual(receiver._ended, False)
+        self.assertEqual(receiver._addresses, [])
+        simple._requests[0].errback(ZeroDivisionError("zow"))
+        self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
+        self.assertEqual(receiver._ended, True)
+        self.assertEqual(receiver._addresses, [])
