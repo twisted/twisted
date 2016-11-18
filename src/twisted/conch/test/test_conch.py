@@ -7,16 +7,17 @@ from itertools import count
 
 from zope.interface import implementer
 
+from twisted.conch.error import ConchError
+from twisted.conch.avatar import ConchUser
+from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
+from twisted.python.compat import unicode
 from twisted.trial import unittest
-from twisted.conch.error import ConchError
-from twisted.conch.avatar import ConchUser
-from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 
 try:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
@@ -73,6 +74,7 @@ class StdioInteractingSessionTests(unittest.TestCase):
     if StdioInteractingSession is None:
         skip = _reason
 
+
     def test_eofReceived(self):
         """
         L{twisted.conch.scripts.conch.SSHSession.eofReceived} loses the
@@ -97,7 +99,7 @@ class Echo(protocol.Protocol):
 
     def dataReceived(self, data):
         self.transport.write(data)
-        if '\n' in data:
+        if b'\n' in data:
             self.transport.loseConnection()
 
 
@@ -117,7 +119,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     """
 
     deferred = None
-    buf = ''
+    buf = b''
 
     def _getDeferred(self):
         d, self.deferred = self.deferred, None
@@ -139,7 +141,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
                 ConchError("exit code was not 0: %s" %
                                  reason.value.exitCode))
         else:
-            buf = self.buf.replace('\r\n', '\n')
+            buf = self.buf.replace(b'\r\n', b'\n')
             self._getDeferred().callback(buf)
 
 
@@ -208,7 +210,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
         and then (after the reactor has spun) send it a KILL signal.
         """
         self.buffer = buffer
-        self.transport.write('\x03')
+        self.transport.write(b'\x03')
         self.transport.loseConnection()
         reactor.callLater(0, self._reallyDie)
 
@@ -237,7 +239,6 @@ class ConchTestForwardingPort(protocol.Protocol):
     is ended.
     """
 
-
     def __init__(self, protocol, data):
         """
         @type protocol: L{ConchTestForwardingProcess}
@@ -251,7 +252,7 @@ class ConchTestForwardingPort(protocol.Protocol):
 
 
     def connectionMade(self):
-        self.buffer = ''
+        self.buffer = b''
         self.transport.write(self.data)
 
 
@@ -278,7 +279,12 @@ while os.path.dirname(path) != path:
 
 from twisted.conch.scripts.%s import run
 run()""" % mod]
-    return start + list(args)
+    madeArgs = []
+    for arg in start + list(args):
+        if isinstance(arg, unicode):
+            arg = arg.encode("utf-8")
+        madeArgs.append(arg)
+    return madeArgs
 
 
 
@@ -289,7 +295,7 @@ class ConchServerSetupMixin:
     if not pyasn1:
         skip = "Cannot run without PyASN1"
 
-    realmFactory = staticmethod(lambda: ConchTestRealm('testuser'))
+    realmFactory = staticmethod(lambda: ConchTestRealm(b'testuser'))
 
     def _createFiles(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
@@ -378,7 +384,7 @@ class ForwardingMixin(ConchServerSetupMixin):
         server.
         """
         d = self.execute('echo goodbye', ConchTestOpenSSHProcess())
-        return d.addCallback(self.assertEqual, 'goodbye\n')
+        return d.addCallback(self.assertEqual, b'goodbye\n')
 
 
     def test_localToRemoteForwarding(self):
@@ -387,11 +393,11 @@ class ForwardingMixin(ConchServerSetupMixin):
         specified port on the server.
         """
         localPort = self._getFreePort()
-        process = ConchTestForwardingProcess(localPort, 'test\n')
+        process = ConchTestForwardingProcess(localPort, b'test\n')
         d = self.execute('', process,
                          sshArgs='-N -L%i:127.0.0.1:%i'
                          % (localPort, self.echoPort))
-        d.addCallback(self.assertEqual, 'test\n')
+        d.addCallback(self.assertEqual, b'test\n')
         return d
 
 
@@ -401,11 +407,11 @@ class ForwardingMixin(ConchServerSetupMixin):
         to a port locally.
         """
         localPort = self._getFreePort()
-        process = ConchTestForwardingProcess(localPort, 'test\n')
+        process = ConchTestForwardingProcess(localPort, b'test\n')
         d = self.execute('', process,
                          sshArgs='-N -R %i:127.0.0.1:%i'
                          % (localPort, self.echoPort))
-        d.addCallback(self.assertEqual, 'test\n')
+        d.addCallback(self.assertEqual, b'test\n')
         return d
 
 
@@ -443,10 +449,12 @@ class RekeyAvatar(ConchUser):
             if i == 60:
                 call.stop()
                 transport.session.conn.sendRequest(
-                    transport.session, 'exit-status', '\x00\x00\x00\x00')
+                    transport.session, b'exit-status', b'\x00\x00\x00\x00')
                 transport.loseConnection()
             else:
-                transport.write("line #%02d\n" % (i,))
+                line = "line #%02d\n" % (i,)
+                line = line.encode("utf-8")
+                transport.write(line)
 
         # The timing for this loop is an educated guess (and/or the result of
         # experimentation) to exercise the case where a packet is generated
@@ -490,9 +498,9 @@ class RekeyTestsMixin(ConchServerSetupMixin):
         process = ConchTestOpenSSHProcess()
         d = self.execute("", process, '-o RekeyLimit=2K')
         def finished(result):
-            self.assertEqual(
-                result,
-                '\n'.join(['line #%02d' % (i,) for i in range(60)]) + '\n')
+            expectedResult = '\n'.join(['line #%02d' % (i,) for i in range(60)]) + '\n'
+            expectedResult = expectedResult.encode("utf-8")
+            self.assertEqual(result, expectedResult)
         d.addCallback(finished)
         return d
 
@@ -501,6 +509,7 @@ class RekeyTestsMixin(ConchServerSetupMixin):
 class OpenSSHClientMixin:
     if not which('ssh'):
         skip = "no ssh command-line client available"
+
 
     def execute(self, remoteCommand, process, sshArgs=''):
         """
@@ -545,7 +554,12 @@ class OpenSSHClientMixin:
                        ' 127.0.0.1 ' + remoteCommand
             port = self.conchServer.getHost().port
             cmds = (cmdline % port).split()
-            reactor.spawnProcess(process, which('ssh')[0], cmds)
+            encodedCmds = []
+            for cmd in cmds:
+                if isinstance(cmd, unicode):
+                    cmd = cmd.encode("utf-8")
+                encodedCmds.append(cmd)
+            reactor.spawnProcess(process, which('ssh')[0], encodedCmds)
             return process.deferred
         return d.addCallback(hasPAKT)
 
@@ -571,7 +585,7 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         """
         d = self.execute('echo hello', ConchTestOpenSSHProcess(),
                          '-oKexAlgorithms=' + keyExchangeAlgo)
-        return d.addCallback(self.assertEqual, 'hello\n')
+        return d.addCallback(self.assertEqual, b'hello\n')
 
 
     def test_DH_GROUP1(self):
@@ -621,11 +635,11 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
         Forwarding of arbitrary IPv6 TCP connections via SSH.
         """
         localPort = self._getFreePort()
-        process = ConchTestForwardingProcess(localPort, 'test\n')
+        process = ConchTestForwardingProcess(localPort, b'test\n')
         d = self.execute('', process,
                          sshArgs='-N -L%i:[::1]:%i'
                          % (localPort, self.echoPortV6))
-        d.addCallback(self.assertEqual, 'test\n')
+        d.addCallback(self.assertEqual, b'test\n')
         return d
 
 
@@ -644,6 +658,7 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
     """
     if runtime.platformType == 'win32':
         skip = "can't run cmdline client on win32"
+
 
     def execute(self, remoteCommand, process, sshArgs='', conchArgs=None):
         """
@@ -667,7 +682,20 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         log.msg(str(cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        reactor.spawnProcess(process, sys.executable, cmds, env=env)
+        encodedCmds = []
+        encodedEnv = {}
+        for cmd in cmds:
+            if isinstance(cmd, unicode):
+                cmd = cmd.encode("utf-8")
+            encodedCmds.append(cmd)
+        for var in env:
+            val = env[var]
+            if isinstance(var, unicode):
+                var = var.encode("utf-8")
+            if isinstance(val, unicode):
+                val = val.encode("utf-8")
+            encodedEnv[var] = val
+        reactor.spawnProcess(process, sys.executable, encodedCmds, env=encodedEnv)
         return process.deferred
 
 
@@ -677,7 +705,7 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         """
         def cb_check_log(result):
             logContent = logPath.getContent()
-            self.assertIn('Log opened.', logContent)
+            self.assertIn(b'Log opened.', logContent)
 
         logPath = filepath.FilePath(self.mktemp())
 
@@ -687,6 +715,6 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
             conchArgs=['--log', '--logfile', logPath.path]
             )
 
-        d.addCallback(self.assertEqual, 'goodbye\n')
+        d.addCallback(self.assertEqual, b'goodbye\n')
         d.addCallback(cb_check_log)
         return d
