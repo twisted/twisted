@@ -67,6 +67,10 @@ def deterministicPool():
 def deterministicReactorThreads():
     """
     Create a deterministic L{IReactorThreads}
+
+    @return: a 2-tuple consisting of an L{IReactorThreads}-like object and a
+        0-argument callable that will perform one unit of work invoked via that
+        object's C{callFromThread} method.
     """
     worker, doer = createMemoryWorker()
     class CFT(object):
@@ -91,7 +95,21 @@ class FakeAddrInfoGetter(object):
 
     def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
         """
-        Mock for getaddrinfo.
+        Mock for L{socket.getaddrinfo}.
+
+        @param host: see L{socket.getaddrinfo}
+
+        @param port: see L{socket.getaddrinfo}
+
+        @param family: see L{socket.getaddrinfo}
+
+        @param socktype: see L{socket.getaddrinfo}
+
+        @param proto: see L{socket.getaddrinfo}
+
+        @param flags: see L{socket.getaddrinfo}
+
+        @return: L{socket.getaddrinfo}
         """
         self.calls.append((host, port, family, socktype, proto, flags))
         results = self.results[host]
@@ -102,14 +120,32 @@ class FakeAddrInfoGetter(object):
                            'nodename nor servname provided, or not known')
 
 
-    def addResultForHost(self, host,
-                         sockaddr,
-                         family=AF_INET,
-                         socktype=SOCK_STREAM,
-                         proto=IPPROTO_TCP,
+    def addResultForHost(self, host, sockaddr, family=AF_INET,
+                         socktype=SOCK_STREAM, proto=IPPROTO_TCP,
                          canonname=b""):
         """
         Add a result for a given hostname.
+
+        @param host: The hostname to give this result for.  This will be the
+            next result from L{FakeAddrInfoGetter.getaddrinfo} when passed this
+            host.
+        @type canonname: native L{str}
+
+        @param sockaddr: The resulting socket address; should be a 2-tuple for
+            IPv4 or a 4-tuple for IPv6.
+
+        @param family: An C{AF_*} constant that will be returned from
+            C{getaddrinfo}.
+
+        @param socktype: A C{SOCK_*} constant that will be returned from
+            C{getaddrinfo}.
+
+        @param proto: An C{IPPROTO_*} constant that will be returned from
+            C{getaddrinfo}.
+
+        @param canonname: A canonical name that will be returned from
+            C{getaddrinfo}.
+        @type canonname: native L{str}
         """
         self.results[host].append(
             (family, socktype, proto, canonname, sockaddr)
@@ -135,6 +171,8 @@ class ResultHolder(object):
     def resolutionBegan(self, hostResolution):
         """
         Hostname resolution began.
+
+        @param hostResolution: see L{IResolutionReceiver}
         """
         self._started = True
         self._resolution = hostResolution
@@ -144,6 +182,8 @@ class ResultHolder(object):
     def addressResolved(self, address):
         """
         An address was resolved.
+
+        @param address: see L{IResolutionReceiver}
         """
         self._addresses.append(address)
 
@@ -175,7 +215,7 @@ class HelperTests(UnitTest):
 
 
 
-class HostnameResolutionTest(UnitTest):
+class HostnameResolutionTests(UnitTest):
     """
     Tests for hostname resolution.
     """
