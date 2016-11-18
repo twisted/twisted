@@ -47,6 +47,7 @@ class DeterministicThreadPool(ThreadPool, object):
         self._team = team
 
 
+
 def deterministicPool():
     """
     Create a deterministic threadpool.
@@ -115,6 +116,7 @@ class FakeAddrInfoGetter(object):
         )
 
 
+
 @implementer(IResolutionReceiver)
 class ResultHolder(object):
     """
@@ -170,7 +172,6 @@ class HelperTests(UnitTest):
         self.pool.callInThread(divideByZero)
         self.worker()
         self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
-
 
 
 
