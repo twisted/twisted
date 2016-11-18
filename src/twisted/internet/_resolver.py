@@ -12,7 +12,8 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-from socket import getaddrinfo, AF_INET, AF_INET6, AF_UNSPEC, gaierror
+from socket import (getaddrinfo, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
+                    SOCK_DGRAM, gaierror)
 
 from zope.interface import implementer
 
@@ -46,6 +47,11 @@ _typesToAF = {
 _afToType = {
     AF_INET: IPv4Address,
     AF_INET6: IPv6Address,
+}
+
+_transportToSocket = {
+    'TCP': SOCK_STREAM,
+    'UDP': SOCK_DGRAM,
 }
 
 
@@ -97,9 +103,11 @@ class GAIResolver(object):
         """
         addressFamily = _typesToAF[_any if addressTypes is None
                                    else frozenset(addressTypes)]
+        socketType = _transportToSocket[transportSemantics]
         def get():
             try:
-                return self._getaddrinfo(hostName, portNumber, addressFamily)
+                return self._getaddrinfo(hostName, portNumber, addressFamily,
+                                         socketType)
             except gaierror:
                 return []
         d = deferToThreadPool(self._reactor, self._threadpool, get)

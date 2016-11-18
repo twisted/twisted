@@ -14,7 +14,7 @@ from collections import defaultdict
 
 from socket import (
     gaierror, EAI_NONAME, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
-    IPPROTO_TCP
+    SOCK_DGRAM, IPPROTO_TCP
 )
 from threading import local, Lock
 
@@ -207,11 +207,11 @@ class HelperTests(UnitTest):
         L{DeterministicThreadPool} will log any exceptions that its "thread"
         workers encounter.
         """
-        self.pool, self.worker = deterministicPool()
+        self.pool, self.doThreadWork = deterministicPool()
         def divideByZero():
             return 1 / 0
         self.pool.callInThread(divideByZero)
-        self.worker()
+        self.doThreadWork()
         self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
 
 
@@ -225,8 +225,8 @@ class HostnameResolutionTests(UnitTest):
         """
         Set up a L{GAIResolver}.
         """
-        self.pool, self.worker = deterministicPool()
-        self.reactor, self.reactwork = deterministicReactorThreads()
+        self.pool, self.doThreadWork = deterministicPool()
+        self.reactor, self.doReactorWork = deterministicReactorThreads()
         self.getter = FakeAddrInfoGetter()
         self.resolver = GAIResolver(self.reactor, self.pool,
                                     self.getter.getaddrinfo)
@@ -245,8 +245,8 @@ class HostnameResolutionTests(UnitTest):
         self.assertIs(receiver._resolution, resolution)
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, False)
-        self.worker()
-        self.reactwork()
+        self.doThreadWork()
+        self.doReactorWork()
         self.assertEqual(receiver._ended, True)
         self.assertEqual(receiver._addresses,
                          [IPv4Address('TCP', '4.3.2.1', 0)])
@@ -270,8 +270,8 @@ class HostnameResolutionTests(UnitTest):
         self.assertIs(receiver._resolution, resolution)
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, False)
-        self.worker()
-        self.reactwork()
+        self.doThreadWork()
+        self.doReactorWork()
         self.assertEqual(receiver._ended, True)
         self.assertEqual(receiver._addresses,
                          [IPv6Address('TCP', '::1', 0, flowInfo, scopeID)])
@@ -288,8 +288,8 @@ class HostnameResolutionTests(UnitTest):
         resolution = self.resolver.resolveHostName(receiver,
                                                    u"sample.example.com")
         self.assertIs(receiver._resolution, resolution)
-        self.worker()
-        self.reactwork()
+        self.doThreadWork()
+        self.doReactorWork()
         self.assertEqual(receiver._started, True)
         self.assertEqual(receiver._ended, True)
         self.assertEqual(receiver._addresses, [])
@@ -309,8 +309,8 @@ class HostnameResolutionTests(UnitTest):
             receiver, u"sample.example.com", addressTypes=addrTypes
         )
         self.assertIs(receiver._resolution, resolution)
-        self.worker()
-        self.reactwork()
+        self.doThreadWork()
+        self.doReactorWork()
         host, port, family, socktype, proto, flags = self.getter.calls[0]
         self.assertEqual(family, expectedAF)
 
@@ -339,3 +339,27 @@ class HostnameResolutionTests(UnitTest):
         """
         self._resolveOnlyTest([IPv4Address, IPv6Address], AF_UNSPEC)
         self._resolveOnlyTest(None, AF_UNSPEC)
+
+
+    def test_transportSemanticsToSocketType(self):
+        """
+        When passed a C{transportSemantics} paramter, C{'TCP'} (the value
+        present in L{IPv4Address.type} to indicate a stream transport) maps to
+        C{SOCK_STREAM} and C{'UDP'} maps to C{SOCK_DGRAM}.
+        """
+        receiver = ResultHolder(self)
+        self.resolver.resolveHostName(receiver, u"example.com",
+                                      transportSemantics='TCP')
+        receiver2 = ResultHolder(self)
+        self.resolver.resolveHostName(receiver2, u"example.com",
+                                      transportSemantics='UDP')
+        self.doThreadWork()
+        self.doReactorWork()
+        self.doThreadWork()
+        self.doReactorWork()
+        host, port, family, socktypeT, proto, flags = self.getter.calls[0]
+        host, port, family, socktypeU, proto, flags = self.getter.calls[1]
+        self.assertEqual(socktypeT, SOCK_STREAM)
+        self.assertEqual(socktypeU, SOCK_DGRAM)
+
+
