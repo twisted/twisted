@@ -13,7 +13,8 @@ __metaclass__ = type
 from collections import defaultdict
 
 from socket import (
-    gaierror, EAI_NONAME, AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
+    gaierror, EAI_NONAME, AF_INET, AF_INET6, AF_UNSPEC, SOCK_STREAM,
+    IPPROTO_TCP
 )
 from threading import local, Lock
 
@@ -294,17 +295,47 @@ class HostnameResolutionTests(UnitTest):
         self.assertEqual(receiver._addresses, [])
 
 
-    def test_resolveOnlyIPv4(self):
+    def _resolveOnlyTest(self, addrTypes, expectedAF):
         """
-        When passed an C{addressTypes} parameter containing only
-        L{IPv4Address}, L{GAIResolver} will pass C{AF_INET} to C{getaddrinfo}.
+        Verify that the given set of address types results in the given C{AF_}
+        constant being passed to C{getaddrinfo}.
+
+        @param addrTypes: iterable of L{IAddress} implementers
+
+        @param expectedAF: an C{AF_*} constant
         """
         receiver = ResultHolder(self)
         resolution = self.resolver.resolveHostName(
-            receiver, u"sample.example.com", addressTypes=[IPv4Address]
+            receiver, u"sample.example.com", addressTypes=addrTypes
         )
         self.assertIs(receiver._resolution, resolution)
         self.worker()
         self.reactwork()
         host, port, family, socktype, proto, flags = self.getter.calls[0]
-        self.assertEqual(socktype, AF_INET)
+        self.assertEqual(family, expectedAF)
+
+
+    def test_resolveOnlyIPv4(self):
+        """
+        When passed an C{addressTypes} parameter containing only
+        L{IPv4Address}, L{GAIResolver} will pass C{AF_INET} to C{getaddrinfo}.
+        """
+        self._resolveOnlyTest([IPv4Address], AF_INET)
+
+
+    def test_resolveOnlyIPv6(self):
+        """
+        When passed an C{addressTypes} parameter containing only
+        L{IPv6Address}, L{GAIResolver} will pass C{AF_INET6} to C{getaddrinfo}.
+        """
+        self._resolveOnlyTest([IPv6Address], AF_INET6)
+
+
+    def test_resolveBoth(self):
+        """
+        When passed an C{addressTypes} parameter containing both L{IPv4Address}
+        and L{IPv6Address} (or the default of C{None}, which carries the same
+        meaning), L{GAIResolver} will pass C{AF_UNSPEC} to C{getaddrinfo}.
+        """
+        self._resolveOnlyTest([IPv4Address, IPv6Address], AF_UNSPEC)
+        self._resolveOnlyTest(None, AF_UNSPEC)

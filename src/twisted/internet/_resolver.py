@@ -12,7 +12,7 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-from socket import getaddrinfo, AF_INET, AF_INET6, gaierror
+from socket import getaddrinfo, AF_INET, AF_INET6, AF_UNSPEC, gaierror
 
 from zope.interface import implementer
 
@@ -32,6 +32,14 @@ class HostResolution(object):
         Create a L{HostResolution} with the given name.
         """
         self.name = name
+
+
+
+_typesToAF = {
+    frozenset([IPv4Address]): AF_INET,
+    frozenset([IPv6Address]): AF_INET6,
+    frozenset([IPv4Address, IPv6Address]): AF_UNSPEC,
+}
 
 
 
@@ -80,9 +88,13 @@ class GAIResolver(object):
 
         @return: see interface
         """
+        if addressTypes is None:
+            addressTypes = [IPv4Address, IPv6Address]
+        addressTypes = frozenset(addressTypes)
+        addressFamily = _typesToAF[addressTypes]
         def get():
             try:
-                return self._getaddrinfo(hostName, portNumber)
+                return self._getaddrinfo(hostName, portNumber, addressFamily)
             except gaierror:
                 return []
         d = deferToThreadPool(self._reactor, self._threadpool, get)
