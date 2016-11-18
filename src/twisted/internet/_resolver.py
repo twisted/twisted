@@ -204,14 +204,18 @@ class FirstOneWins(object):
 
     def resolutionBegan(self, resolution):
         """
-        
+        See L{IResolutionReceiver.resolutionBegan}
+
+        @param resolution: See L{IResolutionReceiver.resolutionBegan}
         """
         self._resolution = resolution
 
 
     def addressResolved(self, address):
         """
-        
+        See L{IResolutionReceiver.addressResolved}
+
+        @param address: See L{IResolutionReceiver.addressResolved}
         """
         if self._resolved:
             return
@@ -221,7 +225,7 @@ class FirstOneWins(object):
 
     def resolutionComplete(self):
         """
-        
+        See L{IResolutionReceiver.resolutionComplete}
         """
         if self._resolved:
             return
