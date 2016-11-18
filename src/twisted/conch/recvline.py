@@ -19,7 +19,8 @@ from twisted.python.compat import iterbytes
 
 _counters = {}
 class Logging(object):
-    """Wrapper which logs attribute lookups.
+    """
+    Wrapper which logs attribute lookups.
 
     This was useful in debugging something, I guess.  I forget what.
     It can probably be deleted or moved somewhere more appropriate.
@@ -51,7 +52,8 @@ class Logging(object):
 
 @implementer(insults.ITerminalTransport)
 class TransportSequence(object):
-    """An L{ITerminalTransport} implementation which forwards calls to
+    """
+    An L{ITerminalTransport} implementation which forwards calls to
     one or more other L{ITerminalTransport}s.
 
     This is a cheap way for servers to keep track of the state they
@@ -86,7 +88,8 @@ def %s(self, *a, **kw):
 
 
 class LocalTerminalBufferMixin(object):
-    """A mixin for RecvLine subclasses which records the state of the terminal.
+    """
+    A mixin for RecvLine subclasses which records the state of the terminal.
 
     This is accomplished by performing all L{ITerminalTransport} operations on both
     the transport passed to makeConnection and an instance of helper.TerminalBuffer.
@@ -109,7 +112,8 @@ class LocalTerminalBufferMixin(object):
 
 
 class RecvLine(insults.TerminalProtocol):
-    """L{TerminalProtocol} which adds line editing features.
+    """
+    L{TerminalProtocol} which adds line editing features.
 
     Clients will be prompted for lines of input with all the usual
     features: character echoing, left and right arrow support for

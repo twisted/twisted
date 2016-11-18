@@ -1067,14 +1067,14 @@ class H2Stream(object):
         """
         Get information about the peer.
         """
-        self._conn.getPeer()
+        return self._conn.getPeer()
 
 
     def getHost(self):
         """
         Similar to getPeer, but for this side of the connection.
         """
-        self._conn.getHost()
+        return self._conn.getHost()
 
 
     def isSecure(self):
