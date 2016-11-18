@@ -919,8 +919,8 @@ class Key(object):
         """
         The fingerprint of a public key consists of the output of the
         message-digest algorithm in the specified format.
-        Supported formats include L{FingerprintFormats.MD5-HEX} and
-        L{FingerprintFormats.SHA256-BASE64}
+        Supported formats include L{FingerprintFormats.MD5_HEX} and
+        L{FingerprintFormats.SHA256_BASE64}
 
         The input to the algorithm is the public key data as specified by [RFC4253].
 
@@ -935,7 +935,7 @@ class Key(object):
 
         @param format: Format for fingerprint generation. Consists
             hash function and representation format.
-            Default is L{FingerprintFormats.MD5-HEX}
+            Default is L{FingerprintFormats.MD5_HEX}
 
         @since: 8.2
 
