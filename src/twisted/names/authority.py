@@ -156,8 +156,8 @@ class FileAuthority(common.ResolverBase):
                 else:
                     ttl = default_ttl
 
-                if record.TYPE == dns.NS and \
-                        name.lower() != self.soa[0].lower():
+                if (record.TYPE == dns.NS and
+                        name.lower() != self.soa[0].lower()):
                     # NS record belong to a child zone: this is a referral.  As
                     # NS records are authoritative in the child zone, ours here
                     # are not.  RFC 2181, section 6.1.
