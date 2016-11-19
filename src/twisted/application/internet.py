@@ -550,7 +550,7 @@ class _ClientMachine(object):
 
     def __init__(self, endpoint, factory, retryPolicy, clock, log):
         """
-        @see L{ClientService.__init__}
+        @see: L{ClientService.__init__}
 
         @param log: The logger for the L{ClientService} instance this state
             machine is associated to.
