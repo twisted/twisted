@@ -541,8 +541,7 @@ def _firstResult(gen):
 
 class _ClientMachine(object):
     """
-    State machine for maintaining a single outgoing connection to an
-    endpoint.
+    State machine for maintaining a single outgoing connection to an endpoint.
 
     @see: L{ClientService}
     """
@@ -553,8 +552,8 @@ class _ClientMachine(object):
         """
         @see L{ClientService.__init__}
 
-        @param log: The logger for the L{ClientService} instance this
-            state machine is assoicated to.
+        @param log: The logger for the L{ClientService} instance this state
+            machine is associated to.
         @type log: L{Logger}
         """
         self._endpoint = endpoint
@@ -654,10 +653,11 @@ class _ClientMachine(object):
     @_machine.output()
     def _waitForStop(self):
         """
-        Return a deferred that will fire when the service has
-        finished disconnecting.
+        Return a deferred that will fire when the service has finished
+        disconnecting.
 
-        @return: L{Deferred} that fires when the service has finished disconnecting.
+        @return: L{Deferred} that fires when the service has finished
+            disconnecting.
         """
         self._stopWaiters.append(Deferred())
         return self._stopWaiters[-1]
@@ -700,8 +700,8 @@ class _ClientMachine(object):
     @_machine.output()
     def _notifyWaiters(self, protocol):
         """
-        Notify all pending requests for a connection that a connection has
-        been made.
+        Notify all pending requests for a connection that a connection has been
+        made.
 
         @param protocol: The protocol of the connection.
         @type protocol: L{IProtocol}
@@ -756,8 +756,8 @@ class _ClientMachine(object):
     @_machine.output()
     def _cancelConnectWaiters(self):
         """
-        Notify all pending requests for a connection that no more
-        connections are expected.
+        Notify all pending requests for a connection that no more connections
+        are expected.
         """
         self._unawait(Failure(CancelledError()))
 

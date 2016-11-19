@@ -850,8 +850,8 @@ class ClientServiceTests(SynchronousTestCase):
 
     def test_retryCancelled(self):
         """
-        When L{ClientService.stopService} is called while waiting between connection attempts,
-        the pending reconnection attempt is cancelled.
+        When L{ClientService.stopService} is called while waiting between
+        connection attempts, the pending reconnection attempt is cancelled.
         """
         clock = Clock()
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
