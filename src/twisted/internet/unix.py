@@ -172,9 +172,12 @@ class _SendmsgMixin(object):
                 return main.CONNECTION_LOST
 
         if ancillary:
-            fd = struct.unpack('i', ancillary[0][2])[0]
+            ancilliaryData = ancillary[0][2]
+            fdCount = len(ancilliaryData) // 4
+            fds = struct.unpack('i'*fdCount, ancilliaryData)
             if interfaces.IFileDescriptorReceiver.providedBy(self.protocol):
-                self.protocol.fileDescriptorReceived(fd)
+                for fd in fds:
+                    self.protocol.fileDescriptorReceived(fd)
             else:
                 log.msg(
                     format=(
@@ -184,7 +187,8 @@ class _SendmsgMixin(object):
                     hostAddress=self.getHost(), peerAddress=self.getPeer(),
                     protocolName=self._getLogPrefix(self.protocol),
                     )
-                os.close(fd)
+                for fd in fds:
+                    os.close(fd)
 
         return self._dataReceived(data)
 
