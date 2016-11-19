@@ -8,7 +8,6 @@ Implementation module for the `tkconch` command.
 
 from __future__ import print_function
 
-import Tkinter, tkFileDialog, tkMessageBox
 from twisted.conch import error
 from twisted.conch.ui import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
@@ -16,13 +15,21 @@ from twisted.conch.ssh import session, forwarding, channel
 from twisted.conch.client.default import isInKnownHosts
 from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
+from twisted.python.compat import _PY3
 
 import os, sys, getpass, struct, base64, signal
+
+if _PY3:
+    import tkinter as Tkinter
+    import tkinter.filedialog as tkFileDialog
+    import tkinter.messagebox as tkMessageBox
+else:
+    import Tkinter, tkFileDialog, tkMessageBox
 
 class TkConchMenu(Tkinter.Frame):
     def __init__(self, *args, **params):
         ## Standard heading: initialization
-        apply(Tkinter.Frame.__init__, (self,) + args, params)
+        Tkinter.Frame.__init__(self, *args, **params)
 
         self.master.title('TkConch')
         self.localRemoteVar = Tkinter.StringVar()
@@ -374,18 +381,18 @@ class SSHClientTransport(transport.SSHClientTransport):
         elif goodKey == 2: # AAHHHHH changed
             return defer.fail(error.ConchError('bad host key'))
         else:
-            if options['host'] == self.transport.getPeer()[1]:
+            if options['host'] == self.transport.getPeer().host:
                 host = options['host']
                 khHost = options['host']
             else:
                 host = '%s (%s)' % (options['host'],
-                                    self.transport.getPeer()[1])
+                                    self.transport.getPeer().host)
                 khHost = '%s,%s' % (options['host'],
-                                    self.transport.getPeer()[1])
+                                    self.transport.getPeer().host)
             keyType = common.getNS(pubKey)[0]
             ques = """The authenticity of host '%s' can't be established.\r
 %s key fingerprint is %s.""" % (host,
-                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType],
+                                {b'ssh-dss':'DSA', b'ssh-rsa':'RSA'}[keyType],
                                 fingerprint)
             ques+='\r\nAre you sure you want to continue connecting (yes/no)? '
             return deferredAskFrame(ques, 1).addCallback(self._cbVerifyHostKey, pubKey, khHost, keyType)
@@ -397,9 +404,12 @@ class SSHClientTransport(transport.SSHClientTransport):
             frame.write('Host key verification failed.\r\n')
             raise error.ConchError('bad host key')
         try:
-            frame.write("Warning: Permanently added '%s' (%s) to the list of known hosts.\r\n" % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType]))
+            frame.write(
+                "Warning: Permanently added '%s' (%s) to the list of "
+                "known hosts.\r\n" %
+                (khHost, {b'ssh-dss':'DSA', b'ssh-rsa':'RSA'}[keyType]))
             with open(os.path.expanduser('~/.ssh/known_hosts'), 'a') as known_hosts:
-                encodedKey = base64.encodestring(pubKey).replace('\n', '')
+                encodedKey = base64.encodestring(pubKey).replace(b'\n', b'')
                 known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
         except:
             log.deferr()
@@ -479,7 +489,7 @@ class SSHConnection(connection.SSHConnection):
 
 class SSHSession(channel.SSHChannel):
 
-    name = 'session'
+    name = b'session'
 
     def channelOpen(self, foo):
         #global globalSession
@@ -495,7 +505,7 @@ class SSHSession(channel.SSHChannel):
         frame.callback = c.dataReceived
         frame.canvas.focus_force()
         if options['subsystem']:
-            self.conn.sendRequest(self, 'subsystem', \
+            self.conn.sendRequest(self, b'subsystem', \
                 common.NS(options['command']))
         elif options['command']:
             if options['tty']:
@@ -503,7 +513,7 @@ class SSHSession(channel.SSHChannel):
                 #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = (25,80,0,0) #struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
-                self.conn.sendRequest(self, 'pty-req', ptyReqData)
+                self.conn.sendRequest(self, b'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
@@ -512,8 +522,8 @@ class SSHSession(channel.SSHChannel):
                 #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = (25,80,0,0) #struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
-                self.conn.sendRequest(self, 'pty-req', ptyReqData)
-            self.conn.sendRequest(self, 'shell', '')
+                self.conn.sendRequest(self, b'pty-req', ptyReqData)
+            self.conn.sendRequest(self, b'shell', b'')
         self.conn.transport.transport.setTcpNoDelay(1)
 
     def handleInput(self, char):
@@ -543,6 +553,8 @@ class SSHSession(channel.SSHChannel):
             self.write(char)
 
     def dataReceived(self, data):
+        if _PY3 and isinstance(data, bytes):
+            data = data.decode("utf-8")
         if options['ansilog']:
             print(repr(data))
         frame.write(data)
