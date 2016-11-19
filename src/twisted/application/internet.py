@@ -523,6 +523,21 @@ def backoffPolicy(initialDelay=1.0, maxDelay=60.0, factor=1.5,
 _defaultPolicy = backoffPolicy()
 
 
+def _firstResult(gen):
+    """
+    Return the first element of a generator and exhaust it.
+
+    L{MethodicalMachine.upon}'s C{collector} argument takes a generator of
+    output results. If the generator is exhausted, the later outputs aren't
+    actually run.
+
+    @param gen: Generator to extract values from
+
+    @return: The first element of the generator.
+    """
+    return list(gen)[0]
+
+
 
 class _ClientMachine(object):
     """
@@ -813,7 +828,6 @@ class _ClientMachine(object):
 
     # State Transitions
 
-    firstResult = lambda _: list(_)[0]
     _init.upon(start, enter=_connecting,
                outputs=[_connect])
     _init.upon(stop, enter=_init,
@@ -822,7 +836,7 @@ class _ClientMachine(object):
     _connecting.upon(start, enter=_connecting, outputs=[])
     _connecting.upon(stop, enter=_disconnecting,
                      outputs=[_waitForStop, _stopConnecting],
-                     collector=firstResult)
+                     collector=_firstResult)
     _connecting.upon(_connectionMade, enter=_connected,
                      outputs=[_notifyWaiters])
     _connecting.upon(_connectionFailed, enter=_waiting,
@@ -832,7 +846,7 @@ class _ClientMachine(object):
                   outputs=[])
     _waiting.upon(stop, enter=_disconnecting,
                   outputs=[_waitForStop, _stopRetrying],
-                  collector=firstResult)
+                  collector=_firstResult)
     _waiting.upon(_reconnect, enter=_connecting,
                   outputs=[_connect])
 
@@ -840,7 +854,7 @@ class _ClientMachine(object):
                     outputs=[])
     _connected.upon(stop, enter=_disconnecting,
                     outputs=[_waitForStop, _disconnect],
-                    collector=firstResult)
+                    collector=_firstResult)
     _connected.upon(_clientDisconnected, enter=_waiting,
                     outputs=[_forgetConnection, _wait])
 
@@ -871,27 +885,25 @@ class _ClientMachine(object):
 
     _init.upon(whenConnected, enter=_init,
                outputs=[_awaitingConnection],
-               collector=firstResult)
+               collector=_firstResult)
     _connecting.upon(whenConnected, enter=_connecting,
                      outputs=[_awaitingConnection],
-                     collector=firstResult)
+                     collector=_firstResult)
     _waiting.upon(whenConnected, enter=_waiting,
                   outputs=[_awaitingConnection],
-                  collector=firstResult)
+                  collector=_firstResult)
     _connected.upon(whenConnected, enter=_connected,
                     outputs=[_currentConnection],
-                    collector=firstResult)
+                    collector=_firstResult)
     _disconnecting.upon(whenConnected, enter=_disconnecting,
                         outputs=[_awaitingConnection],
-                        collector=firstResult)
+                        collector=_firstResult)
     _restarting.upon(whenConnected, enter=_restarting,
                      outputs=[_awaitingConnection],
-                     collector=firstResult)
+                     collector=_firstResult)
     _stopped.upon(whenConnected, enter=_stopped,
                   outputs=[_noConnection],
-                  collector=firstResult)
-
-    del firstResult
+                  collector=_firstResult)
 
 
 
