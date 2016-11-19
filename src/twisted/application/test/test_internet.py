@@ -847,3 +847,14 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(a, CancelledError)
         self.failureResultOf(b, CancelledError)
 
+
+    def test_retryCancelled(self):
+        """
+        When L{ClientService.stopService} is called while waiting between connection attempts,
+        the pending reconnection attempt is cancelled.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq.connectQueue[0].errback(Exception("no connection"))
+        service.stopService()
+        self.assertEqual(clock.getDelayedCalls(), [])
