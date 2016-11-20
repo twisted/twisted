@@ -20,11 +20,16 @@ class TokenPrinter:
 
     currentCol, currentLine = 0, 1
     lastIdentifier = parameters = 0
+    encoding = "utf-8"
 
     def __init__(self, writer):
         self.writer = writer
 
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
+        if _PY3 and type == tokenize.ENCODING:
+            encoding = token
+            return
+
         (srow, scol) = sCoordinates
         (erow, ecol) = eCoordinates
         if self.currentLine < srow:
