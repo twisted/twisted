@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 from stat import S_IMODE
 from os import stat, close, urandom
 from tempfile import mktemp
-from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, socketpair
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
 from hashlib import md5
 from struct import pack
@@ -397,6 +397,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # - Call sendmsg on the other end with two FDs as ancillary data.
         # - Call doRead in the FakeReceiver.
         # - Verify results on FakeProtocol.
+
+        from socket import socketpair
 
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(object):
