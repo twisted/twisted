@@ -28,7 +28,7 @@ class TokenPrinter:
 
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
         if _PY3 and type == tokenize.ENCODING:
-            encoding = token
+            self.encoding = token
             return
 
         (srow, scol) = sCoordinates
