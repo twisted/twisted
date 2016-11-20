@@ -118,10 +118,8 @@ def filter(inp, out, writer=HTMLWriter):
 def main():
     import sys
     if _PY3:
-        stdin = sys.stdin.buffer
         stdout = sys.stdout.buffer
     else:
-        stdin = sys.stdin
         stdout = sys.stdout
     with open(sys.argv[1], "rb") as f:
         filter(f, stdout)
