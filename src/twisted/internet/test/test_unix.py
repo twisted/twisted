@@ -39,7 +39,6 @@ from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
-from twisted.internet.unix import _SendmsgMixin
 from twisted.python.compat import nativeString, _PY3, iteritems
 from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
@@ -399,6 +398,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # - Verify results on FakeProtocol.
 
         from socket import socketpair
+        from twisted.internet.unix import _SendmsgMixin
 
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(ConnectableProtocol):
