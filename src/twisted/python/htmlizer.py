@@ -65,7 +65,7 @@ class HTMLWriter:
         self.noSpan = noSpan
 
     def write(self, token, type=None):
-        if _PY3:
+        if _PY3 and isinstance(token, bytes):
             token = token.decode("utf-8")
         token = escape(token)
         if _PY3:
@@ -73,8 +73,9 @@ class HTMLWriter:
         if (type is None) or (type in self.noSpan):
             self.writer(token)
         else:
-            self.writer('<span class="py-src-%s">%s</span>' %
-                        (type, token))
+            self.writer(
+                b'<span class="py-src-' + type.encode("utf-8") + b'">' + token + b'</span>')
+
 
 
 class SmallerHTMLWriter(HTMLWriter):
@@ -90,7 +91,7 @@ def filter(inp, out, writer=HTMLWriter):
     else:
         tokenizeFunc = tokenize.generate_tokens
 
-    out.write('<pre>')
+    out.write(b'<pre>')
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
         for token in tokenizeFunc(inp.readline):
@@ -98,12 +99,18 @@ def filter(inp, out, writer=HTMLWriter):
             printer(tokenType, string, start, end, line)
     except tokenize.TokenError:
         pass
-    out.write('</pre>\n')
+    out.write(b'</pre>\n')
 
 def main():
     import sys
-    with open(sys.argv[1]) as f:
-        filter(f, sys.stdout)
+    if _PY3:
+        stdin = sys.stdin.buffer
+        stdout = sys.stdout.buffer
+    else:
+        stdin = sys.stdin
+        stdout = sys.stdout
+    with open(sys.argv[1], "rb") as f:
+        filter(f, stdout)
 
 if __name__ == '__main__':
    main()
