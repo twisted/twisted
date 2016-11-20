@@ -385,7 +385,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
-    def test_MultiFileDescriptorReceivedPerRecvmsg(self):
+    def test_multiFileDescriptorReceivedPerRecvmsg(self):
         """
         Verify that _SendmsgMixin handles receiving multiple file descriptors
         per recvmsg, calling L{IFileDescriptorReceiver.fileDescriptorReceived}
