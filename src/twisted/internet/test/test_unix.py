@@ -10,9 +10,10 @@ from __future__ import division, absolute_import
 from stat import S_IMODE
 from os import stat, close, urandom
 from tempfile import mktemp
-from socket import AF_INET, SOCK_STREAM, socket
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, socketpair
 from pprint import pformat
 from hashlib import md5
+from struct import pack
 
 try:
     from socket import AF_UNIX
@@ -38,11 +39,13 @@ from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
+from twisted.internet.unix import _SendmsgMixin
 from twisted.python.compat import nativeString, _PY3, iteritems
 from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
+from twisted.python.sendmsg import sendmsg, SCM_RIGHTS
 
 if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
@@ -380,6 +383,56 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
     if sendmsgSkip is not None:
         test_fileDescriptorOverrun.skip = sendmsgSkip
+
+
+    def test_MultiFileDescriptorReceivedPerRecvmsg(self):
+        """
+        Verify that _SendmsgMixin handles receiving multiple file descriptors
+        per recvmsg, calling L{IFileDescriptorReceiver.fileDescriptorReceived}
+        once per received file descriptor.
+        """
+        # Strategy:
+        # - Create a UNIX socketpair.
+        # - Associate one end to a FakeReceiver and FakeProtocol.
+        # - Call sendmsg on the other end with two FDs as ancillary data.
+        # - Call doRead in the FakeReceiver.
+        # - Verify results on FakeProtocol.
+
+        @implementer(IFileDescriptorReceiver)
+        class FakeProtocol(object):
+            def __init__(self):
+                self.fds = []
+            def fileDescriptorReceived(self, fd):
+                self.fds.append(fd)
+                close(fd)
+
+        class FakeReceiver(_SendmsgMixin):
+            bufferSize = 1024
+            def __init__(self, skt, proto):
+                self.socket = skt
+                self.protocol = proto
+            def _dataReceived(self, data):
+                pass
+
+        send_socket, recv_socket = socketpair(AF_UNIX, SOCK_STREAM)
+        self.addCleanup(send_socket.close)
+        self.addCleanup(recv_socket.close)
+
+        proto = FakeProtocol()
+        receiver = FakeReceiver(recv_socket, proto)
+
+        data_to_send = b'some data needs to be sent'
+        fds_to_send = [send_socket.fileno(), recv_socket.fileno()]
+        ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fds_to_send))]
+        sendmsg(send_socket, data_to_send, ancillary)
+
+        receiver.doRead()
+
+        # Verify that fileDescriptorReceived was called twice.
+        self.assertEqual(len(proto.fds), 2)
+
+        # Verify that received FDs are different from the sent ones.
+        self.assertFalse(set(fds_to_send).intersection(set(proto.fds)))
 
 
     def test_avoidLeakingFileDescriptors(self):
