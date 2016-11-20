@@ -25,6 +25,7 @@ class TokenPrinter:
     def __init__(self, writer):
         self.writer = writer
 
+
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
         if _PY3 and type == tokenize.ENCODING:
             encoding = token
@@ -40,13 +41,13 @@ class TokenPrinter:
             type = "identifier"
             self.parameters = 1
         elif type == tokenize.NAME:
-             if keyword.iskeyword(token):
-                 type = 'keyword'
-             else:
-                 if self.parameters:
-                     type = 'parameter'
-                 else:
-                     type = 'variable'
+            if keyword.iskeyword(token):
+                type = 'keyword'
+            else:
+                if self.parameters:
+                    type = 'parameter'
+                else:
+                    type = 'variable'
         else:
             type = tokenize.tok_name.get(type).lower()
         self.writer(token, type)
@@ -59,6 +60,7 @@ class TokenPrinter:
             self.parameters = 0
 
 
+
 class HTMLWriter:
 
     noSpan = []
@@ -68,6 +70,7 @@ class HTMLWriter:
         noSpan = []
         reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
         self.noSpan = noSpan
+
 
     def write(self, token, type=None):
         if _PY3 and isinstance(token, bytes):
@@ -79,16 +82,20 @@ class HTMLWriter:
             self.writer(token)
         else:
             self.writer(
-                b'<span class="py-src-' + type.encode("utf-8") + b'">' + token + b'</span>')
+                b'<span class="py-src-' + type.encode("utf-8") + b'">' +
+                token + b'</span>')
 
 
 
 class SmallerHTMLWriter(HTMLWriter):
-    """HTMLWriter that doesn't generate spans for some junk.
+    """
+    HTMLWriter that doesn't generate spans for some junk.
 
     Results in much smaller HTML output.
     """
     noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
+
+
 
 def filter(inp, out, writer=HTMLWriter):
     if _PY3:
@@ -106,6 +113,8 @@ def filter(inp, out, writer=HTMLWriter):
         pass
     out.write(b'</pre>\n')
 
+
+
 def main():
     import sys
     if _PY3:
@@ -118,4 +127,4 @@ def main():
         filter(f, stdout)
 
 if __name__ == '__main__':
-   main()
+    main()
