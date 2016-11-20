@@ -414,17 +414,17 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             def _dataReceived(self, data):
                 pass
 
-        send_socket, recv_socket = socketpair(AF_UNIX, SOCK_STREAM)
-        self.addCleanup(send_socket.close)
-        self.addCleanup(recv_socket.close)
+        sendSocket, recvSocket = socketpair(AF_UNIX, SOCK_STREAM)
+        self.addCleanup(sendSocket.close)
+        self.addCleanup(recvSocket.close)
 
         proto = FakeProtocol()
-        receiver = FakeReceiver(recv_socket, proto)
+        receiver = FakeReceiver(recvSocket, proto)
 
-        data_to_send = b'some data needs to be sent'
-        fds_to_send = [send_socket.fileno(), recv_socket.fileno()]
-        ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fds_to_send))]
-        sendmsg(send_socket, data_to_send, ancillary)
+        dataToSend = b'some data needs to be sent'
+        fdsToSend = [sendSocket.fileno(), recvSocket.fileno()]
+        ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
+        sendmsg(sendSocket, dataToSend, ancillary)
 
         receiver.doRead()
 
@@ -432,7 +432,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertEqual(len(proto.fds), 2)
 
         # Verify that received FDs are different from the sent ones.
-        self.assertFalse(set(fds_to_send).intersection(set(proto.fds)))
+        self.assertFalse(set(fdsToSend).intersection(set(proto.fds)))
 
 
     def test_avoidLeakingFileDescriptors(self):
