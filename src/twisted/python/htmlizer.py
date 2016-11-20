@@ -20,9 +20,6 @@ class TokenPrinter:
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
         (srow, scol) = sCoordinates
         (erow, ecol) = eCoordinates
-        #print "printtoken(%r,%r,%r,(%r,%r),(%r,%r),%r), row=%r,col=%r" % (
-        #    self, type, token, srow,scol, erow,ecol, line,
-        #    self.currentLine, self.currentCol)
         if self.currentLine < srow:
             self.writer('\n'*(srow-self.currentLine))
             self.currentLine, self.currentCol = srow, 0
