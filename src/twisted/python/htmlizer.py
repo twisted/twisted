@@ -6,7 +6,14 @@
 HTML rendering of Python source.
 """
 
-import tokenize, cgi, keyword
+from twisted.python.compat import _PY3
+
+import tokenize, keyword
+if _PY3:
+    from html import escape
+else:
+    from cgi import escape
+
 from . import reflect
 
 class TokenPrinter:
@@ -58,7 +65,11 @@ class HTMLWriter:
         self.noSpan = noSpan
 
     def write(self, token, type=None):
-        token = cgi.escape(token)
+        if _PY3:
+            token = token.decode("utf-8")
+        token = escape(token)
+        if _PY3:
+            token = token.encode("utf-8")
         if (type is None) or (type in self.noSpan):
             self.writer(token)
         else:
