@@ -23,7 +23,9 @@ class FilterTests(TestCase):
         input = BytesIO(b"")
         output = BytesIO()
         filter(input, output)
-        self.assertEqual(output.getvalue(), b'<pre><span class="py-src-endmarker"></span></pre>\n')
+        self.assertEqual(
+            output.getvalue(),
+            b'<pre><span class="py-src-endmarker"></span></pre>\n')
 
 
     def test_variable(self):
@@ -37,5 +39,6 @@ class FilterTests(TestCase):
         filter(input, output)
         self.assertEqual(
             output.getvalue(),
-            b'<pre><span class="py-src-variable">foo</span><span class="py-src-newline">\n'
+            b'<pre><span class="py-src-variable">foo</span>'
+            b'<span class="py-src-newline">\n'
             b'</span><span class="py-src-endmarker"></span></pre>\n')
