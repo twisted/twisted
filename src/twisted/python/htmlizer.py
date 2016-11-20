@@ -85,10 +85,17 @@ class SmallerHTMLWriter(HTMLWriter):
     noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
 
 def filter(inp, out, writer=HTMLWriter):
+    if _PY3:
+        tokenizeFunc = tokenize.tokenize
+    else:
+        tokenizeFunc = tokenize.generate_tokens
+
     out.write('<pre>')
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
-        tokenize.tokenize(inp.readline, printer)
+        for token in tokenizeFunc(inp.readline):
+            (tokenType, string, start, end, line) = token
+            printer(tokenType, string, start, end, line)
     except tokenize.TokenError:
         pass
     out.write('</pre>\n')
