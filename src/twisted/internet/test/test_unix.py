@@ -401,7 +401,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         from socket import socketpair
 
         @implementer(IFileDescriptorReceiver)
-        class FakeProtocol(object):
+        class FakeProtocol(ConnectableProtocol):
             def __init__(self):
                 self.fds = []
             def fileDescriptorReceived(self, fd):
