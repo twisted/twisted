@@ -1958,7 +1958,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), 
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
                                                     default_backend())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
@@ -2170,15 +2170,15 @@ class GetMACTests(unittest.TestCase):
         self.assertGetMAC(
             b"hmac-sha2-512", sha512, digestSize=64, blockPadSize=64)
 
-        def test_hmacsha2384(self):
-            """
-            When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
-            algorithm name it returns a tuple of (sha384 digest object, inner pad,
-            outer pad, sha384 digest size) with a C{key} attribute set to the
-            value of the key supplied.
-            """
-            self.assertGetMAC(
-                b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=64)
+    def test_hmacsha2384(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
+        algorithm name it returns a tuple of (sha384 digest object, inner pad,
+        outer pad, sha384 digest size) with a C{key} attribute set to the
+        value of the key supplied.
+        """
+        self.assertGetMAC(
+            b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=80)
 
 
     def test_hmacsha2256(self):
