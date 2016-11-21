@@ -435,6 +435,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         # Verify that received FDs are different from the sent ones.
         self.assertFalse(set(fdsToSend).intersection(set(proto.fds)))
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsg.skip = sendmsgSkip
 
 
     def test_avoidLeakingFileDescriptors(self):
