@@ -8,6 +8,7 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
+from constantly import Names, NamedConstant
 from hashlib import md5
 
 import OpenSSL
@@ -20,6 +21,35 @@ except ImportError:
 
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
+
+# If we don't have TLS v1.3 yet, we can't disable it -- this is just so when it
+# makes it into OpenSSL, connections end up going to v1.3
+if not hasattr(SSL, "OP_NO_TLSv1_3"):
+    _OP_NO_TLSv1_3 = 0x00
+else:
+    _OP_NO_TLSv1_3 = SSL.OP_NO_TLSv1_3
+
+
+class TLSVersion(Names):
+    """
+    TLS versions that we can negotiate with the client/server.
+    """
+    SSLv3 = NamedConstant()
+    TLSv1_0 = NamedConstant()
+    TLSv1_1 = NamedConstant()
+    TLSv1_2 = NamedConstant()
+    TLSv1_3 = NamedConstant()
+
+
+
+_tlsDisableFlags = {
+    TLSVersion.SSLv3: SSL.OP_NO_SSLv3,
+    TLSVersion.TLSv1_0: SSL.OP_NO_TLSv1,
+    TLSVersion.TLSv1_1: SSL.OP_NO_TLSv1_1,
+    TLSVersion.TLSv1_2: SSL.OP_NO_TLSv1_2,
+    TLSVersion.TLSv1_3: _OP_NO_TLSv1_3,
+}
+
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -1365,12 +1395,14 @@ class OpenSSLCertificateOptions(object):
     _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE',
                                            0x00400000)
     _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
+    _OP_NO_TLSv1_3 = _OP_NO_TLSv1_3
 
 
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
+        ['method', 'tlsProtocols'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1390,6 +1422,7 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
+                 tlsProtocols=None,
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1521,10 +1554,19 @@ class OpenSSLCertificateOptions(object):
         )
 
         if method is None:
-            # If no method is specified set things up so that TLSv1.0 and newer
-            # will be supported.
             self.method = SSL.SSLv23_METHOD
-            self._options |= SSL.OP_NO_SSLv3
+
+            if tlsProtocols is None:
+                # If no method or protocols are specified set things up so that
+                # TLSv1.0 and newer will be supported.
+                self._options |= SSL.OP_NO_SSLv3
+            else:
+                if len(tlsProtocols) == 0:
+                    raise ValueError(
+                        "Please specify some protocols in tlsProtocols.")
+
+                for version in set(TLSVersion.iterconstants()) - set(tlsProtocols):
+                    self._options |= _tlsDisableFlags[version]
         else:
             # Otherwise respect the application decision.
             self.method = method
