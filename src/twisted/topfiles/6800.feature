@@ -1,0 +1,1 @@
+twisted.internet.ssl.CertificateOptions now takes a tlsProtocols parameter, which allows you to explicitly pick the versions of TLS or SSL you wish to negotiate. For example, you can now specify TLSv1.2 and TLSv1.0 but not TLSv1.1.
