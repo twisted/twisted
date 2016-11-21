@@ -44,7 +44,6 @@ from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
-from twisted.python.sendmsg import sendmsg, SCM_RIGHTS
 
 if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
@@ -399,6 +398,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         from socket import socketpair
         from twisted.internet.unix import _SendmsgMixin
+        from twisted.python.sendmsg import sendmsg, SCM_RIGHTS
 
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(ConnectableProtocol):
