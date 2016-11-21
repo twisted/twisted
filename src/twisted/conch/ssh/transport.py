@@ -1275,7 +1275,7 @@ class SSHServerTransport(SSHTransportBase):
             curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
         except KeyError:
             raise UnsupportedAlgorithm('unused-key')
-        
+
         # Generate the private key
         ecPriv = ec.generate_private_key(curve, default_backend())
 
@@ -1287,8 +1287,8 @@ class SSHServerTransport(SSHTransportBase):
         # a format for the cryptography module
         theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
                         curve, pktPub).public_key(default_backend())
-    
-        # We need to convert to hex, 
+
+        # We need to convert to hex,
         # so we can convert to an int
         # so we can make it a multiple precision int.
         sharedSecret = MP(
@@ -1378,7 +1378,7 @@ class SSHServerTransport(SSHTransportBase):
             self.ignoreNextPacket = 0
             return
 
-        # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD 
+        # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD
         # have the same value, so use another cue
         # to decide what kind of message the peer sent us.
         if _kex.isFixedGroup(self.kexAlg):
@@ -1641,8 +1641,8 @@ class SSHClientTransport(SSHTransportBase):
                             self.curve, pubKey).public_key(
                             default_backend())
 
-            # We need to convert to hex, 
-            # so we can convert to an int 
+            # We need to convert to hex,
+            # so we can convert to an int
             # so we can make a multiple precision int.
             sharedSecret = MP(
                            int(

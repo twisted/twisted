@@ -772,7 +772,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         ecblob = (common.NS(ecPublicData['curve']) +
                   common.NS(ecPublicData['curve'][-8:]) +
-                  common.NS(b'\x04' + 
+                  common.NS(b'\x04' +
                     utils.int_to_bytes(ecPublicData['x'],  32) +
                     utils.int_to_bytes(ecPublicData['y'],  32))
             )
@@ -887,7 +887,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             keys.Key(self.ecObj).blob(),
             common.NS(keydata.ECDatanistp256['curve']) +
             common.NS(keydata.ECDatanistp256['curve'][-8:]) +
-            common.NS(b'\x04' + 
+            common.NS(b'\x04' +
                utils.int_to_bytes(
                  self.ecObj.private_numbers().public_numbers.x, byteLength) +
                    utils.int_to_bytes(
