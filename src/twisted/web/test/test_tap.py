@@ -168,7 +168,7 @@ class ServiceTests(TestCase):
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
         self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
+            strports.parse(options['ports'][0], None)[:2],
             ('UNIX', (path, None)))
 
     if not IReactorUNIX.providedBy(reactor):
@@ -184,7 +184,7 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
+            endpoints._parseServer(options['ports'][0], None)[:2],
             ('TCP', (8080, None)))
 
 
