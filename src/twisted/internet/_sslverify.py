@@ -1433,8 +1433,9 @@ class OpenSSLCertificateOptions(object):
 
         @param method: The SSL protocol to use, one of SSLv23_METHOD,
             SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD (or any other method
-            constants provided by pyOpenSSL).  By default, a setting will be
-            used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
+            constants provided by pyOpenSSL). By default, a setting will be
+            used which allows TLSv1.0, TLSv1.1, and TLSv1.2. Can not be used
+            with C{tlsProtocols}.
 
         @param verify: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
@@ -1523,6 +1524,11 @@ class OpenSSLCertificateOptions(object):
             earlier in the list are preferred over those later in the list.
         @type acceptableProtocols: L{list} of L{bytes}
 
+        @param tlsProtocols: The TLS protocols this peer wishes to speak. TLS
+            protocols that are not explicitly in this list will not be
+            negotiated. Can not be used with C{method}.
+        @type tlsProtocols: L{list} of L{TLSVersion} constants
+
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
         @raise ValueError: when C{verify} is L{True} but C{caCerts} doesn't
@@ -1535,6 +1541,10 @@ class OpenSSLCertificateOptions(object):
         @raise TypeError: if C{trustRoot} is passed in combination with
             C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
             C{trustRoot} in new code, as its semantics are less tricky.
+        @raise TypeError: if C{method} is passed in combination with
+            C{tlsProtocols}. Please prefer the more explicit C{tlsProtocols} in
+            new code.
+
         @raises NotImplementedError: If acceptableProtocols were provided but
             no negotiation mechanism is available.
         """

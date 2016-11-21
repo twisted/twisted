@@ -1,8 +1,3 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
 Using TLS in Twisted
 ====================
 
@@ -204,10 +199,35 @@ For example,
     options = CertificateOptions(..., dhParameters=dhParams)
 
 Another part of the TLS protocol which ``CertificateOptions`` can control is the version of the TLS or SSL protocol used.
-This is often called the context's "method".
+There are two ways to configure it, either by configuring a list of protocols, or by the legacy way of setting the internal context's "method".
+By default, Twisted will configure it to use TLSv1.0 or later and disable the insecure SSLv3 protocol, but this manual control over protocols can be helpful if you need to support legacy SSLv3 systems, or you wish to restrict it down to just the strongest of the TLS versions.
+
+You can give ``CertificateOptions`` a list of TLS versions you wish it to negotiate with the ``tlsProtocols`` argument in the initializer:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(..., tlsProtocols=[TLSVersion.TLSv1_0,
+                                                    TLSVersion.TLSv1_2])
+
+This will cause it to not negotiate SSLv2, SSLv3, or TLSv1.1.
+SSLv3 and TLSv1.1 are still available, and you can enable support for SSLv3 if you wish.
+As an example, this supports all TLS versions and SSLv3:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(..., tlsProtocols=[TLSVersion.SSLv3,
+                                                    TLSVersion.TLSv1_0,
+                                                    TLSVersion.TLSv1_1,
+                                                    TLSVersion.TLSv1_2])
+
+Newer and future OpenSSL versions may completely remove the ability to negotiate the insecure SSLv3 protocol, in which case, this will not allow you to re-enable it.
+
+Alternatively, you can alter the context's "method".
 By default, ``CertificateOptions`` creates contexts that require at least the TLSv1 protocol.
 ``CertificateOptions`` also supports the older SSLv3 protocol (which may be required interoperate with an existing service or piece of software).
-To allow SSLv3, just pass ``OpenSSL.SSL.SSLv3_METHOD`` to ``CertificateOptions``'s initializer:
+To allow just SSLv3 (and no other protocols), just pass ``OpenSSL.SSL.SSLv3_METHOD`` to ``CertificateOptions``'s initializer:
 
 .. code-block:: python
 
@@ -217,6 +237,7 @@ To allow SSLv3, just pass ``OpenSSL.SSL.SSLv3_METHOD`` to ``CertificateOptions``
 
 The somewhat confusingly-named ``OpenSSL.SSL.SSLv23_METHOD`` is also supported (to enable SSLv3 or better, based on negotiation).
 SSLv2 is insecure; it is explicitly not supported and will be disabled in all configurations.
+``SSLv23_METHOD`` may not negotiate SSLv3 on future OpenSSLs, due to its insecurity.
 
 Additionally, it is possible to limit the acceptable ciphers for your connection by passing an :api:`twisted.internet.interfaces.IAcceptableCiphers <IAcceptableCiphers>` object to ``CertificateOptions``.
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
