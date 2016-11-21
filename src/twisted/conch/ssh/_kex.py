@@ -48,6 +48,7 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
         "Python generator functions.)")
 
 
+
 class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
     """
     An L{_IEllipticCurveExchangeKexAlgorithm} describes a key exchange algorithm
@@ -73,6 +74,8 @@ class _ECDH256(object):
     preference = 1
     hashProcessor = sha256
 
+
+
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
 class _ECDH384(object):
     """
@@ -81,6 +84,8 @@ class _ECDH384(object):
     """
     preference = 2
     hashProcessor = sha384
+
+
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
 class _ECDH512(object):
@@ -160,7 +165,7 @@ class _DHGroup14SHA1(object):
 
 
 
-#Which ECDH hash function to use is dependent on the size.
+# Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms = {
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
@@ -200,6 +205,7 @@ def getKex(kexAlgorithm):
     return _kexAlgorithms[kexAlgorithm]
 
 
+
 def isEllipticCurve(kexAlgorithm):
     """
     Returns C{True} if C{kexAlgorithm} is an elliptic curve.
@@ -212,6 +218,7 @@ def isEllipticCurve(kexAlgorithm):
     @rtype: C{bool}
     """
     return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
+
 
 
 def isFixedGroup(kexAlgorithm):

@@ -249,11 +249,12 @@ class Key(object):
                 ).public_key(default_backend())
             )
         elif keyType in _curveTable:
-            # First we have to make an EllipticCuvePublicNumbers from the provided curve and points,
+            # First we have to make an EllipticCuvePublicNumbers from the 
+            # provided curve and points,
             # then turn it into a public key object.
             return cls(
                 ec.EllipticCurvePublicNumbers.from_encoded_point(_curveTable[keyType],
-                                        common.getNS(rest, 2)[1]).public_key(default_backend()))
+                       common.getNS(rest, 2)[1]).public_key(default_backend()))
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -771,11 +772,11 @@ class Key(object):
         if self.type() == 'EC':
             if self.isPublic():
                 return self._keyObject.public_bytes(serialization.Encoding.PEM,
-                                                    serialization.PublicFormat.SubjectPublicKeyInfo)
+                               serialization.PublicFormat.SubjectPublicKeyInfo)
             else:
                 return self._keyObject.private_bytes(serialization.Encoding.PEM,
-                                                     serialization.PrivateFormat.TraditionalOpenSSL,
-                                                     serialization.NoEncryption())
+                                serialization.PrivateFormat.TraditionalOpenSSL,
+                                serialization.NoEncryption())
         else:
             lines = [
                 '<%s %s (%s bits)' % (
@@ -1101,10 +1102,10 @@ class Key(object):
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']))
         elif type == 'EC':
-            byte_length = (self._keyObject.curve.key_size + 7) // 8
+            byteLength = (self._keyObject.curve.key_size + 7) // 8
             return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
-                        common.NS(b'\x04' + utils.int_to_bytes(data['x'], byte_length) +
-                utils.int_to_bytes(data['y'], byte_length)))
+                        common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
+                utils.int_to_bytes(data['y'], byteLength)))
         else:
             raise BadKeyError("unknown key type %s" % (type,))
 
@@ -1349,7 +1350,7 @@ class Key(object):
         @rtype: L{bytes}
         @return: A signature for the given data.
         """
-        keyType = self.type()  # takes care of bad key type.
+        keyType = self.type()
         if keyType == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
