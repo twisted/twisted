@@ -1421,10 +1421,16 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         """
         self.proto.kexAlg = b'bad-curve'
         self.proto.keyAlg = b'ssh-rsa'
-        self.assertRaises(UnsupportedAlgorithm, self.proto._ssh_KEX_ECDH_INIT, common.NS(b'unused-key'))
+        self.assertRaises(UnsupportedAlgorithm,
+                          self.proto._ssh_KEX_ECDH_INIT,
+                          common.NS(b'unused-key'))
 
 
     def test_checkBad_KEX_INIT_CurveName(self):
+        """
+        Test that if the server received a bad name for a curve
+        we raise an UnsupportedAlgorithm error.
+        """
         kexmsg = (
             b"\xAA" * 16 +
             common.NS(b'ecdh-sha2-nistp256') +
@@ -1952,7 +1958,8 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), 
+                                                    default_backend())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
@@ -1964,8 +1971,9 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
 
-        self.proto.ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
-                                       common.NS(encPub) + common.NS(b'bad-signature'))
+        self.proto.ssh_KEX_ECDH_REPLY(
+             common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+                       common.NS(encPub) + common.NS(b'bad-signature'))
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
