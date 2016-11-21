@@ -39,6 +39,7 @@ class TLSVersion(Names):
     TLSv1_1 = NamedConstant()
     TLSv1_2 = NamedConstant()
     TLSv1_3 = NamedConstant()
+    Highest = NamedConstant()
 
 
 
@@ -50,6 +51,35 @@ _tlsDisableFlags = {
     TLSVersion.TLSv1_3: _OP_NO_TLSv1_3,
 }
 
+
+class TLSVersionRange(object):
+    """
+    A range of L{TLSVersion}s.
+    """
+
+    def __init__(self, fromVersion, toVersion):
+        """
+        @param fromVersion: The minimal version to support.
+        @type fromVersion: L{TLSVersion} constant
+
+        @param toVersion: The maximal version to support (where Highest is the
+            newest at all times)
+        @type toVersion: L{TLSVersion} constant
+        """
+        versions = list(TLSVersion.iterconstants())
+
+        if versions.index(fromVersion) > versions.index(toVersion):
+            raise ValueError(
+                "fromVersion must be an earlier version than toVersion")
+
+        if fromVersion is TLSVersion.Highest:
+            raise ValueError(
+                ("fromVersion cannot be 'Highest', to use just the highest "
+                 "version, pass it directly to CertificateOptions, not in a "
+                 "range"))
+
+        self._fromVersion = fromVersion
+        self._toVersion = toVersion
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -1524,10 +1554,10 @@ class OpenSSLCertificateOptions(object):
             earlier in the list are preferred over those later in the list.
         @type acceptableProtocols: L{list} of L{bytes}
 
-        @param tlsProtocols: The TLS protocols this peer wishes to speak. TLS
-            protocols that are not explicitly in this list will not be
-            negotiated. Can not be used with C{method}.
-        @type tlsProtocols: L{list} of L{TLSVersion} constants
+        @param tlsProtocols: The TLS protocols this peer wishes to speak.
+            Either a single protocol from L{TLSVersion} or a L{TLSVersionRange}
+            with a lowest and highest L{TLSVersion}.
+        @type tlsProtocols: L{TLSVersion} constant or L{TLSVersionRange}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1571,11 +1601,35 @@ class OpenSSLCertificateOptions(object):
                 # TLSv1.0 and newer will be supported.
                 self._options |= SSL.OP_NO_SSLv3
             else:
-                if len(tlsProtocols) == 0:
-                    raise ValueError(
-                        "Please specify some protocols in tlsProtocols.")
+                versions = list(TLSVersion.iterconstants())
 
-                for version in set(TLSVersion.iterconstants()) - set(tlsProtocols):
+                if not isinstance(tlsProtocols, TLSVersionRange):
+                    if tlsProtocols is TLSVersion.Highest:
+                        if hasattr(SSL, "OP_NO_TLSv1_3"):
+                            # Enable TLSv1.3 if we have it...
+                            tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_3,
+                                                           TLSVersion.Highest)
+                        else:
+                            # Otherwise fall back to 1.2.
+                            tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_2,
+                                                           TLSVersion.Highest)
+                    else:
+                        tlsProtocols = TLSVersionRange(tlsProtocols,
+                                                       tlsProtocols)
+
+                excludedVersions = []
+
+                for x in versions[0:versions.index(tlsProtocols._fromVersion)]:
+                    excludedVersions.append(x)
+
+                if tlsProtocols._toVersion is not TLSVersion.Highest:
+                    for x in versions[versions.index(
+                            tlsProtocols._toVersion):]:
+                        if (x is not tlsProtocols._toVersion and
+                            x is not TLSVersion.Highest):
+                            excludedVersions.append(x)
+
+                for version in excludedVersions:
                     self._options |= _tlsDisableFlags[version]
         else:
             # Otherwise respect the application decision.
