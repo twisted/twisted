@@ -816,6 +816,134 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(options, ctx._options & options)
 
 
+    def test_tlsProtocolsNeedsItems(self):
+        """
+        Passing an empty list in C{tlsProtocols} to
+        L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
+        exception.
+        """
+        with self.assertRaises(ValueError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                tlsProtocols=[],
+            )
+
+        self.assertEqual(e.exception.args,
+                         ("Please specify some protocols in tlsProtocols.",))
+
+
+    def test_tlsProtocolsNeedsNoMethod(self):
+        """
+        Passing C{method} and C{tlsProtocols} to
+        L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
+        exception.
+        """
+        with self.assertRaises(TypeError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                method=SSL.SSLv23_METHOD,
+                tlsProtocols=[sslverify.TLSVersion.SSLv3],
+            )
+
+        # lol best error message
+        self.assertEqual(e.exception.args, ("nope",))
+
+
+    def test_tlsProtocolsSSLv3Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{tlsProtocols} set to just SSLv3, it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            tlsProtocols=[sslverify.TLSVersion.SSLv3],
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
+                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsTLSv1Point0Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{tlsProtocols} set to just v1.0, it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            tlsProtocols=[sslverify.TLSVersion.TLSv1_0],
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsTLSv1Point1Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{tlsProtocols} set to just v1.1, it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            tlsProtocols=[sslverify.TLSVersion.TLSv1_1],
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsTLSv1Point2Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{tlsProtocols} set to just v1.2, it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            tlsProtocols=[sslverify.TLSVersion.TLSv1_2],
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsAllModernTLS(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{tlsProtocols} set to TLSv1.0, TLSv1.1, and TLSv1.2, it will exclude
+        both SSLs and the (unreleased) TLSv1.3.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            tlsProtocols=[sslverify.TLSVersion.TLSv1_0,
+                          sslverify.TLSVersion.TLSv1_1,
+                          sslverify.TLSVersion.TLSv1_2],
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
     def test_dhParams(self):
         """
         If C{dhParams} is set, they are loaded into each new context.
