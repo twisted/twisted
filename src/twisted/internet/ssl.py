@@ -247,7 +247,7 @@ __all__ = [
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
     'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
-    'platformTrust', 'OpenSSLDefaultPaths', 'TLSVersion'
+    'platformTrust', 'OpenSSLDefaultPaths', 'TLSVersion',
 
     'VerificationError', 'optionsForClientTLS',
     'ProtocolNegotiationSupport', 'protocolNegotiationMechanisms',
