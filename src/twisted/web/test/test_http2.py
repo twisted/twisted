@@ -477,7 +477,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         requestBytes += buildRequestBytes(headers, body, frameFactory)
 
         connection.makeConnection(transport)
-        # one byte at a time, to stress the implementation.
+        # One byte at a time, to stress the implementation.
         for byte in iterbytes(requestBytes):
             connection.dataReceived(byte)
 
