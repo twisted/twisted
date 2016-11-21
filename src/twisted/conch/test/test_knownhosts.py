@@ -1255,14 +1255,6 @@ class DefaultAPITests(TestCase):
         return self.assertFailure(d, UserRejectedKey)
 
 
-    def test_verifyECKeyType(self):
-        import twisted.conch
-
-        d = default.verifyHostKey(
-            self.fakeTransport, b"4.3.2.1", twisted.conch.test.keydata.privateECDSA_openssh384,
-            "Again, not required.")
-        return self.assertEqual(d.keytype, "ECDSA")
-
     def test_verifyBadKey(self):
         """
         L{default.verifyHostKey} should return a L{Deferred} which fails with
