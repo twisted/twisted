@@ -1188,9 +1188,14 @@ attr n:
         public key.
         """
         self.assertEqual(repr(keys.Key(self.ecObj).public()),
-"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKi" +
-"mX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v46We1hLMyz6ObUBYgkN/34" +
-"n42F4vpeA=")
+"""<Elliptic Curve Public Key (256 bits)
+curve:
+\tecdsa-sha2-nistp256
+x:
+\t76282513020392096317118503144964731774299773481750550543382904345687059013883
+y:
+\t81543197864602852632265664769441647534344375894314319681061137159310646683104>
+""")
 
 
     def test_reprPrivateECDSA(self):
@@ -1199,12 +1204,17 @@ attr n:
         private key.
         """
         self.assertEqual(repr(keys.Key(self.ecObj)),
-"""-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgTJTVg5PYnHGh/Bsl
-ciMZ+101wkrnlpB02uEi3bFhDPShRANCAASopl9Q2e/kI9EqX3jzG6NaW+shpAG+
-Ze3bgtZfOecg+7RH0H6pO23O7+OlntYSzMs+jm1AWIJDf9+J+NheL6Xg
------END PRIVATE KEY-----
+"""<Elliptic Curve Private Key (256 bits)
+curve:
+\tecdsa-sha2-nistp256
+privateValue:
+\t34638743477210341700964008455655698253555655678826059678074967909361042656500
+x:
+\t76282513020392096317118503144964731774299773481750550543382904345687059013883
+y:
+\t81543197864602852632265664769441647534344375894314319681061137159310646683104>
 """)
+
 
 
 class KeyKeyObjectTests(unittest.TestCase):

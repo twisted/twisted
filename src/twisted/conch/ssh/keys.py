@@ -771,25 +771,21 @@ class Key(object):
         Return a pretty representation of this object.
         """
         if self.type() == 'EC':
+            data = self.data()
+            name = data['curve'].decode('utf-8')
+
             if self.isPublic():
-                k = self._keyObject.public_bytes(
-                             serialization.Encoding.OpenSSH,
-                             serialization.PublicFormat.OpenSSH)
-
-                if _PY3:
-                    k = k.decode('utf-8')
-
-                return k
+                out = '<Elliptic Curve Public Key (%s bits)' % (name[-3:])
             else:
-                k = self._keyObject.private_bytes(
-                             serialization.Encoding.PEM,
-                             serialization.PrivateFormat.PKCS8,
-                             serialization.NoEncryption())
+                out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:])
 
-                if _PY3:
-                    k = k.decode('utf-8')
+            for k, v in sorted(data.items()):
+                if _PY3 and k == 'curve':
+                    out += "\ncurve:\n\t%s" % (name)
+                else:
+                    out += "\n%s:\n\t%s" % (k,v)
 
-                return k
+            return out + ">\n"
         else:
             lines = [
                 '<%s %s (%s bits)' % (
@@ -797,8 +793,6 @@ class Key(object):
                     self.isPublic() and 'Public Key' or 'Private Key',
                     self._keyObject.key_size)]
             for k, v in sorted(self.data().items()):
-                if _PY3 and isinstance(k, bytes):
-                    k = k.decode('ascii')
                 lines.append('attr %s:' % (k,))
                 by = common.MP(v)[4:]
                 while by:
