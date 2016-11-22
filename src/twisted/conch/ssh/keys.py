@@ -775,7 +775,8 @@ class Key(object):
                 return self._keyObject.public_bytes(serialization.Encoding.PEM,
                                serialization.PublicFormat.SubjectPublicKeyInfo)
             else:
-                return self._keyObject.private_bytes(serialization.Encoding.PEM,
+                return self._keyObject.private_bytes(
+                                serialization.Encoding.PEM,
                                 serialization.PrivateFormat.TraditionalOpenSSL,
                                 serialization.NoEncryption())
         else:
@@ -1369,7 +1370,7 @@ class Key(object):
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
-        elif keyType == 'EC':  # pragma: no branch
+        elif keyType == 'EC':  # Pragma: no branch
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1386,7 +1387,7 @@ class Key(object):
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)
 
-            # int_to_bytes returns rb[0] as a str in python2
+            # Int_to_bytes returns rb[0] as a str in python2
             # and an as int in python3
             if type(rb[0]) is str:
                 rcomp = ord(rb[0])
@@ -1453,7 +1454,7 @@ class Key(object):
             verifier = k.verifier(
                 signature, hashes.SHA1())
 
-        elif keyType == 'EC':  # pragma: no branch
+        elif keyType == 'EC':  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
             rstr, sstr, rest = common.getNS(concatenatedSignature, 2)
             r = int_from_bytes(rstr, 'big')

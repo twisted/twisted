@@ -1661,7 +1661,8 @@ class SSHClientTransport(SSHTransportBase):
 
             exchangeHash = h.digest()
 
-            if not keys.Key.fromString(theirECHost).verify(signature, exchangeHash):
+            if not keys.Key.fromString(theirECHost).verify(
+                                                      signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                     b'bad signature')
             else:
@@ -1675,7 +1676,8 @@ class SSHClientTransport(SSHTransportBase):
         #fingerprint = nativeString(base64.b64encode(
         #        sha256(hostKey).digest()))
 
-        fingerprint = b':'.join([binascii.hexlify(ch) for ch in iterbytes(md5(hostKey).digest())])
+        fingerprint = b':'.join(
+             [binascii.hexlify(ch) for ch in iterbytes(md5(hostKey).digest())])
         d = self.verifyHostKey(hostKey, fingerprint)
         d.addCallback(_continue_KEX_ECDH_REPLY, hostKey, pubKey, signature)
         d.addErrback(

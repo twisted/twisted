@@ -2170,6 +2170,7 @@ class GetMACTests(unittest.TestCase):
         self.assertGetMAC(
             b"hmac-sha2-512", sha512, digestSize=64, blockPadSize=64)
 
+
     def test_hmacsha2384(self):
         """
         When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
