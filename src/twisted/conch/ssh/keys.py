@@ -775,15 +775,15 @@ class Key(object):
             name = data['curve'].decode('utf-8')
 
             if self.isPublic():
-                out = '<Elliptic Curve Public Key (%s bits)' % (name[-3:])
+                out = '<Elliptic Curve Public Key (%s bits)' % (name[-3:],)
             else:
-                out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:])
+                out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
 
             for k, v in sorted(data.items()):
                 if _PY3 and k == 'curve':
-                    out += "\ncurve:\n\t%s" % (name)
+                    out += "\ncurve:\n\t%s" % (name,)
                 else:
-                    out += "\n%s:\n\t%s" % (k,v)
+                    out += "\n%s:\n\t%s" % (k, v)
 
             return out + ">\n"
         else:
