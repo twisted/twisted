@@ -1574,11 +1574,8 @@ class SSHClientTransport(SSHTransportBase):
             return
         # Are we using ECDH?
         if _kex.isEllipticCurve(self.kexAlg):
-            try:
-                # Find the base curve info
-                self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
-            except KeyError:
-                raise UnsupportedAlgorithm('unused-key')
+            # Find the base curve info
+            self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
 
             # Generate the keys
             self.ecPriv = ec.generate_private_key(self.curve,

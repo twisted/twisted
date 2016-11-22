@@ -772,12 +772,12 @@ class Key(object):
         """
         if self.type() == 'EC':
             if self.isPublic():
-                return self._keyObject.public_bytes(serialization.Encoding.PEM,
-                               serialization.PublicFormat.SubjectPublicKeyInfo)
+                return self._keyObject.public_bytes(serialization.Encoding.OpenSSH,
+                               serialization.PublicFormat.OpenSSH)
             else:
                 return self._keyObject.private_bytes(
                                 serialization.Encoding.PEM,
-                                serialization.PrivateFormat.TraditionalOpenSSL,
+                                serialization.PrivateFormat.PKCS8,
                                 serialization.NoEncryption())
         else:
             lines = [
@@ -1108,8 +1108,6 @@ class Key(object):
             return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
                 common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
                 utils.int_to_bytes(data['y'], byteLength)))
-        else:
-            raise BadKeyError("unknown key type %s" % (type,))
 
 
     def privateBlob(self):
@@ -1158,8 +1156,6 @@ class Key(object):
         elif type == 'EC':
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['privateValue']))
-        else:
-            raise BadKeyError("unknown key type %s" % (type,))
 
     def toString(self, type, extra=None):
         """
@@ -1407,8 +1403,6 @@ class Key(object):
                 sb = b"\x00" + sb
 
             ret = common.NS(common.NS(rb) + common.NS(sb))
-        else:
-            raise BadKeyError("unknown key type %s" % (self.type(),))
         return common.NS(self.sshType()) + ret
 
     def verify(self, signature, data):
