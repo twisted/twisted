@@ -1520,6 +1520,10 @@ class OpenSSLCertificateOptions(object):
             self._OP_CIPHER_SERVER_PREFERENCE
         )
 
+        # Set the mode to Release Buffers, which demallocs send/recv buffers on
+        # idle TLS connections to save memory
+        self._mode = SSL.MODE_RELEASE_BUFFERS
+
         if method is None:
             # If no method is specified set things up so that TLSv1.0 and newer
             # will be supported.
@@ -1620,6 +1624,7 @@ class OpenSSLCertificateOptions(object):
     def _makeContext(self):
         ctx = self._contextFactory(self.method)
         ctx.set_options(self._options)
+        ctx.set_mode(self._mode)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)
