@@ -82,6 +82,49 @@ class TLSVersionRange(object):
         self._toVersion = toVersion
 
 
+
+def _getExcludedTLSProtocols(tlsProtocols):
+    """
+    Given a L{TLSVersion} constant, or a L{TLSVersionRange}, figure out what
+    versions we want to disable (as OpenSSL is an exclusion based API).
+
+    @param tlsProtocols: The protocol or protocols (in a range) we want.
+    @type tlsProtocols: L{TLSVersion} constant or L{TLSVersionRange}
+
+    @return: The versions we want to disable.
+    @rtype: L{list} of L{TLSVersion} constants.
+    """
+    versions = list(TLSVersion.iterconstants())
+
+    if not isinstance(tlsProtocols, TLSVersionRange):
+        if tlsProtocols is TLSVersion.Highest:
+            if hasattr(SSL, "OP_NO_TLSv1_3"):
+                # Enable TLSv1.3 if we have it...
+                tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_3,
+                                               TLSVersion.Highest)
+            else:
+                # Otherwise fall back to 1.2.
+                tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_2,
+                                               TLSVersion.Highest)
+        else:
+            tlsProtocols = TLSVersionRange(tlsProtocols,
+                                           tlsProtocols)
+
+    excludedVersions = []
+
+    for x in versions[0:versions.index(tlsProtocols._fromVersion)]:
+        excludedVersions.append(x)
+
+    if tlsProtocols._toVersion is not TLSVersion.Highest:
+        for x in versions[versions.index(tlsProtocols._toVersion):]:
+            if (x is not tlsProtocols._toVersion and
+                x is not TLSVersion.Highest):
+                excludedVersions.append(x)
+
+    return excludedVersions
+
+
+
 def _cantSetHostnameIndication(connection, hostname):
     """
     The option to set SNI is not available, so do nothing.
@@ -1601,33 +1644,7 @@ class OpenSSLCertificateOptions(object):
                 # TLSv1.0 and newer will be supported.
                 self._options |= SSL.OP_NO_SSLv3
             else:
-                versions = list(TLSVersion.iterconstants())
-
-                if not isinstance(tlsProtocols, TLSVersionRange):
-                    if tlsProtocols is TLSVersion.Highest:
-                        if hasattr(SSL, "OP_NO_TLSv1_3"):
-                            # Enable TLSv1.3 if we have it...
-                            tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_3,
-                                                           TLSVersion.Highest)
-                        else:
-                            # Otherwise fall back to 1.2.
-                            tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_2,
-                                                           TLSVersion.Highest)
-                    else:
-                        tlsProtocols = TLSVersionRange(tlsProtocols,
-                                                       tlsProtocols)
-
-                excludedVersions = []
-
-                for x in versions[0:versions.index(tlsProtocols._fromVersion)]:
-                    excludedVersions.append(x)
-
-                if tlsProtocols._toVersion is not TLSVersion.Highest:
-                    for x in versions[versions.index(
-                            tlsProtocols._toVersion):]:
-                        if (x is not tlsProtocols._toVersion and
-                            x is not TLSVersion.Highest):
-                            excludedVersions.append(x)
+                excludedVersions = _getExcludedTLSProtocols(tlsProtocols)
 
                 for version in excludedVersions:
                     self._options |= _tlsDisableFlags[version]
