@@ -830,7 +830,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
                 tlsProtocols=sslverify.TLSVersion.SSLv3,
             )
 
-        # lol best error message
+        # Best error message
         self.assertEqual(e.exception.args, ("nope",))
 
 

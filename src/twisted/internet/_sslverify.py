@@ -30,6 +30,7 @@ else:
     _OP_NO_TLSv1_3 = SSL.OP_NO_TLSv1_3
 
 
+
 class TLSVersion(Names):
     """
     TLS versions that we can negotiate with the client/server.
