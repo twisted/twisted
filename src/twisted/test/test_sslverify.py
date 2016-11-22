@@ -442,6 +442,8 @@ class FakeContext(object):
     def set_mode(self, mode):
         """
         Set the mode. See L{SSL.Context.set_mode}.
+
+        @param mode: See L{SSL.Context.set_mode}.
         """
         self._mode = mode
 
