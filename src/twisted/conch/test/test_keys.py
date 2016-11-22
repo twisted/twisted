@@ -1182,6 +1182,30 @@ attr n:
 \tee:b4:34:b9:e7:99:95>""")
 
 
+    def test_reprPublicECDSA(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
+        public key.
+        """
+        self.assertEqual(repr(keys.Key(self.ecObj).public()),
+"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKi" +
+"mX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v46We1hLMyz6ObUBYgkN/34" +
+"n42F4vpeA=")
+
+
+    def test_reprPrivateECDSA(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
+        private key.
+        """
+        self.assertEqual(repr(keys.Key(self.ecObj)),
+"""-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgTJTVg5PYnHGh/Bsl
+ciMZ+101wkrnlpB02uEi3bFhDPShRANCAASopl9Q2e/kI9EqX3jzG6NaW+shpAG+
+Ze3bgtZfOecg+7RH0H6pO23O7+OlntYSzMs+jm1AWIJDf9+J+NheL6Xg
+-----END PRIVATE KEY-----
+""")
+
 
 class KeyKeyObjectTests(unittest.TestCase):
     """
