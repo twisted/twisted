@@ -777,7 +777,7 @@ class Key(object):
                              serialization.PublicFormat.OpenSSH)
 
                 if _PY3:
-                  k = k.decode('utf-8')
+                    k = k.decode('utf-8')
 
                 return k
             else:
@@ -787,7 +787,7 @@ class Key(object):
                              serialization.NoEncryption())
 
                 if _PY3:
-                  k = k.decode('utf-8')
+                    k = k.decode('utf-8')
 
                 return k
         else:
