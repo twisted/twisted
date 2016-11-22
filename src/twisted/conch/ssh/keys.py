@@ -772,13 +772,24 @@ class Key(object):
         """
         if self.type() == 'EC':
             if self.isPublic():
-                return self._keyObject.public_bytes(serialization.Encoding.OpenSSH,
-                               serialization.PublicFormat.OpenSSH)
+                k = self._keyObject.public_bytes(
+                             serialization.Encoding.OpenSSH,
+                             serialization.PublicFormat.OpenSSH)
+
+                if _PY3:
+                  k = k.decode('utf-8')
+
+                return k
             else:
-                return self._keyObject.private_bytes(
-                                serialization.Encoding.PEM,
-                                serialization.PrivateFormat.PKCS8,
-                                serialization.NoEncryption())
+                k = self._keyObject.private_bytes(
+                             serialization.Encoding.PEM,
+                             serialization.PrivateFormat.PKCS8,
+                             serialization.NoEncryption())
+
+                if _PY3:
+                  k = k.decode('utf-8')
+
+                return k
         else:
             lines = [
                 '<%s %s (%s bits)' % (
