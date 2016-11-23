@@ -1605,7 +1605,7 @@ class OpenSSLCertificateOptions(object):
 
                 # If you set the max lower than the default, but don't set the
                 # minimum, pull it down to that
-                if minimumTLSVersion > maximumTLSVersion:
+                if maximumTLSVersion and minimumTLSVersion > maximumTLSVersion:
                     minimumTLSVersion = maximumTLSVersion
 
             if maximumTLSVersion and minimumTLSVersion > maximumTLSVersion:
