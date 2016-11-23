@@ -23,11 +23,9 @@ from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
 
 # If we don't have TLS v1.3 yet, we can't disable it -- this is just so when it
-# makes it into OpenSSL, connections end up going to v1.3
-if not hasattr(SSL, "OP_NO_TLSv1_3"):
-    _OP_NO_TLSv1_3 = 0x00
-else:
-    _OP_NO_TLSv1_3 = SSL.OP_NO_TLSv1_3
+# makes it into OpenSSL, connections knowingly bracketed to v1.2 don't end up
+# going to v1.3
+_OP_NO_TLSv1_3 = getattr(SSL, "OP_NO_TLSv1_3", 0x00)
 
 
 
@@ -40,7 +38,6 @@ class TLSVersion(Names):
     TLSv1_1 = NamedConstant()
     TLSv1_2 = NamedConstant()
     TLSv1_3 = NamedConstant()
-    Highest = NamedConstant()
 
 
 
@@ -53,73 +50,32 @@ _tlsDisableFlags = {
 }
 
 
-class TLSVersionRange(object):
+
+def _getExcludedTLSProtocols(oldest, newest):
     """
-    A range of L{TLSVersion}s.
-    """
+    Given a pair of L{TLSVersion} constants, figure out what versions we want
+    to disable (as OpenSSL is an exclusion based API).
 
-    def __init__(self, fromVersion, toVersion):
-        """
-        @param fromVersion: The minimal version to support.
-        @type fromVersion: L{TLSVersion} constant
+    @param oldest: The oldest L{TLSVersion} we want to allow.
+    @type oldest: L{TLSVersion} constant
 
-        @param toVersion: The maximal version to support (where Highest is the
-            newest at all times)
-        @type toVersion: L{TLSVersion} constant
-        """
-        versions = list(TLSVersion.iterconstants())
-
-        if versions.index(fromVersion) > versions.index(toVersion):
-            raise ValueError(
-                "fromVersion must be an earlier version than toVersion")
-
-        if fromVersion is TLSVersion.Highest:
-            raise ValueError(
-                ("fromVersion cannot be 'Highest', to use just the highest "
-                 "version, pass it directly to CertificateOptions, not in a "
-                 "range"))
-
-        self._fromVersion = fromVersion
-        self._toVersion = toVersion
-
-
-
-def _getExcludedTLSProtocols(tlsProtocols):
-    """
-    Given a L{TLSVersion} constant, or a L{TLSVersionRange}, figure out what
-    versions we want to disable (as OpenSSL is an exclusion based API).
-
-    @param tlsProtocols: The protocol or protocols (in a range) we want.
-    @type tlsProtocols: L{TLSVersion} constant or L{TLSVersionRange}
+    @param newest: The newest L{TLSVersion} we want to allow, or L{None} for no
+        upper limit.
+    @type newest: L{TLSVersion} constant or L{None}
 
     @return: The versions we want to disable.
     @rtype: L{list} of L{TLSVersion} constants.
     """
     versions = list(TLSVersion.iterconstants())
 
-    if not isinstance(tlsProtocols, TLSVersionRange):
-        if tlsProtocols is TLSVersion.Highest:
-            if hasattr(SSL, "OP_NO_TLSv1_3"):
-                # Enable TLSv1.3 if we have it...
-                tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_3,
-                                               TLSVersion.Highest)
-            else:
-                # Otherwise fall back to 1.2.
-                tlsProtocols = TLSVersionRange(TLSVersion.TLSv1_2,
-                                               TLSVersion.Highest)
-        else:
-            tlsProtocols = TLSVersionRange(tlsProtocols,
-                                           tlsProtocols)
-
     excludedVersions = []
 
-    for x in versions[0:versions.index(tlsProtocols._fromVersion)]:
+    for x in versions[0:versions.index(oldest)]:
         excludedVersions.append(x)
 
-    if tlsProtocols._toVersion is not TLSVersion.Highest:
-        for x in versions[versions.index(tlsProtocols._toVersion):]:
-            if (x is not tlsProtocols._toVersion and
-                x is not TLSVersion.Highest):
+    if newest:
+        for x in versions[versions.index(newest):]:
+            if x is not newest:
                 excludedVersions.append(x)
 
     return excludedVersions
@@ -1476,7 +1432,8 @@ class OpenSSLCertificateOptions(object):
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
-        ['method', 'tlsProtocols'],
+        ['method', 'minimumTLSVersion'],
+        ['method', 'maximumTLSVersion'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1496,7 +1453,8 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
-                 tlsProtocols=None,
+                 minimumTLSVersion=None,
+                 maximumTLSVersion=None,
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1505,26 +1463,27 @@ class OpenSSLCertificateOptions(object):
 
         @param certificate: An X509 object holding the certificate.
 
-        @param method: The SSL protocol to use, one of SSLv23_METHOD,
-            SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD (or any other method
-            constants provided by pyOpenSSL). By default, a setting will be
-            used which allows TLSv1.0, TLSv1.1, and TLSv1.2. Can not be used
-            with C{tlsProtocols}.
+        @param method: Deprecated, use C{minimumTLSVersion} and/or
+            C{maximumTLSVersion} instead. The SSL protocol to use, one of
+            SSLv23_METHOD, SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD (or any
+            other method constants provided by pyOpenSSL). By default, a
+            setting will be used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
+            Can not be used with C{minimumTLSVersion} or C{maximumTLSVersion}
 
         @param verify: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
             By default this is L{False}.
 
             If L{True}, verify certificates received from the peer and fail the
-            handshake if verification fails.  Otherwise, allow anonymous
+            handshake if verification fails. Otherwise, allow anonymous
             sessions and sessions with certificates which fail validation.
 
         @param caCerts: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
 
             List of certificate authority certificate objects to use to verify
-            the peer's certificate.  Only used if verify is L{True} and will be
-            ignored otherwise.  Since verify is L{False} by default, this is
+            the peer's certificate. Only used if verify is L{True} and will be
+            ignored otherwise. Since verify is L{False} by default, this is
             L{None} by default.
 
         @type caCerts: L{list} of L{OpenSSL.crypto.X509}
@@ -1545,26 +1504,26 @@ class OpenSSLCertificateOptions(object):
             ephemeral DH and ECDH parameters are used to prevent small subgroup
             attacks and to ensure perfect forward secrecy.
 
-        @param enableSessions: If True, set a session ID on each context.  This
+        @param enableSessions: If True, set a session ID on each context. This
             allows a shortened handshake to be used when a known client
             reconnects.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
-            for broken SSL implementations.  This should be entirely safe,
-            according to the OpenSSL documentation, but YMMV.  This option is
+            for broken SSL implementations. This should be entirely safe,
+            according to the OpenSSL documentation, but YMMV. This option is
             now off by default, because it causes problems with connections
             between peers using OpenSSL 0.9.8a.
 
         @param enableSessionTickets: If L{True}, enable session ticket
-            extension for session resumption per RFC 5077.  Note there is no
-            support for controlling session tickets.  This option is off by
+            extension for session resumption per RFC 5077. Note there is no
+            support for controlling session tickets. This option is off by
             default, as some server implementations don't correctly process
             incoming empty session ticket extensions in the hello.
 
         @param extraCertChain: List of certificates that I{complete} your
             verification chain if the certificate authority that signed your
-            C{certificate} isn't widely supported.  Do I{not} add
-            C{certificate} to it.
+            C{certificate} isn't widely supported. Do I{not} add C{certificate}
+            to it.
         @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
 
         @param acceptableCiphers: Ciphers that are acceptable for connections.
@@ -1572,13 +1531,13 @@ class OpenSSLCertificateOptions(object):
         @type acceptableCiphers: L{IAcceptableCiphers}
 
         @param dhParameters: Key generation parameters that are required for
-            Diffie-Hellman key exchange.  If this argument is left L{None},
+            Diffie-Hellman key exchange. If this argument is left L{None},
             C{EDH} ciphers are I{disabled} regardless of C{acceptableCiphers}.
         @type dhParameters: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
 
-        @param trustRoot: Specification of trust requirements of peers.  If
-            this argument is specified, the peer is verified.  It requires a
+        @param trustRoot: Specification of trust requirements of peers. If this
+            argument is specified, the peer is verified. It requires a
             certificate, and that certificate must be signed by one of the
             certificate authorities specified by this object.
 
@@ -1592,16 +1551,19 @@ class OpenSSLCertificateOptions(object):
         @param acceptableProtocols: The protocols this peer is willing to speak
             after the TLS negotiation has completed, advertised over both ALPN
             and NPN. If this argument is specified, and no overlap can be found
-            with the other peer, the connection will fail to be established.
-            If the remote peer does not offer NPN or ALPN, the connection will
-            be established, but no protocol wil be negotiated. Protocols
-            earlier in the list are preferred over those later in the list.
+            with the other peer, the connection will fail to be established. If
+            the remote peer does not offer NPN or ALPN, the connection will be
+            established, but no protocol wil be negotiated. Protocols earlier
+            in the list are preferred over those later in the list.
         @type acceptableProtocols: L{list} of L{bytes}
 
-        @param tlsProtocols: The TLS protocols this peer wishes to speak.
-            Either a single protocol from L{TLSVersion} or a L{TLSVersionRange}
-            with a lowest and highest L{TLSVersion}.
-        @type tlsProtocols: L{TLSVersion} constant or L{TLSVersionRange}
+        @param minimumTLSVersion: The minimum TLS version to use. If not
+            specified, it is a generally considered safe default
+            (L{TLSVersion.TLSv1_0}.
+        @type minimumTLSVersion: L{TLSVersion} constant
+        @param minimumTLSVersion: The maximum TLS version to use. If not
+            specified, it is the most recent your OpenSSL supports.
+        @type minimumTLSVersion: L{TLSVersion} constant
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1613,7 +1575,7 @@ class OpenSSLCertificateOptions(object):
             ciphers for the current platform.
 
         @raise TypeError: if C{trustRoot} is passed in combination with
-            C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
+            C{caCert}, C{verify}, or C{requireCertificate}. Please prefer
             C{trustRoot} in new code, as its semantics are less tricky.
         @raise TypeError: if C{method} is passed in combination with
             C{tlsProtocols}. Please prefer the more explicit C{tlsProtocols} in
@@ -1640,16 +1602,25 @@ class OpenSSLCertificateOptions(object):
         if method is None:
             self.method = SSL.SSLv23_METHOD
 
-            if tlsProtocols is None:
-                # If no method or protocols are specified set things up so that
-                # TLSv1.0 and newer will be supported.
-                self._options |= SSL.OP_NO_SSLv3
-            else:
-                excludedVersions = _getExcludedTLSProtocols(tlsProtocols)
+            if minimumTLSVersion is None:
+                minimumTLSVersion = TLSVersion.TLSv1_0
 
-                for version in excludedVersions:
-                    self._options |= _tlsDisableFlags[version]
+            if maximumTLSVersion and minimumTLSVersion > maximumTLSVersion:
+                raise ValueError(
+                    "minimumTLSVersion needs to be before maximumTLSVersion")
+
+            excludedVersions = _getExcludedTLSProtocols(minimumTLSVersion,
+                                                        maximumTLSVersion)
+
+            for version in excludedVersions:
+                self._options |= _tlsDisableFlags[version]
         else:
+            warnings.warn(
+                ("Passing method to twisted.internet.ssl.CertificateOptions "
+                 "was deprecated in Twisted 16.7. Please use "
+                 "minimumTLSVersion and maximumTLSVersion instead."),
+                DeprecationWarning)
+
             # Otherwise respect the application decision.
             self.method = method
 

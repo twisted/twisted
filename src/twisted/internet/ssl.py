@@ -237,7 +237,7 @@ from twisted.internet._sslverify import (
     optionsForClientTLS, ProtocolNegotiationSupport,
     protocolNegotiationMechanisms,
     trustRootFromCertificates,
-    TLSVersion, TLSVersionRange,
+    TLSVersion,
 )
 
 __all__ = [
@@ -247,7 +247,7 @@ __all__ = [
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
     'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
-    'platformTrust', 'OpenSSLDefaultPaths', 'TLSVersion', 'TLSVersionRange',
+    'platformTrust', 'OpenSSLDefaultPaths', 'TLSVersion',
 
     'VerificationError', 'optionsForClientTLS',
     'ProtocolNegotiationSupport', 'protocolNegotiationMechanisms',
