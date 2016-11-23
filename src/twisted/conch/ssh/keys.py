@@ -1108,7 +1108,7 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']))
-        elif type == 'EC':
+        else: # EC
             byteLength = (self._keyObject.curve.key_size + 7) // 8
             return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
                 common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
@@ -1158,7 +1158,7 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        elif type == 'EC':
+        else: # EC
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['privateValue']))
 
