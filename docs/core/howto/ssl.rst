@@ -199,8 +199,9 @@ For example,
     options = CertificateOptions(..., dhParameters=dhParams)
 
 Another part of the TLS protocol which ``CertificateOptions`` can control is the version of the TLS or SSL protocol used.
-There are two ways to configure it, either by configuring a list of protocols, or by the legacy way of setting the internal context's "method".
-By default, Twisted will configure it to use TLSv1.0 or later and disable the insecure SSLv3 protocol, but this manual control over protocols can be helpful if you need to support legacy SSLv3 systems, or you wish to restrict it down to just the strongest of the TLS versions.
+By default, Twisted will configure it to use TLSv1.0 or later and disable the insecure SSLv3 protocol.
+Manual control over protocols can be helpful if you need to support legacy SSLv3 systems, or you wish to restrict it down to just the strongest of the TLS versions.
+There are two ways to configure the TLS versions Twisted will use: either by configuring a range of versions, or by the legacy way of setting the internal context's "method".
 
 You can give ``CertificateOptions`` a range of TLS versions you wish it to negotiate with the ``minimumTLSVersion`` and ``maximumTLSVersion`` arguments in the initializer:
 
