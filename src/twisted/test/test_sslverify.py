@@ -816,6 +816,27 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(options, ctx._options & options)
 
 
+    def test_methodIsDeprecated(self):
+        """
+        Passing C{method} to L{sslverify.OpenSSLCertificateOptions} is
+        deprecated.
+        """
+        sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            method=SSL.SSLv23_METHOD,
+        )
+
+        message = ("Passing method to twisted.internet.ssl.CertificateOptions "
+                   "was deprecated in Twisted 16.7. Please use "
+                   "minimumTLSVersion and maximumTLSVersion instead.")
+
+        warnings = self.flushWarnings([self.test_methodIsDeprecated])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
+
+
     def test_tlsProtocolsNoMethodWithMinimum(self):
         """
         Passing C{minimumTLSVersion} along with C{method} to
@@ -1404,87 +1425,6 @@ class DeprecationTests(unittest.SynchronousTestCase):
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
             sslverify.OpenSSLCertificateOptions().__setstate__, {})
-
-
-
-class ProtocolVersion(Names):
-    """
-    L{ProtocolVersion} provides constants representing each version of the
-    SSL/TLS protocol.
-    """
-    SSLv2 = NamedConstant()
-    SSLv3 = NamedConstant()
-    TLSv1_0 = NamedConstant()
-    TLSv1_1 = NamedConstant()
-    TLSv1_2 = NamedConstant()
-
-
-
-class ProtocolVersionTests(unittest.TestCase):
-    """
-    Tests for L{sslverify.OpenSSLCertificateOptions}'s SSL/TLS version
-    selection features.
-    """
-    if skipSSL:
-        skip = skipSSL
-    else:
-        _METHOD_TO_PROTOCOL = {
-            SSL.SSLv2_METHOD: set([ProtocolVersion.SSLv2]),
-            SSL.SSLv3_METHOD: set([ProtocolVersion.SSLv3]),
-            SSL.TLSv1_METHOD: set([ProtocolVersion.TLSv1_0]),
-            getattr(SSL, "TLSv1_1_METHOD", object()):
-                set([ProtocolVersion.TLSv1_1]),
-            getattr(SSL, "TLSv1_2_METHOD", object()):
-                set([ProtocolVersion.TLSv1_2]),
-
-            # Presently, SSLv23_METHOD means (SSLv2, SSLv3, TLSv1.0, TLSv1.1,
-            # TLSv1.2) (excluding any protocol versions not implemented by the
-            # underlying version of OpenSSL).
-            SSL.SSLv23_METHOD: set(ProtocolVersion.iterconstants()),
-            }
-
-        _EXCLUSION_OPS = {
-            SSL.OP_NO_SSLv2: ProtocolVersion.SSLv2,
-            SSL.OP_NO_SSLv3: ProtocolVersion.SSLv3,
-            SSL.OP_NO_TLSv1: ProtocolVersion.TLSv1_0,
-            getattr(SSL, "OP_NO_TLSv1_1", 0): ProtocolVersion.TLSv1_1,
-            getattr(SSL, "OP_NO_TLSv1_2", 0): ProtocolVersion.TLSv1_2,
-            }
-
-
-    def _protocols(self, opts):
-        """
-        Determine which SSL/TLS protocol versions are allowed by C{opts}.
-
-        @param opts: An L{sslverify.OpenSSLCertificateOptions} instance to
-            inspect.
-
-        @return: A L{set} of L{NamedConstant}s from L{ProtocolVersion}
-            indicating which SSL/TLS protocol versions connections negotiated
-            using C{opts} will allow.
-        """
-        protocols = self._METHOD_TO_PROTOCOL[opts.method].copy()
-        context = opts.getContext()
-        options = context.set_options(0)
-        if opts.method == SSL.SSLv23_METHOD:
-            # Exclusions apply only to SSLv23_METHOD and no others.
-            for opt, exclude in self._EXCLUSION_OPS.items():
-                if options & opt:
-                    protocols.discard(exclude)
-        return protocols
-
-
-    def test_default(self):
-        """
-        When L{sslverify.OpenSSLCertificateOptions} is initialized with no
-        specific protocol versions all versions of TLS are allowed and no
-        versions of SSL are allowed.
-        """
-        self.assertEqual(
-            set([ProtocolVersion.TLSv1_0,
-                 ProtocolVersion.TLSv1_1,
-                 ProtocolVersion.TLSv1_2]),
-            self._protocols(sslverify.OpenSSLCertificateOptions()))
 
 
 
