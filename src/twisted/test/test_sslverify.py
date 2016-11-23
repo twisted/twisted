@@ -861,6 +861,22 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(message, warnings[0]['message'])
 
 
+    def test_tlsv1ByDefault(self):
+        """
+        L{sslverify.OpenSSLCertificateOptions} will make the default minimum
+        TLS version v1.0, if no C{method} or C{minimumTLSVersion} is given.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        self.assertEqual(options, ctx._options & options)
+
+
     def test_tlsProtocolsNoMethodWithMinimum(self):
         """
         Passing C{minimumTLSVersion} along with C{method} to
