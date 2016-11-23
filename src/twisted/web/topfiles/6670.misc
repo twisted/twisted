@@ -1,0 +1,3 @@
+The --https argument to web plugin is now deprecated
+It is possible to give the web plugin the --port argument
+multiple times to listen on multiple ports.
