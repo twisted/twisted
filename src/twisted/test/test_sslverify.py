@@ -114,33 +114,6 @@ A_KEYPAIR = getModule(__name__).filePath.sibling('server.pem').getContent()
 
 
 
-class DummyOpenSSL(object):
-    """
-    A fake of the L{OpenSSL} module.
-
-    @ivar __version__: A string describing I{pyOpenSSL} version number the fake
-        is emulating.
-    @type __version__: L{str}
-    """
-    def __init__(self, major, minor, patch=None):
-        """
-        @param major: The major version number to emulate.  I{X} in the version
-            I{X.Y}.
-        @type major: L{int}
-
-        @param minor: The minor version number to emulate.  I{Y} in the version
-            I{X.Y}.
-        @type minor: L{int}
-
-        """
-        self.__version__ = "%d.%d" % (major, minor)
-        if patch is not None:
-            self.__version__ += ".%d" % (patch,)
-
-_preTwelveOpenSSL = DummyOpenSSL(0, 11)
-_postTwelveOpenSSL = DummyOpenSSL(0, 13, 1)
-
-
 def counter(counter=itertools.count()):
     """
     Each time we're called, return the next integer in the natural numbers.
@@ -2709,97 +2682,6 @@ class KeyPairTests(unittest.TestCase):
 
 
 
-class OpenSSLVersionTestsMixin(object):
-    """
-    A mixin defining tests relating to the version declaration interface of
-    I{pyOpenSSL}.
-
-    This is used to verify that the fake I{OpenSSL} module presents its fake
-    version information in the same way as the real L{OpenSSL} module.
-    """
-    def test_string(self):
-        """
-        C{OpenSSL.__version__} is a native string.
-        """
-        self.assertIsInstance(self.OpenSSL.__version__, str)
-
-
-    def test_majorDotMinor(self):
-        """
-        C{OpenSSL.__version__} declares the major and minor versions as
-        non-negative integers separated by C{"."}.
-        """
-        parts = self.OpenSSL.__version__.split(".")
-        major = int(parts[0])
-        minor = int(parts[1])
-        self.assertEqual(
-            (True, True),
-            (major >= 0, minor >= 0))
-
-
-
-class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to the real C{OpenSSL} package.
-    """
-    if skipSSL is None:
-        OpenSSL = OpenSSL
-    else:
-        skip = skipSSL
-
-
-
-class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                 unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be older than 0.12.
-    """
-    OpenSSL = _preTwelveOpenSSL
-
-
-
-class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                  unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be newer than 0.12.
-    """
-    OpenSSL = _postTwelveOpenSSL
-
-
-
-class UsablePyOpenSSLTests(unittest.SynchronousTestCase):
-    """
-    Tests for L{UsablePyOpenSSLTests}.
-    """
-    if skipSSL is not None:
-        skip = skipSSL
-
-    def test_ok(self):
-        """
-        Return C{True} for usable versions including possible changes in
-        versioning.
-        """
-        for version in ["0.15.1", "1.0.0", "16.0.0"]:
-            self.assertTrue(sslverify._usablePyOpenSSL(version))
-
-    def test_tooOld(self):
-        """
-        Return C{False} for unusable versions.
-        """
-        self.assertFalse(sslverify._usablePyOpenSSL("0.11.1"))
-
-    def test_inDev(self):
-        """
-        A .dev0 suffix does not trip us up.  Since it has been introduced after
-        0.15.1, it's always C{True}.
-        """
-        for version in ["0.16.0", "1.0.0", "16.0.0"]:
-            self.assertTrue(sslverify._usablePyOpenSSL(version + ".dev0"))
-
-
-
 class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
@@ -2859,8 +2741,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             "service_identity module: {message}.  Please install it from "
             "<https://pypi.python.org/pypi/service_identity> "
             "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module and a recent enough "
-            "pyOpenSSL to support it, Twisted can perform only "
+            "Without the service_identity module, Twisted can perform only "
             "rudimentary TLS client hostname verification.  Many valid "
             "certificate/hostname mappings may be rejected.").format(
                 message=importError)
