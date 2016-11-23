@@ -10,7 +10,6 @@ import warnings
 
 from hashlib import md5
 
-import OpenSSL
 from OpenSSL import SSL, crypto
 
 from twisted.python import log
@@ -435,6 +434,7 @@ class Certificate(CertBase):
                                               self.getSubject().commonName,
                                               self.getIssuer().commonName)
 
+
     def __eq__(self, other):
         if isinstance(other, Certificate):
             return self.dump() == other.dump()
@@ -710,6 +710,7 @@ class PrivateCertificate(Certificate):
                                                  digestAlgorithm)
 
 
+
 @_oldStyle
 class PublicKey:
     """
@@ -744,16 +745,6 @@ class PublicKey:
         """
         return self.keyHash() == otherKey.keyHash()
 
-
-    # XXX This could be a useful method, but sometimes it triggers a segfault,
-    # so we'll steer clear for now.
-#     def verifyCertificate(self, certificate):
-#         """
-#         returns None, or raises a VerifyError exception if the certificate
-#         could not be verified.
-#         """
-#         if not certificate.original.verify(self.original):
-#             raise VerifyError("We didn't sign that certificate.")
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.keyHash())
@@ -1764,6 +1755,7 @@ class OpenSSLAcceptableCiphers(object):
     def __init__(self, ciphers):
         self._ciphers = ciphers
 
+
     def selectCiphers(self, availableCiphers):
         return [cipher
                 for cipher in self._ciphers
@@ -1848,6 +1840,7 @@ class OpenSSLDiffieHellmanParameters(object):
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
         return cls(filePath)
+
 
 
 def _setAcceptableProtocols(context, acceptableProtocols):

@@ -13,19 +13,14 @@ import itertools
 
 from zope.interface import implementer
 from constantly import NamedConstant, Names
+from twisted.python.reflect import requireModule
 
 skipSSL = None
 skipSNI = None
 skipNPN = None
 skipALPN = None
-try:
-    import OpenSSL
-except ImportError:
-    skipSSL = "OpenSSL is required for SSL tests."
-    skipSNI = skipSSL
-    skipNPN = skipSSL
-    skipALPN = skipSSL
-else:
+
+if requireModule("OpenSSL"):
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
@@ -33,18 +28,19 @@ else:
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_npn_advertise_callback(lambda c: None)
-    except AttributeError:
-        skipNPN = "PyOpenSSL 0.15 or greater is required for NPN support"
     except NotImplementedError:
         skipNPN = "OpenSSL 1.0.1 or greater required for NPN support"
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_alpn_select_callback(lambda c: None)
-    except AttributeError:
-        skipALPN = "PyOpenSSL 0.15 or greater is required for ALPN support"
     except NotImplementedError:
         skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
+else:
+    skipSSL = "OpenSSL is required for SSL tests."
+    skipSNI = skipSSL
+    skipNPN = skipSSL
+    skipALPN = skipSSL
 
 from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
