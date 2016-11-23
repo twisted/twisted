@@ -66,13 +66,15 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['extraHeaders'] = []
         self['ports'] = []
 
+
     def opt_port(self, port):
         """
-        strports description of port to start the server on.
+        Strports description of port to start the server on.
         """
         self['ports'].append(port)
 
     opt_p = opt_port
+
 
     def opt_index(self, indexName):
         """
@@ -213,12 +215,12 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                 reflect.namedModule('OpenSSL.SSL')
             except ImportError:
                 raise usage.UsageError("SSL support not installed")
-            my_strport = 'ssl:port={}:privateKey={}:certKey={}'.format(
+            sslStrport = 'ssl:port={}:privateKey={}:certKey={}'.format(
                              self['https'],
                              self['privkey'],
                              self['certificate'],
                          )
-            self['ports'].append(my_strport)
+            self['ports'].append(sslStrport)
 
 
 
