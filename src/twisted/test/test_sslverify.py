@@ -806,8 +806,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE)
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE)
         self.assertEqual(options, ctx._options & options)
 
 
@@ -836,7 +836,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
+        options = SSL.OP_SINGLE_DH_USE | SSL.OP_SINGLE_ECDH_USE
         self.assertEqual(options, ctx._options & options)
 
 
@@ -2807,53 +2807,6 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     if skipSSL is not None:
         skip = skipSSL
 
-    def test_pyOpenSSLTooOld(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        result = sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        expected = (
-            sslverify.simpleVerifyHostname, sslverify.SimpleVerificationError)
-        self.assertEqual(expected, result)
-    test_pyOpenSSLTooOld.suppress = [
-        util.suppress(
-            message="Your version of pyOpenSSL, 0.11, is out of date."),
-        ]
-
-
-    def test_pyOpenSSLTooOldWarning(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        to upgrade.
-        """
-        sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        [warning] = list(
-            warning
-            for warning
-            in self.flushWarnings()
-            if warning["category"] == UserWarning)
-
-        expectedMessage = (
-            "Your version of pyOpenSSL, 0.11, is out of date.  Please upgrade "
-            "to at least 0.12 and install service_identity from "
-            "<https://pypi.python.org/pypi/service_identity>.  Without the "
-            "service_identity module and a recent enough pyOpenSSL to support "
-            "it, Twisted can perform only rudimentary TLS client hostname "
-            "verification.  Many valid certificate/hostname mappings may be "
-            "rejected.")
-
-        self.assertEqual(
-            (warning["message"], warning["filename"], warning["lineno"]),
-            # Make sure we're abusing the warning system to a sufficient
-            # degree: there is no filename or line number that makes sense for
-            # this warning to "blame" for the problem.  It is a system
-            # misconfiguration.  So the location information should be blank
-            # (or as blank as we can make it).
-            (expectedMessage, "", 0))
-
 
     def test_dependencyMissing(self):
         """
@@ -2914,5 +2867,10 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
 
         self.assertEqual(
             (warning["message"], warning["filename"], warning["lineno"]),
-            # See the comment in test_pyOpenSSLTooOldWarning.
+
+            # Make sure we're abusing the warning system to a sufficient
+            # degree: there is no filename or line number that makes sense for
+            # this warning to "blame" for the problem.  It is a system
+            # misconfiguration.  So the location information should be blank
+            # (or as blank as we can make it).
             (expectedMessage, "", 0))

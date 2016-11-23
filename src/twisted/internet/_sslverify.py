@@ -12,48 +12,9 @@ from hashlib import md5
 
 import OpenSSL
 from OpenSSL import SSL, crypto
-try:
-    from OpenSSL.SSL import SSL_CB_HANDSHAKE_DONE, SSL_CB_HANDSHAKE_START
-except ImportError:
-    SSL_CB_HANDSHAKE_START = 0x10
-    SSL_CB_HANDSHAKE_DONE = 0x20
 
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
-
-
-def _cantSetHostnameIndication(connection, hostname):
-    """
-    The option to set SNI is not available, so do nothing.
-
-    @param connection: the connection
-    @type connection: L{OpenSSL.SSL.Connection}
-
-    @param hostname: the server's host name
-    @type: hostname: L{bytes}
-    """
-
-
-
-def _setHostNameIndication(connection, hostname):
-    """
-    Set the server name indication on the given client connection to the given
-    value.
-
-    @param connection: the connection
-    @type connection: L{OpenSSL.SSL.Connection}
-
-    @param hostname: the server's host name
-    @type: hostname: L{bytes}
-    """
-    connection.set_tlsext_host_name(hostname)
-
-
-
-if getattr(SSL.Connection, "set_tlsext_host_name", None) is None:
-    _maybeSetHostNameIndication = _cantSetHostnameIndication
-else:
-    _maybeSetHostNameIndication = _setHostNameIndication
 
 
 
@@ -115,11 +76,10 @@ def simpleVerifyHostname(connection, hostname):
     only for an exact match.
 
     This is to provide I{something} in the way of hostname verification to
-    users who haven't upgraded past OpenSSL 0.12 or installed
-    C{service_identity}.  This check is overly strict, relies on a deprecated
-    TLS feature (you're supposed to ignore the commonName if the
-    subjectAlternativeName extensions are present, I believe), and lots of
-    valid certificates will fail.
+    users who haven't installed C{service_identity}. This check is overly
+    strict, relies on a deprecated TLS feature (you're supposed to ignore the
+    commonName if the subjectAlternativeName extensions are present, I
+    believe), and lots of valid certificates will fail.
 
     @param connection: the OpenSSL connection to verify.
     @type connection: L{OpenSSL.SSL.Connection}
@@ -151,57 +111,41 @@ def _usablePyOpenSSL(version):
 
 
 
-def _selectVerifyImplementation(lib):
+def _selectVerifyImplementation():
     """
-    U{service_identity <https://pypi.python.org/pypi/service_identity>}
-    requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
-    Determine if pyOpenSSL has the requisite feature, and whether
-    C{service_identity} is installed.  If so, use it.  If not, use simplistic
-    and incorrect checking as implemented in L{simpleVerifyHostname}.
-
-    @param lib: The L{OpenSSL} module.  This is necessary to determine whether
-        certain fallback implementation strategies will be necessary.
-    @type lib: L{types.ModuleType}
+    Determine if C{service_identity} is installed. If so, use it. If not, use
+    simplistic and incorrect checking as implemented in
+    L{simpleVerifyHostname}.
 
     @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
     @rtype: L{tuple}
     """
 
     whatsWrong = (
-        "Without the service_identity module and a recent enough pyOpenSSL to "
-        "support it, Twisted can perform only rudimentary TLS client hostname "
-        "verification.  Many valid certificate/hostname mappings may be "
-        "rejected."
+        "Without the service_identity module, Twisted can perform only "
+        "rudimentary TLS client hostname verification.  Many valid "
+        "certificate/hostname mappings may be rejected."
     )
 
-    if _usablePyOpenSSL(lib.__version__):
-        try:
-            from service_identity import VerificationError
-            from service_identity.pyopenssl import verify_hostname
-            return verify_hostname, VerificationError
-        except ImportError as e:
-            warnings.warn_explicit(
-                "You do not have a working installation of the "
-                "service_identity module: '" + str(e) + "'.  "
-                "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> and make "
-                "sure all of its dependencies are satisfied.  "
-                + whatsWrong,
-                # Unfortunately the lineno is required.
-                category=UserWarning, filename="", lineno=0)
-    else:
+    try:
+        from service_identity import VerificationError
+        from service_identity.pyopenssl import verify_hostname
+        return verify_hostname, VerificationError
+    except ImportError as e:
         warnings.warn_explicit(
-            "Your version of pyOpenSSL, {0}, is out of date.  "
-            "Please upgrade to at least 0.12 and install service_identity "
-            "from <https://pypi.python.org/pypi/service_identity>.  "
-            .format(lib.__version__) + whatsWrong,
+            "You do not have a working installation of the "
+            "service_identity module: '" + str(e) + "'.  "
+            "Please install it from "
+            "<https://pypi.python.org/pypi/service_identity> and make "
+            "sure all of its dependencies are satisfied.  "
+            + whatsWrong,
             # Unfortunately the lineno is required.
-            category=UserWarning, filename="", lineno=0)
+              category=UserWarning, filename="", lineno=0)
 
     return simpleVerifyHostname, SimpleVerificationError
 
 
-verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
+verifyHostname, VerificationError = _selectVerifyImplementation()
 
 
 from zope.interface import Interface, implementer
@@ -481,6 +425,7 @@ def _handleattrhelper(Class, transport, methodName):
     return Class(cert)
 
 
+
 class Certificate(CertBase):
     """
     An x509 certificate.
@@ -500,6 +445,7 @@ class Certificate(CertBase):
         return not self.__eq__(other)
 
 
+    @classmethod
     def load(Class, requestData, format=crypto.FILETYPE_ASN1, args=()):
         """
         Load a certificate from an ASN.1- or PEM-format string.
@@ -507,8 +453,6 @@ class Certificate(CertBase):
         @rtype: C{Class}
         """
         return Class(crypto.load_certificate(format, requestData), *args)
-    load = classmethod(load)
-    _load = load
 
 
     def dumpPEM(self):
@@ -520,6 +464,7 @@ class Certificate(CertBase):
         return self.dump(crypto.FILETYPE_PEM)
 
 
+    @classmethod
     def loadPEM(Class, data):
         """
         Load a certificate from a PEM-format data string.
@@ -527,9 +472,9 @@ class Certificate(CertBase):
         @rtype: C{Class}
         """
         return Class.load(data, crypto.FILETYPE_PEM)
-    loadPEM = classmethod(loadPEM)
 
 
+    @classmethod
     def peerFromTransport(Class, transport):
         """
         Get the certificate for the remote end of the given transport.
@@ -542,9 +487,9 @@ class Certificate(CertBase):
             certificate.
         """
         return _handleattrhelper(Class, transport, 'peer')
-    peerFromTransport = classmethod(peerFromTransport)
 
 
+    @classmethod
     def hostFromTransport(Class, transport):
         """
         Get the certificate for the local end of the given transport.
@@ -557,7 +502,6 @@ class Certificate(CertBase):
             certificate.
         """
         return _handleattrhelper(Class, transport, 'host')
-    hostFromTransport = classmethod(hostFromTransport)
 
 
     def getPublicKey(self):
@@ -635,6 +579,7 @@ class CertificateRequest(CertBase):
     Certificate requests are given to certificate authorities to be signed and
     returned resulting in an actual certificate.
     """
+    @classmethod
     def load(Class, requestData, requestFormat=crypto.FILETYPE_ASN1):
         req = crypto.load_certificate_request(requestFormat, requestData)
         dn = DistinguishedName()
@@ -642,7 +587,6 @@ class CertificateRequest(CertBase):
         if not req.verify(req.get_pubkey()):
             raise VerifyError("Can't verify that request for %r is self-signed." % (dn,))
         return Class(req)
-    load = classmethod(load)
 
 
     def dump(self, format=crypto.FILETYPE_ASN1):
@@ -674,9 +618,9 @@ class PrivateCertificate(Certificate):
         return self.load(newCertData, self.privateKey, format)
 
 
+    @classmethod
     def load(Class, data, privateKey, format=crypto.FILETYPE_ASN1):
-        return Class._load(data, format)._setPrivateKey(privateKey)
-    load = classmethod(load)
+        return Class.load(data, format)._setPrivateKey(privateKey)
 
 
     def inspect(self):
@@ -692,6 +636,7 @@ class PrivateCertificate(Certificate):
         return self.dump(crypto.FILETYPE_PEM) + self.privateKey.dump(crypto.FILETYPE_PEM)
 
 
+    @classmethod
     def loadPEM(Class, data):
         """
         Load both private and public parts of a private certificate from a
@@ -699,13 +644,12 @@ class PrivateCertificate(Certificate):
         """
         return Class.load(data, KeyPair.load(data, crypto.FILETYPE_PEM),
                           crypto.FILETYPE_PEM)
-    loadPEM = classmethod(loadPEM)
 
 
+    @classmethod
     def fromCertificateAndKeyPair(Class, certificateInstance, privateKey):
         privcert = Class(certificateInstance.original)
         return privcert._setPrivateKey(privateKey)
-    fromCertificateAndKeyPair = classmethod(fromCertificateAndKeyPair)
 
 
     def options(self, *authorities):
@@ -839,9 +783,9 @@ class PublicKey:
 
 class KeyPair(PublicKey):
 
+    @classmethod
     def load(Class, data, format=crypto.FILETYPE_ASN1):
         return Class(crypto.load_privatekey(format, data))
-    load = classmethod(load)
 
 
     def dump(self, format=crypto.FILETYPE_ASN1):
@@ -868,6 +812,7 @@ class KeyPair(PublicKey):
         return '%s-bit %s Key Pair with Hash: %s' % L
 
 
+    @classmethod
     def generate(Class, kind=crypto.TYPE_RSA, size=1024):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
@@ -876,7 +821,6 @@ class KeyPair(PublicKey):
 
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
         return PrivateCertificate.load(newCertData, self, format)
-    generate = classmethod(generate)
 
 
     def requestObject(self, distinguishedName, digestAlgorithm='sha256'):
@@ -890,7 +834,8 @@ class KeyPair(PublicKey):
     def certificateRequest(self, distinguishedName,
                            format=crypto.FILETYPE_ASN1,
                            digestAlgorithm='sha256'):
-        """Create a certificate request signed with this key.
+        """
+        Create a certificate request signed with this key.
 
         @return: a string, formatted according to the 'format' argument.
         """
@@ -1017,7 +962,7 @@ def trustRootFromCertificates(certificates):
     reject any server certificate not signed by at least one of the
     certificates in the `certificates` list.
 
-    @since: 16.0.0
+    @since: 16.0
 
     @param certificates: All certificates which will be trusted.
     @type certificates: C{iterable} of L{CertBase}
@@ -1243,9 +1188,9 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL_CB_HANDSHAKE_START:
-            _maybeSetHostNameIndication(connection, self._hostnameBytes)
-        elif where & SSL_CB_HANDSHAKE_DONE:
+        if where & SSL.SSL_CB_HANDSHAKE_START:
+            connection.set_tlsext_host_name(self._hostnameBytes)
+        elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
                 verifyHostname(connection, self._hostnameASCII)
             except VerificationError:
@@ -1266,26 +1211,25 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
     @since: 14.0
 
-    @param hostname: The expected name of the remote host.  This serves two
+    @param hostname: The expected name of the remote host. This serves two
         purposes: first, and most importantly, it verifies that the certificate
         received from the server correctly identifies the specified hostname.
-        The second purpose is (if the local C{pyOpenSSL} supports it) to use
-        the U{Server Name Indication extension
+        The second purpose is to use the U{Server Name Indication extension
         <https://en.wikipedia.org/wiki/Server_Name_Indication>} to indicate to
         the server which certificate should be used.
     @type hostname: L{unicode}
 
-    @param trustRoot: Specification of trust requirements of peers.  This may
-        be a L{Certificate} or the result of L{platformTrust}.  By default it
-        is L{platformTrust} and you probably shouldn't adjust it unless you
-        really know what you're doing.  Be aware that clients using this
-        interface I{must} verify the server; you cannot explicitly pass L{None}
-        since that just means to use L{platformTrust}.
+    @param trustRoot: Specification of trust requirements of peers. This may be
+        a L{Certificate} or the result of L{platformTrust}. By default it is
+        L{platformTrust} and you probably shouldn't adjust it unless you really
+        know what you're doing. Be aware that clients using this interface
+        I{must} verify the server; you cannot explicitly pass L{None} since
+        that just means to use L{platformTrust}.
     @type trustRoot: L{IOpenSSLTrustRoot}
 
     @param clientCertificate: The certificate and private key that the client
-        will use to authenticate to the server.  If unspecified, the client
-        will not authenticate.
+        will use to authenticate to the server. If unspecified, the client will
+        not authenticate.
     @type clientCertificate: L{PrivateCertificate}
 
     @param acceptableProtocols: The protocols this peer is willing to speak
@@ -1299,13 +1243,13 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
     @param extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to
-        L{CertificateOptions}.  Please avoid using this unless you absolutely
+        L{CertificateOptions}. Please avoid using this unless you absolutely
         need to; any time you need to pass an option here that is a bug in this
         interface.
     @type extraCertificateOptions: L{dict}
 
     @param kw: (Backwards compatibility hack to allow keyword-only arguments on
-        Python 2.  Please ignore; arbitrary keyword arguments will be errors.)
+        Python 2. Please ignore; arbitrary keyword arguments will be errors.)
     @type kw: L{dict}
 
     @return: A client connection creator.
@@ -1358,13 +1302,6 @@ class OpenSSLCertificateOptions(object):
     # Factory for creating contexts.  Configurable for testability.
     _contextFactory = SSL.Context
     _context = None
-    # Some option constants may not be exposed by PyOpenSSL yet.
-    _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
-    _OP_NO_TICKET = getattr(SSL, 'OP_NO_TICKET', 0x00004000)
-    _OP_NO_COMPRESSION = getattr(SSL, 'OP_NO_COMPRESSION', 0x00020000)
-    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE',
-                                           0x00400000)
-    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
 
 
     @_mutuallyExclusiveArguments([
@@ -1516,8 +1453,8 @@ class OpenSSLCertificateOptions(object):
         # compression to avoid CRIME attack, make the server choose the
         # ciphers.
         self._options = (
-            SSL.OP_NO_SSLv2 | self._OP_NO_COMPRESSION |
-            self._OP_CIPHER_SERVER_PREFERENCE
+            SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+            SSL.OP_CIPHER_SERVER_PREFERENCE
         )
 
         # Set the mode to Release Buffers, which demallocs send/recv buffers on
@@ -1551,15 +1488,15 @@ class OpenSSLCertificateOptions(object):
         self.verifyOnce = verifyOnce
         self.enableSingleUseKeys = enableSingleUseKeys
         if enableSingleUseKeys:
-            self._options |= SSL.OP_SINGLE_DH_USE | self._OP_SINGLE_ECDH_USE
+            self._options |= SSL.OP_SINGLE_DH_USE | SSL.OP_SINGLE_ECDH_USE
         self.enableSessions = enableSessions
         self.fixBrokenPeers = fixBrokenPeers
         if fixBrokenPeers:
-            self._options |= self._OP_ALL
+            self._options |= SSL.OP_ALL
         self.enableSessionTickets = enableSessionTickets
 
         if not enableSessionTickets:
-            self._options |= self._OP_NO_TICKET
+            self._options |= SSL.OP_NO_TICKET
         self.dhParameters = dhParameters
 
         try:
