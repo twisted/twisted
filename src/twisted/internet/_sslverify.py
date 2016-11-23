@@ -1623,7 +1623,7 @@ class OpenSSLCertificateOptions(object):
                 ("Passing method to twisted.internet.ssl.CertificateOptions "
                  "was deprecated in Twisted 16.7. Please use "
                  "minimumTLSVersion and maximumTLSVersion instead."),
-                DeprecationWarning)
+                DeprecationWarning, stacklevel=3)
 
             # Otherwise respect the application decision.
             self.method = method
