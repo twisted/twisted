@@ -67,16 +67,10 @@ def _getExcludedTLSProtocols(oldest, newest):
     @rtype: L{list} of L{TLSVersion} constants.
     """
     versions = list(TLSVersion.iterconstants())
-
-    excludedVersions = []
-
-    for x in versions[0:versions.index(oldest)]:
-        excludedVersions.append(x)
+    excludedVersions = [x for x in versions[:versions.index(oldest)]]
 
     if newest:
-        for x in versions[versions.index(newest):]:
-            if x is not newest:
-                excludedVersions.append(x)
+        excludedVersions.extend([x for x in versions[versions.index(newest):]])
 
     return excludedVersions
 
@@ -1559,7 +1553,7 @@ class OpenSSLCertificateOptions(object):
 
         @param minimumTLSVersion: The minimum TLS version to use. If not
             specified, it is a generally considered safe default
-            (L{TLSVersion.TLSv1_0}.
+            (TLSv1.0).
         @type minimumTLSVersion: L{TLSVersion} constant
         @param minimumTLSVersion: The maximum TLS version to use. If not
             specified, it is the most recent your OpenSSL supports.
@@ -1608,6 +1602,11 @@ class OpenSSLCertificateOptions(object):
 
             if minimumTLSVersion is None:
                 minimumTLSVersion = TLSVersion.TLSv1_0
+
+                # If you set the max lower than the default, but don't set the
+                # minimum, pull it down to that
+                if minimumTLSVersion > maximumTLSVersion:
+                    minimumTLSVersion = maximumTLSVersion
 
             if maximumTLSVersion and minimumTLSVersion > maximumTLSVersion:
                 raise ValueError(

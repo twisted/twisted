@@ -202,32 +202,31 @@ Another part of the TLS protocol which ``CertificateOptions`` can control is the
 There are two ways to configure it, either by configuring a list of protocols, or by the legacy way of setting the internal context's "method".
 By default, Twisted will configure it to use TLSv1.0 or later and disable the insecure SSLv3 protocol, but this manual control over protocols can be helpful if you need to support legacy SSLv3 systems, or you wish to restrict it down to just the strongest of the TLS versions.
 
-You can give ``CertificateOptions`` a range of TLS versions you wish it to negotiate with the ``tlsProtocols`` argument in the initializer:
+You can give ``CertificateOptions`` a range of TLS versions you wish it to negotiate with the ``minimumTLSVersion`` and ``maximumTLSVersion`` arguments in the initializer:
 
 .. code-block:: python
 
-    from twisted.internet.ssl import (CertificateOptions, TLSVersion,
-                                      TLSVersionRange)
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
     options = CertificateOptions(
         ...,
-        tlsProtocols=TLSVersionRange(TLSVersion.TLSv1_0,
-                                     TLSVersion.TLSv1_2))
+        minimumTLSVersion=TLSVersion.TLSv1_0,
+        maximumTLSVersion=TLSVersion.TLSv1_2)
 
-This will cause it to not negotiate SSLv2, SSLv3, or any future TLS.
-SSLv3 is still available, and you can enable support for it if you wish.
+This will cause it to negotiate between TLSv1.0 and TLSv1.2.
+By default, it will default to TLSv1.0 as the minimum version and an unbounded maximum version, so you can specify either if you do not need an absolute round.
+Setting only the ``minimumTLSVersion`` to the highest you are able to will mean that future TLS versions will
+
+SSLv3 is still available and you can enable support for it if you wish.
 As an example, this supports all TLS versions and SSLv3:
 
 .. code-block:: python
 
-    from twisted.internet.ssl import (CertificateOptions, TLSVersion,
-                                      TLSVersionRange)
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
     options = CertificateOptions(
         ...,
-        tlsProtocols=TLSVersionRange(TLSVersion.SSLv3,
-                                     TLSVersion.TLSv1_2))
+        minimumTLSVersion=TLSVersion.SSLv3)
 
-
-Newer and future OpenSSL versions may completely remove the ability to negotiate the insecure SSLv3 protocol, in which case, this will not allow you to re-enable it.
+Future OpenSSL versions may completely remove the ability to negotiate the insecure SSLv3 protocol, and this will not allow you to re-enable it.
 
 Alternatively, you can alter the context's "method".
 By default, ``CertificateOptions`` creates contexts that require at least the TLSv1 protocol.
