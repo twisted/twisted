@@ -229,8 +229,8 @@ class ServiceTests(TestCase):
         An L{UsageError} is raised when C{https} is requested but there is no
         support for SSL.
         """
-        return True ## Changing behavior here.
-                    ## Do we want to guarantee early failure here?
+        return True # Changing behavior here.
+                    # Do we want to guarantee early failure here?
         options = Options()
 
         exception = self.assertRaises(
