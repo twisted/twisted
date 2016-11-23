@@ -454,6 +454,10 @@ class Certificate(CertBase):
         """
         return Class(crypto.load_certificate(format, requestData), *args)
 
+    # We can't use super() because it is old style still, so we have to hack
+    # around things wanting to call the parent function
+    _load = load
+
 
     def dumpPEM(self):
         """
@@ -533,7 +537,8 @@ class Certificate(CertBase):
 
         @param method: One of C{'md5'} or C{'sha'}.
 
-        @return: The digest of the object, formatted as b":"-delimited hex pairs
+        @return: The digest of the object, formatted as b":"-delimited hex
+            pairs
         @rtype: L{bytes}
         """
         return self.original.digest(method)
@@ -620,7 +625,7 @@ class PrivateCertificate(Certificate):
 
     @classmethod
     def load(Class, data, privateKey, format=crypto.FILETYPE_ASN1):
-        return Class.load(data, format)._setPrivateKey(privateKey)
+        return Class._load(data, format)._setPrivateKey(privateKey)
 
 
     def inspect(self):

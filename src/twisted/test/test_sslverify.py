@@ -2817,7 +2817,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
         with SetAsideModule("service_identity"):
             sys.modules["service_identity"] = None
 
-            result = sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            result = sslverify._selectVerifyImplementation()
             expected = (
                 sslverify.simpleVerifyHostname,
                 sslverify.SimpleVerificationError)
@@ -2840,7 +2840,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
         with SetAsideModule("service_identity"):
             sys.modules["service_identity"] = None
 
-            sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            sslverify._selectVerifyImplementation()
 
         [warning] = list(
             warning
