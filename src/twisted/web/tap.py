@@ -70,6 +70,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
     def opt_port(self, port):
         """
         Strports description of port to start the server on.
+        [default: tcp:8080]
         """
         self['ports'].append(port)
 
