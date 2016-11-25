@@ -12,7 +12,6 @@ import sys
 import itertools
 
 from zope.interface import implementer
-from constantly import NamedConstant, Names
 
 skipSSL = None
 skipSNI = None
