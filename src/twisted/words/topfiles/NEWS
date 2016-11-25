@@ -1,6 +1,14 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 16.6.0 (2016-11-17)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc has been ported to Python 3 (#6320)
+
+
 Twisted Words 16.5.0 (2016-10-28)
 =================================
 
