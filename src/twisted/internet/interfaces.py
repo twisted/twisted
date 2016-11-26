@@ -188,7 +188,6 @@ class IHostnameResolver(Interface):
 
 
 
-
 class IResolver(IResolverSimple):
     def query(query, timeout=None):
         """
