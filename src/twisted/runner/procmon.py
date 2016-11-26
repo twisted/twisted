@@ -22,7 +22,11 @@ class LineLogger(basic.LineReceiver):
     delimiter = b'\n'
 
     def lineReceived(self, line):
-        log.msg('[%s] %s' % (self.tag, line))
+        try:
+            line = line.decode('utf-8')
+        except UnicodeDecodeError:
+            line = repr(line)
+        log.msg(u'[%s] %s' % (self.tag, line))
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
