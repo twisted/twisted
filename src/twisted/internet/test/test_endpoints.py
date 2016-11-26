@@ -2646,7 +2646,7 @@ class ServerStringTests(unittest.TestCase):
             ValueError, endpoints.serverFromString, None, "4321")
         self.assertEqual(
             str(value),
-            "Unqualified strport description passed to 'service'."
+            "Unqualified strport description passed to 'service'. "
             "Use qualified endpoint descriptions; for example, 'tcp:4321'.")
 
 

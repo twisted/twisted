@@ -1402,7 +1402,7 @@ def _parseServer(description, factory, default=None):
     args, kw = _parse(description)
     if not args or (len(args) == 1 and not kw):
         deprecationMessage = (
-            "Unqualified strport description passed to 'service'."
+            "Unqualified strport description passed to 'service'. "
             "Use qualified endpoint descriptions; for example, 'tcp:%s'."
             % (description,))
         if default is None:
@@ -2050,6 +2050,3 @@ class _TLSClientEndpointParser(object):
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
-
-
-
