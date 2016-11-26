@@ -5,6 +5,8 @@
 Demonstrate sending mail via SMTP.
 """
 
+from __future__ import print_function
+
 import sys
 from email.mime.text import MIMEText
 
@@ -26,7 +28,7 @@ def send(message, subject, sender, recipients, host):
     def success(r):
         reactor.stop()
     def error(e):
-        print e
+        print(e)
         reactor.stop()
     dfr.addCallback(success)
     dfr.addErrback(error)

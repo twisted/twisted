@@ -1,1 +1,0 @@
-The new APIs: twisted.conch.checkers.IAuthorizedKeysDB, twisted.conch.checkers.InMemorySSHKeyDB, twisted.conch.checkers.UNIXAuthorizedKeyFiles, and twisted.conch.checkers.SSHPublicKeyChecker have been added to provide functionality to check the validity of SSH public keys and specify where authorized keys are to be found.

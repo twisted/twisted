@@ -10,19 +10,21 @@ Usage:
 The example will make an XML-RPC request to advogato.org and display the result.
 """
 
+from __future__ import print_function
+
 from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
 
 def printValue(value):
-    print repr(value)
+    print(repr(value))
     reactor.stop()
 
 def printError(error):
-    print 'error', error
+    print('error', error)
     reactor.stop()
 
 def capitalize(value):
-    print repr(value)
+    print(repr(value))
     proxy.callRemote('test.capitalize', 'moshe zadka').addCallbacks(printValue, printError)
 
 proxy = Proxy('http://advogato.org/XMLRPC')

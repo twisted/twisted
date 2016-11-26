@@ -1,2 +1,0 @@
-Pickling twisted.internet.ssl.OptionSSLCertificationOptions and twisted.internet.ssl.Keypair is no longer supported.
-__getstate__ and __setstate__ methods of these classes have been deprecated.

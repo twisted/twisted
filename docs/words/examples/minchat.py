@@ -11,6 +11,8 @@ To run the script:
 $ python minchat.py
 """
 
+from __future__ import print_function
+
 from twisted.words.im import basechat, baseaccount, ircsupport
 
 
@@ -41,7 +43,7 @@ class AccountManager (baseaccount.AccountManager):
         self.chatui = MinChat()
 
         if len(accounts) == 0:
-            print "You have defined no accounts."
+            print("You have defined no accounts.")
         for acct in accounts:
             acct.logOn(self.chatui)
 
@@ -65,18 +67,18 @@ class MinConversation(basechat.Conversation):
         pass
     
     def showMessage(self, text, metadata=None):
-        print "<%s> %s" % (self.person.name, text)
+        print("<%s> %s" % (self.person.name, text))
         
     def contactChangedNick(self, person, newnick):
         basechat.Conversation.contactChangedNick(self, person, newnick)
-        print "-!- %s is now known as %s" % (person.name, newnick)
+        print("-!- %s is now known as %s" % (person.name, newnick))
 
 
 class MinGroupConversation(basechat.GroupConversation):
     """
     This class is a minimal implementation of the abstract GroupConversation class.
 
-    This is all you need to override to listen in on a group conversaion.
+    This is all you need to override to listen in on a group conversation.
     """
     def show(self):
         """
@@ -91,24 +93,24 @@ class MinGroupConversation(basechat.GroupConversation):
         pass
 
     def showGroupMessage(self, sender, text, metadata=None):
-        print "<%s/%s> %s" % (sender, self.group.name, text)
+        print("<%s/%s> %s" % (sender, self.group.name, text))
 
     def setTopic(self, topic, author):
-        print "-!- %s set the topic of %s to: %s" % (author, 
-            self.group.name, topic)
+        print("-!- %s set the topic of %s to: %s" % (author,
+            self.group.name, topic))
 
     def memberJoined(self, member):
         basechat.GroupConversation.memberJoined(self, member)
-        print "-!- %s joined %s" % (member, self.group.name)
+        print("-!- %s joined %s" % (member, self.group.name))
 
     def memberChangedNick(self, oldnick, newnick):
         basechat.GroupConversation.memberChangedNick(self, oldnick, newnick)
-        print "-!- %s is now known as %s in %s" % (oldnick, newnick,
-            self.group.name)
+        print("-!- %s is now known as %s in %s" % (oldnick, newnick,
+            self.group.name))
 
     def memberLeft(self, member):
         basechat.GroupConversation.memberLeft(self, member)
-        print "-!- %s left %s" % (member, self.group.name)
+        print("-!- %s left %s" % (member, self.group.name))
 
 
 class MinChat(basechat.ChatUI):

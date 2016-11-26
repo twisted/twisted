@@ -1,1 +1,0 @@
-twisted.names.secondary.SecondaryAuthority can now answer queries again (broken since 13.2.0).

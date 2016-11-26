@@ -1,6 +1,8 @@
 # You can run this .tac file directly with:
 #    twistd -ny simple.tac
 
+from __future__ import print_function
+
 from twisted.application import service, internet
 from twisted.protocols import wire
 from twisted.internet import protocol
@@ -19,7 +21,7 @@ class Foo(protocol.Protocol):
     def connectionMade(self):
         self.transport.write('lalala\n')
     def dataReceived(self, data):
-        print `data`
+        print(`data`)
 
 factory = protocol.ClientFactory()
 factory.protocol = Foo
@@ -28,10 +30,10 @@ internet.TCPClient('localhost', 8081, factory).setServiceParent(s)
 class FooService(service.Service):
     def startService(self):
         service.Service.startService(self)
-        print 'lala, starting'
+        print('lala, starting')
     def stopService(self):
         service.Service.stopService(self)
-        print 'lala, stopping'
+        print('lala, stopping')
         print self.parent.getServiceNamed(self.name) is self
 
 foo = FooService()

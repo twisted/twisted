@@ -1,5 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 from twisted.test import proto_helpers, test_protocols
 import math
@@ -43,7 +44,7 @@ class PerformanceTester(object):
             response = raw_input(("A file named %s exists. "
                                  "Overwrite it (y/n)? ") % filename)
             if response.lower() != "y":
-                print "Performance test cancelled."
+                print("Performance test cancelled.")
                 sys.exit(1)
         self.filename = filename
 
@@ -89,7 +90,7 @@ class PerformanceTester(object):
         self.writeHeader()
         self.writePerformanceData()
         self.writeLineSeparator()
-        print "The report was written to %s." % self.filename
+        print("The report was written to %s." % self.filename)
 
 
     def writeHeader(self):
@@ -225,7 +226,7 @@ class NetstringPerformanceTester(PerformanceTester):
 
 def disableGarbageCollector():
     gc.disable()
-    print 'Disabled Garbage Collector.'
+    print('Disabled Garbage Collector.')
 
 
 def main(number, filename):
@@ -237,6 +238,6 @@ def main(number, filename):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print USAGE % sys.argv[0]
+        print(USAGE % sys.argv[0])
         sys.exit(1)
     main(*sys.argv[1:3])

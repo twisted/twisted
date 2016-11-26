@@ -130,53 +130,33 @@ access it mostly just like you can access any other dict. Options are stored
 as mapping items in the Options instance: parameters as 'paramname': 'value'
 and flags as 'flagname': 1 or 0.
 
-    
-
-
 
 Inheritance, Or: How I Learned to Stop Worrying and Love the Superclass
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-    
-Sometimes there is a need for several option processors with
-a unifying core. Perhaps you want all your commands to
-understand ``-q`` /``--quiet`` means to be
-quiet, or something similar. On the face of it, this looks
-impossible: in Python, the subclass's ``optFlags`` 
-would shadow the superclass's. However,
-``usage.Options`` uses special reflection code to get
-all of the ``optFlags`` defined in the hierarchy. So
-the following:
-
-
-
+Sometimes there is a need for several option processors with a unifying core.
+Perhaps you want all your commands to understand ``-q`` /``--quiet`` means to be quiet, or something similar.
+On the face of it, this looks impossible: in Python, the subclass's ``optFlags`` would shadow the superclass's.
+However, ``usage.Options`` uses special reflection code to get all of the ``optFlags`` defined in the hierarchy. So the following:
 
 .. code-block:: python
 
-    
     class BaseOptions(usage.Options):
-    
+
         optFlags = [["quiet", "q", None]]
-    
+
     class SpecificOptions(BaseOptions):
-    
+
         optFlags = [
             ["fast", "f", None], ["good", "g", None], ["cheap", "c", None]
         ]
 
-
-    
-Is the same as: 
-
-
-
+Is the same as:
 
 .. code-block:: python
 
-    
-    class SpecificOptions(BaseOptions):
-    
+    class SpecificOptions(usage.Options):
+
         optFlags = [
             ["quiet", "q", "Silence output"],
             ["fast", "f", "Run quickly"],
@@ -185,14 +165,9 @@ Is the same as:
         ]
 
 
-
-    
-
 Parameters
 ----------
 
-
-    
 Parameters are specified using the attribute
 ``optParameters`` . They *must* be given a
 default. If you want to make sure you got the parameter from
@@ -474,7 +449,7 @@ patch up inconsistencies, and the like. Here is an example:
     
         def postOptions(self):
             if self['fast'] and self['good'] and self['cheap']:
-                raise usage.UsageError, "can't have it all, brother"
+                raise usage.UsageError("can't have it all, brother")
 
 
 

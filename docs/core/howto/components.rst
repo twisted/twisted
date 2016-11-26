@@ -32,7 +32,7 @@ For example:
             self.sideLength = sideLength
 
         def area(self):
-            raise NotImplementedError, "Subclasses must implement area"
+            raise NotImplementedError("Subclasses must implement area")
 
     class Triangle(Shape):
         def area(self):
@@ -61,7 +61,7 @@ For example:
             self.sideLength = sideLength
 
         def area(self):
-            raise NotImplementedError, "Subclasses must implement area"
+            raise NotImplementedError("Subclasses must implement area")
 
     class Color:
         color = None
@@ -100,10 +100,10 @@ For example:
     class HairDryer:
         def plug(self, socket):
             if socket.voltage() == 120:
-                print "I was plugged in properly and am operating."
+                print("I was plugged in properly and am operating.")
             else:
-                print "I was plugged in improperly and "
-                print "now you have no hair dryer any more."
+                print("I was plugged in improperly and ")
+                print("now you have no hair dryer any more.")
 
     class AmericanSocket:
         def voltage(self):
@@ -310,7 +310,7 @@ So, we could write a new "smart" ``HairDryer`` which automatically looked up an 
         def plug(self, socket):
             adapted = IAmericanSocket(socket)
             assert adapted.voltage() == 120, "BOOM"
-            print "I was plugged in properly and am operating"
+            print("I was plugged in properly and am operating")
 
 Now, if we create an instance of our new "smart" ``HairDryer`` and attempt to plug it in to various sockets, the ``HairDryer`` will adapt itself automatically depending on the type of socket it is plugged in to:
 

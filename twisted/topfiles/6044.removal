@@ -1,1 +1,0 @@
-twisted.internet.defer.deferredGenerator is now deprecated. twisted.internet.defer.inlineCallbacks should be used instead.

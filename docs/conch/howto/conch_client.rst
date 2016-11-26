@@ -148,7 +148,7 @@ The ``agentEndpoint`` argument gives the ``SSHCommandClientEndpoint`` an opportu
 The agent may already be loaded with keys, or may have some other way to authenticate a connection.
 Using the agent can mean the process actually establishing the SSH connection doesn't need to load any authentication material (passwords or keys) itself (often convenient in case keys are encrypted and potentially more secure, since only the agent process ever actually holds the secrets).
 The value for this argument is another ``IStreamClientEndpoint`` .
-Often in a typical *NIX desktop environment, the *SSH_AUTH_SOCK* environment variable will give the location of a AF_UNIX socket.
+Often in a typical *NIX desktop environment, the *SSH_AUTH_SOCK* environment variable will give the location of an AF_UNIX socket.
 This explains the value ``echoclient_ssh.py`` assigns this parameter when *--no-agent* is not given.
 
 
@@ -319,23 +319,19 @@ supplied. ``getPassword()`` asks for a
 password, ``getPublicKey()`` and ``getPrivateKey()`` get public and private keys,
 respectively. ``getPassword()`` returns
 a ``Deferred`` that is called back with
-the password to use. ``getPublicKey()`` 
-returns the SSH key data for the public key to use. ``keys.Key.fromString()`` will take
-a key in OpenSSH or LSH format as a string, and convert it to the
-required format. Alternatively, ``keys.Key.fromFile()`` can be used instead, which
-will take the filename of a key in OpenSSH and LSH format, and 
-convert it to the required format. ``getPrivateKey()`` 
-returns a ``Deferred`` which is
-called back with the key object (as used in PyCrypto) for
-the private key. ``getPassword()`` 
-and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user
-for input.
+the password to use.
 
+``getPublicKey()`` returns the SSH key data for the public key to use.
+:api:`Key <twisted.conch.ssh.keys.Key.fromString()>` will take a key in OpenSSH, LSH or any supported format, as a string, and generate a new :api:`Key <twisted.conch.ssh.keys.Key>`.
+Alternatively, ``keys.Key.fromFile()`` can be used instead, which
+will take the filename of a key in the supported format, and  and generate a new  :api:`Key <twisted.conch.ssh.keys.Key>`.
 
+``getPrivateKey()`` returns a ``Deferred`` which is called back with the private :api:`Key <twisted.conch.ssh.keys.Key>`.
 
+``getPassword()`` and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user for input.
 
 Once the authentication is complete, ``SSHUserAuthClient`` takes care of starting the code ``SSHConnection`` object given to it. Next, we'll
-look at how to use the ``SSHConnection`` 
+look at how to use the ``SSHConnection``
 
 
 
@@ -398,7 +394,7 @@ The Channel
             self.catData += data
     
         def closed(self):
-            print 'We got this from "cat":', self.catData
+            print('We got this from "cat":', self.catData)
 
 
 

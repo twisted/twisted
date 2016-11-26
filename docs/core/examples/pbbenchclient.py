@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 from twisted.spread import pb
 from twisted.internet import defer, reactor
@@ -17,8 +18,8 @@ class PBBenchClient:
         thisSecond = int(time.time())
         if thisSecond != self.lastSecond:
             if thisSecond - self.lastSecond > 1:
-                print "WARNING it took more than one second"
-            print 'cps:', self.calledThisSecond
+                print("WARNING it took more than one second")
+            print('cps:', self.calledThisSecond)
             self.calledThisSecond = 0
             self.lastSecond = thisSecond
 
