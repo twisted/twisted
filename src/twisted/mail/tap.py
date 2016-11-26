@@ -8,7 +8,6 @@ Support for creating mail servers with twistd.
 """
 
 import os
-import warnings
 
 from twisted.mail import mail
 from twisted.mail import maildir
