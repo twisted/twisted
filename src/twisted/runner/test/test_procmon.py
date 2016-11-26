@@ -317,7 +317,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         # Schedule the process to start
         self.pm.startService()
-        # advance the reactor to start the process
+        # Advance the reactor to start the process
         self.reactor.advance(0)
         self.assertIn("foo", self.pm.protocols)
         # Long time passes
@@ -327,6 +327,7 @@ class ProcmonTests(unittest.TestCase):
         self.assertEquals(len(events), 1)
         message = events[0]['message']
         self.assertEquals(message, tuple([u'[foo] hello world!']))
+
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
         """
@@ -338,7 +339,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         # Schedule the process to start
         self.pm.startService()
-        # advance the reactor to start the process
+        # Advance the reactor to start the process
         self.reactor.advance(0)
         self.assertIn("foo", self.pm.protocols)
         # Long time passes
@@ -353,6 +354,7 @@ class ProcmonTests(unittest.TestCase):
         self.assertEquals(tag, '[foo]')
         self.assertEquals(output, repr(b'\xffhello world!'))
 
+
     def test_outputReceivedPartialLine(self):
         """
         Getting partial line results in no events until process end
@@ -363,7 +365,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         # Schedule the process to start
         self.pm.startService()
-        # advance the reactor to start the process
+        # Advance the reactor to start the process
         self.reactor.advance(0)
         self.assertIn("foo", self.pm.protocols)
         # Long time passes
