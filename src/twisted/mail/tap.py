@@ -85,8 +85,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     }
 
     compData = usage.Completions(
-                   optActions={"hostname" : usage.CompleteHostnames(),
-                               "certificate" : usage.CompleteFiles("*.pem")}
+                   optActions={"hostname": usage.CompleteHostnames()}
                    )
 
     longdesc = """
