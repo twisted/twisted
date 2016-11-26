@@ -1,6 +1,41 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.6.0 (2016-11-17)
+================================
+
+Features
+--------
+ - The twist script can now be run by invoking python -m twisted.
+   (#8657)
+ - twisted.protocols.sip has been ported to Python 3. (#8669)
+ - twisted.persisted.dirdbm has been ported to Python 3. (#8888)
+
+Bugfixes
+--------
+ - twisted.internet.defer.Deferred now implements send, not __send__,
+   which means that it is now a conforming generator. (#8861)
+ - The IOCP reactor no longer transmits the contents of uninitialized
+   memory when writing large amounts of data. (#8870)
+ - Deferreds awaited/yielded from in a
+   twisted.internet.defer.ensureDeferred wrapped coroutine will now
+   properly raise exceptions. Additionally, it more closely models
+   asyncio.ensure_future and will pass through Deferreds. (#8878)
+ - Deferreds that are paused or chained on other Deferreds will now
+   return a result when yielded/awaited in a twisted.internet.defer
+   .ensureDeferred-wrapped coroutine, instead of returning the
+   Deferred it was chained to. (#8890)
+
+Improved Documentation
+----------------------
+ - twisted.test.proto_helpers is now explicitly covered by the
+   compatibility policy. (#8857)
+
+Other
+-----
+ - #8281, #8823, #8862
+
+
 Twisted Core 16.5.0 (2016-10-28)
 ================================
 

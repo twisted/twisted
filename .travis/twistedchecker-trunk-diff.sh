@@ -27,11 +27,9 @@ fi
 # Make sure we have trunk on the local repo.
 git fetch origin +refs/heads/trunk:refs/remotes/origin/trunk
 
+# Explicitly ignore extension modules.  See: https://github.com/twisted/twistedchecker/issues/118
 mkdir -p build/
-twistedchecker -f parseable $target > build/twistedchecker-branch.report
-
-echo 'NOTICE: TypeError: compile() traceback are a known'
-echo 'See: https://github.com/twisted/twistedchecker/issues/118'
+twistedchecker --ignore='raiser.so,portmap.so,_sendmsg.so' -f parseable "$target" > build/twistedchecker-branch.report
 
 # Make sure repo is producing the diff with prefix so that the output of
 # `git diff` can be parsed by diff_cover.
