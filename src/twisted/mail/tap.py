@@ -144,9 +144,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add a POP3 port listener on the specified endpoint.
 
         You can listen on multiple ports by specifying multiple --pop3 options.
-        For backwards compatibility, a bare TCP port number can be specified,
-        but this is deprecated.  [SSL Example: ssl:8995:privateKey=mycert.pem]
-        [default: tcp:8110]
         """
         self.addEndpoint('pop3', description)
     opt_p = opt_pop3
@@ -157,9 +154,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add an SMTP port listener on the specified endpoint.
 
         You can listen on multiple ports by specifying multiple --smtp options.
-        For backwards compatibility, a bare TCP port number can be specified,
-        but this is deprecated.  [SSL Example: ssl:8465:privateKey=mycert.pem]
-        [default: tcp:8025]
         """
         self.addEndpoint('smtp', description)
     opt_s = opt_smtp
