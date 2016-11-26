@@ -130,7 +130,7 @@ class ServiceTests(TestCase):
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(
             warnings[0]['message'],
-            "Unqualified strport description passed to 'service'."
+            "Unqualified strport description passed to 'service'. "
             "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
         self.assertEqual(len(warnings), 1)
 
