@@ -330,7 +330,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
         """
-        Getting a complete output line generates a log message.
+        Getting invalid UTF-8 results in the repr of the raw message
         """
         events = []
         self.addCleanup(log.removeObserver, events.append)
@@ -352,6 +352,29 @@ class ProcmonTests(unittest.TestCase):
         tag, output = message.split(' ', 1)
         self.assertEquals(tag, '[foo]')
         self.assertEquals(output, repr(b'\xffhello world!'))
+
+    def test_outputReceivedPartialLine(self):
+        """
+        Getting partial line results in no events until process end
+        """
+        events = []
+        self.addCleanup(log.removeObserver, events.append)
+        log.addObserver(events.append)
+        self.pm.addProcess("foo", ["foo"])
+        # Schedule the process to start
+        self.pm.startService()
+        # advance the reactor to start the process
+        self.reactor.advance(0)
+        self.assertIn("foo", self.pm.protocols)
+        # Long time passes
+        self.reactor.advance(self.pm.threshold)
+        # Process greets
+        self.pm.protocols["foo"].outReceived(b'hello world!')
+        self.assertEquals(len(events), 0)
+        self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
+        self.assertEquals(len(events), 1)
+        message = events[0]['message']
+        self.assertEquals(message, tuple([u'[foo] hello world!']))
 
     def test_connectionLostLongLivedProcess(self):
         """
