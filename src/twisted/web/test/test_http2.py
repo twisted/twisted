@@ -10,13 +10,14 @@ from __future__ import absolute_import, division
 import itertools
 
 from twisted.internet import defer, reactor, task
-from twisted.protocols.test.test_tls import NonStreamingProducer
 from twisted.python.compat import iterbytes
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
-from twisted.web.test.test_http import DummyHTTPHandler, DelayedHTTPHandler
+from twisted.web.test.test_http import (
+    DummyHTTPHandler, DelayedHTTPHandler, DummyPullProducerHandler
+)
 from twisted.internet.address import IPv4Address
 
 skipH2 = None
@@ -370,20 +371,6 @@ class DummyProducerHandler(http.Request):
     def process(self):
         self.setResponseCode(200)
         self.registerProducer(DummyProducer(), True)
-
-
-
-class DummyPullProducerHandler(http.Request):
-    """
-    An HTTP request handler that registers a dummy pull producer to serve the
-    body.
-
-    The owner must call C{finish} to complete the response.
-    """
-    def process(self):
-        self._actualProducer = NonStreamingProducer(self)
-        self.setResponseCode(200)
-        self.registerProducer(self._actualProducer, False)
 
 
 
