@@ -17,7 +17,6 @@ from __future__ import division, absolute_import
 import os
 import re
 import socket
-import warnings
 
 from constantly import NamedConstant, Names
 
