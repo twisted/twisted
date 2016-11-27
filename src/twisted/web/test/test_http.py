@@ -2987,6 +2987,10 @@ class ChannelProductionTests(unittest.TestCase):
     def buildChannelAndTransport(self, transport, requestFactory):
         """
         Setup a L{HTTPChannel} and a transport and associate them.
+
+        @param transport: A transport to back the L{HTTPChannel}
+        @param requestFactory: An object that can construct L{Request} objects.
+        @return: A tuple of the channel and the transport.
         """
         transport = transport
         channel = http.HTTPChannel()

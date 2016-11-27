@@ -852,6 +852,9 @@ class NonStreamingProducer(object):
 
 
     def resumeProducing(self):
+        """
+        Write the counter value once.
+        """
         if self.consumer is None or self.counter >= 10:
             raise RuntimeError("BUG: resume after unregister/stop.")
         else:
@@ -863,10 +866,17 @@ class NonStreamingProducer(object):
 
 
     def pauseProducing(self):
+        """
+        An implementation of C{IPushProducer.pauseProducing}. This should never
+        be called on a pull producer, so this just raises an error.
+        """
         raise RuntimeError("BUG: pause should never be called.")
 
 
     def _done(self):
+        """
+        Fire a L{Deferred} so that users can wait for this to complete.
+        """
         self.consumer = None
         d = self.result
         del self.result
@@ -874,6 +884,9 @@ class NonStreamingProducer(object):
 
 
     def stopProducing(self):
+        """
+        Stop all production.
+        """
         self.stopped = True
         self._done()
 

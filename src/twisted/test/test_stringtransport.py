@@ -325,16 +325,25 @@ class TestConsumer(object):
 
 
     def registerProducer(self, producer, streaming):
+        """
+        Registers a single producer with this consumer. Just keeps track of it.
+        """
         self.producer = producer
         self.producerStreaming = streaming
 
 
     def unregisterProducer(self):
+        """
+        Forget the producer we had previously registered.
+        """
         self.producer = None
         self.producerStreaming = None
 
 
     def write(self, data):
+        """
+        Some data was written to the consumer: stores it for later use.
+        """
         self.writes.append(data)
 
 

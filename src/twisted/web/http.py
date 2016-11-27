@@ -1623,6 +1623,9 @@ class _NoPushProducer(object):
     def registerProducer(self, producer, streaming):
         """
         Register to receive data from a producer.
+
+        @param producer: The producer to register.
+        @param streaming: Whether this is a streaming producer or not.
         """
         pass
 
@@ -2163,7 +2166,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._requestProducer = None
         self._requestProducerStreaming = None
-
 
     # Implementation of IPushProducer.
     def stopProducing(self):
