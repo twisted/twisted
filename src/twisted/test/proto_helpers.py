@@ -850,6 +850,7 @@ class NonStreamingProducer(object):
         self.consumer = consumer
         self.result = Deferred()
 
+
     def resumeProducing(self):
         if self.consumer is None or self.counter >= 10:
             raise RuntimeError("BUG: resume after unregister/stop.")
