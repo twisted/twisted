@@ -98,7 +98,7 @@ from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.internet.producer_helpers import _PullToPush
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.protocols import policies, basic
 
 from twisted.web.iweb import (

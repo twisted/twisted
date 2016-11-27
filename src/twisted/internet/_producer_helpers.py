@@ -15,6 +15,10 @@ from twisted.python import log
 from twisted.python.reflect import safe_str
 
 
+# This module exports nothing public, it's for internal Twisted use only.
+__all__ = []
+
+
 @implementer(IPushProducer)
 class _PullToPush(object):
     """
@@ -98,16 +102,24 @@ class _PullToPush(object):
         self._finished = True
         self._coopTask.stop()
 
-
     # IPushProducer implementation:
     def pauseProducing(self):
+        """
+        @see C{IPushProducer.pauseProducing}
+        """
         self._coopTask.pause()
 
 
     def resumeProducing(self):
+        """
+        @see C{IPushProducer.resumeProducing}
+        """
         self._coopTask.resume()
 
 
     def stopProducing(self):
+        """
+        @see C{IPushProducer.stopProducing}
+        """
         self.stopStreaming()
         self._producer.stopProducing()
