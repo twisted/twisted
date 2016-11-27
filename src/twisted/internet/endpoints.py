@@ -21,16 +21,17 @@ import warnings
 
 from constantly import NamedConstant, Names
 
-from socket import AF_INET6, AF_INET
-
-from zope.interface import implementer, directlyProvides
+from zope.interface import implementer, directlyProvides, provider
 
 from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.abstract import isIPv6Address
-from twisted.internet.address import _ProcessAddress, HostnameAddress
+from twisted.internet.address import (
+    _ProcessAddress, HostnameAddress, IPv4Address, IPv6Address
+)
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor)
+    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver
+)
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.stdio import StandardIO, PipeAddress
@@ -42,6 +43,7 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.compat import iterbytes
+from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
 
 
@@ -639,16 +641,10 @@ class HostnameEndpoint(object):
     A name-based endpoint that connects to the fastest amongst the resolved
     host addresses.
 
-    @ivar _getaddrinfo: A hook used for testing name resolution.
-
-    @ivar _deferToThread: A hook used for testing deferToThread.
-
     @cvar _DEFAULT_ATTEMPT_DELAY: The default time to use between attempts, in
         seconds, when no C{attemptDelay} is given to
         L{HostnameEndpoint.__init__}.
     """
-    _getaddrinfo = staticmethod(socket.getaddrinfo)
-    _deferToThread = staticmethod(threads.deferToThread)
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
@@ -657,7 +653,8 @@ class HostnameEndpoint(object):
         Create a L{HostnameEndpoint}.
 
         @param reactor: The reactor to use for connections and delayed calls.
-        @type reactor: provider of L{IReactorTCP} and L{IReactorTime}
+        @type reactor: provider of L{IReactorTCP}, L{IReactorTime} and either
+            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}.
 
         @param host: A hostname to connect to.
         @type host: L{bytes}
@@ -695,25 +692,37 @@ class HostnameEndpoint(object):
         connection which is established first.
         """
         wf = protocolFactory
-        d = self._nameResolution(self._host, self._port)
+        d = Deferred()
+        addresses = []
+        @provider(IResolutionReceiver)
+        class MyReceiver(object):
+            @staticmethod
+            def resolutionBegan(resolutionInProgress):
+                pass
+            @staticmethod
+            def addressResolved(address):
+                addresses.append(address)
+            @staticmethod
+            def resolutionComplete():
+                d.callback(addresses)
+        self._reactor.nameResolver.resolveHostName(
+            MyReceiver, self._host.decode("ascii"), portNumber=self._port
+        )
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
             "Couldn't find the hostname '%s'" % (self._host,))))
         @d.addCallback
-        def gaiResultToEndpoints(gaiResult):
-            """
-            This method matches the host address family with an endpoint for
-            every address returned by C{getaddrinfo}.
-
-            @param gaiResult: A list of 5-tuples as returned by GAI.
-            @type gaiResult: list
-            """
-            for family, socktype, proto, canonname, sockaddr in gaiResult:
-                if family in [AF_INET6]:
-                    yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
-                elif family in [AF_INET]:
-                    yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
+        def resolvedAddressesToEndpoints(addresses):
+            for eachAddress in addresses:
+                if isinstance(eachAddress, IPv6Address):
+                    yield TCP6ClientEndpoint(
+                        self._reactor, eachAddress.host, eachAddress.port,
+                        self._timeout, self._bindAddress
+                    )
+                if isinstance(eachAddress, IPv4Address):
+                    yield TCP4ClientEndpoint(
+                        self._reactor, eachAddress.host, eachAddress.port,
+                        self._timeout, self._bindAddress
+                    )
                     # Yields an endpoint for every address returned by GAI
 
         def _canceller(d):
@@ -792,15 +801,6 @@ class HostnameEndpoint(object):
             return winner
 
         return d
-
-
-    def _nameResolution(self, host, port):
-        """
-        Resolve the hostname string into a tuple containig the host
-        address.
-        """
-        return self._deferToThread(self._getaddrinfo, host, port, 0,
-                socket.SOCK_STREAM)
 
 
 
