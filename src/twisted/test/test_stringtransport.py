@@ -327,6 +327,9 @@ class TestConsumer(object):
     def registerProducer(self, producer, streaming):
         """
         Registers a single producer with this consumer. Just keeps track of it.
+
+        @param producer: The producer to register.
+        @param streaming: Whether the producer is a streaming one or not.
         """
         self.producer = producer
         self.producerStreaming = streaming
@@ -343,6 +346,8 @@ class TestConsumer(object):
     def write(self, data):
         """
         Some data was written to the consumer: stores it for later use.
+
+        @param data: The data to write.
         """
         self.writes.append(data)
 

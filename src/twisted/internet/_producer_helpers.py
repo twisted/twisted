@@ -102,6 +102,7 @@ class _PullToPush(object):
         self._finished = True
         self._coopTask.stop()
 
+
     # IPushProducer implementation:
     def pauseProducing(self):
         """

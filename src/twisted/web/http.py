@@ -2167,6 +2167,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._requestProducer = None
         self._requestProducerStreaming = None
 
+
     # Implementation of IPushProducer.
     def stopProducing(self):
         """
