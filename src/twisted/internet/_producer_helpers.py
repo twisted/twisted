@@ -105,21 +105,21 @@ class _PullToPush(object):
     # IPushProducer implementation:
     def pauseProducing(self):
         """
-        @see C{IPushProducer.pauseProducing}
+        @see: C{IPushProducer.pauseProducing}
         """
         self._coopTask.pause()
 
 
     def resumeProducing(self):
         """
-        @see C{IPushProducer.resumeProducing}
+        @see: C{IPushProducer.resumeProducing}
         """
         self._coopTask.resume()
 
 
     def stopProducing(self):
         """
-        @see C{IPushProducer.stopProducing}
+        @see: C{IPushProducer.stopProducing}
         """
         self.stopStreaming()
         self._producer.stopProducing()
