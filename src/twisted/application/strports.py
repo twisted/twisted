@@ -21,18 +21,15 @@ def service(description, factory, reactor=None):
 
     @param description: The description of the listening port, in the syntax
         described by L{twisted.internet.endpoints.serverFromString}.
-
     @type description: C{str}
 
     @param factory: The protocol factory which will build protocols for
         connections to this service.
-
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
 
     @rtype: C{twisted.application.service.IService}
-
-    @return: the service corresponding to a description of a reliable
-        stream server.
+    @return: the service corresponding to a description of a reliable stream
+        server.
 
     @see: L{twisted.internet.endpoints.serverFromString}
     """
@@ -48,10 +45,14 @@ def service(description, factory, reactor=None):
 
 def listen(description, factory):
     """
-    Listen on a port corresponding to a description
+    Listen on a port corresponding to a description.
 
+    @param description: The description of the connecting port, in the syntax
+        described by L{twisted.internet.endpoints.serverFromString}.
     @type description: L{str}
 
+    @param factory: The protocol factory which will build protocols on
+        connection.
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
 
     @rtype: L{twisted.internet.interfaces.IListeningPort}
