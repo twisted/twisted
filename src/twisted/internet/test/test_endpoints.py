@@ -1611,6 +1611,8 @@ def deterministicResolvingReactor(reactor, expectedAddresses):
                                        ('TCP', expectedAddress, portNumber))
                 resolutionReceiver.addressResolved(expectedAddress)
             resolutionReceiver.resolutionComplete()
+
+
     @provider(IReactorPluggableNameResolver)
     class WithResolver(proxyForInterface(
             InterfaceClass('*', tuple(providedBy(reactor)))
