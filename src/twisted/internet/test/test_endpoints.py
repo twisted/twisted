@@ -8,11 +8,10 @@ L{twisted.internet.endpoints}.
 """
 from __future__ import division, absolute_import
 
-import socket
-
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
-from zope.interface import implementer, provider
+from zope.interface import implementer, provider, providedBy
+from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyObject, verifyClass
 from types import FunctionType
 
@@ -1576,11 +1575,28 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 def deterministicResolvingReactor(reactor, expectedAddresses):
     """
-    
+    Create a reactor that will deterministically resolve all hostnames it is
+    passed to the list of addresses given.
+
+    @param reactor: An object that we wish to add an
+        L{IReactorPluggableNameResolver} to.
+    @type reactor: Any object with some formally-declared interfaces (i.e. one
+        where C{list(providedBy(reactor))} is not empty); usually C{IReactor*}
+        interfaces.
+
+    @param expectedAddresses: the addresses expected to be returned.  If these
+        are strings, they should be IPv4 or IPv6 literals, and they will be
+        wrapped in L{IPv4Address} and L{IPv6Address} objects in the resolution
+        result.
+    @type expectedAddresses: iterable of C{object} or C{str}
+
+    @return: A new reactor which provides all the interfaces previously
+        provided by C{reactor} as well as L{IReactorPluggableNameResolver}.
+        All name resolutions performed with its C{nameResolver} attribute will
+        resolve reentrantly and synchronously with the given
+        C{expectedAddresses}.  However, it is not a complete implementation as
+        it does not have an C{installNameResolver} method.
     """
-    class IReactorsTCPAndTime(interfaces.IReactorTCP,
-                              interfaces.IReactorTime):
-        ""
     @provider(IHostnameResolver)
     class SimpleNameResolver(object):
         @staticmethod
@@ -1596,11 +1612,11 @@ def deterministicResolvingReactor(reactor, expectedAddresses):
                 resolutionReceiver.addressResolved(expectedAddress)
             resolutionReceiver.resolutionComplete()
     @provider(IReactorPluggableNameResolver)
-    class WrappingReactor(proxyForInterface(IReactorsTCPAndTime)):
-        def installNameResolver(self, resolver):
-            raise NotImplementedError()
+    class WithResolver(proxyForInterface(
+            InterfaceClass('*', tuple(providedBy(reactor)))
+    )):
         nameResolver = SimpleNameResolver()
-    return WrappingReactor(reactor)
+    return WithResolver(reactor)
 
 
 
