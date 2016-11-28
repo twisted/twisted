@@ -132,8 +132,9 @@ class PIDFile(object):
     def read(self):
         pidString = b""
         try:
-            for pidString in self.filePath.open():
-                break
+            with self.filePath.open() as fh:
+                for pidString in fh:
+                    break
         except OSError as e:
             if e.errno == errno.ENOENT:  # No such file
                 raise NoPIDFound("PID file does not exist")
