@@ -20,6 +20,7 @@ except ImportError:
 
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
+from ._idna import _idnaBytes
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -61,51 +62,6 @@ class SimpleVerificationError(Exception):
     """
     Not a very useful verification error.
     """
-
-
-
-def _idnaBytes(text):
-    """
-    Convert some text typed by a human into some ASCII bytes.
-
-    This is provided to allow us to use the U{partially-broken IDNA
-    implementation in the standard library <http://bugs.python.org/issue17305>}
-    if the more-correct U{idna <https://pypi.python.org/pypi/idna>} package is
-    not available; C{service_identity} is somewhat stricter about this.
-
-    @param text: A domain name, hopefully.
-    @type text: L{unicode}
-
-    @return: The domain name's IDNA representation, encoded as bytes.
-    @rtype: L{bytes}
-    """
-    try:
-        import idna
-    except ImportError:
-        return text.encode("idna")
-    else:
-        return idna.encode(text)
-
-
-
-def _idnaText(octets):
-    """
-    Convert some IDNA-encoded octets into some human-readable text.
-
-    Currently only used by the tests.
-
-    @param octets: Some bytes representing a hostname.
-    @type octets: L{bytes}
-
-    @return: A human-readable domain name.
-    @rtype: L{unicode}
-    """
-    try:
-        import idna
-    except ImportError:
-        return octets.decode("idna")
-    else:
-        return idna.decode(octets)
 
 
 

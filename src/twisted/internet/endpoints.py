@@ -46,10 +46,10 @@ from twisted.python.compat import iterbytes
 from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
 
+from ._idna import _idnaBytes, _idnaText
 
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from twisted.internet._sslverify import _idnaBytes, _idnaText
     from twisted.internet.ssl import (
         optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
         CertificateOptions, trustRootFromCertificates
@@ -677,7 +677,17 @@ class HostnameEndpoint(object):
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
         self._reactor = reactor
-        self._host = host
+        if isinstance(host, bytes):
+            # If it's bytes, just store it, and the textual version can be
+            # latin1-ified (since it should be only ASCII, but we don't want to
+            # complain too loudly here).
+            self._hostBytes = host
+            self._hostText = _idnaText(host)
+        else:
+            # If it's text, try to idna-ify it.
+            self._hostBytes = _idnaBytes(host)
+            self._hostText = host
+
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
@@ -706,10 +716,10 @@ class HostnameEndpoint(object):
             def resolutionComplete():
                 d.callback(addresses)
         self._reactor.nameResolver.resolveHostName(
-            MyReceiver, self._host.decode("ascii"), portNumber=self._port
+            MyReceiver, self._hostText, portNumber=self._port
         )
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
-            "Couldn't find the hostname '%s'" % (self._host,))))
+            "Couldn't find the hostname '{}'".format(self._hostText))))
         @d.addCallback
         def resolvedAddressesToEndpoints(addresses):
             for eachAddress in addresses:
@@ -733,7 +743,7 @@ class HostnameEndpoint(object):
             # potentially problematic circular reference and possibly
             # gc.garbage.
             d.errback(error.ConnectingCancelledError(
-                HostnameAddress(self._host, self._port)))
+                HostnameAddress(self._hostBytes, self._port)))
 
         @d.addCallback
         def startConnectionAttempts(endpoints):
@@ -755,8 +765,9 @@ class HostnameEndpoint(object):
                 or firing with L{IProtocol}
             """
             if not endpoints:
-                raise error.DNSLookupError("no results for hostname lookup: "
-                                           + self._host.decode("charmap"))
+                raise error.DNSLookupError(
+                    "no results for hostname lookup: {}".format(self._hostText)
+                )
             iterEndpoints = iter(endpoints)
             pending = []
             failures = []
