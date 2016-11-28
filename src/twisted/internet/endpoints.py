@@ -724,6 +724,7 @@ class HostnameEndpoint(object):
                         self._timeout, self._bindAddress
                     )
                     # Yields an endpoint for every address returned by GAI
+        d.addCallback(list)
 
         def _canceller(d):
             # This canceller must remain defined outside of
@@ -742,9 +743,9 @@ class HostnameEndpoint(object):
             one of the connections succeeds, all of them fail, or the attempt
             is cancelled.
 
-            @param endpoints: an iterable of all the endpoints we might try to
+            @param endpoints: a list of all the endpoints we might try to
                 connect to, as determined by name resolution.
-            @type endpoints: iterable of L{IStreamServerEndpoint}
+            @type endpoints: L{list} of L{IStreamServerEndpoint}
 
             @return: a Deferred that fires with the result of the
                 C{endpoint.connect} method that completes the fastest, or fails
@@ -753,6 +754,10 @@ class HostnameEndpoint(object):
             @rtype: L{Deferred} failing with L{error.ConnectingCancelledError}
                 or firing with L{IProtocol}
             """
+            if not endpoints:
+                raise error.DNSLookupError("no results for hostname lookup: "
+                                           + self._host)
+            iterEndpoints = iter(endpoints)
             pending = []
             failures = []
             winner = defer.Deferred(canceller=_canceller)
@@ -766,7 +771,7 @@ class HostnameEndpoint(object):
 
             @LoopingCall
             def iterateEndpoint():
-                endpoint = next(endpoints, None)
+                endpoint = next(iterEndpoints, None)
                 if endpoint is None:
                     # The list of endpoints ends.
                     checkDone.endpointsLeft = False
