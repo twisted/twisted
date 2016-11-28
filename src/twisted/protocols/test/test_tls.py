@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 from zope.interface.verify import verifyObject
 from zope.interface import Interface, directlyProvides, implementer
 
-from twisted.python.compat import intToBytes, iterbytes
+from twisted.python.compat import iterbytes
 try:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
     from twisted.protocols.tls import _PullToPush, _ProducerMembrane
@@ -47,7 +47,7 @@ from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
-from twisted.test.proto_helpers import StringTransport
+from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
 
 
 class HandshakeCallbackContextFactory:
@@ -1417,47 +1417,6 @@ class TLSProducerTests(TestCase):
         is called.
         """
         self.registerProducerAfterConnectionLost(False)
-
-
-
-class NonStreamingProducer(object):
-    """
-    A pull producer which writes 10 times only.
-    """
-
-    counter = 0
-    stopped = False
-
-    def __init__(self, consumer):
-        self.consumer = consumer
-        self.result = Deferred()
-
-    def resumeProducing(self):
-        if self.counter < 10:
-            self.consumer.write(intToBytes(self.counter))
-            self.counter += 1
-            if self.counter == 10:
-                self.consumer.unregisterProducer()
-                self._done()
-        else:
-            if self.consumer is None:
-                raise RuntimeError("BUG: resume after unregister/stop.")
-
-
-    def pauseProducing(self):
-        raise RuntimeError("BUG: pause should never be called.")
-
-
-    def _done(self):
-        self.consumer = None
-        d = self.result
-        del self.result
-        d.callback(None)
-
-
-    def stopProducing(self):
-        self.stopped = True
-        self._done()
 
 
 
