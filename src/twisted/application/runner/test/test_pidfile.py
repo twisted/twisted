@@ -85,7 +85,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         """
         pidFile = PIDFile(DummyFilePath())
 
-        self.assertRaises(NoPIDFound, pidFile.read)
+        e = self.assertRaises(NoPIDFound, pidFile.read)
+        self.assertEqual(str(e), "PID file does not exist")
 
 
     def test_readOpenRaisesOSErrorNotENOENT(self):
@@ -284,7 +285,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
         self.patch(_pidfile, "kill", kill)
 
-        self.assertRaises(StalePIDFileError, pidFile.isRunning)
+        e = self.assertRaises(StalePIDFileError, pidFile.isRunning)
+        self.assertEqual(str(e), "PID file refers to non-existing process")
 
         with pidFile:
             self.assertEqual(pidFile.read(), getpid())
@@ -329,7 +331,8 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         """
         pidFile = NonePIDFile()
 
-        self.assertRaises(NoPIDFound, pidFile.read)
+        e = self.assertRaises(NoPIDFound, pidFile.read)
+        self.assertEqual(str(e), "PID file does not exist")
 
 
     def test_write(self):
