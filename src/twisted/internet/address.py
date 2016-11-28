@@ -79,7 +79,22 @@ class IPv6Address(_IPAddress):
     @ivar host: A string containing a colon-separated, hexadecimal formatted
         IPv6 address; for example, "::1".
     @type host: C{str}
+
+    @ivar flowInfo: the IPv6 flow label.  This can be used by QoS routers to
+        identify flows of traffic; you may generally safely ignore it.
+    @type flowInfo: L{int}
+
+    @ivar scopeID: the IPv6 scope identifier - roughly analagous to what
+        interface traffic destined for this address must be transmitted over.
+    @type scopeID: L{int}
     """
+
+    compareAttributes = ('type', 'host', 'port', 'flowInfo', 'scopeID')
+
+    def __init__(self, type, host, port, flowInfo=0, scopeID=0):
+        super(IPv6Address, self).__init__(type, host, port)
+        self.flowInfo = flowInfo
+        self.scopeID = scopeID
 
 
 
