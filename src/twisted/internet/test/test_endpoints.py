@@ -12,7 +12,7 @@ import socket
 
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
-from zope.interface import implementer
+from zope.interface import implementer, provider
 from zope.interface.verify import verifyObject, verifyClass
 from types import FunctionType
 
@@ -41,6 +41,10 @@ from twisted.protocols import basic, policies
 from twisted.test.iosim import connectedServerAndClient, connectableEndpoint
 from twisted.internet.error import ConnectingCancelledError
 from twisted.python.compat import nativeString
+from twisted.internet.interfaces import IHostnameResolver
+from twisted.internet.interfaces import IReactorPluggableNameResolver
+from twisted.python.components import proxyForInterface
+from twisted.internet.abstract import isIPv6Address
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -1570,6 +1574,35 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 
 
+def deterministicResolvingReactor(reactor, expectedAddresses):
+    """
+    
+    """
+    class IReactorsTCPAndTime(interfaces.IReactorTCP,
+                              interfaces.IReactorTime):
+        ""
+    @provider(IHostnameResolver)
+    class SimpleNameResolver(object):
+        @staticmethod
+        def resolveHostName(resolutionReceiver, hostName, portNumber=0,
+                            addressTypes=None, transportSemantics='TCP'):
+
+            resolutionReceiver.resolutionBegan(None)
+            for expectedAddress in expectedAddresses:
+                resolutionReceiver.addressResolved(
+                    [IPv4Address, IPv6Address][isIPv6Address(expectedAddress)]
+                    ('TCP', expectedAddress, portNumber
+                ))
+            resolutionReceiver.resolutionComplete()
+    @provider(IReactorPluggableNameResolver)
+    class WrappingReactor(proxyForInterface(IReactorsTCPAndTime)):
+        def installNameResolver(self, resolver):
+            raise NotImplementedError()
+        nameResolver = SimpleNameResolver()
+    return WrappingReactor(reactor)
+
+
+
 class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
                                     unittest.TestCase):
     """
@@ -1581,18 +1614,14 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         Creates a L{HostnameEndpoint} instance where the hostname is resolved
         into a single IPv4 address.
         """
+        expectedAddress = '1.2.3.4'
         address = HostnameAddress(b"example.com", 80)
-        endpoint = endpoints.HostnameEndpoint(reactor, b"example.com",
-                                           address.port, **connectArgs)
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(reactor, [expectedAddress]),
+            b"example.com", address.port, **connectArgs
+        )
 
-        def testNameResolution(host, port):
-            self.assertEqual(b"example.com", host)
-            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port))]
-            return defer.succeed(data)
-
-        endpoint._nameResolution = testNameResolution
-
-        return (endpoint, ('1.2.3.4', address.port, clientFactory,
+        return (endpoint, (expectedAddress, address.port, clientFactory,
                 connectArgs.get('timeout', 30),
                 connectArgs.get('bindAddress', None)),
                 address)
@@ -1960,18 +1989,10 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
     """
     def setUp(self):
         self.mreactor = MemoryReactor()
-        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
-                b"www.example.com", 80)
-
-        def nameResolution(host, port):
-            self.assertEqual(b"www.example.com", host)
-            data = [
-                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
-                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0, 0))
-                ]
-            return defer.succeed(data)
-
-        self.endpoint._nameResolution = nameResolution
+        self.endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(self.mreactor,
+                                          ['1.2.3.4', '1:2::3:4']),
+            b"www.example.com", 80)
 
 
     def test_ignoreUnknownAddressFamilies(self):
@@ -3530,26 +3551,6 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
 
 
-def makeHostnameEndpointSynchronous(hostnameEndpoint):
-    """
-    Make the given L{HostnameEndpoint} fire its L{defer.Deferred} from
-    C{connect} synchronously by patching its C{_deferToThread} implementation
-    to return an already-succeeded Deferred.
-
-    @param hostnameEndpoint: The hostname endpoint to patch.
-    """
-    family = AF_INET
-    socktype = SOCK_STREAM
-    proto = IPPROTO_TCP
-    canonname = b''
-    sockaddr = ('127.0.0.1', 4321)
-    gaiResult = family, socktype, proto, canonname, sockaddr
-    def synchronousDeferToThreadForGAI(*args):
-        return defer.succeed([gaiResult])
-    hostnameEndpoint._deferToThread = synchronousDeferToThreadForGAI
-
-
-
 class WrapClientTLSParserTests(unittest.TestCase):
     """
     Tests for L{_TLSClientEndpointParser}.
@@ -3618,14 +3619,13 @@ class WrapClientTLSParserTests(unittest.TestCase):
         # 'localhost', so use 'localhost' as a hostname and the directory
         # containing the cert itself for the CAs list.
         endpoint = endpoints.clientFromString(
-            reactor,
+            deterministicResolvingReactor(reactor, ['127.0.0.1']),
             'tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}'
             .format(
                 escapedPEMPathName, escapedPEMPathName,
                 endpoints.quoteStringArgument(pemPath.parent().path)
             ).encode('ascii')
         )
-        makeHostnameEndpointSynchronous(endpoint._wrappedEndpoint)
         d = endpoint.connect(Factory.forProtocol(Protocol))
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
         clientProtocol = factory.buildProtocol(None)
