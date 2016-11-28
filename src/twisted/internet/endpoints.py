@@ -756,7 +756,7 @@ class HostnameEndpoint(object):
             """
             if not endpoints:
                 raise error.DNSLookupError("no results for hostname lookup: "
-                                           + self._host)
+                                           + self._host.decode("charmap"))
             iterEndpoints = iter(endpoints)
             pending = []
             failures = []
