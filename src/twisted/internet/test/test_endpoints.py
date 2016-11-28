@@ -1922,7 +1922,9 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
         clientFactory.protocol = protocol.Protocol
 
         ep, ignoredArgs, address = self.createClientEndpoint(
-            mreactor, clientFactory)
+            deterministicResolvingReactor(mreactor, ['127.0.0.1']),
+            clientFactory
+        )
 
         d = ep.connect(clientFactory)
         d.cancel()
