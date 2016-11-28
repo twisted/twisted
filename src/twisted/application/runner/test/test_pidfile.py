@@ -6,7 +6,7 @@ Tests for L{twisted.application.runner._pidfile}.
 """
 
 import errno
-from os import getpid, name as SYSTEM_NAME
+from os import getpid, name as SYSTEM_NAME, geteuid
 from io import BytesIO
 
 from zope.interface.verify import verifyObject
@@ -224,6 +224,9 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         """
         if SYSTEM_NAME != "posix":
             raise SkipTest("This test assumes POSIX")
+
+        if geteuid() == 0:
+            raise SkipTest("This test doesn't work if running as root")
 
         pidFile = PIDFile(DummyFilePath())
         pidFile.write(1)  # PID 1 is init on POSIX systems
