@@ -56,17 +56,29 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertEqual(pid, pidFile.read())
 
 
-    def test_readWithoutPID(self):
+    def test_readEmptyPID(self):
         """
         L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
         path.
         """
         pidFile = PIDFile(DummyFilePath(b""))
 
-        self.assertRaises(InvalidPIDFileError, pidFile.read)
+        e = self.assertRaises(InvalidPIDFileError, pidFile.read)
+        self.assertEqual(str(e), "non-integer PID value in PID file: ''")
 
 
     def test_readWithBogusPID(self):
+        """
+        L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
+        path.
+        """
+        pidFile = PIDFile(DummyFilePath(b"#foo!"))
+
+        e = self.assertRaises(InvalidPIDFileError, pidFile.read)
+        self.assertEqual(str(e), "non-integer PID value in PID file: '#foo!'")
+
+
+    def test_readDoesntExist(self):
         """
         L{PIDFile.read} raises L{NoPIDFound} when given a non-existing file
         path.
@@ -74,17 +86,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath())
 
         self.assertRaises(NoPIDFound, pidFile.read)
-
-
-    def test_readDoesntExist(self):
-        """
-        L{PIDFile.read} raises the PID from the given file path.
-        """
-        pid = 1337
-
-        pidFile = PIDFile(DummyFilePath(PIDFile.format(pid=pid)))
-
-        self.assertEqual(pid, pidFile.read())
 
 
     def test_readOpenRaisesOSErrorNotENOENT(self):

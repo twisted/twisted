@@ -143,7 +143,9 @@ class PIDFile(object):
         try:
             return int(pidString)
         except ValueError:
-            raise InvalidPIDFileError("non-integer PID value in PID file")
+            raise InvalidPIDFileError(
+                "non-integer PID value in PID file: {!r}".format(pidString)
+            )
 
 
     def write(self, pid):
