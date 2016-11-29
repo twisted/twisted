@@ -2450,18 +2450,6 @@ class ParserTests(unittest.TestCase):
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
 
-    def test_nonstandardDefault(self):
-        """
-        For compatibility with the old L{twisted.application.strports.parse},
-        the third 'mode' argument may be specified to L{endpoints.parse} to
-        indicate a default other than TCP.
-        """
-        self.assertEqual(
-            self.parse('filename', self.f, 'unix'),
-            ('UNIX', ('filename', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
-
-
     def test_unknownType(self):
         """
         L{strports.parse} raises C{ValueError} when given an unknown endpoint
@@ -2631,23 +2619,6 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(endpoint._backlog, 7)
         self.assertEqual(endpoint._mode, 0o123)
         self.assertTrue(endpoint._wantPID)
-
-
-    def test_implicitDefaultNotAllowed(self):
-        """
-        The older service-based API (L{twisted.internet.strports.service})
-        allowed an implicit default of 'tcp' so that TCP ports could be
-        specified as a simple integer, but we've since decided that's a bad
-        idea, and the new API does not accept an implicit default argument; you
-        have to say 'tcp:' now.  If you try passing an old implicit port number
-        to the new API, you'll get a C{ValueError}.
-        """
-        value = self.assertRaises(
-            ValueError, endpoints.serverFromString, None, "4321")
-        self.assertEqual(
-            str(value),
-            "Unqualified strport description passed to 'service'."
-            "Use qualified endpoint descriptions; for example, 'tcp:4321'.")
 
 
     def test_unknownType(self):

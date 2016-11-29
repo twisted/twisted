@@ -1,6 +1,23 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.6.0 (2016-11-17)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.keys supports ECDSA keys (#8798)
+ - scripts/ckeygen can now generate ecdsa keys. (#8828)
+ - ckeygen has been ported to Python 3 (#8855)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.ssh no longer uses gmpy, if available. gmpy is
+   unmaintained, does not have binary wheels for any platforms, and an
+   alternative for higher performance is available in the form of
+   PyPy. (#8079)
+
+
 Twisted Conch 16.5.0 (2016-10-28)
 =================================
 

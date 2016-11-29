@@ -21,6 +21,11 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThre
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.internet._resolver import (
+    GAIResolver as _GAIResolver,
+    ComplexResolverSimplifier as _ComplexResolverSimplifier,
+    SimpleResolverComplexifier as _SimpleResolverComplexifier,
+)
 from twisted.python import log, failure, reflect
 from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
@@ -487,6 +492,7 @@ class ReactorBase(object):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         self._internalReaders = set()
+        self._nameResolver = None
         self.waker = None
 
         # Arrange for the running attribute to change to True at the right time
@@ -509,11 +515,44 @@ class ReactorBase(object):
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement installWaker")
 
+
     def installResolver(self, resolver):
+        """
+        See L{IReactorPluggableResolver}.
+
+        @param resolver: see L{IReactorPluggableResolver}.
+
+        @return: see L{IReactorPluggableResolver}.
+        """
         assert IResolverSimple.providedBy(resolver)
         oldResolver = self.resolver
         self.resolver = resolver
+        self._nameResolver = _SimpleResolverComplexifier(resolver)
         return oldResolver
+
+
+    def installNameResolver(self, resolver):
+        """
+        See L{IReactorPluggableNameResolver}.
+
+        @param resolver: See L{IReactorPluggableNameResolver}.
+
+        @return: see L{IReactorPluggableNameResolver}.
+        """
+        previousNameResolver = self._nameResolver
+        self._nameResolver = resolver
+        self.resolver = _ComplexResolverSimplifier(resolver)
+        return previousNameResolver
+
+
+    @property
+    def nameResolver(self):
+        """
+        Implementation of read-only
+        L{IReactorPluggableNameResolver.nameResolver}.
+        """
+        return self._nameResolver
+
 
     def wakeUp(self):
         """
@@ -938,8 +977,9 @@ class ReactorBase(object):
         threadpoolShutdownID = None
 
         def _initThreads(self):
+            self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
-            self.resolver = ThreadedResolver(self)
+
 
         def callFromThread(self, f, *args, **kw):
             """
