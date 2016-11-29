@@ -11,7 +11,6 @@ from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import unicode
 from twisted.python.filepath import FilePath
 
 from ...runner import _pidfile
@@ -62,10 +61,14 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
         path.
         """
+        pidValue = b""
         pidFile = PIDFile(DummyFilePath(b""))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(unicode(e), u"non-integer PID value in PID file: ''")
+        self.assertEqual(
+            str(e),
+            "non-integer PID value in PID file: {!r}".format(pidValue)
+        )
 
 
     def test_readWithBogusPID(self):
@@ -73,12 +76,13 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
         path.
         """
-        pidFile = PIDFile(DummyFilePath(b"#foo!"))
+        pidValue = b"#foo!"
+        pidFile = PIDFile(DummyFilePath(pidValue))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
         self.assertEqual(
-            unicode(e),
-            u"non-integer PID value in PID file: '#foo!'"
+            str(e),
+            "non-integer PID value in PID file: {!r}".format(pidValue)
         )
 
 
@@ -90,7 +94,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath())
 
         e = self.assertRaises(NoPIDFound, pidFile.read)
-        self.assertEqual(unicode(e), u"PID file does not exist")
+        self.assertEqual(str(e), "PID file does not exist")
 
 
     def test_readOpenRaisesOSErrorNotENOENT(self):
@@ -293,7 +297,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.patch(_pidfile, "kill", kill)
 
         e = self.assertRaises(StalePIDFileError, pidFile.isRunning)
-        self.assertEqual(unicode(e), u"PID file refers to non-existing process")
+        self.assertEqual(str(e), "PID file refers to non-existing process")
 
         with pidFile:
             self.assertEqual(pidFile.read(), getpid())
@@ -339,7 +343,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = NonePIDFile()
 
         e = self.assertRaises(NoPIDFound, pidFile.read)
-        self.assertEqual(unicode(e), u"PID file does not exist")
+        self.assertEqual(str(e), "PID file does not exist")
 
 
     def test_write(self):
