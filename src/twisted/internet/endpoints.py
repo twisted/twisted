@@ -17,7 +17,6 @@ from __future__ import division, absolute_import
 import os
 import re
 import socket
-import warnings
 
 from constantly import NamedConstant, Names
 
@@ -1377,9 +1376,7 @@ _endpointClientFactories = {
     }
 
 
-_NO_DEFAULT = object()
-
-def _parseServer(description, factory, default=None):
+def _parseServer(description, factory):
     """
     Parse a strports description into a 2-tuple of arguments and keyword
     values.
@@ -1392,28 +1389,9 @@ def _parseServer(description, factory, default=None):
         twisted.application.strports, it's not really used.
     @type factory: L{IProtocolFactory} or L{None}
 
-    @param default: Deprecated argument, specifying the default parser mode to
-        use for unqualified description strings (those which do not have a ':'
-        and prefix).
-    @type default: C{str} or L{None}
-
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
     args, kw = _parse(description)
-    if not args or (len(args) == 1 and not kw):
-        deprecationMessage = (
-            "Unqualified strport description passed to 'service'."
-            "Use qualified endpoint descriptions; for example, 'tcp:%s'."
-            % (description,))
-        if default is None:
-            default = 'tcp'
-            warnings.warn(
-                deprecationMessage, category=DeprecationWarning, stacklevel=4)
-        elif default is _NO_DEFAULT:
-            raise ValueError(deprecationMessage)
-        # If the default has been otherwise specified, the user has already
-        # been warned.
-        args[0:0] = [default]
     endpointType = args[0]
     parser = _serverParsers.get(endpointType)
     if parser is None:
@@ -1424,23 +1402,6 @@ def _parseServer(description, factory, default=None):
         )
         return (plugin, args[1:], kw)
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
-
-
-
-def _serverFromStringLegacy(reactor, description, default):
-    """
-    Underlying implementation of L{serverFromString} which avoids exposing the
-    deprecated 'default' argument to anything but L{strports.service}.
-    """
-    nameOrPlugin, args, kw = _parseServer(description, None, default)
-    if type(nameOrPlugin) is not str:
-        plugin = nameOrPlugin
-        return plugin.parseStreamServer(reactor, *args, **kw)
-    else:
-        name = nameOrPlugin
-    # Chop out the factory.
-    args = args[:1] + args[2:]
-    return _endpointServerFactories[name](reactor, *args, **kw)
 
 
 
@@ -1519,7 +1480,15 @@ def serverFromString(reactor, description):
 
     @since: 10.2
     """
-    return _serverFromStringLegacy(reactor, description, _NO_DEFAULT)
+    nameOrPlugin, args, kw = _parseServer(description, None)
+    if type(nameOrPlugin) is not str:
+        plugin = nameOrPlugin
+        return plugin.parseStreamServer(reactor, *args, **kw)
+    else:
+        name = nameOrPlugin
+    # Chop out the factory.
+    args = args[:1] + args[2:]
+    return _endpointServerFactories[name](reactor, *args, **kw)
 
 
 
@@ -2050,6 +2019,3 @@ class _TLSClientEndpointParser(object):
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
-
-
-
