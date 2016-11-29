@@ -24,7 +24,7 @@ from constantly import NamedConstant, Names
 from zope.interface import implementer, directlyProvides, provider
 
 from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.abstract import isIPv6Address
+from twisted.internet.abstract import isIPv6Address, isIPAddress
 from twisted.internet.address import (
     _ProcessAddress, HostnameAddress, IPv4Address, IPv6Address
 )
@@ -678,14 +678,17 @@ class HostnameEndpoint(object):
         """
         self._reactor = reactor
         if isinstance(host, bytes):
-            # If it's bytes, just store it, and the textual version can be
-            # latin1-ified (since it should be only ASCII, but we don't want to
-            # complain too loudly here).
             self._hostBytes = host
-            self._hostText = _idnaText(host)
+            if isIPAddress(host) or isIPv6Address(host):
+                self._hostText = host.decode("ascii")
+            else:
+                self._hostText = _idnaText(host)
         else:
             # If it's text, try to idna-ify it.
-            self._hostBytes = _idnaBytes(host)
+            if isIPAddress(host) or isIPv6Address(host):
+                self._hostBytes = host.encode("ascii")
+            else:
+                self._hostBytes = _idnaBytes(host)
             self._hostText = host
 
         self._port = port
