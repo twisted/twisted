@@ -474,7 +474,7 @@ class UnsupportedMethodTests(unittest.SynchronousTestCase):
         shows is a list of the supported methods, not the method that was
         unsupported.
         """
-        b = {'b': 'b'} if _PY3 else {'b': ''}
+        b = "b" if _PY3 else ""
         e = error.UnsupportedMethod([b"HEAD", b"PATCH"])
         self.assertEqual(
             str(e), "Expected one of [{b}'HEAD', {b}'PATCH']".format(b=b),
