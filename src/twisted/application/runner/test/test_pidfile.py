@@ -11,6 +11,7 @@ from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
+from twisted.python.compat import unicode
 from twisted.python.filepath import FilePath
 
 from ...runner import _pidfile
@@ -64,7 +65,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath(b""))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(str(e), "non-integer PID value in PID file: ''")
+        self.assertEqual(unicode(e), u"non-integer PID value in PID file: ''")
 
 
     def test_readWithBogusPID(self):
@@ -75,7 +76,10 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath(b"#foo!"))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(str(e), "non-integer PID value in PID file: '#foo!'")
+        self.assertEqual(
+            unicode(e),
+            u"non-integer PID value in PID file: '#foo!'"
+        )
 
 
     def test_readDoesntExist(self):
@@ -86,7 +90,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath())
 
         e = self.assertRaises(NoPIDFound, pidFile.read)
-        self.assertEqual(str(e), "PID file does not exist")
+        self.assertEqual(unicode(e), u"PID file does not exist")
 
 
     def test_readOpenRaisesOSErrorNotENOENT(self):
@@ -289,7 +293,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.patch(_pidfile, "kill", kill)
 
         e = self.assertRaises(StalePIDFileError, pidFile.isRunning)
-        self.assertEqual(str(e), "PID file refers to non-existing process")
+        self.assertEqual(unicode(e), u"PID file refers to non-existing process")
 
         with pidFile:
             self.assertEqual(pidFile.read(), getpid())
@@ -335,7 +339,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = NonePIDFile()
 
         e = self.assertRaises(NoPIDFound, pidFile.read)
-        self.assertEqual(str(e), "PID file does not exist")
+        self.assertEqual(unicode(e), u"PID file does not exist")
 
 
     def test_write(self):
