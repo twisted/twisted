@@ -83,3 +83,14 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress('0.0.256.0'))
         self.assertFalse(isIPAddress('0.0.0.256'))
         self.assertFalse(isIPAddress('256.256.256.256'))
+
+
+    def test_unicodeAndBytes(self):
+        """
+        L{isIPAddress} evaluates ASCII-encoded bytes as well as text.
+        """
+        self.assertFalse(isIPAddress(b'256.0.0.0'))
+        self.assertFalse(isIPAddress(u'256.0.0.0'))
+        self.assertTrue(isIPAddress(b'252.253.254.255'))
+        self.assertTrue(isIPAddress(u'252.253.254.255'))
+
