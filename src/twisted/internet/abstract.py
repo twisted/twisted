@@ -481,6 +481,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         return -1
 
 
+
 def isIPAddress(addr, family=AF_INET):
     """
     Determine whether the given string represents an IP address of the given
@@ -503,6 +504,8 @@ def isIPAddress(addr, family=AF_INET):
             addr = addr.decode("ascii")
         except UnicodeDecodeError:
             return False
+    if family == AF_INET6:
+        addr = addr.split(u"%", 1)[0]
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.
@@ -510,6 +513,7 @@ def isIPAddress(addr, family=AF_INET):
     except (ValueError, error):
         return False
     return True
+
 
 
 def isIPv6Address(addr):
