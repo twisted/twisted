@@ -509,6 +509,11 @@ def isIPAddress(addr, family=AF_INET):
         # is a test for whether the given string *is* an IP address, so strip
         # any potential scope ID before checking.
         addr = addr.split(u"%", 1)[0]
+    elif family == AF_INET:
+        # On Windows, where 3.5+ implement inet_pton, "0" is considered a valid
+        # IPv4 address, but we want to ensure we have all 4 segments.
+        if addr.count(u".") != 3:
+            return False
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.
