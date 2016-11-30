@@ -13,7 +13,7 @@ from socket import AF_INET, AF_INET6, inet_pton, error
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import _PY3, unicode, lazyByteSlice, _matchingString
+from twisted.python.compat import _PY3, unicode, lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
