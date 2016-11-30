@@ -505,6 +505,9 @@ def isIPAddress(addr, family=AF_INET):
         except UnicodeDecodeError:
             return False
     if family == AF_INET6:
+        # On some platforms, inet_ntop fails unless the scope ID is valid; this
+        # is a test for whether the given string *is* an IP address, so strip
+        # any potential scope ID before checking.
         addr = addr.split(u"%", 1)[0]
     try:
         # This might be a native implementation or the one from
