@@ -211,6 +211,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
 
 
     def testPToN(self):
+        """
+        L{twisted.python.compat.inet_pton} parses IPv4 and IPv6 addresses in a
+        manner similar to that of L{socket.inet_pton}.
+        """
         from twisted.python.compat import inet_pton
 
         f = lambda a: inet_pton(socket.AF_INET6, a)
