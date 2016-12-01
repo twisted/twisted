@@ -423,7 +423,8 @@ class Key(object):
                 'Failed to decode key (Bad Passphrase?): %s' % (e,))
 
         if kind == b'EC':
-            return cls(load_pem_private_key(data, passphrase, default_backend()))
+            return cls(
+                load_pem_private_key(data, passphrase, default_backend()))
 
         if kind == b'RSA':
             if len(decodedKey) == 2:  # Alternate RSA key
