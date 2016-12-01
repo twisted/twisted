@@ -29,6 +29,7 @@ import platform
 import socket
 import struct
 import sys
+import tokenize
 from types import MethodType as _MethodType
 
 from io import TextIOBase, IOBase
@@ -845,6 +846,12 @@ def _bytesRepr(bytestring):
         return 'b' + repr(bytestring)
 
 
+if _PY3:
+    _tokenize = tokenize.tokenize
+else:
+    _tokenize = tokenize.generate_tokens
+
+
 
 __all__ = [
     "reraise",
@@ -885,4 +892,5 @@ __all__ = [
     "unichr",
     "raw_input",
     "_maybeMBCS",
+    "_tokenize"
 ]
