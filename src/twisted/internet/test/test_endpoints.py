@@ -1928,7 +1928,7 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
 
 
 
-class HostnameEndpointIDNATests(unittest.TestCase):
+class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
     """
     Tests for L{HostnameEndpoint}'s constructor's encoding behavior.
     """
@@ -1973,6 +1973,29 @@ class HostnameEndpointIDNATests(unittest.TestCase):
         )
         self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
         self.assertEqual(endpoint._hostText, self.sampleIDNAText)
+
+
+    def test_deferBadEncodingToConnect(self):
+        """
+        Since any client of L{IStreamClientEndpoint} needs to handle Deferred
+        failures from C{connect}, L{HostnameEndpoint}'s constructor will not
+        raise exceptions when given bad host names, instead deferring to
+        returning a failing L{Deferred} from C{connect}.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            b'\xff-garbage-\xff', 80
+        )
+        deferred = endpoint.connect(Factory())
+        err = self.failureResultOf(deferred, UnicodeDecodeError)
+        self.assertIn(str(err), "\\xff-garbage-\\xff")
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            u'\xff-garbage-\xff', 80
+        )
+        deferred = endpoint.connect(Factory())
+        err = self.failureResultOf(deferred, UnicodeDecodeError)
+        self.assertIn(str(err), "\\xff-garbage-\\xff")
 
 
 
