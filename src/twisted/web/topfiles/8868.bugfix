@@ -1,0 +1,1 @@
+twisted.web.http.HTTPChannel, the server class for Twisted's HTTP/1.1 server, now exerts backpressure against clients that do not read responses. This means that if a client stops reading from a socket for long enough, Twisted will stop reading further requests from that client until it consumes some responses.
