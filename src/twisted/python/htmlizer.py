@@ -6,7 +6,7 @@
 HTML rendering of Python source.
 """
 
-from twisted.python.compat import _PY3, escape
+from twisted.python.compat import _PY3, _tokenize, escape
 
 import tokenize, keyword
 from . import reflect
@@ -93,15 +93,10 @@ class SmallerHTMLWriter(HTMLWriter):
 
 
 def filter(inp, out, writer=HTMLWriter):
-    if _PY3:
-        tokenizeFunc = tokenize.tokenize
-    else:
-        tokenizeFunc = tokenize.generate_tokens
-
     out.write(b'<pre>')
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
-        for token in tokenizeFunc(inp.readline):
+        for token in _tokenize(inp.readline):
             (tokenType, string, start, end, line) = token
             printer(tokenType, string, start, end, line)
     except tokenize.TokenError:
