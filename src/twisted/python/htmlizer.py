@@ -6,7 +6,7 @@
 HTML rendering of Python source.
 """
 
-from twisted.python.compat import _PY3, _tokenize, escape
+from twisted.python.compat import _tokenize, escape
 
 import tokenize, keyword
 from . import reflect
@@ -68,11 +68,10 @@ class HTMLWriter:
 
 
     def write(self, token, type=None):
-        if _PY3 and isinstance(token, bytes):
+        if isinstance(token, bytes):
             token = token.decode("utf-8")
         token = escape(token)
-        if _PY3:
-            token = token.encode("utf-8")
+        token = token.encode("utf-8")
         if (type is None) or (type in self.noSpan):
             self.writer(token)
         else:
