@@ -17,6 +17,7 @@ from __future__ import division, absolute_import
 import os
 import re
 import socket
+from unicodedata import normalize
 
 from constantly import NamedConstant, Names
 
@@ -684,6 +685,7 @@ class HostnameEndpoint(object):
                 self._hostText = _idnaText(host)
         else:
             # If it's text, try to idna-ify it.
+            host = normalize('NFC', host)
             if isIPAddress(host) or isIPv6Address(host):
                 self._hostBytes = host.encode("ascii")
             else:

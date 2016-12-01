@@ -10,10 +10,12 @@ from __future__ import division, absolute_import
 
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
+from unicodedata import normalize
+from types import FunctionType
+
 from zope.interface import implementer, provider, providedBy
 from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyObject, verifyClass
-from types import FunctionType
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
@@ -1923,6 +1925,54 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
         mreactor.advance(0.3)
         self.assertEqual(self.failureResultOf(d).value, expectedError)
         self.assertEqual([], mreactor.getDelayedCalls())
+
+
+
+class HostnameEndpointIDNATests(unittest.TestCase):
+    """
+    Tests for L{HostnameEndpoint}'s constructor's encoding behavior.
+    """
+
+    sampleIDNAText = u'b\xfccher.ch'
+    sampleIDNABytes = b'xn--bcher-kva.ch'
+
+    def test_idnaHostnameText(self):
+        """
+        A L{HostnameEndpoint} constructed with text will contain an
+        IDNA-encoded bytes representation of that text.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            self.sampleIDNAText, 80
+        )
+        self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
+        self.assertEqual(endpoint._hostText, self.sampleIDNAText)
+
+
+    def test_idnaHostnameBytes(self):
+        """
+        A L{HostnameEndpoint} constructed with bytes will contain an
+        IDNA-decoded textual representation of those bytes.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            self.sampleIDNAText, 80
+        )
+        self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
+        self.assertEqual(endpoint._hostText, self.sampleIDNAText)
+
+
+    def test_nonNormalizedText(self):
+        """
+        A L{HostnameEndpoint} constructed with NFD-normalized text will store
+        the NFC-normalized version of that text.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            normalize('NFD', self.sampleIDNAText), 80
+        )
+        self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
+        self.assertEqual(endpoint._hostText, self.sampleIDNAText)
 
 
 
