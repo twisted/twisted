@@ -27,7 +27,6 @@ import inspect
 import os
 import platform
 import socket
-import string
 import struct
 import sys
 from types import MethodType as _MethodType
