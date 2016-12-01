@@ -17,7 +17,6 @@ from twisted.internet.interfaces import IReactorUNIX
 from twisted.internet import reactor, endpoints
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
-from twisted.application import strports
 from twisted.python.compat import _PY3
 
 from twisted.web.server import Site
@@ -179,7 +178,7 @@ class ServiceTests(TestCase):
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
         self.assertEqual(
-            strports.parse(options['port'], None)[:2],
+            endpoints._parseServer(options['port'], None)[:2],
             ('UNIX', (path, None)))
 
     if not IReactorUNIX.providedBy(reactor):
