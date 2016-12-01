@@ -380,8 +380,9 @@ C7R0eKcDHHLMYO39aPnCwXjscisnInEhYGNblTDyPyiyNxAOXuC8x7luTmwzMbNJ
 /ow0IqSj0VF72VJN9uSoPpFd4lLT0zN8v42RWja0M8ohWNf+YNJluPgCFE0PT4Vm
 SUrCyZXsNh6VXwjs3gKQ
 -----END DSA PRIVATE KEY-----"""
-        self.assertEqual(keys.Key.fromString(privateDSAData),
-                         keys.Key.fromString(privateDSAData.replace(b'\n', b'\r\n')))
+        self.assertEqual(
+            keys.Key.fromString(privateDSAData),
+            keys.Key.fromString(privateDSAData.replace(b'\n', b'\r\n')))
 
 
     def test_fromLSHPublicUnsupportedType(self):
