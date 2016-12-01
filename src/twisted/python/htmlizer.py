@@ -6,14 +6,9 @@
 HTML rendering of Python source.
 """
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, escape
 
 import tokenize, keyword
-if _PY3:
-    from html import escape
-else:
-    from cgi import escape
-
 from . import reflect
 
 class TokenPrinter:
