@@ -22,7 +22,7 @@ class TokenPrinter:
 
 
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
-        if _PY3 and type == tokenize.ENCODING:
+        if hasattr(tokenize, "ENCODING") and type == tokenize.ENCODING:
             self.encoding = token
             return
 
