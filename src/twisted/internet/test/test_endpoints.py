@@ -1986,16 +1986,16 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
             deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
             b'\xff-garbage-\xff', 80
         )
-        deferred = endpoint.connect(Factory())
-        err = self.failureResultOf(deferred, UnicodeDecodeError)
-        self.assertIn(str(err), "\\xff-garbage-\\xff")
+        deferred = endpoint.connect(Factory.forProtocol(Protocol))
+        err = self.failureResultOf(deferred, ValueError)
+        self.assertIn("\\xff-garbage-\\xff", str(err))
         endpoint = endpoints.HostnameEndpoint(
             deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
-            u'\xff-garbage-\xff', 80
+            u'\x01-garbage-\x01', 80
         )
         deferred = endpoint.connect(Factory())
-        err = self.failureResultOf(deferred, UnicodeDecodeError)
-        self.assertIn(str(err), "\\xff-garbage-\\xff")
+        err = self.failureResultOf(deferred, ValueError)
+        self.assertIn("\\x01-garbage-\\x01", str(err))
 
 
 
