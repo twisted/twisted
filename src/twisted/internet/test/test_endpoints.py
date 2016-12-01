@@ -1991,11 +1991,11 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
         self.assertIn("\\xff-garbage-\\xff", str(err))
         endpoint = endpoints.HostnameEndpoint(
             deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
-            u'\x01-garbage-\x01', 80
+            u'\u2ff0-garbage-\u2ff0', 80
         )
         deferred = endpoint.connect(Factory())
         err = self.failureResultOf(deferred, ValueError)
-        self.assertIn("\\x01-garbage-\\x01", str(err))
+        self.assertIn("\\u2ff0-garbage-\\u2ff0", str(err))
 
 
 
