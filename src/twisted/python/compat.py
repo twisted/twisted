@@ -122,11 +122,9 @@ def inet_pton(af, addr):
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
     elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        illegalChars = [x for x in addr if x not in string.hexdigits + ':.']
-        if illegalChars:
-            raise ValueError("Illegal characters: %r" %
-                             (''.join(illegalChars),))
-
+        if '%' in addr and (addr.count('%') > 1 or addr.index("%") == 0):
+            raise ValueError("illegal IP address string passed to inet_pton")
+        addr = addr.split('%')[0]
         parts = addr.split(':')
         elided = parts.count('')
         ipv4Component = '.' in parts[-1]
