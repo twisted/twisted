@@ -104,6 +104,21 @@ def currentframe(n=0):
 
 
 def inet_pton(af, addr):
+    """
+    Emulator of L{socket.inet_pton}.
+
+    @param af: An address family to parse; C{socket.AF_INET} or
+        C{socket.AF_INET6}.
+    @type af: L{int}
+
+    @param addr: An address.
+    @type addr: native L{str}
+
+    @return: The binary packed version of the passed address.
+    @rtype: L{bytes}
+    """
+    if not addr:
+        raise ValueError("illegal IP address string passed to inet_pton")
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
     elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
