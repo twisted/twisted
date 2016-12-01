@@ -112,10 +112,7 @@ def filter(inp, out, writer=HTMLWriter):
 
 def main():
     import sys
-    if _PY3:
-        stdout = sys.stdout.buffer
-    else:
-        stdout = sys.stdout
+    stdout = getattr(sys.stdout, "buffer", sys.stdout)
     with open(sys.argv[1], "rb") as f:
         filter(f, stdout)
 
