@@ -1,0 +1,1 @@
+twisted.application.strports.parse, as well as the deprecated default arguments in strports.service/listen, deprecated since Twisted 10.2, has been removed.

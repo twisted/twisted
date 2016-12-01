@@ -346,7 +346,7 @@ class WebClientTests(unittest.TestCase):
         for n in range(min(len(connections), self.cleanupServerConnections)):
             proto = connections.pop()
             msg("Closing %r" % (proto,))
-            proto.transport.loseConnection()
+            proto.transport.abortConnection()
         d = self.port.stopListening()
 
         return defer.DeferredList([waitUntilAllDisconnected(

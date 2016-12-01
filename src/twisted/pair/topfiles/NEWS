@@ -1,3 +1,17 @@
+Twisted Pair 16.6.0 (2016-11-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 16.5.0 (2016-10-28)
+================================
+
+Features
+--------
+ - twisted.pair has been ported to Python 3 (#8744)
+
+
 Twisted Pair 16.4.1 (2016-09-07)
 ================================
 

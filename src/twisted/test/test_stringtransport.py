@@ -13,7 +13,7 @@ from twisted.internet.interfaces import (ITransport, IPushProducer, IConsumer,
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import (StringTransport, MemoryReactor,
-    RaisingMemoryReactor)
+    RaisingMemoryReactor, NonStreamingProducer)
 from twisted.internet.protocol import ClientFactory, Factory
 
 
@@ -178,7 +178,7 @@ class StringTransportTests(TestCase):
         """
         If a peer address is passed to L{StringTransport.__init__}, that
         value is returned from L{StringTransport.getPeer}.
-        """        
+        """
         address = object()
         self.assertIs(
             StringTransport(peerAddress=address).getPeer(), address)
@@ -311,3 +311,91 @@ class ReactorTests(TestCase):
         reactor.removeWriter(writer)
 
         self.assertEqual(reactor.getWriters(), [])
+
+
+
+class TestConsumer(object):
+    """
+    A very basic test consumer for use with the NonStreamingProducerTests.
+    """
+    def __init__(self):
+        self.writes = []
+        self.producer = None
+        self.producerStreaming = None
+
+
+    def registerProducer(self, producer, streaming):
+        """
+        Registers a single producer with this consumer. Just keeps track of it.
+
+        @param producer: The producer to register.
+        @param streaming: Whether the producer is a streaming one or not.
+        """
+        self.producer = producer
+        self.producerStreaming = streaming
+
+
+    def unregisterProducer(self):
+        """
+        Forget the producer we had previously registered.
+        """
+        self.producer = None
+        self.producerStreaming = None
+
+
+    def write(self, data):
+        """
+        Some data was written to the consumer: stores it for later use.
+
+        @param data: The data to write.
+        """
+        self.writes.append(data)
+
+
+
+class NonStreamingProducerTests(TestCase):
+    """
+    Tests for the L{NonStreamingProducer} to validate behaviour.
+    """
+    def test_producesOnly10Times(self):
+        """
+        When the L{NonStreamingProducer} has resumeProducing called 10 times,
+        it writes the counter each time and then fails.
+        """
+        consumer = TestConsumer()
+        producer = NonStreamingProducer(consumer)
+        consumer.registerProducer(producer, False)
+
+        self.assertIs(consumer.producer, producer)
+        self.assertIs(producer.consumer, consumer)
+        self.assertFalse(consumer.producerStreaming)
+
+        for _ in range(10):
+            producer.resumeProducing()
+
+        # We should have unregistered the producer and printed the 10 results.
+        expectedWrites = [
+            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9'
+        ]
+        self.assertIsNone(consumer.producer)
+        self.assertIsNone(consumer.producerStreaming)
+        self.assertIsNone(producer.consumer)
+        self.assertEqual(consumer.writes, expectedWrites)
+
+        # Another attempt to produce fails.
+        self.assertRaises(RuntimeError, producer.resumeProducing)
+
+
+    def test_cannotPauseProduction(self):
+        """
+        When the L{NonStreamingProducer} is paused, it raises a
+        L{RuntimeError}.
+        """
+        consumer = TestConsumer()
+        producer = NonStreamingProducer(consumer)
+        consumer.registerProducer(producer, False)
+
+        # Produce once, just to be safe.
+        producer.resumeProducing()
+
+        self.assertRaises(RuntimeError, producer.pauseProducing)

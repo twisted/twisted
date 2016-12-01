@@ -19,10 +19,13 @@ from twisted.conch.manhole import ColoredManhole
 class UnexpectedOutputError(Exception):
     pass
 
+
+
 class TerminalProcessProtocol(protocol.ProcessProtocol):
     def __init__(self, proto):
         self.proto = proto
         self.onConnection = defer.Deferred()
+
 
     def connectionMade(self):
         self.proto.makeConnection(self)

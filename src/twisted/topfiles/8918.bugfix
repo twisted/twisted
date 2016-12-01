@@ -1,0 +1,1 @@
+twist on Python 3 now correctly prints the help text when given no plugin to run.

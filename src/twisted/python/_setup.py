@@ -97,9 +97,11 @@ _EXTRA_OPTIONS = dict(
     ],
     soap=['soappy'],
     serial=['pyserial'],
-    osx=['pyobjc'],
+    osx=['pyobjc-core',
+         'pyobjc-framework-CFNetwork',
+         'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.3.0, < 3.0',
+    http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
@@ -130,17 +132,17 @@ _EXTRAS_REQUIRE = {
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
+    "cftp = twisted.conch.scripts.cftp:run",
+    "conch = twisted.conch.scripts.conch:run",
+    "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [
-    "cftp = twisted.conch.scripts.cftp:run",
-    "conch = twisted.conch.scripts.conch:run",
     "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
-    "tkconch = twisted.conch.scripts.tkconch:run",
     ]
 
 if not _PY3:
@@ -359,14 +361,7 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.conch.client.connect",
-    "twisted.conch.client.direct",
-    "twisted.conch.test.test_cftp",
-    "twisted.conch.test.test_conch",
     "twisted.conch.test.test_manhole",
-    "twisted.conch.ui.__init__",
-    "twisted.conch.ui.ansi",
-    "twisted.conch.ui.tkvt100",
     "twisted.internet._threadedselect",
     "twisted.internet.glib2reactor",
     "twisted.internet.gtk2reactor",
@@ -412,7 +407,6 @@ notPortedModules = [
     "twisted.news.test.test_database",
     "twisted.news.test.test_news",
     "twisted.news.test.test_nntp",
-    "twisted.persisted.dirdbm",
     "twisted.plugins.twisted_conch",
     "twisted.plugins.twisted_ftp",
     "twisted.plugins.twisted_inet",
@@ -429,7 +423,6 @@ notPortedModules = [
     "twisted.protocols.mice.__init__",
     "twisted.protocols.mice.mouseman",
     "twisted.protocols.shoutcast",
-    "twisted.protocols.sip",
     "twisted.python._pydoctor",
     "twisted.python._release",
     "twisted.python.finalize",
@@ -453,7 +446,6 @@ notPortedModules = [
     "twisted.test.crash_test_dummy",
     "twisted.test.myrebuilder1",
     "twisted.test.myrebuilder2",
-    "twisted.test.test_dirdbm",
     "twisted.test.test_finger",
     "twisted.test.test_formmethod",
     "twisted.test.test_ftp",
@@ -462,7 +454,6 @@ notPortedModules = [
     "twisted.test.test_ident",
     "twisted.test.test_rebuild",
     "twisted.test.test_shortcut",
-    "twisted.test.test_sip",
     "twisted.test.test_strerror",
     "twisted.trial._dist.__init__",
     "twisted.trial._dist.distreporter",
@@ -493,21 +484,8 @@ notPortedModules = [
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
     "twisted.web.twcgi",
-    "twisted.words.ewords",
-    "twisted.words.im.baseaccount",
-    "twisted.words.im.interfaces",
-    "twisted.words.im.ircsupport",
-    "twisted.words.im.pbsupport",
-    "twisted.words.iwords",
-    "twisted.words.protocols.irc",
     "twisted.words.protocols.oscar",
-    "twisted.words.service",
     "twisted.words.tap",
-    "twisted.words.test.test_basesupport",
-    "twisted.words.test.test_irc",
-    "twisted.words.test.test_irc_service",
-    "twisted.words.test.test_ircsupport",
     "twisted.words.test.test_oscar",
-    "twisted.words.test.test_service",
     "twisted.words.test.test_tap",
 ]

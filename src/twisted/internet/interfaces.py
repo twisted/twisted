@@ -84,6 +84,110 @@ class IResolverSimple(Interface):
 
 
 
+class IHostResolution(Interface):
+    """
+    An L{IHostResolution} represents represents an in-progress recursive query
+    for a DNS name.
+
+    @since: 16.7
+    """
+
+    name = Attribute(
+        """
+        L{unicode}; the name of the host being resolved.
+        """
+    )
+
+    def cancel():
+        """
+        Stop the hostname resolution in progress.
+        """
+
+
+
+class IResolutionReceiver(Interface):
+    """
+    An L{IResolutionReceiver} receives the results of a hostname resolution in
+    progress, initiated by an L{IHostnameResolver}.
+
+    @since: 16.7
+    """
+
+    def resolutionBegan(resolutionInProgress):
+        """
+        A hostname resolution began.
+
+        @param resolutionInProgress: an L{IHostResolution}.
+        """
+
+
+    def addressResolved(address):
+        """
+        An internet address.  This is called when an address for the given name
+        is discovered.  In the current implementation this practically means
+        L{IPv4Address} or L{IPv6Address}, but implementations of this interface
+        should be lenient to other types being passed to this interface as
+        well, for future-proofing.
+
+        @param address: An address object.
+        @type address: L{IAddress}
+        """
+
+
+    def resolutionComplete():
+        """
+        Resolution has completed; no further addresses will be relayed to
+        L{IResolutionReceiver.addressResolved}.
+        """
+
+
+
+class IHostnameResolver(Interface):
+    """
+    An L{IHostnameResolver} can resolve a host name and port number into a
+    series of L{IAddress} objects.
+
+    @since: 16.7
+    """
+
+    def resolveHostName(resolutionReceiver, hostName, portNumber=0,
+                        addressTypes=None, transportSemantics='TCP'):
+        """
+        Initiate a hostname resolution.
+
+        @param resolutionReceiver: an object that will receive each resolved
+            address as it arrives.
+        @type resolutionReceiver: L{IResolutionReceiver}
+
+        @param hostName: The name of the host to resolve.  If this contains
+            non-ASCII code points, they will be converted to IDNA first.
+        @type hostName: L{unicode}
+
+        @param portNumber: The port number that the returned addresses should
+            include.
+        @type portNumber: L{int} greater than or equal to 0 and less than 65536
+
+        @param addressTypes: An iterable of implementors of L{IAddress} that
+            are acceptable values for C{resolutionReceiver} to receive to its
+            L{addressResolved <IResolutionReceiver.addressResolved>}.  In
+            practice, this means an iterable containing
+            L{twisted.internet.address.IPv4Address},
+            L{twisted.internet.address.IPv6Address}, both, or neither.
+        @type addressTypes: L{collections.Iterable} of L{type}
+
+        @param transportSemantics: A string describing the semantics of the
+            transport; either C{'TCP'} for stream-oriented transports or
+            C{'UDP'} for datagram-oriented; see
+            L{twisted.internet.address.IPv6Address.type} and
+            L{twisted.internet.address.IPv4Address.type}.
+        @type transportSemantics: native L{str}
+
+        @return: The resolution in progress.
+        @rtype: L{IResolutionReceiver}
+        """
+
+
+
 class IResolver(IResolverSimple):
     def query(query, timeout=None):
         """
@@ -1413,9 +1517,14 @@ class IReactorCore(Interface):
         """
 
 
+
 class IReactorPluggableResolver(Interface):
     """
-    A reactor with a pluggable name resolver interface.
+    An L{IReactorPluggableResolver} is a reactor which can be customized with
+    an L{IResolverSimple}.  This is a fairly limited interface, that supports
+    only IPv4; you should use L{IReactorPluggableNameResolver} instead.
+
+    @see: L{IReactorPluggableNameResolver}
     """
 
     def installResolver(resolver):
@@ -1426,7 +1535,35 @@ class IReactorPluggableResolver(Interface):
         @param resolver: The new resolver to use.
 
         @return: The previously installed resolver.
+        @rtype: L{IResolverSimple}
         """
+
+
+
+class IReactorPluggableNameResolver(Interface):
+    """
+    An L{IReactorPluggableNameResolver} is a reactor whose name resolver can be
+    set to a user-supplied object.
+    """
+
+    nameResolver = Attribute(
+        """
+        Read-only attribute; the resolver installed with L{installResolver}.
+        An L{IHostnameResolver}.
+        """
+    )
+
+    def installNameResolver(resolver):
+        """
+        Set the internal resolver to use for name lookups.
+
+        @type resolver: An object providing the L{IHostnameResolver} interface.
+        @param resolver: The new resolver to use.
+
+        @return: The previously installed resolver.
+        @rtype: L{IHostnameResolver}
+        """
+
 
 
 class IReactorDaemonize(Interface):

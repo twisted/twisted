@@ -15,6 +15,7 @@ import struct
 from twisted.conch.ssh._cryptography_backports import (
     intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
 
+from twisted.python.compat import unicode
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
 
@@ -26,6 +27,8 @@ def NS(t):
     """
     net string
     """
+    if isinstance(t, unicode):
+        t = t.encode("utf-8")
     return struct.pack('!L', len(t)) + t
 
 

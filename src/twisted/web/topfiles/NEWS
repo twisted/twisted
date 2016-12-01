@@ -1,6 +1,41 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 16.6.0 (2016-11-17)
+===============================
+
+Features
+--------
+ - twisted.web.server.Site's HTTP/2 server support now emits vastly
+   fewer WINDOW_UPDATE frames than previously. (#8681)
+
+Bugfixes
+--------
+ - twisted.web.Agent now tolerates receiving unexpected status codes
+   in the 100 range by discarding them, which is what RFC 7231
+   recommends doing. (#8885)
+ - twisted.web._http.H2Stream's getHost and getPeer implementations
+   now actually return the host and peer instead of None. (#8893)
+
+
+Twisted Web 16.5.0 (2016-10-28)
+===============================
+
+Bugfixes
+--------
+ - twisted.web.client.HTTPConnectionPool and anything that uses it,
+   like twisted.web.client.Agent, have had their logic for resuming
+   transports changed so that transports are resumed after state
+   machine transitions are complete, rather than before. This change
+   allows the HTTP client infrastructure to work with alternative HTTP
+   implementations such as HTTP/2 which may be able to deliver a
+   complete response synchronously when producing is resumed. (#8720)
+
+Other
+-----
+ - #8519, #8530, #8629, #8707, #8777, #8778, #8844
+
+
 Twisted Web 16.4.1 (2016-09-07)
 ===============================
 
