@@ -514,6 +514,8 @@ def isIPAddress(addr, family=AF_INET):
         # IPv4 address, but we want to ensure we have all 4 segments.
         if addr.count(u".") != 3:
             return False
+    else:
+        raise ValueError("unknown address family {!r}".format(family))
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.
