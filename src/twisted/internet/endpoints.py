@@ -677,20 +677,30 @@ class HostnameEndpoint(object):
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
         self._reactor = reactor
+        self._badHostname = False
         if isinstance(host, bytes):
             self._hostBytes = host
             if isIPAddress(host) or isIPv6Address(host):
                 self._hostText = host.decode("ascii")
             else:
-                self._hostText = _idnaText(host)
+                try:
+                    self._hostText = _idnaText(host)
+                except UnicodeError:
+                    self._badHostname = True
+                    self._hostText = repr(host)
         else:
             # If it's text, try to idna-ify it.
             host = normalize('NFC', host)
+            self._hostText = host
             if isIPAddress(host) or isIPv6Address(host):
                 self._hostBytes = host.encode("ascii")
             else:
-                self._hostBytes = _idnaBytes(host)
-            self._hostText = host
+                try:
+                    self._hostBytes = _idnaBytes(host)
+                except UnicodeError:
+                    self._badHostname = True
+                    self._hostText = unicode(repr(host))
+                    self._hostBytes = host.encode("utf-8")
 
         self._port = port
         self._timeout = timeout
@@ -707,6 +717,10 @@ class HostnameEndpoint(object):
         """
         wf = protocolFactory
         d = Deferred()
+        if self._badHostname:
+            ude = ValueError("invalid hostname: {}".format(self._hostText))
+            d.errback(ude)
+            return d
         addresses = []
         @provider(IResolutionReceiver)
         class MyReceiver(object):
