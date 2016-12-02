@@ -34,10 +34,10 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
-from twisted.protocols.tls import _PullToPush
 
 
 # This API is currently considered private.
@@ -398,10 +398,12 @@ class H2Connection(Protocol, TimeoutMixin):
         @type event: L{h2.events.RequestReceived}
         """
         stream = H2Stream(
-            event.stream_id, self, event.headers, self.requestFactory
+            event.stream_id,
+            self, event.headers,
+            self.requestFactory,
+            self.site,
+            self.factory
         )
-        stream.site = self.site
-        stream.factory = self.factory
         self.streams[event.stream_id] = stream
         self._streamCleanupCallbacks[event.stream_id] = Deferred()
         self._outboundStreamQueues[event.stream_id] = deque()
@@ -789,6 +791,14 @@ class H2Stream(object):
     @ivar producer: The object producing the response, if any.
     @type producer: L{IProducer}
 
+    @ivar site: The L{twisted.web.server.Site} object this stream belongs to,
+        if any.
+    @type site: L{twisted.web.server.Site}
+
+    @ivar factory: The L{twisted.web.http.HTTPFactory} object that constructed
+        this stream's parent connection.
+    @type factory: L{twisted.web.http.HTTPFactory}
+
     @ivar _producerProducing: Whether the producer stored in producer is
         currently producing data.
     @type _producerProducing: L{bool}
@@ -812,7 +822,8 @@ class H2Stream(object):
     transport = None
 
 
-    def __init__(self, streamID, connection, headers, requestFactory):
+    def __init__(self, streamID, connection, headers,
+                 requestFactory, site, factory):
         """
         Initialize this HTTP/2 stream.
 
@@ -831,9 +842,19 @@ class H2Stream(object):
             request objects.
         @type requestFactory: A callable that returns a
             L{twisted.web.iweb.IRequest}.
+
+        @param site: The L{twisted.web.server.Site} object this stream belongs
+            to, if any.
+        @type site: L{twisted.web.server.Site}
+
+        @param factory: The L{twisted.web.http.HTTPFactory} object that
+            constructed this stream's parent connection.
+        @type factory: L{twisted.web.http.HTTPFactory}
         """
 
         self.streamID = streamID
+        self.site = site
+        self.factory = factory
         self.producing = True
         self.command = None
         self.path = None
