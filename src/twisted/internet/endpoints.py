@@ -699,7 +699,8 @@ class HostnameEndpoint(object):
                     self._hostBytes = _idnaBytes(host)
                 except UnicodeError:
                     self._badHostname = True
-                    self._hostText = unicode(repr(host))
+                    self._hostText = (host.encode("ascii", "backslashreplace")
+                                      .decode("ascii"))
                     self._hostBytes = host.encode("utf-8")
 
         self._port = port
