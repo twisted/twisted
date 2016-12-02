@@ -5,7 +5,7 @@
 Tests for L{twisted.python.htmlizer}.
 """
 
-from StringIO import StringIO
+from io import BytesIO
 
 from twisted.trial.unittest import TestCase
 from twisted.python.htmlizer import filter
@@ -20,10 +20,12 @@ class FilterTests(TestCase):
         If passed an empty input file, L{filter} writes a I{pre} tag containing
         only an end marker to the output file.
         """
-        input = StringIO("")
-        output = StringIO()
+        input = BytesIO(b"")
+        output = BytesIO()
         filter(input, output)
-        self.assertEqual(output.getvalue(), '<pre><span class="py-src-endmarker"></span></pre>\n')
+        self.assertEqual(
+            output.getvalue(),
+            b'<pre><span class="py-src-endmarker"></span></pre>\n')
 
 
     def test_variable(self):
@@ -32,10 +34,11 @@ class FilterTests(TestCase):
         a I{pre} tag containing a I{py-src-variable} span containing the
         variable.
         """
-        input = StringIO("foo\n")
-        output = StringIO()
+        input = BytesIO(b"foo\n")
+        output = BytesIO()
         filter(input, output)
         self.assertEqual(
             output.getvalue(),
-            '<pre><span class="py-src-variable">foo</span><span class="py-src-newline">\n'
-            '</span><span class="py-src-endmarker"></span></pre>\n')
+            b'<pre><span class="py-src-variable">foo</span>'
+            b'<span class="py-src-newline">\n'
+            b'</span><span class="py-src-endmarker"></span></pre>\n')
