@@ -396,6 +396,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # - Call doRead in the FakeReceiver.
         # - Verify results on FakeProtocol.
 
+        # TODO: replace FakeReceiver test approach with one based in
+        # IReactorSocket.adoptStreamConnection once AF_UNIX support is
+        # implemented; see https://twistedmatrix.com/trac/ticket/5573.
+
         from socket import socketpair
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg, SCM_RIGHTS
