@@ -784,16 +784,20 @@ class Key(object):
             if _PY3 and isinstance(k, bytes):
                 k = k.decode('ascii')
             lines.append('attr %s:' % (k,))
-            by = common.MP(v)[4:]
-            while by:
-                m = by[:15]
-                by = by[15:]
-                o = ''
-                for c in iterbytes(m):
-                    o = o + '%02x:' % (ord(c),)
-                if len(m) < 15:
-                    o = o[:-1]
-                lines.append('\t' + o)
+            if isinstance(v, bytes):
+                v = v.decode("ascii")
+                lines.append('\t' + v)
+            else:
+                by = common.MP(v)[4:]
+                while by:
+                    m = by[:15]
+                    by = by[15:]
+                    o = ''
+                    for c in iterbytes(m):
+                        o = o + '%02x:' % (ord(c),)
+                    if len(m) < 15:
+                        o = o[:-1]
+                    lines.append('\t' + o)
         lines[-1] = lines[-1] + '>'
         return '\n'.join(lines)
 
