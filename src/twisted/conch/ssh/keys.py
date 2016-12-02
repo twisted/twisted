@@ -779,7 +779,7 @@ class Key(object):
             '<%s %s (%s bits)' % (
                 nativeString(self.type()),
                 self.isPublic() and 'Public Key' or 'Private Key',
-                self._keyObject.key_size)]
+                self.size())]
         for k, v in sorted(self.data().items()):
             if _PY3 and isinstance(k, bytes):
                 k = k.decode('ascii')
