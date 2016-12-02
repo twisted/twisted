@@ -247,8 +247,9 @@ class Key(object):
                 ).public_key(default_backend())
             )
         elif keyType in [b'ecdsa-sha2-' + curve for curve in list(_curveTable.keys())]:
-            x, y, rest = common.getMP(rest, 2)
-            return cls._fromECComponents(x=x, y=y, curve=keyType)
+            return cls(load_ssh_public_key(
+                keyType + b' ' + base64.encodestring(blob),
+                default_backend()))
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
