@@ -385,9 +385,9 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
     def test_multiFileDescriptorReceivedPerRecvmsg(self):
         """
-        Verify that _SendmsgMixin handles receiving multiple file descriptors
-        per recvmsg, calling L{IFileDescriptorReceiver.fileDescriptorReceived}
-        once per received file descriptor.
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor.
         """
         # Strategy:
         # - Create a UNIX socketpair.
