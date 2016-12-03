@@ -46,37 +46,6 @@ matrix:
     # fails.
     - python: 2.7
       env: TOXENV=txchecker-travis
-    #
-    # OSX 10.10
-    #
-    - language: generic
-      os: osx
-      # 7.1 is OS X 10.10.x
-      # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
-      osx_image: xcode7.1
-      python: 2.7
-      env: TOXENV=py27-alldeps-withcov-macos1010,codecov-publish
-    #
-    # OSX 10.11
-    #
-    - language: generic
-      os: osx
-      # 8 is OS X 10.11.x
-      # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
-      osx_image: xcode8
-      env: TOXENV=py35-alldeps-withcov-macos,codecov-publish
-    - language: generic
-      os: osx
-      osx_image: xcode8
-      # Test cfreactor explicitly
-      env:
-        - TOXENV=py35-alldeps-withcov-macos,codecov-publish
-        - TWISTED_REACTOR=cf
-
-
-  allow_failures:
-    - osx_image: xcode7.1
-    - osx_image: xcode8
 
 
 addons:
