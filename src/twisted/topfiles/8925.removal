@@ -1,0 +1,1 @@
+twisted.protocols.telnet (not to be confused with the supported twisted.conch.telnet), deprecated since Twisted 2.5, has been removed.
