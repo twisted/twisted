@@ -165,7 +165,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 2.5.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
-        self.assertIn('twisted_platform_support', deps)
+        self.assertIn('twisted-platform-support', deps)
 
 
     def test_extrasRequiresLinuxPlatformDeps(self):
@@ -184,7 +184,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyserial', deps)
         self.assertIn('h2 >= 2.5.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
-        self.assertIn('twisted_platform_support', deps)
+        self.assertIn('twisted-platform-support', deps)
 
 
     def test_extrasRequiresWindowsPlatformDeps(self):
@@ -204,7 +204,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 2.5.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
-        self.assertIn('twisted_platform_support', deps)
+        self.assertIn('twisted-platform-support', deps)
 
 
 
