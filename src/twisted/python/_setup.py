@@ -94,8 +94,11 @@ _EXTRA_OPTIONS = dict(
     serial=['pyserial'],
     osx=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
-         'pyobjc-framework-Cocoa'],
-    windows=['pypiwin32'],
+         'pyobjc-framework-Cocoa',
+         'twisted-platform-support'],
+    windows=['pypiwin32',
+             'twisted-platform-support'],
+    linux=['twisted-platform-support'],
     http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
@@ -122,13 +125,17 @@ _EXTRAS_REQUIRE = {
     'windows_platform': (
         _EXTRA_OPTIONS['windows'] + _PLATFORM_INDEPENDENT
     ),
+    'linux_platform': (
+        _EXTRA_OPTIONS['linux'] + _PLATFORM_INDEPENDENT
+    )
 }
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
+    "ckeygen = twisted.conch.scripts.ckeygen:run",
     "conch = twisted.conch.scripts.conch:run",
+    "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
@@ -143,75 +150,14 @@ if not _PY3:
     _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
 
 
-
-class ConditionalExtension(Extension):
-    """
-    An extension module that will only be compiled if certain conditions are
-    met.
-
-    @param condition: A callable of one argument which returns True or False to
-        indicate whether the extension should be built. The argument is an
-        instance of L{build_ext_twisted}, which has useful methods for checking
-        things about the platform.
-    """
-    def __init__(self, *args, **kwargs):
-        self.condition = kwargs.pop("condition", lambda builder: True)
-        Extension.__init__(self, *args, **kwargs)
-
-
-
-# The C extensions used for Twisted.
-_EXTENSIONS = [
-    ConditionalExtension(
-        "twisted.test.raiser",
-        sources=["src/twisted/test/raiser.c"],
-        condition=lambda _: _isCPython),
-
-    ConditionalExtension(
-        "twisted.internet.iocpreactor.iocpsupport",
-        sources=[
-            "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-            "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
-            ],
-        libraries=["ws2_32"],
-        condition=lambda _: _isCPython and sys.platform == "win32"),
-
-    ConditionalExtension(
-        "twisted.python._sendmsg",
-        sources=["src/twisted/python/_sendmsg.c"],
-        condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-    ConditionalExtension(
-        "twisted.runner.portmap",
-        sources=["src/twisted/runner/portmap.c"],
-        condition=lambda builder: not _PY3 and
-                                  builder._check_header("rpc/rpc.h")),
-    ]
-
-
-
-def getSetupArgs(extensions=_EXTENSIONS):
+def getSetupArgs():
     """
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
     arguments = STATIC_PACKAGE_METADATA.copy()
 
-    # This is a workaround for distutils behavior; ext_modules isn't
-    # actually used by our custom builder.  distutils deep-down checks
-    # to see if there are any ext_modules defined before invoking
-    # the build_ext command.  We need to trigger build_ext regardless
-    # because it is the thing that does the conditional checks to see
-    # if it should build any extensions.  The reason we have to delay
-    # the conditional checks until then is that the compiler objects
-    # are not yet set up when this code is executed.
-    arguments["ext_modules"] = extensions
-    # Use custome class to build the extensions.
-    class my_build_ext(build_ext_twisted):
-        conditionalExtensions = extensions
-    command_classes = {
-        'build_ext': my_build_ext,
-    }
+    command_classes = {}
 
     if sys.version_info[0] >= 3:
         requirements = ["zope.interface >= 4.0.2"]
