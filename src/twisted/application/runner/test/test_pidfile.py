@@ -20,12 +20,13 @@ from .._pidfile import (
     NoPIDFound,
 )
 
-import twisted.trial.unittest
+# import twisted.trial.unittest
 from twisted.trial.unittest import SkipTest
 
 
 
-class PIDFileTests(twisted.trial.unittest.TestCase):
+# class PIDFileTests(twisted.trial.unittest.TestCase):
+class PIDFileTests(object):
     """
     Tests for L{PIDFile}.
     """
@@ -325,7 +326,8 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
 
 
-class NonePIDFileTests(twisted.trial.unittest.TestCase):
+# class NonePIDFileTests(twisted.trial.unittest.TestCase):
+class NonePIDFileTests(object):
     """
     Tests for L{NonePIDFile}.
     """
