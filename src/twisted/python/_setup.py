@@ -25,9 +25,6 @@ here.
 @var _PLATFORM_INDEPENDENT: A list of all optional cross-platform dependencies,
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 
-@var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
-    process.
-
 @var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
@@ -35,9 +32,7 @@ import os
 import platform
 import sys
 
-from distutils.command import build_ext
-from distutils.errors import CompileError
-from setuptools import Extension, find_packages
+from setuptools import find_packages
 from setuptools.command.build_py import build_py
 
 # Do not replace this with t.p.compat imports, this file must not import
@@ -134,7 +129,6 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
-    "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
@@ -260,105 +254,6 @@ class BuildPy3(build_py):
         return modules
 
 
-
-## Helpers and distutil tweaks
-
-
-class build_ext_twisted(build_ext.build_ext):
-    """
-    Allow subclasses to easily detect and customize Extensions to
-    build at install-time.
-    """
-
-    def prepare_extensions(self):
-        """
-        Prepare the C{self.extensions} attribute (used by
-        L{build_ext.build_ext}) by checking which extensions in
-        I{conditionalExtensions} should be built.  In addition, if we are
-        building on NT, define the WIN32 macro to 1.
-        """
-        # always define WIN32 under Windows
-        if os.name == 'nt':
-            self.define_macros = [("WIN32", 1)]
-        else:
-            self.define_macros = []
-
-        # On Solaris 10, we need to define the _XOPEN_SOURCE and
-        # _XOPEN_SOURCE_EXTENDED macros to build in order to gain access to
-        # the msg_control, msg_controllen, and msg_flags members in
-        # sendmsg.c. (according to
-        # http://stackoverflow.com/questions/1034587).  See the documentation
-        # of X/Open CAE in the standards(5) man page of Solaris.
-        if sys.platform.startswith('sunos'):
-            self.define_macros.append(('_XOPEN_SOURCE', 1))
-            self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
-
-        self.extensions = [
-            x for x in self.conditionalExtensions if x.condition(self)
-        ]
-
-        for ext in self.extensions:
-            ext.define_macros.extend(self.define_macros)
-
-
-    def build_extensions(self):
-        """
-        Check to see which extension modules to build and then build them.
-        """
-        self.prepare_extensions()
-        build_ext.build_ext.build_extensions(self)
-
-
-    def _remove_conftest(self):
-        for filename in ("conftest.c", "conftest.o", "conftest.obj"):
-            try:
-                os.unlink(filename)
-            except EnvironmentError:
-                pass
-
-
-    def _compile_helper(self, content):
-        conftest = open("conftest.c", "w")
-        try:
-            with conftest:
-                conftest.write(content)
-
-            try:
-                self.compiler.compile(["conftest.c"], output_dir='')
-            except CompileError:
-                return False
-            return True
-        finally:
-            self._remove_conftest()
-
-
-    def _check_header(self, header_name):
-        """
-        Check if the given header can be included by trying to compile a file
-        that contains only an #include line.
-        """
-        self.compiler.announce("checking for %s ..." % header_name, 0)
-        return self._compile_helper("#include <%s>\n" % header_name)
-
-
-
-def _checkCPython(sys=sys, platform=platform):
-    """
-    Checks if this implementation is CPython.
-
-    This uses C{platform.python_implementation}.
-
-    This takes C{sys} and C{platform} kwargs that by default use the real
-    modules. You shouldn't care about these -- they are for testing purposes
-    only.
-
-    @return: C{False} if the implementation is definitely not CPython, C{True}
-        otherwise.
-    """
-    return platform.python_implementation() == "CPython"
-
-
-_isCPython = _checkCPython()
 
 notPortedModules = [
     "twisted.conch.test.test_manhole",
