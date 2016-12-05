@@ -150,6 +150,7 @@ if not _PY3:
     _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
 
 
+
 def getSetupArgs():
     """
     @return: The keyword arguments to be used the the setup method.
@@ -157,11 +158,11 @@ def getSetupArgs():
     """
     arguments = STATIC_PACKAGE_METADATA.copy()
 
-    command_classes = {}
+    commandClasses = {}
 
     if sys.version_info[0] >= 3:
         requirements = ["zope.interface >= 4.0.2"]
-        command_classes['build_py'] = BuildPy3
+        commandClasses['build_py'] = BuildPy3
     else:
         requirements = ["zope.interface >= 3.6.0"]
 
@@ -176,7 +177,7 @@ def getSetupArgs():
         entry_points={
             'console_scripts': _CONSOLE_SCRIPTS
         },
-        cmdclass=command_classes,
+        cmdclass=commandClasses,
         include_package_data=True,
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,

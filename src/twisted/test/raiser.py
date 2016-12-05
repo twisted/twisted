@@ -2,8 +2,8 @@
 # See LICENSE for details.
 
 """
-A trivial extension that just raises an exception.
-See L{twisted.test.test_failure.test_failureConstructionWithMungedStackSucceeds}.
+A trivial extension that just raises an exception. See
+L{twisted.test.test_failure.test_failureConstructionWithMungedStackSucceeds}.
 """
 
 from twisted_platform_support._raiser import RaiserException, raiseException
