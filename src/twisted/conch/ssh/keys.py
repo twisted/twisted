@@ -20,7 +20,6 @@ import base64
 
 from incremental import Version
 
-from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
@@ -55,7 +54,7 @@ from twisted.python.deprecate import deprecated, getDeprecationWarningString
 # For Diffie-Hellman
 import curve25519
 # For signing
-import nacl.signing
+import ed25519
 
 _curveTable = {
     b'ecdsa-sha2-nistp256': ec.SECP256R1(),
@@ -1457,8 +1456,8 @@ class Key(object):
 
             ret = common.NS(common.NS(rb) + common.NS(sb))
         elif keyType == 'ED25519':
-            sk = nacl.signing.SigningKey(self._keyObject.serialize())
-            ret = common.NS(sk.sign(data)[:nacl.bindings.crypto_sign_BYTES])
+            sk = ed25519.SigningKey(self._keyObject.serialize())
+            ret = common.NS(sk.sign(data))
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
         return common.NS(self.sshType()) + ret
@@ -1525,9 +1524,9 @@ class Key(object):
                 hashSize = hashes.SHA512()
             verifier = k.verifier(signature, ec.ECDSA(hashSize))
         elif keyType == 'ED25519':
-            vk = nacl.signing.VerifyKey(self._keyObject.serialize())
+            vk = ed25519.VerifyingKey(self._keyObject.serialize())
             try:
-                vk.verify(data, common.getNS(signature)[0])
+                vk.verify(common.getNS(signature)[0], data)
                 return True
             except:
                 return False
