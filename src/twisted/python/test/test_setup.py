@@ -5,20 +5,13 @@
 Tests for parts of our release automation system.
 """
 
-
-import os
-
-
 from setuptools.dist import Distribution
 import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
-from twisted.python._setup import (
-    BuildPy3,
-    _EXTRAS_REQUIRE,
-    )
+from twisted.python._setup import BuildPy3, _EXTRAS_REQUIRE
 
 
 class OptionalDependenciesTests(TestCase):

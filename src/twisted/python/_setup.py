@@ -28,8 +28,6 @@ here.
 @var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
-import os
-import platform
 import sys
 
 from setuptools import find_packages
