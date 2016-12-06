@@ -138,7 +138,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         """
         L{PIDFile.writeRunningPID} stores the PID for the current process.
         """
-        raise SkipTest("FIXME")
         pidFile = PIDFile(DummyFilePath())
         pidFile.writeRunningPID()
 
@@ -366,7 +365,6 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         L{NonePIDFile.writeRunningPID} raises L{OSError} with an errno of
         L{errno.EPERM}.
         """
-        raise SkipTest("FIXME")
         pidFile = NonePIDFile()
 
         error = self.assertRaises(OSError, pidFile.writeRunningPID)
