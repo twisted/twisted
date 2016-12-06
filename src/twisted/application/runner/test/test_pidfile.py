@@ -178,7 +178,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         that it actually invokes the C{kill} system call, which is useful for
         testing of our chosen method for probing the existence of a process.
         """
-        raise SkipTest("FIXME")
         pidFile = PIDFile(DummyFilePath())
         pidFile.writeRunningPID()
 
@@ -250,7 +249,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.isRunning} re-raises L{OSError} if the attached C{errno}
         value from L{os.kill} is not an expected one.
         """
-        raise SkipTest("FIXME")
         pidFile = PIDFile(DummyFilePath())
         pidFile.writeRunningPID()
 
