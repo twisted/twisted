@@ -21,14 +21,13 @@ from .._pidfile import PIDFile, NonePIDFile
 from .._runner import Runner, RunnerOptions
 from .test_pidfile import DummyFilePath
 
-# import twisted.trial.unittest
+import twisted.trial.unittest
 
 
 
-# class CommandTests(twisted.trial.unittest.TestCase):
-class CommandTests(object):
+class RunnerTests(twisted.trial.unittest.TestCase):
     """
-    Tests for L{Command}.
+    Tests for L{Runner}.
     """
 
     def setUp(self):
