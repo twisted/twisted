@@ -76,7 +76,7 @@ class IPIDFile(Interface):
         """
 
 
-    def __exit__(exc_type, exc_value, traceback):
+    def __exit__(excType, excValue, traceback):
         """
         Exit a context using this PIDFile.
 
@@ -225,7 +225,7 @@ class PIDFile(object):
         return self
 
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, excType, excValue, traceback):
         """
         @see: L{IPIDFile.__exit__}
         """
@@ -285,7 +285,7 @@ class NonePIDFile(object):
         return self
 
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, excType, excValue, traceback):
         """
         @see: L{IPIDFile.__exit__}
         """
