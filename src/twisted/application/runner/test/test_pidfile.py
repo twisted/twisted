@@ -41,9 +41,9 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_formatWithPID(self):
         """
-        L{PIDFile.format} returns the expected format when given a PID.
+        L{PIDFile._format} returns the expected format when given a PID.
         """
-        self.assertEqual(PIDFile.format(pid=1337), b"1337\n")
+        self.assertEqual(PIDFile._format(pid=1337), b"1337\n")
 
 
     def test_readWithPID(self):
@@ -52,7 +52,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         """
         pid = 1337
 
-        pidFile = PIDFile(DummyFilePath(PIDFile.format(pid=pid)))
+        pidFile = PIDFile(DummyFilePath(PIDFile._format(pid=pid)))
 
         self.assertEqual(pid, pidFile.read())
 

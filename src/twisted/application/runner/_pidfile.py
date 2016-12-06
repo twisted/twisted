@@ -95,7 +95,7 @@ class PIDFile(object):
 
 
     @staticmethod
-    def format(pid):
+    def _format(pid):
         """
         Format a PID file's content.
 
@@ -144,7 +144,7 @@ class PIDFile(object):
 
         @raise EnvironmentError: If this PID file cannot be written.
         """
-        self.filePath.setContent(self.format(pid=pid))
+        self.filePath.setContent(self._format(pid=pid))
 
 
     def writeRunningPID(self):
