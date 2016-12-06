@@ -7,7 +7,7 @@ PID file.
 """
 
 import errno
-from os import getpid, kill
+from os import getpid, kill, name as SYSTEM_NAME
 
 from zope.interface import Interface, implementer
 
@@ -166,6 +166,30 @@ class PIDFile(object):
         except NoPIDFound:
             return False
 
+        if SYSTEM_NAME == "posix":
+            return self._pidIsRunningPOSIX(pid)
+        else:
+            raise NotImplementedError(
+                "isRunning is not implemented on {}".format(SYSTEM_NAME)
+            )
+
+
+    @staticmethod
+    def _pidIsRunningPOSIX(pid):
+        """
+        POSIX implementation for running process check.
+
+        Determine whether there is a running process corresponding to the given
+        PID.
+
+        @return: True if the given PID is currently running; false otherwise.
+        @rtype: L{bool}
+
+        @raise EnvironmentError: If this PID file cannot be read.
+        @raise InvalidPIDFileError: If this PID file's content is invalid.
+        @raise StalePIDFileError: If this PID file's content refers to a PID
+            for which there is no corresponding running process.
+        """
         try:
             kill(pid, 0)
         except OSError as e:
