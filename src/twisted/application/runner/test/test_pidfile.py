@@ -116,23 +116,23 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_writePID(self):
         """
-        L{PIDFile.write} stores the given PID.
+        L{PIDFile._write} stores the given PID.
         """
         pid = 1995
 
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(pid)
+        pidFile._write(pid)
 
         self.assertEqual(pidFile.read(), pid)
 
 
     def test_writePIDInvalid(self):
         """
-        L{PIDFile.write} raises L{ValueError} when given an invalid PID.
+        L{PIDFile._write} raises L{ValueError} when given an invalid PID.
         """
         pidFile = PIDFile(DummyFilePath())
 
-        self.assertRaises(ValueError, pidFile.write, u"burp")
+        self.assertRaises(ValueError, pidFile._write, u"burp")
 
 
     def test_writeRunningPID(self):
@@ -161,7 +161,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.isRunning} returns true for a process that does exist.
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1337)
+        pidFile._write(1337)
 
         def kill(pid, signal):
             return  # Don't actually kill anything
@@ -191,7 +191,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         does not exist (errno=ESRCH).
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1337)
+        pidFile._write(1337)
 
         def kill(pid, signal):
             raise OSError(errno.ESRCH, "No such process")
@@ -207,7 +207,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         to kill (errno=EPERM).
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1337)
+        pidFile._write(1337)
 
         def kill(pid, signal):
             raise OSError(errno.EPERM, "Operation not permitted")
@@ -240,7 +240,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
             raise SkipTest("This test doesn't work if running as root")
 
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1)  # PID 1 is init on POSIX systems
+        pidFile._write(1)  # PID 1 is init on POSIX systems
 
         self.assertTrue(pidFile.isRunning())
 
@@ -292,7 +292,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         contained PID file exists but refers to a non-running PID.
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1337)
+        pidFile._write(1337)
 
         def kill(pid, signal):
             raise OSError(errno.ESRCH, "No such process")
@@ -313,7 +313,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         the contained PID.
         """
         pidFile = PIDFile(DummyFilePath())
-        pidFile.write(1337)
+        pidFile._write(1337)
 
         def kill(pid, signal):
             return  # Don't actually kill anything
@@ -351,11 +351,11 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
     def test_write(self):
         """
-        L{NonePIDFile.write} raises L{OSError} with an errno of L{errno.EPERM}.
+        L{NonePIDFile._write} raises L{OSError} with an errno of L{errno.EPERM}.
         """
         pidFile = NonePIDFile()
 
-        error = self.assertRaises(OSError, pidFile.write, 0)
+        error = self.assertRaises(OSError, pidFile._write, 0)
         self.assertEqual(error.errno, errno.EPERM)
 
 

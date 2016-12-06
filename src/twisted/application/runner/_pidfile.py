@@ -33,17 +33,6 @@ class IPIDFile(Interface):
         """
 
 
-    def write(pid):
-        """
-        Store a PID in this PID file.
-
-        @param pid: A PID to store.
-        @type pid: L{int}
-
-        @raise EnvironmentError: If this PID file cannot be written.
-        """
-
-
     def writeRunningPID():
         """
         Store the PID of the current process in this PID file.
@@ -146,12 +135,20 @@ class PIDFile(object):
             )
 
 
-    def write(self, pid):
+    def _write(self, pid):
+        """
+        Store a PID in this PID file.
+
+        @param pid: A PID to store.
+        @type pid: L{int}
+
+        @raise EnvironmentError: If this PID file cannot be written.
+        """
         self.filePath.setContent(self.format(pid=pid))
 
 
     def writeRunningPID(self):
-        self.write(getpid())
+        self._write(getpid())
 
 
     def remove(self):
@@ -235,12 +232,12 @@ class NonePIDFile(object):
         raise NoPIDFound("PID file does not exist")
 
 
-    def write(self, pid):
+    def _write(self, pid):
         raise OSError(errno.EPERM, "Operation not permitted")
 
 
     def writeRunningPID(self):
-        self.write(0)
+        self._write(0)
 
 
     def remove(self):
