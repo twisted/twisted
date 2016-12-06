@@ -17,8 +17,6 @@ from twisted.logger import Logger
 
 class IPIDFile(Interface):
     """
-    PID file.
-
     Manages a file that remembers a process ID.
     """
 
