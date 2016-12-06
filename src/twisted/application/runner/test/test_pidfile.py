@@ -9,9 +9,10 @@ import errno
 from os import getpid, name as SYSTEM_NAME
 from io import BytesIO
 
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.filepath import FilePath
+from twisted.python.filepath import IFilePath
 
 from ...runner import _pidfile
 from .._pidfile import (
@@ -400,10 +401,10 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
 
 
-class DummyFilePath(FilePath):
+@implementer(IFilePath)
+class DummyFilePath(object):
     """
-    Stub for L{twisted.python.filepath.FilePath} which returns a stream
-    containing the given data when opened.
+    In-memory L{IFilePath}.
     """
 
     def __init__(self, content=None):
