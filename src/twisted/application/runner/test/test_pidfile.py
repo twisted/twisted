@@ -5,6 +5,7 @@
 Tests for L{twisted.application.runner._pidfile}.
 """
 
+from functools import wraps
 import errno
 from os import getpid, name as SYSTEM_NAME
 from io import BytesIO
@@ -13,6 +14,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python.filepath import IFilePath
+from twisted.python.runtime import platform
 
 from ...runner import _pidfile
 from .._pidfile import (
@@ -23,6 +25,38 @@ from .._pidfile import (
 
 import twisted.trial.unittest
 from twisted.trial.unittest import SkipTest
+
+
+def ifPlatformSupported(f):
+    """
+    Decorator for tests that are not expected to work on all platforms.
+
+    Calling L{PIDFile.isRunning} currently raises L{NotImplementedError} on
+    non-POSIX platforms.
+
+    On an unsupported platform, we expect to see any test that calls
+    L{PIDFile.isRunning} to raise either L{NotImplementedError} or
+    C{self.failureException}.
+    (C{self.failureException} may occur in a test that checks for a specific
+    exception but it gets NotImplementedError instead).
+    """
+    @wraps(f)
+    def wrapper(self, *args, **kwargs):
+        supported = platform.getType() == "posix"
+
+        if supported:
+            return f(self, *args, **kwargs)
+        else:
+            e = self.assertRaises(
+                (self.failureException, NotImplementedError),
+                f, self, *args, **kwargs
+            )
+            if isinstance(e, NotImplementedError):
+                self.assertTrue(
+                    str(e).startswith("isRunning is not implemented on ")
+                )
+
+    return wrapper
 
 
 
@@ -156,6 +190,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertFalse(pidFile.filePath.exists())
 
 
+    @ifPlatformSupported
     def test_isRunningDoesExist(self):
         """
         L{PIDFile.isRunning} returns true for a process that does exist.
@@ -171,6 +206,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
 
+    @ifPlatformSupported
     def test_isRunningThis(self):
         """
         L{PIDFile.isRunning} returns true for this process (which is running).
@@ -185,6 +221,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
 
+    @ifPlatformSupported
     def test_isRunningDoesNotExist(self):
         """
         L{PIDFile.isRunning} raises L{StalePIDFileError} for a process that
@@ -201,6 +238,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertRaises(StalePIDFileError, pidFile.isRunning)
 
 
+    @ifPlatformSupported
     def test_isRunningNotAllowed(self):
         """
         L{PIDFile.isRunning} returns true for a process that we are not allowed
@@ -217,6 +255,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
 
+    @ifPlatformSupported
     def test_isRunningInit(self):
         """
         L{PIDFile.isRunning} returns true for a process that we are not allowed
@@ -245,6 +284,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
 
+    @ifPlatformSupported
     def test_isRunningUnknownErrno(self):
         """
         L{PIDFile.isRunning} re-raises L{OSError} if the attached C{errno}
@@ -285,6 +325,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertFalse(pidFile.filePath.exists())
 
 
+    @ifPlatformSupported
     def test_contextManagerDoesntExist(self):
         """
         When used as a context manager, a L{PIDFile} will replace the
@@ -306,6 +347,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
             self.assertEqual(pidFile.read(), getpid())
 
 
+    @ifPlatformSupported
     def test_contextManagerAlreadyRunning(self):
         """
         When used as a context manager, a L{PIDFile} will raise
