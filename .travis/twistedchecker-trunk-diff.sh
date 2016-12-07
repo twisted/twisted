@@ -34,6 +34,7 @@ git fetch origin "+refs/heads/trunk:refs/remotes/origin/trunk";
 mkdir -p build/;
 twistedchecker \
     --ignore="raiser.so,portmap.so,_sendmsg.so" \
+    --disable="${TWISTEDCHECKER_SKIP_WARNINGS:-}" \
     --output-format=parseable \
     "${target}" \
     > "build/twistedchecker-branch.report" || true;
