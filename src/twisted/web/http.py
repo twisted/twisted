@@ -2466,7 +2466,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
             if negotiatedProtocol == b'h2':
                 if not H2_ENABLED:
-                    raise ValueError("Neogitated HTTP/2 without support.")
+                    raise ValueError("Negotiated HTTP/2 without support.")
 
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
