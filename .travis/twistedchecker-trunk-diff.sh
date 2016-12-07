@@ -21,7 +21,7 @@ target="$1";
 # an importable module.
 if [ ! -d "${target}" ]; then
     if ! python -c "import ${target}" 2> /dev/null; then
-        >&2 echo "$target does not exists as a path or as a module.";
+        >&2 echo "${target} does not exists as a path or as a module.";
         exit 1;
     fi;
 fi;
@@ -34,9 +34,9 @@ git fetch origin "+refs/heads/trunk:refs/remotes/origin/trunk";
 mkdir -p build/;
 twistedchecker \
     --ignore="raiser.so,portmap.so,_sendmsg.so" \
-    -f parseable "${target}" \
-    > "build/twistedchecker-branch.report" \
-    || true;
+    --output-format=parseable \
+    "${target}" \
+    > "build/twistedchecker-branch.report" || true;
 
 # Make sure repo is producing the diff with prefix so that the output of
 # `git diff` can be parsed by diff_cover.
