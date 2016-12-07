@@ -117,9 +117,6 @@ class PIDFile(object):
 
 
     def read(self):
-        """
-        @see: L{IPIDFile.read}
-        """
         pidString = b""
         try:
             with self.filePath.open() as fh:
@@ -151,23 +148,14 @@ class PIDFile(object):
 
 
     def writeRunningPID(self):
-        """
-        @see: L{IPIDFile.writeRunningPID}
-        """
         self._write(getpid())
 
 
     def remove(self):
-        """
-        @see: L{IPIDFile.remove}
-        """
         self.filePath.remove()
 
 
     def isRunning(self):
-        """
-        @see: L{IPIDFile.isRunning}
-        """
         try:
             pid = self.read()
         except NoPIDFound:
@@ -213,9 +201,6 @@ class PIDFile(object):
 
 
     def __enter__(self):
-        """
-        @see: L{IPIDFile.__enter__}
-        """
         try:
             if self.isRunning():
                 raise AlreadyRunningError()
@@ -226,9 +211,6 @@ class PIDFile(object):
 
 
     def __exit__(self, excType, excValue, traceback):
-        """
-        @see: L{IPIDFile.__exit__}
-        """
         self.remove()
 
 
@@ -247,9 +229,6 @@ class NonePIDFile(object):
 
 
     def read(self):
-        """
-        @see: L{IPIDFile.read}
-        """
         raise NoPIDFound("PID file does not exist")
 
 
@@ -268,37 +247,22 @@ class NonePIDFile(object):
 
 
     def writeRunningPID(self):
-        """
-        @see: L{IPIDFile.writeRunningPID}
-        """
         self._write(0)
 
 
     def remove(self):
-        """
-        @see: L{IPIDFile.remove}
-        """
         raise OSError(errno.ENOENT, "No such file or directory")
 
 
     def isRunning(self):
-        """
-        @see: L{IPIDFile.isRunning}
-        """
         return False
 
 
     def __enter__(self):
-        """
-        @see: L{IPIDFile.__enter__}
-        """
         return self
 
 
     def __exit__(self, excType, excValue, traceback):
-        """
-        @see: L{IPIDFile.__exit__}
-        """
         pass
 
 

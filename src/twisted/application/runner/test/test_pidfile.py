@@ -412,38 +412,23 @@ class DummyFilePath(object):
 
 
     def open(self, mode="r"):
-        """
-        @see: L{IFilePath.open}
-        """
         if not self._exists:
             raise OSError(errno.ENOENT, "No such file or directory")
         return BytesIO(self.getContent())
 
 
     def setContent(self, content):
-        """
-        @see: L{IFilePath.setContent}
-        """
         self._exists = content is not None
         self._content = content
 
 
     def getContent(self):
-        """
-        @see: L{IFilePath.getContent}
-        """
         return self._content
 
 
     def remove(self):
-        """
-        @see: L{IFilePath.remove}
-        """
         self.setContent(None)
 
 
     def exists(self):
-        """
-        @see: L{IFilePath.exists}
-        """
         return self._exists
