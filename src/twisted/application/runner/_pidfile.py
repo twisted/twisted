@@ -89,6 +89,10 @@ class IPIDFile(Interface):
 class PIDFile(object):
     """
     Concrete implementation of L{IPIDFile} based on C{IFilePath}.
+
+    This implementation is presently not supported on non-POSIX platforms.
+    Specifically, calling L{PIDFile.isRunning} will raise
+    L{NotImplementedError}.
     """
 
     _log = Logger()
