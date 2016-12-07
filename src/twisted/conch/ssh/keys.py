@@ -368,7 +368,7 @@ class Key(object):
         @raises EncryptedKeyError: if
             * a passphrase is not provided for an encrypted key
         """
-        lines = data.strip().split(b'\n')
+        lines = data.strip().splitlines()
         kind = lines[0][11:-17]
         if lines[1].startswith(b'Proc-Type: 4,ENCRYPTED'):
             if not passphrase:
