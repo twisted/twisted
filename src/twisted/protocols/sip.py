@@ -20,6 +20,7 @@ from twisted import cred
 from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import log
+from twisted.python._oldstyle import _oldStyle
 from twisted.python.compat import _PY3, iteritems, unicode
 
 PORT = 5060
@@ -298,6 +299,7 @@ def parseViaHeader(value):
 
 
 
+@_oldStyle
 class URL:
     """
     A SIP URL.
@@ -480,6 +482,7 @@ class RegistrationError(SIPError):
 
 
 
+@_oldStyle
 class Message:
     """
     A SIP message.
@@ -862,6 +865,7 @@ class IContact(Interface):
 
 
 
+@_oldStyle
 class Registration:
     def __init__(self, secondsToExpiry, contactURL):
         self.secondsToExpiry = secondsToExpiry
