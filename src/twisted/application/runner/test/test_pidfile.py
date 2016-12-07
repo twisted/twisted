@@ -39,6 +39,11 @@ def ifPlatformSupported(f):
     or C{self.failureException}.
     (C{self.failureException} may occur in a test that checks for a specific
     exception but it gets NotImplementedError instead.)
+
+    @param f: The test method to decorate.
+    @type f: method
+
+    @return: The wrapped callable.
     """
     @wraps(f)
     def wrapper(self, *args, **kwargs):
