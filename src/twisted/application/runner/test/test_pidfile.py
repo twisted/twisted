@@ -35,10 +35,10 @@ def ifPlatformSupported(f):
     non-POSIX platforms.
 
     On an unsupported platform, we expect to see any test that calls
-    L{PIDFile.isRunning} to raise either L{NotImplementedError} or
-    C{self.failureException}.
+    L{PIDFile.isRunning} to raise either L{NotImplementedError}, L{SkipTest},
+    or C{self.failureException}.
     (C{self.failureException} may occur in a test that checks for a specific
-    exception but it gets NotImplementedError instead).
+    exception but it gets NotImplementedError instead.)
     """
     @wraps(f)
     def wrapper(self, *args, **kwargs):
@@ -48,7 +48,7 @@ def ifPlatformSupported(f):
             return f(self, *args, **kwargs)
         else:
             e = self.assertRaises(
-                (self.failureException, NotImplementedError),
+                (NotImplementedError, SkipTest, self.failureException),
                 f, self, *args, **kwargs
             )
             if isinstance(e, NotImplementedError):
