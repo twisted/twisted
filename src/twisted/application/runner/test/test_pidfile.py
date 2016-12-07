@@ -77,7 +77,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
         path.
         """
-        pidValue = b" #foo!"
+        pidValue = b"$foo!"
         pidFile = PIDFile(DummyFilePath(pidValue))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
