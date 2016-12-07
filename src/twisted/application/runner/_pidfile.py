@@ -254,6 +254,16 @@ class NonePIDFile(object):
 
 
     def _write(self, pid):
+        """
+        Store a PID in this PID file.
+
+        @param pid: A PID to store.
+        @type pid: L{int}
+
+        @raise EnvironmentError: If this PID file cannot be written.
+
+        @note: This implementation always raises an L{EnvironmentError}.
+        """
         raise OSError(errno.EPERM, "Operation not permitted")
 
 
