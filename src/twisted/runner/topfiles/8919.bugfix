@@ -1,0 +1,1 @@
+On Python 3, procmon now handles process output without exceptions
