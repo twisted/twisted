@@ -11,7 +11,31 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
-from twisted.python._setup import BuildPy3, _EXTRAS_REQUIRE
+from twisted.python._setup import BuildPy3, _EXTRAS_REQUIRE, getSetupArgs
+
+
+class SetupTests(TestCase):
+    """
+    Tests for L{getSetupArgs}.
+    """
+
+    def test_hardRequirements(self):
+        """
+        Twisted has hard requirements of Zope.Interface, Constantly, and
+        Incremental.
+        """
+        args = getSetupArgs()
+        neededDependencies = set(["constantly >= 15.1",
+                                  "incremental >= 16.10.1"])
+
+        if not _PY3:
+            neededDependencies.add("zope.interface >= 3.6.0")
+        else:
+            neededDependencies.add("zope.interface >= 4.0.2")
+
+        self.assertEqual(set(args["install_requires"]),
+                         neededDependencies)
+
 
 
 class OptionalDependenciesTests(TestCase):
