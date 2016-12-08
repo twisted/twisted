@@ -1,0 +1,1 @@
+The deprecated property twisted.python.filepath.FilePath.statinfo (since 15.0) and the deprecated methods FilePath.getmtime, FilePath.getatime, and Filepath.getctime (since 8.0) have been removed.
