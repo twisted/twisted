@@ -14,7 +14,7 @@ from twisted.python.compat import _PY3
 __all__ = ["sendmsg", "recvmsg", "getSocketFamily", "SCM_RIGHTS"]
 
 if not _PY3:
-    from twisted_platform_support._sendmsg import (
+    from _twisted_platform_support._sendmsg import (
         send1msg, recv1msg, getsockfam, SCM_RIGHTS)
     __all__ += ["send1msg", "recv1msg", "getsockfam"]
 else:
