@@ -492,7 +492,7 @@ def isIPAddress(addr, family=AF_INET):
         representation of an IPv4 address.
 
     @param family: The address family to test for.  (This parameter has only
-        been available since Twisted 16.7; previosuly L{isIPAddress} could only
+        been available since Twisted 16.7; previously L{isIPAddress} could only
         test for IPv4 addresses.)
     @type family: C{bool}
 
