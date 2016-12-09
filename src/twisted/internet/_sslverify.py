@@ -1630,7 +1630,7 @@ class OpenSSLCertificateOptions(object):
                 if (reduceSecurityToTLSVersion and
                     atLeastTLSVersion > reduceSecurityToTLSVersion):
                     raise ValueError(
-                        ("atLeastTLSVersion needs to be before "
+                        ("atLeastTLSVersion needs to be lower than "
                          "reduceSecurityToTLSVersion"))
 
                 if atLeastTLSVersion > self._defaultMinimumTLSVersion:
@@ -1648,7 +1648,7 @@ class OpenSSLCertificateOptions(object):
             if (reduceSecurityToTLSVersion and
                 noLowerThanTLSVersion > reduceSecurityToTLSVersion):
                 raise ValueError(
-                    ("noLowerThanTLSVersion needs to be before "
+                    ("noLowerThanTLSVersion needs to be lower than "
                      "reduceSecurityToTLSVersion"))
 
             excludedVersions = _getExcludedTLSProtocols(

@@ -963,8 +963,45 @@ class OpenSSLOptionsTests(unittest.TestCase):
                 reduceSecurityToTLSVersion=sslverify.TLSVersion.SSLv3)
 
         self.assertEqual(e.exception.args, (
-            ("noLowerThanTLSVersion needs to be before "
-            "reduceSecurityToTLSVersion"),))
+            ("noLowerThanTLSVersion needs to be lower than "
+             "reduceSecurityToTLSVersion"),))
+
+
+    def test_tlsVersionRangeInOrderAtLeast(self):
+        """
+        Passing out of order TLS versions to C{atLeastTLSVersion} and
+        C{reduceSecurityToTLSVersion} will cause it to raise an exception.
+        """
+        with self.assertRaises(ValueError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                atLeastTLSVersion=sslverify.TLSVersion.TLSv1_0,
+                reduceSecurityToTLSVersion=sslverify.TLSVersion.SSLv3)
+
+        self.assertEqual(e.exception.args, (
+            ("atLeastTLSVersion needs to be lower than "
+             "reduceSecurityToTLSVersion"),))
+
+
+    def test_tlsProtocolsreduceToMaxWithoutMin(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{reduceSecurityToTLSVersion} but no C{atLeastTLSVersion} or
+        C{noLowerThanTLSVersion} set, and C{reduceSecurityToTLSVersion} is
+        below the minimum default, the minimum will be made the new maximum.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            reduceSecurityToTLSVersion=sslverify.TLSVersion.SSLv3,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
+                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
 
 
     def test_tlsProtocolsSSLv3Only(self):
