@@ -236,6 +236,17 @@ class AbstractFilePathTests(BytesTestCase):
             self.assertEqual(type(p.getStatusChangeTime()), float)
 
 
+    def test_oldTimesAreInts(self):
+        """
+        Verify that all times returned from the various time functions are
+        integers, for compatibility.
+        """
+        for p in self.path, self.path.child(b'file1'):
+            self.assertEqual(type(p.getatime()), int)
+            self.assertEqual(type(p.getmtime()), int)
+            self.assertEqual(type(p.getctime()), int)
+
+
 
 class FakeWindowsPath(filepath.FilePath):
     """
@@ -805,9 +816,9 @@ class FilePathTests(AbstractFilePathTests):
         p = self.path.child(b'stattest')
         p.touch()
         self.assertEqual(p.getsize(), 0)
-        self.assertEqual(abs(p.getModificationTime() - time.time()) // 20, 0)
-        self.assertEqual(abs(p.getStatusChangeTime() - time.time()) // 20, 0)
-        self.assertEqual(abs(p.getAccessTime() - time.time()) // 20, 0)
+        self.assertEqual(abs(p.getmtime() - time.time()) // 20, 0)
+        self.assertEqual(abs(p.getctime() - time.time()) // 20, 0)
+        self.assertEqual(abs(p.getatime() - time.time()) // 20, 0)
         self.assertTrue(p.exists())
         self.assertTrue(p.exists())
         # OOB removal: FilePath.remove() will automatically restat
@@ -1442,7 +1453,7 @@ class FilePathTests(AbstractFilePathTests):
 
         # This path should look like we don't know what status it's in, not that
         # we know that it didn't exist when last we checked.
-        self.assertIsNone(fp._statinfo)
+        self.assertIsNone(fp.statinfo)
         self.assertEqual(fp.getsize(), 8)
 
 
@@ -1460,6 +1471,58 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(
             self.path.child(b"sub1").getPermissions().shorthand(),
             "rwxrw-r--")
+
+
+    def test_deprecateStatinfoGetter(self):
+        """
+        Getting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo
+        warningInfo = self.flushWarnings([self.test_deprecateStatinfoGetter])
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.python.filepath.FilePath.statinfo was deprecated in "
+            "Twisted 15.0.0; please use other FilePath methods such as "
+            "getsize(), isdir(), getModificationTime(), etc. instead")
+
+
+    def test_deprecateStatinfoSetter(self):
+        """
+        Setting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo = None
+        warningInfo = self.flushWarnings([self.test_deprecateStatinfoSetter])
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.python.filepath.FilePath.statinfo was deprecated in "
+            "Twisted 15.0.0; please use other FilePath methods such as "
+            "getsize(), isdir(), getModificationTime(), etc. instead")
+
+
+    def test_deprecateStatinfoSetterSets(self):
+        """
+        Setting L{twisted.python.filepath.FilePath.statinfo} changes the value
+        of _statinfo such that getting statinfo again returns the new value.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo = None
+        self.assertIsNone(fp.statinfo)
+
+
+    def test_filePathNotDeprecated(self):
+        """
+        While accessing L{twisted.python.filepath.FilePath.statinfo} is
+        deprecated, the filepath itself is not.
+        """
+        filepath.FilePath(self.mktemp())
+        warningInfo = self.flushWarnings([self.test_filePathNotDeprecated])
+        self.assertEqual(warningInfo, [])
 
 
     def test_getPermissions_Windows(self):
