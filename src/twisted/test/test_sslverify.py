@@ -1105,27 +1105,6 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(options, ctx._options & options)
 
 
-    def test_tlsProtocolsAllModernTLS(self):
-        """
-        When calling L{sslverify.OpenSSLCertificateOptions} with
-        C{noLowerThanTLSVersion} set to TLSv1.0 and
-        C{reduceSecurityToTLSVersion} to TLSv1.2, it will exclude both SSLs and
-        the (unreleased) TLSv1.3.
-        """
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-            noLowerThanTLSVersion=sslverify.TLSVersion.TLSv1_0,
-            reduceSecurityToTLSVersion=sslverify.TLSVersion.TLSv1_2,
-        )
-        opts._contextFactory = FakeContext
-        ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
-                   opts._OP_NO_TLSv1_3)
-        self.assertEqual(options, ctx._options & options)
-
-
     def test_tlsProtocolsAtLeastAllSecureTLS(self):
         """
         When calling L{sslverify.OpenSSLCertificateOptions} with
