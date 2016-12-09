@@ -6,6 +6,7 @@ Tests for deprecations in L{twisted.runner}.
 """
 
 from twisted.trial.unittest import TestCase
+from twisted.python.reflect import requireModule
 
 
 class PortmapDeprecationTests(TestCase):
@@ -25,3 +26,6 @@ class PortmapDeprecationTests(TestCase):
             ("twisted.runner.portmap was deprecated in Twisted NEXT: "
              "There is no replacement for this module."),
             warningsShown[0]['message'])
+
+    if not requireModule("_twisted_platform_support._portmap"):
+        testDeprecated.skip = "Not relevant on this platform."
