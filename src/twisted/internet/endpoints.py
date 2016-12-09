@@ -17,19 +17,21 @@ from __future__ import division, absolute_import
 import os
 import re
 import socket
+from unicodedata import normalize
 
 from constantly import NamedConstant, Names
 
-from socket import AF_INET6, AF_INET
-
-from zope.interface import implementer, directlyProvides
+from zope.interface import implementer, directlyProvides, provider
 
 from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.abstract import isIPv6Address
-from twisted.internet.address import _ProcessAddress, HostnameAddress
+from twisted.internet.abstract import isIPv6Address, isIPAddress
+from twisted.internet.address import (
+    _ProcessAddress, HostnameAddress, IPv4Address, IPv6Address
+)
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor)
+    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver
+)
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.stdio import StandardIO, PipeAddress
@@ -41,12 +43,13 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.compat import iterbytes
+from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
 
+from ._idna import _idnaBytes, _idnaText
 
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from twisted.internet._sslverify import _idnaBytes, _idnaText
     from twisted.internet.ssl import (
         optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
         CertificateOptions, trustRootFromCertificates
@@ -638,16 +641,28 @@ class HostnameEndpoint(object):
     A name-based endpoint that connects to the fastest amongst the resolved
     host addresses.
 
-    @ivar _getaddrinfo: A hook used for testing name resolution.
-
-    @ivar _deferToThread: A hook used for testing deferToThread.
-
     @cvar _DEFAULT_ATTEMPT_DELAY: The default time to use between attempts, in
         seconds, when no C{attemptDelay} is given to
         L{HostnameEndpoint.__init__}.
+
+    @ivar _hostText: the textual representation of the hostname passed to the
+        constructor.  Used to pass to the reactor's hostname resolver.
+    @type _hostText: L{unicode}
+
+    @ivar _hostBytes: the encoded bytes-representation of the hostname passed
+        to the constructor.  Used to construct the L{HostnameAddress}
+        associated with this endpoint.
+    @type _hostBytes: L{bytes}
+
+    @ivar _hostStr: the native-string representation of the hostname passed to
+        the constructor, used for exception construction
+    @type _hostStr: native L{str}
+
+    @ivar _badHostname: a flag - hopefully false!  - indicating that an invalid
+        hostname was passed to the constructor.  This might be a textual
+        hostname that isn't valid IDNA, or non-ASCII bytes.
+    @type _badHostname: L{bool}
     """
-    _getaddrinfo = staticmethod(socket.getaddrinfo)
-    _deferToThread = staticmethod(threads.deferToThread)
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
@@ -656,10 +671,11 @@ class HostnameEndpoint(object):
         Create a L{HostnameEndpoint}.
 
         @param reactor: The reactor to use for connections and delayed calls.
-        @type reactor: provider of L{IReactorTCP} and L{IReactorTime}
+        @type reactor: provider of L{IReactorTCP}, L{IReactorTime} and either
+            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}.
 
         @param host: A hostname to connect to.
-        @type host: L{bytes}
+        @type host: L{bytes} or L{unicode}
 
         @param port: The port number to connect to.
         @type port: L{int}
@@ -679,7 +695,10 @@ class HostnameEndpoint(object):
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
         self._reactor = reactor
-        self._host = host
+        [self._badHostname, self._hostBytes, self._hostText] = (
+            self._hostAsBytesAndText(host)
+        )
+        self._hostStr = self._hostBytes if bytes is str else self._hostText
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
@@ -688,32 +707,94 @@ class HostnameEndpoint(object):
         self._attemptDelay = attemptDelay
 
 
+    @staticmethod
+    def _hostAsBytesAndText(host):
+        """
+        For various reasons (documented in the C{@ivar}'s in the class
+        docstring) we need both a textual and a binary representation of the
+        hostname given to the constructor.  For compatibility and convenience,
+        we accept both textual and binary representations of the hostname, save
+        the form that was passed, and convert into the other form.  This is
+        mostly just because L{HostnameAddress} chose somewhat poorly to define
+        its attribute as bytes; hopefully we can find a compatible way to clean
+        this up in the future and just operate in terms of text internally.
+
+        @param host: A hostname to convert.
+        @type host: L{bytes} or C{str}
+
+        @return: a 3-tuple of C{(invalid, bytes, text)} where C{invalid} is a
+            boolean indicating the validity of the hostname, C{bytes} is a
+            binary representation of C{host}, and C{text} is a textual
+            representation of C{host}.
+        """
+        if isinstance(host, bytes):
+            if isIPAddress(host) or isIPv6Address(host):
+                return False, host, host.decode("ascii")
+            else:
+                try:
+                    return False, host, _idnaText(host)
+                except UnicodeError:
+                    # Convert the host to _some_ kind of text, to handle below.
+                    host = host.decode("charmap")
+        else:
+            host = normalize('NFC', host)
+            if isIPAddress(host) or isIPv6Address(host):
+                return False, host.encode("ascii"), host
+            else:
+                try:
+                    return False, _idnaBytes(host), host
+                except UnicodeError:
+                    pass
+        # `host` has been converted to text by this point either way; it's
+        # invalid as a hostname, and so may contain unprintable characters and
+        # such. escape it with backslashes so the user can get _some_ guess as
+        # to what went wrong.
+        asciibytes = host.encode('ascii', 'backslashreplace')
+        return True, asciibytes, asciibytes.decode('ascii')
+
+
     def connect(self, protocolFactory):
         """
         Attempts a connection to each address returned by gai, and returns a
         connection which is established first.
         """
-        wf = protocolFactory
-        d = self._nameResolution(self._host, self._port)
+        if self._badHostname:
+            return defer.fail(
+                ValueError("invalid hostname: {}".format(self._hostStr))
+            )
+        d = Deferred()
+        addresses = []
+        @provider(IResolutionReceiver)
+        class EndpointReceiver(object):
+            @staticmethod
+            def resolutionBegan(resolutionInProgress):
+                pass
+            @staticmethod
+            def addressResolved(address):
+                addresses.append(address)
+            @staticmethod
+            def resolutionComplete():
+                d.callback(addresses)
+        self._reactor.nameResolver.resolveHostName(
+            EndpointReceiver, self._hostText, portNumber=self._port
+        )
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
-            "Couldn't find the hostname '%s'" % (self._host,))))
+            "Couldn't find the hostname '{}'".format(self._hostStr))))
         @d.addCallback
-        def gaiResultToEndpoints(gaiResult):
-            """
-            This method matches the host address family with an endpoint for
-            every address returned by C{getaddrinfo}.
-
-            @param gaiResult: A list of 5-tuples as returned by GAI.
-            @type gaiResult: list
-            """
-            for family, socktype, proto, canonname, sockaddr in gaiResult:
-                if family in [AF_INET6]:
-                    yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
-                elif family in [AF_INET]:
-                    yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
-                    # Yields an endpoint for every address returned by GAI
+        def resolvedAddressesToEndpoints(addresses):
+            # Yield an endpoint for every address resolved from the name.
+            for eachAddress in addresses:
+                if isinstance(eachAddress, IPv6Address):
+                    yield TCP6ClientEndpoint(
+                        self._reactor, eachAddress.host, eachAddress.port,
+                        self._timeout, self._bindAddress
+                    )
+                if isinstance(eachAddress, IPv4Address):
+                    yield TCP4ClientEndpoint(
+                        self._reactor, eachAddress.host, eachAddress.port,
+                        self._timeout, self._bindAddress
+                    )
+        d.addCallback(list)
 
         def _canceller(d):
             # This canceller must remain defined outside of
@@ -722,7 +803,7 @@ class HostnameEndpoint(object):
             # potentially problematic circular reference and possibly
             # gc.garbage.
             d.errback(error.ConnectingCancelledError(
-                HostnameAddress(self._host, self._port)))
+                HostnameAddress(self._hostBytes, self._port)))
 
         @d.addCallback
         def startConnectionAttempts(endpoints):
@@ -732,9 +813,9 @@ class HostnameEndpoint(object):
             one of the connections succeeds, all of them fail, or the attempt
             is cancelled.
 
-            @param endpoints: an iterable of all the endpoints we might try to
+            @param endpoints: a list of all the endpoints we might try to
                 connect to, as determined by name resolution.
-            @type endpoints: iterable of L{IStreamServerEndpoint}
+            @type endpoints: L{list} of L{IStreamServerEndpoint}
 
             @return: a Deferred that fires with the result of the
                 C{endpoint.connect} method that completes the fastest, or fails
@@ -743,6 +824,11 @@ class HostnameEndpoint(object):
             @rtype: L{Deferred} failing with L{error.ConnectingCancelledError}
                 or firing with L{IProtocol}
             """
+            if not endpoints:
+                raise error.DNSLookupError(
+                    "no results for hostname lookup: {}".format(self._hostStr)
+                )
+            iterEndpoints = iter(endpoints)
             pending = []
             failures = []
             winner = defer.Deferred(canceller=_canceller)
@@ -756,14 +842,14 @@ class HostnameEndpoint(object):
 
             @LoopingCall
             def iterateEndpoint():
-                endpoint = next(endpoints, None)
+                endpoint = next(iterEndpoints, None)
                 if endpoint is None:
                     # The list of endpoints ends.
                     checkDone.endpointsLeft = False
                     checkDone()
                     return
 
-                eachAttempt = endpoint.connect(wf)
+                eachAttempt = endpoint.connect(protocolFactory)
                 pending.append(eachAttempt)
                 @eachAttempt.addBoth
                 def noLongerPending(result):
@@ -791,15 +877,6 @@ class HostnameEndpoint(object):
             return winner
 
         return d
-
-
-    def _nameResolution(self, host, port):
-        """
-        Resolve the hostname string into a tuple containig the host
-        address.
-        """
-        return self._deferToThread(self._getaddrinfo, host, port, 0,
-                socket.SOCK_STREAM)
 
 
 
