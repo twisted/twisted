@@ -740,6 +740,7 @@ class HostnameEndpoint(object):
             "Couldn't find the hostname '{}'".format(self._hostText))))
         @d.addCallback
         def resolvedAddressesToEndpoints(addresses):
+            # Yield an endpoint for every address resolved from the name.
             for eachAddress in addresses:
                 if isinstance(eachAddress, IPv6Address):
                     yield TCP6ClientEndpoint(
@@ -751,7 +752,6 @@ class HostnameEndpoint(object):
                         self._reactor, eachAddress.host, eachAddress.port,
                         self._timeout, self._bindAddress
                     )
-                    # Yields an endpoint for every address returned by GAI
         d.addCallback(list)
 
         def _canceller(d):
