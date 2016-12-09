@@ -22,10 +22,6 @@ except ImportError:
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
 
-# If we don't have TLS v1.3 yet, we can't disable it -- this is just so when it
-# makes it into OpenSSL, connections knowingly bracketed to v1.2 don't end up
-# going to v1.3
-_OP_NO_TLSv1_3 = getattr(SSL, "OP_NO_TLSv1_3", 0x00)
 
 
 
@@ -46,7 +42,11 @@ _tlsDisableFlags = {
     TLSVersion.TLSv1_0: SSL.OP_NO_TLSv1,
     TLSVersion.TLSv1_1: SSL.OP_NO_TLSv1_1,
     TLSVersion.TLSv1_2: SSL.OP_NO_TLSv1_2,
-    TLSVersion.TLSv1_3: _OP_NO_TLSv1_3,
+
+    # If we don't have TLS v1.3 yet, we can't disable it -- this is just so
+    # when it makes it into OpenSSL, connections knowingly bracketed to v1.2
+    # don't end up going to v1.3
+    TLSVersion.TLSv1_3: getattr(SSL, "OP_NO_TLSv1_3", 0x00),
 }
 
 
@@ -1407,6 +1407,12 @@ class OpenSSLCertificateOptions(object):
 
     @ivar _cipherString: An OpenSSL-specific cipher string.
     @type _cipherString: L{unicode}
+
+    @ivar _defaultMinimumTLSVersion: The default TLS version that will be
+        negotiated. This should be a "safe default", with wide client and
+        server support, vs an optimally secure one that excludes a large number
+        of users. As of late 2016, TLSv1.0 is that safe default.
+    @type _defaultMinimumTLSVersion: L{TLSVersion} constant
     """
 
     # Factory for creating contexts.  Configurable for testability.
@@ -1419,15 +1425,19 @@ class OpenSSLCertificateOptions(object):
     _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE',
                                            0x00400000)
     _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
-    _OP_NO_TLSv1_3 = _OP_NO_TLSv1_3
+    _OP_NO_TLSv1_3 = _tlsDisableFlags[TLSVersion.TLSv1_3]
+
+    _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
 
 
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
-        ['method', 'minimumTLSVersion'],
-        ['method', 'maximumTLSVersion'],
+        ['method', 'noLowerThanTLSVersion'],
+        ['method', 'atLeastTLSVersion'],
+        ['atLeastTLSVersion', 'noLowerThanTLSVersion'],
+        ['method', 'reduceSecurityToTLSVersion'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1447,8 +1457,9 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
-                 minimumTLSVersion=None,
-                 maximumTLSVersion=None,
+                 atLeastTLSVersion=None,
+                 noLowerThanTLSVersion=None,
+                 reduceSecurityToTLSVersion=None,
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1457,12 +1468,15 @@ class OpenSSLCertificateOptions(object):
 
         @param certificate: An X509 object holding the certificate.
 
-        @param method: Deprecated, use C{minimumTLSVersion} and/or
-            C{maximumTLSVersion} instead. The SSL protocol to use, one of
-            SSLv23_METHOD, SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD (or any
-            other method constants provided by pyOpenSSL). By default, a
-            setting will be used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
-            Can not be used with C{minimumTLSVersion} or C{maximumTLSVersion}
+        @param method: Deprecated, use a combination of
+            C{noLowerThanTLSVersion}, C{atLeastTLSVersion}, or
+            C{reduceSecurityToTLSVersion} instead. The SSL protocol to use, one
+            of C{SSLv23_METHOD}, C{SSLv2_METHOD}, C{SSLv3_METHOD},
+            C{TLSv1_METHOD} (or any other method constants provided by
+            pyOpenSSL). By default, a setting will be used which allows
+            TLSv1.0, TLSv1.1, and TLSv1.2. Can not be used with
+            C{noLowerThanTLSVersion}, C{atLeastTLSVersion}, or
+            C{reduceSecurityToTLSVersion}
 
         @param verify: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
@@ -1551,13 +1565,25 @@ class OpenSSLCertificateOptions(object):
             in the list are preferred over those later in the list.
         @type acceptableProtocols: L{list} of L{bytes}
 
-        @param minimumTLSVersion: The minimum TLS version to use. If not
-            specified, it is a generally considered safe default
-            (TLSv1.0).
-        @type minimumTLSVersion: L{TLSVersion} constant
-        @param minimumTLSVersion: The maximum TLS version to use. If not
-            specified, it is the most recent your OpenSSL supports.
-        @type minimumTLSVersion: L{TLSVersion} constant
+        @param atLeastTLSVersion: The minimum TLS version that you want to use,
+            or Twisted's default if it is higher. Use this if you want to make
+            your client/server more secure than Twisted's default, but will
+            accept Twisted's default instead if it moves higher than this
+            value. You probably want to use this over C{noLowerThanTLSVersion}.
+        @type atLeastTLSVersion: L{TLSVersion} constant
+
+        @param noLowerThanTLSVersion: The minimum TLS version to use. If not
+            specified, it is a generally considered safe default (TLSv1.0). If
+            you want to raise your minimum TLS version to above that of this
+            default, use C{atLeastTLSVersion}.
+        @type noLowerThanTLSVersion: L{TLSVersion} constant
+
+        @param reduceSecurityToTLSVersion: The maximum TLS version to use. If
+            not specified, it is the most recent your OpenSSL supports. You
+            only want to set this if the peer that you are communicating with
+            has problems with more recent TLS versions, it lowers your security
+            when communicating with newer peers.
+        @type reduceSecurityToTLSVersion: L{TLSVersion} constant
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1600,28 +1626,42 @@ class OpenSSLCertificateOptions(object):
         if method is None:
             self.method = SSL.SSLv23_METHOD
 
-            if minimumTLSVersion is None:
-                minimumTLSVersion = TLSVersion.TLSv1_0
+            if atLeastTLSVersion:
+                if (reduceSecurityToTLSVersion and
+                    atLeastTLSVersion > reduceSecurityToTLSVersion):
+                    raise ValueError(
+                        ("atLeastTLSVersion needs to be before "
+                         "reduceSecurityToTLSVersion"))
+
+                if atLeastTLSVersion > self._defaultMinimumTLSVersion:
+                    noLowerThanTLSVersion = atLeastTLSVersion
+
+            if noLowerThanTLSVersion is None:
+                noLowerThanTLSVersion = self._defaultMinimumTLSVersion
 
                 # If you set the max lower than the default, but don't set the
                 # minimum, pull it down to that
-                if maximumTLSVersion and minimumTLSVersion > maximumTLSVersion:
-                    minimumTLSVersion = maximumTLSVersion
+                if (reduceSecurityToTLSVersion and
+                    noLowerThanTLSVersion > reduceSecurityToTLSVersion):
+                    noLowerThanTLSVersion = reduceSecurityToTLSVersion
 
-            if maximumTLSVersion and minimumTLSVersion > maximumTLSVersion:
+            if (reduceSecurityToTLSVersion and
+                noLowerThanTLSVersion > reduceSecurityToTLSVersion):
                 raise ValueError(
-                    "minimumTLSVersion needs to be before maximumTLSVersion")
+                    ("noLowerThanTLSVersion needs to be before "
+                     "reduceSecurityToTLSVersion"))
 
-            excludedVersions = _getExcludedTLSProtocols(minimumTLSVersion,
-                                                        maximumTLSVersion)
+            excludedVersions = _getExcludedTLSProtocols(
+                noLowerThanTLSVersion, reduceSecurityToTLSVersion)
 
             for version in excludedVersions:
                 self._options |= _tlsDisableFlags[version]
         else:
             warnings.warn(
                 ("Passing method to twisted.internet.ssl.CertificateOptions "
-                 "was deprecated in Twisted 16.7. Please use "
-                 "minimumTLSVersion and maximumTLSVersion instead."),
+                 "was deprecated in Twisted NEXT. Please use a combination "
+                   "of noLowerThanTLSVersion, atLeastTLSVersion, and "
+                   "reduceSecurityToTLSVersion instead."),
                 DeprecationWarning, stacklevel=3)
 
             # Otherwise respect the application decision.
