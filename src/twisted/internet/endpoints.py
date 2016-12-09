@@ -734,7 +734,7 @@ class HostnameEndpoint(object):
                 try:
                     return False, host, _idnaText(host)
                 except UnicodeError:
-                    # convert the host to _some_ kind of text, to handle below
+                    # Convert the host to _some_ kind of text, to handle below.
                     host = host.decode("charmap")
         else:
             host = normalize('NFC', host)
@@ -745,7 +745,7 @@ class HostnameEndpoint(object):
                     return False, _idnaBytes(host), host
                 except UnicodeError:
                     pass
-        # host has been converted to text by this point either way; it's
+        # `host` has been converted to text by this point either way; it's
         # invalid as a hostname, and so may contain unprintable characters and
         # such. escape it with backslashes so the user can get _some_ guess as
         # to what went wrong.
