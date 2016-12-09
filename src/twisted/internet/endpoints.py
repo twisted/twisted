@@ -716,7 +716,6 @@ class HostnameEndpoint(object):
         Attempts a connection to each address returned by gai, and returns a
         connection which is established first.
         """
-        wf = protocolFactory
         d = Deferred()
         if self._badHostname:
             ude = ValueError("invalid hostname: {}".format(self._hostText))
@@ -808,7 +807,7 @@ class HostnameEndpoint(object):
                     checkDone()
                     return
 
-                eachAttempt = endpoint.connect(wf)
+                eachAttempt = endpoint.connect(protocolFactory)
                 pending.append(eachAttempt)
                 @eachAttempt.addBoth
                 def noLongerPending(result):
