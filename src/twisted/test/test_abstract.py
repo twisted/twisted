@@ -11,6 +11,8 @@ from twisted.trial.unittest import TestCase
 
 from twisted.internet.abstract import isIPAddress
 
+from socket import AF_IPX
+
 
 class AddressTests(TestCase):
     """
@@ -83,3 +85,31 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress('0.0.256.0'))
         self.assertFalse(isIPAddress('0.0.0.256'))
         self.assertFalse(isIPAddress('256.256.256.256'))
+
+
+    def test_unicodeAndBytes(self):
+        """
+        L{isIPAddress} evaluates ASCII-encoded bytes as well as text.
+        """
+        self.assertFalse(isIPAddress(b'256.0.0.0'))
+        self.assertFalse(isIPAddress(u'256.0.0.0'))
+        self.assertTrue(isIPAddress(b'252.253.254.255'))
+        self.assertTrue(isIPAddress(u'252.253.254.255'))
+
+
+    def test_nonIPAddressFamily(self):
+        """
+        All address families other than C{AF_INET} and C{AF_INET6} result in a
+        L{ValueError} being raised.
+        """
+        self.assertRaises(ValueError, isIPAddress, b'anything', AF_IPX)
+
+
+    def test_nonASCII(self):
+        """
+        All IP addresses must be encodable as ASCII; non-ASCII should result in
+        a L{False} result.
+        """
+        self.assertFalse(isIPAddress(b'\xff.notascii'))
+        self.assertFalse(isIPAddress(u'\u4321.notascii'))
+
