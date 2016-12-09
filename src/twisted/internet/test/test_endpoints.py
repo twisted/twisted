@@ -8,13 +8,14 @@ L{twisted.internet.endpoints}.
 """
 from __future__ import division, absolute_import
 
-import socket
-
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
-from zope.interface import implementer
-from zope.interface.verify import verifyObject, verifyClass
+from unicodedata import normalize
 from types import FunctionType
+
+from zope.interface import implementer, provider, providedBy
+from zope.interface.interface import InterfaceClass
+from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
@@ -41,6 +42,10 @@ from twisted.protocols import basic, policies
 from twisted.test.iosim import connectedServerAndClient, connectableEndpoint
 from twisted.internet.error import ConnectingCancelledError
 from twisted.python.compat import nativeString
+from twisted.internet.interfaces import IHostnameResolver
+from twisted.internet.interfaces import IReactorPluggableNameResolver
+from twisted.python.components import proxyForInterface
+from twisted.internet.abstract import isIPv6Address
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -1570,6 +1575,55 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 
 
+def deterministicResolvingReactor(reactor, expectedAddresses):
+    """
+    Create a reactor that will deterministically resolve all hostnames it is
+    passed to the list of addresses given.
+
+    @param reactor: An object that we wish to add an
+        L{IReactorPluggableNameResolver} to.
+    @type reactor: Any object with some formally-declared interfaces (i.e. one
+        where C{list(providedBy(reactor))} is not empty); usually C{IReactor*}
+        interfaces.
+
+    @param expectedAddresses: the addresses expected to be returned.  If these
+        are strings, they should be IPv4 or IPv6 literals, and they will be
+        wrapped in L{IPv4Address} and L{IPv6Address} objects in the resolution
+        result.
+    @type expectedAddresses: iterable of C{object} or C{str}
+
+    @return: A new reactor which provides all the interfaces previously
+        provided by C{reactor} as well as L{IReactorPluggableNameResolver}.
+        All name resolutions performed with its C{nameResolver} attribute will
+        resolve reentrantly and synchronously with the given
+        C{expectedAddresses}.  However, it is not a complete implementation as
+        it does not have an C{installNameResolver} method.
+    """
+    @provider(IHostnameResolver)
+    class SimpleNameResolver(object):
+        @staticmethod
+        def resolveHostName(resolutionReceiver, hostName, portNumber=0,
+                            addressTypes=None, transportSemantics='TCP'):
+
+            resolutionReceiver.resolutionBegan(None)
+            for expectedAddress in expectedAddresses:
+                if isinstance(expectedAddress, str):
+                    expectedAddress = ([IPv4Address, IPv6Address]
+                                       [isIPv6Address(expectedAddress)]
+                                       ('TCP', expectedAddress, portNumber))
+                resolutionReceiver.addressResolved(expectedAddress)
+            resolutionReceiver.resolutionComplete()
+
+
+    @provider(IReactorPluggableNameResolver)
+    class WithResolver(proxyForInterface(
+            InterfaceClass('*', tuple(providedBy(reactor)))
+    )):
+        nameResolver = SimpleNameResolver()
+    return WithResolver(reactor)
+
+
+
 class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
                                     unittest.TestCase):
     """
@@ -1581,18 +1635,14 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         Creates a L{HostnameEndpoint} instance where the hostname is resolved
         into a single IPv4 address.
         """
+        expectedAddress = '1.2.3.4'
         address = HostnameAddress(b"example.com", 80)
-        endpoint = endpoints.HostnameEndpoint(reactor, b"example.com",
-                                           address.port, **connectArgs)
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(reactor, [expectedAddress]),
+            b"example.com", address.port, **connectArgs
+        )
 
-        def testNameResolution(host, port):
-            self.assertEqual(b"example.com", host)
-            data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port))]
-            return defer.succeed(data)
-
-        endpoint._nameResolution = testNameResolution
-
-        return (endpoint, ('1.2.3.4', address.port, clientFactory,
+        return (endpoint, (expectedAddress, address.port, clientFactory,
                 connectArgs.get('timeout', 30),
                 connectArgs.get('bindAddress', None)),
                 address)
@@ -1634,30 +1684,6 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         @return: C{dict} of keyword arguments to pass to connect.
         """
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
-
-
-    def test_freeFunctionDeferToThread(self):
-        """
-        By default, L{HostnameEndpoint._deferToThread} is
-        L{threads.deferToThread}.
-        """
-        mreactor = None
-        clientFactory = None
-        ep, ignoredArgs, address = self.createClientEndpoint(
-                mreactor, clientFactory)
-
-        self.assertEqual(ep._deferToThread, threads.deferToThread)
-
-
-    def test_defaultGAI(self):
-        """
-        By default, L{HostnameEndpoint._getaddrinfo} is L{socket.getaddrinfo}.
-        """
-        mreactor = None
-        clientFactory = None
-        ep, ignoredArgs, address = self.createClientEndpoint(mreactor,
-                clientFactory)
-        self.assertEqual(ep._getaddrinfo, socket.getaddrinfo)
 
 
     def test_endpointConnectingCancelled(self, advance=None):
@@ -1791,29 +1817,6 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         self.assertEqual([], mreactor.getDelayedCalls())
 
 
-    def test_nameResolution(self):
-        """
-        While resolving hostnames, _nameResolution calls _deferToThread with
-        _getaddrinfo.
-        """
-        calls = []
-        clientFactory = object()
-
-        def fakeDeferToThread(f, *args, **kwargs):
-            calls.append((f, args, kwargs))
-            return defer.Deferred()
-
-        endpoint = endpoints.HostnameEndpoint(reactor, b'ipv4.example.com',
-            1234)
-        fakegetaddrinfo = object()
-        endpoint._getaddrinfo = fakegetaddrinfo
-        endpoint._deferToThread = fakeDeferToThread
-        endpoint.connect(clientFactory)
-        self.assertEqual(
-            [(fakegetaddrinfo, (b"ipv4.example.com", 1234, 0, SOCK_STREAM),
-                {})], calls)
-
-
 
 class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
                                     unittest.TestCase):
@@ -1827,17 +1830,10 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
         into a single IPv6 address.
         """
         address = HostnameAddress(b"ipv6.example.com", 80)
-        endpoint = endpoints.HostnameEndpoint(reactor, b"ipv6.example.com",
-                                              address.port, **connectArgs)
-
-        def testNameResolution(host, port):
-            self.assertEqual(b"ipv6.example.com", host)
-            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port,
-                0, 0))]
-            return defer.succeed(data)
-
-        endpoint._nameResolution = testNameResolution
-
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(reactor, ['1:2::3:4']),
+            b"ipv6.example.com", address.port, **connectArgs
+        )
         return (endpoint, ('1:2::3:4', address.port, clientFactory,
                 connectArgs.get('timeout', 30),
                 connectArgs.get('bindAddress', None)),
@@ -1893,7 +1889,9 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
         clientFactory.protocol = protocol.Protocol
 
         ep, ignoredArgs, address = self.createClientEndpoint(
-            mreactor, clientFactory)
+            deterministicResolvingReactor(mreactor, ['127.0.0.1']),
+            clientFactory
+        )
 
         d = ep.connect(clientFactory)
         d.cancel()
@@ -1930,6 +1928,77 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
 
 
 
+class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
+    """
+    Tests for L{HostnameEndpoint}'s constructor's encoding behavior.
+    """
+
+    sampleIDNAText = u'b\xfccher.ch'
+    sampleIDNABytes = b'xn--bcher-kva.ch'
+
+    def test_idnaHostnameText(self):
+        """
+        A L{HostnameEndpoint} constructed with text will contain an
+        IDNA-encoded bytes representation of that text.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            self.sampleIDNAText, 80
+        )
+        self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
+        self.assertEqual(endpoint._hostText, self.sampleIDNAText)
+
+
+    def test_idnaHostnameBytes(self):
+        """
+        A L{HostnameEndpoint} constructed with bytes will contain an
+        IDNA-decoded textual representation of those bytes.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            self.sampleIDNAText, 80
+        )
+        self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
+        self.assertEqual(endpoint._hostText, self.sampleIDNAText)
+
+
+    def test_nonNormalizedText(self):
+        """
+        A L{HostnameEndpoint} constructed with NFD-normalized text will store
+        the NFC-normalized version of that text.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            normalize('NFD', self.sampleIDNAText), 80
+        )
+        self.assertEqual(endpoint._hostBytes, self.sampleIDNABytes)
+        self.assertEqual(endpoint._hostText, self.sampleIDNAText)
+
+
+    def test_deferBadEncodingToConnect(self):
+        """
+        Since any client of L{IStreamClientEndpoint} needs to handle Deferred
+        failures from C{connect}, L{HostnameEndpoint}'s constructor will not
+        raise exceptions when given bad host names, instead deferring to
+        returning a failing L{Deferred} from C{connect}.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            b'\xff-garbage-\xff', 80
+        )
+        deferred = endpoint.connect(Factory.forProtocol(Protocol))
+        err = self.failureResultOf(deferred, ValueError)
+        self.assertIn("\\xff-garbage-\\xff", str(err))
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(MemoryReactor(), ['127.0.0.1']),
+            u'\u2ff0-garbage-\u2ff0', 80
+        )
+        deferred = endpoint.connect(Factory())
+        err = self.failureResultOf(deferred, ValueError)
+        self.assertIn("\\u2ff0-garbage-\\u2ff0", str(err))
+
+
+
 class HostnameEndpointsGAIFailureTests(unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns no address.
@@ -1939,17 +2008,14 @@ class HostnameEndpointsGAIFailureTests(unittest.TestCase):
         If no address is returned by GAI for a hostname, the connection attempt
         fails with L{error.DNSLookupError}.
         """
-        endpoint = endpoints.HostnameEndpoint(Clock(), b"example.com", 80)
-
-        def testNameResolution(host, port):
-            self.assertEqual(b"example.com", host)
-            data = error.DNSLookupError("Problems")
-            return defer.fail(data)
-
-        endpoint._nameResolution = testNameResolution
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b"example.com", 80
+        )
         clientFactory = object()
         dConnect = endpoint.connect(clientFactory)
-        return self.assertFailure(dConnect, error.DNSLookupError)
+        exc = self.failureResultOf(dConnect, error.DNSLookupError)
+        self.assertIn("example.com", str(exc))
 
 
 
@@ -1960,41 +2026,23 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
     """
     def setUp(self):
         self.mreactor = MemoryReactor()
-        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
-                b"www.example.com", 80)
-
-        def nameResolution(host, port):
-            self.assertEqual(b"www.example.com", host)
-            data = [
-                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
-                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0, 0))
-                ]
-            return defer.succeed(data)
-
-        self.endpoint._nameResolution = nameResolution
+        self.endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(self.mreactor,
+                                          ['1.2.3.4', '1:2::3:4']),
+            b"www.example.com", 80)
 
 
-    def test_ignoreUnknownAddressFamilies(self):
+    def test_ignoreUnknownAddressTypes(self):
         """
-        If an address family other than AF_INET and AF_INET6 is returned by
-        on address resolution, the endpoint ignores that address.
+        If an address type other than L{IPv4Address} and L{IPv6Address} is
+        returned by on address resolution, the endpoint ignores that address.
         """
         self.mreactor = MemoryReactor()
-        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
-                b"www.example.com", 80)
-        AF_INX = None  # An arbitrary name for testing
-
-        def nameResolution(host, port):
-            self.assertEqual(b"www.example.com", host)
-            data = [
-                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
-                (AF_INX, SOCK_STREAM, 'SOME_PROTOCOL_IN_FUTURE', '',
-                    ('a.b.c.d', port)),
-                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0,
-                    0))]
-            return defer.succeed(data)
-
-        self.endpoint._nameResolution = nameResolution
+        self.endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(self.mreactor, ['1.2.3.4', object(),
+                                                          '1:2::3:4']),
+            b"www.example.com", 80
+        )
         clientFactory = None
 
         self.endpoint.connect(clientFactory)
@@ -3501,26 +3549,6 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
 
 
-def makeHostnameEndpointSynchronous(hostnameEndpoint):
-    """
-    Make the given L{HostnameEndpoint} fire its L{defer.Deferred} from
-    C{connect} synchronously by patching its C{_deferToThread} implementation
-    to return an already-succeeded Deferred.
-
-    @param hostnameEndpoint: The hostname endpoint to patch.
-    """
-    family = AF_INET
-    socktype = SOCK_STREAM
-    proto = IPPROTO_TCP
-    canonname = b''
-    sockaddr = ('127.0.0.1', 4321)
-    gaiResult = family, socktype, proto, canonname, sockaddr
-    def synchronousDeferToThreadForGAI(*args):
-        return defer.succeed([gaiResult])
-    hostnameEndpoint._deferToThread = synchronousDeferToThreadForGAI
-
-
-
 class WrapClientTLSParserTests(unittest.TestCase):
     """
     Tests for L{_TLSClientEndpointParser}.
@@ -3541,7 +3569,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
                 'tls:example.com:443:timeout=10:bindAddress=127.0.0.1'))
         hostnameEndpoint = endpoint._wrappedEndpoint
         self.assertIs(hostnameEndpoint._reactor, reactor)
-        self.assertEqual(hostnameEndpoint._host, b'example.com')
+        self.assertEqual(hostnameEndpoint._hostBytes, b'example.com')
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
         self.assertEqual(hostnameEndpoint._bindAddress,
@@ -3559,8 +3587,11 @@ class WrapClientTLSParserTests(unittest.TestCase):
             reactor, b'tls:\xc3\xa9xample.example.com:443'
         )
         self.assertEqual(
-            endpoint._wrappedEndpoint._host, b'xn--xample-9ua.example.com')
-        connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
+            endpoint._wrappedEndpoint._hostBytes,
+            b'xn--xample-9ua.example.com'
+        )
+        connectionCreator = connectionCreatorFromEndpoint(
+            reactor, endpoint)
         self.assertEqual(connectionCreator._hostname,
                          u'\xe9xample.example.com')
 
@@ -3589,14 +3620,13 @@ class WrapClientTLSParserTests(unittest.TestCase):
         # 'localhost', so use 'localhost' as a hostname and the directory
         # containing the cert itself for the CAs list.
         endpoint = endpoints.clientFromString(
-            reactor,
+            deterministicResolvingReactor(reactor, ['127.0.0.1']),
             'tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}'
             .format(
                 escapedPEMPathName, escapedPEMPathName,
                 endpoints.quoteStringArgument(pemPath.parent().path)
             ).encode('ascii')
         )
-        makeHostnameEndpointSynchronous(endpoint._wrappedEndpoint)
         d = endpoint.connect(Factory.forProtocol(Protocol))
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
         clientProtocol = factory.buildProtocol(None)
@@ -3643,7 +3673,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
         endpoint = endpoints.clientFromString(reactor, b'tls:example.com:443')
         creator = connectionCreatorFromEndpoint(reactor, endpoint)
         self.assertEqual(creator._hostname, u'example.com')
-        self.assertEqual(endpoint._wrappedEndpoint._host, b'example.com')
+        self.assertEqual(endpoint._wrappedEndpoint._hostBytes, b'example.com')
 
 
 
