@@ -211,6 +211,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
 
 
     def testPToN(self):
+        """
+        L{twisted.python.compat.inet_pton} parses IPv4 and IPv6 addresses in a
+        manner similar to that of L{socket.inet_pton}.
+        """
         from twisted.python.compat import inet_pton
 
         f = lambda a: inet_pton(socket.AF_INET6, a)
@@ -226,6 +230,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
         self.assertEqual(
             '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
             f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae'))
+        # Scope ID doesn't affect the binary representation.
+        self.assertEqual(
+            '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
+            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae%en0'))
 
         self.assertEqual('\x00' * 14 + '\x00\x01', f('::1'))
         self.assertEqual('\x00' * 12 + '\x01\x02\x03\x04', f('::1.2.3.4'))
@@ -237,7 +245,7 @@ class IPv6Tests(unittest.SynchronousTestCase):
                         '1:::3', ':::', '1:2', '::1.2', '1.2.3.4::',
                         'abcd:1.2.3.4:abcd:abcd:abcd:abcd:abcd',
                         '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
-                        '1.2.3.4']:
+                        '1.2.3.4', '', '%eth0']:
             self.assertRaises(ValueError, f, badaddr)
 
 if _PY3:
