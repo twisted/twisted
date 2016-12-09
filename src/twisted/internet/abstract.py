@@ -491,10 +491,11 @@ def isIPAddress(addr, family=AF_INET):
     @param addr: A string which may or may not be the decimal dotted
         representation of an IPv4 address.
 
-    @param family: The address family to test for.  (This parameter has only
-        been available since Twisted 16.7; previously L{isIPAddress} could only
-        test for IPv4 addresses.)
-    @type family: C{bool}
+    @param family: The address family to test for; one of the C{AF_*} constants
+        from the L{socket} module.  (This parameter has only been available
+        since Twisted 16.7; previously L{isIPAddress} could only test for IPv4
+        addresses.)
+    @type family: C{int}
 
     @rtype: C{bool}
     @return: C{True} if C{addr} represents an IPv4 address, C{False} otherwise.
