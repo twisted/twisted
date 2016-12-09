@@ -715,8 +715,8 @@ class HostnameEndpoint(object):
         hostname given to the constructor.  For compatibility and convenience,
         we accept both textual and binary representations of the hostname, save
         the form that was passed, and convert into the other form.  This is
-        mostly just because HostnameAddress chose somewhat poorly to define its
-        attribute as bytes; hopefully we can find a compatible way to clean
+        mostly just because L{HostnameAddress} chose somewhat poorly to define
+        its attribute as bytes; hopefully we can find a compatible way to clean
         this up in the future and just operate in terms of text internally.
 
         @param host: A hostname to convert.
