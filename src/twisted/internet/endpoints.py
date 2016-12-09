@@ -724,7 +724,7 @@ class HostnameEndpoint(object):
             return d
         addresses = []
         @provider(IResolutionReceiver)
-        class MyReceiver(object):
+        class EndpointReceiver(object):
             @staticmethod
             def resolutionBegan(resolutionInProgress):
                 pass
@@ -735,7 +735,7 @@ class HostnameEndpoint(object):
             def resolutionComplete():
                 d.callback(addresses)
         self._reactor.nameResolver.resolveHostName(
-            MyReceiver, self._hostText, portNumber=self._port
+            EndpointReceiver, self._hostText, portNumber=self._port
         )
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
             "Couldn't find the hostname '{}'".format(self._hostText))))
