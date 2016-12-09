@@ -56,6 +56,7 @@ from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
 from twisted.internet import protocol, defer, reactor
+from twisted.internet._idna import _idnaText, _idnaBytes
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
@@ -1484,7 +1485,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        serverIDNA = sslverify._idnaBytes(serverHostname)
+        serverIDNA = _idnaBytes(serverHostname)
         serverCA, serverCert = certificatesForAuthorityAndServer(serverIDNA)
         other = {}
         passClientCert = None
@@ -1753,7 +1754,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
         def setupServerContext(ctx):
             def servername_received(conn):
-                serverIDNA = sslverify._idnaText(conn.get_servername())
+                serverIDNA = _idnaText(conn.get_servername())
                 names.append(serverIDNA)
             ctx.set_tlsext_servername_callback(servername_received)
         cProto, sProto, pump = self.serviceIdentitySetup(
