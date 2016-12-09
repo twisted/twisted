@@ -644,6 +644,24 @@ class HostnameEndpoint(object):
     @cvar _DEFAULT_ATTEMPT_DELAY: The default time to use between attempts, in
         seconds, when no C{attemptDelay} is given to
         L{HostnameEndpoint.__init__}.
+
+    @ivar _hostText: the textual representation of the hostname passed to the
+        constructor.  Used to pass to the reactor's hostname resolver.
+    @type _hostText: L{unicode}
+
+    @ivar _hostBytes: the encoded bytes-representation of the hostname passed
+        to the constructor.  Used to construct the L{HostnameAddress}
+        associated with this endpoint.
+    @type _hostBytes: L{bytes}
+
+    @ivar _hostStr: the native-string representation of the hostname passed to
+        the constructor, used for exception construction
+    @type _hostStr: native L{str}
+
+    @ivar _badHostname: a flag - hopefully false!  - indicating that an invalid
+        hostname was passed to the constructor.  This might be a textual
+        hostname that isn't valid IDNA, or non-ASCII bytes.
+    @type _badHostname: L{bool}
     """
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
@@ -657,7 +675,7 @@ class HostnameEndpoint(object):
             L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}.
 
         @param host: A hostname to connect to.
-        @type host: L{bytes}
+        @type host: L{bytes} or L{unicode}
 
         @param port: The port number to connect to.
         @type port: L{int}
@@ -677,38 +695,62 @@ class HostnameEndpoint(object):
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
         self._reactor = reactor
-        self._badHostname = False
-        if isinstance(host, bytes):
-            self._hostBytes = host
-            if isIPAddress(host) or isIPv6Address(host):
-                self._hostText = host.decode("ascii")
-            else:
-                try:
-                    self._hostText = _idnaText(host)
-                except UnicodeError:
-                    self._badHostname = True
-                    self._hostText = repr(host)
-        else:
-            # If it's text, try to idna-ify it.
-            host = normalize('NFC', host)
-            self._hostText = host
-            if isIPAddress(host) or isIPv6Address(host):
-                self._hostBytes = host.encode("ascii")
-            else:
-                try:
-                    self._hostBytes = _idnaBytes(host)
-                except UnicodeError:
-                    self._badHostname = True
-                    self._hostText = (host.encode("ascii", "backslashreplace")
-                                      .decode("ascii"))
-                    self._hostBytes = host.encode("utf-8")
-
+        [self._badHostname, self._hostBytes, self._hostText] = (
+            self._hostAsBytesAndText(host)
+        )
+        self._hostStr = self._hostBytes if bytes is str else self._hostText
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
+
+
+    @staticmethod
+    def _hostAsBytesAndText(host):
+        """
+        For various reasons (documented in the C{@ivar}'s in the class
+        docstring) we need both a textual and a binary representation of the
+        hostname given to the constructor.  For compatibility and convenience,
+        we accept both textual and binary representations of the hostname, save
+        the form that was passed, and convert into the other form.  This is
+        mostly just because HostnameAddress chose somewhat poorly to define its
+        attribute as bytes; hopefully we can find a compatible way to clean
+        this up in the future and just operate in terms of text internally.
+
+        @param host: A hostname to convert.
+        @type host: L{bytes} or C{str}
+
+        @return: a 3-tuple of C{(invalid, bytes, text)} where C{invalid} is a
+            boolean indicating the validity of the hostname, C{bytes} is a
+            binary representation of C{host}, and C{text} is a textual
+            representation of C{host}.
+        """
+        if isinstance(host, bytes):
+            if isIPAddress(host) or isIPv6Address(host):
+                return False, host, host.decode("ascii")
+            else:
+                try:
+                    return False, host, _idnaText(host)
+                except UnicodeError:
+                    # convert the host to _some_ kind of text, to handle below
+                    host = host.decode("charmap")
+        else:
+            host = normalize('NFC', host)
+            if isIPAddress(host) or isIPv6Address(host):
+                return False, host.encode("ascii"), host
+            else:
+                try:
+                    return False, _idnaBytes(host), host
+                except UnicodeError:
+                    pass
+        # host has been converted to text by this point either way; it's
+        # invalid as a hostname, and so may contain unprintable characters and
+        # such. escape it with backslashes so the user can get _some_ guess as
+        # to what went wrong.
+        asciibytes = host.encode('ascii', 'backslashreplace')
+        return True, asciibytes, asciibytes.decode('ascii')
 
 
     def connect(self, protocolFactory):
@@ -718,7 +760,7 @@ class HostnameEndpoint(object):
         """
         if self._badHostname:
             return defer.fail(
-                ValueError("invalid hostname: {}".format(self._hostText))
+                ValueError("invalid hostname: {}".format(self._hostStr))
             )
         d = Deferred()
         addresses = []
@@ -737,7 +779,7 @@ class HostnameEndpoint(object):
             EndpointReceiver, self._hostText, portNumber=self._port
         )
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
-            "Couldn't find the hostname '{}'".format(self._hostText))))
+            "Couldn't find the hostname '{}'".format(self._hostStr))))
         @d.addCallback
         def resolvedAddressesToEndpoints(addresses):
             # Yield an endpoint for every address resolved from the name.
@@ -784,7 +826,7 @@ class HostnameEndpoint(object):
             """
             if not endpoints:
                 raise error.DNSLookupError(
-                    "no results for hostname lookup: {}".format(self._hostText)
+                    "no results for hostname lookup: {}".format(self._hostStr)
                 )
             iterEndpoints = iter(endpoints)
             pending = []
