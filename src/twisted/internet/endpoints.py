@@ -716,11 +716,11 @@ class HostnameEndpoint(object):
         Attempts a connection to each address returned by gai, and returns a
         connection which is established first.
         """
-        d = Deferred()
         if self._badHostname:
-            ude = ValueError("invalid hostname: {}".format(self._hostText))
-            d.errback(ude)
-            return d
+            return defer.fail(
+                ValueError("invalid hostname: {}".format(self._hostText))
+            )
+        d = Deferred()
         addresses = []
         @provider(IResolutionReceiver)
         class EndpointReceiver(object):
