@@ -40,7 +40,7 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         is resolved using HostnameEndpoint's resolver.
         """
         sut = forwarding.SSHConnectForwardingChannel(
-            hostport=(b'fwd.example.org', 1234))
+            hostport=('fwd.example.org', 1234))
         # Patch channel and resolver to not touch the network.
         memoryReactor = MemoryReactorClock()
         sut._reactor = deterministicResolvingReactor(memoryReactor, ['::1'])
