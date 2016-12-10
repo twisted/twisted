@@ -1396,12 +1396,10 @@ class _StandardEndpointFactory(object):
         SSL context objects for any SSL connections the agent needs to make.
 
     @ivar _connectTimeout: If not L{None}, the timeout passed to
-        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the
-        connection timeout.
+        L{HostnameEndpoint} for specifying the connection timeout.
 
     @ivar _bindAddress: If not L{None}, the address passed to
-        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the local
-        address to bind to.
+        L{HostnameEndpoint} for specifying the local address to bind to.
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
@@ -1451,12 +1449,7 @@ class _StandardEndpointFactory(object):
                               "contains non-ASCII octets, it should be ASCII "
                               "decodable.").format(uri=uri))
 
-        if isIPAddress(host):
-            endpoint = TCP4ClientEndpoint(self._reactor, host, uri.port,
-                                          **kwargs)
-        else:
-            endpoint = HostnameEndpoint(self._reactor, host, uri.port,
-                                        **kwargs)
+        endpoint = HostnameEndpoint(self._reactor, host, uri.port, **kwargs)
         if uri.scheme == b'http':
             return endpoint
         elif uri.scheme == b'https':
