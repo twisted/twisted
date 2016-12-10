@@ -56,6 +56,7 @@ from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
 from twisted.internet import protocol, defer, reactor
+from twisted.internet._idna import _idnaText, _idnaBytes
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
@@ -402,6 +403,8 @@ class FakeContext(object):
 
     @ivar _verifyDepth: Set by L{set_verify_depth}.
 
+    @ivar _mode: Set by L{set_mode}.
+
     @ivar _sessionID: Set by L{set_session_id}.
 
     @ivar _extraCertChain: Accumulated L{list} of all extra certificates added
@@ -435,6 +438,15 @@ class FakeContext(object):
 
     def check_privatekey(self):
         return None
+
+
+    def set_mode(self, mode):
+        """
+        Set the mode. See L{SSL.Context.set_mode}.
+
+        @param mode: See L{SSL.Context.set_mode}.
+        """
+        self._mode = mode
 
 
     def set_verify(self, flags, callback):
@@ -798,6 +810,19 @@ class OpenSSLOptionsTests(unittest.TestCase):
         options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
                    opts._OP_CIPHER_SERVER_PREFERENCE)
         self.assertEqual(options, ctx._options & options)
+
+
+    def test_modeIsSet(self):
+        """
+        Every context must be in C{MODE_RELEASE_BUFFERS} mode.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertEqual(SSL.MODE_RELEASE_BUFFERS, ctx._mode)
 
 
     def test_singleUseKeys(self):
@@ -1460,7 +1485,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        serverIDNA = sslverify._idnaBytes(serverHostname)
+        serverIDNA = _idnaBytes(serverHostname)
         serverCA, serverCert = certificatesForAuthorityAndServer(serverIDNA)
         other = {}
         passClientCert = None
@@ -1729,7 +1754,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
         def setupServerContext(ctx):
             def servername_received(conn):
-                serverIDNA = sslverify._idnaText(conn.get_servername())
+                serverIDNA = _idnaText(conn.get_servername())
                 names.append(serverIDNA)
             ctx.set_tlsext_servername_callback(servername_received)
         cProto, sProto, pump = self.serviceIdentitySetup(

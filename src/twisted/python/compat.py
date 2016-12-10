@@ -27,9 +27,9 @@ import inspect
 import os
 import platform
 import socket
-import string
 import struct
 import sys
+import tokenize
 from types import MethodType as _MethodType
 
 from io import TextIOBase, IOBase
@@ -104,14 +104,27 @@ def currentframe(n=0):
 
 
 def inet_pton(af, addr):
+    """
+    Emulator of L{socket.inet_pton}.
+
+    @param af: An address family to parse; C{socket.AF_INET} or
+        C{socket.AF_INET6}.
+    @type af: L{int}
+
+    @param addr: An address.
+    @type addr: native L{str}
+
+    @return: The binary packed version of the passed address.
+    @rtype: L{bytes}
+    """
+    if not addr:
+        raise ValueError("illegal IP address string passed to inet_pton")
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
     elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        illegalChars = [x for x in addr if x not in string.hexdigits + ':.']
-        if illegalChars:
-            raise ValueError("Illegal characters: %r" %
-                             (''.join(illegalChars),))
-
+        if '%' in addr and (addr.count('%') > 1 or addr.index("%") == 0):
+            raise ValueError("illegal IP address string passed to inet_pton")
+        addr = addr.split('%')[0]
         parts = addr.split(':')
         elided = parts.count('')
         ipv4Component = '.' in parts[-1]
@@ -833,6 +846,12 @@ def _bytesRepr(bytestring):
         return 'b' + repr(bytestring)
 
 
+if _PY3:
+    _tokenize = tokenize.tokenize
+else:
+    _tokenize = tokenize.generate_tokens
+
+
 
 __all__ = [
     "reraise",
@@ -873,4 +892,5 @@ __all__ = [
     "unichr",
     "raw_input",
     "_maybeMBCS",
+    "_tokenize"
 ]
