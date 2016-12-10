@@ -1112,7 +1112,7 @@ class BindAuthorityTests(unittest.TestCase):
 
     def test_aRecords(self):
         """
-        A records are loaded correctly.
+        A records are loaded.
         """
         for dom, ip in [(b"example.com", u"10.0.0.1"),
                         (b"no-in.example.com", u"10.0.0.2")]:
@@ -1130,7 +1130,7 @@ class BindAuthorityTests(unittest.TestCase):
 
     def test_aaaaRecords(self):
         """
-        AAAA records are loaded correctly.
+        AAAA records are loaded.
         """
         rr = self.successResultOf(
             self.auth.lookupIPV6Address(b"example.com")
@@ -1146,7 +1146,7 @@ class BindAuthorityTests(unittest.TestCase):
 
     def test_mxRecords(self):
         """
-        MX records are loaded correctly.
+        MX records are loaded.
         """
         rr = self.successResultOf(
             self.auth.lookupMailExchange(b"not-fqdn.example.com")
@@ -1161,7 +1161,7 @@ class BindAuthorityTests(unittest.TestCase):
 
     def test_cnameRecords(self):
         """
-        CNAME records are loaded correctly.
+        CNAME records are loaded.
         """
         rr = self.successResultOf(
             self.auth.lookupIPV6Address(b"www.example.com")
@@ -1176,7 +1176,7 @@ class BindAuthorityTests(unittest.TestCase):
 
     def test_invalidRecordClass(self):
         """
-        Raises NotImplementedError on invalid records.
+        loadBindString raises NotImplementedError on invalid records.
         """
         with self.assertRaises(NotImplementedError) as e:
             self.loadBindString(

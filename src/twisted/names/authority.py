@@ -44,14 +44,14 @@ def getSerial(filename='/tmp/twisted-names.serial'):
         os.umask(o)
 
     with open(filename, 'r') as serialFile:
-        lastSerial, id = serialFile.readline().split()
+        lastSerial, zoneID = serialFile.readline().split()
 
-    id = (lastSerial == serial) and (int(id) + 1) or 0
+    zoneID = (lastSerial == serial) and (int(zoneID) + 1) or 0
 
     with open(filename, 'w') as serialFile:
-        serialFile.write('%s %d' % (serial, id))
+        serialFile.write('%s %d' % (serial, zoneID))
 
-    serial = serial + ('%02d' % (id,))
+    serial = serial + ('%02d' % (zoneID,))
     return serial
 
 
@@ -299,15 +299,13 @@ class BindAuthority(FileAuthority):
     """
     def loadFile(self, filename):
         """
-        This is a private API; do not use in application code.
-
         Load records from C{filename}.
 
         @param filename: file to read from
         @type filename: L{bytes}
         """
         fp = FilePath(filename)
-        # XXX - not the best way to set an origin. It can be set using $ORIGIN
+        # Not the best way to set an origin. It can be set using $ORIGIN
         # though.
         self.origin = nativeString(fp.basename() + b'.')
 
@@ -319,8 +317,6 @@ class BindAuthority(FileAuthority):
 
     def stripComments(self, lines):
         """
-        This is a private API; do not use in application code.
-
         Strip comments from C{lines}.
 
         @param lines: lines to work on
@@ -337,8 +333,6 @@ class BindAuthority(FileAuthority):
 
     def collapseContinuations(self, lines):
         """
-        This is a private API; do not use in application code.
-
         Transform multiline statements into single lines.
 
         @param lines: lines to work on
@@ -366,14 +360,10 @@ class BindAuthority(FileAuthority):
 
     def parseLines(self, lines):
         """
-        This is a private API; do not use in application code.
-
         Parse C{lines}.
 
         @param lines: lines to work on
         @type lines: iterable of L{bytes}
-
-        @return: nothing
         """
         ttl = 60 * 60 * 3
         origin = self.origin
@@ -400,8 +390,6 @@ class BindAuthority(FileAuthority):
 
     def addRecord(self, owner, ttl, type, domain, cls, rdata):
         """
-        This is a private API; do not use in application code.
-
         Add a record to our authority.  Expand domain with origin if necessary.
 
         @param owner: origin?
@@ -421,8 +409,6 @@ class BindAuthority(FileAuthority):
 
         @param rdata: record data
         @type rdata: L{list} of L{bytes}
-
-        @return: nothing
         """
         if not domain.endswith(b'.'):
             domain = domain + b'.' + owner[:-1]
@@ -439,8 +425,6 @@ class BindAuthority(FileAuthority):
 
     def class_IN(self, ttl, type, domain, rdata):
         """
-        This is a private API; do not use in application code.
-
         Simulate a class IN and recurse into the actual class.
 
         @param ttl: time to live for the record
@@ -454,8 +438,6 @@ class BindAuthority(FileAuthority):
 
         @param rdata:
         @type rdate: bytes
-
-        @return: nothing
         """
         record = getattr(dns, 'Record_%s' % (nativeString(type),), None)
         if record:
@@ -473,8 +455,6 @@ class BindAuthority(FileAuthority):
 
     def parseRecordLine(self, origin, ttl, line):
         """
-        This is a private API; do not use in application code.
-
         Parse a C{line} from a zone file respecting C{origin} and C{ttl}.
 
         Add resulting records to authority.
@@ -487,8 +467,6 @@ class BindAuthority(FileAuthority):
 
         @param line: zone file line to parse; split by word
         @type line: L{list} of L{bytes}
-
-        @return: nothing
         """
         if _PY3:
             queryClasses = set(
