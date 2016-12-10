@@ -14,11 +14,12 @@ class PortmapDeprecationTests(TestCase):
     L{twisted.runner.portmap} is deprecated.
     """
 
-    def testDeprecated(self):
+    def test_deprecated(self):
         """
         L{twisted.runner.portmap} is deprecated.
         """
         from twisted.runner import portmap
+        portmap # shh pyflakes
 
         warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
