@@ -1390,10 +1390,10 @@ class OpenSSLCertificateOptions(object):
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
-        ['method', 'noLowerThanTLSVersion'],
-        ['method', 'atLeastTLSVersion'],
-        ['atLeastTLSVersion', 'noLowerThanTLSVersion'],
-        ['method', 'reduceSecurityToTLSVersion'],
+        ['method', 'insecurelyLowerMinimumTo'],
+        ['method', 'raiseMinimumTo'],
+        ['raiseMinimumTo', 'insecurelyLowerMinimumTo'],
+        ['method', 'lowerMaximumSecurityTo'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1413,9 +1413,9 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
-                 atLeastTLSVersion=None,
-                 noLowerThanTLSVersion=None,
-                 reduceSecurityToTLSVersion=None,
+                 raiseMinimumTo=None,
+                 insecurelyLowerMinimumTo=None,
+                 lowerMaximumSecurityTo=None,
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1425,29 +1425,28 @@ class OpenSSLCertificateOptions(object):
         @param certificate: An X509 object holding the certificate.
 
         @param method: Deprecated, use a combination of
-            C{noLowerThanTLSVersion}, C{atLeastTLSVersion}, or
-            C{reduceSecurityToTLSVersion} instead. The SSL protocol to use, one
-            of C{SSLv23_METHOD}, C{SSLv2_METHOD}, C{SSLv3_METHOD},
-            C{TLSv1_METHOD} (or any other method constants provided by
-            pyOpenSSL). By default, a setting will be used which allows
-            TLSv1.0, TLSv1.1, and TLSv1.2. Can not be used with
-            C{noLowerThanTLSVersion}, C{atLeastTLSVersion}, or
-            C{reduceSecurityToTLSVersion}
+            C{insecurelyLowerMinimumTo}, C{raiseMinimumTo}, or
+            C{lowerMaximumSecurityTo} instead.  The SSL protocol to use, one of
+            C{SSLv23_METHOD}, C{SSLv2_METHOD}, C{SSLv3_METHOD}, C{TLSv1_METHOD}
+            (or any other method constants provided by pyOpenSSL).  By default,
+            a setting will be used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
+            Can not be used with C{insecurelyLowerMinimumTo},
+            C{raiseMinimumTo}, or C{lowerMaximumSecurityTo}
 
         @param verify: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
             By default this is L{False}.
 
             If L{True}, verify certificates received from the peer and fail the
-            handshake if verification fails. Otherwise, allow anonymous
+            handshake if verification fails.  Otherwise, allow anonymous
             sessions and sessions with certificates which fail validation.
 
         @param caCerts: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
 
             List of certificate authority certificate objects to use to verify
-            the peer's certificate. Only used if verify is L{True} and will be
-            ignored otherwise. Since verify is L{False} by default, this is
+            the peer's certificate.  Only used if verify is L{True} and will be
+            ignored otherwise.  Since verify is L{False} by default, this is
             L{None} by default.
 
         @type caCerts: L{list} of L{OpenSSL.crypto.X509}
@@ -1468,26 +1467,26 @@ class OpenSSLCertificateOptions(object):
             ephemeral DH and ECDH parameters are used to prevent small subgroup
             attacks and to ensure perfect forward secrecy.
 
-        @param enableSessions: If True, set a session ID on each context. This
+        @param enableSessions: If True, set a session ID on each context.  This
             allows a shortened handshake to be used when a known client
             reconnects.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
-            for broken SSL implementations. This should be entirely safe,
-            according to the OpenSSL documentation, but YMMV. This option is
+            for broken SSL implementations.  This should be entirely safe,
+            according to the OpenSSL documentation, but YMMV.  This option is
             now off by default, because it causes problems with connections
             between peers using OpenSSL 0.9.8a.
 
         @param enableSessionTickets: If L{True}, enable session ticket
-            extension for session resumption per RFC 5077. Note there is no
-            support for controlling session tickets. This option is off by
+            extension for session resumption per RFC 5077.  Note there is no
+            support for controlling session tickets.  This option is off by
             default, as some server implementations don't correctly process
             incoming empty session ticket extensions in the hello.
 
         @param extraCertChain: List of certificates that I{complete} your
             verification chain if the certificate authority that signed your
-            C{certificate} isn't widely supported. Do I{not} add C{certificate}
-            to it.
+            C{certificate} isn't widely supported.  Do I{not} add
+            C{certificate} to it.
         @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
 
         @param acceptableCiphers: Ciphers that are acceptable for connections.
@@ -1495,13 +1494,13 @@ class OpenSSLCertificateOptions(object):
         @type acceptableCiphers: L{IAcceptableCiphers}
 
         @param dhParameters: Key generation parameters that are required for
-            Diffie-Hellman key exchange. If this argument is left L{None},
+            Diffie-Hellman key exchange.  If this argument is left L{None},
             C{EDH} ciphers are I{disabled} regardless of C{acceptableCiphers}.
         @type dhParameters: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
 
-        @param trustRoot: Specification of trust requirements of peers. If this
-            argument is specified, the peer is verified. It requires a
+        @param trustRoot: Specification of trust requirements of peers.  If
+            this argument is specified, the peer is verified.  It requires a
             certificate, and that certificate must be signed by one of the
             certificate authorities specified by this object.
 
@@ -1514,32 +1513,37 @@ class OpenSSLCertificateOptions(object):
 
         @param acceptableProtocols: The protocols this peer is willing to speak
             after the TLS negotiation has completed, advertised over both ALPN
-            and NPN. If this argument is specified, and no overlap can be found
-            with the other peer, the connection will fail to be established. If
-            the remote peer does not offer NPN or ALPN, the connection will be
-            established, but no protocol wil be negotiated. Protocols earlier
-            in the list are preferred over those later in the list.
+            and NPN.  If this argument is specified, and no overlap can be
+            found with the other peer, the connection will fail to be
+            established.  If the remote peer does not offer NPN or ALPN, the
+            connection will be established, but no protocol wil be negotiated.
+            Protocols earlier in the list are preferred over those later in the
+            list.
         @type acceptableProtocols: L{list} of L{bytes}
 
-        @param atLeastTLSVersion: The minimum TLS version that you want to use,
-            or Twisted's default if it is higher. Use this if you want to make
+        @param raiseMinimumTo: The minimum TLS version that you want to use, or
+            Twisted's default if it is higher.  Use this if you want to make
             your client/server more secure than Twisted's default, but will
             accept Twisted's default instead if it moves higher than this
-            value. You probably want to use this over C{noLowerThanTLSVersion}.
-        @type atLeastTLSVersion: L{TLSVersion} constant
+            value.  You probably want to use this over
+            C{insecurelyLowerMinimumTo}.
+        @type raiseMinimumTo: L{TLSVersion} constant
 
-        @param noLowerThanTLSVersion: The minimum TLS version to use. If not
-            specified, it is a generally considered safe default (TLSv1.0). If
-            you want to raise your minimum TLS version to above that of this
-            default, use C{atLeastTLSVersion}.
-        @type noLowerThanTLSVersion: L{TLSVersion} constant
+        @param insecurelyLowerMinimumTo: The minimum TLS version to use,
+            possibky lower than Twisted's default.  If not specified, it is a
+            generally considered safe default (TLSv1.0).  If you want to raise
+            your minimum TLS version to above that of this default, use
+            C{raiseMinimumTo}.  DO NOT use this argument unless you are
+            absolutely sure this is what you want.
+        @type insecurelyLowerMinimumTo: L{TLSVersion} constant
 
-        @param reduceSecurityToTLSVersion: The maximum TLS version to use. If
-            not specified, it is the most recent your OpenSSL supports. You
-            only want to set this if the peer that you are communicating with
-            has problems with more recent TLS versions, it lowers your security
-            when communicating with newer peers.
-        @type reduceSecurityToTLSVersion: L{TLSVersion} constant
+        @param lowerMaximumSecurityTo: The maximum TLS version to use.  If not
+            specified, it is the most recent your OpenSSL supports.  You only
+            want to set this if the peer that you are communicating with has
+            problems with more recent TLS versions, it lowers your security
+            when communicating with newer peers.  DO NOT use this argument
+            unless you are absolutely sure this is what you want.
+        @type lowerMaximumSecurityTo: L{TLSVersion} constant
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1551,11 +1555,11 @@ class OpenSSLCertificateOptions(object):
             ciphers for the current platform.
 
         @raise TypeError: if C{trustRoot} is passed in combination with
-            C{caCert}, C{verify}, or C{requireCertificate}. Please prefer
+            C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
             C{trustRoot} in new code, as its semantics are less tricky.
         @raise TypeError: if C{method} is passed in combination with
-            C{tlsProtocols}. Please prefer the more explicit C{tlsProtocols} in
-            new code.
+            C{tlsProtocols}.  Please prefer the more explicit C{tlsProtocols}
+            in new code.
 
         @raises NotImplementedError: If acceptableProtocols were provided but
             no negotiation mechanism is available.
@@ -1582,33 +1586,33 @@ class OpenSSLCertificateOptions(object):
         if method is None:
             self.method = SSL.SSLv23_METHOD
 
-            if atLeastTLSVersion:
-                if (reduceSecurityToTLSVersion and
-                    atLeastTLSVersion > reduceSecurityToTLSVersion):
+            if raiseMinimumTo:
+                if (lowerMaximumSecurityTo and
+                    raiseMinimumTo > lowerMaximumSecurityTo):
                     raise ValueError(
-                        ("atLeastTLSVersion needs to be lower than "
-                         "reduceSecurityToTLSVersion"))
+                        ("raiseMinimumTo needs to be lower than "
+                         "lowerMaximumSecurityTo"))
 
-                if atLeastTLSVersion > self._defaultMinimumTLSVersion:
-                    noLowerThanTLSVersion = atLeastTLSVersion
+                if raiseMinimumTo > self._defaultMinimumTLSVersion:
+                    insecurelyLowerMinimumTo = raiseMinimumTo
 
-            if noLowerThanTLSVersion is None:
-                noLowerThanTLSVersion = self._defaultMinimumTLSVersion
+            if insecurelyLowerMinimumTo is None:
+                insecurelyLowerMinimumTo = self._defaultMinimumTLSVersion
 
                 # If you set the max lower than the default, but don't set the
                 # minimum, pull it down to that
-                if (reduceSecurityToTLSVersion and
-                    noLowerThanTLSVersion > reduceSecurityToTLSVersion):
-                    noLowerThanTLSVersion = reduceSecurityToTLSVersion
+                if (lowerMaximumSecurityTo and
+                    insecurelyLowerMinimumTo > lowerMaximumSecurityTo):
+                    insecurelyLowerMinimumTo = lowerMaximumSecurityTo
 
-            if (reduceSecurityToTLSVersion and
-                noLowerThanTLSVersion > reduceSecurityToTLSVersion):
+            if (lowerMaximumSecurityTo and
+                insecurelyLowerMinimumTo > lowerMaximumSecurityTo):
                 raise ValueError(
-                    ("noLowerThanTLSVersion needs to be lower than "
-                     "reduceSecurityToTLSVersion"))
+                    ("insecurelyLowerMinimumTo needs to be lower than "
+                     "lowerMaximumSecurityTo"))
 
             excludedVersions = _getExcludedTLSProtocols(
-                noLowerThanTLSVersion, reduceSecurityToTLSVersion)
+                insecurelyLowerMinimumTo, lowerMaximumSecurityTo)
 
             for version in excludedVersions:
                 self._options |= _tlsDisableFlags[version]
@@ -1616,8 +1620,9 @@ class OpenSSLCertificateOptions(object):
             warnings.warn(
                 ("Passing method to twisted.internet.ssl.CertificateOptions "
                  "was deprecated in Twisted NEXT. Please use a combination "
-                   "of noLowerThanTLSVersion, atLeastTLSVersion, and "
-                   "reduceSecurityToTLSVersion instead."),
+                 "of insecurelyLowerMinimumTo, raiseMinimumTo, and "
+                 "lowerMaximumSecurityTo instead, as Twisted will correctly "
+                 "configure the method."),
                 DeprecationWarning, stacklevel=3)
 
             # Otherwise respect the application decision.
