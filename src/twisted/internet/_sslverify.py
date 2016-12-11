@@ -149,7 +149,7 @@ def _selectVerifyImplementation():
             "sure all of its dependencies are satisfied.  "
             + whatsWrong,
             # Unfortunately the lineno is required.
-              category=UserWarning, filename="", lineno=0)
+            category=UserWarning, filename="", lineno=0)
 
     return simpleVerifyHostname, SimpleVerificationError
 
@@ -1316,6 +1316,7 @@ class OpenSSLCertificateOptions(object):
     _context = None
 
     _OP_NO_TLSv1_3 = _tlsDisableFlags[TLSVersion.TLSv1_3]
+
     _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
 
 
