@@ -37,10 +37,9 @@ from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
-from twisted.internet.abstract import isIPv6Address, isIPAddress
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
-from twisted.internet.endpoints import (
-    TCP4ClientEndpoint, HostnameEndpoint, wrapClientTLS)
+from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
