@@ -26,7 +26,7 @@ from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed, CancelledError
-from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet.endpoints import TCP4ClientEndpoint
 
 from twisted.web.client import (FileBodyProducer, Request, HTTPConnectionPool,
                                 ResponseDone, _HTTP11ClientFactory, URI)
@@ -49,10 +49,14 @@ from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
-    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+    from twisted.protocols.tls import TLSMemoryBIOProtocol
 except ImportError:
     ssl = None
+    skipWhenNoSSL = "SSL not present, cannot run SSL tests."
+    skipWhenSSLPresent = None
 else:
+    skipWhenSSLPresent = "SSL present."
+    skipWhenNoSSL = None
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
 
 
@@ -1046,6 +1050,8 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         timeout = self.reactor.tcpClients.pop()[3]
         self.assertEqual(5, timeout)
 
+    test_connectTimeoutHTTPS.skip = skipWhenNoSSL
+
 
     def test_bindAddress(self):
         """
@@ -1067,6 +1073,8 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         agent.request(b'GET', b'https://foo/')
         address = self.reactor.tcpClients.pop()[4]
         self.assertEqual('192.168.0.1', address)
+
+    test_bindAddressSSL.skip = skipWhenNoSSL
 
 
     def test_responseIncludesRequest(self):
@@ -1163,9 +1171,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
     """
     Tests for the new HTTP client API that depends on SSL.
     """
-    if ssl is None:
-        skip = "SSL not present, cannot run SSL tests"
-
+    skip = skipWhenNoSSL
 
     def makeEndpoint(self, host=b'example.com', port=443):
         """
@@ -1414,12 +1420,10 @@ class WebClientContextFactoryTests(TestCase):
             certificateOptions.trustRoot, ssl.OpenSSLDefaultPaths)
 
 
-    if ssl is None:
-        test_returnsContext.skip = "SSL not present, cannot run SSL tests."
-        test_setsTrustRootOnContextToDefaultTrustRoot.skip = (
-            "SSL not present, cannot run SSL tests.")
-    else:
-        test_missingSSL.skip = "SSL present."
+    test_returnsContext.skip \
+        = test_setsTrustRootOnContextToDefaultTrustRoot.skip \
+        = skipWhenNoSSL
+    test_missingSSL.skip = skipWhenSSLPresent
 
 
 
@@ -1865,6 +1869,8 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         req, res = self.protocol.requests.pop()
         self.assertEqual(req.headers.getRawHeaders(b'cookie'), [b'foo=1'])
 
+    test_secureCookie.skip = skipWhenNoSSL
+
 
     def test_secureCookieOnInsecureConnection(self):
         """
@@ -1891,7 +1897,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         L{CookieAgent} supports cookies which enforces the port number they
         need to be transferred upon.
         """
-        uri = b'https://example.com:1234/foo?bar'
+        uri = b'http://example.com:1234/foo?bar'
         cookie = b'foo=1;port=1234'
 
         cookieJar = cookielib.CookieJar()
@@ -1911,7 +1917,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         When creating a cookie with a port directive, it won't be added to the
         L{cookie.CookieJar} if the URI is on a different port.
         """
-        uri = b'https://example.com:4567/foo?bar'
+        uri = b'http://example.com:4567/foo?bar'
         cookie = b'foo=1;port=1234'
 
         cookieJar = cookielib.CookieJar()
@@ -2408,8 +2414,18 @@ class _RedirectAgentTestsMixin(object):
 
         req, res = self.protocol.requests.pop()
 
+        # If possible (i.e.: SSL support is present), run the test with a
+        # cross-scheme redirect to verify that the scheme is honored; if not,
+        # let's just make sure it works at all.
+        if ssl is None:
+            scheme = b'http'
+            expectedPort = 80
+        else:
+            scheme = b'https'
+            expectedPort = 443
+
         headers = http_headers.Headers(
-            {b'location': [b'https://example.com/bar']})
+            {b'location': [scheme + b'://example.com/bar']})
         response = Response((b'HTTP', 1, 1), code, b'OK', headers, None)
         res.callback(response)
 
@@ -2419,7 +2435,7 @@ class _RedirectAgentTestsMixin(object):
 
         host, port = self.reactor.tcpClients.pop()[:2]
         self.assertEqual(EXAMPLE_COM_IP, host)
-        self.assertEqual(443, port)
+        self.assertEqual(expectedPort, port)
 
 
     def test_redirect301(self):
