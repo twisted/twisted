@@ -855,7 +855,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
                    "was deprecated in Twisted NEXT. Please use a combination "
                    "of insecurelyLowerMinimumTo, raiseMinimumTo, and "
                    "lowerMaximumSecurityTo instead, as Twisted will correctly "
-                   "configure the method..")
+                   "configure the method.")
 
         warnings = self.flushWarnings([self.test_methodIsDeprecated])
         self.assertEqual(1, len(warnings))
