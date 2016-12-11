@@ -43,6 +43,8 @@ from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
 from incremental import Version
 from twisted.web.client import BrowserLikePolicyForHTTPS
+from twisted.internet.test.test_endpoints import deterministicResolvingReactor
+from twisted.internet.endpoints import HostnameEndpoint
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -290,29 +292,36 @@ class FileBodyProducerTests(TestCase):
         self._scheduled.pop(0)()
         self.assertEqual(expectedResult[:readSize * 2], output.getvalue())
 
-
+EXAMPLE_COM_IP = '127.0.0.7'
+EXAMPLE_NET_IP = '127.0.0.8'
+EXAMPLE_ORG_IP = '127.0.0.9'
+FOO_LOCAL_IP = '127.0.0.10'
+FOO_COM_IP = '127.0.0.11'
 
 class FakeReactorAndConnectMixin:
     """
     A test mixin providing a testable C{Reactor} class and a dummy C{connect}
     method which allows instances to pretend to be endpoints.
     """
-    Reactor = MemoryReactorClock
-
-    @implementer(IPolicyForHTTPS)
-    class StubPolicy(object):
+    def createReactor(self):
         """
-        A stub policy for HTTPS URIs which allows HTTPS tests to run even if
-        pyOpenSSL isn't installed.
+        Create a L{MemoryReactorClock} and give it some hostnames it can
+        resolve.
         """
-        def creatorForNetloc(self, hostname, port):
-            """
-            Don't actually do anything.
+        mrc = MemoryReactorClock()
+        drr = deterministicResolvingReactor(mrc, hostMap={
+            u'example.com': [EXAMPLE_COM_IP],
+            u'example.net': [EXAMPLE_NET_IP],
+            u'example.org': [EXAMPLE_ORG_IP],
+            u'foo': [FOO_LOCAL_IP],
+            u'foo.com': [FOO_COM_IP],
+        })
 
-            @param hostname: ignored
-
-            @param port: ignored
-            """
+        # Lots of tests were written expecting MemoryReactorClock and the
+        # reactor seen by the SUT to be the same object.
+        drr.tcpClients = mrc.tcpClients
+        drr.advance = mrc.advance
+        return drr
 
     class StubEndpoint(object):
         """
@@ -338,7 +347,7 @@ class FakeReactorAndConnectMixin:
         Return an Agent suitable for use in tests that wrap the Agent and want
         both a fake reactor and StubHTTPProtocol.
         """
-        agent = client.Agent(reactor, self.StubPolicy())
+        agent = client.Agent(reactor)
         _oldGetEndpoint = agent._getEndpoint
         agent._getEndpoint = lambda *args: (
             self.StubEndpoint(_oldGetEndpoint(*args), self))
@@ -395,7 +404,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
     Tests for the L{HTTPConnectionPool} class.
     """
     def setUp(self):
-        self.fakeReactor = self.Reactor()
+        self.fakeReactor = self.createReactor()
         self.pool = HTTPConnectionPool(self.fakeReactor)
         self.pool._factory = DummyFactory
         # The retry code path is tested in HTTPConnectionPoolRetryTests:
@@ -744,7 +753,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         """
         Create an L{Agent} wrapped around a fake reactor.
         """
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
         self.agent = self.makeAgent()
 
 
@@ -845,21 +854,23 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         # Cause the connection to be refused
         host, port, factory = self.reactor.tcpClients.pop()[:3]
         factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
-        return self.assertFailure(result, ConnectionRefusedError)
+        self.reactor.advance(10)
+        # ^ https://twistedmatrix.com/trac/ticket/8202
+        self.failureResultOf(result, ConnectionRefusedError)
 
 
     def test_connectHTTP(self):
         """
-        L{Agent._getEndpoint} return a C{TCP4ClientEndpoint} when passed a
-        scheme of C{'http'}.
+        L{Agent._getEndpoint} return a C{HostnameEndpoint} when passed a scheme
+        of C{'http'}.
         """
         expectedHost = b'example.com'
         expectedPort = 1234
         endpoint = self.agent._getEndpoint(URI.fromBytes(
             b'http://' + expectedHost + b":" + intToBytes(expectedPort)))
-        self.assertEqual(endpoint._host, "example.com")
+        self.assertEqual(endpoint._hostStr, "example.com")
         self.assertEqual(endpoint._port, expectedPort)
-        self.assertIsInstance(endpoint, TCP4ClientEndpoint)
+        self.assertIsInstance(endpoint, HostnameEndpoint)
 
 
     def test_nonDecodableURI(self):
@@ -877,33 +888,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
                          ("The host of the provided URI ({reprout}) contains "
                           "non-ASCII octets, it should be ASCII "
                           "decodable.").format(reprout=repr(uri.host)))
-
-
-    def test_connectHTTPSCustomContextFactory(self):
-        """
-        If a context factory is passed to L{Agent.__init__} it will be used to
-        determine the SSL parameters for HTTPS requests.  When an HTTPS request
-        is made, the hostname and port number of the request URL will be passed
-        to the context factory's C{getContext} method.  The resulting context
-        object will be used to establish the SSL connection.
-        """
-        expectedHost = b'example.org'
-        expectedPort = 20443
-        expectedContext = object()
-
-        contextArgs = []
-        class StubWebContextFactory(object):
-            def getContext(self, hostname, port):
-                contextArgs.append((hostname, port))
-                return expectedContext
-
-        agent = client.Agent(self.reactor, StubWebContextFactory())
-        endpoint = agent._getEndpoint(URI.fromBytes(
-            b'https://' + expectedHost + b":" + intToBytes(expectedPort)))
-        contextFactory = endpoint._sslContextFactory
-        context = contextFactory.getContext()
-        self.assertEqual(context, expectedContext)
-        self.assertEqual(contextArgs, [(expectedHost, expectedPort)])
 
 
     def test_hostProvided(self):
@@ -1052,14 +1036,14 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertEqual(5, timeout)
 
 
-    def test_connectSSLTimeout(self):
+    def test_connectTimeoutHTTPS(self):
         """
         L{Agent} takes a C{connectTimeout} argument which is forwarded to the
-        following C{connectSSL} call.
+        following C{connectTCP} call.
         """
-        agent = client.Agent(self.reactor, self.StubPolicy(), connectTimeout=5)
+        agent = client.Agent(self.reactor, connectTimeout=5)
         agent.request(b'GET', b'https://foo/')
-        timeout = self.reactor.sslClients.pop()[4]
+        timeout = self.reactor.tcpClients.pop()[3]
         self.assertEqual(5, timeout)
 
 
@@ -1079,10 +1063,9 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         L{Agent} takes a C{bindAddress} argument which is forwarded to the
         following C{connectSSL} call.
         """
-        agent = client.Agent(self.reactor, self.StubPolicy(),
-                             bindAddress='192.168.0.1')
+        agent = client.Agent(self.reactor, bindAddress='192.168.0.1')
         agent.request(b'GET', b'https://foo/')
-        address = self.reactor.sslClients.pop()[5]
+        address = self.reactor.tcpClients.pop()[4]
         self.assertEqual('192.168.0.1', address)
 
 
@@ -1198,7 +1181,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         @return: An endpoint of an L{Agent} constructed according to args.
         @rtype: L{SSL4ClientEndpoint}
         """
-        return client.Agent(self.Reactor())._getEndpoint(
+        return client.Agent(self.createReactor())._getEndpoint(
             URI.fromBytes(b'https://' + host + b":" + intToBytes(port) + b"/"))
 
 
@@ -1207,7 +1190,10 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         L{Agent._getEndpoint} return a L{SSL4ClientEndpoint} when passed a
         scheme of C{'https'}.
         """
-        self.assertIsInstance(self.makeEndpoint(), SSL4ClientEndpoint)
+        from twisted.internet.endpoints import _WrapperEndpoint
+        endpoint = self.makeEndpoint()
+        self.assertIsInstance(endpoint, _WrapperEndpoint)
+        self.assertIsInstance(endpoint._wrappedEndpoint, HostnameEndpoint)
 
 
     def test_hostArgumentIsRespected(self):
@@ -1215,7 +1201,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         If a host is passed, the endpoint respects it.
         """
         endpoint = self.makeEndpoint(host=b"example.com")
-        self.assertEqual(endpoint._host, "example.com")
+        self.assertEqual(endpoint._wrappedEndpoint._hostStr, "example.com")
 
 
     def test_portArgumentIsRespected(self):
@@ -1224,7 +1210,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         """
         expectedPort = 4321
         endpoint = self.makeEndpoint(port=expectedPort)
-        self.assertEqual(endpoint._port, expectedPort)
+        self.assertEqual(endpoint._wrappedEndpoint._port, expectedPort)
 
 
     def test_contextFactoryType(self):
@@ -1232,7 +1218,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         L{Agent} wraps its connection creator creator and uses modern TLS APIs.
         """
         endpoint = self.makeEndpoint()
-        contextFactory = endpoint._sslContextFactory
+        contextFactory = endpoint._wrapperFactory(None)._connectionCreator
         self.assertIsInstance(contextFactory, ClientTLSOptions)
         self.assertEqual(contextFactory._hostname, u"example.com")
 
@@ -1301,16 +1287,12 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
                 return JustEnoughCreator(hostname, port)
 
         expectedCreatorCreator = StubBrowserLikePolicyForHTTPS()
-        reactor = self.Reactor()
+        reactor = self.createReactor()
         agent = client.Agent(reactor, expectedCreatorCreator)
         endpoint = agent._getEndpoint(URI.fromBytes(
             b'https://' + expectedHost + b":" + intToBytes(expectedPort)))
         endpoint.connect(Factory.forProtocol(Protocol))
-        passedFactory = reactor.sslClients[-1][2]
-        passedContextFactory = reactor.sslClients[-1][3]
-        tlsFactory = TLSMemoryBIOFactory(
-            passedContextFactory, True, passedFactory
-        )
+        tlsFactory = reactor.tcpClients[-1][2]
         tlsProtocol = tlsFactory.buildProtocol(None)
         tlsProtocol.makeConnection(StringTransport())
         tls = contextArgs[0][0]
@@ -1803,7 +1785,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
 
 
     def setUp(self):
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
 
 
     def test_emptyCookieJarRequest(self):
@@ -1968,7 +1950,7 @@ class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
         """
         Create an L{Agent} wrapped around a fake reactor.
         """
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
         self.agent = self.buildAgentForWrapperTest(self.reactor)
 
 
@@ -2114,7 +2096,7 @@ class ContentDecoderAgentWithGzipTests(TestCase,
         """
         Create an L{Agent} wrapped around a fake reactor.
         """
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
         agent = self.buildAgentForWrapperTest(self.reactor)
         self.agent = client.ContentDecoderAgent(
             agent, [(b"gzip", client.GzipDecoder)])
@@ -2311,7 +2293,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
 
     def setUp(self):
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
         self.agent = client.ProxyAgent(
             TCP4ClientEndpoint(self.reactor, "bar", 5678), self.reactor)
         oldEndpoint = self.agent._proxyEndpoint
@@ -2421,7 +2403,7 @@ class _RedirectAgentTestsMixin(object):
         self.agent.request(b'GET', b'http://example.com/foo')
 
         host, port = self.reactor.tcpClients.pop()[:2]
-        self.assertEqual("example.com", host)
+        self.assertEqual(EXAMPLE_COM_IP, host)
         self.assertEqual(80, port)
 
         req, res = self.protocol.requests.pop()
@@ -2435,8 +2417,8 @@ class _RedirectAgentTestsMixin(object):
         self.assertEqual(b'GET', req2.method)
         self.assertEqual(b'/bar', req2.uri)
 
-        host, port = self.reactor.sslClients.pop()[:2]
-        self.assertEqual("example.com", host)
+        host, port = self.reactor.tcpClients.pop()[:2]
+        self.assertEqual(EXAMPLE_COM_IP, host)
         self.assertEqual(443, port)
 
 
@@ -2690,7 +2672,7 @@ class RedirectAgentTests(TestCase, FakeReactorAndConnectMixin,
 
 
     def setUp(self):
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
         self.agent = self.makeAgent()
 
 
@@ -2729,7 +2711,7 @@ class BrowserLikeRedirectAgentTests(TestCase,
 
 
     def setUp(self):
-        self.reactor = self.Reactor()
+        self.reactor = self.createReactor()
         self.agent = self.makeAgent()
 
 
