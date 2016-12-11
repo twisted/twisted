@@ -8,6 +8,7 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
+from constantly import Names, NamedConstant
 from hashlib import md5
 
 import OpenSSL
@@ -21,6 +22,59 @@ except ImportError:
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
+
+
+
+
+class TLSVersion(Names):
+    """
+    TLS versions that we can negotiate with the client/server.
+    """
+    SSLv3 = NamedConstant()
+    TLSv1_0 = NamedConstant()
+    TLSv1_1 = NamedConstant()
+    TLSv1_2 = NamedConstant()
+    TLSv1_3 = NamedConstant()
+
+
+
+_tlsDisableFlags = {
+    TLSVersion.SSLv3: SSL.OP_NO_SSLv3,
+    TLSVersion.TLSv1_0: SSL.OP_NO_TLSv1,
+    TLSVersion.TLSv1_1: SSL.OP_NO_TLSv1_1,
+    TLSVersion.TLSv1_2: SSL.OP_NO_TLSv1_2,
+
+    # If we don't have TLS v1.3 yet, we can't disable it -- this is just so
+    # when it makes it into OpenSSL, connections knowingly bracketed to v1.2
+    # don't end up going to v1.3
+    TLSVersion.TLSv1_3: getattr(SSL, "OP_NO_TLSv1_3", 0x00),
+}
+
+
+
+def _getExcludedTLSProtocols(oldest, newest):
+    """
+    Given a pair of L{TLSVersion} constants, figure out what versions we want
+    to disable (as OpenSSL is an exclusion based API).
+
+    @param oldest: The oldest L{TLSVersion} we want to allow.
+    @type oldest: L{TLSVersion} constant
+
+    @param newest: The newest L{TLSVersion} we want to allow, or L{None} for no
+        upper limit.
+    @type newest: L{TLSVersion} constant or L{None}
+
+    @return: The versions we want to disable.
+    @rtype: L{list} of L{TLSVersion} constants.
+    """
+    versions = list(TLSVersion.iterconstants())
+    excludedVersions = [x for x in versions[:versions.index(oldest)]]
+
+    if newest:
+        excludedVersions.extend([x for x in versions[versions.index(newest):]])
+
+    return excludedVersions
+
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -1309,6 +1363,12 @@ class OpenSSLCertificateOptions(object):
 
     @ivar _cipherString: An OpenSSL-specific cipher string.
     @type _cipherString: L{unicode}
+
+    @ivar _defaultMinimumTLSVersion: The default TLS version that will be
+        negotiated. This should be a "safe default", with wide client and
+        server support, vs an optimally secure one that excludes a large number
+        of users. As of late 2016, TLSv1.0 is that safe default.
+    @type _defaultMinimumTLSVersion: L{TLSVersion} constant
     """
 
     # Factory for creating contexts.  Configurable for testability.
@@ -1321,12 +1381,19 @@ class OpenSSLCertificateOptions(object):
     _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE',
                                            0x00400000)
     _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
+    _OP_NO_TLSv1_3 = _tlsDisableFlags[TLSVersion.TLSv1_3]
+
+    _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
 
 
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
+        ['method', 'insecurelyLowerMinimumTo'],
+        ['method', 'raiseMinimumTo'],
+        ['raiseMinimumTo', 'insecurelyLowerMinimumTo'],
+        ['method', 'lowerMaximumSecurityTo'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1346,6 +1413,9 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
+                 raiseMinimumTo=None,
+                 insecurelyLowerMinimumTo=None,
+                 lowerMaximumSecurityTo=None,
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1354,10 +1424,14 @@ class OpenSSLCertificateOptions(object):
 
         @param certificate: An X509 object holding the certificate.
 
-        @param method: The SSL protocol to use, one of SSLv23_METHOD,
-            SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD (or any other method
-            constants provided by pyOpenSSL).  By default, a setting will be
-            used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
+        @param method: Deprecated, use a combination of
+            C{insecurelyLowerMinimumTo}, C{raiseMinimumTo}, or
+            C{lowerMaximumSecurityTo} instead.  The SSL protocol to use, one of
+            C{SSLv23_METHOD}, C{SSLv2_METHOD}, C{SSLv3_METHOD}, C{TLSv1_METHOD}
+            (or any other method constants provided by pyOpenSSL).  By default,
+            a setting will be used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
+            Can not be used with C{insecurelyLowerMinimumTo},
+            C{raiseMinimumTo}, or C{lowerMaximumSecurityTo}
 
         @param verify: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
@@ -1439,12 +1513,37 @@ class OpenSSLCertificateOptions(object):
 
         @param acceptableProtocols: The protocols this peer is willing to speak
             after the TLS negotiation has completed, advertised over both ALPN
-            and NPN. If this argument is specified, and no overlap can be found
-            with the other peer, the connection will fail to be established.
-            If the remote peer does not offer NPN or ALPN, the connection will
-            be established, but no protocol wil be negotiated. Protocols
-            earlier in the list are preferred over those later in the list.
+            and NPN.  If this argument is specified, and no overlap can be
+            found with the other peer, the connection will fail to be
+            established.  If the remote peer does not offer NPN or ALPN, the
+            connection will be established, but no protocol wil be negotiated.
+            Protocols earlier in the list are preferred over those later in the
+            list.
         @type acceptableProtocols: L{list} of L{bytes}
+
+        @param raiseMinimumTo: The minimum TLS version that you want to use, or
+            Twisted's default if it is higher.  Use this if you want to make
+            your client/server more secure than Twisted's default, but will
+            accept Twisted's default instead if it moves higher than this
+            value.  You probably want to use this over
+            C{insecurelyLowerMinimumTo}.
+        @type raiseMinimumTo: L{TLSVersion} constant
+
+        @param insecurelyLowerMinimumTo: The minimum TLS version to use,
+            possibky lower than Twisted's default.  If not specified, it is a
+            generally considered safe default (TLSv1.0).  If you want to raise
+            your minimum TLS version to above that of this default, use
+            C{raiseMinimumTo}.  DO NOT use this argument unless you are
+            absolutely sure this is what you want.
+        @type insecurelyLowerMinimumTo: L{TLSVersion} constant
+
+        @param lowerMaximumSecurityTo: The maximum TLS version to use.  If not
+            specified, it is the most recent your OpenSSL supports.  You only
+            want to set this if the peer that you are communicating with has
+            problems with more recent TLS versions, it lowers your security
+            when communicating with newer peers.  DO NOT use this argument
+            unless you are absolutely sure this is what you want.
+        @type lowerMaximumSecurityTo: L{TLSVersion} constant
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1458,6 +1557,10 @@ class OpenSSLCertificateOptions(object):
         @raise TypeError: if C{trustRoot} is passed in combination with
             C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
             C{trustRoot} in new code, as its semantics are less tricky.
+        @raise TypeError: if C{method} is passed in combination with
+            C{tlsProtocols}.  Please prefer the more explicit C{tlsProtocols}
+            in new code.
+
         @raises NotImplementedError: If acceptableProtocols were provided but
             no negotiation mechanism is available.
         """
@@ -1481,11 +1584,47 @@ class OpenSSLCertificateOptions(object):
         self._mode = SSL.MODE_RELEASE_BUFFERS
 
         if method is None:
-            # If no method is specified set things up so that TLSv1.0 and newer
-            # will be supported.
             self.method = SSL.SSLv23_METHOD
-            self._options |= SSL.OP_NO_SSLv3
+
+            if raiseMinimumTo:
+                if (lowerMaximumSecurityTo and
+                    raiseMinimumTo > lowerMaximumSecurityTo):
+                    raise ValueError(
+                        ("raiseMinimumTo needs to be lower than "
+                         "lowerMaximumSecurityTo"))
+
+                if raiseMinimumTo > self._defaultMinimumTLSVersion:
+                    insecurelyLowerMinimumTo = raiseMinimumTo
+
+            if insecurelyLowerMinimumTo is None:
+                insecurelyLowerMinimumTo = self._defaultMinimumTLSVersion
+
+                # If you set the max lower than the default, but don't set the
+                # minimum, pull it down to that
+                if (lowerMaximumSecurityTo and
+                    insecurelyLowerMinimumTo > lowerMaximumSecurityTo):
+                    insecurelyLowerMinimumTo = lowerMaximumSecurityTo
+
+            if (lowerMaximumSecurityTo and
+                insecurelyLowerMinimumTo > lowerMaximumSecurityTo):
+                raise ValueError(
+                    ("insecurelyLowerMinimumTo needs to be lower than "
+                     "lowerMaximumSecurityTo"))
+
+            excludedVersions = _getExcludedTLSProtocols(
+                insecurelyLowerMinimumTo, lowerMaximumSecurityTo)
+
+            for version in excludedVersions:
+                self._options |= _tlsDisableFlags[version]
         else:
+            warnings.warn(
+                ("Passing method to twisted.internet.ssl.CertificateOptions "
+                 "was deprecated in Twisted NEXT. Please use a combination "
+                 "of insecurelyLowerMinimumTo, raiseMinimumTo, and "
+                 "lowerMaximumSecurityTo instead, as Twisted will correctly "
+                 "configure the method."),
+                DeprecationWarning, stacklevel=3)
+
             # Otherwise respect the application decision.
             self.method = method
 
