@@ -311,6 +311,11 @@ class FakeReactorAndConnectMixin:
         """
         Create a L{MemoryReactorClock} and give it some hostnames it can
         resolve.
+
+        @return: a L{MemoryReactorClock}-like object with a slightly limited
+            interface (only C{advance} and C{tcpClients} in addition to its
+            formally-declared reactor interfaces), which can resolve a fixed
+            set of domains.
         """
         mrc = MemoryReactorClock()
         drr = deterministicResolvingReactor(mrc, hostMap={
@@ -1418,7 +1423,6 @@ class WebClientContextFactoryTests(TestCase):
         certificateOptions = ctx._getCertificateOptions('example.com', 443)
         self.assertIsInstance(
             certificateOptions.trustRoot, ssl.OpenSSLDefaultPaths)
-
 
     test_returnsContext.skip \
         = test_setsTrustRootOnContextToDefaultTrustRoot.skip \
