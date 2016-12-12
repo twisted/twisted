@@ -793,28 +793,6 @@ def _coercedUnicode(s):
 
 
 
-def _maybeMBCS(s):
-    """
-    Convert the string C{s} to a L{unicode} string, if required.
-
-    @param s: The string to convert.
-    @type s: L{bytes} or L{unicode}
-
-    @return: The string, decoded using MBCS if needed.
-    @rtype: L{unicode}
-
-    @raises UnicodeDecodeError: If passed a byte string that cannot be decoded
-        using MBCS.
-    """
-    assert sys.platform == "win32", "only reasonable on Windows"
-    assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
-
-    if isinstance(s, bytes):
-        return s.decode('mbcs')
-    return s
-
-
-
 if _PY3:
     unichr = chr
     raw_input = input
@@ -891,6 +869,5 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_maybeMBCS",
     "_tokenize"
 ]

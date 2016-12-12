@@ -784,11 +784,14 @@ class ReactorBase(object):
 
 
     def getDelayedCalls(self):
-        """Return all the outstanding delayed calls in the system.
+        """
+        Return all the outstanding delayed calls in the system.
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
-        test cases."""
+        test cases.
+        """
         return [x for x in (self._pendingTimedCalls + self._newTimedCalls) if not x.cancelled]
+
 
     def _insertNewDelayedCalls(self):
         for call in self._newTimedCalls:
@@ -831,7 +834,8 @@ class ReactorBase(object):
 
 
     def runUntilCurrent(self):
-        """Run all pending timed calls.
+        """
+        Run all pending timed calls.
         """
         if self.threadCallQueue:
             # Keep track of how many calls we actually make, as we're
@@ -916,34 +920,43 @@ class ReactorBase(object):
         # without ever spawning a child process.  If it succeeds, we'll save
         # the result so that Python doesn't need to do it implicitly later.
         #
-        # For any unicode which we can actually encode, we'll also issue a
-        # deprecation warning, because no one should be passing unicode here
-        # anyway.
-        #
         # -exarkun
+
+        # In the past, this function raised a DeprecationWarning when Unicode
+        # was passed to it. This, in hindsight, isn't probably the best, as
+        # paths are text.
+        #
+        # - hawkowl
         defaultEncoding = sys.getdefaultencoding()
 
         # Common check function
         def argChecker(arg):
             """
-            Return either a str or None.  If the given value is not
-            allowable for some reason, None is returned.  Otherwise, a
-            possibly different object which should be used in place of arg
-            is returned.  This forces unicode encoding to happen now, rather
-            than implicitly later.
+            Return either a L{str} (L{bytes} on Python 2, L{unicode} on Python
+            3) or L{None}.  If the given value is not allowable for some
+            reason, L{None} is returned.  Otherwise, a possibly different
+            object which should be used in place of arg is returned.  This
+            forces unicode encoding/decoding to happen now, rather than
+            implicitly later.
             """
-            if isinstance(arg, unicode):
-                try:
-                    arg = arg.encode(defaultEncoding)
-                except UnicodeEncodeError:
-                    return None
-                warnings.warn(
-                    "Argument strings and environment keys/values passed to "
-                    "reactor.spawnProcess should be bytes, not unicode.",
-                    category=DeprecationWarning,
-                    stacklevel=4)
-            if isinstance(arg, bytes) and b'\0' not in arg:
-                return arg
+            if _PY3:
+                if isinstance(arg, bytes) and b'\0' not in arg:
+                    try:
+                        arg = arg.decode(defaultEncoding)
+                    except UnicodeDecodeError:
+                        return None
+
+                if isinstance(arg, unicode):
+                    return arg
+
+            else:
+                if isinstance(arg, unicode):
+                    try:
+                        arg = arg.encode(defaultEncoding)
+                    except UnicodeEncodeError:
+                        return None
+                if isinstance(arg, bytes) and b'\0' not in arg:
+                    return arg
 
             return None
 
@@ -1045,6 +1058,7 @@ class ReactorBase(object):
             See L{twisted.internet.interfaces.IReactorInThreads.callInThread}.
             """
             self.getThreadPool().callInThread(_callable, *args, **kwargs)
+
 
         def suggestThreadPoolSize(self, size):
             """
