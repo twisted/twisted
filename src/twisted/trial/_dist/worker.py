@@ -17,7 +17,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import Deferred
 from twisted.protocols.amp import AMP
-from twisted.python.compat import unicode
+from twisted.python.compat import _PY3, unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import namedObject
 from twisted.trial.unittest import Todo
@@ -92,6 +92,8 @@ class LocalWorkerAMP(AMP):
         @return: A L{Failure} instance with enough information about a test
            error.
         """
+        if _PY3:
+            errorClass = errorClass.decode("utf-8")
         errorType = namedObject(errorClass)
         failure = Failure(error, errorType)
         for i in range(0, len(frames), 3):
