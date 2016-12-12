@@ -128,7 +128,7 @@ class DistTrialRunnerTests(TestCase):
         C{createLocalWorkers} iterates the list of protocols and create one
         L{LocalWorker} for each.
         """
-        protocols = [object() for x in xrange(4)]
+        protocols = [object() for x in range(4)]
         workers = self.runner.createLocalWorkers(protocols, "path")
         for s in workers:
             self.assertIsInstance(s, LocalWorker)
@@ -167,7 +167,7 @@ class DistTrialRunnerTests(TestCase):
         """
         fakeReactor = FakeReactor()
         suite = TrialSuite()
-        for i in xrange(10):
+        for i in range(10):
             suite.addTest(TestCase())
         self.runner.run(suite, fakeReactor)
         self.assertEqual(fakeReactor.runCount, 1)
@@ -203,7 +203,7 @@ class DistTrialRunnerTests(TestCase):
 
         fakeReactor = FakeReactorWithLock()
         suite = TrialSuite()
-        for i in xrange(10):
+        for i in range(10):
             suite.addTest(TestCase())
         self.runner.run(suite, fakeReactor)
 
