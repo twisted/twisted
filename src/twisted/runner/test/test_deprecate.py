@@ -28,5 +28,5 @@ class PortmapDeprecationTests(TestCase):
              "There is no replacement for this module."),
             warningsShown[0]['message'])
 
-    if not requireModule("_twisted_platform_support._portmap"):
+    if not requireModule("_twisted_platform_support.portmap"):
         test_deprecated.skip = "Not relevant on this platform."
