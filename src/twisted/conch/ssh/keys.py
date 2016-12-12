@@ -247,8 +247,9 @@ class Key(object):
                 ).public_key(default_backend())
             )
         elif keyType in [b'ecdsa-sha2-' + curve for curve in list(_curveTable.keys())]:
-            x, y, rest = common.getMP(rest, 2)
-            return cls._fromECComponents(x=x, y=y, curve=keyType)
+            return cls(load_ssh_public_key(
+                keyType + b' ' + base64.encodestring(blob),
+                default_backend()))
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -779,21 +780,25 @@ class Key(object):
             '<%s %s (%s bits)' % (
                 nativeString(self.type()),
                 self.isPublic() and 'Public Key' or 'Private Key',
-                self._keyObject.key_size)]
+                self.size())]
         for k, v in sorted(self.data().items()):
             if _PY3 and isinstance(k, bytes):
                 k = k.decode('ascii')
             lines.append('attr %s:' % (k,))
-            by = common.MP(v)[4:]
-            while by:
-                m = by[:15]
-                by = by[15:]
-                o = ''
-                for c in iterbytes(m):
-                    o = o + '%02x:' % (ord(c),)
-                if len(m) < 15:
-                    o = o[:-1]
-                lines.append('\t' + o)
+            if isinstance(v, bytes):
+                v = v.decode("ascii")
+                lines.append('\t' + v)
+            else:
+                by = common.MP(v)[4:]
+                while by:
+                    m = by[:15]
+                    by = by[15:]
+                    o = ''
+                    for c in iterbytes(m):
+                        o = o + '%02x:' % (ord(c),)
+                    if len(m) < 15:
+                        o = o[:-1]
+                    lines.append('\t' + o)
         lines[-1] = lines[-1] + '>'
         return '\n'.join(lines)
 
