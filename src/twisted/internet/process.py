@@ -64,6 +64,7 @@ def reapAllProcesses():
         process.reapProcess()
 
 
+
 def registerReapProcessHandler(pid, process):
     """
     Register a process handler for the given pid, in case L{reapAllProcesses}
@@ -87,6 +88,7 @@ def registerReapProcessHandler(pid, process):
         reapProcessHandlers[pid] = process
 
 
+
 def unregisterReapProcessHandler(pid, process):
     """
     Unregister a process handler previously registered with
@@ -96,6 +98,7 @@ def unregisterReapProcessHandler(pid, process):
             and reapProcessHandlers[pid] == process):
         raise RuntimeError("Try to unregister a process not registered.")
     del reapProcessHandlers[pid]
+
 
 
 def detectLinuxBrokenPipeBehavior():
@@ -174,11 +177,13 @@ class ProcessWriter(abstract.FileDescriptor):
         if self.enableReadHack:
             self.startReading()
 
+
     def fileno(self):
         """
         Return the fileno() of my process's stdin.
         """
         return self.fd
+
 
     def writeSomeData(self, data):
         """
@@ -192,9 +197,11 @@ class ProcessWriter(abstract.FileDescriptor):
             self.startReading()
         return rv
 
+
     def write(self, data):
         self.stopReading()
         abstract.FileDescriptor.write(self, data)
+
 
     def doRead(self):
         """
@@ -225,6 +232,7 @@ class ProcessWriter(abstract.FileDescriptor):
                 return CONNECTION_LOST
         else:
             self.stopReading()
+
 
     def connectionLost(self, reason):
         """
@@ -260,11 +268,13 @@ class ProcessReader(abstract.FileDescriptor):
         self.fd = fileno
         self.startReading()
 
+
     def fileno(self):
         """
         Return the fileno() of my process's stderr.
         """
         return self.fd
+
 
     def writeSomeData(self, data):
         # the only time this is actually called is after .loseConnection Any
@@ -273,14 +283,17 @@ class ProcessReader(abstract.FileDescriptor):
         assert data == ""
         return CONNECTION_LOST
 
+
     def doRead(self):
         """
         This is called when the pipe becomes readable.
         """
         return fdesc.readFromFD(self.fd, self.dataReceived)
 
+
     def dataReceived(self, data):
         self.proc.childDataReceived(self.name, data)
+
 
     def loseConnection(self):
         if self.connected and not self.disconnecting:
@@ -289,6 +302,7 @@ class ProcessReader(abstract.FileDescriptor):
             self.reactor.callLater(0, self.connectionLost,
                                    failure.Failure(CONNECTION_DONE))
 
+
     def connectionLost(self, reason):
         """
         Close my end of the pipe, signal the Process (which signals the
@@ -296,6 +310,7 @@ class ProcessReader(abstract.FileDescriptor):
         """
         abstract.FileDescriptor.connectionLost(self, reason)
         self.proc.childConnectionLost(self.name, reason)
+
 
 
 class _BaseProcess(BaseProcess, object):
@@ -516,6 +531,7 @@ class _BaseProcess(BaseProcess, object):
                                           self.pid, self.status)
 
 
+
 class _FDDetector(object):
     """
     This class contains the logic necessary to decide which of the available
@@ -633,6 +649,7 @@ def _listOpenFDs():
     use.
     """
     return detector._listOpenFDs()
+
 
 
 @implementer(IProcessTransport)
@@ -857,6 +874,7 @@ class Process(_BaseProcess):
     def writeToChild(self, childFD, data):
         self.pipes[childFD].write(data)
 
+
     def closeChildFD(self, childFD):
         # for writer pipes, loseConnection tries to write the remaining data
         # out to the pipe before closing it
@@ -865,10 +883,12 @@ class Process(_BaseProcess):
         if childFD in self.pipes:
             self.pipes[childFD].loseConnection()
 
+
     def pauseProducing(self):
         for p in self.pipes.itervalues():
             if isinstance(p, ProcessReader):
                 p.stopReading()
+
 
     def resumeProducing(self):
         for p in self.pipes.itervalues():
@@ -882,16 +902,20 @@ class Process(_BaseProcess):
         """
         self.closeChildFD(0)
 
+
     def closeStdout(self):
         self.closeChildFD(1)
 
+
     def closeStderr(self):
         self.closeChildFD(2)
+
 
     def loseConnection(self):
         self.closeStdin()
         self.closeStderr()
         self.closeStdout()
+
 
     def write(self, data):
         """
@@ -901,6 +925,7 @@ class Process(_BaseProcess):
         """
         if 0 in self.pipes:
             self.pipes[0].write(data)
+
 
     def registerProducer(self, producer, streaming):
         """
@@ -914,11 +939,13 @@ class Process(_BaseProcess):
         else:
             producer.stopProducing()
 
+
     def unregisterProducer(self):
         """
         Call this to unregister producer for standard input."""
         if 0 in self.pipes:
             self.pipes[0].unregisterProducer()
+
 
     def writeSequence(self, seq):
         """
@@ -944,6 +971,7 @@ class Process(_BaseProcess):
         except:
             log.err()
         self.maybeCallProcessEnded()
+
 
     def maybeCallProcessEnded(self):
         # we don't call ProcessProtocol.processEnded until:
@@ -1067,16 +1095,19 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         self._resetSignalDisposition()
 
 
-    # PTYs do not have stdin/stdout/stderr. They only have in and out, just
-    # like sockets. You cannot close one without closing off the entire PTY.
     def closeStdin(self):
+        # PTYs do not have stdin/stdout/stderr. They only have in and out, just
+        # like sockets. You cannot close one without closing off the entire PTY
         pass
+
 
     def closeStdout(self):
         pass
 
+
     def closeStderr(self):
         pass
+
 
     def doRead(self):
         """
@@ -1086,11 +1117,13 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             self.fd,
             lambda data: self.proto.childDataReceived(1, data))
 
+
     def fileno(self):
         """
         This returns the file number of standard output on this process.
         """
         return self.fd
+
 
     def maybeCallProcessEnded(self):
         # two things must happen before we call the ProcessProtocol's
@@ -1102,6 +1135,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         if self.lostProcess == 2:
             _BaseProcess.maybeCallProcessEnded(self)
 
+
     def connectionLost(self, reason):
         """
         I call this to clean up when one or all of my connections has died.
@@ -1110,6 +1144,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         os.close(self.fd)
         self.lostProcess += 1
         self.maybeCallProcessEnded()
+
 
     def writeSomeData(self, data):
         """
