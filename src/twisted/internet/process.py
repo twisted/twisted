@@ -255,7 +255,7 @@ class ProcessReader(abstract.FileDescriptor):
     I am a selectable representation of a process's output pipe, such as
     stdout and stderr.
     """
-    connected = 1
+    connected = True
 
     def __init__(self, reactor, proc, name, fileno):
         """
@@ -280,7 +280,7 @@ class ProcessReader(abstract.FileDescriptor):
         # the only time this is actually called is after .loseConnection Any
         # actual write attempt would fail, so we must avoid that. This hack
         # allows us to use .loseConnection on both readers and writers.
-        assert data == ""
+        assert data == b""
         return CONNECTION_LOST
 
 
@@ -401,17 +401,17 @@ class _BaseProcess(BaseProcess, object):
         Fork and then exec sub-process.
 
         @param path: the path where to run the new process.
-        @type path: C{str}
+        @type path: L{bytes} or L{unicode}
         @param uid: if defined, the uid used to run the new process.
-        @type uid: C{int}
+        @type uid: L{int}
         @param gid: if defined, the gid used to run the new process.
-        @type gid: C{int}
+        @type gid: L{int}
         @param executable: the executable to run in a new process.
-        @type executable: C{str}
+        @type executable: L{str}
         @param args: arguments used to create the new process.
-        @type args: C{list}.
+        @type args: L{list}.
         @param environment: environment used for the new process.
-        @type environment: C{dict}.
+        @type environment: L{dict}.
         @param kwargs: keyword arguments to L{_setupChild} method.
         """
         collectorEnabled = gc.isenabled()
