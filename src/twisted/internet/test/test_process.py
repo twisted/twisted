@@ -356,7 +356,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                exe = pyExe.decode(os.getfilesystemencoding())
+                exe = pyExe.decode(sys.getfilesystemencoding())
 
                 subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
                 f2 = subprocess.Popen([exe, "-c",
