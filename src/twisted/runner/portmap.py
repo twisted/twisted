@@ -6,6 +6,6 @@
 Portmap support.
 """
 
-from _twisted_platform_support._portmap import set, unset
+from _twisted_platform_support.portmap import set, unset
 
 __all__ = ["set", "unset"]

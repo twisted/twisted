@@ -93,10 +93,10 @@ _EXTRA_OPTIONS = dict(
     osx=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa',
-         'twisted-platform-support >= 16.12.2'],
+         'twisted-platform-support >= 16.12.3'],
     windows=['pypiwin32',
-             'twisted-platform-support >= 16.12.2'],
-    linux=['twisted-platform-support >= 16.12.2'],
+             'twisted-platform-support >= 16.12.3'],
+    linux=['twisted-platform-support >= 16.12.3'],
     http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
