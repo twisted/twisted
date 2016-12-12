@@ -17,9 +17,12 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
-from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
-from twisted.internet.interfaces import IConnector, IDelayedCall
+from twisted.internet.interfaces import (
+    IReactorCore, IReactorTime, IReactorThreads, IResolverSimple,
+    IReactorPluggableResolver, IReactorPluggableNameResolver, IConnector,
+    IDelayedCall,
+)
+
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.internet._resolver import (
     GAIResolver as _GAIResolver,
@@ -441,7 +444,8 @@ class _ThreePhaseEvent(object):
 
 
 
-@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver)
+@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver,
+             IReactorPluggableNameResolver)
 class ReactorBase(object):
     """
     Default base class for Reactors.

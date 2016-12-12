@@ -134,6 +134,7 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
+    "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
@@ -142,7 +143,6 @@ _CONSOLE_SCRIPTS = [
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [
     "mailmail = twisted.mail.scripts.mailmail:run",
-    "pyhtmlizer = twisted.scripts.htmlizer:run",
     ]
 
 if not _PY3:
@@ -433,11 +433,9 @@ notPortedModules = [
     "twisted.python.shortcut",
     "twisted.python.test.cmodulepullpipe",
     "twisted.python.test.test_fakepwd",
-    "twisted.python.test.test_htmlizer",
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_release",
     "twisted.python.test.test_win32",
-    "twisted.scripts.htmlizer",
     "twisted.spread.test.test_pbfailure",
     "twisted.tap.__init__",
     "twisted.tap.ftp",
