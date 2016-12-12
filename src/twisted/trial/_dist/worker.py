@@ -17,6 +17,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import Deferred
 from twisted.protocols.amp import AMP
+from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import namedObject
 from twisted.trial.unittest import Todo
@@ -278,8 +279,11 @@ class LocalWorker(ProcessProtocol):
         self._errLog = open(os.path.join(self._logDirectory, 'err.log'), 'w')
         testLog = open(os.path.join(self._logDirectory, self._logFile), 'w')
         self._ampProtocol.setTestStream(testLog)
+        logDirectory = self._logDirectory
+        if isinstance(logDirectory, unicode):
+             logDirectory = logDirectory.encode("utf-8")
         d = self._ampProtocol.callRemote(workercommands.Start,
-                                         directory=self._logDirectory)
+                                         directory=logDirectory)
         # Ignore the potential errors, the test suite will fail properly and it
         # would just print garbage.
         d.addErrback(lambda x: None)
