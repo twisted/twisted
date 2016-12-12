@@ -8,9 +8,9 @@ Tests for L{twisted.trial._dist.workertrial}.
 import errno
 import sys
 import os
-from cStringIO import StringIO
 
 from twisted.protocols.amp import AMP
+from twisted.python.compat import NativeStringIO as StringIO
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.trial._dist.workertrial import WorkerLogObserver, main, _setupPath

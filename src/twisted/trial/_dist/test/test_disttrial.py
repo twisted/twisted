@@ -7,13 +7,13 @@ Tests for L{twisted.trial._dist.disttrial}.
 
 import os
 import sys
-from cStringIO import StringIO
 
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import fail, succeed
 from twisted.internet.task import Cooperator, deferLater
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet import reactor
+from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.failure import Failure
 from twisted.python.lockfile import FilesystemLock
 
