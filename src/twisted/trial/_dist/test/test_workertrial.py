@@ -102,7 +102,7 @@ class MainTests(TestCase):
         client = FakeAMP()
         clientTransport = StringTransport()
         client.makeConnection(clientTransport)
-        client.callRemote(workercommands.Run, testCase="doesntexist")
+        client.callRemote(workercommands.Run, testCase=b"doesntexist")
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)

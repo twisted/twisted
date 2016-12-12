@@ -57,7 +57,7 @@ class WorkerProtocolTests(TestCase):
         Calling the L{workercommands.Run} command on the client returns a
         response with C{success} sets to C{True}.
         """
-        d = self.client.callRemote(workercommands.Run, testCase="doesntexist")
+        d = self.client.callRemote(workercommands.Run, testCase=b"doesntexist")
 
         def check(result):
             self.assertTrue(result['success'])
@@ -96,7 +96,7 @@ class LocalWorkerAMPTests(TestCase):
         self.worker.makeConnection(self.workerTransport)
 
         config = trial.Options()
-        self.testName = "twisted.doesnexist"
+        self.testName = b"twisted.doesnexist"
         config['tests'].append(self.testName)
         self.testCase = trial._getSuite(config)._tests.pop()
 
@@ -135,8 +135,8 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddExpectedFailure,
-                                   testName=self.testName, error='error',
-                                   todo='todoReason')
+                                   testName=self.testName, error=b'error',
+                                   todo=b'todoReason')
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -151,8 +151,8 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddError,
-                                   testName=self.testName, error='error',
-                                   errorClass='exceptions.ValueError',
+                                   testName=self.testName, error=b'error',
+                                   errorClass=b'exceptions.ValueError',
                                    frames=[])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
@@ -169,9 +169,9 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddError,
-                                   testName=self.testName, error='error',
-                                   errorClass='exceptions.ValueError',
-                                   frames=["file.py", "invalid code", "3"])
+                                   testName=self.testName, error=b'error',
+                                   errorClass=b'exceptions.ValueError',
+                                   frames=[b"file.py", b"invalid code", b"3"])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -189,8 +189,8 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddFailure,
-                                   testName=self.testName, fail='fail',
-                                   failClass='exceptions.RuntimeError',
+                                   testName=self.testName, fail=b'fail',
+                                   failClass=b'exceptions.RuntimeError',
                                    frames=[])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
@@ -206,7 +206,7 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddSkip,
-                                   testName=self.testName, reason='reason')
+                                   testName=self.testName, reason=b'reason')
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -222,7 +222,7 @@ class LocalWorkerAMPTests(TestCase):
 
         d = self.worker.callRemote(managercommands.AddUnexpectedSuccess,
                                    testName=self.testName,
-                                   todo='todo')
+                                   todo=b'todo')
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -241,7 +241,7 @@ class LocalWorkerAMPTests(TestCase):
 
 
         d = self.worker.callRemote(managercommands.TestWrite,
-                                   out="Some output")
+                                   out=b"Some output")
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
