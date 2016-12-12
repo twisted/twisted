@@ -12,19 +12,14 @@ import sys
 import itertools
 
 from zope.interface import implementer
+from twisted.python.reflect import requireModule
 
 skipSSL = None
 skipSNI = None
 skipNPN = None
 skipALPN = None
-try:
-    import OpenSSL
-except ImportError:
-    skipSSL = "OpenSSL is required for SSL tests."
-    skipSNI = skipSSL
-    skipNPN = skipSSL
-    skipALPN = skipSSL
-else:
+
+if requireModule("OpenSSL"):
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
@@ -32,18 +27,19 @@ else:
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_npn_advertise_callback(lambda c: None)
-    except AttributeError:
-        skipNPN = "PyOpenSSL 0.15 or greater is required for NPN support"
     except NotImplementedError:
         skipNPN = "OpenSSL 1.0.1 or greater required for NPN support"
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_alpn_select_callback(lambda c: None)
-    except AttributeError:
-        skipALPN = "PyOpenSSL 0.15 or greater is required for ALPN support"
     except NotImplementedError:
         skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
+else:
+    skipSSL = "OpenSSL is required for SSL tests."
+    skipSNI = skipSSL
+    skipNPN = skipSSL
+    skipALPN = skipSSL
 
 from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
@@ -112,33 +108,6 @@ A_PEER_CERTIFICATE_PEM = """
 
 A_KEYPAIR = getModule(__name__).filePath.sibling('server.pem').getContent()
 
-
-
-class DummyOpenSSL(object):
-    """
-    A fake of the L{OpenSSL} module.
-
-    @ivar __version__: A string describing I{pyOpenSSL} version number the fake
-        is emulating.
-    @type __version__: L{str}
-    """
-    def __init__(self, major, minor, patch=None):
-        """
-        @param major: The major version number to emulate.  I{X} in the version
-            I{X.Y}.
-        @type major: L{int}
-
-        @param minor: The minor version number to emulate.  I{Y} in the version
-            I{X.Y}.
-        @type minor: L{int}
-
-        """
-        self.__version__ = "%d.%d" % (major, minor)
-        if patch is not None:
-            self.__version__ += ".%d" % (patch,)
-
-_preTwelveOpenSSL = DummyOpenSSL(0, 11)
-_postTwelveOpenSSL = DummyOpenSSL(0, 13, 1)
 
 
 def counter(counter=itertools.count()):
@@ -806,8 +775,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE)
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE)
         self.assertEqual(options, ctx._options & options)
 
 
@@ -836,7 +805,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
+        options = SSL.OP_SINGLE_DH_USE | SSL.OP_SINGLE_ECDH_USE
         self.assertEqual(options, ctx._options & options)
 
 
@@ -875,8 +844,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
         self.assertEqual(options, ctx._options & options)
 
 
@@ -1000,8 +969,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
                    SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
         self.assertEqual(options, ctx._options & options)
 
@@ -1020,8 +989,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
                    SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
         self.assertEqual(options, ctx._options & options)
 
@@ -1040,8 +1009,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
                    SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
         self.assertEqual(options, ctx._options & options)
 
@@ -1060,8 +1029,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
                    SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
         self.assertEqual(options, ctx._options & options)
 
@@ -1080,8 +1049,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
                    SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | opts._OP_NO_TLSv1_3)
         self.assertEqual(options, ctx._options & options)
 
@@ -1101,8 +1070,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
                    opts._OP_NO_TLSv1_3)
         self.assertEqual(options, ctx._options & options)
 
@@ -1120,8 +1089,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
                    SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
         self.assertEqual(options, ctx._options & options)
 
@@ -1142,8 +1111,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         # Future maintainer warning: this will break if we change our default
         # up, so you should change it to add the relevant OP_NO flags when we
         # do make that change and this test fails.
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
         self.assertEqual(options, ctx._options & options)
         self.assertEqual(opts._defaultMinimumTLSVersion,
                          sslverify.TLSVersion.TLSv1_0)
@@ -1162,8 +1131,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
                    SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
         self.assertEqual(options, ctx._options & options)
 
@@ -2956,150 +2925,12 @@ class KeyPairTests(unittest.TestCase):
 
 
 
-class OpenSSLVersionTestsMixin(object):
-    """
-    A mixin defining tests relating to the version declaration interface of
-    I{pyOpenSSL}.
-
-    This is used to verify that the fake I{OpenSSL} module presents its fake
-    version information in the same way as the real L{OpenSSL} module.
-    """
-    def test_string(self):
-        """
-        C{OpenSSL.__version__} is a native string.
-        """
-        self.assertIsInstance(self.OpenSSL.__version__, str)
-
-
-    def test_majorDotMinor(self):
-        """
-        C{OpenSSL.__version__} declares the major and minor versions as
-        non-negative integers separated by C{"."}.
-        """
-        parts = self.OpenSSL.__version__.split(".")
-        major = int(parts[0])
-        minor = int(parts[1])
-        self.assertEqual(
-            (True, True),
-            (major >= 0, minor >= 0))
-
-
-
-class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to the real C{OpenSSL} package.
-    """
-    if skipSSL is None:
-        OpenSSL = OpenSSL
-    else:
-        skip = skipSSL
-
-
-
-class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                 unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be older than 0.12.
-    """
-    OpenSSL = _preTwelveOpenSSL
-
-
-
-class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                  unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be newer than 0.12.
-    """
-    OpenSSL = _postTwelveOpenSSL
-
-
-
-class UsablePyOpenSSLTests(unittest.SynchronousTestCase):
-    """
-    Tests for L{UsablePyOpenSSLTests}.
-    """
-    if skipSSL is not None:
-        skip = skipSSL
-
-    def test_ok(self):
-        """
-        Return C{True} for usable versions including possible changes in
-        versioning.
-        """
-        for version in ["0.15.1", "1.0.0", "16.0.0"]:
-            self.assertTrue(sslverify._usablePyOpenSSL(version))
-
-    def test_tooOld(self):
-        """
-        Return C{False} for unusable versions.
-        """
-        self.assertFalse(sslverify._usablePyOpenSSL("0.11.1"))
-
-    def test_inDev(self):
-        """
-        A .dev0 suffix does not trip us up.  Since it has been introduced after
-        0.15.1, it's always C{True}.
-        """
-        for version in ["0.16.0", "1.0.0", "16.0.0"]:
-            self.assertTrue(sslverify._usablePyOpenSSL(version + ".dev0"))
-
-
-
 class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
     """
     if skipSSL is not None:
         skip = skipSSL
-
-    def test_pyOpenSSLTooOld(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        result = sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        expected = (
-            sslverify.simpleVerifyHostname, sslverify.SimpleVerificationError)
-        self.assertEqual(expected, result)
-    test_pyOpenSSLTooOld.suppress = [
-        util.suppress(
-            message="Your version of pyOpenSSL, 0.11, is out of date."),
-        ]
-
-
-    def test_pyOpenSSLTooOldWarning(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        to upgrade.
-        """
-        sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        [warning] = list(
-            warning
-            for warning
-            in self.flushWarnings()
-            if warning["category"] == UserWarning)
-
-        expectedMessage = (
-            "Your version of pyOpenSSL, 0.11, is out of date.  Please upgrade "
-            "to at least 0.12 and install service_identity from "
-            "<https://pypi.python.org/pypi/service_identity>.  Without the "
-            "service_identity module and a recent enough pyOpenSSL to support "
-            "it, Twisted can perform only rudimentary TLS client hostname "
-            "verification.  Many valid certificate/hostname mappings may be "
-            "rejected.")
-
-        self.assertEqual(
-            (warning["message"], warning["filename"], warning["lineno"]),
-            # Make sure we're abusing the warning system to a sufficient
-            # degree: there is no filename or line number that makes sense for
-            # this warning to "blame" for the problem.  It is a system
-            # misconfiguration.  So the location information should be blank
-            # (or as blank as we can make it).
-            (expectedMessage, "", 0))
 
 
     def test_dependencyMissing(self):
@@ -3111,7 +2942,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
         with SetAsideModule("service_identity"):
             sys.modules["service_identity"] = None
 
-            result = sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            result = sslverify._selectVerifyImplementation()
             expected = (
                 sslverify.simpleVerifyHostname,
                 sslverify.SimpleVerificationError)
@@ -3134,7 +2965,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
         with SetAsideModule("service_identity"):
             sys.modules["service_identity"] = None
 
-            sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            sslverify._selectVerifyImplementation()
 
         [warning] = list(
             warning
@@ -3153,13 +2984,17 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             "service_identity module: {message}.  Please install it from "
             "<https://pypi.python.org/pypi/service_identity> "
             "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module and a recent enough "
-            "pyOpenSSL to support it, Twisted can perform only "
+            "Without the service_identity module, Twisted can perform only "
             "rudimentary TLS client hostname verification.  Many valid "
             "certificate/hostname mappings may be rejected.").format(
                 message=importError)
 
         self.assertEqual(
             (warning["message"], warning["filename"], warning["lineno"]),
-            # See the comment in test_pyOpenSSLTooOldWarning.
+
+            # Make sure we're abusing the warning system to a sufficient
+            # degree: there is no filename or line number that makes sense for
+            # this warning to "blame" for the problem.  It is a system
+            # misconfiguration.  So the location information should be blank
+            # (or as blank as we can make it).
             (expectedMessage, "", 0))
