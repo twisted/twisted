@@ -666,7 +666,7 @@ class ProcessTests(unittest.TestCase):
         # can do about that.
         badUnicode = u'\N{SNOWMAN}'
         try:
-            badUnicode.encode(sys.getdefaultencoding())
+            badUnicode.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError:
             # Okay, that unicode doesn't encode, put it in as a bad environment
             # key.
@@ -682,6 +682,7 @@ class ProcessTests(unittest.TestCase):
             pass
 
         for env in badEnvs:
+            print(env)
             self.assertRaises(
                 TypeError,
                 reactor.spawnProcess, p, pyExe, [pyExe, b"-c", b""], env=env)

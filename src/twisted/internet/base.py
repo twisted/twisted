@@ -923,11 +923,11 @@ class ReactorBase(object):
         # -exarkun
 
         # In the past, this function raised a DeprecationWarning when Unicode
-        # was passed to it. This, in hindsight, isn't probably the best, as
-        # paths are text.
+        # was passed to it. This has been changed to pass the Unicode through
+        # to Python 3 natively, and to still encode down to bytes on Python 2.
         #
         # - hawkowl
-        defaultEncoding = sys.getdefaultencoding()
+        defaultEncoding = sys.getfilesystemencoding()
 
         # Common check function
         def argChecker(arg):
