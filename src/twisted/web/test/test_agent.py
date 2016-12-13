@@ -46,6 +46,8 @@ from incremental import Version
 from twisted.web.client import BrowserLikePolicyForHTTPS
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint
+from twisted.test.proto_helpers import AccumulatingProtocol
+from twisted.test.iosim import IOPump, FakeTransport
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -740,9 +742,16 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(host, expectedAddress)
         peerAddress = addressType('TCP', host, port)
         clientProtocol = factory.buildProtocol(peerAddress)
-        clientTransport = StringTransport(peerAddress=peerAddress)
+        clientTransport = FakeTransport(clientProtocol, False,
+                                        peerAddress=peerAddress)
         clientProtocol.makeConnection(clientTransport)
-        lines = clientTransport.io.getvalue().split("\r\n")
+        serverProtocol = AccumulatingProtocol()
+        serverTransport = FakeTransport(serverProtocol, True)
+        serverProtocol.makeConnection(serverTransport)
+        pump = IOPump(clientProtocol, serverProtocol,
+                      clientTransport, serverTransport, False)
+        pump.flush()
+        lines = serverProtocol.data.split("\r\n")
         self.assertTrue(lines[0].startswith(b"GET / HTTP"))
         headers = dict([line.split(": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
