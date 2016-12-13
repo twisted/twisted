@@ -682,7 +682,6 @@ class ProcessTests(unittest.TestCase):
             pass
 
         for env in badEnvs:
-            print(env)
             self.assertRaises(
                 TypeError,
                 reactor.spawnProcess, p, pyExe, [pyExe, b"-c", b""], env=env)
