@@ -22,7 +22,7 @@ from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import fail, succeed
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone
-from twisted.python.compat import NativeStringIO as StringIO, unicode
+from twisted.python.compat import _PY3, NativeStringIO as StringIO, unicode
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
 
@@ -149,10 +149,14 @@ class LocalWorkerAMPTests(TestCase):
         Run a test, and encounter an error.
         """
         results = []
+        if _PY3:
+            errorClass = b'builtins.ValueError'
+        else:
+            errorClass = b'exceptions.ValueError'
 
         d = self.worker.callRemote(managercommands.AddError,
                                    testName=self.testName, error=b'error',
-                                   errorClass=b'exceptions.ValueError',
+                                   errorClass=errorClass,
                                    frames=[])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
@@ -167,10 +171,14 @@ class LocalWorkerAMPTests(TestCase):
         the C{frames} argument passed to C{AddError}.
         """
         results = []
+        if _PY3:
+            errorClass = b'builtins.ValueError'
+        else:
+            errorClass = b'exceptions.ValueError'
 
         d = self.worker.callRemote(managercommands.AddError,
                                    testName=self.testName, error=b'error',
-                                   errorClass=b'exceptions.ValueError',
+                                   errorClass=errorClass,
                                    frames=[b"file.py", b"invalid code", b"3"])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
@@ -187,10 +195,14 @@ class LocalWorkerAMPTests(TestCase):
         Run a test, and fail.
         """
         results = []
+        if _PY3:
+            failClass = b'builtins.RuntimeError'
+        else:
+            failClass = b'exceptions.RuntimeError'
 
         d = self.worker.callRemote(managercommands.AddFailure,
                                    testName=self.testName, fail=b'fail',
-                                   failClass=b'exceptions.RuntimeError',
+                                   failClass=failClass,
                                    frames=[])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
