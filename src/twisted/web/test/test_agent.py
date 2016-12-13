@@ -48,6 +48,9 @@ from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
+from twisted.protocols.tls import TLSMemoryBIOFactory
+from twisted.internet.ssl import optionsForClientTLS, CertificateOptions
+from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -732,6 +735,27 @@ class AgentTestsMixin(object):
         self.assertTrue(verifyObject(IAgent, self.makeAgent()))
 
 
+
+class IntegrationTestingMixin(object):
+    """
+    Transport-to-Agent integration tests for both HTTP and HTTPS.
+    """
+
+    def test_integrationTestIPv4(self):
+        """
+        L{Agent} works over IPv4.
+        """
+        self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
+
+
+    def test_integrationTestIPv6(self):
+        """
+        L{Agent} works over IPv6.
+        """
+        self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
+                             IPv6Address)
+
+
     def integrationTest(self, hostName, expectedAddress, addressType,
                         serverWrapper=lambda server: server,
                         createAgent=client.Agent,
@@ -760,25 +784,36 @@ class AgentTestsMixin(object):
         clientTransport = FakeTransport(clientProtocol, False,
                                         peerAddress=peerAddress)
         clientProtocol.makeConnection(clientTransport)
-        serverProtocol = AccumulatingProtocol()
-        wrapper = serverWrapper(serverProtocol)
+        @Factory.forProtocol
+        def accumulator():
+            ap = AccumulatingProtocol()
+            accumulator.currentProtocol = ap
+            return ap
+        accumulator.currentProtocol = None
+        accumulator.protocolConnectionMade = None
+        wrapper = serverWrapper(accumulator).buildProtocol(None)
         serverTransport = FakeTransport(wrapper, True)
         wrapper.makeConnection(serverTransport)
-        pump = IOPump(clientProtocol, serverProtocol,
+        pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
-        lines = serverProtocol.data.split("\r\n")
+        lines = accumulator.currentProtocol.data.split(b"\r\n")
         self.assertTrue(lines[0].startswith(b"GET / HTTP"))
         headers = dict([line.split(": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
-        clientProtocol.dataReceived(b"HTTP/1.1 200 OK"
-                                    b"\r\nX-An-Header: an-value\r\n"
-                                    b"\r\nContent-length: 12\r\n\r\n"
-                                    b"hello world!")
+        accumulator.currentProtocol.transport.write(
+            b"HTTP/1.1 200 OK"
+            b"\r\nX-An-Header: an-value\r\n"
+            b"\r\nContent-length: 12\r\n\r\n"
+            b"hello world!"
+        )
+        pump.flush()
         response = self.successResultOf(deferred)
         self.assertEquals(response.headers.getRawHeaders(b'x-an-header')[0],
                           b"an-value")
+
+
 
 @implementer(IAgentEndpointFactory)
 class StubEndpointFactory(object):
@@ -799,7 +834,8 @@ class StubEndpointFactory(object):
 
 
 
-class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
+class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
+                 IntegrationTestingMixin):
     """
     Tests for the new HTTP client API provided by L{Agent}.
     """
@@ -826,21 +862,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertIsInstance(agent._pool, HTTPConnectionPool)
         self.assertEqual(agent._pool.persistent, False)
         self.assertIdentical(agent._reactor, agent._pool._reactor)
-
-
-    def test_integrationTestIPv4(self):
-        """
-        L{Agent} works over IPv4.
-        """
-        self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
-
-
-    def test_integrationTestIPv6(self):
-        """
-        L{Agent} works over IPv6.
-        """
-        self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
-                             IPv6Address)
 
 
     def test_persistent(self):
@@ -1239,7 +1260,8 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
 
 
-class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
+class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
+                      IntegrationTestingMixin):
     """
     Tests for the new HTTP client API that depends on SSL.
     """
@@ -1423,6 +1445,30 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         self.assertTrue(trustRoot.called)
         connection = creator.clientConnectionForTLS(None)
         self.assertIs(trustRoot.context, connection.get_context())
+
+
+    def integrationTest(self, hostName, expectedAddress, addressType):
+        """
+        Wrap L{AgentTestsMixin.integrationTest} with TLS.
+        """
+        authority, server = certificatesForAuthorityAndServer(
+            commonName=hostName)
+        def tlsify(serverFactory):
+            return TLSMemoryBIOFactory(server.options(), False, serverFactory)
+        def tlsagent(reactor):
+            from twisted.web.iweb import IPolicyForHTTPS
+            from zope.interface import implementer
+            @implementer(IPolicyForHTTPS)
+            class Policy(object):
+                def creatorForNetloc(self, hostname, port):
+                    return optionsForClientTLS(hostname.decode("ascii"),
+                                               trustRoot=authority)
+            return client.Agent(reactor, contextFactory=Policy())
+        (super(AgentHTTPSTests, self)
+         .integrationTest(hostName, expectedAddress, addressType,
+                          serverWrapper=tlsify,
+                          createAgent=tlsagent,
+                          scheme=b'https'))
 
 
 
