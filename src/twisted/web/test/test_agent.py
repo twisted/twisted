@@ -297,6 +297,7 @@ class FileBodyProducerTests(TestCase):
         self.assertEqual(expectedResult[:readSize * 2], output.getvalue())
 
 EXAMPLE_COM_IP = '127.0.0.7'
+EXAMPLE_COM_V6_IP = '::7'
 EXAMPLE_NET_IP = '127.0.0.8'
 EXAMPLE_ORG_IP = '127.0.0.9'
 FOO_LOCAL_IP = '127.0.0.10'
@@ -320,6 +321,7 @@ class FakeReactorAndConnectMixin:
         mrc = MemoryReactorClock()
         drr = deterministicResolvingReactor(mrc, hostMap={
             u'example.com': [EXAMPLE_COM_IP],
+            u'ipv6.example.com': [EXAMPLE_COM_V6_IP],
             u'example.net': [EXAMPLE_NET_IP],
             u'example.org': [EXAMPLE_ORG_IP],
             u'foo': [FOO_LOCAL_IP],
