@@ -113,8 +113,11 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addSkip(test, reason)
         reason = str(reason).encode("utf-8")
+        testName = test.id()
+        if isinstance(testName, unicode):
+            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddSkip,
-                                    testName=test.id(),
+                                    testName=testName,
                                     reason=reason)
 
 
@@ -136,8 +139,11 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addExpectedFailure(test, error, todo)
         errorMessage = error.getErrorMessage().encode("utf-8")
+        testName = test.id()
+        if isinstance(testName, unicode):
+            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddExpectedFailure,
-                                    testName=test.id(),
+                                    testName=testName,
                                     error=errorMessage,
                                     todo=self._getTodoReason(todo))
 
@@ -147,8 +153,11 @@ class WorkerReporter(TestResult):
         Send an unexpected success over.
         """
         super(WorkerReporter, self).addUnexpectedSuccess(test, todo)
+        testName = test.id()
+        if isinstance(testName, unicode):
+            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddUnexpectedSuccess,
-                                    testName=test.id(),
+                                    testName=testName,
                                     todo=self._getTodoReason(todo))
 
 
