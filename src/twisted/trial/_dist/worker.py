@@ -161,6 +161,8 @@ class LocalWorkerAMP(AMP):
         """
         Print test output from the worker.
         """
+        if _PY3 and isinstance(out, bytes):
+            out = out.decode("utf-8")
         self._testStream.write(out + '\n')
         self._testStream.flush()
         return {'success': True}
