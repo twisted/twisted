@@ -454,7 +454,6 @@ notPortedModules = [
     "twisted.test.test_shortcut",
     "twisted.test.test_strerror",
     "twisted.trial._dist.test.test_worker",
-    "twisted.trial._dist.test.test_workerreporter",
     "twisted.web.distrib",
     "twisted.web.domhelpers",
     "twisted.web.microdom",
