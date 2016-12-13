@@ -789,6 +789,9 @@ class ReactorBase(object):
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
         test cases.
+
+        @return: A list of outstanding delayed calls.
+        @type: L{list} of L{DelayedCall}
         """
         return [x for x in (self._pendingTimedCalls + self._newTimedCalls) if not x.cancelled]
 
