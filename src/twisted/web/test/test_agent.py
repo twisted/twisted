@@ -720,7 +720,10 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
                          CancelledError)
 
 
-    def integrationTest(self, hostName, expectedAddress, addressType):
+    def integrationTest(self, hostName, expectedAddress, addressType,
+                        serverWrapper=lambda server: server,
+                        createAgent=client.Agent,
+                        scheme=b'http'):
         """
         L{Agent} will make a TCP connection, send an HTTP request, and return a
         L{Deferred} that fires when the response has been received.
@@ -736,8 +739,8 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         @type addressType: L{type}
         """
         reactor = self.createReactor()
-        agent = client.Agent(reactor)
-        deferred = agent.request(b"GET", b"http://" + hostName + "/")
+        agent = createAgent(reactor)
+        deferred = agent.request(b"GET", scheme + b"://" + hostName + "/")
         host, port, factory, timeout, bind = reactor.tcpClients[0]
         self.assertEqual(host, expectedAddress)
         peerAddress = addressType('TCP', host, port)
@@ -746,8 +749,9 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
                                         peerAddress=peerAddress)
         clientProtocol.makeConnection(clientTransport)
         serverProtocol = AccumulatingProtocol()
-        serverTransport = FakeTransport(serverProtocol, True)
-        serverProtocol.makeConnection(serverTransport)
+        wrapper = serverWrapper(serverProtocol)
+        serverTransport = FakeTransport(wrapper, True)
+        wrapper.makeConnection(serverTransport)
         pump = IOPump(clientProtocol, serverProtocol,
                       clientTransport, serverTransport, False)
         pump.flush()
