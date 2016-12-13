@@ -185,7 +185,7 @@ class LocalWorkerAMPTests(TestCase):
 
         self.assertEqual(self.testCase, self.result.errors[0][0])
         self.assertEqual(
-            [('file.py', 'invalid code', 3, [], [])],
+            [(b'file.py', b'invalid code', 3, [], [])],
             self.result.errors[0][1].frames)
         self.assertTrue(results)
 
