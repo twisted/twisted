@@ -71,11 +71,13 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addError(test, error)
         failure = self._getFailure(error)
-        frames = self._getFrames(failure)
+        error = failure.getErrorMessage().encode("utf-8")
+        errorClass = qual(failure.type).encode("utf-8")
+        frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddError,
                                     testName=test.id(),
-                                    error=failure.getErrorMessage(),
-                                    errorClass=qual(failure.type),
+                                    error=error,
+                                    errorClass=errorClass,
                                     frames=frames)
 
 
@@ -85,11 +87,13 @@ class WorkerReporter(TestResult):
         """
         super(WorkerReporter, self).addFailure(test, fail)
         failure = self._getFailure(fail)
-        frames = self._getFrames(failure)
+        fail=failure.getErrorMessage().encode("utf-8")
+        failClass=qual(failure.type).encode("utf-8")
+        frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddFailure,
                                     testName=test.id(),
-                                    fail=failure.getErrorMessage(),
-                                    failClass=qual(failure.type),
+                                    fail=fail,
+                                    failClass=failClass,
                                     frames=frames)
 
 
@@ -98,8 +102,10 @@ class WorkerReporter(TestResult):
         Send a skip over.
         """
         super(WorkerReporter, self).addSkip(test, reason)
+        reason=str(reason).encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddSkip,
-                                    testName=test.id(), reason=str(reason))
+                                    testName=test.id(),
+                                    reason=reason)
 
 
     def _getTodoReason(self, todo):
@@ -119,9 +125,10 @@ class WorkerReporter(TestResult):
         Send an expected failure over.
         """
         super(WorkerReporter, self).addExpectedFailure(test, error, todo)
+        errorMessage = error.getErrorMessage().encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddExpectedFailure,
                                     testName=test.id(),
-                                    error=error.getErrorMessage(),
+                                    error=errorMessage,
                                     todo=self._getTodoReason(todo))
 
 
