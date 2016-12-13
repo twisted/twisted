@@ -9,6 +9,7 @@ Test reporter forwarding test results over trial distributed AMP commands.
 @since: 12.3
 """
 
+from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
 from twisted.trial.reporter import TestResult
@@ -61,8 +62,11 @@ class WorkerReporter(TestResult):
         Send a success over.
         """
         super(WorkerReporter, self).addSuccess(test)
+        testName = test.id()
+        if isinstance(testName, unicode):
+            testName = testName.encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddSuccess,
-                                    testName=test.id())
+                                    testName=testName)
 
 
     def addError(self, test, error):
@@ -70,12 +74,15 @@ class WorkerReporter(TestResult):
         Send an error over.
         """
         super(WorkerReporter, self).addError(test, error)
+        testName = test.id()
+        if isinstance(testName, unicode):
+            testName = testName.encode("utf-8")
         failure = self._getFailure(error)
         error = failure.getErrorMessage().encode("utf-8")
         errorClass = qual(failure.type).encode("utf-8")
         frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddError,
-                                    testName=test.id(),
+                                    testName=testName,
                                     error=error,
                                     errorClass=errorClass,
                                     frames=frames)
@@ -86,12 +93,15 @@ class WorkerReporter(TestResult):
         Send a Failure over.
         """
         super(WorkerReporter, self).addFailure(test, fail)
+        testName = test.id()
+        if isinstance(testName, unicode):
+            testName = testName.encode("utf-8")
         failure = self._getFailure(fail)
         fail=failure.getErrorMessage().encode("utf-8")
         failClass=qual(failure.type).encode("utf-8")
         frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddFailure,
-                                    testName=test.id(),
+                                    testName=testName,
                                     fail=fail,
                                     failClass=failClass,
                                     frames=frames)
