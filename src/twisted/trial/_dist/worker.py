@@ -43,6 +43,8 @@ class WorkerProtocol(AMP):
         """
         Run a test case by name.
         """
+        if _PY3:
+            testCase = testCase.decode("utf-8")
         case = self._loader.loadByName(testCase)
         suite = TrialSuite([case], self._forceGarbageCollection)
         suite.run(self._result)
