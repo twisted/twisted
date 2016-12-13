@@ -27,6 +27,7 @@ from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint
+from twisted.internet.address import IPv4Address, IPv6Address
 
 from twisted.web.client import (FileBodyProducer, Request, HTTPConnectionPool,
                                 ResponseDone, _HTTP11ClientFactory, URI)
@@ -715,6 +716,59 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         d.cancel()
         self.assertEqual(self.failureResultOf(connectionResult).type,
                          CancelledError)
+
+
+    def integrationTest(self, hostName, expectedAddress, addressType):
+        """
+        L{Agent} will make a TCP connection, send an HTTP request, and return a
+        L{Deferred} that fires when the response has been received.
+
+        @param hostName: The hostname to interpolate into the URL to be
+            requested.
+        @type hostName: L{bytes}
+
+        @param expectedAddress: The expected address string.
+        @type expectedAddress: L{bytes}
+
+        @param addressType: The class to construct an address out of.
+        @type addressType: L{type}
+        """
+        reactor = self.createReactor()
+        agent = client.Agent(reactor)
+        deferred = agent.request(b"GET", b"http://" + hostName + "/")
+        host, port, factory, timeout, bind = reactor.tcpClients[0]
+        self.assertEqual(host, expectedAddress)
+        peerAddress = addressType('TCP', host, port)
+        clientProtocol = factory.buildProtocol(peerAddress)
+        clientTransport = StringTransport(peerAddress=peerAddress)
+        clientProtocol.makeConnection(clientTransport)
+        lines = clientTransport.io.getvalue().split("\r\n")
+        self.assertTrue(lines[0].startswith(b"GET / HTTP"))
+        headers = dict([line.split(": ", 1) for line in lines[1:] if line])
+        self.assertEqual(headers[b'Host'], hostName)
+        self.assertNoResult(deferred)
+        clientProtocol.dataReceived(b"HTTP/1.1 200 OK"
+                                    b"\r\nX-An-Header: an-value\r\n"
+                                    b"\r\nContent-length: 12\r\n\r\n"
+                                    b"hello world!")
+        response = self.successResultOf(deferred)
+        self.assertEquals(response.headers.getRawHeaders(b'x-an-header')[0],
+                          b"an-value")
+
+
+    def test_integrationTestIPv4(self):
+        """
+        L{Agent} works over IPv4.
+        """
+        self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
+
+
+    def test_integrationTestIPv6(self):
+        """
+        L{Agent} works over IPv6.
+        """
+        self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
+                             IPv6Address)
 
 
 
