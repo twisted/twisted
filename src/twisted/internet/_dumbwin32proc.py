@@ -39,7 +39,7 @@ from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
 
 
-@_replaceIf(_PY3, getattr(os, "fsdecode"))
+@_replaceIf(_PY3, lambda x: os.fsdecode(x))
 def _fsdecode(x):
     """
     Decode a string to a L{unicode} representation, passing through existing L{unicode} unchanged.
