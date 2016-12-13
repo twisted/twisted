@@ -22,7 +22,7 @@ from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import fail, succeed
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone
-from twisted.python.compat import NativeStringIO as StringIO
+from twisted.python.compat import NativeStringIO as StringIO, unicode
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
 
@@ -298,6 +298,8 @@ class FakeTransport(object):
     calls = 0
 
     def writeToChild(self, fd, data):
+        if isinstance(self.dataString, unicode) and isinstance(data, bytes):
+            data = data.decode("utf-8")
         self.dataString += data
 
 
