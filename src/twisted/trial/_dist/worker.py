@@ -283,7 +283,7 @@ class LocalWorker(ProcessProtocol):
         self._ampProtocol.setTestStream(testLog)
         logDirectory = self._logDirectory
         if isinstance(logDirectory, unicode):
-             logDirectory = logDirectory.encode("utf-8")
+            logDirectory = logDirectory.encode("utf-8")
         d = self._ampProtocol.callRemote(workercommands.Start,
                                          directory=logDirectory)
         # Ignore the potential errors, the test suite will fail properly and it
