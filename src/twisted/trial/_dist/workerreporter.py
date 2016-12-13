@@ -97,8 +97,8 @@ class WorkerReporter(TestResult):
         if isinstance(testName, unicode):
             testName = testName.encode("utf-8")
         failure = self._getFailure(fail)
-        fail=failure.getErrorMessage().encode("utf-8")
-        failClass=qual(failure.type).encode("utf-8")
+        fail = failure.getErrorMessage().encode("utf-8")
+        failClass = qual(failure.type).encode("utf-8")
         frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddFailure,
                                     testName=testName,
@@ -112,7 +112,7 @@ class WorkerReporter(TestResult):
         Send a skip over.
         """
         super(WorkerReporter, self).addSkip(test, reason)
-        reason=str(reason).encode("utf-8")
+        reason = str(reason).encode("utf-8")
         self.ampProtocol.callRemote(managercommands.AddSkip,
                                     testName=test.id(),
                                     reason=reason)
