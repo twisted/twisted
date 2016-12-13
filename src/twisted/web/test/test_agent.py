@@ -720,6 +720,18 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
                          CancelledError)
 
 
+
+class AgentTestsMixin(object):
+    """
+    Tests for any L{IAgent} implementation.
+    """
+    def test_interface(self):
+        """
+        The agent object provides L{IAgent}.
+        """
+        self.assertTrue(verifyObject(IAgent, self.makeAgent()))
+
+
     def integrationTest(self, hostName, expectedAddress, addressType,
                         serverWrapper=lambda server: server,
                         createAgent=client.Agent,
@@ -768,35 +780,6 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEquals(response.headers.getRawHeaders(b'x-an-header')[0],
                           b"an-value")
 
-
-    def test_integrationTestIPv4(self):
-        """
-        L{Agent} works over IPv4.
-        """
-        self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
-
-
-    def test_integrationTestIPv6(self):
-        """
-        L{Agent} works over IPv6.
-        """
-        self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
-                             IPv6Address)
-
-
-
-class AgentTestsMixin(object):
-    """
-    Tests for any L{IAgent} implementation.
-    """
-    def test_interface(self):
-        """
-        The agent object provides L{IAgent}.
-        """
-        self.assertTrue(verifyObject(IAgent, self.makeAgent()))
-
-
-
 @implementer(IAgentEndpointFactory)
 class StubEndpointFactory(object):
     """
@@ -843,6 +826,21 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertIsInstance(agent._pool, HTTPConnectionPool)
         self.assertEqual(agent._pool.persistent, False)
         self.assertIdentical(agent._reactor, agent._pool._reactor)
+
+
+    def test_integrationTestIPv4(self):
+        """
+        L{Agent} works over IPv4.
+        """
+        self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
+
+
+    def test_integrationTestIPv6(self):
+        """
+        L{Agent} works over IPv6.
+        """
+        self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
+                             IPv6Address)
 
 
     def test_persistent(self):
