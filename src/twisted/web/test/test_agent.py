@@ -798,7 +798,7 @@ class IntegrationTestingMixin(object):
         pump.flush()
         lines = accumulator.currentProtocol.data.split(b"\r\n")
         self.assertTrue(lines[0].startswith(b"GET / HTTP"))
-        headers = dict([line.split(": ", 1) for line in lines[1:] if line])
+        headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
         accumulator.currentProtocol.transport.write(
