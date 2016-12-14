@@ -772,6 +772,21 @@ class IntegrationTestingMixin(object):
 
         @param addressType: The class to construct an address out of.
         @type addressType: L{type}
+
+        @param serverWrapper: A callable that takes a protocol factory and
+            returns a protocol factory; used to wrap the server / responder
+            side in a TLS server.
+        @type serverWrapper:
+            serverWrapper(L{twisted.internet.interfaces.IProtocolFactory}) ->
+            L{twisted.internet.interfaces.IProtocolFactory}
+
+        @param createAgent: A callable that takes a reactor and produces an
+            L{IAgent}; used to construct an agent with an appropriate trust
+            root for TLS.
+        @type createAgent: createAgent(reactor) -> L{IAgent}
+
+        @param scheme: The scheme to test, C{http} or C{https}
+        @type scheme: L{bytes}
         """
         reactor = self.createReactor()
         agent = createAgent(reactor)
