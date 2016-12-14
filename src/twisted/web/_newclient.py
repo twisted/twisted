@@ -409,10 +409,10 @@ class HTTPClientParser(HTTPParser):
         to keep track of this response's state.
         """
         parts = status.split(b' ', 2)
-        if len(parts) != 2:
-            raise ParseError(u"wrong number of parts", status)
-        elif len(parts) != 3:
+        if len(parts) == 2:
             parts = parts + [b'Unknown']
+        if len(parts) != 3:
+            raise ParseError(u"wrong number of parts", status)
 
         try:
             statusCode = int(parts[1])
