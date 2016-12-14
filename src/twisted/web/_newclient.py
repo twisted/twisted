@@ -412,7 +412,7 @@ class HTTPClientParser(HTTPParser):
         if len(parts) != 2:
             raise ParseError(u"wrong number of parts", status)
         elif len(parts) != 3:
-            parts = parts + ['Unknown']
+            parts = parts + [b'Unknown']
 
         try:
             statusCode = int(parts[1])
