@@ -48,14 +48,11 @@ from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
-from twisted.protocols.tls import TLSMemoryBIOFactory
-from twisted.internet.ssl import optionsForClientTLS
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
-    from twisted.protocols.tls import TLSMemoryBIOProtocol
 except ImportError:
     ssl = None
     skipWhenNoSSL = "SSL not present, cannot run SSL tests."
@@ -64,6 +61,8 @@ else:
     skipWhenSSLPresent = "SSL present."
     skipWhenNoSSL = None
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
+    from twisted.internet.ssl import optionsForClientTLS
+    from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
 
 
 
