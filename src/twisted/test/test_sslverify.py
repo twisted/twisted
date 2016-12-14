@@ -12,20 +12,14 @@ import sys
 import itertools
 
 from zope.interface import implementer
-from constantly import NamedConstant, Names
+from twisted.python.reflect import requireModule
 
 skipSSL = None
 skipSNI = None
 skipNPN = None
 skipALPN = None
-try:
-    import OpenSSL
-except ImportError:
-    skipSSL = "OpenSSL is required for SSL tests."
-    skipSNI = skipSSL
-    skipNPN = skipSSL
-    skipALPN = skipSSL
-else:
+
+if requireModule("OpenSSL"):
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
@@ -33,18 +27,19 @@ else:
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_npn_advertise_callback(lambda c: None)
-    except AttributeError:
-        skipNPN = "PyOpenSSL 0.15 or greater is required for NPN support"
     except NotImplementedError:
         skipNPN = "OpenSSL 1.0.1 or greater required for NPN support"
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.set_alpn_select_callback(lambda c: None)
-    except AttributeError:
-        skipALPN = "PyOpenSSL 0.15 or greater is required for ALPN support"
     except NotImplementedError:
         skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
+else:
+    skipSSL = "OpenSSL is required for SSL tests."
+    skipSNI = skipSSL
+    skipNPN = skipSSL
+    skipALPN = skipSSL
 
 from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
@@ -113,33 +108,6 @@ A_PEER_CERTIFICATE_PEM = """
 
 A_KEYPAIR = getModule(__name__).filePath.sibling('server.pem').getContent()
 
-
-
-class DummyOpenSSL(object):
-    """
-    A fake of the L{OpenSSL} module.
-
-    @ivar __version__: A string describing I{pyOpenSSL} version number the fake
-        is emulating.
-    @type __version__: L{str}
-    """
-    def __init__(self, major, minor, patch=None):
-        """
-        @param major: The major version number to emulate.  I{X} in the version
-            I{X.Y}.
-        @type major: L{int}
-
-        @param minor: The minor version number to emulate.  I{Y} in the version
-            I{X.Y}.
-        @type minor: L{int}
-
-        """
-        self.__version__ = "%d.%d" % (major, minor)
-        if patch is not None:
-            self.__version__ += ".%d" % (patch,)
-
-_preTwelveOpenSSL = DummyOpenSSL(0, 11)
-_postTwelveOpenSSL = DummyOpenSSL(0, 13, 1)
 
 
 def counter(counter=itertools.count()):
@@ -807,8 +775,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-                   opts._OP_CIPHER_SERVER_PREFERENCE)
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE)
         self.assertEqual(options, ctx._options & options)
 
 
@@ -837,7 +805,335 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        options = SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
+        options = SSL.OP_SINGLE_DH_USE | SSL.OP_SINGLE_ECDH_USE
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_methodIsDeprecated(self):
+        """
+        Passing C{method} to L{sslverify.OpenSSLCertificateOptions} is
+        deprecated.
+        """
+        sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            method=SSL.SSLv23_METHOD,
+        )
+
+        message = ("Passing method to twisted.internet.ssl.CertificateOptions "
+                   "was deprecated in Twisted NEXT. Please use a combination "
+                   "of insecurelyLowerMinimumTo, raiseMinimumTo, and "
+                   "lowerMaximumSecurityTo instead, as Twisted will correctly "
+                   "configure the method.")
+
+        warnings = self.flushWarnings([self.test_methodIsDeprecated])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
+
+
+    def test_tlsv1ByDefault(self):
+        """
+        L{sslverify.OpenSSLCertificateOptions} will make the default minimum
+        TLS version v1.0, if no C{method}, or C{insecurelyLowerMinimumTo} is
+        given.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsAtLeastWithMinimum(self):
+        """
+        Passing C{insecurelyLowerMinimumTo} along with C{raiseMinimumTo} to
+        L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
+        exception.
+        """
+        with self.assertRaises(TypeError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
+                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
+            )
+
+        # Best error message
+        self.assertEqual(e.exception.args, ("nope",))
+
+
+    def test_tlsProtocolsNoMethodWithAtLeast(self):
+        """
+        Passing C{raiseMinimumTo} along with C{method} to
+        L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
+        exception.
+        """
+        with self.assertRaises(TypeError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                method=SSL.SSLv23_METHOD,
+                raiseMinimumTo=sslverify.TLSVersion.TLSv1_2,
+            )
+
+        # Best error message
+        self.assertEqual(e.exception.args, ("nope",))
+
+
+    def test_tlsProtocolsNoMethodWithMinimum(self):
+        """
+        Passing C{insecurelyLowerMinimumTo} along with C{method} to
+        L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
+        exception.
+        """
+        with self.assertRaises(TypeError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                method=SSL.SSLv23_METHOD,
+                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
+            )
+
+        # Best error message
+        self.assertEqual(e.exception.args, ("nope",))
+
+
+    def test_tlsProtocolsNoMethodWithMaximum(self):
+        """
+        Passing C{lowerMaximumSecurityTo} along with C{method} to
+        L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
+        exception.
+        """
+        with self.assertRaises(TypeError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                method=SSL.SSLv23_METHOD,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+            )
+
+        # Best error message
+        self.assertEqual(e.exception.args, ("nope",))
+
+
+    def test_tlsVersionRangeInOrder(self):
+        """
+        Passing out of order TLS versions to C{insecurelyLowerMinimumTo} and
+        C{lowerMaximumSecurityTo} will cause it to raise an exception.
+        """
+        with self.assertRaises(ValueError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_0,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3)
+
+        self.assertEqual(e.exception.args, (
+            ("insecurelyLowerMinimumTo needs to be lower than "
+             "lowerMaximumSecurityTo"),))
+
+
+    def test_tlsVersionRangeInOrderAtLeast(self):
+        """
+        Passing out of order TLS versions to C{raiseMinimumTo} and
+        C{lowerMaximumSecurityTo} will cause it to raise an exception.
+        """
+        with self.assertRaises(ValueError) as e:
+            sslverify.OpenSSLCertificateOptions(
+                privateKey=self.sKey,
+                certificate=self.sCert,
+                raiseMinimumTo=sslverify.TLSVersion.TLSv1_0,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3)
+
+        self.assertEqual(e.exception.args, (
+            ("raiseMinimumTo needs to be lower than "
+             "lowerMaximumSecurityTo"),))
+
+
+    def test_tlsProtocolsreduceToMaxWithoutMin(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{lowerMaximumSecurityTo} but no C{raiseMinimumTo} or
+        C{insecurelyLowerMinimumTo} set, and C{lowerMaximumSecurityTo} is
+        below the minimum default, the minimum will be made the new maximum.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
+                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsSSLv3Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to
+        SSLv3, it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.SSLv3,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.SSLv3,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_TLSv1 |
+                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsTLSv1Point0Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.0,
+        it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_0,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_0,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsTLSv1Point1Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.1,
+        it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_1,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_1,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_2 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsTLSv1Point2Only(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.2,
+        it will exclude all others.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsAllModernTLS(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} set to TLSv1.0 and
+        C{lowerMaximumSecurityTo} to TLSv1.2, it will exclude both SSLs and
+        the (unreleased) TLSv1.3.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_0,
+            lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   opts._OP_NO_TLSv1_3)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsAtLeastAllSecureTLS(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{raiseMinimumTo} set to TLSv1.2, it will ignore all TLSs below
+        1.2 and SSL.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            raiseMinimumTo=sslverify.TLSVersion.TLSv1_2
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
+        self.assertEqual(options, ctx._options & options)
+
+
+    def test_tlsProtocolsAtLeastWillAcceptHigherDefault(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{raiseMinimumTo} set to a value lower than Twisted's default will
+        cause it to use the more secure default.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            raiseMinimumTo=sslverify.TLSVersion.SSLv3
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        # Future maintainer warning: this will break if we change our default
+        # up, so you should change it to add the relevant OP_NO flags when we
+        # do make that change and this test fails.
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3)
+        self.assertEqual(options, ctx._options & options)
+        self.assertEqual(opts._defaultMinimumTLSVersion,
+                         sslverify.TLSVersion.TLSv1_0)
+
+
+    def test_tlsProtocolsAllSecureTLS(self):
+        """
+        When calling L{sslverify.OpenSSLCertificateOptions} with
+        C{insecurelyLowerMinimumTo} set to TLSv1.2, it will ignore all TLSs below
+        1.2 and SSL.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            insecurelyLowerMinimumTo=sslverify.TLSVersion.TLSv1_2
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        options = (SSL.OP_NO_SSLv2 | SSL.OP_NO_COMPRESSION |
+                   SSL.OP_CIPHER_SERVER_PREFERENCE | SSL.OP_NO_SSLv3 |
+                   SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1)
         self.assertEqual(options, ctx._options & options)
 
 
@@ -1258,87 +1554,6 @@ class DeprecationTests(unittest.SynchronousTestCase):
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
             sslverify.OpenSSLCertificateOptions().__setstate__, {})
-
-
-
-class ProtocolVersion(Names):
-    """
-    L{ProtocolVersion} provides constants representing each version of the
-    SSL/TLS protocol.
-    """
-    SSLv2 = NamedConstant()
-    SSLv3 = NamedConstant()
-    TLSv1_0 = NamedConstant()
-    TLSv1_1 = NamedConstant()
-    TLSv1_2 = NamedConstant()
-
-
-
-class ProtocolVersionTests(unittest.TestCase):
-    """
-    Tests for L{sslverify.OpenSSLCertificateOptions}'s SSL/TLS version
-    selection features.
-    """
-    if skipSSL:
-        skip = skipSSL
-    else:
-        _METHOD_TO_PROTOCOL = {
-            SSL.SSLv2_METHOD: set([ProtocolVersion.SSLv2]),
-            SSL.SSLv3_METHOD: set([ProtocolVersion.SSLv3]),
-            SSL.TLSv1_METHOD: set([ProtocolVersion.TLSv1_0]),
-            getattr(SSL, "TLSv1_1_METHOD", object()):
-                set([ProtocolVersion.TLSv1_1]),
-            getattr(SSL, "TLSv1_2_METHOD", object()):
-                set([ProtocolVersion.TLSv1_2]),
-
-            # Presently, SSLv23_METHOD means (SSLv2, SSLv3, TLSv1.0, TLSv1.1,
-            # TLSv1.2) (excluding any protocol versions not implemented by the
-            # underlying version of OpenSSL).
-            SSL.SSLv23_METHOD: set(ProtocolVersion.iterconstants()),
-            }
-
-        _EXCLUSION_OPS = {
-            SSL.OP_NO_SSLv2: ProtocolVersion.SSLv2,
-            SSL.OP_NO_SSLv3: ProtocolVersion.SSLv3,
-            SSL.OP_NO_TLSv1: ProtocolVersion.TLSv1_0,
-            getattr(SSL, "OP_NO_TLSv1_1", 0): ProtocolVersion.TLSv1_1,
-            getattr(SSL, "OP_NO_TLSv1_2", 0): ProtocolVersion.TLSv1_2,
-            }
-
-
-    def _protocols(self, opts):
-        """
-        Determine which SSL/TLS protocol versions are allowed by C{opts}.
-
-        @param opts: An L{sslverify.OpenSSLCertificateOptions} instance to
-            inspect.
-
-        @return: A L{set} of L{NamedConstant}s from L{ProtocolVersion}
-            indicating which SSL/TLS protocol versions connections negotiated
-            using C{opts} will allow.
-        """
-        protocols = self._METHOD_TO_PROTOCOL[opts.method].copy()
-        context = opts.getContext()
-        options = context.set_options(0)
-        if opts.method == SSL.SSLv23_METHOD:
-            # Exclusions apply only to SSLv23_METHOD and no others.
-            for opt, exclude in self._EXCLUSION_OPS.items():
-                if options & opt:
-                    protocols.discard(exclude)
-        return protocols
-
-
-    def test_default(self):
-        """
-        When L{sslverify.OpenSSLCertificateOptions} is initialized with no
-        specific protocol versions all versions of TLS are allowed and no
-        versions of SSL are allowed.
-        """
-        self.assertEqual(
-            set([ProtocolVersion.TLSv1_0,
-                 ProtocolVersion.TLSv1_1,
-                 ProtocolVersion.TLSv1_2]),
-            self._protocols(sslverify.OpenSSLCertificateOptions()))
 
 
 
@@ -2710,150 +2925,12 @@ class KeyPairTests(unittest.TestCase):
 
 
 
-class OpenSSLVersionTestsMixin(object):
-    """
-    A mixin defining tests relating to the version declaration interface of
-    I{pyOpenSSL}.
-
-    This is used to verify that the fake I{OpenSSL} module presents its fake
-    version information in the same way as the real L{OpenSSL} module.
-    """
-    def test_string(self):
-        """
-        C{OpenSSL.__version__} is a native string.
-        """
-        self.assertIsInstance(self.OpenSSL.__version__, str)
-
-
-    def test_majorDotMinor(self):
-        """
-        C{OpenSSL.__version__} declares the major and minor versions as
-        non-negative integers separated by C{"."}.
-        """
-        parts = self.OpenSSL.__version__.split(".")
-        major = int(parts[0])
-        minor = int(parts[1])
-        self.assertEqual(
-            (True, True),
-            (major >= 0, minor >= 0))
-
-
-
-class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to the real C{OpenSSL} package.
-    """
-    if skipSSL is None:
-        OpenSSL = OpenSSL
-    else:
-        skip = skipSSL
-
-
-
-class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                 unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be older than 0.12.
-    """
-    OpenSSL = _preTwelveOpenSSL
-
-
-
-class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                  unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be newer than 0.12.
-    """
-    OpenSSL = _postTwelveOpenSSL
-
-
-
-class UsablePyOpenSSLTests(unittest.SynchronousTestCase):
-    """
-    Tests for L{UsablePyOpenSSLTests}.
-    """
-    if skipSSL is not None:
-        skip = skipSSL
-
-    def test_ok(self):
-        """
-        Return C{True} for usable versions including possible changes in
-        versioning.
-        """
-        for version in ["0.15.1", "1.0.0", "16.0.0"]:
-            self.assertTrue(sslverify._usablePyOpenSSL(version))
-
-    def test_tooOld(self):
-        """
-        Return C{False} for unusable versions.
-        """
-        self.assertFalse(sslverify._usablePyOpenSSL("0.11.1"))
-
-    def test_inDev(self):
-        """
-        A .dev0 suffix does not trip us up.  Since it has been introduced after
-        0.15.1, it's always C{True}.
-        """
-        for version in ["0.16.0", "1.0.0", "16.0.0"]:
-            self.assertTrue(sslverify._usablePyOpenSSL(version + ".dev0"))
-
-
-
 class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
     """
     if skipSSL is not None:
         skip = skipSSL
-
-    def test_pyOpenSSLTooOld(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        result = sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        expected = (
-            sslverify.simpleVerifyHostname, sslverify.SimpleVerificationError)
-        self.assertEqual(expected, result)
-    test_pyOpenSSLTooOld.suppress = [
-        util.suppress(
-            message="Your version of pyOpenSSL, 0.11, is out of date."),
-        ]
-
-
-    def test_pyOpenSSLTooOldWarning(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        to upgrade.
-        """
-        sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        [warning] = list(
-            warning
-            for warning
-            in self.flushWarnings()
-            if warning["category"] == UserWarning)
-
-        expectedMessage = (
-            "Your version of pyOpenSSL, 0.11, is out of date.  Please upgrade "
-            "to at least 0.12 and install service_identity from "
-            "<https://pypi.python.org/pypi/service_identity>.  Without the "
-            "service_identity module and a recent enough pyOpenSSL to support "
-            "it, Twisted can perform only rudimentary TLS client hostname "
-            "verification.  Many valid certificate/hostname mappings may be "
-            "rejected.")
-
-        self.assertEqual(
-            (warning["message"], warning["filename"], warning["lineno"]),
-            # Make sure we're abusing the warning system to a sufficient
-            # degree: there is no filename or line number that makes sense for
-            # this warning to "blame" for the problem.  It is a system
-            # misconfiguration.  So the location information should be blank
-            # (or as blank as we can make it).
-            (expectedMessage, "", 0))
 
 
     def test_dependencyMissing(self):
@@ -2865,7 +2942,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
         with SetAsideModule("service_identity"):
             sys.modules["service_identity"] = None
 
-            result = sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            result = sslverify._selectVerifyImplementation()
             expected = (
                 sslverify.simpleVerifyHostname,
                 sslverify.SimpleVerificationError)
@@ -2888,7 +2965,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
         with SetAsideModule("service_identity"):
             sys.modules["service_identity"] = None
 
-            sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            sslverify._selectVerifyImplementation()
 
         [warning] = list(
             warning
@@ -2907,13 +2984,17 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             "service_identity module: {message}.  Please install it from "
             "<https://pypi.python.org/pypi/service_identity> "
             "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module and a recent enough "
-            "pyOpenSSL to support it, Twisted can perform only "
+            "Without the service_identity module, Twisted can perform only "
             "rudimentary TLS client hostname verification.  Many valid "
             "certificate/hostname mappings may be rejected.").format(
                 message=importError)
 
         self.assertEqual(
             (warning["message"], warning["filename"], warning["lineno"]),
-            # See the comment in test_pyOpenSSLTooOldWarning.
+
+            # Make sure we're abusing the warning system to a sufficient
+            # degree: there is no filename or line number that makes sense for
+            # this warning to "blame" for the problem.  It is a system
+            # misconfiguration.  So the location information should be blank
+            # (or as blank as we can make it).
             (expectedMessage, "", 0))
