@@ -39,7 +39,7 @@ from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
-from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
@@ -1395,12 +1395,10 @@ class _StandardEndpointFactory(object):
         SSL context objects for any SSL connections the agent needs to make.
 
     @ivar _connectTimeout: If not L{None}, the timeout passed to
-        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the
-        connection timeout.
+        L{HostnameEndpoint} for specifying the connection timeout.
 
     @ivar _bindAddress: If not L{None}, the address passed to
-        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the local
-        address to bind to.
+        L{HostnameEndpoint} for specifying the local address to bind to.
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
@@ -1430,12 +1428,13 @@ class _StandardEndpointFactory(object):
 
     def endpointForURI(self, uri):
         """
-        Connect directly over TCP for C{b'http'} scheme, and TLS for C{b'https'}.
+        Connect directly over TCP for C{b'http'} scheme, and TLS for
+        C{b'https'}.
 
         @param uri: L{URI} to connect to.
 
         @return: Endpoint to connect to.
-        @rtype: L{TCP4ClientEndpoint} or L{SSL4ClientEndpoint}
+        @rtype: L{IStreamClientEndpoint}
         """
         kwargs = {}
         if self._connectTimeout is not None:
@@ -1449,13 +1448,13 @@ class _StandardEndpointFactory(object):
                               "contains non-ASCII octets, it should be ASCII "
                               "decodable.").format(uri=uri))
 
+        endpoint = HostnameEndpoint(self._reactor, host, uri.port, **kwargs)
         if uri.scheme == b'http':
-            return TCP4ClientEndpoint(self._reactor, host, uri.port, **kwargs)
+            return endpoint
         elif uri.scheme == b'https':
-            tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host,
-                                                              uri.port)
-            return SSL4ClientEndpoint(self._reactor, host, uri.port, tlsPolicy,
-                                      **kwargs)
+            connectionCreator = self._policyForHTTPS.creatorForNetloc(uri.host,
+                                                                      uri.port)
+            return wrapClientTLS(connectionCreator, endpoint)
         else:
             raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
 
