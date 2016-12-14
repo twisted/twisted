@@ -49,7 +49,7 @@ from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
 from twisted.protocols.tls import TLSMemoryBIOFactory
-from twisted.internet.ssl import optionsForClientTLS, CertificateOptions
+from twisted.internet.ssl import optionsForClientTLS
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.web.error import SchemeNotSupported
 
@@ -776,7 +776,7 @@ class IntegrationTestingMixin(object):
         """
         reactor = self.createReactor()
         agent = createAgent(reactor)
-        deferred = agent.request(b"GET", scheme + b"://" + hostName + "/")
+        deferred = agent.request(b"GET", scheme + b"://" + hostName + b"/")
         host, port, factory, timeout, bind = reactor.tcpClients[0]
         self.assertEqual(host, expectedAddress)
         peerAddress = addressType('TCP', host, port)
