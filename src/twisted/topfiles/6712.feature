@@ -1,2 +1,3 @@
-twisted.web.client.Agent now uses HostnameEndpoint for both HTTP and HTTPS,
-meaning that IPv6 and HTTPS URLs can be used together.
+twisted.web.client.Agent now uses HostnameEndpoint internally; as a
+consequence, it now supports IPv6, as well as making connections faster and
+more reliably to hosts that have more than one DNS name.
