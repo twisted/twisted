@@ -26,6 +26,7 @@ elif not _shouldEnableNewStyle():
 
 forbiddenModules = [
     "twisted.internet",
+    "twisted.python",
 ]
 
 
