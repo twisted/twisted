@@ -29,6 +29,7 @@ class InputError(FormException):
     """
 
 
+
 @_oldStyle
 class Argument:
     """Base class for form arguments."""

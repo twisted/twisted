@@ -73,7 +73,6 @@ class FailureTests(SynchronousTestCase):
         untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
         self.assertIs(f, untrapped)
 
-
     if _shouldEnableNewStyle:
         test_trapRaisesCurrentFailure.skip = (
             "In Python 3, or with new-style classes enabled on Python 2, "
@@ -95,7 +94,6 @@ class FailureTests(SynchronousTestCase):
 
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
-
 
     if not _shouldEnableNewStyle:
         test_trapRaisesWrappedException.skip = (

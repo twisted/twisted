@@ -242,31 +242,45 @@ class AdapterTests(unittest.SynchronousTestCase):
 class IMeta(Interface):
     pass
 
+
+
 @implementer(IMeta)
 class MetaAdder(components.Adapter):
     def add(self, num):
         return self.original.num + num
+
+
 
 @implementer(IMeta)
 class BackwardsAdder(components.Adapter):
     def add(self, num):
         return self.original.num - num
 
+
+
 class MetaNumber(object):
     def __init__(self, num):
         self.num = num
+
+
 
 class FakeAdder(object):
     def add(self, num):
         return num + 5
 
+
+
 class FakeNumber(object):
     num = 3
+
+
 
 class ComponentNumber(components.Componentized):
     def __init__(self):
         self.num = 0
         components.Componentized.__init__(self)
+
+
 
 @implementer(IMeta)
 class ComponentMeta(components.Adapter):
@@ -274,28 +288,40 @@ class ComponentMeta(components.Adapter):
         components.Adapter.__init__(self, original)
         self.num = self.original.num
 
+
+
 class ComponentAdder(ComponentMeta):
     def add(self, num):
         self.num += num
         return self.num
+
+
 
 class ComponentDoubler(ComponentMeta):
     def add(self, num):
         self.num += (num * 2)
         return self.original.num
 
+
+
 class IAttrX(Interface):
     def x():
         pass
+
+
 
 class IAttrXX(Interface):
     def xx():
         pass
 
+
+
 @implementer(IAttrX)
 class Xcellent(object):
     def x(self):
         return 'x!'
+
+
 
 @comparable
 class DoubleXAdapter(object):
@@ -306,6 +332,7 @@ class DoubleXAdapter(object):
         return (self.original.x(), self.original.x())
     def __cmp__(self, other):
         return cmp(self.num, other.num)
+
 
 
 class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):

@@ -22,6 +22,7 @@ class NotSupportedError(NotImplementedError):
     """
 
 
+
 @_oldStyle
 class Request:
     """I am an abstract representation of a request for an entity.
@@ -42,6 +43,7 @@ class Request:
         """The response to this request is finished; flush all data to the network stream.
         """
         raise NotImplementedError("%s.finish" % reflect.qual(self.__class__))
+
 
 
 @_oldStyle
