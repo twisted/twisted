@@ -1157,7 +1157,7 @@ class IReactorProcess(Interface):
         @type env: a L{dict} mapping L{bytes}/L{unicode} keys to
             L{bytes}/L{unicode} items, or L{None}.
         @param env: the environment variables to pass to the child process.
-            The resulting behavior varies between platforms.  If::
+            The resulting behavior varies between platforms.  If:
 
                 - C{env} is not set:
                   - On POSIX: pass an empty environment.
