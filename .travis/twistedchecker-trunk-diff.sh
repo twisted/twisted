@@ -8,8 +8,8 @@
 # * SCRIPT_NAME twisted/words/
 # * SCRIPT_NAME twisted.words
 
-set -e
-set -u
+set -e  # Exit with error is a command exits with an unchecked error.
+set -u  # Exit with error if an undefined variable is dereferenced.
 
 target="$1";
 
