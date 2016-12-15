@@ -1141,6 +1141,16 @@ class IReactorProcess(Interface):
         """
         Spawn a process, with a process protocol.
 
+        Arguments given to this function that are listed as L{bytes} or
+        L{unicode} may be encoded or decoded depending on the platform and the
+        argument type given.  On UNIX systems (Linux, FreeBSD, macOS) and
+        Python 2 on Windows, L{unicode} arguments will be encoded down to
+        L{bytes} using the encoding given by L{os.getfilesystemencoding}, to be
+        used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
+        arguments will be decoded up to L{unicode} using the encoding given by
+        L{os.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
+        thereafter) and given to Windows's native "wide" APIs.
+
         @type processProtocol: L{IProcessProtocol} provider
         @param processProtocol: An object which will be notified of all events
             related to the created process.
