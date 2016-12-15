@@ -906,10 +906,10 @@ class ReactorBase(object):
         Check for valid arguments and environment to spawnProcess.
 
         @return: A two element tuple giving values to use when creating the
-        process.  The first element of the tuple is a C{list} of C{str}
+        process.  The first element of the tuple is a C{list} of C{bytes}
         giving the values for argv of the child process.  The second element
         of the tuple is either L{None} if C{env} was L{None} or a C{dict}
-        mapping C{str} environment keys to C{str} environment values.
+        mapping C{bytes} environment keys to C{bytes} environment values.
         """
         # Any unicode string which Python would successfully implicitly
         # encode to a byte string would have worked before these explicit
@@ -925,41 +925,24 @@ class ReactorBase(object):
         #
         # -exarkun
 
-        # In the past, this function raised a DeprecationWarning when Unicode
-        # was passed to it. This has been changed to pass the Unicode through
-        # to Python 3 natively, and to still encode down to bytes on Python 2.
-        #
-        # - hawkowl
         defaultEncoding = sys.getfilesystemencoding()
 
         # Common check function
         def argChecker(arg):
             """
-            Return either a L{str} (L{bytes} on Python 2, L{unicode} on Python
-            3) or L{None}.  If the given value is not allowable for some
-            reason, L{None} is returned.  Otherwise, a possibly different
-            object which should be used in place of arg is returned.  This
-            forces unicode encoding/decoding to happen now, rather than
+            Return either L{bytes} or L{None}.  If the given value is not
+            allowable for some reason, L{None} is returned.  Otherwise, a
+            possibly different object which should be used in place of arg is
+            returned.  This forces unicode encoding to happen now, rather than
             implicitly later.
             """
-            if _PY3:
-                if isinstance(arg, bytes) and b'\0' not in arg:
-                    try:
-                        arg = arg.decode(defaultEncoding)
-                    except UnicodeDecodeError:
-                        return None
-
-                if isinstance(arg, unicode):
-                    return arg
-
-            else:
-                if isinstance(arg, unicode):
-                    try:
-                        arg = arg.encode(defaultEncoding)
-                    except UnicodeEncodeError:
-                        return None
-                if isinstance(arg, bytes) and b'\0' not in arg:
-                    return arg
+            if isinstance(arg, unicode):
+                try:
+                    arg = arg.encode(defaultEncoding)
+                except UnicodeEncodeError:
+                    return None
+            if isinstance(arg, bytes) and b'\0' not in arg:
+                return arg
 
             return None
 
