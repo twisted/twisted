@@ -1575,7 +1575,8 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 
 
-def deterministicResolvingReactor(reactor, expectedAddresses):
+def deterministicResolvingReactor(reactor, expectedAddresses=(),
+                                  hostMap=None):
     """
     Create a reactor that will deterministically resolve all hostnames it is
     passed to the list of addresses given.
@@ -1586,11 +1587,15 @@ def deterministicResolvingReactor(reactor, expectedAddresses):
         where C{list(providedBy(reactor))} is not empty); usually C{IReactor*}
         interfaces.
 
-    @param expectedAddresses: the addresses expected to be returned.  If these
-        are strings, they should be IPv4 or IPv6 literals, and they will be
-        wrapped in L{IPv4Address} and L{IPv6Address} objects in the resolution
-        result.
+    @param expectedAddresses: (optional); the addresses expected to be returned
+        for every address.  If these are strings, they should be IPv4 or IPv6
+        literals, and they will be wrapped in L{IPv4Address} and L{IPv6Address}
+        objects in the resolution result.
     @type expectedAddresses: iterable of C{object} or C{str}
+
+    @param hostMap: (optional); the names (unicode) mapped to lists of
+        addresses (str or L{IAddress}); in the same format as expectedAddress,
+        which map the results for I{specific} hostnames to addresses.
 
     @return: A new reactor which provides all the interfaces previously
         provided by C{reactor} as well as L{IReactorPluggableNameResolver}.
@@ -1599,14 +1604,16 @@ def deterministicResolvingReactor(reactor, expectedAddresses):
         C{expectedAddresses}.  However, it is not a complete implementation as
         it does not have an C{installNameResolver} method.
     """
+    if hostMap is None:
+        hostMap = {}
+    hostMap = hostMap.copy()
     @provider(IHostnameResolver)
     class SimpleNameResolver(object):
         @staticmethod
         def resolveHostName(resolutionReceiver, hostName, portNumber=0,
                             addressTypes=None, transportSemantics='TCP'):
-
             resolutionReceiver.resolutionBegan(None)
-            for expectedAddress in expectedAddresses:
+            for expectedAddress in hostMap.get(hostName, expectedAddresses):
                 if isinstance(expectedAddress, str):
                     expectedAddress = ([IPv4Address, IPv6Address]
                                        [isIPv6Address(expectedAddress)]

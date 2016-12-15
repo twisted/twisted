@@ -784,11 +784,17 @@ class ReactorBase(object):
 
 
     def getDelayedCalls(self):
-        """Return all the outstanding delayed calls in the system.
+        """
+        Return all the outstanding delayed calls in the system.
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
-        test cases."""
+        test cases.
+
+        @return: A list of outstanding delayed calls.
+        @type: L{list} of L{DelayedCall}
+        """
         return [x for x in (self._pendingTimedCalls + self._newTimedCalls) if not x.cancelled]
+
 
     def _insertNewDelayedCalls(self):
         for call in self._newTimedCalls:
@@ -831,7 +837,8 @@ class ReactorBase(object):
 
 
     def runUntilCurrent(self):
-        """Run all pending timed calls.
+        """
+        Run all pending timed calls.
         """
         if self.threadCallQueue:
             # Keep track of how many calls we actually make, as we're
@@ -899,10 +906,10 @@ class ReactorBase(object):
         Check for valid arguments and environment to spawnProcess.
 
         @return: A two element tuple giving values to use when creating the
-        process.  The first element of the tuple is a C{list} of C{str}
+        process.  The first element of the tuple is a C{list} of C{bytes}
         giving the values for argv of the child process.  The second element
         of the tuple is either L{None} if C{env} was L{None} or a C{dict}
-        mapping C{str} environment keys to C{str} environment values.
+        mapping C{bytes} environment keys to C{bytes} environment values.
         """
         # Any unicode string which Python would successfully implicitly
         # encode to a byte string would have worked before these explicit
@@ -916,32 +923,24 @@ class ReactorBase(object):
         # without ever spawning a child process.  If it succeeds, we'll save
         # the result so that Python doesn't need to do it implicitly later.
         #
-        # For any unicode which we can actually encode, we'll also issue a
-        # deprecation warning, because no one should be passing unicode here
-        # anyway.
-        #
         # -exarkun
-        defaultEncoding = sys.getdefaultencoding()
+
+        defaultEncoding = sys.getfilesystemencoding()
 
         # Common check function
         def argChecker(arg):
             """
-            Return either a str or None.  If the given value is not
-            allowable for some reason, None is returned.  Otherwise, a
-            possibly different object which should be used in place of arg
-            is returned.  This forces unicode encoding to happen now, rather
-            than implicitly later.
+            Return either L{bytes} or L{None}.  If the given value is not
+            allowable for some reason, L{None} is returned.  Otherwise, a
+            possibly different object which should be used in place of arg is
+            returned.  This forces unicode encoding to happen now, rather than
+            implicitly later.
             """
             if isinstance(arg, unicode):
                 try:
                     arg = arg.encode(defaultEncoding)
                 except UnicodeEncodeError:
                     return None
-                warnings.warn(
-                    "Argument strings and environment keys/values passed to "
-                    "reactor.spawnProcess should be bytes, not unicode.",
-                    category=DeprecationWarning,
-                    stacklevel=4)
             if isinstance(arg, bytes) and b'\0' not in arg:
                 return arg
 
@@ -1045,6 +1044,7 @@ class ReactorBase(object):
             See L{twisted.internet.interfaces.IReactorInThreads.callInThread}.
             """
             self.getThreadPool().callInThread(_callable, *args, **kwargs)
+
 
         def suggestThreadPoolSize(self, size):
             """
