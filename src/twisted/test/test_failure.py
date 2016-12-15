@@ -13,7 +13,7 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO, _PY3, _shouldEnableNewStyle
 from twisted.python import reflect
 from twisted.python import failure
 
@@ -74,9 +74,10 @@ class FailureTests(SynchronousTestCase):
         self.assertIs(f, untrapped)
 
 
-    if _PY3:
+    if _shouldEnableNewStyle:
         test_trapRaisesCurrentFailure.skip = (
-            "In Python3, Failure.trap raises the wrapped Exception "
+            "In Python 3, or with new-style classes enabled on Python 2, "
+            "Failure.trap raises the wrapped Exception "
             "instead of the original Failure instance.")
 
 
@@ -96,10 +97,10 @@ class FailureTests(SynchronousTestCase):
         self.assertIs(exception, untrapped)
 
 
-    if not _PY3:
+    if not _shouldEnableNewStyle:
         test_trapRaisesWrappedException.skip = (
-            "In Python2, Failure.trap raises the current Failure instance "
-            "instead of the wrapped Exception.")
+            "In Python2 with old-style classes, Failure.trap raises the "
+            "current Failure instance instead of the wrapped Exception.")
 
 
     def test_failureValueFromFailure(self):
@@ -838,13 +839,13 @@ class DebugModeTests(SynchronousTestCase):
         """
         # Make sure any changes we make are reversed:
         post_mortem = pdb.post_mortem
-        if _PY3:
+        if _shouldEnableNewStyle:
             origInit = failure.Failure.__init__
         else:
             origInit = failure.Failure.__dict__['__init__']
         def restore():
             pdb.post_mortem = post_mortem
-            if _PY3:
+            if _shouldEnableNewStyle:
                 failure.Failure.__init__ = origInit
             else:
                 failure.Failure.__dict__['__init__'] = origInit

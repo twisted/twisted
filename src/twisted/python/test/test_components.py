@@ -79,7 +79,7 @@ class Test(components.Adapter):
 
 
 @implementer(ITest2)
-class Test2:
+class Test2(object):
     temporaryAdapter = 1
     def __init__(self, orig):
         pass
@@ -252,15 +252,15 @@ class BackwardsAdder(components.Adapter):
     def add(self, num):
         return self.original.num - num
 
-class MetaNumber:
+class MetaNumber(object):
     def __init__(self, num):
         self.num = num
 
-class FakeAdder:
+class FakeAdder(object):
     def add(self, num):
         return num + 5
 
-class FakeNumber:
+class FakeNumber(object):
     num = 3
 
 class ComponentNumber(components.Componentized):
@@ -268,7 +268,7 @@ class ComponentNumber(components.Componentized):
         self.num = 0
         components.Componentized.__init__(self)
 
-implementer(IMeta)
+@implementer(IMeta)
 class ComponentMeta(components.Adapter):
     def __init__(self, original):
         components.Adapter.__init__(self, original)
@@ -293,12 +293,12 @@ class IAttrXX(Interface):
         pass
 
 @implementer(IAttrX)
-class Xcellent:
+class Xcellent(object):
     def x(self):
         return 'x!'
 
 @comparable
-class DoubleXAdapter:
+class DoubleXAdapter(object):
     num = 42
     def __init__(self, original):
         self.original = original
@@ -779,7 +779,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         idiomatic way to ensure that signature works; test_proxyInheritance
         verifies the how-Python-actually-calls-it signature.
         """
-        class Sample:
+        class Sample(object):
             called = False
             def hello(self):
                 self.called = True
@@ -855,4 +855,3 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertIs(yayable.ifaceAttribute, thingy)
         del proxy.ifaceAttribute
         self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
-

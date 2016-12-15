@@ -30,6 +30,7 @@ deprecatedModuleAttribute(
 
 
 
+@_oldStyle
 class InsensitiveDict:
     """
     Dictionary, that has case-insensitive keys.
@@ -433,6 +434,7 @@ def searchupwards(start, files=[], dirs=[]):
 
 
 
+@_oldStyle
 class LineLog:
     """
     A limited-size line-based log, useful for logging line-based
@@ -568,6 +570,7 @@ class _IntervalDifferentialIterator(object):
 
 
 
+@_oldStyle
 class FancyStrMixin:
     """
     Mixin providing a flexible implementation of C{__str__}.
@@ -606,6 +609,7 @@ class FancyStrMixin:
 
 
 
+@_oldStyle
 class FancyEqMixin:
     """
     Mixin that implements C{__eq__} and C{__ne__}.

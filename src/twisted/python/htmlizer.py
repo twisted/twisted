@@ -10,7 +10,10 @@ from twisted.python.compat import _tokenize, escape
 
 import tokenize, keyword
 from . import reflect
+from twisted.python._oldstyle import _oldStyle
 
+
+@_oldStyle
 class TokenPrinter:
 
     currentCol, currentLine = 0, 1
@@ -56,6 +59,7 @@ class TokenPrinter:
 
 
 
+@_oldStyle
 class HTMLWriter:
 
     noSpan = []
