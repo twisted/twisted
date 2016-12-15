@@ -30,7 +30,7 @@ from twisted.internet._resolver import (
     SimpleResolverComplexifier as _SimpleResolverComplexifier,
 )
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, iteritems, _PY3
+from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.python._oldstyle import _oldStyle
