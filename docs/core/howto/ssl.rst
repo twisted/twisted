@@ -1,8 +1,3 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
 Using TLS in Twisted
 ====================
 
@@ -204,19 +199,46 @@ For example,
     options = CertificateOptions(..., dhParameters=dhParams)
 
 Another part of the TLS protocol which ``CertificateOptions`` can control is the version of the TLS or SSL protocol used.
-This is often called the context's "method".
-By default, ``CertificateOptions`` creates contexts that require at least the TLSv1 protocol.
-``CertificateOptions`` also supports the older SSLv3 protocol (which may be required interoperate with an existing service or piece of software).
-To allow SSLv3, just pass ``OpenSSL.SSL.SSLv3_METHOD`` to ``CertificateOptions``'s initializer:
+By default, Twisted will configure it to use TLSv1.0 or later and disable the insecure SSLv3 protocol.
+Manual control over protocols can be helpful if you need to support legacy SSLv3 systems, or you wish to restrict it down to just the strongest of the TLS versions.
+
+You can ask ``CertificateOptions`` to use a more secure default minimum than Twisted's by using the ``raiseMinimumTo`` argument in the initializer:
 
 .. code-block:: python
 
-    from twisted.internet.ssl import CertificateOptions
-    from OpenSSL.SSL import SSLv3_METHOD
-    options = CertificateOptions(..., method=SSLv3_METHOD)
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(
+        ...,
+        raiseMinimumTo=TLSVersion.TLSv1_1)
 
-The somewhat confusingly-named ``OpenSSL.SSL.SSLv23_METHOD`` is also supported (to enable SSLv3 or better, based on negotiation).
-SSLv2 is insecure; it is explicitly not supported and will be disabled in all configurations.
+This will always negotiate a minimum of TLSv1.1, but will negotiate higher versions if Twisted's default is higher.
+This usage will stay secure if Twisted updates the minimum to TLSv1.2, rather than causing your application to use the now theoretically insecure minimum you set.
+
+If you need a strictly hard range of TLS versions you wish ``CertificateOptions`` to negotiate, you can use the ``insecurelyLowerMinimumTo`` and ``lowerMaximumSecurityTo`` arguments in the initializer:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(
+        ...,
+        insecurelyLowerMinimumTo=TLSVersion.TLSv1_0,
+        lowerMaximumSecurityTo=TLSVersion.TLSv1_2)
+
+This will cause it to negotiate between TLSv1.0 and TLSv1.2, and will not change if Twisted's default minimum TLS version is raised.
+It is highly recommended not to set ``lowerMaximumSecurityTo`` unless you have a peer that is known to misbehave on newer TLS versions, and to only set ``insecurelyLowerMinimumTo`` when Twisted's minimum is not acceptable.
+Using these two arguments to ``CertificateOptions`` may make your application's TLS insecure if you do not review it frequently, and should not be used in libraries.
+
+SSLv3 support is still available and you can enable support for it if you wish.
+As an example, this supports all TLS versions and SSLv3:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(
+        ...,
+        insecurelyLowerMinimumTo=TLSVersion.SSLv3)
+
+Future OpenSSL versions may completely remove the ability to negotiate the insecure SSLv3 protocol, and this will not allow you to re-enable it.
 
 Additionally, it is possible to limit the acceptable ciphers for your connection by passing an :api:`twisted.internet.interfaces.IAcceptableCiphers <IAcceptableCiphers>` object to ``CertificateOptions``.
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
