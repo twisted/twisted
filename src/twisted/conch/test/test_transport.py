@@ -416,7 +416,11 @@ class DHGroupExchangeSHA256Mixin:
 
 
 
-class ECHDMixin:
+class ECDHMixin:
+    """
+    Mixin for elliptic curve diffie-hellman tests.
+    """
+
     kexAlgorithm = b'ecdh-sha2-nistp256'
     hashProcessor = sha256
 
@@ -1150,7 +1154,7 @@ class BaseSSHTransportDHGroupExchangeSHA256Tests(
 
 
 class BaseSSHTransportEllipticCurveTests(
-        BaseSSHTransportDHGroupExchangeBaseCase, ECHDMixin,
+        BaseSSHTransportDHGroupExchangeBaseCase, ECDHMixin,
         TransportTestCase):
     """
     ecdh-sha2-nistp256 tests for TransportBase
