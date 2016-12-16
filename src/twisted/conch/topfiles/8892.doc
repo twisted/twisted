@@ -1,0 +1,1 @@
+The documentation for itwisted.conch.endpoints.SHCommandClientEndpoint.existingConnection now describes where the value for the connection parameter might come from.
