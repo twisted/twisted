@@ -127,7 +127,8 @@ class FTPServerTestCase(unittest.TestCase):
             protocols.append(self.client)
         d2.addCallback(gotClient)
 
-        self.addCleanup(proto_helpers.waitUntilAllDisconnected, reactor, protocols)
+        self.addCleanup(proto_helpers.waitUntilAllDisconnected,
+                        reactor, protocols)
         return defer.gatherResults([d1, d2])
 
     def assertCommandResponse(self, command, expectedResponseLines,
