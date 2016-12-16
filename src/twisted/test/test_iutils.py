@@ -9,7 +9,6 @@ from __future__ import division, absolute_import
 
 import warnings, os, stat, sys, signal
 
-from twisted.python.compat import _PY3
 from twisted.python.runtime import platform
 from twisted.trial import unittest
 from twisted.internet import error, reactor, utils, interfaces
@@ -171,8 +170,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
 
-    if _PY3:
-        test_outputSignal.skip = "Test hangs on Python 3 (#8583)"
     if platform.isWindows():
         test_outputSignal.skip = "Windows doesn't have real signals."
 
