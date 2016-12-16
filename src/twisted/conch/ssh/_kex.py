@@ -10,9 +10,12 @@ from __future__ import absolute_import, division
 
 from hashlib import sha1, sha256, sha384, sha512
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
 from zope.interface import Attribute, implementer, Interface
 
 from twisted.conch import error
+from twisted.conch.ssh.keys import _curveTable
 from twisted.python.compat import long
 
 
@@ -54,6 +57,7 @@ class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
     An L{_IEllipticCurveExchangeKexAlgorithm} describes a key exchange algorithm
     that uses an elliptic curve exchange between the client and server.
     """
+
 
 
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
@@ -276,6 +280,14 @@ def getSupportedKeyExchanges():
     @return: A C{list} of supported key exchange algorithm names.
     @rtype: C{list} of L{bytes}
     """
+    backend = default_backend()
+    for keyAlgorithm in list(_kexAlgorithms):
+        if keyAlgorithm.startswith(b"ecdh"):
+            keyAlgorithmDsa = keyAlgorithm.replace(b"ecdh", b"ecdsa")
+            supported = backend.elliptic_curve_exchange_algorithm_supported(
+                ec.ECDH(), _curveTable[keyAlgorithmDsa])
+            if not supported:
+                _kexAlgorithms.pop(keyAlgorithm)
     return sorted(
         _kexAlgorithms,
         key = lambda kexAlgorithm: _kexAlgorithms[kexAlgorithm].preference)
