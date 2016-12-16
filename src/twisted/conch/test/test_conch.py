@@ -586,7 +586,8 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
         """
         kexAlgorithms = []
         try:
-            output = subprocess.check_output([which('ssh')[0], '-Q', 'kex'])
+            output = subprocess.check_output([which('ssh')[0], '-Q', 'kex'],
+                                             stderr=subprocess.STDOUT)
             if not isinstance(output, str):
                 output = output.decode("utf-8")
             kexAlgorithms = output.split()
