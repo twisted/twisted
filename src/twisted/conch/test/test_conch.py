@@ -584,10 +584,14 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
 
         @return: L{defer.Deferred}
         """
-        output = subprocess.check_output([which('ssh')[0], '-Q', 'kex'])
-        if not isinstance(output, str):
-            output = output.decode("utf-8")
-        kexAlgorithms = output.split()
+        kexAlgorithms = []
+        try:
+            output = subprocess.check_output([which('ssh')[0], '-Q', 'kex'])
+            if not isinstance(output, str):
+                output = output.decode("utf-8")
+            kexAlgorithms = output.split()
+        except:
+            pass
 
         if keyExchangeAlgo not in kexAlgorithms:
             raise unittest.SkipTest(
