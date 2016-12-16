@@ -21,7 +21,10 @@ from threading import local, Lock
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import IResolutionReceiver, IResolverSimple
+from twisted.internet.interfaces import (
+    IResolutionReceiver, IResolverSimple, IReactorPluggableNameResolver,
+    IHostnameResolver,
+)
 
 from twisted.trial.unittest import (
     SynchronousTestCase as UnitTest
@@ -534,6 +537,17 @@ class ReactorInstallationTests(UnitTest, object):
     Tests for installing old and new resolvers onto a L{ReactorBase} (from
     which all of Twisted's reactor implementations derive).
     """
+
+    def test_interfaceCompliance(self):
+        """
+        L{ReactorBase} (and its subclasses) provide both
+        L{IReactorPluggableNameResolver} and L{IReactorPluggableResolver}.
+        """
+        reactor = JustEnoughReactor()
+        verifyObject(IReactorPluggableNameResolver, reactor)
+        verifyObject(IResolverSimple, reactor.resolver)
+        verifyObject(IHostnameResolver, reactor.nameResolver)
+
 
     def test_defaultToGAIResolver(self):
         """

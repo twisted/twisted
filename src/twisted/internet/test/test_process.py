@@ -356,10 +356,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                if platform.isWindows():
-                    exe = pyExe.decode('mbcs')
-                else:
-                    exe = pyExe.decode('ascii')
+                exe = pyExe.decode(sys.getfilesystemencoding())
 
                 subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
                 f2 = subprocess.Popen([exe, "-c",
