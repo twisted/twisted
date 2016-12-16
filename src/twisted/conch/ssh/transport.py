@@ -29,6 +29,9 @@ from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
 from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
 
+# This import is needed if SHA256 hashing is used.
+#from twisted.python.compat import nativeString
+
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
     NS, getNS, MP, getMP, _MPpow, ffs, int_from_bytes
@@ -475,8 +478,13 @@ class SSHTransportBase(protocol.Protocol):
     ]
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
-    supportedPublicKeys = ([b'ssh-rsa', b'ssh-dss'] +
-                        [b'ecdsa-sha2-' + curve for curve in list(keys._curveTable.keys())])
+    supportedPublicKeys = [b'ssh-rsa', b'ssh-dss']
+
+    # Add the supported EC keys, and change the name from ecdh* to ecdsa*
+    for eckey in supportedKeyExchanges:
+        if eckey.find(b'ecdh') != -1:
+            supportedPublicKeys += [eckey.replace(b'ecdh', b'ecdsa')]
+
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
     supportedVersions = (b'1.99', b'2.0')
@@ -1260,38 +1268,46 @@ class SSHServerTransport(SSHTransportBase):
         @return: None.
         """
         # Get the raw client public key.
-        clientECDHpublicKey, foo = getNS(packet)
-
+        pktPub, packet = getNS(packet)
 
         # Get the host's public and private keys
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
-
+        # Get the curve instance
+        try:
+            curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
+        except KeyError:
+            raise UnsupportedAlgorithm('unused-key')
 
         # Generate the private key
-        ecPriv = ec.generate_private_key(keys._curveTable[shortKex], default_backend())
+        ecPriv = ec.generate_private_key(curve, default_backend())
 
-        #Get the public key
+        # Get the public key
         ecPub = ecPriv.public_key()
         encPub = ecPub.public_numbers().encode_point()
 
-        serverECDHpublicKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
-            keys._curveTable[shortKex], clientECDHpublicKey).public_key(default_backend())
+        # Take the provided public key and transform it into
+        # a format for the cryptography module
+        theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
+                        curve, pktPub).public_key(default_backend())
 
-        # We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
-        sharedSecret = MP(int(binascii.hexlify(
-            ecPriv.exchange(ec.ECDH(), serverECDHpublicKey)), 16))
+        # We need to convert to hex,
+        # so we can convert to an int
+        # so we can make it a multiple precision int.
+        sharedSecret = MP(
+                       int(
+                        binascii.hexlify(
+                          ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
 
-        # Hash-processor needs to be loaded according to key-size.
+        # Finish update and digest
         h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(pubHostKey.blob()))
-        h.update(NS(clientECDHpublicKey))
+        h.update(NS(pktPub))
         h.update(NS(encPub))
         h.update(sharedSecret)
         exchangeHash = h.digest()
@@ -1367,8 +1383,9 @@ class SSHServerTransport(SSHTransportBase):
             self.ignoreNextPacket = 0
             return
 
-        # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD have the same value, so use
-        # another cue to decide what kind of message the peer sent us.
+        # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD
+        # have the same value, so use another cue
+        # to decide what kind of message the peer sent us.
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
         elif _kex.isEllipticCurve(self.kexAlg):
@@ -1560,22 +1577,20 @@ class SSHClientTransport(SSHTransportBase):
             # Connection was disconnected while doing base processing.
             # Maybe no common protocols were agreed.
             return
-
+        # Are we using ECDH?
         if _kex.isEllipticCurve(self.kexAlg):
-            # We agreed on elliptic curve key exchange algorithm.
-            shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
+            # Find the base curve info
+            self.curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
 
-            #Get the curve
-            self._curve = keys._curveTable[shortKex]
+            # Generate the keys
+            self.ecPriv = ec.generate_private_key(self.curve,
+                                                  default_backend())
+            self.ecPub = self.ecPriv.public_key()
 
-            #Generate the keys
-            self._ecPriv = ec.generate_private_key(self._curve, default_backend())
-            self._ecPub = self._ecPriv.public_key()
-
-            #DH_GEX_REQUEST_OLD is the same number we need.
+            # DH_GEX_REQUEST_OLD is the same number we need.
             self.sendPacket(
                     MSG_KEX_DH_GEX_REQUEST_OLD,
-                    NS(self._ecPub.public_numbers().encode_point()))
+                    NS(self.ecPub.public_numbers().encode_point()))
         elif _kex.isFixedGroup(self.kexAlg):
             # We agreed on a fixed group key exchange algorithm.
             self.x = _generateX(randbytes.secureRandom, 512)
@@ -1618,39 +1633,52 @@ class SSHClientTransport(SSHTransportBase):
         @return: A deferred firing when key exchange is complete.
         """
         def _continue_KEX_ECDH_REPLY(ignored, hostKey, pubKey, signature):
+            # Save off the host public key.
+            theirECHost = hostKey
 
-            # Take the provided public key and transform it into a format for the cryptography module
-            #can be changed after PR533. use keys.Key.<somemethod>
-            serverKey = ec.EllipticCurvePublicNumbers.from_encoded_point(
-                self._curve, pubKey).public_key(default_backend())
+            # Take the provided public key and transform it into a format
+            # for the cryptography module
+            theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
+                            self.curve, pubKey).public_key(
+                            default_backend())
 
-            # We need to convert to hex, so we can convert to an int so we can make a multiple precision int.
-            sharedSecret = MP(int(binascii.hexlify(
-                self._ecPriv.exchange(ec.ECDH(), serverKey)), 16))
+            # We need to convert to hex,
+            # so we can convert to an int
+            # so we can make a multiple precision int.
+            sharedSecret = MP(
+                           int(
+                           binascii.hexlify(
+                             self.ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
 
             h = _kex.getHashProcessor(self.kexAlg)()
             h.update(NS(self.ourVersionString))
             h.update(NS(self.otherVersionString))
             h.update(NS(self.ourKexInitPayload))
             h.update(NS(self.otherKexInitPayload))
-            h.update(NS(hostKey))
-            h.update(NS(self._ecPub.public_numbers().encode_point()))
+            h.update(NS(theirECHost))
+            h.update(NS(self.ecPub.public_numbers().encode_point()))
             h.update(NS(pubKey))
             h.update(sharedSecret)
+
             exchangeHash = h.digest()
 
-            if not keys.Key.fromString(hostKey).verify(signature, exchangeHash):
+            if not keys.Key.fromString(theirECHost).verify(
+                                                      signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
                                     b'bad signature')
             else:
                 self._keySetup(sharedSecret, exchangeHash)
 
-
-        # Get the host public key, the raw ECDH public key bytes and the signature
+        # Get the host public key,
+        # the raw ECDH public key bytes and the signature
         hostKey, pubKey, signature, packet = getNS(packet, 3)
 
-        fingerprint = b':'.join([binascii.hexlify(ch) for ch in
-                                 iterbytes(md5(hostKey).digest())])
+        # Easier to comment this out for now than to update all of the tests.
+        #fingerprint = nativeString(base64.b64encode(
+        #        sha256(hostKey).digest()))
+
+        fingerprint = b':'.join(
+             [binascii.hexlify(ch) for ch in iterbytes(md5(hostKey).digest())])
         d = self.verifyHostKey(hostKey, fingerprint)
         d.addCallback(_continue_KEX_ECDH_REPLY, hostKey, pubKey, signature)
         d.addErrback(

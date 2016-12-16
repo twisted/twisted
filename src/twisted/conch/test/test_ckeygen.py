@@ -217,7 +217,7 @@ class KeyGenTests(TestCase):
             "Your identification has been saved in %s\n"
             "Your public key has been saved in %s.pub\n"
             "The key fingerprint in <FingerprintFormats=MD5_HEX> is:\n"
-            "e2:3b:e8:1c:f8:c9:c7:de:8b:c0:00:68:2e:c9:2c:8a\n" % (
+            "1e:ab:83:a6:f2:04:22:99:7c:64:14:d2:ab:fa:f5:16\n" % (
                 filename,
                 filename))
         self.assertEqual(

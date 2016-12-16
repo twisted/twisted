@@ -49,6 +49,13 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
 
 
 
+class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
+    """
+    An L{_IEllipticCurveExchangeKexAlgorithm} describes a key exchange algorithm
+    that uses an elliptic curve exchange between the client and server.
+    """
+
+
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
     An L{_IGroupExchangeKexAlgorithm} describes a key exchange algorithm
@@ -68,9 +75,9 @@ class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDHSHA256(object):
+class _ECDH256(object):
     """
-    Elliptic curve key exchange with SHA-256 as HASH. Defined in
+    Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
     RFC 5656.
     """
     preference = 1
@@ -79,9 +86,9 @@ class _ECDHSHA256(object):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDHSHA384(object):
+class _ECDH384(object):
     """
-    Elliptic curve key exchange with SHA-384 as HASH. Defined in
+    Elliptic Curve Key Exchange with SHA-384 as HASH. Defined in
     RFC 5656.
     """
     preference = 2
@@ -90,9 +97,9 @@ class _ECDHSHA384(object):
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDHSHA512(object):
+class _ECDH512(object):
     """
-    Elliptic curve key exchange with SHA-512 as HASH. Defined in
+    Elliptic Curve Key Exchange with SHA-512 as HASH. Defined in
     RFC 5656.
     """
     preference = 3
@@ -167,14 +174,23 @@ class _DHGroup14SHA1(object):
 
 
 
+# Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms = {
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
     b"diffie-hellman-group1-sha1": _DHGroup1SHA1(),
     b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
-    b"ecdh-sha2-nistp256": _ECDHSHA256(),
-    b"ecdh-sha2-nistp384": _ECDHSHA384(),
-    b"ecdh-sha2-nistp521": _ECDHSHA512(),
+    b"ecdh-sha2-nistp256": _ECDH256(),
+    b"ecdh-sha2-nistp384": _ECDH384(),
+    b"ecdh-sha2-nistp521": _ECDH512(),
+    b"ecdh-sha2-nistk163": _ECDH256(),
+    b"ecdh-sha2-nistp224": _ECDH256(),
+    b"ecdh-sha2-nistk233": _ECDH256(),
+    b"ecdh-sha2-nistb233": _ECDH256(),
+    b"ecdh-sha2-nistk283": _ECDH384(),
+    b"ecdh-sha2-nistk409": _ECDH384(),
+    b"ecdh-sha2-nistb409": _ECDH384(),
+    b"ecdh-sha2-nistt571": _ECDH512()
     }
 
 
@@ -196,6 +212,21 @@ def getKex(kexAlgorithm):
         raise error.ConchError(
             "Unsupported key exchange algorithm: %s" % (kexAlgorithm,))
     return _kexAlgorithms[kexAlgorithm]
+
+
+
+def isEllipticCurve(kexAlgorithm):
+    """
+    Returns C{True} if C{kexAlgorithm} is an elliptic curve.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
+
+    @return: C{True} if C{kexAlgorithm} is an elliptic curve,
+        otherwise C{False}.
+    @rtype: C{bool}
+    """
+    return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
 
