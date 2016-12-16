@@ -1609,6 +1609,7 @@ class SSHClientTransport(SSHTransportBase):
                     self._dhMaximalGroupSize,
                     ))
 
+
     def _ssh_KEX_ECDH_REPLY(self, packet):
         """
         Called to handle a reply to a ECDH exchange message(KEX_ECDH_INIT).

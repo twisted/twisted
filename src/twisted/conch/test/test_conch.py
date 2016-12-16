@@ -606,7 +606,6 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
             'ecdh-sha2-nistp384')
 
 
-
     def test_ECDHSHA521(self):
         """
         The ecdh-sha2-nistp521 key exchange algorithm is compatible with
