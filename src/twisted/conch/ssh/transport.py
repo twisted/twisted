@@ -1242,6 +1242,82 @@ class SSHServerTransport(SSHTransportBase):
                 self.ignoreNextPacket = True # Guess was wrong
 
 
+    def _ssh_KEX_ECDH_INIT(self, packet):
+        """
+        Called from L{ssh_KEX_DH_GEX_REQUEST_OLD} to handle
+        elliptic curve key exchanges.
+
+        Payload::
+
+            string client Elliptic Curve Diffie-Hellman public key
+
+        Just like L{_ssh_KEXDH_INIT} this message type is also not dispatched
+        directly. Extra check to determine if this is really KEX_ECDH_INIT
+        is required.
+
+        First we load the host's public/private keys.
+        Then we generate the ECDH public/private keypair for the given curve.
+        With that we generate the shared secret key.
+        Then we compute the hash to sign and send back to the client
+        Along with the server's public key and the ECDH public key.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+
+        @return: None.
+        """
+        # Get the raw client public key.
+        pktPub, packet = getNS(packet)
+
+        # Get the host's public and private keys
+        pubHostKey = self.factory.publicKeys[self.keyAlg]
+        privHostKey = self.factory.privateKeys[self.keyAlg]
+
+        # Get the curve instance
+        try:
+            curve = keys._curveTable[b'ecdsa' + self.kexAlg[4:]]
+        except KeyError:
+            raise UnsupportedAlgorithm('unused-key')
+
+        # Generate the private key
+        ecPriv = ec.generate_private_key(curve, default_backend())
+
+        # Get the public key
+        ecPub = ecPriv.public_key()
+        encPub = ecPub.public_numbers().encode_point()
+
+        # Take the provided public key and transform it into
+        # a format for the cryptography module
+        theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(
+                        curve, pktPub).public_key(default_backend())
+
+        # We need to convert to hex,
+        # so we can convert to an int
+        # so we can make it a multiple precision int.
+        sharedSecret = MP(
+                       int(
+                        binascii.hexlify(
+                          ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
+
+        # Finish update and digest
+        h = _kex.getHashProcessor(self.kexAlg)()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(pubHostKey.blob()))
+        h.update(NS(pktPub))
+        h.update(NS(encPub))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        self.sendPacket(
+            MSG_KEXDH_REPLY,
+            NS(pubHostKey.blob()) + NS(encPub) +
+            NS(privHostKey.sign(exchangeHash)))
+        self._keySetup(sharedSecret, exchangeHash)
+
+
     def _ssh_KEXDH_INIT(self, packet):
         """
         Called to handle the beginning of a non-group key exchange.
