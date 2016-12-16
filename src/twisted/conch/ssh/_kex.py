@@ -67,13 +67,6 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
 
 
 
-class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
-    """
-    An L{_IEllipticCurveExchangeKexAlgorithm} describes a key exchange algorithm
-    that uses an elliptic curve key exchange between the client and server.
-    """
-
-
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
 class _ECDH256(object):
     """
@@ -242,21 +235,6 @@ def isFixedGroup(kexAlgorithm):
     @rtype: L{bool}
     """
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
-
-
-
-def isEllipticCurve(kexAlgorithm):
-    """
-    Returns C{True} if C{kexAlgorithm} is an elliptic curve algorithm.
-
-    @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{bytes}
-
-    @return: C{True} if C{kexAlgorithm} is an elliptic curve algorithm,
-        otherwise C{False}.
-    @rtype: L{bool}
-    """
-    return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
 

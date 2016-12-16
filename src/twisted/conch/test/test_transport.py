@@ -1515,25 +1515,6 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
              newKeys[4]))
 
 
-    def test_ECDH_keySetup(self):
-        """
-        Test that _keySetup sets up the next encryption keys.
-        """
-        self.proto.kexAlg = b'ecdh-sha2-nistp256'
-        self.proto.nextEncryptions = MockCipher()
-        self.simulateKeyExchange(b'AB', b'CD')
-        self.assertEqual(self.proto.sessionID, b'CD')
-        self.simulateKeyExchange(b'AB', b'EF')
-        self.assertEqual(self.proto.sessionID, b'CD')
-        self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
-        newKeys = [self.proto._getKey(c, b'AB', b'EF')
-                   for c in iterbytes(b'ABCDEF')]
-        self.assertEqual(
-            self.proto.nextEncryptions.keys,
-            (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
-             newKeys[4]))
-
-
     def test_NEWKEYS(self):
         """
         Test that NEWKEYS transitions the keys in nextEncryptions to
@@ -2262,16 +2243,6 @@ class GetMACTests(unittest.TestCase):
         """
         self.assertGetMAC(
             b"hmac-sha2-256", sha256, digestSize=32, blockPadSize=32)
-
-    def test_hmacsha2384(self):
-        """
-        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
-        algorithm name it returns a tuple of (sha384 digest object, inner pad,
-        outer pad, sha384 digest size) with a C{key} attribute set to the
-        value of the key supplied.
-        """
-        self.assertGetMAC(
-            b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=80)
 
 
     def test_hmacsha1(self):
