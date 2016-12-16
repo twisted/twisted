@@ -33,10 +33,13 @@ else:
     elif cryptography is None:
         dependencySkip = "can't run without cryptography"
 
+
     class transport: # fictional modules to make classes work
         class SSHTransportBase: pass
         class SSHServerTransport: pass
         class SSHClientTransport: pass
+
+
     class factory:
         class SSHFactory:
             pass
@@ -410,6 +413,7 @@ class DHGroupExchangeSHA256Mixin:
 
     kexAlgorithm = b'diffie-hellman-group-exchange-sha256'
     hashProcessor = sha256
+
 
 
 class ECHDMixin:
@@ -1144,6 +1148,7 @@ class BaseSSHTransportDHGroupExchangeSHA256Tests(
     """
 
 
+
 class BaseSSHTransportEllipticCurveTests(
         BaseSSHTransportDHGroupExchangeBaseCase, ECHDMixin,
         TransportTestCase):
@@ -1462,6 +1467,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertRaises(AttributeError)
         self.assertRaises(UnsupportedAlgorithm)
 
+
     def test_KEXDH_INIT_GROUP1(self):
         """
         KEXDH_INIT messages are processed when the
@@ -1495,6 +1501,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
              newKeys[4]))
+
 
     def test_ECDH_keySetup(self):
         """
@@ -2121,7 +2128,8 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
+                                                    default_backend())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
@@ -2133,8 +2141,9 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         self.proto.kexAlg = b'ecdh-sha2-nistp256'
 
-        self.proto._ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
-                                       common.NS(encPub) + common.NS(b'bad-signature'))
+        self.proto._ssh_KEX_ECDH_REPLY(
+            common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+            common.NS(encPub) + common.NS(b'bad-signature'))
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
