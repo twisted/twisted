@@ -13,7 +13,6 @@ from hashlib import sha1, sha256, sha384, sha512
 from zope.interface import Attribute, implementer, Interface
 
 from twisted.conch import error
-from twisted.conch.ssh.keys import _curveTable
 from twisted.python.compat import long
 
 
