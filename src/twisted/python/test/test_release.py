@@ -371,7 +371,7 @@ def doNotFailOnNetworkError(func):
         except FailTest as e:
             if "Failed to get object inventory" in e.args[0]:
                 raise SkipTest(("This test is prone to intermittent network "
-                                "errors. Exception was: %r") % (e,))
+                                "errors. See #8753. Exception was: %r") % (e,))
             raise
     return _
 
