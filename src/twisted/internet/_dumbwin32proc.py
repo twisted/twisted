@@ -9,6 +9,7 @@ http://isometri.cc/strips/gates_in_the_head
 from __future__ import absolute_import, division, print_function
 
 import os
+import sys
 
 # Win32 imports
 import win32api
@@ -28,18 +29,38 @@ PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items, _PY3, _maybeMBCS
+from twisted.python.compat import items, _PY3, unicode
 from twisted.python.win32 import quoteArguments
+from twisted.python.util import _replaceIf
 
 from twisted.internet import error
 
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
 
+
+@_replaceIf(_PY3, getattr(os, 'fsdecode', None))
+def _fsdecode(x):
+    """
+    Decode a string to a L{unicode} representation, passing through existing L{unicode} unchanged.
+
+    @param x: The string to be conditionally decoded.
+    @type x: L{bytes} or L{unicode}
+
+    @return: L{unicode}
+    """
+    if isinstance(x, unicode):
+        return x
+
+    return x.decode(sys.getfilesystemencoding())
+
+
+
 def debug(msg):
-    import sys
     print(msg)
     sys.stdout.flush()
+
+
 
 class _Reaper(_pollingfile._PollableResource):
 
@@ -178,13 +199,13 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         if _PY3:
             # Make sure all the arguments are Unicode.
-            args = [_maybeMBCS(x) for x in args]
+            args = [_fsdecode(x) for x in args]
 
         cmdline = quoteArguments(args)
 
         if _PY3:
             # The command, too, needs to be Unicode, if it is a value.
-            command = _maybeMBCS(command) if command else command
+            command = _fsdecode(command) if command else command
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
@@ -202,8 +223,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                 newenv = {}
                 for key, value in items(env):
 
-                    key = _maybeMBCS(key)
-                    value = _maybeMBCS(value)
+                    key = _fsdecode(key)
+                    value = _fsdecode(value)
 
                     newenv[key] = value
 
