@@ -11,6 +11,7 @@ only ever performed on Linux.
 from __future__ import print_function
 
 import glob
+import functools
 import operator
 import os
 import sys
@@ -22,7 +23,7 @@ from datetime import date
 from io import BytesIO as StringIO
 from urllib2 import urlopen
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
 from twisted.python.procutils import which
 from twisted.python import release
@@ -356,12 +357,33 @@ class UtilityTests(ExternalTempdirTestCase):
 
 
 
+def doNotFailOnNetworkError(func):
+    """
+    A decorator which makes APIBuilder tests not fail because of intermittent
+    network failures during tests.
+
+    @param func: The function to decorate.
+    """
+    @functools.wraps(func)
+    def _(*a, **kw):
+        try:
+            func(*a, **kw)
+        except FailTest as e:
+            if "Failed to get object inventory" in e.args[0]:
+                raise SkipTest(("This test is prone to intermittent network "
+                                "errors. Exception was: %r") % (e,))
+            raise
+    return _
+
+
+
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
     skip = pydoctorSkip
 
+    @doNotFailOnNetworkError
     def test_build(self):
         """
         L{APIBuilder.build} writes an index file which includes the name of the
@@ -423,6 +445,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertEqual(stdout.getvalue(), '')
 
 
+    @doNotFailOnNetworkError
     def test_buildWithPolicy(self):
         """
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
@@ -472,6 +495,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertEqual(stdout.getvalue(), '')
 
 
+    @doNotFailOnNetworkError
     def test_buildWithDeprecated(self):
         """
         The templates and System for Twisted includes adding deprecations.
