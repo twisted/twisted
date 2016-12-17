@@ -360,9 +360,13 @@ class UtilityTests(ExternalTempdirTestCase):
 def doNotFailOnNetworkError(func):
     """
     A decorator which makes APIBuilder tests not fail because of intermittent
-    network failures during tests.
+    network failures -- mamely, APIBuilder being unable to get the "object
+    inventory" of other projects.
 
     @param func: The function to decorate.
+
+    @return: A decorated function which won't fail if the object inventory
+        fetching fails.
     """
     @functools.wraps(func)
     def _(*a, **kw):
@@ -370,8 +374,9 @@ def doNotFailOnNetworkError(func):
             func(*a, **kw)
         except FailTest as e:
             if "Failed to get object inventory" in e.args[0]:
-                raise SkipTest(("This test is prone to intermittent network "
-                                "errors. See #8753. Exception was: %r") % (e,))
+                raise SkipTest(
+                    ("This test is prone to intermittent network errors. "
+                     "See ticket 8753. Exception was: %r") % (e,))
             raise
     return _
 
