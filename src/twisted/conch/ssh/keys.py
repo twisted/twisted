@@ -798,13 +798,21 @@ class Key(object):
         if self.type() == 'ED25519':
             return binascii.hexlify(self._keyObject.serialize())
         elif self.type() == 'EC':
+            data = self.data()
+            name = data['curve'].decode('utf-8')
+
             if self.isPublic():
-                return self._keyObject.public_bytes(serialization.Encoding.PEM,
-                               serialization.PublicFormat.SubjectPublicKeyInfo)
+                out = '<Elliptic Curve Public Key (%s bits)' % (name[-3:],)
             else:
-                return self._keyObject.private_bytes(serialization.Encoding.PEM,
-                                serialization.PrivateFormat.TraditionalOpenSSL,
-                                serialization.NoEncryption())
+                out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
+
+            for k, v in sorted(data.items()):
+                if _PY3 and k == 'curve':
+                    out += "\ncurve:\n\t%s" % (name,)
+                else:
+                    out += "\n%s:\n\t%s" % (k, v)
+
+            return out + ">\n"
         else:
             lines = [
                 '<%s %s (%s bits)' % (
@@ -1243,21 +1251,25 @@ class Key(object):
         """
         data = self.data()
         if self.isPublic():
-            if self.type() == 'EC':
+            if self.type() == 'ED25519':
+                retstr = binascii.hexlify(self._keyObject.serialize())
+            elif self.type() == 'EC':
                 if not extra:
                     extra = b''
-                return (self._keyObject.public_bytes(
+                retstr = (self._keyObject.public_bytes(
                     serialization.Encoding.OpenSSH,
                     serialization.PublicFormat.OpenSSH
                     ) + b' ' + extra).strip()
-
-            b64Data = encodebytes(self.blob()).replace(b'\n', b'')
-            if not extra:
-                extra = b''
-            return (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
+            else:
+                b64Data = encodebytes(self.blob()).replace(b'\n', b'')
+                if not extra:
+                    extra = b''
+                retstr = (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
+            return retstr
         else:
-
-            if self.type() == 'EC':
+            if self.type() == 'ED25519':
+                retstr = binascii.hexlify(self._keyObject.serialize())
+            elif self.type() == 'EC':
                 # EC keys has complex ASN.1 structure hence we do this this way.
                 if not extra:
                     # unencrypted private key
@@ -1265,50 +1277,51 @@ class Key(object):
                 else:
                     encryptor = serialization.BestAvailableEncryption(extra)
 
-                return self._keyObject.private_bytes(
+                retstr = self._keyObject.private_bytes(
                     serialization.Encoding.PEM,
                     serialization.PrivateFormat.TraditionalOpenSSL,
                     encryptor)
-
-            lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
-                               b' PRIVATE KEY-----'))]
-            if self.type() == 'RSA':
-                p, q = data['p'], data['q']
-                objData = (0, data['n'], data['e'], data['d'], q, p,
-                           data['d'] % (q - 1), data['d'] % (p - 1),
-                           data['u'])
             else:
-                objData = (0, data['p'], data['q'], data['g'], data['y'],
-                           data['x'])
-            asn1Sequence = univ.Sequence()
-            for index, value in izip(itertools.count(), objData):
-                asn1Sequence.setComponentByPosition(index, univ.Integer(value))
-            asn1Data = berEncoder.encode(asn1Sequence)
-            if extra:
-                iv = randbytes.secureRandom(8)
-                hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
-                hexiv = hexiv.encode('ascii')
-                lines.append(b'Proc-Type: 4,ENCRYPTED')
-                lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
-                ba = md5(extra + iv).digest()
-                bb = md5(ba + extra + iv).digest()
-                encKey = (ba + bb)[:24]
-                padLen = 8 - (len(asn1Data) % 8)
-                asn1Data += (chr(padLen) * padLen).encode('ascii')
+                lines = [b''.join((b'-----BEGIN ', self.type().encode('ascii'),
+                                   b' PRIVATE KEY-----'))]
+                if self.type() == 'RSA':
+                    p, q = data['p'], data['q']
+                    objData = (0, data['n'], data['e'], data['d'], q, p,
+                               data['d'] % (q - 1), data['d'] % (p - 1),
+                               data['u'])
+                else:
+                    objData = (0, data['p'], data['q'], data['g'], data['y'],
+                               data['x'])
+                asn1Sequence = univ.Sequence()
+                for index, value in izip(itertools.count(), objData):
+                    asn1Sequence.setComponentByPosition(index, univ.Integer(value))
+                asn1Data = berEncoder.encode(asn1Sequence)
+                if extra:
+                    iv = randbytes.secureRandom(8)
+                    hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
+                    hexiv = hexiv.encode('ascii')
+                    lines.append(b'Proc-Type: 4,ENCRYPTED')
+                    lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
+                    ba = md5(extra + iv).digest()
+                    bb = md5(ba + extra + iv).digest()
+                    encKey = (ba + bb)[:24]
+                    padLen = 8 - (len(asn1Data) % 8)
+                    asn1Data += (chr(padLen) * padLen).encode('ascii')
 
-                encryptor = Cipher(
-                    algorithms.TripleDES(encKey),
-                    modes.CBC(iv),
-                    backend=default_backend()
-                ).encryptor()
+                    encryptor = Cipher(
+                        algorithms.TripleDES(encKey),
+                        modes.CBC(iv),
+                        backend=default_backend()
+                    ).encryptor()
 
-                asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
+                    asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
 
-            b64Data = encodebytes(asn1Data).replace(b'\n', b'')
-            lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
-            lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
-                                   b' PRIVATE KEY-----')))
-            return b'\n'.join(lines)
+                b64Data = encodebytes(asn1Data).replace(b'\n', b'')
+                lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
+                lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
+                                       b' PRIVATE KEY-----')))
+                retstr = b'\n'.join(lines)
+            return retstr
 
     def _toString_LSH(self):
         """
