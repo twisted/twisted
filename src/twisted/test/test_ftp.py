@@ -70,6 +70,10 @@ class FTPServerTestCase(unittest.TestCase):
     userAnonymous = "anonymous"
 
     def setUp(self):
+        # Keep a list of the protocols created so we can make sure they all
+        # disconnect before the tests end.
+        protocols = []
+
         # Create a directory
         self.directory = self.mktemp()
         os.mkdir(self.directory)
@@ -109,6 +113,7 @@ class FTPServerTestCase(unittest.TestCase):
                     self.serverProtocol.transport.loseConnection()
             self.addCleanup(cleanupServer)
             d1.callback(None)
+            protocols.append(protocol)
             return protocol
         self.factory.buildProtocol = _rememberProtocolInstance
 
@@ -119,7 +124,11 @@ class FTPServerTestCase(unittest.TestCase):
         def gotClient(client):
             self.client = client
             self.addCleanup(self.client.transport.loseConnection)
+            protocols.append(self.client)
         d2.addCallback(gotClient)
+
+        self.addCleanup(proto_helpers.waitUntilAllDisconnected,
+                        reactor, protocols)
         return defer.gatherResults([d1, d2])
 
     def assertCommandResponse(self, command, expectedResponseLines,
