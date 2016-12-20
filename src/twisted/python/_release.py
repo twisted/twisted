@@ -455,7 +455,7 @@ class NewsBuilder(object):
             reverse[description].sort()
         reverse = reverse.items()
         # result is a tuple of (descr, tickets)
-        reverse.sort(key=lambda result: result[1][0])
+        reverse = sorted(reverse, key=lambda result: result[1][0])
 
         fileObj.write(header + '\n' + '-' * len(header) + '\n')
         for (description, relatedTickets) in reverse:
