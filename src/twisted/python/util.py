@@ -17,6 +17,7 @@ except ImportError:
 from twisted.python.compat import _PY3, unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python._oldstyle import _oldStyle
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
@@ -567,6 +568,7 @@ class _IntervalDifferentialIterator(object):
 
 
 
+@_oldStyle
 class FancyStrMixin:
     """
     Mixin providing a flexible implementation of C{__str__}.
@@ -605,6 +607,7 @@ class FancyStrMixin:
 
 
 
+@_oldStyle
 class FancyEqMixin:
     """
     Mixin that implements C{__eq__} and C{__ne__}.
