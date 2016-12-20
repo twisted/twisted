@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=W9401,W9402
+
 """
 Tests for L{twisted.conch.manhole}.
 """
