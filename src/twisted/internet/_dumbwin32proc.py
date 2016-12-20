@@ -29,9 +29,8 @@ PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items, _PY3, unicode
+from twisted.python.compat import items, _PY3, unicode, _replaceIf
 from twisted.python.win32 import quoteArguments
-from twisted.python.util import _replaceIf
 
 from twisted.internet import error
 
