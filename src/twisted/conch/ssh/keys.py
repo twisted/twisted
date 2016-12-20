@@ -23,8 +23,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key, load_ssh_public_key)
+from cryptography import utils
 
 try:
+
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
 except ImportError:
@@ -47,22 +49,21 @@ from twisted.python.compat import (
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 
-
+# Curve lookup table
 _curveTable = {
-    b'nistp256' : ec.SECP256R1(),
-    b'nistp384' : ec.SECP384R1(),
-    b'nistp521' : ec.SECP521R1(),
-    b'nistk163' : ec.SECT163K1(),
-    b'nistp192' : ec.SECP192R1(),
-    b'nistp224' : ec.SECP224R1(),
-    b'nistk233' : ec.SECT233K1(),
-    b'nistb233' : ec.SECT233R1(),
-    b'nistk283' : ec.SECT283K1(),
-    b'nistk409' : ec.SECT409K1(),
-    b'nistb409' : ec.SECT409R1(),
-    b'nistt571' : ec.SECT571K1()
-    }
-
+    b'ecdsa-sha2-nistp256': ec.SECP256R1(),
+    b'ecdsa-sha2-nistp384': ec.SECP384R1(),
+    b'ecdsa-sha2-nistp521': ec.SECP521R1(),
+    b'ecdsa-sha2-nistk163': ec.SECT163K1(),
+    b'ecdsa-sha2-nistp192': ec.SECP192R1(),
+    b'ecdsa-sha2-nistp224': ec.SECP224R1(),
+    b'ecdsa-sha2-nistk233': ec.SECT233K1(),
+    b'ecdsa-sha2-nistb233': ec.SECT233R1(),
+    b'ecdsa-sha2-nistk283': ec.SECT283K1(),
+    b'ecdsa-sha2-nistk409': ec.SECT409K1(),
+    b'ecdsa-sha2-nistb409': ec.SECT409R1(),
+    b'ecdsa-sha2-nistt571': ec.SECT571K1()
+}
 
 _secToNist = {
     b'secp256r1' : b'nistp256',
@@ -135,6 +136,7 @@ class Key(object):
     @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey} object
         that operations are performed with.
     """
+
     @classmethod
     def fromFile(cls, filename, type=None, passphrase=None):
         """
@@ -183,7 +185,7 @@ class Key(object):
         if isinstance(data, unicode):
             data = data.encode("utf-8")
         if isinstance(passphrase, unicode):
-             passphrase = passphrase.encode("utf-8")
+            passphrase = passphrase.encode("utf-8")
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
@@ -246,9 +248,14 @@ class Key(object):
                     )
                 ).public_key(default_backend())
             )
-        elif keyType in [b'ecdsa-sha2-' + curve for curve in list(_curveTable.keys())]:
-            x, y, rest = common.getMP(rest, 2)
-            return cls._fromECComponents(x=x, y=y, curve=keyType)
+        elif keyType in _curveTable:
+            # First we have to make an EllipticCuvePublicNumbers from the
+            # provided curve and points,
+            # then turn it into a public key object.
+            return cls(
+                ec.EllipticCurvePublicNumbers.from_encoded_point(
+                      _curveTable[keyType],
+                       common.getNS(rest, 2)[1]).public_key(default_backend()))
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
 
@@ -300,7 +307,7 @@ class Key(object):
         elif keyType == b'ssh-dss':
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
-        elif keyType in [b'ecdsa-sha2-' + curve for curve in list(_curveTable.keys())]:
+        elif keyType in [curve for curve in list(_curveTable.keys())]:
             x, y, privateValue, rest = common.getMP(rest, 3)
             return cls._fromECComponents(x=x, y=y, curve=keyType,
                 privateValue=privateValue)
@@ -328,7 +335,6 @@ class Key(object):
             return cls(load_ssh_public_key(data, default_backend()))
         blob = decodebytes(data.split()[1])
         return cls._fromString_BLOB(blob)
-
 
     @classmethod
     def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
@@ -368,7 +374,7 @@ class Key(object):
         @raises EncryptedKeyError: if
             * a passphrase is not provided for an encrypted key
         """
-        lines = data.strip().split(b'\n')
+        lines = data.strip().splitlines()
         kind = lines[0][11:-17]
         if lines[1].startswith(b'Proc-Type: 4,ENCRYPTED'):
             if not passphrase:
@@ -384,7 +390,7 @@ class Key(object):
 
             if cipher in (b'AES-128-CBC', b'AES-256-CBC'):
                 algorithmClass = algorithms.AES
-                keySize = 16
+                keySize = int(int(cipher.split(b'-')[1])/8)
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
@@ -416,16 +422,15 @@ class Key(object):
             b64Data = b''.join(lines[1:-1])
             keyData = decodebytes(b64Data)
 
-        if kind == b'EC':
-            # ECDSA keys don't need base64 decoding which is required
-            # for RSA or DSA key.
-            return cls(load_pem_private_key(data, passphrase, default_backend()))
-
         try:
             decodedKey = berDecoder.decode(keyData)[0]
         except PyAsn1Error as e:
             raise BadKeyError(
                 'Failed to decode key (Bad Passphrase?): %s' % (e,))
+
+        if kind == b'EC':
+            return cls(
+                load_pem_private_key(data, passphrase, default_backend()))
 
         if kind == b'RSA':
             if len(decodedKey) == 2:  # Alternate RSA key
@@ -435,7 +440,7 @@ class Key(object):
 
             n, e, d, p, q, dmp1, dmq1, iqmp = [
                 long(value) for value in decodedKey[1:9]
-            ]
+                ]
             if p > q:  # Make p smaller than q
                 p, q = q, p
             return cls(
@@ -469,7 +474,6 @@ class Key(object):
         else:
             raise BadKeyError("unknown key type %s" % (kind,))
 
-
     @classmethod
     def _fromString_PUBLIC_LSH(cls, data):
         """
@@ -500,7 +504,6 @@ class Key(object):
             return cls._fromRSAComponents(n=kd[b'n'], e=kd[b'e'])
         else:
             raise BadKeyError('unknown lsh key type %s' % (sexp[1][0],))
-
 
     @classmethod
     def _fromString_PRIVATE_LSH(cls, data):
@@ -537,7 +540,6 @@ class Key(object):
 
         else:
             raise BadKeyError('unknown lsh key type %s' % (sexp[1][0],))
-
 
     @classmethod
     def _fromString_AGENTV3(cls, data):
@@ -588,7 +590,6 @@ class Key(object):
         else:
             raise BadKeyError("unknown key type %s" % (keyType,))
 
-
     @classmethod
     def _guessStringType(cls, data):
         """
@@ -616,7 +617,6 @@ class Key(object):
                 return 'agentv3'
             else:
                 return 'blob'
-
 
     @classmethod
     def _fromRSAComponents(cls, n, e, d=None, p=None, q=None, u=None):
@@ -658,11 +658,10 @@ class Key(object):
                 dmq1=rsa.rsa_crt_dmq1(d, q),
                 iqmp=rsa.rsa_crt_iqmp(p, q),
                 public_numbers=publicNumbers,
-                )
+            )
             keyObject = privateNumbers.private_key(default_backend())
 
         return cls(keyObject)
-
 
     @classmethod
     def _fromDSAComponents(cls, y, p, q, g, x=None):
@@ -699,7 +698,6 @@ class Key(object):
 
         return cls(keyObject)
 
-
     @classmethod
     def _fromECComponents(cls, x, y, curve, privateValue=None):
         """
@@ -719,7 +717,7 @@ class Key(object):
         """
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
-            x=x, y=y, curve=_curveTable[curve.split(b'-')[2]])
+            x=x, y=y, curve=_curveTable[curve])
         if privateValue is None:
             # We have public components.
             keyObject = publicNumbers.public_key(default_backend())
@@ -729,7 +727,6 @@ class Key(object):
             keyObject = privateNumbers.private_key(default_backend())
 
         return cls(keyObject)
-
 
     def __init__(self, keyObject):
         """
@@ -750,7 +747,6 @@ class Key(object):
         else:
             self._keyObject = keyObject
 
-
     def __eq__(self, other):
         """
         Return True if other represents an object with the same key.
@@ -759,7 +755,6 @@ class Key(object):
             return self.type() == other.type() and self.data() == other.data()
         else:
             return NotImplemented
-
 
     def __ne__(self, other):
         """
@@ -770,33 +765,46 @@ class Key(object):
             return result
         return not result
 
-
     def __repr__(self):
         """
         Return a pretty representation of this object.
         """
-        lines = [
-            '<%s %s (%s bits)' % (
-                nativeString(self.type()),
-                self.isPublic() and 'Public Key' or 'Private Key',
-                self._keyObject.key_size)]
-        for k, v in sorted(self.data().items()):
-            if _PY3 and isinstance(k, bytes):
-                k = k.decode('ascii')
-            lines.append('attr %s:' % (k,))
-            by = common.MP(v)[4:]
-            while by:
-                m = by[:15]
-                by = by[15:]
-                o = ''
-                for c in iterbytes(m):
-                    o = o + '%02x:' % (ord(c),)
-                if len(m) < 15:
-                    o = o[:-1]
-                lines.append('\t' + o)
-        lines[-1] = lines[-1] + '>'
-        return '\n'.join(lines)
+        if self.type() == 'EC':
+            data = self.data()
+            name = data['curve'].decode('utf-8')
 
+            if self.isPublic():
+                out = '<Elliptic Curve Public Key (%s bits)' % (name[-3:],)
+            else:
+                out = '<Elliptic Curve Private Key (%s bits)' % (name[-3:],)
+
+            for k, v in sorted(data.items()):
+                if _PY3 and k == 'curve':
+                    out += "\ncurve:\n\t%s" % (name,)
+                else:
+                    out += "\n%s:\n\t%s" % (k, v)
+
+            return out + ">\n"
+        else:
+            lines = [
+                '<%s %s (%s bits)' % (
+                    nativeString(self.type()),
+                    self.isPublic() and 'Public Key' or 'Private Key',
+                    self._keyObject.key_size)]
+            for k, v in sorted(self.data().items()):
+                lines.append('attr %s:' % (k,))
+                by = common.MP(v)[4:]
+                while by:
+                    m = by[:15]
+                    by = by[15:]
+                    o = ''
+                    for c in iterbytes(m):
+                        o = o + '%02x:' % (ord(c),)
+                    if len(m) < 15:
+                        o = o[:-1]
+                    lines.append('\t' + o)
+            lines[-1] = lines[-1] + '>'
+            return '\n'.join(lines)
 
     @property
     @deprecated(Version('Twisted', 16, 0, 0))
@@ -820,7 +828,7 @@ class Key(object):
                 keyObject = RSA.construct((
                     keyData['n'],
                     long(keyData['e']),
-                    ))
+                ))
             else:
                 keyObject = RSA.construct((
                     keyData['n'],
@@ -829,7 +837,7 @@ class Key(object):
                     keyData['p'],
                     keyData['q'],
                     keyData['u'],
-                    ))
+                ))
         elif keyType == 'DSA':
             if isPublic:
                 keyObject = DSA.construct((
@@ -837,7 +845,7 @@ class Key(object):
                     keyData['g'],
                     keyData['p'],
                     keyData['q'],
-                    ))
+                ))
             else:
                 keyObject = DSA.construct((
                     keyData['y'],
@@ -845,12 +853,11 @@ class Key(object):
                     keyData['p'],
                     keyData['q'],
                     keyData['x'],
-                    ))
+                ))
         else:
             raise BadKeyError('Unsupported key type.')
 
         return keyObject
-
 
     @keyObject.setter
     @deprecated(Version('Twisted', 16, 0, 0))
@@ -868,7 +875,7 @@ class Key(object):
                     q=rawKey.q,
                     d=rawKey.d,
                     u=rawKey.u,
-                    )
+                )
             else:
                 newKey = self._fromRSAComponents(e=rawKey.e, n=rawKey.n)
         elif isinstance(value, DSA._DSAobj):
@@ -880,19 +887,18 @@ class Key(object):
                     q=rawKey.q,
                     g=rawKey.g,
                     x=rawKey.x,
-                    )
+                )
             else:
                 newKey = self._fromDSAComponents(
                     y=rawKey.y,
                     p=rawKey.p,
                     q=rawKey.q,
                     g=rawKey.g,
-                    )
+                )
         else:
             raise BadKeyError('PyCrypto key type not supported.')
 
         self._keyObject = newKey._keyObject
-
 
     def isPublic(self):
         """
@@ -903,7 +909,6 @@ class Key(object):
         return isinstance(
             self._keyObject,
             (rsa.RSAPublicKey, dsa.DSAPublicKey, ec.EllipticCurvePublicKey))
-
 
     def public(self):
         """
@@ -916,13 +921,12 @@ class Key(object):
         """
         return Key(self._keyObject.public_key())
 
-
     def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
         The fingerprint of a public key consists of the output of the
         message-digest algorithm in the specified format.
-        Supported formats include L{FingerprintFormats.MD5-HEX} and
-        L{FingerprintFormats.SHA256-BASE64}
+        Supported formats include L{FingerprintFormats.MD5_HEX} and
+        L{FingerprintFormats.SHA256_BASE64}
 
         The input to the algorithm is the public key data as specified by [RFC4253].
 
@@ -937,7 +941,7 @@ class Key(object):
 
         @param format: Format for fingerprint generation. Consists
             hash function and representation format.
-            Default is L{FingerprintFormats.MD5-HEX}
+            Default is L{FingerprintFormats.MD5_HEX}
 
         @since: 8.2
 
@@ -952,11 +956,10 @@ class Key(object):
         elif format is FingerprintFormats.MD5_HEX:
             return nativeString(
                 b':'.join([binascii.hexlify(x)
-                for x in iterbytes(md5(self.blob()).digest())]))
+                           for x in iterbytes(md5(self.blob()).digest())]))
         else:
             raise BadFingerPrintFormat(
                 'Unsupported fingerprint format: %s' % (format,))
-
 
     def type(self):
         """
@@ -979,8 +982,6 @@ class Key(object):
             raise RuntimeError(
                 'unknown type of object: %r' % (self._keyObject,))
 
-
-
     def sshType(self):
         """
         Get the type of the object we wrap as defined in the SSH protocol,
@@ -997,7 +998,6 @@ class Key(object):
         else:
             return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()]
 
-
     def size(self):
         """
         Return the size of the object we wrap.
@@ -1010,7 +1010,6 @@ class Key(object):
         elif self.type() == 'EC':
             return self._keyObject.curve.key_size
         return self._keyObject.key_size
-
 
     def data(self):
         """
@@ -1054,7 +1053,7 @@ class Key(object):
             }
         elif isinstance(self._keyObject, ec.EllipticCurvePublicKey):
             numbers = self._keyObject.public_numbers()
-            return{
+            return {
                 "x": numbers.x,
                 "y": numbers.y,
                 "curve": self.sshType(),
@@ -1067,9 +1066,9 @@ class Key(object):
                 "privateValue": numbers.private_value,
                 "curve": self.sshType(),
             }
+
         else:
             raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
-
 
     def blob(self):
         """
@@ -1108,9 +1107,11 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']))
-        else:
-            return (common.NS(data['curve']) + common.MP(data['x']) +
-                    common.MP(data['y']))
+        else: # EC
+            byteLength = (self._keyObject.curve.key_size + 7) // 8
+            return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
+                common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
+                utils.int_to_bytes(data['y'], byteLength)))
 
 
     def privateBlob(self):
@@ -1156,10 +1157,9 @@ class Key(object):
             return (common.NS(b'ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']) + common.MP(data['x']))
-        else:
+        else: # EC
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['privateValue']))
-
 
     def toString(self, type, extra=None):
         """
@@ -1188,7 +1188,6 @@ class Key(object):
             return method(extra)
         else:
             return method()
-
 
     def _toString_OPENSSH(self, extra):
         """
@@ -1272,7 +1271,6 @@ class Key(object):
                                    b' PRIVATE KEY-----')))
             return b'\n'.join(lines)
 
-
     def _toString_LSH(self):
         """
         Return a public or private LSH key.  See _fromString_PUBLIC_LSH and
@@ -1325,7 +1323,6 @@ class Key(object):
             else:
                 raise BadKeyError("unknown key type %s'" % (type,))
 
-
     def _toString_AGENTV3(self):
         """
         Return a private Secure Shell Agent v3 key.  See
@@ -1343,7 +1340,6 @@ class Key(object):
                           data['x'])
             return common.NS(self.sshType()) + b''.join(map(common.MP, values))
 
-
     def sign(self, data):
         """
         Sign some data with this key.
@@ -1356,7 +1352,7 @@ class Key(object):
         @rtype: L{bytes}
         @return: A signature for the given data.
         """
-        keyType = self.type() # takes care of bad key type.
+        keyType = self.type()
         if keyType == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
@@ -1374,7 +1370,7 @@ class Key(object):
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
-        elif keyType == 'EC': # pragma: no branch
+        elif keyType == 'EC':  # Pragma: no branch
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1385,10 +1381,33 @@ class Key(object):
                 hashSize = hashes.SHA512()
             signer = self._keyObject.signer(ec.ECDSA(hashSize))
             signer.update(data)
-            ret = common.NS(signer.finalize())
+            signature = signer.finalize()
+            (r, s) = decode_dss_signature(signature)
 
+            rb = int_to_bytes(r)
+            sb = int_to_bytes(s)
+
+            # Int_to_bytes returns rb[0] as a str in python2
+            # and an as int in python3
+            if type(rb[0]) is str:
+                rcomp = ord(rb[0])
+            else:
+                rcomp = rb[0]
+
+            # If the MSB is set, prepend a null byte for correct formatting.
+            if rcomp & 0x80:
+                rb = b"\x00" + rb
+
+            if type(sb[0]) is str:
+                scomp = ord(sb[0])
+            else:
+                scomp = sb[0]
+
+            if scomp & 0x80:
+                sb = b"\x00" + sb
+
+            ret = common.NS(common.NS(rb) + common.NS(sb))
         return common.NS(self.sshType()) + ret
-
 
     def verify(self, signature, data):
         """
@@ -1408,8 +1427,10 @@ class Key(object):
             signatureType, signature = b'ssh-dss', common.NS(signature)
         else:
             signatureType, signature = common.getNS(signature)
+
         if signatureType != self.sshType():
             return False
+
         keyType = self.type()
         if keyType == 'RSA':
             k = self._keyObject
@@ -1431,19 +1452,25 @@ class Key(object):
             verifier = k.verifier(
                 signature, hashes.SHA1())
 
-        elif keyType == 'EC': # pragma: no branch
+        elif keyType == 'EC':  # Pragma: no branch
+            concatenatedSignature = common.getNS(signature)[0]
+            rstr, sstr, rest = common.getNS(concatenatedSignature, 2)
+            r = int_from_bytes(rstr, 'big')
+            s = int_from_bytes(sstr, 'big')
+            signature = encode_dss_signature(r, s)
+
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
+
             keySize = self.size()
-            if keySize <= 256: # Hash size depends on key size
+            if keySize <= 256:  # Hash size depends on key size
                 hashSize = hashes.SHA256()
             elif keySize <= 384:
                 hashSize = hashes.SHA384()
             else:
                 hashSize = hashes.SHA512()
-            verifier = k.verifier(
-                common.getNS(signature)[0], ec.ECDSA(hashSize))
+            verifier = k.verifier(signature, ec.ECDSA(hashSize))
 
         verifier.update(data)
         try:
@@ -1452,7 +1479,6 @@ class Key(object):
             return False
         else:
             return True
-
 
 
 @deprecated(Version("Twisted", 15, 5, 0))
@@ -1476,7 +1502,6 @@ def objectType(obj):
         return keyDataMapping[tuple(obj.keydata)]
     except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
-
 
 
 def _getPersistentRSAKey(location, keySize=4096):
@@ -1524,7 +1549,6 @@ def _getPersistentRSAKey(location, keySize=4096):
             backend=default_backend()
         )
         return Key(privateKey)
-
 
 
 if _PY3:

@@ -18,14 +18,14 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.python.randbytes import secureRandom
-from twisted.internet import defer
-from twisted.python import log
-from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.conch.ssh.keys import Key, BadKeyError
-from twisted.python.compat import nativeString
+from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
+from twisted.internet import defer
+from twisted.python import log
+from twisted.python.compat import nativeString, unicode
+from twisted.python.randbytes import secureRandom
+from twisted.python.util import FancyEqMixin
 
 
 def _b64encode(s):
@@ -163,6 +163,8 @@ class PlainEntry(_BaseEntry):
             C{False} otherwise.
         @rtype: L{bool}
         """
+        if isinstance(hostname, unicode):
+            hostname = hostname.encode("utf-8")
         return hostname in self._hostnames
 
 
@@ -239,6 +241,8 @@ def _hmacedString(key, string):
     @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
+    if isinstance(string, unicode):
+        string = string.encode("utf-8")
     hash.update(string)
     return hash.digest()
 
@@ -482,13 +486,19 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
+
+                keytype = key.type()
+
+                if keytype is "EC":
+                    keytype = "ECDSA"
+
                 prompt = (
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
-                    "RSA key fingerprint is %s.\n"
+                    "%s key fingerprint is SHA256:%s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (nativeString(hostname), nativeString(ip),
-                     key.fingerprint()))
+                    (nativeString(hostname), nativeString(ip), keytype,
+                     key.fingerprint(format=FingerprintFormats.SHA256_BASE64)))
                 proceed = ui.prompt(prompt.encode(sys.getdefaultencoding()))
                 return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)

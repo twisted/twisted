@@ -22,10 +22,14 @@ transport = DummyTransport()
 class LineLogger(basic.LineReceiver):
 
     tag = None
-    delimiter = '\n'
+    delimiter = b'\n'
 
     def lineReceived(self, line):
-        log.msg('[%s] %s' % (self.tag, line))
+        try:
+            line = line.decode('utf-8')
+        except UnicodeDecodeError:
+            line = repr(line)
+        log.msg(u'[%s] %s' % (self.tag, line))
 
 
 @implementer(interfaces.ILoggingProcessProtocol)
@@ -43,14 +47,14 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
     def outReceived(self, data):
         self.output.dataReceived(data)
-        self.empty = data[-1] == '\n'
+        self.empty = data[-1] == b'\n'
 
     errReceived = outReceived
 
 
     def processEnded(self, reason):
         if not self.empty:
-            self.output.dataReceived('\n')
+            self.output.dataReceived(b'\n')
         self.service.connectionLost(self.name)
 
 

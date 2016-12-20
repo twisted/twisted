@@ -1,0 +1,1 @@
+twisted.conch.ssh.keys.Key.fromString now supports OpenSSL private keys with Windows line endings (\r\n) again (broken since 16.6.0).

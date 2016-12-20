@@ -30,6 +30,7 @@ else:
         sys.getfilesystemencoding())
 
 
+
 class ArrowsTests(unittest.TestCase):
     def setUp(self):
         self.underlyingTransport = StringTransport()
@@ -38,7 +39,6 @@ class ArrowsTests(unittest.TestCase):
         self.pt.protocolFactory = lambda: self.p
         self.pt.factory = self
         self.pt.makeConnection(self.underlyingTransport)
-        # self.p.makeConnection(self.pt)
 
 
     def test_printableCharacters(self):
@@ -393,7 +393,6 @@ else:
 
     class TestTransport(transport.SSHClientTransport):
         def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
-            # transport.SSHClientTransport.__init__(self, *a, **kw)
             self.protocolFactory = protocolFactory
             self.protocolArgs = protocolArgs
             self.protocolKwArgs = protocolKwArgs
@@ -430,6 +429,7 @@ else:
         pass
 
     components.registerAdapter(TestSession, TestUser, session.ISession)
+
 
 
 class NotifyingExpectableBuffer(helper.ExpectableBuffer):
@@ -773,3 +773,17 @@ class HistoricRecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, HistoricRec
 class HistoricRecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
+
+
+
+class TransportSequenceTests(unittest.TestCase):
+    """
+    L{twisted.conch.recvline.TransportSequence}
+    """
+
+    def test_invalidSequence(self):
+        """
+        Initializing a L{recvline.TransportSequence} with no args
+        raises an assertion.
+        """
+        self.assertRaises(AssertionError, recvline.TransportSequence)
