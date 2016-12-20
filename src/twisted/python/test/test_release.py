@@ -396,12 +396,12 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        self.assertIn(
-            '<a href="%s">%s</a>' % (projectURL, projectName),
-            indexPath.getContent(),
-            "Project name/location not in file contents.")
 
         quuxPath = outputPath.child("quux.html")
+        self.assertIn(
+            '<a href="%s">%s</a>' % (projectURL, projectName),
+            quuxPath.getContent(),
+            "Project name/location not in file contents.")
         self.assertTrue(
             quuxPath.exists(),
             "Package documentation file %r did not exist." % (quuxPath.path,))
@@ -449,12 +449,12 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
-            indexPath.getContent(),
-            "Project name/location not in file contents.")
 
         twistedPath = outputPath.child("twisted.html")
+        self.assertIn(
+            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            twistedPath.getContent(),
+            "Project name/location not in file contents.")
         self.assertTrue(
             twistedPath.exists(),
             "Package documentation file %r did not exist."
