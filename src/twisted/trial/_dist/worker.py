@@ -17,6 +17,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import Deferred
 from twisted.protocols.amp import AMP
+from twisted.python.compat import _PY3, unicode
 from twisted.python.failure import Failure
 from twisted.python.reflect import namedObject
 from twisted.trial.unittest import Todo
@@ -42,6 +43,8 @@ class WorkerProtocol(AMP):
         """
         Run a test case by name.
         """
+        if _PY3:
+            testCase = testCase.decode("utf-8")
         case = self._loader.loadByName(testCase)
         suite = TrialSuite([case], self._forceGarbageCollection)
         suite.run(self._result)
@@ -91,6 +94,8 @@ class LocalWorkerAMP(AMP):
         @return: A L{Failure} instance with enough information about a test
            error.
         """
+        if _PY3:
+            errorClass = errorClass.decode("utf-8")
         errorType = namedObject(errorClass)
         failure = Failure(error, errorType)
         for i in range(0, len(frames), 3):
@@ -156,6 +161,8 @@ class LocalWorkerAMP(AMP):
         """
         Print test output from the worker.
         """
+        if _PY3 and isinstance(out, bytes):
+            out = out.decode("utf-8")
         self._testStream.write(out + '\n')
         self._testStream.flush()
         return {'success': True}
@@ -278,8 +285,11 @@ class LocalWorker(ProcessProtocol):
         self._errLog = open(os.path.join(self._logDirectory, 'err.log'), 'w')
         testLog = open(os.path.join(self._logDirectory, self._logFile), 'w')
         self._ampProtocol.setTestStream(testLog)
+        logDirectory = self._logDirectory
+        if isinstance(logDirectory, unicode):
+            logDirectory = logDirectory.encode("utf-8")
         d = self._ampProtocol.callRemote(workercommands.Start,
-                                         directory=self._logDirectory)
+                                         directory=logDirectory)
         # Ignore the potential errors, the test suite will fail properly and it
         # would just print garbage.
         d.addErrback(lambda x: None)
