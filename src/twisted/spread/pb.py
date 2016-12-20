@@ -455,9 +455,11 @@ class CopiedFailure(RemoteCopy, failure.Failure):
     def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
         if file is None:
             file = log.logfile
+        failureType = self.type
+        if not isinstance(failureType, str):
+            failureType = failureType.decode("utf-8")
         file.write("Traceback from remote host -- ")
-        file.write(self.traceback)
-        file.write(self.type + ": " + self.value)
+        file.write(failureType + ": " + self.value)
         file.write('\n')
 
 
