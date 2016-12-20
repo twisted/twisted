@@ -403,6 +403,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
                       outputPath)
 
         indexPath = outputPath.child("index.html")
+        indexContent = getStrContent(indexPath)
 
         self.assertTrue(
             indexPath.exists(),
@@ -412,7 +413,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxContent = getStrContent(quuxPath)
         self.assertIn(
             '<a href="%s">%s</a>' % (projectURL, projectName),
-            quuxContent,
+            indexContent,
             "Project name/location not in file contents.")
         self.assertTrue(
             quuxPath.exists(),
