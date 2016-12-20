@@ -294,8 +294,10 @@ class RemoteReference(Serializable, styles.Ephemeral):
         self.perspective = perspective
         self.disconnectCallbacks = []
 
+
     def notifyOnDisconnect(self, callback):
-        """Register a callback to be called if our broker gets disconnected.
+        """
+        Register a callback to be called if our broker gets disconnected.
 
         This callback will be called with one argument, this instance.
         """
@@ -304,20 +306,28 @@ class RemoteReference(Serializable, styles.Ephemeral):
         if len(self.disconnectCallbacks) == 1:
             self.broker.notifyOnDisconnect(self._disconnected)
 
+
     def dontNotifyOnDisconnect(self, callback):
-        """Remove a callback that was registered with notifyOnDisconnect."""
+        """
+        Remove a callback that was registered with notifyOnDisconnect.
+        """
         self.disconnectCallbacks.remove(callback)
         if not self.disconnectCallbacks:
             self.broker.dontNotifyOnDisconnect(self._disconnected)
 
+
     def _disconnected(self):
-        """Called if we are disconnected and have callbacks registered."""
+        """
+        Called if we are disconnected and have callbacks registered.
+        """
         for callback in self.disconnectCallbacks:
             callback(self)
         self.disconnectCallbacks = None
 
+
     def jellyFor(self, jellier):
-        """If I am being sent back to where I came from, serialize as a local backreference.
+        """
+        If I am being sent back to where I came from, serialize as a local backreference.
         """
         if jellier.invoker:
             assert self.broker == jellier.invoker, "Can't send references to brokers other than their own."
@@ -325,14 +335,17 @@ class RemoteReference(Serializable, styles.Ephemeral):
         else:
             return b"unpersistable", "References cannot be serialized"
 
+
     def unjellyFor(self, unjellier, unjellyList):
         self.__init__(unjellier.invoker.unserializingPerspective, unjellier.invoker, unjellyList[1], 1)
         return self
 
-    def callRemote(self, _name, *args, **kw):
-        """Asynchronously invoke a remote method.
 
-        @type _name: C{str}
+    def callRemote(self, _name, *args, **kw):
+        """
+        Asynchronously invoke a remote method.
+
+        @type _name: L{str}
         @param _name:  the name of the remote method to invoke
         @param args: arguments to serialize for the remote function
         @param kw:  keyword arguments to serialize for the remote function.
@@ -343,32 +356,40 @@ class RemoteReference(Serializable, styles.Ephemeral):
         if not isinstance(_name, bytes):
             _name = _name.encode('utf8')
 
-        # note that we use '_name' instead of 'name' so the user can call
+        # Note that we use '_name' instead of 'name' so the user can call
         # remote methods with 'name' as a keyword parameter, like this:
         #  ref.callRemote("getPeopleNamed", count=12, name="Bob")
         return self.broker._sendMessage(b'', self.perspective, self.luid,
                                         _name, args, kw)
 
+
     def remoteMethod(self, key):
-        """Get a L{RemoteMethod} for this key.
+        """
+        Get a L{RemoteMethod} for this key.
         """
         return RemoteMethod(self, key)
 
+
     def __cmp__(self,other):
-        """Compare me [to another L{RemoteReference}].
+        """
+        Compare me [to another L{RemoteReference}].
         """
         if isinstance(other, RemoteReference):
             if other.broker == self.broker:
                 return cmp(self.luid, other.luid)
         return cmp(self.broker, other)
 
+
     def __hash__(self):
-        """Hash me.
+        """
+        Hash me.
         """
         return self.luid
 
+
     def __del__(self):
-        """Do distributed reference counting on finalization.
+        """
+        Do distributed reference counting on finalization.
         """
         if self.doRefCount:
             self.broker.sendDecRef(self.luid)
@@ -376,36 +397,41 @@ class RemoteReference(Serializable, styles.Ephemeral):
 setUnjellyableForClass("remote", RemoteReference)
 
 class Local:
-    """(internal) A reference to a local object.
+    """
+    (internal) A reference to a local object.
     """
 
     def __init__(self, object, perspective=None):
-        """Initialize.
+        """
+        Initialize.
         """
         self.object = object
         self.perspective = perspective
         self.refcount = 1
 
+
     def __repr__(self):
         return "<pb.Local %r ref:%s>" % (self.object, self.refcount)
 
+
     def incref(self):
-        """Increment and return my reference count.
+        """
+        Increment and return my reference count.
         """
         self.refcount = self.refcount + 1
         return self.refcount
 
+
     def decref(self):
-        """Decrement and return my reference count.
+        """
+        Decrement and return my reference count.
         """
         self.refcount = self.refcount - 1
         return self.refcount
 
 
-##
-# Failure
-##
 
+# Failure
 class CopyableFailure(failure.Failure, Copyable):
     """
     A L{flavors.RemoteCopy} and L{flavors.Copyable} version of
@@ -538,7 +564,8 @@ class Broker(banana.Banana):
 
 
     def resumeProducing(self):
-        """Called when the consumer attached to me runs out of buffer.
+        """
+        Called when the consumer attached to me runs out of buffer.
         """
         # Go backwards over the list so we can remove indexes from it as we go
         for pageridx in xrange(len(self.pageProducers)-1, -1, -1):
@@ -549,17 +576,22 @@ class Broker(banana.Banana):
         if not self.pageProducers:
             self.transport.unregisterProducer()
 
+
     # Streaming producer methods; not necessary to implement.
+    #
     def pauseProducing(self):
         pass
 
+
     def stopProducing(self):
         pass
+
 
     def registerPageProducer(self, pager):
         self.pageProducers.append(pager)
         if len(self.pageProducers) == 1:
             self.transport.registerProducer(self, 0)
+
 
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
@@ -597,6 +629,7 @@ class Broker(banana.Banana):
         """
         self.sendEncoded(exp)
 
+
     def proto_didNotUnderstand(self, command):
         """Respond to stock 'C{didNotUnderstand}' message.
 
@@ -605,6 +638,7 @@ class Broker(banana.Banana):
         an exception in the future.)
         """
         log.msg("Didn't understand command: %r" % command)
+
 
     def connectionReady(self):
         """Initialize. Called after Banana negotiation is done.
@@ -616,8 +650,9 @@ class Broker(banana.Banana):
             except:
                 log.deferr()
         self.connects = None
-        if self.factory: # in tests we won't have factory
+        if self.factory: # In tests we won't have factory
             self.factory.clientConnectionMade(self)
+
 
     def connectionFailed(self):
         # XXX should never get called anymore? check!
@@ -630,11 +665,12 @@ class Broker(banana.Banana):
 
     waitingForAnswers = None
 
+
     def connectionLost(self, reason):
         """The connection was lost.
         """
         self.disconnected = 1
-        # nuke potential circular references.
+        # Nuke potential circular references.
         self.luids = None
         if self.waitingForAnswers:
             for d in self.waitingForAnswers.values():
@@ -666,18 +702,27 @@ class Broker(banana.Banana):
         self.locallyCachedObjects = None
         self.localObjects = None
 
+
     def notifyOnDisconnect(self, notifier):
-        """Call the given callback when the Broker disconnects."""
+        """
+        Call the given callback when the Broker disconnects.
+        """
         assert callable(notifier)
         self.disconnects.append(notifier)
 
+
     def notifyOnFail(self, notifier):
-        """Call the given callback if the Broker fails to connect."""
+        """
+        Call the given callback if the Broker fails to connect.
+        """
         assert callable(notifier)
         self.failures.append(notifier)
 
+
     def notifyOnConnect(self, notifier):
-        """Call the given callback when the Broker connects."""
+        """
+        Call the given callback when the Broker connects.
+        """
         assert callable(notifier)
         if self.connects is None:
             try:
@@ -687,12 +732,16 @@ class Broker(banana.Banana):
         else:
             self.connects.append(notifier)
 
+
     def dontNotifyOnDisconnect(self, notifier):
-        """Remove a callback from list of disconnect callbacks."""
+        """
+        Remove a callback from list of disconnect callbacks.
+        """
         try:
             self.disconnects.remove(notifier)
         except ValueError:
             pass
+
 
     def localObjectForID(self, luid):
         """
@@ -711,6 +760,7 @@ class Broker(banana.Banana):
         return lob.object
 
     maxBrokerRefsViolations = 0
+
 
     def registerReference(self, object):
         """Get an ID for a local object.
@@ -738,6 +788,7 @@ class Broker(banana.Banana):
             self.localObjects[luid].incref()
         return luid
 
+
     def setNameForLocal(self, name, object):
         """Store a special (string) ID for this object.
 
@@ -750,6 +801,7 @@ class Broker(banana.Banana):
         assert object is not None
         self.localObjects[name] = Local(object)
 
+
     def remoteForName(self, name):
         """Returns an object from the remote name mapping.
 
@@ -761,6 +813,7 @@ class Broker(banana.Banana):
 
         return RemoteReference(None, self, name, 0)
 
+
     def cachedRemotelyAs(self, instance, incref=0):
         """Returns an ID that says what this instance is cached as remotely, or L{None} if it's not.
         """
@@ -771,14 +824,17 @@ class Broker(banana.Banana):
             self.remotelyCachedObjects[luid].incref()
         return luid
 
+
     def remotelyCachedForLUID(self, luid):
         """Returns an instance which is cached remotely, with this LUID.
         """
         return self.remotelyCachedObjects[luid].object
 
+
     def cacheRemotely(self, instance):
         """
-        XXX"""
+        XXX
+        """
         puid = instance.processUniqueID()
         luid = self.newLocalID()
         if len(self.remotelyCachedObjects) > MAX_BROKER_REFS:
@@ -795,6 +851,7 @@ class Broker(banana.Banana):
         self.remotelyCachedObjects[luid] = Local(instance, self.serializingPerspective)
         return luid
 
+
     def cacheLocally(self, cid, instance):
         """(internal)
 
@@ -802,9 +859,11 @@ class Broker(banana.Banana):
         """
         self.locallyCachedObjects[cid] = instance
 
+
     def cachedLocallyAs(self, cid):
         instance = self.locallyCachedObjects[cid]
         return instance
+
 
     def serialize(self, object, perspective=None, method=None, args=None, kw=None):
         """Jelly an object according to the remote security rules for this broker.
@@ -826,7 +885,6 @@ class Broker(banana.Banana):
         # from within a getState (this causes concurrency problems anyway so
         # you really, really shouldn't do it))
 
-        # self.jellier = _NetJellier(self)
         self.serializingPerspective = perspective
         self.jellyMethod = method
         self.jellyArgs = args
@@ -839,8 +897,10 @@ class Broker(banana.Banana):
             self.jellyArgs = None
             self.jellyKw = None
 
+
     def unserialize(self, sexp, perspective = None):
-        """Unjelly an sexp according to the local security rules for this broker.
+        """
+        Unjelly an sexp according to the local security rules for this broker.
         """
 
         self.unserializingPerspective = perspective
@@ -849,17 +909,21 @@ class Broker(banana.Banana):
         finally:
             self.unserializingPerspective = None
 
+
     def newLocalID(self):
-        """Generate a new LUID.
+        """
+        Generate a new LUID.
         """
         self.currentLocalID = self.currentLocalID + 1
         return self.currentLocalID
+
 
     def newRequestID(self):
         """Generate a new request ID.
         """
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
+
 
     def _sendMessage(self, prefix, perspective, objectID, message, args, kw):
         pbc = None
@@ -894,13 +958,18 @@ class Broker(banana.Banana):
         self.sendCall(prefix + b"message", requestID, objectID, message, answerRequired, netArgs, netKw)
         return rval
 
+
     def proto_message(self, requestID, objectID, message, answerRequired, netArgs, netKw):
         self._recvMessage(self.localObjectForID, requestID, objectID, message, answerRequired, netArgs, netKw)
+
+
     def proto_cachemessage(self, requestID, objectID, message, answerRequired, netArgs, netKw):
         self._recvMessage(self.cachedLocallyAs, requestID, objectID, message, answerRequired, netArgs, netKw)
 
+
     def _recvMessage(self, findObjMethod, requestID, objectID, message, answerRequired, netArgs, netKw):
-        """Received a message-send.
+        """
+        Received a message-send.
 
         Look up message based on object, unserialize the arguments, and
         invoke it with args, and send an 'answer' or 'error' response.
@@ -940,17 +1009,19 @@ class Broker(banana.Banana):
                     # XXX Should this be done somewhere else?
                 else:
                     self._sendAnswer(netResult, requestID)
-    ##
-    # success
-    ##
 
+
+    # Success
     def _sendAnswer(self, netResult, requestID):
-        """(internal) Send an answer to a previously sent message.
+        """
+        (internal) Send an answer to a previously sent message.
         """
         self.sendCall(b"answer", requestID, netResult)
 
+
     def proto_answer(self, requestID, netResult):
-        """(internal) Got an answer to a previously sent message.
+        """
+        (internal) Got an answer to a previously sent message.
 
         Look up the appropriate callback and call it.
         """
@@ -958,9 +1029,8 @@ class Broker(banana.Banana):
         del self.waitingForAnswers[requestID]
         d.callback(self.unserialize(netResult))
 
-    ##
-    # failure
-    ##
+
+    # Failure
     def _sendFailureOrError(self, fail, requestID):
         """
         Call L{_sendError} or L{_sendFailure}, depending on whether C{fail}
@@ -973,13 +1043,17 @@ class Broker(banana.Banana):
 
 
     def _sendFailure(self, fail, requestID):
-        """Log error and then send it."""
+        """
+        Log error and then send it.
+        """
         log.msg("Peer will receive following PB traceback:")
         log.err(fail)
         self._sendError(fail, requestID)
 
+
     def _sendError(self, fail, requestID):
-        """(internal) Send an error for a previously sent message.
+        """
+        (internal) Send an error for a previously sent message.
         """
         if isinstance(fail, failure.Failure):
             # If the failures value is jellyable or allowed through security,
@@ -993,24 +1067,28 @@ class Broker(banana.Banana):
             fail.unsafeTracebacks = self.factory.unsafeTracebacks
         self.sendCall(b"error", requestID, self.serialize(fail))
 
+
     def proto_error(self, requestID, fail):
-        """(internal) Deal with an error.
+        """
+        (internal) Deal with an error.
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
         d.errback(self.unserialize(fail))
 
-    ##
-    # refcounts
-    ##
 
+    # Refcounts
+    #
     def sendDecRef(self, objectID):
-        """(internal) Send a DECREF directive.
+        """
+        (internal) Send a DECREF directive.
         """
         self.sendCall(b"decref", objectID)
 
+
     def proto_decref(self, objectID):
-        """(internal) Decrement the reference count of an object.
+        """
+        (internal) Decrement the reference count of an object.
 
         If the reference count is zero, it will free the reference to this
         object.
@@ -1029,12 +1107,15 @@ class Broker(banana.Banana):
     ##
 
     def decCacheRef(self, objectID):
-        """(internal) Send a DECACHE directive.
+        """
+        (internal) Send a DECACHE directive.
         """
         self.sendCall(b"decache", objectID)
 
+
     def proto_decache(self, objectID):
-        """(internal) Decrement the reference count of a cached object.
+        """
+        (internal) Decrement the reference count of a cached object.
 
         If the reference count is zero, free the reference, then send an
         'uncached' directive.
@@ -1056,8 +1137,10 @@ class Broker(banana.Banana):
             del self.remotelyCachedObjects[objectID]
             self.sendCall(b"uncache", objectID)
 
+
     def proto_uncache(self, objectID):
-        """(internal) Tell the client it is now OK to uncache an object.
+        """
+        (internal) Tell the client it is now OK to uncache an object.
         """
         # log.msg("uncaching locally %d" % objectID)
         obj = self.locallyCachedObjects[objectID]
@@ -1070,7 +1153,8 @@ class Broker(banana.Banana):
 
 
 def respond(challenge, password):
-    """Respond to a challenge.
+    """
+    Respond to a challenge.
 
     This is useful for challenge/response authentication.
     """
@@ -1083,13 +1167,18 @@ def respond(challenge, password):
     doubleHashedPassword = m.digest()
     return doubleHashedPassword
 
+
+
 def challenge():
-    """I return some random data."""
+    """
+    I return some random data.
+    """
     crap = b''
     for x in range(random.randrange(15,25)):
         crap = crap + chr(random.randint(65,90))
     crap = md5(crap).digest()
     return crap
+
 
 
 class PBClientFactory(protocol.ClientFactory):
@@ -1133,24 +1222,30 @@ class PBClientFactory(protocol.ClientFactory):
         self._broker = None
         self._root = None
 
+
     def _failAll(self, reason):
         deferreds = self.rootObjectRequests
         self._reset()
         for d in deferreds:
             d.errback(reason)
 
+
     def clientConnectionFailed(self, connector, reason):
         self._failAll(reason)
 
+
     def clientConnectionLost(self, connector, reason, reconnecting=0):
-        """Reconnecting subclasses should call with reconnecting=1."""
+        """
+        Reconnecting subclasses should call with reconnecting=1.
+        """
         if reconnecting:
-            # any pending requests will go to next connection attempt
+            # Any pending requests will go to next connection attempt
             # so we don't fail them.
             self._broker = None
             self._root = None
         else:
             self._failAll(reason)
+
 
     def clientConnectionMade(self, broker):
         self._broker = broker
@@ -1160,19 +1255,23 @@ class PBClientFactory(protocol.ClientFactory):
         for d in ds:
             d.callback(self._root)
 
+
     def getRootObject(self):
-        """Get root object of remote PB server.
+        """
+        Get root object of remote PB server.
 
         @return: Deferred of the root object.
         """
         if self._broker and not self._broker.disconnected:
-           return defer.succeed(self._root)
+            return defer.succeed(self._root)
         d = defer.Deferred()
         self.rootObjectRequests.append(d)
         return d
 
+
     def disconnect(self):
-        """If the factory is connected, close the connection.
+        """
+        If the factory is connected, close the connection.
 
         Note that if you set up the factory to reconnect, you will need to
         implement extra logic to prevent automatic reconnection after this
@@ -1181,9 +1280,11 @@ class PBClientFactory(protocol.ClientFactory):
         if self._broker:
             self._broker.transport.loseConnection()
 
+
     def _cbSendUsername(self, root, username, password, client):
         return root.callRemote("login", username).addCallback(
             self._cbResponse, password, client)
+
 
     def _cbResponse(self, challenges, password, client):
         challenge, challenger = challenges
@@ -1279,9 +1380,11 @@ class PBServerFactory(protocol.ServerFactory):
         proto.setNameForLocal("root", self.root.rootObject(proto))
         return proto
 
+
     def clientConnectionMade(self, protocol):
         # XXX does this method make any sense?
         pass
+
 
 
 class IUsernameMD5Password(ICredentials):
@@ -1310,6 +1413,7 @@ class IUsernameMD5Password(ICredentials):
             be called back with one of these values.
         """
 
+
     def checkMD5Password(password):
         """
         Validate these credentials against the correct MD5 digest of the
@@ -1326,12 +1430,16 @@ class IUsernameMD5Password(ICredentials):
         """
 
 
+
 @implementer(IPBRoot)
 class _PortalRoot:
-    """Root object, used to login to portal."""
+    """
+    Root object, used to login to portal.
+    """
 
     def __init__(self, portal):
         self.portal = portal
+
 
     def rootObject(self, broker):
         return _PortalWrapper(self.portal, broker)
@@ -1427,7 +1535,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
         return d
 
 
-    # IUsernameHashedPassword:
+    # IUsernameHashedPassword
     def checkPassword(self, password):
         return self.checkMD5Password(md5(password).digest())
 
