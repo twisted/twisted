@@ -69,31 +69,31 @@ class ManholeProtocolTests(unittest.TestCase):
 
 
 class WriterTests(unittest.TestCase):
-    def testInteger(self):
+    def test_Integer(self):
         manhole.lastColorizedLine("1")
 
 
-    def testDoubleQuoteString(self):
+    def test_DoubleQuoteString(self):
         manhole.lastColorizedLine('"1"')
 
 
-    def testSingleQuoteString(self):
+    def test_SingleQuoteString(self):
         manhole.lastColorizedLine("'1'")
 
 
-    def testTripleSingleQuotedString(self):
+    def test_TripleSingleQuotedString(self):
         manhole.lastColorizedLine("'''1'''")
 
 
-    def testTripleDoubleQuotedString(self):
+    def test_TripleDoubleQuotedString(self):
         manhole.lastColorizedLine('"""1"""')
 
 
-    def testFunctionDefinition(self):
+    def test_FunctionDefinition(self):
         manhole.lastColorizedLine("def foo():")
 
 
-    def testClassDefinition(self):
+    def test_ClassDefinition(self):
         manhole.lastColorizedLine("class foo:")
 
 
