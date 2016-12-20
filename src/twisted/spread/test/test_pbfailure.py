@@ -4,7 +4,6 @@
 """
 Tests for error handling in PB.
 """
-from io import BytesIO, StringIO
 from twisted.internet import reactor, defer
 from twisted.python import log
 from twisted.python.compat import _PY3, NativeStringIO
