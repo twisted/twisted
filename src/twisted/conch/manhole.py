@@ -19,6 +19,7 @@ from io import BytesIO
 from twisted.conch import recvline
 
 from twisted.internet import defer
+from twisted.python.compat import _tokenize
 from twisted.python.htmlizer import TokenPrinter
 
 class FileWrapper:
@@ -322,9 +323,12 @@ def lastColorizedLine(source):
     p = TokenPrinter(w.write).printtoken
     s = BytesIO(source)
 
-    tokenize.tokenize(s.readline, p)
+    for token in _tokenize(s.readline):
+        (tokenType, string, start, end, line) = token
+        p(tokenType, string, start, end, line)
 
-    return str(w)
+    line = str(w).encode("utf-8")
+    return line
 
 
 
