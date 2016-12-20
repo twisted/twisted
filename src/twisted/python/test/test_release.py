@@ -1069,7 +1069,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         self._commit(project)
         builder.buildAll(project)
 
-        self.assertEqual(5, len(project.children()))
+        self.assertEqual(5, len(list(project.children())))
         output = self._getStatus(project)
         removed = [line for line in output.splitlines()
                    if line.startswith("D ")]
