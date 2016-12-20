@@ -70,30 +70,51 @@ class ManholeProtocolTests(unittest.TestCase):
 
 class WriterTests(unittest.TestCase):
     def test_Integer(self):
+        """
+        Colorize an integer.
+        """
         manhole.lastColorizedLine("1")
 
 
     def test_DoubleQuoteString(self):
+        """
+        Colorize an integer in double quotes.
+        """
         manhole.lastColorizedLine('"1"')
 
 
     def test_SingleQuoteString(self):
+        """
+        Colorize an integer in single quotes.
+        """
         manhole.lastColorizedLine("'1'")
 
 
     def test_TripleSingleQuotedString(self):
+        """
+        Colorize an integer in triple quotes.
+        """
         manhole.lastColorizedLine("'''1'''")
 
 
     def test_TripleDoubleQuotedString(self):
+        """
+        Colorize an integer in triple and double quotes.
+        """
         manhole.lastColorizedLine('"""1"""')
 
 
     def test_FunctionDefinition(self):
+        """
+        Colorize a function definition.
+        """
         manhole.lastColorizedLine("def foo():")
 
 
     def test_ClassDefinition(self):
+        """
+        Colorize a class definition.
+        """
         manhole.lastColorizedLine("class foo:")
 
 
@@ -107,6 +128,9 @@ class ManholeLoopbackMixin:
 
 
     def test_SimpleExpression(self):
+        """
+        Evaluate simple expression.
+        """
         done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
@@ -123,6 +147,9 @@ class ManholeLoopbackMixin:
 
 
     def test_TripleQuoteLineContinuation(self):
+        """
+        Evaluate line continuation in triple quotes.
+        """
         done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
@@ -140,6 +167,9 @@ class ManholeLoopbackMixin:
 
 
     def test_FunctionDefinition(self):
+        """
+        Evaluate function definition.
+        """
         done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
@@ -161,6 +191,9 @@ class ManholeLoopbackMixin:
 
 
     def test_ClassDefinition(self):
+        """
+        Evaluate class definition.
+        """
         done = self.recvlineClient.expect(b"done")
         self._testwrite(
             b"class Foo:\n"
@@ -183,6 +216,9 @@ class ManholeLoopbackMixin:
 
 
     def test_Exception(self):
+        """
+        Evaluate raising an exception.
+        """
         done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
@@ -202,6 +238,9 @@ class ManholeLoopbackMixin:
 
 
     def test_ControlC(self):
+        """
+        Evaluate interrupting with CTRL-C.
+        """
         done = self.recvlineClient.expect(b"done")
 
         self._testwrite(
@@ -247,6 +286,9 @@ class ManholeLoopbackMixin:
 
 
     def test_ControlBackslash(self):
+        """
+        Evaluate cancelling with CTRL-\.
+        """
         self._testwrite(b"cancelled line")
         partialLine = self.recvlineClient.expect(b"cancelled line")
 

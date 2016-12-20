@@ -94,6 +94,8 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         value is 1 if more input is required, 0 if the line was dealt
         with in some way (this is the same as runsource()).
 
+        @param line: line of text
+        @type line: L{bytes}
         """
         self.buffer.append(line)
         source = b"\n".join(self.buffer)
@@ -316,6 +318,9 @@ def lastColorizedLine(source):
     Tokenize and colorize the given Python source.
 
     Returns a VT102-format colorized version of the last line of C{source}.
+
+    @param source: Python source code
+    @type source: L{str} or L{bytes}
     """
     if not isinstance(source, bytes):
         source = source.encode("utf-8")
