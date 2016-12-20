@@ -259,8 +259,6 @@ class Manhole(recvline.HistoricRecvLine):
 
 
     def lineReceived(self, line):
-        if not isinstance(line, bytes):
-            line = line.encode("utf-8")
         more = self.interpreter.push(line)
         self.pn = bool(more)
         if self._needsNewline():
