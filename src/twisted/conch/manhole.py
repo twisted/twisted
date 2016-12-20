@@ -96,6 +96,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 
         @param line: line of text
         @type line: L{bytes}
+        @return: L{bool} from L{code.InteractiveInterpreter.runsource}
         """
         self.buffer.append(line)
         source = b"\n".join(self.buffer)
@@ -321,6 +322,7 @@ def lastColorizedLine(source):
 
     @param source: Python source code
     @type source: L{str} or L{bytes}
+    @return: L{bytes} of colorized source
     """
     if not isinstance(source, bytes):
         source = source.encode("utf-8")
