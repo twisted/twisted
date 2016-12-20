@@ -361,7 +361,6 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.conch.test.test_manhole",
     "twisted.internet._threadedselect",
     "twisted.internet.glib2reactor",
     "twisted.internet.gtk2reactor",
