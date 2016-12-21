@@ -1,0 +1,1 @@
+Twisted now does not require a C compiler to install. The portions that do require it (sendmsg on Python 2, IOCP on Windows) are now imported from `twisted_platform_support` and is automatically installed and used when installing with any of the "_platform" setuptools extras.

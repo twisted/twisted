@@ -15,3 +15,8 @@ deprecatedModuleAttribute(
     Version("Twisted", 16, 0, 0),
     "Use twisted.__version__ instead.",
     "twisted.runner", "__version__")
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "There is no replacement for this module.",
+    "twisted.runner", "portmap")
