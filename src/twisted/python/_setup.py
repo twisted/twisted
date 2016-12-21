@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# pylint: disable=I0011,C0103
+# pylint: disable=I0011,C0103,C9302,W9401,W9402
 
 """
 Setuptools convenience functionality.
