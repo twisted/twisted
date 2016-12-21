@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr
+    _coercedUnicode, unichr, raw_input, _bytesRepr, _replaceIf
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -921,3 +921,65 @@ class FutureBytesReprTests(unittest.TestCase):
         ``b`` to the returned repr on both Python 2 and 3.
         """
         self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
+
+
+class ReplaceIfTests(unittest.TestCase):
+    """
+    Tests for L{_replaceIf}.
+    """
+
+    def test_replacesIfTrue(self):
+        """
+        L{_replaceIf} swaps out the body of a function if the conditional
+        is C{True}.
+        """
+        @_replaceIf(True, lambda: "hi")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "hi")
+        self.assertEqual(test.__name__, "test")
+        self.assertEqual(test.__module__, "twisted.test.test_compat")
+
+
+    def test_keepsIfFalse(self):
+        """
+        L{_replaceIf} keeps the original body of the function if the
+        conditional is C{False}.
+        """
+        @_replaceIf(False, lambda: "hi")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "bye")
+
+
+    def test_multipleReplace(self):
+        """
+        In the case that multiple conditions are true, the first one
+        (to the reader) is chosen by L{_replaceIf}
+        """
+        @_replaceIf(True, lambda: "hi")
+        @_replaceIf(False, lambda: "bar")
+        @_replaceIf(True, lambda: "baz")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "hi")
+
+
+    def test_boolsOnly(self):
+        """
+        L{_replaceIf}'s condition argument only accepts bools.
+        """
+        with self.assertRaises(ValueError) as e:
+
+            @_replaceIf("hi", "there")
+            def test():
+                """
+                Some test function.
+                """
+
+        self.assertEqual(e.exception.args[0],
+                         ("condition argument to _replaceIf requires a bool, "
+                          "not 'hi'"))

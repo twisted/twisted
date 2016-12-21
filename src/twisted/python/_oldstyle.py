@@ -10,8 +10,7 @@ from __future__ import absolute_import, division
 
 import types
 
-from twisted.python.compat import _shouldEnableNewStyle, _PY3
-from twisted.python.util import _replaceIf
+from twisted.python.compat import _shouldEnableNewStyle, _PY3, _replaceIf
 
 
 def passthru(arg):
