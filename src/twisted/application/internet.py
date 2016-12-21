@@ -834,6 +834,8 @@ class _ClientMachine(object):
                outputs=[])
 
     _connecting.upon(start, enter=_connecting, outputs=[])
+    # Note that this synchonously triggers _connectionFailed in the
+    # _disconnecting state.
     _connecting.upon(stop, enter=_disconnecting,
                      outputs=[_waitForStop, _stopConnecting],
                      collector=_firstResult)
@@ -866,6 +868,8 @@ class _ClientMachine(object):
                         outputs=[_cancelConnectWaiters,
                                  _finishStopping,
                                  _forgetConnection])
+    # Note that this is triggered synchonously with the transition from
+    # _connecting
     _disconnecting.upon(_connectionFailed, enter=_stopped,
                         outputs=[_cancelConnectWaiters, _finishStopping])
 
@@ -874,8 +878,6 @@ class _ClientMachine(object):
     _restarting.upon(stop, enter=_disconnecting,
                      outputs=[])
     _restarting.upon(_clientDisconnected, enter=_connecting,
-                     outputs=[_finishStopping, _connect])
-    _restarting.upon(_connectionFailed, enter=_stopped,
                      outputs=[_finishStopping, _connect])
 
     _stopped.upon(start, enter=_connecting,
