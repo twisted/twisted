@@ -486,6 +486,6 @@ class FailureJellyingTests(unittest.TestCase):
             exception = "builtins.Exception"
         else:
             exception = "exceptions.Exception"
-        expectedOutput= ("Traceback from remote host -- "
+        expectedOutput = ("Traceback from remote host -- "
                          "{}: some reason\n".format(exception))
-        self.assertEqual( expectedOutput, output.getvalue())
+        self.assertEqual(expectedOutput, output.getvalue())

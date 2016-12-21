@@ -299,7 +299,8 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """
         Register a callback to be called if our broker gets disconnected.
 
-        This callback will be called with one argument, this instance.
+        @param callback: a callable which will be called with one
+                         argument, this instance.
         """
         assert callable(callback)
         self.disconnectCallbacks.append(callback)
@@ -310,6 +311,8 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def dontNotifyOnDisconnect(self, callback):
         """
         Remove a callback that was registered with notifyOnDisconnect.
+
+        @param callback: a callable
         """
         self.disconnectCallbacks.remove(callback)
         if not self.disconnectCallbacks:
@@ -365,14 +368,17 @@ class RemoteReference(Serializable, styles.Ephemeral):
 
     def remoteMethod(self, key):
         """
-        Get a L{RemoteMethod} for this key.
+
+        @param key: The key.
+        @return: A L{RemoteMethod} for this key.
         """
         return RemoteMethod(self, key)
 
 
-    def __cmp__(self,other):
+    def __cmp__(self, other):
         """
-        Compare me [to another L{RemoteReference}].
+
+        @param other: another L{RemoteReference} to compare me to.
         """
         if isinstance(other, RemoteReference):
             if other.broker == self.broker:
@@ -416,7 +422,9 @@ class Local:
 
     def incref(self):
         """
-        Increment and return my reference count.
+        Increment the reference count.
+
+        @return: the reference count after incrementing
         """
         self.refcount = self.refcount + 1
         return self.refcount
@@ -424,7 +432,9 @@ class Local:
 
     def decref(self):
         """
-        Decrement and return my reference count.
+        Decrement the reference count.
+
+        @return: the reference count after decrementing
         """
         self.refcount = self.refcount - 1
         return self.refcount
@@ -517,7 +527,8 @@ def failure2Copyable(fail, unsafeTracebacks=0):
 
 
 class Broker(banana.Banana):
-    """I am a broker for objects.
+    """
+    I am a broker for objects.
     """
 
     version = 6
@@ -577,13 +588,13 @@ class Broker(banana.Banana):
             self.transport.unregisterProducer()
 
 
-    # Streaming producer methods; not necessary to implement.
-    #
     def pauseProducing(self):
+        # Streaming producer method; not necessary to implement.
         pass
 
 
     def stopProducing(self):
+        # Streaming producer method; not necessary to implement.
         pass
 
 
@@ -594,7 +605,8 @@ class Broker(banana.Banana):
 
 
     def expressionReceived(self, sexp):
-        """Evaluate an expression as it's received.
+        """
+        Evaluate an expression as it's received.
         """
         if isinstance(sexp, list):
             command = sexp[0]
@@ -614,10 +626,13 @@ class Broker(banana.Banana):
 
 
     def proto_version(self, vnum):
-        """Protocol message: (version version-number)
+        """
+        Protocol message: (version version-number)
 
         Check to make sure that both ends of the protocol are speaking
         the same version dialect.
+
+        @param vnum: The version number.
         """
 
         if vnum != self.version:
@@ -625,23 +640,30 @@ class Broker(banana.Banana):
 
 
     def sendCall(self, *exp):
-        """Utility method to send an expression to the other side of the connection.
+        """
+        Utility method to send an expression to the other side of the connection.
+
+        @param exp: The expression.
         """
         self.sendEncoded(exp)
 
 
     def proto_didNotUnderstand(self, command):
-        """Respond to stock 'C{didNotUnderstand}' message.
+        """
+        Respond to stock 'C{didNotUnderstand}' message.
 
         Log the command that was not understood and continue. (Note:
         this will probably be changed to close the connection or raise
         an exception in the future.)
+
+        @param command: The command to log.
         """
         log.msg("Didn't understand command: %r" % command)
 
 
     def connectionReady(self):
-        """Initialize. Called after Banana negotiation is done.
+        """
+        Initialize. Called after Banana negotiation is done.
         """
         self.sendCall(b"version", self.version)
         for notifier in self.connects:
@@ -667,7 +689,10 @@ class Broker(banana.Banana):
 
 
     def connectionLost(self, reason):
-        """The connection was lost.
+        """
+        The connection was lost.
+
+        @param reason: message to put in L{failure.Failure}
         """
         self.disconnected = 1
         # Nuke potential circular references.
@@ -705,7 +730,8 @@ class Broker(banana.Banana):
 
     def notifyOnDisconnect(self, notifier):
         """
-        Call the given callback when the Broker disconnects.
+
+        @param notifier: callback to call when the Broker disconnects.
         """
         assert callable(notifier)
         self.disconnects.append(notifier)
@@ -713,7 +739,8 @@ class Broker(banana.Banana):
 
     def notifyOnFail(self, notifier):
         """
-        Call the given callback if the Broker fails to connect.
+
+        @param notifier: callback to call if the Broker fails to connect.
         """
         assert callable(notifier)
         self.failures.append(notifier)
@@ -721,7 +748,8 @@ class Broker(banana.Banana):
 
     def notifyOnConnect(self, notifier):
         """
-        Call the given callback when the Broker connects.
+
+        @param notifier: callback to call when the Broker connects.
         """
         assert callable(notifier)
         if self.connects is None:
@@ -735,7 +763,8 @@ class Broker(banana.Banana):
 
     def dontNotifyOnDisconnect(self, notifier):
         """
-        Remove a callback from list of disconnect callbacks.
+
+        @param notifier: callback to remove from list of disconnect callbacks.
         """
         try:
             self.disconnects.remove(notifier)
@@ -763,10 +792,12 @@ class Broker(banana.Banana):
 
 
     def registerReference(self, object):
-        """Get an ID for a local object.
+        """
+        Store a persistent reference to a local object and map its
+        id() to a generated, session-unique ID.
 
-        Store a persistent reference to a local object and map its id()
-        to a generated, session-unique ID and return that ID.
+        @param object: a local object
+        @return: the generated ID
         """
 
         assert object is not None
@@ -790,10 +821,14 @@ class Broker(banana.Banana):
 
 
     def setNameForLocal(self, name, object):
-        """Store a special (string) ID for this object.
+        """
+        Store a special (string) ID for this object.
 
         This is how you specify a 'base' set of objects that the remote
         protocol can connect to.
+
+        @param name: An ID.
+        @param object: The object.
         """
         if isinstance(name, unicode):
             name = name.encode('utf8')
@@ -803,10 +838,14 @@ class Broker(banana.Banana):
 
 
     def remoteForName(self, name):
-        """Returns an object from the remote name mapping.
+        """
+        Returns an object from the remote name mapping.
 
         Note that this does not check the validity of the name, only
         creates a translucent reference for it.
+
+        @param name: The name to look up.
+        @return: An object which maps to the name.
         """
         if isinstance(name, unicode):
             name = name.encode('utf8')
@@ -815,7 +854,13 @@ class Broker(banana.Banana):
 
 
     def cachedRemotelyAs(self, instance, incref=0):
-        """Returns an ID that says what this instance is cached as remotely, or L{None} if it's not.
+        """
+
+        @param instance: The instance to look up.
+        @param incref: Flag to specify whether to increment the
+                       reference.
+        @return: An ID that says what this instance is cached as
+                 remotely, or L{None} if it's not.
         """
 
         puid = instance.processUniqueID()
@@ -826,7 +871,10 @@ class Broker(banana.Banana):
 
 
     def remotelyCachedForLUID(self, luid):
-        """Returns an instance which is cached remotely, with this LUID.
+        """
+
+        @param luid: The LUID to look up.
+        @return: An instance which is cached remotely.
         """
         return self.remotelyCachedObjects[luid].object
 
@@ -834,6 +882,8 @@ class Broker(banana.Banana):
     def cacheRemotely(self, instance):
         """
         XXX
+
+        @return: A new LUID.
         """
         puid = instance.processUniqueID()
         luid = self.newLocalID()
@@ -866,7 +916,14 @@ class Broker(banana.Banana):
 
 
     def serialize(self, object, perspective=None, method=None, args=None, kw=None):
-        """Jelly an object according to the remote security rules for this broker.
+        """
+        Jelly an object according to the remote security rules for this broker.
+
+        @param object: The object to jelly.
+        @param perspective: The perspective.
+        @param method: The method.
+        @param args: Arguments.
+        @param kw: Keyword arguments.
         """
 
         if isinstance(object, defer.Deferred):
@@ -901,6 +958,9 @@ class Broker(banana.Banana):
     def unserialize(self, sexp, perspective = None):
         """
         Unjelly an sexp according to the local security rules for this broker.
+
+        @param sexp: The object to unjelly.
+        @param perspective: The perspective.
         """
 
         self.unserializingPerspective = perspective
@@ -912,14 +972,17 @@ class Broker(banana.Banana):
 
     def newLocalID(self):
         """
-        Generate a new LUID.
+
+        @return: A newly generated LUID.
         """
         self.currentLocalID = self.currentLocalID + 1
         return self.currentLocalID
 
 
     def newRequestID(self):
-        """Generate a new request ID.
+        """
+
+        @return: A newly generated request ID.
         """
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
@@ -973,6 +1036,14 @@ class Broker(banana.Banana):
 
         Look up message based on object, unserialize the arguments, and
         invoke it with args, and send an 'answer' or 'error' response.
+
+        @param findObjMethod: A callable which takes C{objectID} as argument.
+        @param requestID: The requiest ID.
+        @param objectID: The object ID.
+        @param message: The message.
+        @param answerRequired:
+        @param netArgs: Arguments.
+        @param netKw: Keyword arguments.
         """
         if not isinstance(message, str):
             message = message.decode('utf8')
@@ -1011,10 +1082,12 @@ class Broker(banana.Banana):
                     self._sendAnswer(netResult, requestID)
 
 
-    # Success
     def _sendAnswer(self, netResult, requestID):
         """
         (internal) Send an answer to a previously sent message.
+
+        @param netResult: The answer.
+        @param requestID: The request ID.
         """
         self.sendCall(b"answer", requestID, netResult)
 
@@ -1024,17 +1097,22 @@ class Broker(banana.Banana):
         (internal) Got an answer to a previously sent message.
 
         Look up the appropriate callback and call it.
+
+        @param requestID: The request ID.
+        @param netResult: The answer.
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
         d.callback(self.unserialize(netResult))
 
 
-    # Failure
     def _sendFailureOrError(self, fail, requestID):
         """
         Call L{_sendError} or L{_sendFailure}, depending on whether C{fail}
         represents an L{Error} subclass or not.
+
+        @param fail: The failure.
+        @param requestID: The request ID.
         """
         if fail.check(Error) is None:
             self._sendFailure(fail, requestID)
@@ -1045,6 +1123,9 @@ class Broker(banana.Banana):
     def _sendFailure(self, fail, requestID):
         """
         Log error and then send it.
+
+        @param fail: The failure.
+        @param requestID: The request ID.
         """
         log.msg("Peer will receive following PB traceback:")
         log.err(fail)
@@ -1054,6 +1135,9 @@ class Broker(banana.Banana):
     def _sendError(self, fail, requestID):
         """
         (internal) Send an error for a previously sent message.
+
+        @param fail: The failure.
+        @param requestID: The request ID.
         """
         if isinstance(fail, failure.Failure):
             # If the failures value is jellyable or allowed through security,
@@ -1071,17 +1155,20 @@ class Broker(banana.Banana):
     def proto_error(self, requestID, fail):
         """
         (internal) Deal with an error.
+
+        @param requestID: The request ID.
+        @param fail: The failure.
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
         d.errback(self.unserialize(fail))
 
 
-    # Refcounts
-    #
     def sendDecRef(self, objectID):
         """
         (internal) Send a DECREF directive.
+
+        @param objectID: The object ID.
         """
         self.sendCall(b"decref", objectID)
 
@@ -1092,6 +1179,8 @@ class Broker(banana.Banana):
 
         If the reference count is zero, it will free the reference to this
         object.
+
+        @param objectID: The object ID.
         """
         if isinstance(objectID, unicode):
             objectID = objectID.encode('utf8')
@@ -1102,13 +1191,12 @@ class Broker(banana.Banana):
             del self.localObjects[objectID]
             self._localCleanup.pop(puid, lambda: None)()
 
-    ##
-    # caching
-    ##
 
     def decCacheRef(self, objectID):
         """
         (internal) Send a DECACHE directive.
+
+        @param objectID: The object ID.
         """
         self.sendCall(b"decache", objectID)
 
@@ -1119,6 +1207,8 @@ class Broker(banana.Banana):
 
         If the reference count is zero, free the reference, then send an
         'uncached' directive.
+
+        @param objectID: The object ID.
         """
         refs = self.remotelyCachedObjects[objectID].decref()
         # log.msg('decaching: %s #refs: %s' % (objectID, refs))
@@ -1141,6 +1231,8 @@ class Broker(banana.Banana):
     def proto_uncache(self, objectID):
         """
         (internal) Tell the client it is now OK to uncache an object.
+
+        @param objectID: The object ID.
         """
         # log.msg("uncaching locally %d" % objectID)
         obj = self.locallyCachedObjects[objectID]
@@ -1157,6 +1249,10 @@ def respond(challenge, password):
     Respond to a challenge.
 
     This is useful for challenge/response authentication.
+
+    @param challenge: A challenge.
+    @param password: A password.
+    @return: The password hashed twice.
     """
     m = md5()
     m.update(password)
@@ -1171,7 +1267,8 @@ def respond(challenge, password):
 
 def challenge():
     """
-    I return some random data.
+
+    @return: Some random data.
     """
     crap = b''
     for x in range(random.randrange(15,25)):
@@ -1494,6 +1591,8 @@ class _PortalWrapper(Referenceable, _JellyableAvatarMixin):
     def remote_login(self, username):
         """
         Start of username/password login.
+
+        @param username: The username.
         """
         c = challenge()
         return c, _PortalAuthChallenger(self.portal, self.broker, username, c)
@@ -1535,13 +1634,24 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
         return d
 
 
-    # IUsernameHashedPassword
     def checkPassword(self, password):
+        """
+        L{IUsernameHashedPassword}
+
+        @param password: The password.
+        @return: L{_PortalAuthChallenger.checkMD5Password}
+        """
         return self.checkMD5Password(md5(password).digest())
 
 
-    # IUsernameMD5Password
     def checkMD5Password(self, md5Password):
+        """
+        L{IUsernameMD5Password}
+
+        @param md5Password:
+        @rtype: L{bool}
+        @return: L{True} if password matches.
+        """
         md = md5()
         md.update(md5Password)
         md.update(self.challenge)
