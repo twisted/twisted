@@ -342,6 +342,9 @@ class PresentationHint:
 
 @_oldStyle
 class MethodSignature:
+    """
+    A signature of a callable.
+    """
 
     def __init__(self, *sigList):
         """

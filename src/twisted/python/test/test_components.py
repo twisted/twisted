@@ -259,19 +259,11 @@ class BackwardsAdder(components.Adapter):
 
 
 class MetaNumber(object):
+    """
+    Integer wrapper for Interface adaptation tests.
+    """
     def __init__(self, num):
         self.num = num
-
-
-
-class FakeAdder(object):
-    def add(self, num):
-        return num + 5
-
-
-
-class FakeNumber(object):
-    num = 3
 
 
 
@@ -283,60 +275,82 @@ class ComponentNumber(components.Componentized):
 
 
 @implementer(IMeta)
-class ComponentMeta(components.Adapter):
+class ComponentAdder(components.Adapter):
+    """
+    Adder for componentized adapter tests.
+    """
     def __init__(self, original):
         components.Adapter.__init__(self, original)
         self.num = self.original.num
 
 
-
-class ComponentAdder(ComponentMeta):
     def add(self, num):
         self.num += num
         return self.num
 
 
 
-class ComponentDoubler(ComponentMeta):
-    def add(self, num):
-        self.num += (num * 2)
-        return self.original.num
-
-
-
 class IAttrX(Interface):
+    """
+    Base interface for test of adapter with C{__cmp__}.
+    """
     def x():
-        pass
+        """
+        Return a value.
+        """
 
 
 
 class IAttrXX(Interface):
+    """
+    Adapted interface for test of adapter with C{__cmp__}.
+    """
     def xx():
-        pass
+        """
+        Return a tuple of values.
+        """
 
 
 
 @implementer(IAttrX)
 class Xcellent(object):
+    """
+    L{IAttrX} implementation for test of adapter with C{__cmp__}.
+    """
     def x(self):
+        """
+        Return a value.
+
+        @return: a value
+        """
         return 'x!'
 
 
 
 @comparable
 class DoubleXAdapter(object):
+    """
+    Adapter with __cmp__.
+    """
     num = 42
     def __init__(self, original):
         self.original = original
+
+
     def xx(self):
         return (self.original.x(), self.original.x())
+
+
     def __cmp__(self, other):
         return cmp(self.num, other.num)
 
 
 
 class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):
-    def testBasic(self):
+    def test_basic(self):
+        """
+        Registered adapters can be used to adapt classes to an interface.
+        """
         components.registerAdapter(MetaAdder, MetaNumber, IMeta)
         n = MetaNumber(1)
         self.assertEqual(IMeta(n).add(1), 2)
