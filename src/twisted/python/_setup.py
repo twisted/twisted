@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=I0011,C0103,C9302,W9401,W9402
+
 """
 Setuptools convenience functionality.
 
@@ -150,7 +152,7 @@ if not _PY3:
 
 
 
-class ConditionalExtension(Extension):
+class ConditionalExtension(Extension, object):
     """
     An extension module that will only be compiled if certain conditions are
     met.
@@ -247,7 +249,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
 
 
 
-class BuildPy3(build_py):
+class BuildPy3(build_py, object):
     """
     A version of build_py that doesn't install the modules that aren't yet
     ported to Python 3.
@@ -264,7 +266,7 @@ class BuildPy3(build_py):
 ## Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext):
+class build_ext_twisted(build_ext.build_ext, object):
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.
