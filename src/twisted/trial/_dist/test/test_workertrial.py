@@ -8,9 +8,9 @@ Tests for L{twisted.trial._dist.workertrial}.
 import errno
 import sys
 import os
-from cStringIO import StringIO
 
 from twisted.protocols.amp import AMP
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.trial._dist.workertrial import WorkerLogObserver, main, _setupPath
@@ -102,12 +102,15 @@ class MainTests(TestCase):
         client = FakeAMP()
         clientTransport = StringTransport()
         client.makeConnection(clientTransport)
-        client.callRemote(workercommands.Run, testCase="doesntexist")
+        client.callRemote(workercommands.Run, testCase=b"doesntexist")
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
         self.assertIn(
             "No module named 'doesntexist'", self.writeStream.getvalue())
+
+    if _PY3:
+        test_forwardCommand.skip = "Does not work on Python 3 (https://tm.tl/8944)"
 
 
     def test_readInterrupted(self):

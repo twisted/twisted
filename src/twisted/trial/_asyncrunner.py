@@ -81,6 +81,7 @@ def _clearSuite(suite):
     suite._tests = []
 
 
+
 def decorate(test, decorator):
     """
     Decorate all test cases in C{test} with C{decorator}.
@@ -167,6 +168,7 @@ _docTestCase = getattr(doctest, 'DocTestCase', None)
 if _docTestCase:
     components.registerAdapter(
         _BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
+
 
 
 def _iterateTests(testSuiteOrCase):
