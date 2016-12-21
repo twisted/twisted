@@ -666,7 +666,7 @@ class ProcessTests(unittest.TestCase):
         # can do about that.
         badUnicode = u'\N{SNOWMAN}'
         try:
-            badUnicode.encode(sys.getdefaultencoding())
+            badUnicode.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError:
             # Okay, that unicode doesn't encode, put it in as a bad environment
             # key.
@@ -690,105 +690,6 @@ class ProcessTests(unittest.TestCase):
             self.assertRaises(
                 TypeError,
                 reactor.spawnProcess, p, pyExe, args, env=None)
-
-
-    # Use upper-case so that the environment key test uses an upper case
-    # name: some versions of Windows only support upper case environment
-    # variable names, and I think Python (as of 2.5) doesn't use the right
-    # syscall for lowercase or mixed case names to work anyway.
-    okayUnicode = u"UNICODE"
-    encodedValue = b"UNICODE"
-
-    def _deprecatedUnicodeSupportTest(self, processProtocolClass, argv=[],
-                                      env={}):
-        """
-        Check that a deprecation warning is emitted when passing unicode to
-        spawnProcess for an argv value or an environment key or value.
-        Check that the warning is of the right type, has the right message,
-        and refers to the correct file.  Unfortunately, don't check that the
-        line number is correct, because that is too hard for me to figure
-        out.
-
-        @param processProtocolClass: A L{UtilityProcessProtocol} subclass
-        which will be instantiated to communicate with the child process.
-
-        @param argv: The argv argument to spawnProcess.
-
-        @param env: The env argument to spawnProcess.
-
-        @return: A Deferred which fires when the test is complete.
-        """
-        # Sanity to check to make sure we can actually encode this unicode
-        # with the default system encoding.  This may be excessively
-        # paranoid. -exarkun
-        self.assertEqual(
-            self.okayUnicode.encode(sys.getdefaultencoding()),
-            self.encodedValue)
-
-        pEnv = properEnv.copy()
-        pEnv.update(env)
-
-        d = processProtocolClass.run(reactor, argv, pEnv)
-
-        warnings = self.flushWarnings([UtilityProcessProtocol.run])
-
-        # We only want the first warning, which will be the code we are
-        # testing and not the reactor which may raise its own deprecation
-        # warnings (like gireactor).
-        warning = warnings[0]
-        self.assertEqual(
-            warning["message"],
-            ("Argument strings and environment keys/values passed to "
-             "reactor.spawnProcess should be bytes, not unicode."))
-        self.assertTrue(__file__.startswith(warning["filename"]))
-
-        return d.getResult()
-
-
-    def test_deprecatedUnicodeArgvSupport(self):
-        """
-        Test that a unicode string passed for an argument value is allowed
-        if it can be encoded with the default system encoding, but that a
-        deprecation warning is emitted.
-        """
-        d = self._deprecatedUnicodeSupportTest(GetArgumentVector,
-                                               argv=[self.okayUnicode])
-        def gotArgVector(argv):
-            self.assertEqual(argv[1], self.encodedValue)
-        d.addCallback(gotArgVector)
-        return d
-
-
-    def test_deprecatedUnicodeEnvKeySupport(self):
-        """
-        Test that a unicode string passed for the key of the environment
-        dictionary is allowed if it can be encoded with the default system
-        encoding, but that a deprecation warning is emitted.
-        """
-        d = self._deprecatedUnicodeSupportTest(
-            GetEnvironmentDictionary, env={self.okayUnicode: self.encodedValue})
-        def gotEnvironment(environ):
-            self.assertEqual(environ[self.encodedValue], self.encodedValue)
-        d.addCallback(gotEnvironment)
-        return d
-
-
-    def test_deprecatedUnicodeEnvValueSupport(self):
-        """
-        Test that a unicode string passed for the value of the environment
-        dictionary is allowed if it can be encoded with the default system
-        encoding, but that a deprecation warning is emitted.
-        """
-        d = self._deprecatedUnicodeSupportTest(
-            GetEnvironmentDictionary, env={self.encodedValue: self.okayUnicode})
-        def gotEnvironment(environ):
-            # On Windows, the environment contains more things than we
-            # specified, so only make sure that at least the key we wanted
-            # is there, rather than testing the dictionary for exact
-            # equality.
-            self.assertEqual(environ[self.encodedValue], self.encodedValue)
-        d.addCallback(gotEnvironment)
-        return d
 
 
 
