@@ -232,7 +232,8 @@ class Failure:
             if exc_tb:
                 tb = exc_tb
             elif _PY3:
-                tb = self.value.__traceback__
+                if hasattr(self.value, "__traceback__"):
+                    tb = self.value.__traceback__
 
         frames = self.frames = []
         stack = self.stack = []
