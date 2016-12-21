@@ -54,8 +54,8 @@ thirdSampleEncodedKey = (
     b'==')
 
 ecdsaSampleEncodedKey = (
-    b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60SMMf'
-    b'dKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
+    b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60'
+    b'SMMfdKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
 
 sampleKey = a2b_base64(sampleEncodedKey)
 otherSampleKey = a2b_base64(otherSampleEncodedKey)
