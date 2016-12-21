@@ -26,6 +26,7 @@ elif not _shouldEnableNewStyle():
 
 forbiddenModules = [
     "twisted._threads",
+    "twisted.application",
     "twisted.internet",
     "twisted.logger",
     "twisted.plugins",
