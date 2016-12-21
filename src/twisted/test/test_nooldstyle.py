@@ -31,6 +31,7 @@ forbiddenModules = [
     "twisted.plugins",
     "twisted.positioning",
     "twisted.protocols.haproxy",
+    "twisted.python",
     "twisted.script",
     "twisted.tap",
     "twisted.trial",
