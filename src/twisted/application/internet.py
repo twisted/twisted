@@ -844,8 +844,8 @@ class _ClientMachine(object):
 
     _waiting.upon(start, enter=_waiting,
                   outputs=[])
-    _waiting.upon(stop, enter=_disconnecting,
-                  outputs=[_waitForStop, _stopRetrying],
+    _waiting.upon(stop, enter=_stopped,
+                  outputs=[_waitForStop, _stopRetrying, _finishStopping],
                   collector=_firstResult)
     _waiting.upon(_reconnect, enter=_connecting,
                   outputs=[_connect])
