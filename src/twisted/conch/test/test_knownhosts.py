@@ -53,9 +53,14 @@ thirdSampleEncodedKey = (
     b'343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ'
     b'==')
 
+ecdsaSampleEncodedKey = (
+    b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60SMMf'
+    b'dKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
+
 sampleKey = a2b_base64(sampleEncodedKey)
 otherSampleKey = a2b_base64(otherSampleEncodedKey)
 thirdSampleKey = a2b_base64(thirdSampleEncodedKey)
+ecdsaSampleKey =  a2b_base64(ecdsaSampleEncodedKey)
 
 samplePlaintextLine = (
     b"www.twistedmatrix.com ssh-rsa " + sampleEncodedKey + b"\n")
@@ -695,7 +700,7 @@ class KnownHostsDatabaseTests(TestCase):
                 b"www.twistedmatrix.com", Key.fromString(sampleKey)))
 
 
-    def test_hasNonPresentKey(self):
+    def test_notPresentKey(self):
         """
         L{KnownHostsFile.hasHostKey} returns C{False} when a key for the given
         hostname is not present.
@@ -703,6 +708,10 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         self.assertFalse(hostsFile.hasHostKey(
                 b"non-existent.example.com", Key.fromString(sampleKey)))
+        self.assertTrue(hostsFile.hasHostKey(
+                b"www.twistedmatrix.com", Key.fromString(sampleKey)))
+        self.assertFalse(hostsFile.hasHostKey(
+                b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey)))
 
 
     def test_hasLaterAddedKey(self):
