@@ -527,7 +527,7 @@ def _firstResult(gen):
     """
     Return the first element of a generator and exhaust it.
 
-    L{MethodicalMachine.upon}'s C{collector} argument takes a generator of
+    L{automat.MethodicalMachine.upon}'s C{collector} argument takes a generator of
     output results. If the generator is exhausted, the later outputs aren't
     actually run.
 
