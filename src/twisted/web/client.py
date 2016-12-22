@@ -29,7 +29,7 @@ from zope.interface import implementer
 from twisted.python import log
 from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
-from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
 
@@ -737,6 +737,32 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
     return factory
 
 
+
+def _deprecateGetPageClasses():
+    """
+    Mark the protocols and factories associated with L{getPage} and
+    L{downloadPage} as deprecated.
+    """
+    for klass in [
+        HTTPPageGetter, HTTPPageDownloader,
+        HTTPClientFactory, HTTPDownloader
+    ]:
+        deprecatedModuleAttribute(
+            Version("Twisted", 16, 7, 0),
+            getDeprecationWarningString(
+                klass,
+                Version("Twisted", 16, 7, 0),
+                replacement="https://pypi.org/project/treq/ or twisted.web.client.Agent")
+            .split("; ")[1],
+            klass.__module__,
+            klass.__name__)
+
+_deprecateGetPageClasses()
+
+
+
+@deprecated(Version("Twisted", 16, 7, 0),
+            "https://pypi.org/project/treq/ or twisted.web.client.Agent")
 def getPage(url, contextFactory=None, *args, **kwargs):
     """
     Download a web page as a string.
@@ -753,6 +779,9 @@ def getPage(url, contextFactory=None, *args, **kwargs):
         *args, **kwargs).deferred
 
 
+
+@deprecated(Version("Twisted", 16, 7, 0),
+            "https://pypi.org/project/treq/ or twisted.web.client.Agent")
 def downloadPage(url, file, contextFactory=None, *args, **kwargs):
     """
     Download a web page to a file.
