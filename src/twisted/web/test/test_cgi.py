@@ -8,6 +8,7 @@ Tests for L{twisted.web.twcgi}.
 import sys
 import os
 import json
+from io import BytesIO
 
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, error
@@ -119,7 +120,9 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(DUMMY_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum)
+        d = client.Agent(reactor).request(
+            'GET', "http://localhost:%d/cgi" % (portnum,))
+        d.addCallback(client.readBody)
         d.addCallback(self._testCGI_1)
         return d
 
@@ -137,13 +140,16 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
-        factory = client.HTTPClientFactory(url)
-        reactor.connectTCP('localhost', portnum, factory)
-        def checkResponse(ignored):
-            self.assertNotIn('monkeys', factory.response_headers['server'])
-            self.assertNotIn('last year', factory.response_headers['date'])
-        factory.deferred.addCallback(checkResponse)
-        return factory.deferred
+        agent = client.Agent(reactor)
+        d = agent.request(b'GET', url)
+        d.addCallback(discardBody)
+        def checkResponse(response):
+            self.assertNotIn('monkeys',
+                             response.headers.getRawHeaders('server'))
+            self.assertNotIn('last year',
+                             response.headers.getRawHeaders('date'))
+        d.addCallback(checkResponse)
+        return d
 
 
     def test_noDuplicateContentTypeHeaders(self):
@@ -155,13 +161,16 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
-        factory = client.HTTPClientFactory(url)
-        reactor.connectTCP('localhost', portnum, factory)
-        def checkResponse(ignored):
+        agent = client.Agent(reactor)
+        d = agent.request(b'GET', url)
+        d.addCallback(discardBody)
+        def checkResponse(response):
             self.assertEqual(
-                factory.response_headers['content-type'], ['text/cgi-duplicate-test'])
-        factory.deferred.addCallback(checkResponse)
-        return factory.deferred
+                response.headers.getRawHeaders('content-type'),
+                ['text/cgi-duplicate-test'])
+            return response
+        d.addCallback(checkResponse)
+        return d
 
 
     def test_noProxyPassthrough(self):
@@ -199,13 +208,14 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
-        factory = client.HTTPClientFactory(url)
-        reactor.connectTCP('localhost', portnum, factory)
-        def checkResponse(ignored):
+        agent = client.Agent(reactor)
+        d = agent.request(b'GET', url)
+        d.addCallback(discardBody)
+        def checkResponse(response):
             self.assertEqual(
-                factory.response_headers['header'], ['spam', 'eggs'])
-        factory.deferred.addCallback(checkResponse)
-        return factory.deferred
+                response.headers.getRawHeaders('header'), ['spam', 'eggs'])
+        d.addCallback(checkResponse)
+        return d
 
 
     def test_malformedHeaderCGI(self):
@@ -216,8 +226,9 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
-        factory = client.HTTPClientFactory(url)
-        reactor.connectTCP('localhost', portnum, factory)
+        agent = client.Agent(reactor)
+        d = agent.request(b'GET', url)
+        d.addCallback(discardBody)
         loggedMessages = []
 
         def addMessage(eventDict):
@@ -227,11 +238,11 @@ class CGITests(unittest.TestCase):
         self.addCleanup(log.removeObserver, addMessage)
 
         def checkResponse(ignored):
-            self.assertEqual(loggedMessages[0],
-                             "ignoring malformed CGI header: 'XYZ'")
+            self.assertIn("ignoring malformed CGI header: 'XYZ'",
+                          loggedMessages)
 
-        factory.deferred.addCallback(checkResponse)
-        return factory.deferred
+        d.addCallback(checkResponse)
+        return d
 
 
     def testReadEmptyInput(self):
@@ -240,7 +251,9 @@ class CGITests(unittest.TestCase):
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum)
+        agent = client.Agent(reactor)
+        d = agent.request("GET", "http://localhost:%d/cgi" % (portnum,))
+        d.addCallback(client.readBody)
         d.addCallback(self._testReadEmptyInput_1)
         return d
     testReadEmptyInput.timeout = 5
@@ -253,9 +266,14 @@ class CGITests(unittest.TestCase):
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum,
-                           method="POST",
-                           postdata="Here is your stdin")
+        agent = client.Agent(reactor)
+        d = agent.request(
+            uri="http://localhost:%d/cgi" % (portnum,),
+            method=b"POST",
+            bodyProducer=client.FileBodyProducer(
+                BytesIO(b"Here is your stdin")),
+        )
+        d.addCallback(client.readBody)
         d.addCallback(self._testReadInput_1)
         return d
     testReadInput.timeout = 5
@@ -269,9 +287,13 @@ class CGITests(unittest.TestCase):
             cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum,
-                           method="POST",
-                           postdata="Here is your stdin")
+        d = client.Agent(reactor).request(
+            uri="http://localhost:%d/cgi" % (portnum,),
+            method=b"POST",
+            bodyProducer=client.FileBodyProducer(
+                BytesIO(b"Here is your stdin")),
+        )
+        d.addCallback(client.readBody)
         d.addCallback(self._testReadAllInput_1)
         return d
     testReadAllInput.timeout = 5
@@ -395,3 +417,15 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
+
+
+
+def discardBody(response):
+    """
+    Discard the body of a HTTP response.
+
+    @param response: The response.
+
+    @return: The response.
+    """
+    return client.readBody(response).addCallback(lambda _: response)
