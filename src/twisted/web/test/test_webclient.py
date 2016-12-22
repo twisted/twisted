@@ -16,7 +16,7 @@ except ImportError:
     from urllib.parse import urlparse, urljoin
 
 from twisted.python.compat import networkString, nativeString, intToBytes
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data
 from twisted.web.util import Redirect
@@ -254,6 +254,9 @@ class HTTPPageGetterTests(unittest.TestCase):
     Tests for L{HTTPPagerGetter}, the HTTP client protocol implementation
     used to implement L{getPage}.
     """
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def test_earlyHeaders(self):
         """
         When a connection is made, L{HTTPPagerGetter} sends the headers from
@@ -293,6 +296,9 @@ class HTTPPageGetterTests(unittest.TestCase):
 
 
 class WebClientTests(unittest.TestCase):
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -853,6 +859,9 @@ class WebClientSSLTests(WebClientTests):
 
 
 class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def getHTTPS(self, path):
         return networkString("https://127.0.0.1:%d/%s" % (self.tlsPortno, path))
 
@@ -894,6 +903,9 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
 
 
 class CookieTests(unittest.TestCase):
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -970,6 +982,8 @@ class HostHeaderTests(unittest.TestCase):
     Test that L{HTTPClientFactory} includes the port in the host header
     if needed.
     """
+    suppress = [util.suppress(category=DeprecationWarning)]
+
 
     def _getHost(self, bytes):
         """
