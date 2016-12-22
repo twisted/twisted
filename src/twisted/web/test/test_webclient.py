@@ -1381,3 +1381,101 @@ class URITestsForIPv6(URITests, unittest.TestCase):
         self.assertEqual(uri.host, b"::1")
         self.assertEqual(uri.netloc, b"[::1]:80")
         self.assertEqual(uri.toBytes(), b'http://[::1]:80/index.html')
+
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests that l{getPage} and friends are deprecated.
+    """
+
+    def test_getPageDeprecated(self):
+        """
+        L{client.getPage} is deprecated.
+        """
+        port = reactor.listenTCP(
+            0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
+        portno = port.getHost().port
+        self.addCleanup(port.stopListening)
+        url = networkString("http://127.0.0.1:%d" % (portno,))
+
+        d = client.getPage(url)
+        warningInfo = self.flushWarnings([self.test_getPageDeprecated])
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.web.client.getPage was deprecated in "
+            "Twisted 16.7.0; please use https://pypi.org/project/treq/ or twisted.web.client.Agent instead")
+
+        return d.addErrback(lambda _: None)
+
+
+    def test_downloadPageDeprecated(self):
+        """
+        L{client.downloadPage} is deprecated.
+        """
+        port = reactor.listenTCP(
+            0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
+        portno = port.getHost().port
+        self.addCleanup(port.stopListening)
+        url = networkString("http://127.0.0.1:%d" % (portno,))
+
+        path = FilePath(self.mktemp())
+        d = client.downloadPage(url, path.path)
+
+        warningInfo = self.flushWarnings([self.test_downloadPageDeprecated])
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.web.client.downloadPage was deprecated in "
+            "Twisted 16.7.0; please use https://pypi.org/project/treq/ or twisted.web.client.Agent instead")
+
+        return d.addErrback(lambda _: None)
+
+
+    def _testDeprecatedClass(self, klass):
+        """
+        Assert that accessing the given class was deprecated.
+
+        @param klass: The class being deprecated.
+        @type klass: L{str}
+        """
+        getattr(client, klass)
+
+        warningInfo = self.flushWarnings()
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.web.client.{} was deprecated in "
+            "Twisted 16.7.0: please use https://pypi.org/project/treq/ or twisted.web.client.Agent instead".format(klass))
+
+
+    def test_httpPageGetterDeprecated(self):
+        """
+        L{client.HTTPPageGetter} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPPageGetter")
+
+
+    def test_httpPageDownloaderDeprecated(self):
+        """
+        L{client.HTTPPageDownloader} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPPageDownloader")
+
+
+    def test_httpClientFactoryDeprecated(self):
+        """
+        L{client.HTTPClientFactory} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPClientFactory")
+
+
+    def test_httpDownloaderDeprecated(self):
+        """
+        L{client.HTTPDownloader} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPDownloader")
