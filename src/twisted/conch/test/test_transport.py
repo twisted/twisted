@@ -2435,6 +2435,7 @@ class TransportLoopbackTests(unittest.TestCase):
         client.receiveError = lambda code, desc: client.errors.append((
                 code, desc))
         client.connectionSecure = lambda: client.loseConnection()
+        server.supportedPublicKeys = list(server.factory.getPublicKeys().keys())
         server = mod(server)
         client = mod(client)
         def check(ignored, server, client):
