@@ -17,6 +17,7 @@ if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.client.knownhosts import \
         PlainEntry, HashedEntry, KnownHostsFile, UnparsedEntry, ConsoleUI
     from twisted.conch.client import default
+    from twisted.conch.test import keydata
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
 
@@ -895,6 +896,35 @@ class KnownHostsDatabaseTests(TestCase):
         ui, l, knownHostsFile = self.verifyNonPresentKey()
         ui.promptDeferred.callback(False)
         l[0].trap(UserRejectedKey)
+
+
+    def test_verifyNonPresentECKey(self):
+        """
+        Set up a test to verify an ECDSA key that isn't present.
+        Return a 3-tuple of the UI, a list set up to collect the result
+        of the verifyHostKey call, and the sample L{KnownHostsFile} being used.
+        """
+        ecObj = Key._fromECComponents(
+            x=keydata.ECDatanistp256['x'],
+            y=keydata.ECDatanistp256['y'],
+            privateValue=keydata.ECDatanistp256['privateValue'],
+            curve=keydata.ECDatanistp256['curve']
+        )
+
+        hostsFile = self.loadSampleHostsFile()
+        ui = FakeUI()
+        l = []
+        d = hostsFile.verifyHostKey(
+            ui, b"sample-host.example.com", b"4.3.2.1", ecObj)
+        d.addBoth(l.append)
+        self.assertEqual([], l)
+        self.assertEqual(
+            ui.promptText,
+            b"The authenticity of host 'sample-host.example.com (4.3.2.1)' "
+            b"can't be established.\n"
+            b"ECDSA key fingerprint is "
+            b"SHA256:fJnSpgCcYoYYsaBbnWj1YBghGh/QTDgfe4w4U5M5tEo=.\n"
+            b"Are you sure you want to continue connecting (yes/no)? ")
 
 
     def test_verifyHostIPMismatch(self):

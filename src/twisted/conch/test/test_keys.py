@@ -794,7 +794,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         ecblob = (common.NS(ecPublicData['curve']) +
                   common.NS(ecPublicData['curve'][-8:]) +
-                  common.NS(b'\x04' + 
+                  common.NS(b'\x04' +
                     utils.int_to_bytes(ecPublicData['x'],  32) +
                     utils.int_to_bytes(ecPublicData['y'],  32))
             )
@@ -909,7 +909,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             keys.Key(self.ecObj).blob(),
             common.NS(keydata.ECDatanistp256['curve']) +
             common.NS(keydata.ECDatanistp256['curve'][-8:]) +
-            common.NS(b'\x04' + 
+            common.NS(b'\x04' +
                utils.int_to_bytes(
                  self.ecObj.private_numbers().public_numbers.x, byteLength) +
                    utils.int_to_bytes(
@@ -1202,6 +1202,40 @@ attr n:
 \t69:a2:b7:07:0c:a3:93:c1:34:d8:2e:1e:4a:99:1a:
 \t6c:96:46:07:46:2b:dc:25:29:1b:87:f0:be:05:1d:
 \tee:b4:34:b9:e7:99:95>""")
+
+
+    def test_reprPublicECDSA(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
+        public key.
+        """
+        self.assertEqual(repr(keys.Key(self.ecObj).public()),
+"""<Elliptic Curve Public Key (256 bits)
+curve:
+\tecdsa-sha2-nistp256
+x:
+\t76282513020392096317118503144964731774299773481750550543382904345687059013883
+y:""" +
+"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
+"6683104>\n")
+
+
+    def test_reprPrivateECDSA(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for an ECDSA
+        private key.
+        """
+        self.assertEqual(repr(keys.Key(self.ecObj)),
+"""<Elliptic Curve Private Key (256 bits)
+curve:
+\tecdsa-sha2-nistp256
+privateValue:
+\t34638743477210341700964008455655698253555655678826059678074967909361042656500
+x:
+\t76282513020392096317118503144964731774299773481750550543382904345687059013883
+y:""" +
+"\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
+"6683104>\n")
 
 
 

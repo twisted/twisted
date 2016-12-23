@@ -33,10 +33,13 @@ else:
     elif cryptography is None:
         dependencySkip = "can't run without cryptography"
 
+
     class transport: # fictional modules to make classes work
         class SSHTransportBase: pass
         class SSHServerTransport: pass
         class SSHClientTransport: pass
+
+
     class factory:
         class SSHFactory:
             pass
@@ -409,6 +412,16 @@ class DHGroupExchangeSHA256Mixin:
     """
 
     kexAlgorithm = b'diffie-hellman-group-exchange-sha256'
+    hashProcessor = sha256
+
+
+
+class ECDHMixin:
+    """
+    Mixin for elliptic curve diffie-hellman tests.
+    """
+
+    kexAlgorithm = b'ecdh-sha2-nistp256'
     hashProcessor = sha256
 
 
@@ -1140,6 +1153,15 @@ class BaseSSHTransportDHGroupExchangeSHA256Tests(
 
 
 
+class BaseSSHTransportEllipticCurveTests(
+        BaseSSHTransportDHGroupExchangeBaseCase, ECDHMixin,
+        TransportTestCase):
+    """
+    ecdh-sha2-nistp256 tests for TransportBase
+    """
+
+
+
 class ServerAndClientSSHTransportBaseCase:
     """
     Tests that need to be run on both the server and the client.
@@ -1448,6 +1470,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_KEXINIT(kexmsg)
         self.assertRaises(AttributeError)
         self.assertRaises(UnsupportedAlgorithm)
+
 
     def test_KEXDH_INIT_GROUP1(self):
         """
@@ -1958,7 +1981,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), 
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
                                                     default_backend())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
@@ -2087,6 +2110,48 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
 
+    def test_disconnectKEX_ECDH_REPLYBadSignature(self):
+        """
+        Test that KEX_ECDH_REPLY disconnects if the signature is bad.
+        """
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b'ecdh-sha2-nistp256') +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+
+        self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
+
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
+                                                    default_backend())
+        self.proto.ecPub = self.proto.ecPriv.public_key()
+
+        # Generate the private key
+        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        # Get the public key
+        thisPub = thisPriv.public_key()
+        encPub = thisPub.public_numbers().encode_point()
+        self.proto.curve = ec.SECP256R1()
+
+        self.proto.kexAlg = b'ecdh-sha2-nistp256'
+
+        self.proto.ssh_KEX_ECDH_REPLY(
+            common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+            common.NS(encPub) + common.NS(b'bad-signature'))
+
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
 
 class ClientSSHTransportDHGroupExchangeSHA1Tests(
         ClientSSHTransportDHGroupExchangeBaseCase, DHGroupExchangeSHA1Mixin,
@@ -2170,15 +2235,16 @@ class GetMACTests(unittest.TestCase):
         self.assertGetMAC(
             b"hmac-sha2-512", sha512, digestSize=64, blockPadSize=64)
 
-        def test_hmacsha2384(self):
-            """
-            When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
-            algorithm name it returns a tuple of (sha384 digest object, inner pad,
-            outer pad, sha384 digest size) with a C{key} attribute set to the
-            value of the key supplied.
-            """
-            self.assertGetMAC(
-                b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=64)
+
+    def test_hmacsha2384(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
+        algorithm name it returns a tuple of (sha384 digest object, inner pad,
+        outer pad, sha384 digest size) with a C{key} attribute set to the
+        value of the key supplied.
+        """
+        self.assertGetMAC(
+            b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=80)
 
 
     def test_hmacsha2256(self):

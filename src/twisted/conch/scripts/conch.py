@@ -242,8 +242,8 @@ class _KeepAlive:
         self.lc.start(300)
 
     def sendGlobal(self):
-        d = self.conn.sendGlobalRequest("conch-keep-alive@twistedmatrix.com",
-                "", wantReply = 1)
+        d = self.conn.sendGlobalRequest(b"conch-keep-alive@twistedmatrix.com",
+                b"", wantReply = 1)
         d.addBoth(self._cbGlobal)
         self.globalTimeout = reactor.callLater(30, self._ebGlobal)
 
@@ -278,7 +278,7 @@ class SSHConnection(connection.SSHConnection):
 
     def requestRemoteForwarding(self, remotePort, hostport):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-        d = self.sendGlobalRequest('tcpip-forward', data,
+        d = self.sendGlobalRequest(b'tcpip-forward', data,
                                    wantReply=1)
         log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
         d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
@@ -295,7 +295,7 @@ class SSHConnection(connection.SSHConnection):
 
     def cancelRemoteForwarding(self, remotePort):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-        self.sendGlobalRequest('cancel-tcpip-forward', data)
+        self.sendGlobalRequest(b'cancel-tcpip-forward', data)
         log.msg('cancelling remote forwarding %s' % remotePort)
         try:
             del self.remoteForwards[remotePort]
