@@ -20,6 +20,7 @@ import base64
 
 from incremental import Version
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
@@ -51,11 +52,9 @@ from twisted.python.compat import (
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 
-# For Diffie-Hellman
-import curve25519
-# For signing
-import ed25519
+import nacl.signing
 
+# Curve lookup table
 _curveTable = {
     b'ecdsa-sha2-nistp256': ec.SECP256R1(),
     b'ecdsa-sha2-nistp384': ec.SECP384R1(),
@@ -72,18 +71,18 @@ _curveTable = {
 }
 
 _secToNist = {
-    b'secp256r1' : b'nistp256',
-    b'secp384r1' : b'nistp384',
-    b'secp521r1' : b'nistp521',
-    b'sect163k1' : b'nistk163',
-    b'secp192r1' : b'nistp192',
-    b'secp224r1' : b'nistp224',
-    b'sect233k1' : b'nistk233',
-    b'sect233r1' : b'nistb233',
-    b'sect283k1' : b'nistk283',
-    b'sect409k1' : b'nistk409',
-    b'sect409r1' : b'nistb409',
-    b'sect571k1' : b'nistt571'
+    b'secp256r1' : b'ecdsa-sha2-nistp256',
+    b'secp384r1' : b'ecdsa-sha2-nistp384',
+    b'secp521r1' : b'ecdsa-sha2-nistp521',
+    b'sect163k1' : b'ecdsa-sha2-nistk163',
+    b'secp192r1' : b'ecdsa-sha2-nistp192',
+    b'secp224r1' : b'ecdsa-sha2-nistp224',
+    b'sect233k1' : b'ecdsa-sha2-nistk233',
+    b'sect233r1' : b'ecdsa-sha2-nistb233',
+    b'sect283k1' : b'ecdsa-sha2-nistk283',
+    b'sect409k1' : b'ecdsa-sha2-nistk409',
+    b'sect409r1' : b'ecdsa-sha2-nistb409',
+    b'sect571k1' : b'ecdsa-sha2-nistt571'
 }
 
 
@@ -254,13 +253,14 @@ class Key(object):
                 ).public_key(default_backend())
             )
         elif keyType == b'ssh-ed25519':
-            return cls(curve25519.Public(common.getNS(rest)[0]))
+            return cls(nacl.signing.VerifyKey(common.getNS(rest)[0]))
         elif keyType in _curveTable:
-            # First we have to make an EllipticCuvePublicNumbers from the 
+            # First we have to make an EllipticCuvePublicNumbers from the
             # provided curve and points,
             # then turn it into a public key object.
             return cls(
-                ec.EllipticCurvePublicNumbers.from_encoded_point(_curveTable[keyType],
+                ec.EllipticCurvePublicNumbers.from_encoded_point(
+                      _curveTable[keyType],
                        common.getNS(rest, 2)[1]).public_key(default_backend()))
         else:
             raise BadKeyError('unknown blob type: %s' % (keyType,))
@@ -315,9 +315,7 @@ class Key(object):
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
         elif keyType == b'ssh-ed25519':
-            # Passing data in as secret or seed doesn't work
-            pr = curve25519.Private()
-            pr.private = common.getNS(rest)[0]
+            pr = nacl.signing.SigningKey(common.getNS(rest)[0])
             return cls(pr)
         elif keyType in [curve for curve in list(_curveTable.keys())]:
             x, y, privateValue, rest = common.getMP(rest, 3)
@@ -435,15 +433,15 @@ class Key(object):
             b64Data = b''.join(lines[1:-1])
             keyData = decodebytes(b64Data)
 
-        # Curve25519 Keys just say "OPENSSH KEY", which may change in the future.
-        # berDecoder doesn't seem to support Curve25519 yet.
+        # ED25519 Keys just say "OPENSSH KEY".
+        # berDecoder doesn't seem to support ed25519 yet.
         if kind == b'OPENSSH':
-            key = keyData[161:193]
-            # Passing secret=key does not work as it gets mangled
-            # Create the key, then overwrite it
-            pr = curve25519.Private()
-            pr.private = key
-            return cls(pr)
+            # OpenSSH keeps ed25519 keys in the openssh-key-v1 format.
+            # One file can have multiple keys.
+            # For now just grab the last private key.
+            privKey = common.getNS(
+                keyData[keyData.rindex('25519') + 5:], 2)[1][:32]
+            return cls(nacl.signing.SigningKey(privKey))
         else:
             if kind == b'EC':
                 # ECDSA keys don't need base64 decoding which is required
@@ -631,7 +629,7 @@ class Key(object):
             return 'public_lsh'
         elif data.startswith(b'('):
             return 'private_lsh'
-        elif data.startswith(b'\x00\x00\x00\x0bssh-'):  # curve25519
+        elif data.startswith(b'\x00\x00\x00\x0bssh-'):  # ed25519
             return 'blob'
         elif data.startswith(b'\x00\x00\x00\x07ssh-') or data.startswith(b'\x00\x00\x00\x13ecdsa-'):
             ignored, rest = common.getNS(data)
@@ -796,7 +794,12 @@ class Key(object):
         Return a pretty representation of this object.
         """
         if self.type() == 'ED25519':
-            return binascii.hexlify(self._keyObject.serialize())
+            if self.isPublic():
+                return '<ed25519 Verification Key\nkey: %s\n>' % binascii.hexlify(
+                    self.data())
+            else:
+                return '<ed25519 Signing Key\nkey: %s\n>' % binascii.hexlify(
+                    self.data())
         elif self.type() == 'EC':
             data = self.data()
             name = data['curve'].decode('utf-8')
@@ -820,8 +823,6 @@ class Key(object):
                     self.isPublic() and 'Public Key' or 'Private Key',
                     self._keyObject.key_size)]
             for k, v in sorted(self.data().items()):
-                if _PY3 and isinstance(k, bytes):
-                    k = k.decode('ascii')
                 lines.append('attr %s:' % (k,))
                 by = common.MP(v)[4:]
                 while by:
@@ -938,7 +939,8 @@ class Key(object):
         """
         return isinstance(
             self._keyObject,
-            (rsa.RSAPublicKey, dsa.DSAPublicKey, ec.EllipticCurvePublicKey))
+            (rsa.RSAPublicKey, dsa.DSAPublicKey, ec.EllipticCurvePublicKey,
+             nacl.signing.VerifyKey))
 
     def public(self):
         """
@@ -1009,7 +1011,7 @@ class Key(object):
                 self._keyObject, (ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey)):
             return 'EC'
         elif isinstance(
-                self._keyObject, (curve25519.Public, curve25519.Private)):
+                self._keyObject, (nacl.signing.VerifyKey, nacl.signing.SigningKey)):
             return 'ED25519'
         else:
             raise RuntimeError(
@@ -1027,7 +1029,7 @@ class Key(object):
         @rtype: L{bytes}
         """
         if self.type() == 'EC':
-            return b'ecdsa-sha2-' + _secToNist[self._keyObject.curve.name.encode('ascii')]
+            return _secToNist[self._keyObject.curve.name.encode('ascii')]
         else:
             return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss', 'ED25519': b'ssh-ed25519'}[self.type()]
 
@@ -1102,10 +1104,10 @@ class Key(object):
                 "privateValue": numbers.private_value,
                 "curve": self.sshType(),
             }
-        elif isinstance(self._keyObject, curve25519.Public):
-            return self._keyObject.public
-        elif isinstance(self._keyObject, curve25519.Private):
-            return self._keyObject.private
+        elif isinstance(self._keyObject, nacl.signing.VerifyKey):
+            return self._keyObject._key
+        elif isinstance(self._keyObject, nacl.signing.SigningKey):
+            return self._keyObject._signing_key
         else:
             raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
 
@@ -1151,10 +1153,8 @@ class Key(object):
             return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
                     common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
                     utils.int_to_bytes(data['y'], byteLength)))
-        elif type == 'ED25519':
+        else: # 'ED25519'
             return (common.NS(b'ssh-ed25519') + common.NS(data))
-        else:
-            raise BadKeyError("unknown key type %s" % (type,))
 
 
     def privateBlob(self):
@@ -1203,10 +1203,8 @@ class Key(object):
         elif type == 'EC':
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['privateValue']))
-        elif type == 'ED25519':
+        else: # 'ED25519'
             return (common.NS(b'ssh-ed25519') + common.NS(data))
-        else:
-            raise BadKeyError("unknown key type %s" % (type,))
 
     def toString(self, type, extra=None):
         """
@@ -1252,7 +1250,8 @@ class Key(object):
         data = self.data()
         if self.isPublic():
             if self.type() == 'ED25519':
-                retstr = binascii.hexlify(self._keyObject.serialize())
+                retstr = b'ssh-ed25519' + base64.encode(
+                    self._keyObject)
             elif self.type() == 'EC':
                 if not extra:
                     extra = b''
@@ -1265,10 +1264,31 @@ class Key(object):
                 if not extra:
                     extra = b''
                 retstr = (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
-            return retstr
         else:
             if self.type() == 'ED25519':
-                retstr = binascii.hexlify(self._keyObject.serialize())
+                # openssh-key-v1 specification:
+                # cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/
+                basestr = b'openssh-key-v1\x00\x00'
+                basestr += b'\x00\x00\x04none\x00' * 2
+                basestr += b"\x00\x00" * 3 + b"\x01"
+                verstr = common.NS(b'ssh-ed25519')
+                verstr += common.NS(self._keyObject.verify_key._key)
+                basestr += common.NS(verstr)
+
+                keystr = str(randbytes.secureRandom(4)) * 2
+                keystr += verstr
+                keystr += common.NS(self._keyObject._signing_key)
+                basestr += common.NS(keystr)
+
+                b64str = base64.b64encode(basestr)
+                retstr = b'-----BEGIN OPENSSH PRIVATE KEY-----\n'
+
+                i = 0
+                while i < len(b64str):
+                    retstr += b64str[i: i + 70] + '\n'
+                    i += 70
+
+                retstr += b'-----END OPENSSH PRIVATE KEY-----\n'
             elif self.type() == 'EC':
                 # EC keys has complex ASN.1 structure hence we do this this way.
                 if not extra:
@@ -1321,7 +1341,7 @@ class Key(object):
                 lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
                                        b' PRIVATE KEY-----')))
                 retstr = b'\n'.join(lines)
-            return retstr
+        return retstr
 
     def _toString_LSH(self):
         """
@@ -1332,11 +1352,6 @@ class Key(object):
         """
         data = self.data()
         type = self.type()
-
-        # No support for EC keys yet.
-        if self.type() == 'EC':
-            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-
         if self.isPublic():
             if type == 'RSA':
                 keyData = sexpy.pack([[b'public-key',
@@ -1395,11 +1410,6 @@ class Key(object):
             elif self.type() == 'DSA':
                 values = (data['p'], data['q'], data['g'], data['y'],
                           data['x'])
-            # I assume this is what's needed
-            # But commented out because it hasn't been tested yet.
-            elif self.type() == 'EC':
-                raise UnsupportedAlgorithm("toString() does not support Elliptic Curves yet.")
-                # values = (data['curve'], data['curve'][-8:], data['p'], data['x'])
             return common.NS(self.sshType()) + b''.join(map(common.MP, values))
 
     def sign(self, data):
@@ -1431,7 +1441,8 @@ class Key(object):
             # are just numbers, and could be any length from 0 to 160 bits.
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
-        elif keyType == 'EC':  # pragma: no branch
+
+        elif keyType == 'EC':  # Pragma: no branch
             # Hash size depends on key size
             keySize = self.size()
             if keySize <= 256:
@@ -1448,7 +1459,7 @@ class Key(object):
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)
 
-            # int_to_bytes returns rb[0] as a str in python2
+            # Int_to_bytes returns rb[0] as a str in python2
             # and an as int in python3
             if type(rb[0]) is str:
                 rcomp = ord(rb[0])
@@ -1468,11 +1479,8 @@ class Key(object):
                 sb = b"\x00" + sb
 
             ret = common.NS(common.NS(rb) + common.NS(sb))
-        elif keyType == 'ED25519':
-            sk = ed25519.SigningKey(self._keyObject.serialize())
-            ret = common.NS(sk.sign(data))
-        else:
-            raise BadKeyError("unknown key type %s" % (self.type(),))
+        else: # 'ED25519'
+            ret = common.NS(self._keyObject.sign(data).signature)
         return common.NS(self.sshType()) + ret
 
     def verify(self, signature, data):
@@ -1498,7 +1506,13 @@ class Key(object):
             return False
 
         keyType = self.type()
-        if keyType == 'RSA':
+        if keyType == 'ED25519':
+            try:
+                self._keyObject.verify(data, common.getNS(signature)[0])
+                return True
+            except:
+                return False
+        elif keyType == 'RSA':
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
@@ -1517,7 +1531,8 @@ class Key(object):
                 k = k.public_key()
             verifier = k.verifier(
                 signature, hashes.SHA1())
-        elif keyType == 'EC':  # pragma: no branch
+
+        elif keyType == 'EC':  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
             rstr, sstr, rest = common.getNS(concatenatedSignature, 2)
             r = int_from_bytes(rstr, 'big')
@@ -1536,20 +1551,11 @@ class Key(object):
             else:
                 hashSize = hashes.SHA512()
             verifier = k.verifier(signature, ec.ECDSA(hashSize))
-        elif keyType == 'ED25519':
-            vk = ed25519.VerifyingKey(self._keyObject.serialize())
-            try:
-                vk.verify(common.getNS(signature)[0], data)
-                return True
-            except:
-                return False
-        else:
-            raise BadKeyError("unknown key type %s" % (self.type(),))
 
         verifier.update(data)
         try:
             verifier.verify()
-        except:
+        except InvalidSignature:
             return False
         else:
             return True
