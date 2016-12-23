@@ -1400,7 +1400,7 @@ class URITestsForIPv6(URITests, unittest.TestCase):
 
 class DeprecationTests(unittest.TestCase):
     """
-    Tests that l{getPage} and friends are deprecated.
+    Tests that L{client.getPage} and friends are deprecated.
     """
 
     def test_getPageDeprecated(self):
