@@ -1767,7 +1767,6 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        serverIDNA = _idnaBytes(serverHostname)
         serverCA, serverCert = certificatesForAuthorityAndServer(
             serverHostname
         )
@@ -1792,7 +1791,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         serverContextSetup(serverOpts.getContext())
         if not validCertificate:
             serverCA, otherServer = certificatesForAuthorityAndServer(
-                serverIDNA
+                serverHostname
             )
         if buggyInfoCallback:
             def broken(*a, **k):
