@@ -149,13 +149,13 @@ def makeCertificate(**kw):
 
 
 
-def certificatesForAuthorityAndServer(serviceIdentity=b'example.com'):
+def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
     """
     Create a self-signed CA certificate and server certificate signed by the
     CA.
 
     @param serviceIdentity: The identity (hostname) of the server.
-    @type serviceIdentity: L{bytes}
+    @type serviceIdentity: L{unicode}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
@@ -210,7 +210,7 @@ def certificatesForAuthorityAndServer(serviceIdentity=b'example.com'):
         )
         .add_extension(
             x509.SubjectAlternativeName(
-                [x509.DNSName(serviceIdentity.decode('ascii'))]
+                [x509.DNSName(serviceIdentity)]
             ),
             critical=True,
         )
@@ -1768,7 +1768,9 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @rtype: see L{connectedServerAndClient}.
         """
         serverIDNA = _idnaBytes(serverHostname)
-        serverCA, serverCert = certificatesForAuthorityAndServer(serverIDNA)
+        serverCA, serverCert = certificatesForAuthorityAndServer(
+            serverHostname
+        )
         other = {}
         passClientCert = None
         clientCA, clientCert = certificatesForAuthorityAndServer(u'client')
