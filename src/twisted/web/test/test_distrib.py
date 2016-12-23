@@ -89,7 +89,7 @@ class DistribTests(unittest.TestCase):
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        d = agent.request("GET", "http://127.0.0.1:%d/here/there" % \
+        d = agent.request(b"GET", "http://127.0.0.1:%d/here/there" % \
                           (self.port2.getHost().port,))
         d.addCallback(client.readBody)
         d.addCallback(self.assertEqual, 'root')
@@ -139,7 +139,7 @@ class DistribTests(unittest.TestCase):
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
         url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
-        return agent.request("GET", url, **kwargs).addCallback(client.readBody)
+        return agent.request(b"GET", url, **kwargs).addCallback(client.readBody)
 
 
     def _requestAgentTest(self, child, **kwargs):
@@ -157,7 +157,7 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        d = client.Agent(reactor).request("GET", "http://%s:%s/child" % (
+        d = client.Agent(reactor).request(b"GET", "http://%s:%s/child" % (
             mainAddr.host, mainAddr.port), **kwargs)
 
         def cbCollectBody(response):
