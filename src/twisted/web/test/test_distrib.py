@@ -139,7 +139,9 @@ class DistribTests(unittest.TestCase):
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
         url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
-        return agent.request(b"GET", url, **kwargs).addCallback(client.readBody)
+        d = agent.request(b"GET", url, **kwargs)
+        d.addCallback(client.readBody)
+        return d
 
 
     def _requestAgentTest(self, child, **kwargs):
