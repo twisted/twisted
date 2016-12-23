@@ -63,7 +63,7 @@ from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
 from twisted.internet import protocol, defer, reactor
-from twisted.internet._idna import _idnaText, _idnaBytes
+from twisted.internet._idna import _idnaText
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
