@@ -737,6 +737,7 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
     return factory
 
 
+_GETPAGE_REPLACEMENT_TEXT = "https://pypi.org/project/treq/ or twisted.web.client.Agent"
 
 def _deprecateGetPageClasses():
     """
@@ -752,7 +753,7 @@ def _deprecateGetPageClasses():
             getDeprecationWarningString(
                 klass,
                 Version("Twisted", 16, 7, 0),
-                replacement="https://pypi.org/project/treq/ or twisted.web.client.Agent")
+                replacement=_GETPAGE_REPLACEMENT_TEXT)
             .split("; ")[1],
             klass.__module__,
             klass.__name__)
@@ -762,7 +763,7 @@ _deprecateGetPageClasses()
 
 
 @deprecated(Version("Twisted", 16, 7, 0),
-            "https://pypi.org/project/treq/ or twisted.web.client.Agent")
+            _GETPAGE_REPLACEMENT_TEXT)
 def getPage(url, contextFactory=None, *args, **kwargs):
     """
     Download a web page as a string.
@@ -781,7 +782,7 @@ def getPage(url, contextFactory=None, *args, **kwargs):
 
 
 @deprecated(Version("Twisted", 16, 7, 0),
-            "https://pypi.org/project/treq/ or twisted.web.client.Agent")
+            _GETPAGE_REPLACEMENT_TEXT)
 def downloadPage(url, file, contextFactory=None, *args, **kwargs):
     """
     Download a web page to a file.
