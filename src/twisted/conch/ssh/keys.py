@@ -1336,7 +1336,8 @@ class Key(object):
                         backend=default_backend()
                     ).encryptor()
 
-                    asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
+                    asn1Data = encryptor.update(asn1Data)
+                    asn1Data += encryptor.finalize()
 
                 b64Data = encodebytes(asn1Data).replace(b'\n', b'')
                 lines += [b64Data[i:i + 64]
