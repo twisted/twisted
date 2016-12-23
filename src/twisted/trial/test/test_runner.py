@@ -99,7 +99,7 @@ class CapturingReporter(object):
 
 
 
-class TrialRunnerTestsMixin:
+class TrialRunnerTestsMixin(object):
     """
     Mixin defining tests for L{runner.TrialRunner}.
     """
