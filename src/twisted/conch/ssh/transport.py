@@ -1671,7 +1671,8 @@ class SSHClientTransport(SSHTransportBase):
             if self.kexAlg.find(b'curve25519') >= 0:
                 # Make sure the size is correct
                 if len(pubKey) != 32:
-                    self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, b'bad key size')
+                    self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
+                                        b'bad key size')
 
                 # Turn the public key into a public key object
                 theirECPub = nacl.public.PublicKey(pubKey)
@@ -1691,13 +1692,14 @@ class SSHClientTransport(SSHTransportBase):
                                 self.curve, pubKey).public_key(
                                 default_backend())
 
-                # We need to convert to hex, 
-                # so we can convert to an int 
+                # We need to convert to hex,
+                # so we can convert to an int
                 # so we can make a multiple precision int.
                 sharedSecret = MP(
                                int(
                                binascii.hexlify(
-                                 self.ecPriv.exchange(ec.ECDH(), theirECPub)), 16))
+                                 self.ecPriv.exchange(ec.ECDH(), theirECPub))
+                                   , 16))
                 encPub = self.ecPub.public_numbers().encode_point()
 
             h = _kex.getHashProcessor(self.kexAlg)()

@@ -3,10 +3,7 @@
 # See LICENSE for details.
 
 """
-
 Handling of RSA and DSA keys.
-@ivar curveTable: a look up table for translating NIST standard curve names to Cryptograpy instances.
-@ivar oidTable: a table to translate OID values to Cryptography instances.
 """
 
 from __future__ import absolute_import, division
@@ -627,9 +624,10 @@ class Key(object):
             return 'public_lsh'
         elif data.startswith(b'('):
             return 'private_lsh'
-        elif data.startswith(b'\x00\x00\x00\x0bssh-'):  # ed25519
+        elif data.startswith(b'\x00\x00\x00\x0bssh-'):  # ED25519
             return 'blob'
-        elif data.startswith(b'\x00\x00\x00\x07ssh-') or data.startswith(b'\x00\x00\x00\x13ecdsa-'):
+        elif data.startswith(b'\x00\x00\x00\x07ssh-')\
+                or data.startswith(b'\x00\x00\x00\x13ecdsa-'):
             ignored, rest = common.getNS(data)
             count = 0
             while rest:
@@ -793,11 +791,11 @@ class Key(object):
         """
         if self.type() == 'ED25519':
             if self.isPublic():
-                return '<ed25519 Verification Key\nkey: %s\n>' % binascii.hexlify(
-                    self.data())
+                return '<ed25519 Verification Key\nkey: %s\n>'\
+                       % (binascii.hexlify(self.data()),)
             else:
-                return '<ed25519 Signing Key\nkey: %s\n>' % binascii.hexlify(
-                    self.data())
+                return '<ed25519 Signing Key\nkey: %s\n>' % (binascii.hexlify(
+                    self.data()),)
         elif self.type() == 'EC':
             data = self.data()
             name = data['curve'].decode('utf-8')
@@ -1006,10 +1004,12 @@ class Key(object):
                 self._keyObject, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
             return 'DSA'
         elif isinstance(
-                self._keyObject, (ec.EllipticCurvePublicKey, ec.EllipticCurvePrivateKey)):
+                self._keyObject, (ec.EllipticCurvePublicKey,
+                                  ec.EllipticCurvePrivateKey)):
             return 'EC'
         elif isinstance(
-                self._keyObject, (nacl.signing.VerifyKey, nacl.signing.SigningKey)):
+                self._keyObject, (nacl.signing.VerifyKey,
+                                  nacl.signing.SigningKey)):
             return 'ED25519'
         else:
             raise RuntimeError(
@@ -1029,7 +1029,8 @@ class Key(object):
         if self.type() == 'EC':
             return _secToNist[self._keyObject.curve.name.encode('ascii')]
         else:
-            return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss', 'ED25519': b'ssh-ed25519'}[self.type()]
+            return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss',
+                    'ED25519': b'ssh-ed25519'}[self.type()]
 
     def size(self):
         """
@@ -1149,7 +1150,8 @@ class Key(object):
         elif type == 'EC':
             byteLength = (self._keyObject.curve.key_size + 7) // 8
             return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
-                    common.NS(b'\x04' + utils.int_to_bytes(data['x'], byteLength) +
+                    common.NS(b'\x04' + utils.int_to_bytes(data['x'],
+                                                           byteLength) +
                     utils.int_to_bytes(data['y'], byteLength)))
         else: # 'ED25519'
             return (common.NS(b'ssh-ed25519') + common.NS(data))
@@ -1260,10 +1262,11 @@ class Key(object):
                 b64Data = encodebytes(self.blob()).replace(b'\n', b'')
                 if not extra:
                     extra = b''
-                retstr = (self.sshType() + b' ' + b64Data + b' ' + extra).strip()
+                retstr = (self.sshType() + b' '
+                          + b64Data + b' ' + extra).strip()
         else:
             if self.type() == 'ED25519':
-                # openssh-key-v1 specification:
+                # Openssh-key-v1 specification:
                 # cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/
                 basestr = b'openssh-key-v1\x00\x00'
                 basestr += b'\x00\x00\x04none\x00' * 2
@@ -1311,11 +1314,13 @@ class Key(object):
                                data['x'])
                 asn1Sequence = univ.Sequence()
                 for index, value in izip(itertools.count(), objData):
-                    asn1Sequence.setComponentByPosition(index, univ.Integer(value))
+                    asn1Sequence.setComponentByPosition(
+                        index, univ.Integer(value))
                 asn1Data = berEncoder.encode(asn1Sequence)
                 if extra:
                     iv = randbytes.secureRandom(8)
-                    hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
+                    hexiv = ''.join(['%02X' % (ord(x),)
+                                     for x in iterbytes(iv)])
                     hexiv = hexiv.encode('ascii')
                     lines.append(b'Proc-Type: 4,ENCRYPTED')
                     lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
@@ -1334,9 +1339,11 @@ class Key(object):
                     asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
 
                 b64Data = encodebytes(asn1Data).replace(b'\n', b'')
-                lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
-                lines.append(b''.join((b'-----END ', self.type().encode('ascii'),
-                                       b' PRIVATE KEY-----')))
+                lines += [b64Data[i:i + 64]
+                          for i in range(0, len(b64Data), 64)]
+                lines.append(b''.join(
+                    (b'-----END ', self.type().encode('ascii'),
+                     b' PRIVATE KEY-----')))
                 retstr = b'\n'.join(lines)
         return retstr
 
