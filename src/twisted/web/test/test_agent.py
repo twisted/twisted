@@ -1465,8 +1465,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(
-            commonName=hostName)
+        authority, server = certificatesForAuthorityAndServer(hostName)
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)
         def tlsagent(reactor):
