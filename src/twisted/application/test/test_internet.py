@@ -550,6 +550,7 @@ class ClientServiceTests(SynchronousTestCase):
         nkw = {}
         nkw.update(clock=Clock())
         nkw.update(kw)
+        clock = nkw['clock']
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
 
         # `endpointForTesting` is totally generic to any LLPI client that uses
@@ -576,7 +577,7 @@ class ClientServiceTests(SynchronousTestCase):
                 service.stopService()
             # Ensure that we don't leave any state in the reactor after
             # stopService.
-            self.assertEqual(service._clock.getDelayedCalls(), [])
+            self.assertEqual(clock.getDelayedCalls(), [])
         self.addCleanup(stop)
         if startService:
             service.startService()
@@ -621,6 +622,23 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(d)
 
 
+    def test_startServiceWaitsForDisconnect(self):
+        """
+        When L{ClientService} is restarted after having been connected, it
+        waits to start connecting until after having disconnected.
+        """
+        cq, service = self.makeReconnector()
+        d = service.stopService()
+        self.assertNoResult(d)
+        protocol = cq.constructedProtocols[0]
+        self.assertEqual(protocol.transport.disconnecting, True)
+        service.startService()
+        self.assertNoResult(d)
+        self.assertEqual(len(cq.constructedProtocols), 1)
+        protocol.connectionLost(Failure(Exception()))
+        self.assertEqual(len(cq.constructedProtocols), 2)
+
+
     def test_startServiceWhileStopping(self):
         """
         When L{ClientService} is stopping - that is,
@@ -639,13 +657,13 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
         self.assertEqual(first.transport.disconnecting, True)
+        first.connectionLost(Failure(Exception()))
+        self.successResultOf(stopped)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
         self.assertIdentical(self.successResultOf(nextProtocol),
                              cq.applicationProtocols[1])
         secondStopped = service.stopService()
-        first.connectionLost(Failure(Exception()))
-        self.successResultOf(stopped)
         self.assertNoResult(secondStopped)
 
 
@@ -829,3 +847,16 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(a, CancelledError)
         self.failureResultOf(b, CancelledError)
 
+
+    def test_retryCancelled(self):
+        """
+        When L{ClientService.stopService} is called while waiting between
+        connection attempts, the pending reconnection attempt is cancelled and
+        the service is stopped immediately.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq.connectQueue[0].errback(Exception("no connection"))
+        d = service.stopService()
+        self.assertEqual(clock.getDelayedCalls(), [])
+        self.successResultOf(d)

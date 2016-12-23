@@ -170,9 +170,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
-
-    if _PY3:
-        test_outputSignal.skip = "Test hangs on Python 3 (#8583)"
     if platform.isWindows():
         test_outputSignal.skip = "Windows doesn't have real signals."
 
