@@ -186,7 +186,7 @@ class CGITests(unittest.TestCase):
 
         headers = http_headers.Headers({"Proxy": ["foo"],
                                         "X-Innocent-Header": ["bar"]})
-        d = agent.request("GET", url, headers=headers)
+        d = agent.request(b"GET", url, headers=headers)
 
         def checkResponse(response):
             headers = json.loads(response)
@@ -252,7 +252,7 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         agent = client.Agent(reactor)
-        d = agent.request("GET", "http://localhost:%d/cgi" % (portnum,))
+        d = agent.request(b"GET", "http://localhost:%d/cgi" % (portnum,))
         d.addCallback(client.readBody)
         d.addCallback(self._testReadEmptyInput_1)
         return d
