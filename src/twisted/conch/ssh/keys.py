@@ -401,7 +401,7 @@ class Key(object):
 
             if cipher in (b'AES-128-CBC', b'AES-256-CBC'):
                 algorithmClass = algorithms.AES
-                keySize = 16
+                keySize = int(int(cipher.split(b'-')[1])/8)
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
@@ -444,10 +444,8 @@ class Key(object):
             return cls(nacl.signing.SigningKey(privKey))
         else:
             if kind == b'EC':
-                # ECDSA keys don't need base64 decoding which is required
-                # for RSA or DSA key.
-                return cls(load_pem_private_key(data, passphrase, default_backend()))
-
+                return cls(
+                    load_pem_private_key(data, passphrase, default_backend()))
             try:
                 decodedKey = berDecoder.decode(keyData)[0]
             except PyAsn1Error as e:
@@ -1155,7 +1153,6 @@ class Key(object):
                     utils.int_to_bytes(data['y'], byteLength)))
         else: # 'ED25519'
             return (common.NS(b'ssh-ed25519') + common.NS(data))
-
 
     def privateBlob(self):
         """

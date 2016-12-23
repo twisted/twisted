@@ -9,6 +9,7 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 from __future__ import division, absolute_import
 
 from twisted.python.compat import nativeString, networkString, NativeStringIO
+from io import BytesIO
 
 import datetime
 
@@ -16,7 +17,7 @@ from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
 from twisted.web.xmlrpc import _QueryFactory, withRequest, xmlrpclib
-from twisted.web import server, client, error, http, static
+from twisted.web import server, client, http, static
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
 from twisted.python import failure
@@ -404,18 +405,23 @@ class XMLRPCTests(unittest.TestCase):
         """
         A classic GET on the xml server should return a NOT_ALLOWED.
         """
-        d = client.getPage(networkString("http://127.0.0.1:%d/" % (self.port,)))
-        d = self.assertFailure(d, error.Error)
-        d.addCallback(
-            lambda exc: self.assertEqual(int(exc.args[0]), http.NOT_ALLOWED))
+        agent = client.Agent(reactor)
+        d = agent.request(b"GET", networkString("http://127.0.0.1:%d/" % (self.port,)))
+        def checkResponse(response):
+            self.assertEqual(response.code, http.NOT_ALLOWED)
+        d.addCallback(checkResponse)
         return d
 
     def test_errorXMLContent(self):
         """
         Test that an invalid XML input returns an L{xmlrpc.Fault}.
         """
-        d = client.getPage(networkString("http://127.0.0.1:%d/" % (self.port,)),
-                           method=b"POST", postdata=b"foo")
+        agent = client.Agent(reactor)
+        d = agent.request(
+            uri=networkString("http://127.0.0.1:%d/" % (self.port,)),
+            method=b"POST",
+            bodyProducer=client.FileBodyProducer(BytesIO(b"foo")))
+        d.addCallback(client.readBody)
         def cb(result):
             self.assertRaises(xmlrpc.Fault, xmlrpclib.loads, result)
         d.addCallback(cb)

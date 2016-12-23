@@ -1333,9 +1333,10 @@ class SSHServerTransport(SSHTransportBase):
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        self.sendPacket(MSG_KEXDH_REPLY,
-                        NS(pubHostKey.blob()) + NS(encPub)
-                          + NS(privHostKey.sign(exchangeHash)))
+        self.sendPacket(
+            MSG_KEXDH_REPLY,
+            NS(pubHostKey.blob()) + NS(encPub) +
+            NS(privHostKey.sign(exchangeHash)))
         self._keySetup(sharedSecret, exchangeHash)
 
 
@@ -1384,8 +1385,8 @@ class SSHServerTransport(SSHTransportBase):
         """
         This represents different key exchange methods that share the same
         integer value.  If the message is determined to be a KEXDH_INIT,
-        C{_ssh_KEXDH_INIT} is called to handle it. If it is a KEX_ECDH_INIT,
-        C{_ssh_KEX_ECDH_INIT} is called.
+        L{_ssh_KEXDH_INIT} is called to handle it. If it is a KEX_ECDH_INIT,
+        L{_ssh_KEX_ECDH_INIT} is called.
         Otherwise, for KEX_DH_GEX_REQUEST_OLD payload::
 
                 integer ideal (ideal size for the Diffie-Hellman prime)
@@ -1640,7 +1641,7 @@ class SSHClientTransport(SSHTransportBase):
                     ))
 
 
-    def ssh_KEX_ECDH_REPLY(self, packet):
+    def _ssh_KEX_ECDH_REPLY(self, packet):
         """
         Called to handle a reply to a ECDH exchange message(KEX_ECDH_INIT).
 
@@ -1790,7 +1791,7 @@ class SSHClientTransport(SSHTransportBase):
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
         elif _kex.isEllipticCurve(self.kexAlg):
-            return self.ssh_KEX_ECDH_REPLY(packet)
+            return self._ssh_KEX_ECDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
