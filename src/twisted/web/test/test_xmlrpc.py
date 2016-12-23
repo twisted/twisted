@@ -406,7 +406,7 @@ class XMLRPCTests(unittest.TestCase):
         A classic GET on the xml server should return a NOT_ALLOWED.
         """
         agent = client.Agent(reactor)
-        d = agent.request(b'GET', networkString("http://127.0.0.1:%d/" % (self.port,)))
+        d = agent.request(b"GET", networkString("http://127.0.0.1:%d/" % (self.port,)))
         def checkResponse(response):
             self.assertEqual(response.code, http.NOT_ALLOWED)
         d.addCallback(checkResponse)

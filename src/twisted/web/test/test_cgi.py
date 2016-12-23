@@ -121,7 +121,7 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         d = client.Agent(reactor).request(
-            'GET', "http://localhost:%d/cgi" % (portnum,))
+            "GET", 'http://localhost:%d/cgi' % (portnum,))
         d.addCallback(client.readBody)
         d.addCallback(self._testCGI_1)
         return d
@@ -141,7 +141,7 @@ class CGITests(unittest.TestCase):
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
         agent = client.Agent(reactor)
-        d = agent.request(b'GET', url)
+        d = agent.request(b"GET", url)
         d.addCallback(discardBody)
         def checkResponse(response):
             self.assertNotIn('monkeys',
@@ -162,7 +162,7 @@ class CGITests(unittest.TestCase):
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
         agent = client.Agent(reactor)
-        d = agent.request(b'GET', url)
+        d = agent.request(b"GET", url)
         d.addCallback(discardBody)
         def checkResponse(response):
             self.assertEqual(
@@ -209,7 +209,7 @@ class CGITests(unittest.TestCase):
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
         agent = client.Agent(reactor)
-        d = agent.request(b'GET', url)
+        d = agent.request(b"GET", url)
         d.addCallback(discardBody)
         def checkResponse(response):
             self.assertEqual(
@@ -227,7 +227,7 @@ class CGITests(unittest.TestCase):
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
         agent = client.Agent(reactor)
-        d = agent.request(b'GET', url)
+        d = agent.request(b"GET", url)
         d.addCallback(discardBody)
         loggedMessages = []
 
