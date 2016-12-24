@@ -353,30 +353,25 @@ Instead, Twisted provides helpers for building correctly configured ones.
 For example, you can use :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>`, which takes care of all hostname certificate verification for you.
 
 
-
-
-
-
-Here's an example which shows how to use ``Agent`` to request
-an *HTTPS* URL with no certificate verification.
-
-
-    
-
-
+Here's an example which shows how to use ``Agent`` to request an *HTTPS* URL with certificate verification.
 
 .. code-block:: python
 
-    
     from twisted.python.log import err
-    from twisted.web.client import Agent
+    from twisted.web.client import Agent, readBody
     from twisted.internet import reactor
     from twisted.internet.ssl import optionsForClientTLS
 
     def display(response):
         print("Received response")
-        print(response)
-    
+        print(response.code)
+        print(response.headers)
+        return readBody(response).addCallback(cbBody)
+
+    def cbBody(body):
+        print('Response body:')
+        print(body)
+
     def main():
         contextFactory = optionsForClientTLS(u"https://example.com/")
         agent = Agent(reactor, contextFactory)
@@ -384,7 +379,7 @@ an *HTTPS* URL with no certificate verification.
         d.addCallbacks(display, err)
         d.addCallback(lambda ignored: reactor.stop())
         reactor.run()
-    
+
     if __name__ == "__main__":
         main()
 
