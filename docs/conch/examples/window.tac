@@ -168,7 +168,7 @@ class ButtonDemo(insults.TerminalProtocol):
 
 
 def makeService(args):
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
     f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,

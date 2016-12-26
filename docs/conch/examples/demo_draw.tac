@@ -47,7 +47,7 @@ class Draw(insults.TerminalProtocol):
         self.terminal.cursorBackward()
 
 def makeService(args):
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
     f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
