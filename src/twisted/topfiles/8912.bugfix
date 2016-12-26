@@ -1,0 +1,1 @@
+twisted.internet.unix.Server.doRead and twisted.internet.unix.Client.doRead now discard recvmsg's ancilliary data of unsupported level or type.

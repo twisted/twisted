@@ -171,10 +171,21 @@ class _SendmsgMixin(object):
             else:
                 return main.CONNECTION_LOST
 
-        if ancillary:
-            ancillaryData = ancillary[0][2]
-            fdCount = len(ancillaryData) // 4
-            fds = struct.unpack('i'*fdCount, ancillaryData)
+        for cmsgLevel, cmsgType, cmsgData in ancillary:
+            if cmsgLevel != socket.SOL_SOCKET or cmsgType != sendmsg.SCM_RIGHTS:
+                log.msg(
+                    format=(
+                        "%(protocolName)s (on %(hostAddress)r) "
+                        "received unsupported ancillary data "
+                        "(level=%(cmsgLevel)r, type=%(cmsgType)r) "
+                        "from %(peerAddress)r."),
+                    hostAddress=self.getHost(), peerAddress=self.getPeer(),
+                    protocolName=self._getLogPrefix(self.protocol),
+                    cmsgLevel=cmsgLevel, cmsgType=cmsgType,
+                    )
+                continue
+            fdCount = len(cmsgData) // 4
+            fds = struct.unpack('i'*fdCount, cmsgData)
             if interfaces.IFileDescriptorReceiver.providedBy(self.protocol):
                 for fd in fds:
                     self.protocol.fileDescriptorReceived(fd)
