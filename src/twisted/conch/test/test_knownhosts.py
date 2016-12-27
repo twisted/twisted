@@ -961,6 +961,26 @@ class KnownHostsDatabaseTests(TestCase):
             ui.userWarnings)
 
 
+    def test_getHostKeyAlgorithms(self):
+        """
+        For a given host, get the host key algorithms for that
+        host in the known_hosts file.
+        """
+        hostsFile = self.loadSampleHostsFile()
+        hostsFile.addHostKey(
+            b"www.twistedmatrix.com", Key.fromString(otherSampleKey))
+        hostsFile.addHostKey(
+            b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey))
+        hostsFile.save()
+        options = {}
+        options['known-hosts'] = hostsFile.savePath.path
+        algorithms = default.getHostKeyAlgorithms(
+                         b"www.twistedmatrix.com", options)
+        expectedAlgorithms = [b'ssh-rsa', b'ecdsa-sha2-nistp256']
+        self.assertEqual(algorithms, expectedAlgorithms)
+
+
+
 class FakeFile(object):
     """
     A fake file-like object that acts enough like a file for
