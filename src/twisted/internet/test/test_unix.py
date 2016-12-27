@@ -406,7 +406,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # IReactorSocket.adoptStreamConnection once AF_UNIX support is
         # implemented; see https://twistedmatrix.com/trac/ticket/5573.
 
-        from socket import socketpair
+        import socket
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg
         from twisted.trial.unittest import SkipTest
@@ -427,7 +427,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             def _dataReceived(self, data):
                 pass
 
-        sendSocket, recvSocket = socketpair(AF_UNIX, SOCK_STREAM)
+        sendSocket, recvSocket = socket.socketpair(AF_UNIX, SOCK_STREAM)
         self.addCleanup(sendSocket.close)
         self.addCleanup(recvSocket.close)
 
@@ -439,7 +439,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         ancillary = ancillaryEncoder(fdsToSend)
         try:
             sendmsg(sendSocket, dataToSend, ancillary)
-        except OSError as e:
+        except (socket.error, OSError) as e:
             # Some platforms fail if ancillary contains more than
             # one entry (Mac OS 10.9.5, for example). No point in
             # continuing if sendmsg fails, skip the test.
