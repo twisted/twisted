@@ -175,6 +175,9 @@ def doConnect():
     host = options['host']
     port = options['port']
     vhk = default.verifyHostKey
+    if not options['host-key-algorithms']:
+        options['host-key-algorithms'] = default.getHostKeyAlgorithms(
+                                             host, options)
     uao = default.SSHUserAuthClient(options['user'], options, SSHConnection())
     connect.connect(host, port, options, vhk, uao).addErrback(_ebExit)
 
