@@ -506,7 +506,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertEqual(len(proto.fds), 2)
 
         # Verify that received FDs are different from the sent ones.
-        self.assertFalse(set(proto.fdsToSend).intersection(set(proto.fds)))
+        self.assertFalse(set(encoder.fdsToSend).intersection(set(proto.fds)))
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
