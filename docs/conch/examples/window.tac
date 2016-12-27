@@ -1,6 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# You can run this .tac file directly with:
+#    twistd -ny window.tac
+#
+# Re-using a private key is dangerous, generate one.
+#
+# For this example you can use:
+#
+# $ ckeygen -t rsa -f ssh-keys/ssh_host_rsa_key
+
 """
 Widgets demo.
 
@@ -20,16 +29,17 @@ from __future__ import division
 
 import string, random
 
-from twisted.python import log
-from twisted.internet import protocol, task
 from twisted.application import internet, service
-from twisted.cred import checkers, portal
 
 from twisted.conch.insults import insults, window
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
+from twisted.conch.ssh import keys
+from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
+from twisted.cred import checkers, portal
+from twisted.internet import protocol, reactor, task
+from twisted.python import log
 
-from twisted.internet import reactor
+
 
 class DrawableCanvas(window.Canvas):
     x = 0
@@ -188,6 +198,8 @@ def makeService(args):
     rlm.chainedProtocolFactory = chainProtocolFactory
     ptl = portal.Portal(rlm, [checker])
     f = ConchFactory(ptl)
+    f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
+    f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
     csvc = internet.TCPServer(args['ssh'], f)
 
     m = service.MultiService()
