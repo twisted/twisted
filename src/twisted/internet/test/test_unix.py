@@ -458,14 +458,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
         from twisted.python.sendmsg import SCM_RIGHTS
 
-        class Encoder:
-            def __init__(self):
-                self.fdsToSend = None
-            def __call__(self, fdsToSend):
-                self.fdsToSend = fdsToSend
-                return [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
+        def encoder(fdsToSend):
+            encoder.fdsToSend = fdsToSend
+            return [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
 
-        encoder = Encoder()
         proto = self._SendmsgMixinFileDescriptorReceivedDriver(encoder)
 
         # Verify that the encoder was used.
@@ -488,17 +484,13 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
         from twisted.python.sendmsg import SCM_RIGHTS
 
-        class Encoder:
-            def __init__(self):
-                self.fdsToSend = None
-            def __call__(self, fdsToSend):
-                self.fdsToSend = fdsToSend
-                return [
-                    (SOL_SOCKET, SCM_RIGHTS, pack('i', fd))
-                    for fd in fdsToSend
-                ]
+        def encoder(fdsToSend):
+            encoder.fdsToSend = fdsToSend
+            return [
+                (SOL_SOCKET, SCM_RIGHTS, pack('i', fd))
+                for fd in fdsToSend
+            ]
 
-        encoder = Encoder()
         proto = self._SendmsgMixinFileDescriptorReceivedDriver(encoder)
 
         # Verify that the encoder was used.
