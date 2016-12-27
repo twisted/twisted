@@ -409,6 +409,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         from socket import socketpair
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg
+        from twisted.trial.unittest import SkipTest
 
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(ConnectableProtocol):
@@ -436,7 +437,13 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         dataToSend = b'some data needs to be sent'
         fdsToSend = [sendSocket.fileno(), recvSocket.fileno()]
         ancillary = ancillaryEncoder(fdsToSend)
-        sendmsg(sendSocket, dataToSend, ancillary)
+        try:
+            sendmsg(sendSocket, dataToSend, ancillary)
+        except OSError as e:
+            # Some platforms fail if ancillary contains more than
+            # one entry (Mac OS 10.9.5, for example). No point in
+            # continuing if sendmsg fails, skip the test.
+            raise SkipTest('sendmsg failed: %s' % (e,))
 
         receiver.doRead()
 
@@ -492,12 +499,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 ]
 
         encoder = Encoder()
-        try:
-            proto = self._SendmsgMixinFileDescriptorReceivedDriver(encoder)
-        except OSError as e:
-            from twisted.trial import unittest
-            # Underlying OS failed sendmsg with more than one CMSG.
-            raise unittest.SkipTest('sendmsg failed: %s' % (e,))
+        proto = self._SendmsgMixinFileDescriptorReceivedDriver(encoder)
 
         # Verify that the encoder was used.
         self.assertIsNotNone(encoder.fdsToSend)
