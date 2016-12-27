@@ -67,7 +67,7 @@ class DrawableCanvas(window.Canvas):
         self.repaint()
 
     def keystrokeReceived(self, keyID, modifier):
-        if keyID == '\r' or keyID == '\v':
+        if keyID == b'\r' or keyID == b'\v':
             return
         window.Canvas.keystrokeReceived(self, keyID, modifier)
         if self.x >= self.width:
@@ -85,7 +85,8 @@ class DrawableCanvas(window.Canvas):
         window.Canvas.render(self, width, height, terminal)
         if self.focused:
             terminal.cursorPosition(self.x, self.y)
-            window.cursor(terminal, self[self.x, self.y])
+            ch = chr(self[self.x, self.y])
+            window.cursor(terminal, ch)
 
 
 class ButtonDemo(insults.TerminalProtocol):
@@ -109,9 +110,11 @@ class ButtonDemo(insults.TerminalProtocol):
         self.window = window.TopWindow(self._draw, self._schedule)
         self.output = window.TextOutput((15, 1))
         self.input = window.TextInput(15, self._setText)
-        self.select1 = window.Selection(map(str, range(100)), self._setText, 10)
-        self.select2 = window.Selection(map(str, range(200, 300)), self._setText, 10)
-        self.button = window.Button("Clear", self._clear)
+        selections = [num.encode("utf-8") for num in map(str, range(100))]
+        self.select1 = window.Selection(selections, self._setText, 10)
+        selections = [num.encode("utf-8") for num in map(str, range(200, 300))]
+        self.select2 = window.Selection(selections, self._setText, 10)
+        self.button = window.Button(b"Clear", self._clear)
         self.canvas = DrawableCanvas()
 
         hbox = window.HBox()
@@ -126,7 +129,7 @@ class ButtonDemo(insults.TerminalProtocol):
         t3 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
         t4 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
         for _t in t1, t2, t3, t4:
-            _t.setText((('This is a very long string.  ' * 3) + '\n') * 3)
+            _t.setText(((b'This is a very long string.  ' * 3) + b'\n') * 3)
 
         vp = window.Viewport(t3)
         d = [1]
@@ -173,7 +176,7 @@ class ButtonDemo(insults.TerminalProtocol):
         self.canvas.clear()
 
     def _setText(self, text):
-        self.input.setText('')
+        self.input.setText(b'')
         self.output.setText(text)
 
 
