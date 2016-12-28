@@ -291,7 +291,7 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
 
         /* Unpack the tuples into the control message. */
         struct cmsghdr *control_message = CMSG_FIRSTHDR(&message_header);
-        while ( (item = PyIter_Next(iterator)) ) {
+        while ( (item = PyIter_Next(iterator)) && control_message!=NULL ) {
             int type, level;
             Py_ssize_t data_len;
             size_t data_size;
