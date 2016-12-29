@@ -136,8 +136,10 @@ def getHostKeyAlgorithms(host, options):
     This can be used to change the order of supported key types
     in the KEXINIT packet.
 
+    @type host: L{str}
     @param host: the host to check in known_hosts
-    @param options: L{twisted.conch.client.options.ConchOptions}
+    @type options: L{twisted.conch.client.options.ConchOptions}
+    @param options: options passed to client
     @return: L{list} of L{str} representing key types or L{None}.
     """
     knownHosts = KnownHostsFile.fromPath(FilePath(
