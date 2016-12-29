@@ -29,7 +29,7 @@ from zope.interface import implementer
 from twisted.python import log
 from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
-from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
 
@@ -39,7 +39,7 @@ from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
-from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
@@ -737,6 +737,33 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
     return factory
 
 
+_GETPAGE_REPLACEMENT_TEXT = "https://pypi.org/project/treq/ or twisted.web.client.Agent"
+
+def _deprecateGetPageClasses():
+    """
+    Mark the protocols and factories associated with L{getPage} and
+    L{downloadPage} as deprecated.
+    """
+    for klass in [
+        HTTPPageGetter, HTTPPageDownloader,
+        HTTPClientFactory, HTTPDownloader
+    ]:
+        deprecatedModuleAttribute(
+            Version("Twisted", 16, 7, 0),
+            getDeprecationWarningString(
+                klass,
+                Version("Twisted", 16, 7, 0),
+                replacement=_GETPAGE_REPLACEMENT_TEXT)
+            .split("; ")[1],
+            klass.__module__,
+            klass.__name__)
+
+_deprecateGetPageClasses()
+
+
+
+@deprecated(Version("Twisted", 16, 7, 0),
+            _GETPAGE_REPLACEMENT_TEXT)
 def getPage(url, contextFactory=None, *args, **kwargs):
     """
     Download a web page as a string.
@@ -753,6 +780,9 @@ def getPage(url, contextFactory=None, *args, **kwargs):
         *args, **kwargs).deferred
 
 
+
+@deprecated(Version("Twisted", 16, 7, 0),
+            _GETPAGE_REPLACEMENT_TEXT)
 def downloadPage(url, file, contextFactory=None, *args, **kwargs):
     """
     Download a web page to a file.
@@ -1395,12 +1425,10 @@ class _StandardEndpointFactory(object):
         SSL context objects for any SSL connections the agent needs to make.
 
     @ivar _connectTimeout: If not L{None}, the timeout passed to
-        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the
-        connection timeout.
+        L{HostnameEndpoint} for specifying the connection timeout.
 
     @ivar _bindAddress: If not L{None}, the address passed to
-        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the local
-        address to bind to.
+        L{HostnameEndpoint} for specifying the local address to bind to.
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
@@ -1430,12 +1458,13 @@ class _StandardEndpointFactory(object):
 
     def endpointForURI(self, uri):
         """
-        Connect directly over TCP for C{b'http'} scheme, and TLS for C{b'https'}.
+        Connect directly over TCP for C{b'http'} scheme, and TLS for
+        C{b'https'}.
 
         @param uri: L{URI} to connect to.
 
         @return: Endpoint to connect to.
-        @rtype: L{TCP4ClientEndpoint} or L{SSL4ClientEndpoint}
+        @rtype: L{IStreamClientEndpoint}
         """
         kwargs = {}
         if self._connectTimeout is not None:
@@ -1449,13 +1478,13 @@ class _StandardEndpointFactory(object):
                               "contains non-ASCII octets, it should be ASCII "
                               "decodable.").format(uri=uri))
 
+        endpoint = HostnameEndpoint(self._reactor, host, uri.port, **kwargs)
         if uri.scheme == b'http':
-            return TCP4ClientEndpoint(self._reactor, host, uri.port, **kwargs)
+            return endpoint
         elif uri.scheme == b'https':
-            tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host,
-                                                              uri.port)
-            return SSL4ClientEndpoint(self._reactor, host, uri.port, tlsPolicy,
-                                      **kwargs)
+            connectionCreator = self._policyForHTTPS.creatorForNetloc(uri.host,
+                                                                      uri.port)
+            return wrapClientTLS(connectionCreator, endpoint)
         else:
             raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
 

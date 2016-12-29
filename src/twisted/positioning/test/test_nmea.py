@@ -563,7 +563,7 @@ class FixUnitsTests(TestCase):
 
 
 
-class FixerTestMixin:
+class FixerTestMixin(object):
     """
     Mixin for tests for the fixers on L{nmea.NMEAAdapter} that adapt
     from NMEA-specific notations to generic Python objects.
