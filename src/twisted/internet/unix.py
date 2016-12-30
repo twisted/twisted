@@ -172,7 +172,8 @@ class _SendmsgMixin(object):
                 return main.CONNECTION_LOST
 
         for cmsgLevel, cmsgType, cmsgData in ancillary:
-            if cmsgLevel != socket.SOL_SOCKET or cmsgType != sendmsg.SCM_RIGHTS:
+            if (cmsgLevel != socket.SOL_SOCKET or
+                cmsgType != sendmsg.SCM_RIGHTS):
                 log.msg(
                     format=(
                         "%(protocolName)s (on %(hostAddress)r) "
