@@ -427,6 +427,12 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.protocol = proto
             def _dataReceived(self, data):
                 pass
+            def getHost(self):
+                pass
+            def getPeer(self):
+                pass
+            def _getLogPrefix(self, o):
+                pass
 
         sendSocket, recvSocket = socket.socketpair(AF_UNIX, SOCK_STREAM)
         self.addCleanup(sendSocket.close)
@@ -492,6 +498,39 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsgBadCMSG(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor. Scenario: unsupported CMSGs with no FDs.
+        """
+        # Given that we can't just send random/invalid ancillary data via the
+        # packer for it to be sent via sendmsg -- the kernel would not accept
+        # it -- we'll temporarily replace recvmsg with a fake one that produces
+        # a non-supported ancillary message level/type. This being said, from
+        # the perspective of the ancillaryPacker, all that is required it to
+        # let the test driver know that 0 file descriptors are expected.
+        from twisted.python import sendmsg
+
+        def ancillaryPacker(fdsToSend):
+            ancillary = []
+            expectedCount = 0
+            return ancillary, expectedCount
+
+        def fakeRecvmsgUnsupportedAncillary(skt, *args, **kwargs):
+            data = b'some data'
+            ancillary = [(SOL_SOCKET+1, sendmsg.SCM_RIGHTS+1, b'')]
+            flags = 0
+            return sendmsg.RecievedMessage(data, ancillary, flags)
+
+        origRecvmsg = sendmsg.recvmsg
+        sendmsg.recvmsg = fakeRecvmsgUnsupportedAncillary
+        self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+        sendmsg.recvmsg = origRecvmsg
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
 
 
     def test_avoidLeakingFileDescriptors(self):
