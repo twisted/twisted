@@ -79,7 +79,7 @@ class Test(components.Adapter):
 
 
 @implementer(ITest2)
-class Test2:
+class Test2(object):
     temporaryAdapter = 1
     def __init__(self, orig):
         pass
@@ -242,74 +242,115 @@ class AdapterTests(unittest.SynchronousTestCase):
 class IMeta(Interface):
     pass
 
+
+
 @implementer(IMeta)
 class MetaAdder(components.Adapter):
     def add(self, num):
         return self.original.num + num
+
+
 
 @implementer(IMeta)
 class BackwardsAdder(components.Adapter):
     def add(self, num):
         return self.original.num - num
 
-class MetaNumber:
+
+
+class MetaNumber(object):
+    """
+    Integer wrapper for Interface adaptation tests.
+    """
     def __init__(self, num):
         self.num = num
 
-class FakeAdder:
-    def add(self, num):
-        return num + 5
 
-class FakeNumber:
-    num = 3
 
 class ComponentNumber(components.Componentized):
     def __init__(self):
         self.num = 0
         components.Componentized.__init__(self)
 
-implementer(IMeta)
-class ComponentMeta(components.Adapter):
+
+
+@implementer(IMeta)
+class ComponentAdder(components.Adapter):
+    """
+    Adder for componentized adapter tests.
+    """
     def __init__(self, original):
         components.Adapter.__init__(self, original)
         self.num = self.original.num
 
-class ComponentAdder(ComponentMeta):
+
     def add(self, num):
         self.num += num
         return self.num
 
-class ComponentDoubler(ComponentMeta):
-    def add(self, num):
-        self.num += (num * 2)
-        return self.original.num
+
 
 class IAttrX(Interface):
+    """
+    Base interface for test of adapter with C{__cmp__}.
+    """
     def x():
-        pass
+        """
+        Return a value.
+        """
+
+
 
 class IAttrXX(Interface):
+    """
+    Adapted interface for test of adapter with C{__cmp__}.
+    """
     def xx():
-        pass
+        """
+        Return a tuple of values.
+        """
+
+
 
 @implementer(IAttrX)
-class Xcellent:
+class Xcellent(object):
+    """
+    L{IAttrX} implementation for test of adapter with C{__cmp__}.
+    """
     def x(self):
+        """
+        Return a value.
+
+        @return: a value
+        """
         return 'x!'
 
+
+
 @comparable
-class DoubleXAdapter:
+class DoubleXAdapter(object):
+    """
+    Adapter with __cmp__.
+    """
     num = 42
     def __init__(self, original):
         self.original = original
+
+
     def xx(self):
         return (self.original.x(), self.original.x())
+
+
     def __cmp__(self, other):
         return cmp(self.num, other.num)
 
 
+
 class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):
-    def testBasic(self):
+    def test_basic(self):
+        """
+        Registered adapters can be used to adapt classes to an interface.
+        """
         components.registerAdapter(MetaAdder, MetaNumber, IMeta)
         n = MetaNumber(1)
         self.assertEqual(IMeta(n).add(1), 2)
@@ -779,7 +820,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         idiomatic way to ensure that signature works; test_proxyInheritance
         verifies the how-Python-actually-calls-it signature.
         """
-        class Sample:
+        class Sample(object):
             called = False
             def hello(self):
                 self.called = True
@@ -855,4 +896,3 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertIs(yayable.ifaceAttribute, thingy)
         del proxy.ifaceAttribute
         self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
-

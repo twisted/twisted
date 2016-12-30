@@ -15,8 +15,8 @@ class Run(Command):
     """
     Run a test.
     """
-    arguments = [('testCase', String())]
-    response = [('success', Boolean())]
+    arguments = [(b'testCase', String())]
+    response = [(b'success', Boolean())]
 
 
 
@@ -24,5 +24,5 @@ class Start(Command):
     """
     Set up the worker process, giving the running directory.
     """
-    arguments = [('directory', String())]
-    response = [('success', Boolean())]
+    arguments = [(b'directory', String())]
+    response = [(b'success', Boolean())]

@@ -14,6 +14,8 @@ import sys
 import os
 import errno
 
+from twisted.python.compat import unicode
+
 
 def _setupPath(environ):
     """
@@ -83,6 +85,8 @@ def main(_fdopen=os.fdopen):
     while True:
         try:
             r = protocolIn.read(1)
+            if isinstance(r, unicode):
+                r = r.encode("utf-8")
         except IOError as e:
             if e.args[0] == errno.EINTR:
                 if sys.version_info < (3, 0):
@@ -90,7 +94,7 @@ def main(_fdopen=os.fdopen):
                 continue
             else:
                 raise
-        if r == '':
+        if r == b'':
             break
         else:
             workerProtocol.dataReceived(r)
