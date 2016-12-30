@@ -383,16 +383,23 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
-    def test_multiFileDescriptorReceivedPerRecvmsg(self):
+    def _SendmsgMixinFileDescriptorReceivedDriver(self, ancillaryPacker):
         """
-        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
-        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
-        file descriptor.
+        Drive _SendmsgMixin via sendmsg socket calls to check that
+        L{IFileDescriptorReceiver.fileDescriptorReceived} is called once
+        for each file descriptor received in the ancillary messages.
+        ancillaryPacker is called with a list of two file descriptors and
+        should return a two-tuple where: the first item is an iterable of
+        zero or more (cmsg_level, cmsg_type, cmsg_data) tuples for actual
+        sending via sendmsg; the second item is an integer indicating the
+        expected number of FDs to be received.
         """
         # Strategy:
         # - Create a UNIX socketpair.
         # - Associate one end to a FakeReceiver and FakeProtocol.
-        # - Call sendmsg on the other end with two FDs as ancillary data.
+        # - Call sendmsg on the other end to send FDs as ancillary data.
+        #   (ancillary data is obtained calling ancillaryPacker with
+        #   the two FDs associated with the socketpair)
         # - Call doRead in the FakeReceiver.
         # - Verify results on FakeProtocol.
 
@@ -400,9 +407,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # IReactorSocket.adoptStreamConnection once AF_UNIX support is
         # implemented; see https://twistedmatrix.com/trac/ticket/5573.
 
-        from socket import socketpair
+        import socket
         from twisted.internet.unix import _SendmsgMixin
-        from twisted.python.sendmsg import sendmsg, SCM_RIGHTS
+        from twisted.python.sendmsg import sendmsg
+        from twisted.trial.unittest import SkipTest
 
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(ConnectableProtocol):
@@ -420,7 +428,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             def _dataReceived(self, data):
                 pass
 
-        sendSocket, recvSocket = socketpair(AF_UNIX, SOCK_STREAM)
+        sendSocket, recvSocket = socket.socketpair(AF_UNIX, SOCK_STREAM)
         self.addCleanup(sendSocket.close)
         self.addCleanup(recvSocket.close)
 
@@ -429,18 +437,61 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         dataToSend = b'some data needs to be sent'
         fdsToSend = [sendSocket.fileno(), recvSocket.fileno()]
-        ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
-        sendmsg(sendSocket, dataToSend, ancillary)
+        ancillary, expectedCount = ancillaryPacker(fdsToSend)
+        try:
+            sendmsg(sendSocket, dataToSend, ancillary)
+        except (socket.error, OSError) as e:
+            # Some platforms fail if ancillary contains more than
+            # one entry (Mac OS 10.9 and 10.10, for example).
+            # No point in continuing if sendmsg fails, skip the test.
+            raise SkipTest('sendmsg failed: %s' % (e,))
 
         receiver.doRead()
 
         # Verify that fileDescriptorReceived was called twice.
-        self.assertEqual(len(proto.fds), 2)
+        self.assertEqual(len(proto.fds), expectedCount)
 
         # Verify that received FDs are different from the sent ones.
         self.assertFalse(set(fdsToSend).intersection(set(proto.fds)))
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsgOneCMSG(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor. Scenario: single CMSG with two FDs.
+        """
+        from twisted.python.sendmsg import SCM_RIGHTS
+
+        def ancillaryPacker(fdsToSend):
+            ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
+            expectedCount = 2
+            return ancillary, expectedCount
+
+        self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
     if sendmsgSkip is not None:
-        test_multiFileDescriptorReceivedPerRecvmsg.skip = sendmsgSkip
+        test_multiFileDescriptorReceivedPerRecvmsgOneCMSG.skip = sendmsgSkip
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor. Scenario: two CMSGs with one FD each.
+        """
+        from twisted.python.sendmsg import SCM_RIGHTS
+
+        def ancillaryPacker(fdsToSend):
+            ancillary = [
+                (SOL_SOCKET, SCM_RIGHTS, pack('i', fd))
+                for fd in fdsToSend
+            ]
+            expectedCount = 2
+            return ancillary, expectedCount
+
+        self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
 
     def test_avoidLeakingFileDescriptors(self):
