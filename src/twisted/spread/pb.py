@@ -672,8 +672,7 @@ class Broker(banana.Banana):
             except:
                 log.deferr()
         self.connects = None
-        if self.factory: # In tests we won't have factory
-            self.factory.clientConnectionMade(self)
+        self.factory.clientConnectionMade(self)
 
 
     def connectionFailed(self):
