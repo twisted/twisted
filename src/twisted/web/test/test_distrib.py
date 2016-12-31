@@ -23,6 +23,7 @@ from twisted.web import distrib, client, resource, static, server
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
 from twisted.test import proto_helpers
+from twisted.web.http_headers import Headers
 
 
 class MySite(server.Site):
@@ -87,8 +88,10 @@ class DistribTests(unittest.TestCase):
         r2.putChild("here", self.sub)
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
-        d = client.getPage("http://127.0.0.1:%d/here/there" % \
-                           self.port2.getHost().port)
+        agent = client.Agent(reactor)
+        d = agent.request(b"GET", "http://127.0.0.1:%d/here/there" % \
+                          (self.port2.getHost().port,))
+        d.addCallback(client.readBody)
         d.addCallback(self.assertEqual, 'root')
         return d
 
@@ -128,14 +131,17 @@ class DistribTests(unittest.TestCase):
         then retrieve it from a L{ResourceSubscription} via an HTTP client.
 
         @param child: The resource to publish using distrib.
-        @param **kwargs: Extra keyword arguments to pass to L{getPage} when
+        @param **kwargs: Extra keyword arguments to pass to L{Agent.request} when
             requesting the resource.
 
         @return: A L{Deferred} which fires with the result of the request.
         """
         mainPort, mainAddr = self._setupDistribServer(child)
-        return client.getPage("http://%s:%s/child" % (
-            mainAddr.host, mainAddr.port), **kwargs)
+        agent = client.Agent(reactor)
+        url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        d = agent.request(b"GET", url, **kwargs)
+        d.addCallback(client.readBody)
+        return d
 
 
     def _requestAgentTest(self, child, **kwargs):
@@ -153,7 +159,7 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        d = client.Agent(reactor).request("GET", "http://%s:%s/child" % (
+        d = client.Agent(reactor).request(b"GET", "http://%s:%s/child" % (
             mainAddr.host, mainAddr.port), **kwargs)
 
         def cbCollectBody(response):
@@ -180,7 +186,7 @@ class DistribTests(unittest.TestCase):
                 return ""
 
         request = self._requestTest(
-            ReportRequestHeaders(), headers={'foo': 'bar'})
+            ReportRequestHeaders(), headers=Headers({'foo': ['bar']}))
         def cbRequested(result):
             self.assertEqual(requestHeaders['Foo'], ['bar'])
         request.addCallback(cbRequested)
