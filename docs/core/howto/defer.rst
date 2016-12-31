@@ -411,7 +411,7 @@ Consider this example of a Deferred which is ignorant of cancellation:
 
     operation = Deferred()
     def x(result):
-        print("Hooray, a result:" + repr(x))
+        print("Hooray, a result:" + repr(result))
     operation.addCallback(x)
     # ...
     def operationDone():
