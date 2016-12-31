@@ -18,6 +18,7 @@ from twisted.python.randbytes import insecureRandom
 from twisted.cred.portal import IRealm
 from twisted.protocols import basic
 from twisted.internet import reactor, task, protocol, defer, error
+from twisted.internet.error import TimeoutError
 from twisted.internet.interfaces import IConsumer
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred import portal, checkers, credentials
@@ -1234,7 +1235,7 @@ class DTPFactoryTests(unittest.TestCase):
 
         # Now fail the connection attempt.  This should do nothing.  In
         # particular, it should not raise an exception.
-        self.factory.clientConnectionFailed(None, defer.TimeoutError("foo"))
+        self.factory.clientConnectionFailed(None, TimeoutError("foo"))
 
         # Give the Deferred to trial so it can make sure it did what we
         # expected.

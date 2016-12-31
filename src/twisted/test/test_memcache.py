@@ -15,8 +15,9 @@ from twisted.protocols.memcache import ClientError, ServerError
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.internet.task import Clock
-from twisted.internet.defer import Deferred, gatherResults, TimeoutError
+from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.defer import DeferredList
+from twisted.internet.error import TimeoutError
 
 
 
@@ -327,7 +328,7 @@ class MemCacheTests(CommandMixin, TestCase):
         self.assertFailure(d2, TimeoutError)
 
         def checkMessage(error):
-            self.assertEqual(str(error), "Connection timeout")
+            self.assertRegex(str(error), "Connection timeout")
 
         d1.addCallback(checkMessage)
         self.assertFailure(d3, ConnectionDone)

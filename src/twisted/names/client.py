@@ -281,7 +281,7 @@ class Resolver(common.ResolverBase):
         When the last timeout expires, the query is considered failed.
 
         @rtype: C{Deferred}
-        @raise C{twisted.internet.defer.TimeoutError}: When the query times
+        @raise C{twisted.internet.error.TimeoutError}: When the query times
         out.
         """
         if timeout is None:
@@ -317,7 +317,7 @@ class Resolver(common.ResolverBase):
         # protocol we're giving up on it and return a terminal timeout failure
         # to our caller.
         if not timeout:
-            return failure.Failure(defer.TimeoutError(query))
+            return failure.Failure(error.TimeoutError(query))
 
         # Get an address to try.  Take it out of the list of addresses
         # to try and put it ino the list of already tried addresses.

@@ -14,6 +14,7 @@ from __future__ import division, absolute_import
 from zope.interface import implementer
 
 from twisted.internet import defer, interfaces
+from twisted.internet.error import TimeoutError
 from twisted.names import dns, common, error
 
 
@@ -26,7 +27,7 @@ class FailureHandler:
 
     def __call__(self, failure):
         # AuthoritativeDomainErrors should halt resolution attempts
-        failure.trap(dns.DomainError, defer.TimeoutError, NotImplementedError)
+        failure.trap(dns.DomainError, TimeoutError, NotImplementedError)
         return self.resolver(self.query, self.timeout)
 
 

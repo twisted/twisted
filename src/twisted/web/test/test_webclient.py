@@ -21,6 +21,7 @@ from twisted.web import server, client, error, resource
 from twisted.web.static import Data
 from twisted.web.util import Redirect
 from twisted.internet import reactor, defer, interfaces
+from twisted.internet.error import TimeoutError
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
@@ -493,7 +494,7 @@ class WebClientTests(unittest.TestCase):
         self.cleanupServerConnections = 1
         return self.assertFailure(
             client.getPage(self.getURL("wait"), timeout=0.000001),
-            defer.TimeoutError)
+            TimeoutError)
 
 
     def testDownloadPage(self):
@@ -703,7 +704,7 @@ class WebClientTests(unittest.TestCase):
         L{client.HTTPDownloader.__init__} elapses without the complete response
         being received, the L{defer.Deferred} returned by
         L{client.downloadPage} fires with a L{Failure} wrapping a
-        L{defer.TimeoutError}.
+        L{error.TimeoutError}.
         """
         self.cleanupServerConnections = 2
         # Verify the behavior if no bytes are ever written.
@@ -718,8 +719,8 @@ class WebClientTests(unittest.TestCase):
             self.mktemp(), timeout=0.01)
 
         return defer.gatherResults([
-            self.assertFailure(first, defer.TimeoutError),
-            self.assertFailure(second, defer.TimeoutError)])
+            self.assertFailure(first, TimeoutError),
+            self.assertFailure(second, TimeoutError)])
 
 
     def test_downloadTimeoutsWorkWithoutReading(self):
@@ -728,7 +729,7 @@ class WebClientTests(unittest.TestCase):
         L{client.HTTPDownloader.__init__} elapses without the complete response
         being received, the L{defer.Deferred} returned by
         L{client.downloadPage} fires with a L{Failure} wrapping a
-        L{defer.TimeoutError}, even if the remote peer isn't reading data from
+        L{error.TimeoutError}, even if the remote peer isn't reading data from
         the socket.
         """
         self.cleanupServerConnections = 1
@@ -738,7 +739,7 @@ class WebClientTests(unittest.TestCase):
         d = client.downloadPage(
             self.getURL("never-read"),
             self.mktemp(), timeout=0.05)
-        return self.assertFailure(d, defer.TimeoutError)
+        return self.assertFailure(d, TimeoutError)
 
 
     def test_downloadHeaders(self):

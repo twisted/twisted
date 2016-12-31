@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 import unittest as pyunit
 
 from twisted.internet import defer
+from twisted.internet.error import TimeoutError
 from twisted.trial import unittest, reporter
 from twisted.trial import util
 from twisted.trial.test import detests
@@ -178,8 +179,8 @@ class TimeoutTests(TestTester):
         return detests.TimeoutTests(name)
 
     def _wasTimeout(self, error):
-        self.assertEqual(error.check(defer.TimeoutError),
-                             defer.TimeoutError)
+        self.assertEqual(error.check(TimeoutError),
+                             TimeoutError)
 
     def test_pass(self):
         result = self.runTest('test_pass')
