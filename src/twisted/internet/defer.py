@@ -160,6 +160,8 @@ def maybeDeferred(f, *args, **kw):
 
 
 
+@deprecated(Version('Twisted', 16, 8, 0),
+            replacement='twisted.internet.defer.Deferred.addTimeout')
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
 

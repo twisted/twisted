@@ -2943,3 +2943,24 @@ class EnsureDeferredTests(unittest.TestCase):
         """
         with self.assertRaises(ValueError):
             defer.ensureDeferred("something")
+
+
+
+class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
+    """
+    L{twisted.internet.defer} timeout code.
+    """
+    def test_deprecatedTimeout(self):
+        """
+        L{twisted.internet.defer.timeout} is deprecated.
+        """
+        deferred = defer.Deferred()
+        defer.timeout(deferred)
+        self.assertFailure(deferred, defer.TimeoutError)
+        warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.internet.defer.timeout was deprecated in Twisted 16.8.0;'
+            ' please use twisted.internet.defer.Deferred.addTimeout instead')
