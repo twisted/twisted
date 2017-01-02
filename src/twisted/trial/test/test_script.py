@@ -871,3 +871,17 @@ class HelpOrderTests(unittest.TestCase):
             )
 
             self.assertTrue(match, msg=msg % (orderName, output))
+
+
+
+class TrialMainDoesNothingTests(unittest.SynchronousTestCase):
+    """
+    Importing L{twisted.trial.__main__} will not run the script
+    unless it is actually C{__main__}.
+    """
+    def test_importDoesNothing(self):
+        """
+        If we import L{twisted.trial.__main__}, it should do nothing.
+        """
+        # We shouldn't suddenly drop into a script when we import this!
+        __import__('twisted.trial.__main__')
