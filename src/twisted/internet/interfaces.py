@@ -89,7 +89,7 @@ class IHostResolution(Interface):
     An L{IHostResolution} represents represents an in-progress recursive query
     for a DNS name.
 
-    @since: Twisted 16.7.0rc1
+    @since: Twisted 16.7.0
     """
 
     name = Attribute(
@@ -110,7 +110,7 @@ class IResolutionReceiver(Interface):
     An L{IResolutionReceiver} receives the results of a hostname resolution in
     progress, initiated by an L{IHostnameResolver}.
 
-    @since: Twisted 16.7.0rc1
+    @since: Twisted 16.7.0
     """
 
     def resolutionBegan(resolutionInProgress):
@@ -147,7 +147,7 @@ class IHostnameResolver(Interface):
     An L{IHostnameResolver} can resolve a host name and port number into a
     series of L{IAddress} objects.
 
-    @since: Twisted 16.7.0rc1
+    @since: Twisted 16.7.0
     """
 
     def resolveHostName(resolutionReceiver, hostName, portNumber=0,
