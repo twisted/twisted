@@ -1,5 +1,5 @@
-Twisted 16.7.0rc1
-=================
+Twisted 16.7.0
+==============
 
 |pypi|
 |coverage|
@@ -8,9 +8,10 @@ Twisted 16.7.0rc1
 
 .. code::
 
-    <derwolfe> Twisted - thank you for continuing to be fun to use and relatively easy to test 😃
+    <hawkowl> can we make this a No Acronym Zone
+    <idnar> hawkowl: an NAZ?
 
-For information on what's new in Twisted 16.7.0rc1, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.7.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
