@@ -1,35 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Conch 16.7.0rc1 (2016-12-23)
-====================================
-
-Features
---------
- - twisted.conch.manhole now works on Python 3. (#8327)
- - Twisted Conch now supports ECDH key exchanges. (#8730)
- - Add support in twisted.conch.ssh for hmac-sha2-384 (#8784)
- - conch and cftp scripts now work on Python 3. (#8791)
- - twisted.conch.ssh supports ECDH key exchange. (#8811)
-
-Bugfixes
---------
- - twisted.conch.ssh.keys.Key.fromString now supports OpenSSL private
-   keys with Windows line endings (\r\n) again (broken since 16.6.0).
-   (#8928)
-
-Improved Documentation
-----------------------
- - The documentation for
-   twisted.conch.endpoints.SSHCommandClientEndpoint.existingConnection
-   now describes where the value for the connection parameter might
-   come from. (#8892)
-
-Other
------
- - #8894
-
-
 Twisted Conch 16.6.0 (2016-11-17)
 =================================
 
