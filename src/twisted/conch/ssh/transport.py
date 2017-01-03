@@ -481,12 +481,14 @@ class SSHTransportBase(protocol.Protocol):
     ]
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
-    supportedPublicKeys = [b'ssh-rsa', b'ssh-dss', b'ssh-ed25519']
+    supportedPublicKeys = []
 
     # Add the supported EC keys, and change the name from ecdh* to ecdsa*
     for eckey in supportedKeyExchanges:
         if eckey.find(b'ecdh') != -1:
             supportedPublicKeys += [eckey.replace(b'ecdh', b'ecdsa')]
+
+    supportedPublicKeys += [b'ssh-rsa', b'ssh-dss']
 
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
