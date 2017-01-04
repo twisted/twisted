@@ -39,7 +39,6 @@ if cryptography and pyasn1 and nacl:
 
 import base64
 import os
-import binascii
 
 from twisted.conch.test import keydata
 from twisted.python import randbytes
@@ -926,7 +925,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                    self.ecObj.private_numbers().public_numbers.y, byteLength))
             )
 
-
     def test_blobED25519(self):
         """
         Return the over-the-wire SSH format of the ED25519 public key.
@@ -1056,16 +1054,15 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(key.public().toString('openssh'),
                 keydata.publicECDSA_openssh[:-8]) # no comment
 
-
     def test_toOpenSSHED25519(self):
         """
         L{keys.Key.toString} serializes a ED25519 key in OpenSSH format.
         """
-        key = keys.Key.fromString(keydata.privateED_openssh)
+        key = keys.Key.fromString(keydata.privateED25519_openssh)
         self.assertEqual(key.public().toString('openssh', b'comment'),
-                         keydata.publicED_openssh)
+                         keydata.publicED25519_openssh)
         self.assertEqual(key.public().toString('openssh'),
-                         keydata.publicED_openssh[:-8])
+                         keydata.publicED25519_openssh[:-8])
 
     def test_toLSHRSA(self):
         """
