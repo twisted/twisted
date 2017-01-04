@@ -529,6 +529,14 @@ class CooperativeTask(object):
 
 
 
+def uncooperator(started=True):
+    return Cooperator(
+        # Don't stop consuming the iterator.
+        terminationPredicateFactory=lambda: lambda: False,
+        scheduler=lambda what: (what(), object())[1],
+        started=started,
+    )
+
 class Cooperator(object):
     """
     Cooperative task scheduler.

@@ -8,6 +8,7 @@ import re
 import sys
 import textwrap
 import types
+from runpy import run_module
 
 from twisted.trial import unittest
 from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
@@ -19,6 +20,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.compat import NativeStringIO, _PY3
 
 from twisted.trial.test.test_loader import testNames
+from twisted.test.test_twisted import SetAsideModule
 
 if not _PY3:
     from twisted.trial._dist.disttrial import DistTrialRunner
@@ -885,3 +887,12 @@ class TrialMainDoesNothingTests(unittest.SynchronousTestCase):
         """
         # We shouldn't suddenly drop into a script when we import this!
         __import__('twisted.trial.__main__')
+
+
+    def test_importedAsMainDoesThings(self):
+        """
+        If L{twisted.trial.__main__} is run as a I{__main__}-style script,
+        it runs the trial console script.
+        """
+        with SetAsideModule("twisted.trial.__main__"):
+            run_module('twisted.trial.__main__')
