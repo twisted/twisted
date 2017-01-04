@@ -32,7 +32,7 @@ try:
     import nacl.signing
 except ImportError:
     nacl = None
-    skipnacl = 'Cannot run without pynacl.'
+    skipNacl = 'Cannot run without pynacl.'
 
 if cryptography and pyasn1 and nacl:
     from twisted.conch.ssh import keys, common, sexpy
@@ -926,6 +926,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                    self.ecObj.private_numbers().public_numbers.y, byteLength))
             )
 
+
     def test_blobED25519(self):
         """
         Return the over-the-wire SSH format of the ED25519 public key.
@@ -1055,15 +1056,16 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(key.public().toString('openssh'),
                 keydata.publicECDSA_openssh[:-8]) # no comment
 
+
     def test_toOpenSSHED25519(self):
         """
         L{keys.Key.toString} serializes a ED25519 key in OpenSSH format.
         """
-        key = keys.Key.fromString(keydata.privateED25519_openssh)
+        key = keys.Key.fromString(keydata.privateED_openssh)
         self.assertEqual(key.public().toString('openssh', b'comment'),
-                         keydata.publicED25519_openssh)
+                         keydata.publicED_openssh)
         self.assertEqual(key.public().toString('openssh'),
-                         keydata.publicED25519_openssh[:-8])  # no comment
+                         keydata.publicED_openssh[:-8])
 
     def test_toLSHRSA(self):
         """

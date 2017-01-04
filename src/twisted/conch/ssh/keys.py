@@ -748,8 +748,18 @@ class Key(object):
 
         return cls(keyObject)
 
+
     @classmethod
     def _fromED25519Components(cls, seed, isPrivate=False):
+        """
+        Build a key from ED25519 components.
+
+        @param seed: The seed value for a Signing (private) key, or
+        a Verify (public) key.
+        @type seed: L{bytes}
+
+        @param isPrivate: Is seed for a Signing or Verify key?
+        """
         if isPrivate:
             return cls(nacl.signing.SigningKey(seed))
         else:
