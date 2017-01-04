@@ -64,7 +64,6 @@ def ifPlatformSupported(f):
     return wrapper
 
 
-
 class PIDFileTests(twisted.trial.unittest.TestCase):
     """
     Tests for L{PIDFile}.
@@ -278,11 +277,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         if SYSTEM_NAME != "posix":
             raise SkipTest("This test assumes POSIX")
 
-        from os import geteuid
-
-        if geteuid() == 0:
-            raise SkipTest("This test doesn't work if running as root")
-
         pidFile = PIDFile(DummyFilePath())
         pidFile._write(1)  # PID 1 is init on POSIX systems
 
@@ -370,7 +364,6 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
         self.assertRaises(AlreadyRunningError, pidFile.__enter__)
-
 
 
 class NonePIDFileTests(twisted.trial.unittest.TestCase):
