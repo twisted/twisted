@@ -13,7 +13,10 @@ usage() {
 
   echo "${program}: usage:";
   echo "    ${program} <pull_request_number> <trac_ticket_number> <branch_name>";
-
+  echo "";
+  echo "${program} creates a branch in the Twisted GitHub repository from a";
+  echo "forked pull request.  This is necessary in order to create a branch";
+  echo "that is visible to the Buildbot-based builder infrastructure.";
 }
 
 
