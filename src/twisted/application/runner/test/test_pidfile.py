@@ -64,6 +64,7 @@ def ifPlatformSupported(f):
     return wrapper
 
 
+
 class PIDFileTests(twisted.trial.unittest.TestCase):
     """
     Tests for L{PIDFile}.
@@ -364,6 +365,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
         self.assertRaises(AlreadyRunningError, pidFile.__enter__)
+
 
 
 class NonePIDFileTests(twisted.trial.unittest.TestCase):
