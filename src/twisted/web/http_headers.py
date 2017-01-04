@@ -141,9 +141,6 @@ class Headers(object):
         @return: C{values}, with each item decoded
         @rtype: L{list} of L{unicode}
         """
-        if type(values) is not list:
-            return values
-
         newValues = []
 
         for value in values:
@@ -243,7 +240,7 @@ class Headers(object):
         encodedName = self._encodeName(name)
         values = self._rawHeaders.get(encodedName, default)
 
-        if isinstance(name, unicode):
+        if isinstance(name, unicode) and values is not default:
             return self._decodeValues(values)
         return values
 

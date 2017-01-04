@@ -371,6 +371,9 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
         default = object()
         self.assertIdentical(h.getRawHeaders(u"test", default), default)
+        self.assertIdentical(h.getRawHeaders(u"test", None), None)
+        self.assertEqual(h.getRawHeaders(u"test", [None]), [None])
+        self.assertEqual(h.getRawHeaders(u"test", [u"\N{SNOWMAN}"]), [u"\N{SNOWMAN}"])
 
 
     def test_getRawHeaders(self):
