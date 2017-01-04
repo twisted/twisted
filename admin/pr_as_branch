@@ -12,7 +12,10 @@ usage() {
   if [ $# != 0 ]; then echo "$@"; echo ""; fi;
 
   echo "${program}: usage:";
-  echo "    ${program} <pull_request_number> <trac_ticket_number> <branch_name>";
+  echo "    ${program} pull_request_number trac_ticket_number branch_name";
+  echo "";
+  echo "Note: branch_name should not include the ticket number prefix; that ";
+  echo "will be added automatically.";
   echo "";
   echo "${program} creates a branch in the Twisted GitHub repository from a";
   echo "forked pull request.  This is necessary in order to create a branch";
