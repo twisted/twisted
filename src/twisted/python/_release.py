@@ -248,7 +248,6 @@ class Project(object):
 
     def getVersion(self):
         """
-
         @return: A L{incremental.Version} specifying the version number of the
             project based on live python modules.
         """
