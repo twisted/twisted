@@ -6,7 +6,8 @@ Tests for error handling in PB.
 """
 from twisted.internet import reactor, defer
 from twisted.python import log
-from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.compat import NativeStringIO
+from twisted.python.reflect import qual
 from twisted.spread import pb, flavors, jelly
 from twisted.trial import unittest
 
@@ -405,10 +406,7 @@ class PBFailureTests(PBConnTestCase):
         self.assertRaises(StopIteration, copy.throwExceptionIntoGenerator, gen)
         self.assertEqual(len(exception), 1)
         exc = exception[0]
-        if _PY3:
-            self.assertEqual(exc.remoteType, b"builtins.AttributeError")
-        else:
-            self.assertEqual(exc.remoteType, b"exceptions.AttributeError")
+        self.assertEqual(exc.remoteType, qual(AttributeError).encode("ascii"))
         self.assertEqual(exc.args, ("foo",))
         self.assertEqual(exc.remoteTraceback, 'Traceback unavailable\n')
 
@@ -482,10 +480,7 @@ class FailureJellyingTests(unittest.TestCase):
         copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
         output = NativeStringIO()
         copied.printTraceback(output)
-        if _PY3:
-            exception = "builtins.Exception"
-        else:
-            exception = "exceptions.Exception"
+        exception = qual(Exception)
         expectedOutput = ("Traceback from remote host -- "
                          "{}: some reason\n".format(exception))
         self.assertEqual(expectedOutput, output.getvalue())
