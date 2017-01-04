@@ -437,7 +437,7 @@ class Key(object):
             # One file can have multiple keys.
             # For now just grab the last private key.
             privKey = common.getNS(
-                keyData[keyData.rindex('25519') + 5:], 2)[1][:32]
+                keyData[keyData.rindex(b'25519') + 5:], 2)[1][:32]
             return cls(nacl.signing.SigningKey(privKey))
         else:
             if kind == b'EC':

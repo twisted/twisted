@@ -196,8 +196,7 @@ class KeyTests(unittest.TestCase):
             curve=keydata.ECDatanistp521['curve']
         )._keyObject
         self.ed25519Obj = keys.Key._fromED25519Components(
-            seed=binascii.unhexlify(
-                'abef82c26e67ab82fba182f6539b0196d84d5d868f13be7c5ff21b478547d885'),
+            seed=keydata.ED25519Data['seed'],
             isPrivate=True
         )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'

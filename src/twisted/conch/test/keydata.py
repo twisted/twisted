@@ -9,6 +9,7 @@ Data used by test_keys as well as others.
 from __future__ import absolute_import, division
 
 from twisted.python.compat import long, _b64decodebytes as decodebytes
+import binascii
 
 RSAData = {
     'n': long('106248668575524741116943830949539894737212779118943280948138'
@@ -84,6 +85,11 @@ ECDatanistp521 = {
   'curve': b'ecdsa-sha2-nistp521'
 }
 
+ED25519Data = {
+    'seed': binascii.unhexlify(
+        'abef82c26e67ab82fba182f6539b0196d84d5d868f13be7c5ff21b478547d885')
+}
+
 privateECDSA_openssh521 = b"""-----BEGIN EC PRIVATE KEY-----
 MIHcAgEBBEIAjn0lSVF6QweS4bjOGP9RHwqxUiTastSE0MVuLtFvkxygZqQ712oZ
 ewMvqKkxthMQgxzSpGtRBcmkL7RqZ94+18qgBwYFK4EEACOhgYkDgYYABAFpX/6B
@@ -127,7 +133,7 @@ nZyEZW+dth5fkA6E4eIMAAAAEw==
 -----END OPENSSH PRIVATE KEY-----"""
 
 publicED25519_openssh = (b"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBWFEev7mSnuS"
-"EdWpX4BnRqPnZyEZW+dth5fkA6E4eIM comment")
+b"EdWpX4BnRqPnZyEZW+dth5fkA6E4eIM comment")
 
 publicRSA_openssh = (b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBE"
 b"vLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYL"
