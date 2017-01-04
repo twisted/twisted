@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Handling of RSA and DSA keys.
+Handling of RSA, DSA, EC, and *25519 keys.
 """
 
 from __future__ import absolute_import, division
@@ -748,6 +748,13 @@ class Key(object):
 
         return cls(keyObject)
 
+    @classmethod
+    def _fromED25519Components(cls, seed, isPrivate=False):
+        if isPrivate:
+            return cls(nacl.signing.SigningKey(seed))
+        else:
+            return cls(nacl.signing.VerifyKey(seed))
+
     def __init__(self, keyObject):
         """
         Initialize with a private or public
@@ -947,7 +954,10 @@ class Key(object):
         @rtype: L{Key}
         @return: A public key.
         """
-        return Key(self._keyObject.public_key())
+        if self.type() is 'ED25519':
+            return Key(self._keyObject.verify_key)
+        else:
+            return Key(self._keyObject.public_key())
 
     def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
@@ -1104,9 +1114,15 @@ class Key(object):
                 "curve": self.sshType(),
             }
         elif isinstance(self._keyObject, nacl.signing.VerifyKey):
-            return self._keyObject._key
+            numbers = self._keyObject._key
+            return {
+                "verify": numbers
+            }
         elif isinstance(self._keyObject, nacl.signing.SigningKey):
-            return self._keyObject._signing_key
+            return {
+                "verify": self._keyObject.verify_key._key,
+                "signing": self._keyObject._signing_key
+            }
         else:
             raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
 
@@ -1154,7 +1170,7 @@ class Key(object):
                                                            byteLength) +
                     utils.int_to_bytes(data['y'], byteLength)))
         else: # 'ED25519'
-            return (common.NS(b'ssh-ed25519') + common.NS(data))
+            return (common.NS(b'ssh-ed25519') + common.NS(data['verify']))
 
     def privateBlob(self):
         """
@@ -1203,7 +1219,7 @@ class Key(object):
             return (common.NS(data['curve']) + common.MP(data['x']) +
                     common.MP(data['y']) + common.MP(data['privateValue']))
         else: # 'ED25519'
-            return (common.NS(b'ssh-ed25519') + common.NS(data))
+            return (common.NS(b'ssh-ed25519') + common.NS(data['signing']))
 
     def toString(self, type, extra=None):
         """
@@ -1248,10 +1264,7 @@ class Key(object):
         """
         data = self.data()
         if self.isPublic():
-            if self.type() == 'ED25519':
-                retstr = b'ssh-ed25519' + base64.encode(
-                    self._keyObject)
-            elif self.type() == 'EC':
+            if self.type() == 'EC':
                 if not extra:
                     extra = b''
                 retstr = (self._keyObject.public_bytes(
