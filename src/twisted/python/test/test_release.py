@@ -36,7 +36,7 @@ from incremental import Version
 from subprocess import CalledProcessError
 
 from twisted.python._release import (
-    getStrContent, setStrContent,
+    getStrContent, lenientSetStrContent,
     findTwistedProjects, replaceInFile, Project, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
@@ -198,7 +198,7 @@ class StructureAssertingMixin(object):
                 if not isinstance(content, str):
                     content = content.decode("utf-8")
                 content = content.replace('\n', os.linesep)
-                setStrContent(child, content)
+                lenientSetStrContent(child, content)
 
 
     def assertStructure(self, root, dirDict):
@@ -272,7 +272,7 @@ class ProjectTests(ExternalTempdirTestCase):
             directory.child('__init__.py').setContent(b'')
         directory.child('topfiles').createDirectory()
         generatedVersion = genVersion(*version)
-        setStrContent(directory.child('_version.py'), generatedVersion)
+        lenientSetStrContent(directory.child('_version.py'), generatedVersion)
         return Project(directory)
 
 
@@ -395,7 +395,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "    '%s'\n"
             "def _bar():\n"
             "    '%s'" % (docstring, privateDocstring))
-        setStrContent(inputPath.child("__init__.py"), inputPathContent)
+        lenientSetStrContent(inputPath.child("__init__.py"), inputPathContent)
         outputPath = FilePath(self.mktemp())
 
         builder = APIBuilder()
@@ -451,11 +451,11 @@ class APIBuilderTests(ExternalTempdirTestCase):
         initContent = (
             "def foo():\n"
             "    '%s'\n" % (docstring,))
-        setStrContent(packagePath.child("__init__.py"), initContent)
+        lenientSetStrContent(packagePath.child("__init__.py"), initContent)
         generatedVersion = genVersion("twisted", 1, 0, 0)
         if not isinstance(generatedVersion, bytes):
             generatedVersion = generatedVersion.encode("utf-8")
-        setStrContent(packagePath.child("_version.py"), generatedVersion)
+        lenientSetStrContent(packagePath.child("_version.py"), generatedVersion)
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -521,7 +521,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "class Baz(object):\n"
             "    pass"
             "" % (docstring, privateDocstring))
-        setStrContent(inputPath.child("__init__.py"), initPyContent)
+        lenientSetStrContent(inputPath.child("__init__.py"), initPyContent)
 
         outputPath = FilePath(self.mktemp())
 
@@ -896,7 +896,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             'http://twistedmatrix.com/trac/ticket/<number>\n'
             '\n'
             'Blah blah other stuff.\n')
-        setStrContent(news, content)
+        lenientSetStrContent(news, content)
 
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
@@ -1205,8 +1205,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        setStrContent(self.sourceDir.child("conf.py"), self.confContent)
-        setStrContent(self.sourceDir.child("index.rst"), self.indexContent)
+        lenientSetStrContent(self.sourceDir.child("conf.py"), self.confContent)
+        lenientSetStrContent(self.sourceDir.child("index.rst"), self.indexContent)
 
 
     def verifyFileExists(self, fileDir, fileName):

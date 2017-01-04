@@ -55,7 +55,7 @@ def runCommand(args, **kwargs):
 
 
 
-def setStrContent(fileObj, content, encoding="utf-8"):
+def lenientSetStrContent(fileObj, content, encoding="utf-8"):
     """
     Write out C{content} as L{bytes} to a L{FilePath}.
 
