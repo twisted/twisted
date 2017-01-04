@@ -113,13 +113,14 @@ To get a result from some blocking code back into the reactor thread, we can use
 Similarly, you want some code running in a non-reactor thread wants to invoke some code in the reactor thread and get its result, you can use :api:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`::
 
     from twisted.internet import threads, reactor, defer
-    from twisted.web.client import getPage
+    from twisted.web.client import Agent
     from twisted.web.error import Error
 
     def inThread():
+        agent = Agent(reactor)
         try:
             result = threads.blockingCallFromThread(
-                reactor, getPage, "http://twistedmatrix.com/")
+                reactor, agent.request, "GET", "http://twistedmatrix.com/"))
         except Error, exc:
             print(exc)
         else:

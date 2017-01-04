@@ -181,7 +181,9 @@ For use of ``SSHCommandClientEndpoint`` that is intended to be completely autono
 
 It is also possible to run commands (one or more) over an
 already-established connection.  This is done using the alternate
-constructor ``SSHCommandClientEndpoint.existingConnection`` .
+constructor ``SSHCommandClientEndpoint.existingConnection`` .  The
+``connection`` argument to that function can be obtained by accessing
+``transport.conn`` on an already connected protocol.
 
 
     

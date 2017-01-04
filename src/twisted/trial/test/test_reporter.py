@@ -832,7 +832,7 @@ class UncleanWarningTodoTests(TodoTests):
 
 
 
-class MockColorizer:
+class MockColorizer(object):
     """
     Used by TreeReporterTests to make sure that output is colored correctly.
     """
