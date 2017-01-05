@@ -550,7 +550,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
 
         quuxFooContent = getStrContent(quuxPath.sibling('quux.foo.html'))
-        import time; time.sleep(3600)
         self.assertIn(
             'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
             quuxFooContent)
