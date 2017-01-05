@@ -27,9 +27,10 @@ except ImportError:
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.procutils import which
 from twisted.python import release
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
 
 from incremental import Version
 
@@ -378,7 +379,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -441,7 +442,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
@@ -493,7 +494,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         """
         The templates and System for Twisted includes adding deprecations.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
