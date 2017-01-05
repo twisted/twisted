@@ -50,13 +50,23 @@ TICKET_NUMBER="$1"; shift;
 #repo="https://github.com/twisted/twisted.git";
 repo="git@github.com:twisted/twisted.git";
 
-clone="$(mktemp -d -t twisted.XXXX)";
+wc="$(dirname "$(dirname "$0")")/.git";
 
-git clone --depth 1 --progress "${repo}" "${clone}";
+if [ ! -d "${wc}" ]; then
+  wc="$(mktemp -d -t twisted.XXXX)";
 
-cd "${clone}";
+  git clone --depth 1 --progress "${repo}" "${wc}";
+
+  cloned=true;
+else
+  cloned=false;
+fi;
+
+cd "${wc}";
 
 git fetch origin "refs/pull/${PR_NUMBER}/head";
 git push origin "FETCH_HEAD:refs/heads/${TICKET_NUMBER}-${BRANCH_NAME}";
 
-rm -fr "${clone}";
+if ${cloned}; then
+  rm -fr "${wc}";
+fi;
