@@ -1141,83 +1141,94 @@ class IReactorProcess(Interface):
         """
         Spawn a process, with a process protocol.
 
+        Arguments given to this function that are listed as L{bytes} or
+        L{unicode} may be encoded or decoded depending on the platform and the
+        argument type given.  On UNIX systems (Linux, FreeBSD, macOS) and
+        Python 2 on Windows, L{unicode} arguments will be encoded down to
+        L{bytes} using the encoding given by L{os.getfilesystemencoding}, to be
+        used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
+        arguments will be decoded up to L{unicode} using the encoding given by
+        L{os.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
+        thereafter) and given to Windows's native "wide" APIs.
+
         @type processProtocol: L{IProcessProtocol} provider
-        @param processProtocol: An object which will be notified of all
-            events related to the created process.
+        @param processProtocol: An object which will be notified of all events
+            related to the created process.
 
         @param executable: the file name to spawn - the full path should be
-                           used.
+            used.
+        @type executable: L{bytes} or L{unicode}
 
         @param args: the command line arguments to pass to the process; a
-                     sequence of strings. The first string should be the
-                     executable's name.
+            sequence of strings.  The first string should be the executable's
+            name.
+        @type args: L{list} with L{bytes} or L{unicode} items.
 
-        @type env: a C{dict} mapping C{str} to C{str}, or L{None}.
-        @param env: the environment variables to pass to the child process. The
-                    resulting behavior varies between platforms. If
-                      - C{env} is not set:
-                        - On POSIX: pass an empty environment.
-                        - On Windows: pass C{os.environ}.
-                      - C{env} is L{None}:
-                        - On POSIX: pass C{os.environ}.
-                        - On Windows: pass C{os.environ}.
-                      - C{env} is a C{dict}:
-                        - On POSIX: pass the key/value pairs in C{env} as the
-                          complete environment.
-                        - On Windows: update C{os.environ} with the key/value
-                          pairs in the C{dict} before passing it. As a
-                          consequence of U{bug #1640
-                          <http://twistedmatrix.com/trac/ticket/1640>}, passing
-                          keys with empty values in an effort to unset
-                          environment variables I{won't} unset them.
+        @type env: a L{dict} mapping L{bytes}/L{unicode} keys to
+            L{bytes}/L{unicode} items, or L{None}.
+        @param env: the environment variables to pass to the child process.
+            The resulting behavior varies between platforms.  If:
+
+                - C{env} is not set:
+                  - On POSIX: pass an empty environment.
+                  - On Windows: pass L{os.environ}.
+                - C{env} is L{None}:
+                  - On POSIX: pass L{os.environ}.
+                  - On Windows: pass L{os.environ}.
+                - C{env} is a L{dict}:
+                  - On POSIX: pass the key/value pairs in C{env} as the
+                    complete environment.
+                  - On Windows: update L{os.environ} with the key/value
+                    pairs in the L{dict} before passing it. As a
+                    consequence of U{bug #1640
+                    <http://twistedmatrix.com/trac/ticket/1640>}, passing
+                    keys with empty values in an effort to unset
+                    environment variables I{won't} unset them.
 
         @param path: the path to run the subprocess in - defaults to the
-                     current directory.
+            current directory.
+        @type path: L{bytes} or L{unicode} or L{None}
 
-        @param uid: user ID to run the subprocess as. (Only available on
-                    POSIX systems.)
+        @param uid: user ID to run the subprocess as.  (Only available on POSIX
+            systems.)
 
-        @param gid: group ID to run the subprocess as. (Only available on
-                    POSIX systems.)
+        @param gid: group ID to run the subprocess as.  (Only available on
+            POSIX systems.)
 
         @param usePTY: if true, run this process in a pseudo-terminal.
-                       optionally a tuple of C{(masterfd, slavefd, ttyname)},
-                       in which case use those file descriptors.
-                       (Not available on all systems.)
+            optionally a tuple of C{(masterfd, slavefd, ttyname)}, in which
+            case use those file descriptors.  (Not available on all systems.)
 
         @param childFDs: A dictionary mapping file descriptors in the new child
-                         process to an integer or to the string 'r' or 'w'.
+            process to an integer or to the string 'r' or 'w'.
 
-                         If the value is an integer, it specifies a file
-                         descriptor in the parent process which will be mapped
-                         to a file descriptor (specified by the key) in the
-                         child process.  This is useful for things like inetd
-                         and shell-like file redirection.
+            If the value is an integer, it specifies a file descriptor in the
+            parent process which will be mapped to a file descriptor (specified
+            by the key) in the child process.  This is useful for things like
+            inetd and shell-like file redirection.
 
-                         If it is the string 'r', a pipe will be created and
-                         attached to the child at that file descriptor: the
-                         child will be able to write to that file descriptor
-                         and the parent will receive read notification via the
-                         L{IProcessProtocol.childDataReceived} callback.  This
-                         is useful for the child's stdout and stderr.
+            If it is the string 'r', a pipe will be created and attached to the
+            child at that file descriptor: the child will be able to write to
+            that file descriptor and the parent will receive read notification
+            via the L{IProcessProtocol.childDataReceived} callback.  This is
+            useful for the child's stdout and stderr.
 
-                         If it is the string 'w', similar setup to the previous
-                         case will occur, with the pipe being readable by the
-                         child instead of writeable.  The parent process can
-                         write to that file descriptor using
-                         L{IProcessTransport.writeToChild}.  This is useful for
-                         the child's stdin.
+            If it is the string 'w', similar setup to the previous case will
+            occur, with the pipe being readable by the child instead of
+            writeable.  The parent process can write to that file descriptor
+            using L{IProcessTransport.writeToChild}.  This is useful for the
+            child's stdin.
 
-                         If childFDs is not passed, the default behaviour is to
-                         use a mapping that opens the usual stdin/stdout/stderr
-                         pipes.
+            If childFDs is not passed, the default behaviour is to use a
+            mapping that opens the usual stdin/stdout/stderr pipes.
+        @type childFDs: L{dict} of L{int} to L{int} or L{str}
 
         @see: L{twisted.internet.protocol.ProcessProtocol}
 
         @return: An object which provides L{IProcessTransport}.
 
         @raise OSError: Raised with errno C{EAGAIN} or C{ENOMEM} if there are
-                        insufficient system resources to create a new process.
+            insufficient system resources to create a new process.
         """
 
 class IReactorTime(Interface):
@@ -2003,11 +2014,11 @@ class IProcessProtocol(Interface):
         """
         Called when data arrives from the child process.
 
-        @type childFD: C{int}
+        @type childFD: L{int}
         @param childFD: The file descriptor from which the data was
             received.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: The data read from the child's file descriptor.
         """
 
@@ -2547,10 +2558,10 @@ class IProcessTransport(ITransport):
         Similar to L{ITransport.write} but also allows the file descriptor in
         the child process which will receive the bytes to be specified.
 
-        @type childFD: C{int}
+        @type childFD: L{int}
         @param childFD: The file descriptor to which to write.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: The bytes to write.
 
         @return: L{None}

@@ -151,6 +151,31 @@ class TestFileDescriptorReceiverProtocol(TestProtocol):
 
 
 
+@implementer(interfaces.IHandshakeListener)
+class TestHandshakeListener(TestProtocol):
+    """
+    A Protocol that implements L{IHandshakeListener} and records the
+    number of times its C{handshakeCompleted} method has been called.
+
+    @ivar handshakeCompletedCalls: The number of times
+        C{handshakeCompleted}
+    @type handshakeCompletedCalls: L{int}
+    """
+
+    def __init__(self):
+        TestProtocol.__init__(self)
+        self.handshakeCompletedCalls = 0
+
+
+    def handshakeCompleted(self):
+        """
+        Called when a TLS handshake has completed.  Implemented per
+        L{IHandshakeListener}
+        """
+        self.handshakeCompletedCalls += 1
+
+
+
 class TestFactory(ClientFactory):
     """
     Simple factory to be used both when connecting and listening. It contains
@@ -397,6 +422,26 @@ class WrappingFactoryTests(unittest.TestCase):
             interfaces.IHalfCloseableProtocol.providedBy(p), False)
 
 
+    def test_wrappingProtocolHandshakeListener(self):
+        """
+        Our L{_WrappingProtocol} should be an L{IHandshakeListener} if
+        the C{wrappedProtocol} is.
+        """
+        handshakeListener = TestHandshakeListener()
+        wrapped = endpoints._WrappingProtocol(None, handshakeListener)
+        self.assertTrue(interfaces.IHandshakeListener.providedBy(wrapped))
+
+
+    def test_wrappingProtocolNotHandshakeListener(self):
+        """
+        Our L{_WrappingProtocol} should not provide L{IHandshakeListener}
+        if the C{wrappedProtocol} doesn't.
+        """
+        tp = TestProtocol()
+        p = endpoints._WrappingProtocol(None, tp)
+        self.assertFalse(interfaces.IHandshakeListener.providedBy(p))
+
+
     def test_wrappedProtocolReadConnectionLost(self):
         """
         L{_WrappingProtocol.readConnectionLost} should proxy to the wrapped
@@ -417,6 +462,17 @@ class WrappingFactoryTests(unittest.TestCase):
         p = endpoints._WrappingProtocol(None, hcp)
         p.writeConnectionLost()
         self.assertTrue(hcp.writeLost)
+
+
+    def test_wrappedProtocolHandshakeCompleted(self):
+        """
+        L{_WrappingProtocol.handshakeCompleted} should proxy to the
+        wrapped protocol's C{handshakeCompleted}
+        """
+        listener = TestHandshakeListener()
+        wrapped = endpoints._WrappingProtocol(None, listener)
+        wrapped.handshakeCompleted()
+        self.assertEqual(listener.handshakeCompletedCalls, 1)
 
 
 
@@ -1575,7 +1631,8 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 
 
-def deterministicResolvingReactor(reactor, expectedAddresses):
+def deterministicResolvingReactor(reactor, expectedAddresses=(),
+                                  hostMap=None):
     """
     Create a reactor that will deterministically resolve all hostnames it is
     passed to the list of addresses given.
@@ -1586,11 +1643,15 @@ def deterministicResolvingReactor(reactor, expectedAddresses):
         where C{list(providedBy(reactor))} is not empty); usually C{IReactor*}
         interfaces.
 
-    @param expectedAddresses: the addresses expected to be returned.  If these
-        are strings, they should be IPv4 or IPv6 literals, and they will be
-        wrapped in L{IPv4Address} and L{IPv6Address} objects in the resolution
-        result.
+    @param expectedAddresses: (optional); the addresses expected to be returned
+        for every address.  If these are strings, they should be IPv4 or IPv6
+        literals, and they will be wrapped in L{IPv4Address} and L{IPv6Address}
+        objects in the resolution result.
     @type expectedAddresses: iterable of C{object} or C{str}
+
+    @param hostMap: (optional); the names (unicode) mapped to lists of
+        addresses (str or L{IAddress}); in the same format as expectedAddress,
+        which map the results for I{specific} hostnames to addresses.
 
     @return: A new reactor which provides all the interfaces previously
         provided by C{reactor} as well as L{IReactorPluggableNameResolver}.
@@ -1599,14 +1660,16 @@ def deterministicResolvingReactor(reactor, expectedAddresses):
         C{expectedAddresses}.  However, it is not a complete implementation as
         it does not have an C{installNameResolver} method.
     """
+    if hostMap is None:
+        hostMap = {}
+    hostMap = hostMap.copy()
     @provider(IHostnameResolver)
     class SimpleNameResolver(object):
         @staticmethod
         def resolveHostName(resolutionReceiver, hostName, portNumber=0,
                             addressTypes=None, transportSemantics='TCP'):
-
             resolutionReceiver.resolutionBegan(None)
-            for expectedAddress in expectedAddresses:
+            for expectedAddress in hostMap.get(hostName, expectedAddresses):
                 if isinstance(expectedAddress, str):
                     expectedAddress = ([IPv4Address, IPv6Address]
                                        [isIPv6Address(expectedAddress)]

@@ -10,9 +10,10 @@ from __future__ import division, absolute_import
 from stat import S_IMODE
 from os import stat, close, urandom
 from tempfile import mktemp
-from socket import AF_INET, SOCK_STREAM, socket
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
 from hashlib import md5
+from struct import pack
 
 try:
     from socket import AF_UNIX
@@ -380,6 +381,66 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
     if sendmsgSkip is not None:
         test_fileDescriptorOverrun.skip = sendmsgSkip
+
+
+    def test_multiFileDescriptorReceivedPerRecvmsg(self):
+        """
+        _SendmsgMixin handles multiple file descriptors per recvmsg, calling
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
+        file descriptor.
+        """
+        # Strategy:
+        # - Create a UNIX socketpair.
+        # - Associate one end to a FakeReceiver and FakeProtocol.
+        # - Call sendmsg on the other end with two FDs as ancillary data.
+        # - Call doRead in the FakeReceiver.
+        # - Verify results on FakeProtocol.
+
+        # TODO: replace FakeReceiver test approach with one based in
+        # IReactorSocket.adoptStreamConnection once AF_UNIX support is
+        # implemented; see https://twistedmatrix.com/trac/ticket/5573.
+
+        from socket import socketpair
+        from twisted.internet.unix import _SendmsgMixin
+        from twisted.python.sendmsg import sendmsg, SCM_RIGHTS
+
+        @implementer(IFileDescriptorReceiver)
+        class FakeProtocol(ConnectableProtocol):
+            def __init__(self):
+                self.fds = []
+            def fileDescriptorReceived(self, fd):
+                self.fds.append(fd)
+                close(fd)
+
+        class FakeReceiver(_SendmsgMixin):
+            bufferSize = 1024
+            def __init__(self, skt, proto):
+                self.socket = skt
+                self.protocol = proto
+            def _dataReceived(self, data):
+                pass
+
+        sendSocket, recvSocket = socketpair(AF_UNIX, SOCK_STREAM)
+        self.addCleanup(sendSocket.close)
+        self.addCleanup(recvSocket.close)
+
+        proto = FakeProtocol()
+        receiver = FakeReceiver(recvSocket, proto)
+
+        dataToSend = b'some data needs to be sent'
+        fdsToSend = [sendSocket.fileno(), recvSocket.fileno()]
+        ancillary = [(SOL_SOCKET, SCM_RIGHTS, pack('ii', *fdsToSend))]
+        sendmsg(sendSocket, dataToSend, ancillary)
+
+        receiver.doRead()
+
+        # Verify that fileDescriptorReceived was called twice.
+        self.assertEqual(len(proto.fds), 2)
+
+        # Verify that received FDs are different from the sent ones.
+        self.assertFalse(set(fdsToSend).intersection(set(proto.fds)))
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsg.skip = sendmsgSkip
 
 
     def test_avoidLeakingFileDescriptors(self):

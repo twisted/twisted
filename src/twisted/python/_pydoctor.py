@@ -16,7 +16,7 @@ from pydoctor import model, zopeinterface
 from pydoctor.sphinx import SphinxInventory
 
 
-class HeadRequest(urllib2.Request):
+class HeadRequest(urllib2.Request, object):
     """
     A request for the HEAD HTTP method.
     """
