@@ -52,7 +52,7 @@ repo="git@github.com:twisted/twisted.git";
 
 clone="$(mktemp -d -t twisted.XXXX)";
 
-git clone --progress "${repo}" "${clone}";
+git clone --depth 1 --progress "${repo}" "${clone}";
 
 cd "${clone}";
 
