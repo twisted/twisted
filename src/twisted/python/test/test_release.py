@@ -19,7 +19,7 @@ import tempfile
 import shutil
 
 from datetime import date
-from io import BytesIO as StringIO
+from io import BytesIO
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -752,16 +752,14 @@ class NewsBuilderMixin(StructureAssertingMixin):
         L{NewsBuilder._writeHeader} accepts a file-like object opened for
         writing and a header string and writes out a news file header to it.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeHeader(output, "Super Awesometastic 32.16")
         content = output.getvalue()
-        if not isinstance(content, str):
-            content = content.decode("utf-8")
         self.assertEqual(
             content,
-            "Super Awesometastic 32.16\n"
-            "=========================\n"
-            "\n")
+            b"Super Awesometastic 32.16\n"
+            b"=========================\n"
+            b"\n")
 
 
     def test_writeSection(self):
@@ -771,24 +769,22 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges}) and writes out a section header and all
         of the given ticket information.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeSection(
             output, "Features",
             [(3, "Great stuff."),
              (17, "Very long line which goes on and on and on, seemingly "
               "without end until suddenly without warning it does end.")])
         content = output.getvalue()
-        if not isinstance(content, str):
-            content = content.decode("utf-8")
         self.assertEqual(
             content,
-            "Features\n"
-            "--------\n"
-            " - Great stuff. (#3)\n"
-            " - Very long line which goes on and on and on, seemingly "
-            "without end\n"
-            "   until suddenly without warning it does end. (#17)\n"
-            "\n")
+            b"Features\n"
+            b"--------\n"
+            b" - Great stuff. (#3)\n"
+            b" - Very long line which goes on and on and on, seemingly "
+            b"without end\n"
+            b"   until suddenly without warning it does end. (#17)\n"
+            b"\n")
 
 
     def test_writeMisc(self):
@@ -798,21 +794,19 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges} and writes out a section header and all
         of the ticket numbers, but excludes any descriptions.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeMisc(
             output, "Other",
             [(x, "") for x in range(2, 50, 3)])
         content = output.getvalue()
-        if not isinstance(content, str):
-            content = content.decode("utf-8")
         self.assertEqual(
             content,
-            "Other\n"
-            "-----\n"
-            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
-            "#38, #41,\n"
-            "   #44, #47\n"
-            "\n")
+            b"Other\n"
+            b"-----\n"
+            b" - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
+            b"#38, #41,\n"
+            b"   #44, #47\n"
+            b"\n")
 
 
     def test_build(self):
@@ -1269,7 +1263,7 @@ class SphinxBuilderTests(TestCase):
         Creates and builds a fake Sphinx project as if via the command line,
         failing if there are any warnings.
         """
-        output = StringIO()
+        output = BytesIO()
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
