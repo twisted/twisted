@@ -456,7 +456,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         generatedVersion = genVersion("twisted", 1, 0, 0)
         if not isinstance(generatedVersion, bytes):
             generatedVersion = generatedVersion.encode("utf-8")
-        lenientSetStrContent(packagePath.child("_version.py"), generatedVersion)
+        lenientSetStrContent(packagePath.child("_version.py"),
+                             generatedVersion)
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -1199,8 +1200,10 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        lenientSetStrContent(self.sourceDir.child("conf.py"), self.confContent)
-        lenientSetStrContent(self.sourceDir.child("index.rst"), self.indexContent)
+        lenientSetStrContent(self.sourceDir.child("conf.py"),
+                             self.confContent)
+        lenientSetStrContent(self.sourceDir.child("index.rst"),
+                             self.indexContent)
 
 
     def verifyFileExists(self, fileDir, fileName):

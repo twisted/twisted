@@ -195,8 +195,8 @@ class GitCommand(object):
         """
         runCommand(["git", "-C", fromDir.path,
                     "checkout-index", "--all", "--force",
-                    # --prefix has to end up with a "/" so that files get copied
-                    # to a directory whose name is the prefix.
+                    # --prefix has to end up with a "/" so that files
+                    # get copied to a directory whose name is the prefix.
                     "--prefix", exportDir.path + "/"])
 
 
