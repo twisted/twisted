@@ -50,7 +50,7 @@ TICKET_NUMBER="$1"; shift;
 #repo="https://github.com/twisted/twisted.git";
 repo="git@github.com:twisted/twisted.git";
 
-clone="$(mktemp -d -t twisted)";
+clone="$(mktemp -d -t twisted.XXXX)";
 
 git clone --progress "${repo}" "${clone}";
 
