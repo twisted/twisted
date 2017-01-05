@@ -9,15 +9,14 @@ import sys
 import textwrap
 import types
 
-from twisted.trial import unittest
-from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
-from twisted.trial.runner import TestLoader
-from twisted.scripts import trial
 from twisted.python import util
-from twisted.python.usage import UsageError
-from twisted.python.filepath import FilePath
 from twisted.python.compat import NativeStringIO, _PY3
-
+from twisted.python.filepath import FilePath
+from twisted.python.usage import UsageError
+from twisted.scripts import trial
+from twisted.trial import unittest
+from twisted.trial.runner import TestLoader
+from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
 from twisted.trial.test.test_loader import testNames
 
 if not _PY3:
