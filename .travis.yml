@@ -45,7 +45,11 @@ matrix:
     # Twistedchecker is running as a separate job so that we can ignore if it
     # fails.
     - python: 2.7
-      env: TOXENV=txchecker-travis
+      env: TOXENV=txchecker-travis-required
+    - python: 2.7
+      env: TOXENV=txchecker-travis-all
+  allow_failures:
+    - env: TOXENV=txchecker-travis-all
 
 
 addons:

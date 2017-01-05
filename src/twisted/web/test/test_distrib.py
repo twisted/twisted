@@ -292,7 +292,6 @@ class DistribTests(unittest.TestCase):
                 '    <p>Connection to distributed server lost:'
                     '<pre>'
                     '[Failure instance: Traceback from remote host -- '
-                    'Traceback unavailable',
                 'twisted.spread.flavors.NoSuchMethod: '
                     'No such method: remote_request',
                 ']</pre></p>',
