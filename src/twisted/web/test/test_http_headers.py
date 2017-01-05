@@ -74,6 +74,19 @@ class BytesHeadersTests(TestCase):
         self.assertIdentical(h.getRawHeaders(b"test", default), default)
 
 
+    def test_getRawHeadersWithDefaultMatchingValue(self):
+        """
+        If the object passed as the value list to L{Headers.setRawHeaders}
+        is later passed as a default to L{Headers.getRawHeaders}, the
+        result nevertheless contains encoded values.
+        """
+        h = Headers()
+        default = [u"value"]
+        h.setRawHeaders(b"key", default)
+        self.assertIsInstance(h.getRawHeaders(b"key", default)[0], bytes)
+        self.assertEqual(h.getRawHeaders(b"key", default), [b"value"])
+
+
     def test_getRawHeaders(self):
         """
         L{Headers.getRawHeaders} returns the values which have been set for a
@@ -377,6 +390,19 @@ class UnicodeHeadersTests(TestCase):
             h.getRawHeaders(u"test", [u"\N{SNOWMAN}"]),
             [u"\N{SNOWMAN}"],
         )
+
+
+    def test_getRawHeadersWithDefaultMatchingValue(self):
+        """
+        If the object passed as the value list to L{Headers.setRawHeaders}
+        is later passed as a default to L{Headers.getRawHeaders}, the
+        result nevertheless contains decoded values.
+        """
+        h = Headers()
+        default = [b"value"]
+        h.setRawHeaders(b"key", default)
+        self.assertIsInstance(h.getRawHeaders(u"key", default)[0], unicode)
+        self.assertEqual(h.getRawHeaders(u"key", default), [u"value"])
 
 
     def test_getRawHeaders(self):
