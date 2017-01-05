@@ -234,8 +234,10 @@ class Headers(object):
         @param default: The value to return if no header with the given C{name}
             exists.
 
-        @rtype: L{list} of strings, same type as C{name}
-        @return: A L{list} of values for the given header.
+        @rtype: L{list} of strings, same type as C{name} (except when
+            C{default} is returned).
+        @return: If the named header is present, a L{list} of its
+            values.  Otherwise, C{default}.
         """
         encodedName = self._encodeName(name)
         values = self._rawHeaders.get(encodedName, default)
