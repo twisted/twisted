@@ -151,6 +151,31 @@ class TestFileDescriptorReceiverProtocol(TestProtocol):
 
 
 
+@implementer(interfaces.IHandshakeListener)
+class TestHandshakeListener(TestProtocol):
+    """
+    A Protocol that implements L{IHandshakeListener} and records the
+    number of times its C{handshakeCompleted} method has been called.
+
+    @ivar handshakeCompletedCalls: The number of times
+        C{handshakeCompleted}
+    @type handshakeCompletedCalls: L{int}
+    """
+
+    def __init__(self):
+        TestProtocol.__init__(self)
+        self.handshakeCompletedCalls = 0
+
+
+    def handshakeCompleted(self):
+        """
+        Called when a TLS handshake has completed.  Implemented per
+        L{IHandshakeListener}
+        """
+        self.handshakeCompletedCalls += 1
+
+
+
 class TestFactory(ClientFactory):
     """
     Simple factory to be used both when connecting and listening. It contains
@@ -397,6 +422,26 @@ class WrappingFactoryTests(unittest.TestCase):
             interfaces.IHalfCloseableProtocol.providedBy(p), False)
 
 
+    def test_wrappingProtocolHandshakeListener(self):
+        """
+        Our L{_WrappingProtocol} should be an L{IHandshakeListener} if
+        the C{wrappedProtocol} is.
+        """
+        handshakeListener = TestHandshakeListener()
+        wrapped = endpoints._WrappingProtocol(None, handshakeListener)
+        self.assertTrue(interfaces.IHandshakeListener.providedBy(wrapped))
+
+
+    def test_wrappingProtocolNotHandshakeListener(self):
+        """
+        Our L{_WrappingProtocol} should not provide L{IHandshakeListener}
+        if the C{wrappedProtocol} doesn't.
+        """
+        tp = TestProtocol()
+        p = endpoints._WrappingProtocol(None, tp)
+        self.assertFalse(interfaces.IHandshakeListener.providedBy(p))
+
+
     def test_wrappedProtocolReadConnectionLost(self):
         """
         L{_WrappingProtocol.readConnectionLost} should proxy to the wrapped
@@ -417,6 +462,17 @@ class WrappingFactoryTests(unittest.TestCase):
         p = endpoints._WrappingProtocol(None, hcp)
         p.writeConnectionLost()
         self.assertTrue(hcp.writeLost)
+
+
+    def test_wrappedProtocolHandshakeCompleted(self):
+        """
+        L{_WrappingProtocol.handshakeCompleted} should proxy to the
+        wrapped protocol's C{handshakeCompleted}
+        """
+        listener = TestHandshakeListener()
+        wrapped = endpoints._WrappingProtocol(None, listener)
+        wrapped.handshakeCompleted()
+        self.assertEqual(listener.handshakeCompletedCalls, 1)
 
 
 
