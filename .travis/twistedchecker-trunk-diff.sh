@@ -8,7 +8,10 @@
 # * SCRIPT_NAME twisted/words/
 # * SCRIPT_NAME twisted.words
 
-target=$1
+set -e  # Exit with error is a command exits with an unchecked error.
+set -u  # Exit with error if an undefined variable is dereferenced.
+
+target="$1";
 
 # FIXME: https://github.com/twisted/twistedchecker/issues/116
 # Since for unknown modules twistedchecker will return the same error, the
@@ -16,29 +19,32 @@ target=$1
 # module.
 # This is why we check that the argument is a path and if not a path, it is
 # an importable module.
-if [ ! -d "$target" ]; then
-    python -c "import $target" 2> /dev/null
-    if [ $? -ne 0 ]; then
-        >&2 echo "$target does not exists as a path or as a module."
-        exit 1
-    fi
-fi
+if [ ! -d "${target}" ]; then
+    if ! python -c "import ${target}" 2> /dev/null; then
+        >&2 echo "${target} does not exists as a path or as a module.";
+        exit 1;
+    fi;
+fi;
 
 # Make sure we have trunk on the local repo.
-git fetch origin +refs/heads/trunk:refs/remotes/origin/trunk
+git fetch origin "+refs/heads/trunk:refs/remotes/origin/trunk";
 
-# Explicitly ignore extension modules.  See: https://github.com/twisted/twistedchecker/issues/118
-mkdir -p build/
-twistedchecker --ignore='raiser.so,portmap.so,_sendmsg.so' -f parseable "$target" > build/twistedchecker-branch.report
+# Explicitly ignore extension modules.
+# See: https://github.com/twisted/twistedchecker/issues/118
+mkdir -p build/;
+twistedchecker \
+    --ignore="raiser.so,portmap.so,_sendmsg.so" \
+    --disable="${TWISTEDCHECKER_SKIP_WARNINGS:-}" \
+    --output-format=parseable \
+    "${target}" \
+    > "build/twistedchecker-branch.report" || true;
 
 # Make sure repo is producing the diff with prefix so that the output of
 # `git diff` can be parsed by diff_cover.
-git config diff.noprefix false
+git config diff.noprefix false;
 
 diff-quality \
     --violations=pylint \
     --fail-under=100 \
-    --compare-branch=origin/trunk build/twistedchecker-branch.report
-
-diff_exit_code=$?
-exit $diff_exit_code
+    --compare-branch=origin/trunk \
+    build/twistedchecker-branch.report;
