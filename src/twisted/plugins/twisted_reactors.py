@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division
 
 from twisted.application.reactors import Reactor
-from twisted.python.runtime import platformType
+from twisted.python.reflect import requireModule
 
 default = Reactor(
     'default', 'twisted.internet.default',
@@ -25,8 +25,7 @@ __all__ = [
     "default", "select", "poll", "epoll", "kqueue",
 ]
 
-try:
-    import twisted.internet.cfreactor
+if requireModule("twisted.internet.cfreactor") is not None:
     cf = Reactor(
         'cf' , 'twisted.internet.cfreactor',
         'CoreFoundation integration reactor.')
@@ -34,12 +33,9 @@ try:
     __all__.extend([
          "cf"
     ])
-except ImportError:
-    pass
 
 
-try:
-    import twisted.internet.asyncioreactor
+if requireModule("twisted.internet.asyncioreactor") is not None:
     asyncio = Reactor(
         'asyncio', 'twisted.internet.asyncioreactor',
         'asyncio integration reactor')
@@ -47,67 +43,56 @@ try:
     __all__.extend([
         "asyncio"
     ])
-except ImportError:
-     pass
 
-try:
-    import twisted.internet.wxreactor
+if requireModule("twisted.internet.wxreactor") is not None:
     wx = Reactor(
         'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
     __all__.extend([
         "wx"
     ])
-except ImportError:
-    pass
 
-try:
+if requireModule("twisted.internet.gireactor") is not None:
     gi = Reactor(
         'gi', 'twisted.internet.gireactor',
         'GObject Introspection integration reactor.')
     __all__.extend([
          "gi"
     ])
-except ImportError:
-    pass
 
-try:
+if requireModule("twisted.internet.gtk3reactor") is not None:
     gtk3 = Reactor(
          'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 integration reactor.')
     __all__.extend([
         "gtk3"
     ])
-except ImportError:
-    pass
 
-try:
-    import twisted.internet.gtk2reactor
+if requireModule("twisted.internet.gtk2reactor") is not None:
     gtk2 = Reactor(
         'gtk2', 'twisted.internet.gtk2reactor', 'Gtk2 integration reactor.')
     __all__.extend([
         "gtk2"
 ])
-except ImportError:
-    pass
 
-try:
-    import twisted.internet.glib2reactor
+if requireModule("twisted.internet.glib2reactor") is not None:
     glib2 = Reactor(
         'glib2', 'twisted.internet.glib2reactor',
         'GLib2 event-loop integration reactor.')
     __all__.extend([
     "glib2"
 ])
-except ImportError:
-    pass
 
-if platformType == "win32":
+if requireModule("twisted.internet.win32eventreactor") is not None:
     win32er = Reactor(
         'win32', 'twisted.internet.win32eventreactor',
         'Win32 WaitForMultipleObjects-based reactor.')
+    __all__.extend([
+        "win32er"
+    ])
+
+if requireModule("twisted.internet.iocpreactor") is not None:
     iocp = Reactor(
         'iocp', 'twisted.internet.iocpreactor',
         'Win32 IO Completion Ports-based reactor.')
-
     __all__.extend([
-        "win32er", "iocp"
+        "iocp"
     ])
