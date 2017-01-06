@@ -601,6 +601,7 @@ def run():
         config.parseOptions()
     except usage.error as ue:
         raise SystemExit("%s: %s" % (sys.argv[0], ue))
+    sys.path.insert(0, os.path.abspath(os.getcwd()))
     _initialDebugSetup(config)
 
     try:
