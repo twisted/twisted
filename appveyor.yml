@@ -16,6 +16,11 @@ test: off
 # commits on random branches without an associated PR.
 skip_branch_with_pr: true
 
+# Don't build commits that only touch quotes
+skip_commits:
+  files:
+  - 'docs/fun/Twisted.Quotes'
+
 # Not sure if the cache works.
 # Note the use of single quotes around the entire line, when environment
 # variables are used.
