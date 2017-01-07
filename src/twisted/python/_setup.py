@@ -77,6 +77,7 @@ _dev = [
     'twisted-dev-tools >= 0.0.2',
     'python-subunit',
     'sphinx >= 1.3.1',
+    'hypothesis >= 3.6.1'
 ]
 
 if not _PY3:

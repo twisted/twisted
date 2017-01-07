@@ -515,80 +515,76 @@ def catchLogs(testCase, logPublisher=globalLogPublisher):
 
 AT_LEAST_ONE_ATTEMPT = 100.
 
+
+
+def makeReconnector(fireImmediately=True, startService=True,
+                    protocolType=Protocol, **kw):
+    """
+    Create a L{ClientService} along with a L{ConnectInformation} indicating
+    the connections in progress on its endpoint.
+
+    @param fireImmediately: Should all of the endpoint connection attempts
+        fire synchronously?
+    @type fireImmediately: L{bool}
+
+    @param startService: Should the L{ClientService} be started before
+        being returned?
+    @type startService: L{bool}
+
+    @param protocolType: a 0-argument callable returning a new L{IProtocol}
+        provider to be used for application-level protocol connections.
+
+    @param kw: Arbitrary keyword arguments to be passed on to
+        L{ClientService}
+
+    @return: a 2-tuple of L{ConnectInformation} (for information about test
+        state) and L{ClientService} (the system under test).  The
+        L{ConnectInformation} has 2 additional attributes;
+        C{applicationFactory} and C{applicationProtocols}, which refer to
+        the unwrapped protocol factory and protocol instances passed in to
+        L{ClientService} respectively.
+    """
+    nkw = {}
+    nkw.update(clock=Clock())
+    nkw.update(kw)
+    cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
+
+    # `endpointForTesting` is totally generic to any LLPI client that uses
+    # endpoints, and maintains all its state internally; however,
+    # applicationProtocols and applicationFactory are bonus attributes that
+    # are only specifically interesitng to tests that use wrapper
+    # protocols.  For now, set them here, externally.
+
+    applicationProtocols = cq.applicationProtocols = []
+
+    class RememberingFactory(Factory, object):
+        protocol = protocolType
+        def buildProtocol(self, addr):
+            result = super(RememberingFactory, self).buildProtocol(addr)
+            applicationProtocols.append(result)
+            return result
+
+    cq.applicationFactory = factory = RememberingFactory()
+
+    service = ClientService(endpoint, factory, **nkw)
+    if startService:
+        service.startService()
+    return cq, service
+
+
+
 class ClientServiceTests(SynchronousTestCase):
     """
     Tests for L{ClientService}.
     """
 
-    def makeReconnector(self, fireImmediately=True, startService=True,
-                        protocolType=Protocol, **kw):
-        """
-        Create a L{ClientService} along with a L{ConnectInformation} indicating
-        the connections in progress on its endpoint.
-
-        @param fireImmediately: Should all of the endpoint connection attempts
-            fire synchronously?
-        @type fireImmediately: L{bool}
-
-        @param startService: Should the L{ClientService} be started before
-            being returned?
-        @type startService: L{bool}
-
-        @param protocolType: a 0-argument callable returning a new L{IProtocol}
-            provider to be used for application-level protocol connections.
-
-        @param kw: Arbitrary keyword arguments to be passed on to
-            L{ClientService}
-
-        @return: a 2-tuple of L{ConnectInformation} (for information about test
-            state) and L{ClientService} (the system under test).  The
-            L{ConnectInformation} has 2 additional attributes;
-            C{applicationFactory} and C{applicationProtocols}, which refer to
-            the unwrapped protocol factory and protocol instances passed in to
-            L{ClientService} respectively.
-        """
-        nkw = {}
-        nkw.update(clock=Clock())
-        nkw.update(kw)
-        clock = nkw['clock']
-        cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
-
-        # `endpointForTesting` is totally generic to any LLPI client that uses
-        # endpoints, and maintains all its state internally; however,
-        # applicationProtocols and applicationFactory are bonus attributes that
-        # are only specifically interesitng to tests that use wrapper
-        # protocols.  For now, set them here, externally.
-
-        applicationProtocols = cq.applicationProtocols = []
-
-        class RememberingFactory(Factory, object):
-            protocol = protocolType
-            def buildProtocol(self, addr):
-                result = super(RememberingFactory, self).buildProtocol(addr)
-                applicationProtocols.append(result)
-                return result
-
-        cq.applicationFactory = factory = RememberingFactory()
-
-        service = ClientService(endpoint, factory, **nkw)
-        def stop():
-            service._protocol = None
-            if service.running:
-                service.stopService()
-            # Ensure that we don't leave any state in the reactor after
-            # stopService.
-            self.assertEqual(clock.getDelayedCalls(), [])
-        self.addCleanup(stop)
-        if startService:
-            service.startService()
-        return cq, service
 
 
     def test_startService(self):
         """
         When the service is started, a connection attempt is made.
         """
-        cq, service = self.makeReconnector(fireImmediately=False)
+        cq, service = makeReconnector(fireImmediately=False)
         self.assertEqual(len(cq.connectQueue), 1)
 
 
@@ -599,7 +595,7 @@ class ClientServiceTests(SynchronousTestCase):
         factory that was passed to the reactor, the factory that was passed
         from the application receives them.
         """
-        cq, service = self.makeReconnector()
+        cq, service = makeReconnector()
         firstAppFactory = cq.applicationFactory
         self.assertEqual(firstAppFactory.numPorts, 0)
         firstPassedFactory = cq.passedFactories[0]
@@ -613,7 +609,7 @@ class ClientServiceTests(SynchronousTestCase):
         returned L{Deferred} fires when all outstanding connections have been
         stopped.
         """
-        cq, service = self.makeReconnector()
+        cq, service = makeReconnector()
         d = service.stopService()
         self.assertNoResult(d)
         protocol = cq.constructedProtocols[0]
@@ -627,7 +623,7 @@ class ClientServiceTests(SynchronousTestCase):
         When L{ClientService} is restarted after having been connected, it
         waits to start connecting until after having disconnected.
         """
-        cq, service = self.makeReconnector()
+        cq, service = makeReconnector()
         d = service.stopService()
         self.assertNoResult(d)
         protocol = cq.constructedProtocols[0]
@@ -646,7 +642,7 @@ class ClientServiceTests(SynchronousTestCase):
         returns has not fired yet - calling L{startService} will cause a new
         connection to be made, and new calls to L{whenConnected} to succeed.
         """
-        cq, service = self.makeReconnector(fireImmediately=False)
+        cq, service = makeReconnector(fireImmediately=False)
         cq.connectQueue[0].callback(None)
         first = cq.constructedProtocols[0]
         stopped = service.stopService()
@@ -674,7 +670,7 @@ class ClientServiceTests(SynchronousTestCase):
         returns has fired - calling L{startService} will cause a new connection
         to be made, and new calls to L{whenConnected} to succeed.
         """
-        cq, service = self.makeReconnector(fireImmediately=False)
+        cq, service = makeReconnector(fireImmediately=False)
         stopped = service.stopService()
         self.successResultOf(stopped)
         self.failureResultOf(service.whenConnected(), CancelledError)
@@ -697,7 +693,7 @@ class ClientServiceTests(SynchronousTestCase):
             """
             Provider of various interfaces.
             """
-        cq, service = self.makeReconnector(protocolType=FancyProtocol)
+        cq, service = makeReconnector(protocolType=FancyProtocol)
         reactorFacing = cq.constructedProtocols[0]
         self.assertTrue(IFileDescriptorReceiver.providedBy(reactorFacing))
         self.assertTrue(IHalfCloseableProtocol.providedBy(reactorFacing))
@@ -708,7 +704,7 @@ class ClientServiceTests(SynchronousTestCase):
         When the service is stopped while retrying, the retry is cancelled.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq, service = makeReconnector(fireImmediately=False, clock=clock)
         cq.connectQueue[0].errback(Exception())
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
@@ -723,7 +719,7 @@ class ClientServiceTests(SynchronousTestCase):
         attempt is cancelled.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq, service = makeReconnector(fireImmediately=False, clock=clock)
         self.assertEqual(len(cq.connectQueue), 1)
         self.assertNoResult(cq.connectQueue[0])
         d = service.stopService()
@@ -736,7 +732,7 @@ class ClientServiceTests(SynchronousTestCase):
         protocol and resets the delay.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(clock=clock)
+        cq, service = makeReconnector(clock=clock)
         awaitingProtocol = service.whenConnected()
         self.assertEqual(clock.getDelayedCalls(), [])
         self.assertIdentical(self.successResultOf(awaitingProtocol),
@@ -749,7 +745,7 @@ class ClientServiceTests(SynchronousTestCase):
         to the protocol and tries again after a timeout.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False,
+        cq, service = makeReconnector(fireImmediately=False,
                                            clock=clock)
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].errback(Failure(Exception()))
@@ -768,7 +764,7 @@ class ClientServiceTests(SynchronousTestCase):
         to the protocol and calls retry.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(clock=clock, fireImmediately=False)
+        cq, service = makeReconnector(clock=clock, fireImmediately=False)
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].callback(None)
         self.assertEqual(len(cq.connectQueue), 1)
@@ -789,7 +785,7 @@ class ClientServiceTests(SynchronousTestCase):
         is removed.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(clock=clock)
+        cq, service = makeReconnector(clock=clock)
         d = service.stopService()
         cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
         self.failureResultOf(service.whenConnected(), CancelledError)
@@ -802,7 +798,7 @@ class ClientServiceTests(SynchronousTestCase):
         complaint and do nothing else (in particular it will not make
         additional connections).
         """
-        cq, service = self.makeReconnector(fireImmediately=False,
+        cq, service = makeReconnector(fireImmediately=False,
                                            startService=False)
         self.assertEqual(len(cq.connectQueue), 0)
         service.startService()
@@ -819,7 +815,7 @@ class ClientServiceTests(SynchronousTestCase):
         connection is established.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq, service = makeReconnector(fireImmediately=False, clock=clock)
         a = service.whenConnected()
         b = service.whenConnected()
         self.assertNoResult(a)
@@ -837,7 +833,7 @@ class ClientServiceTests(SynchronousTestCase):
         L{ClientService.stopService} is called.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq, service = makeReconnector(fireImmediately=False, clock=clock)
         a = service.whenConnected()
         b = service.whenConnected()
         self.assertNoResult(a)
@@ -855,8 +851,54 @@ class ClientServiceTests(SynchronousTestCase):
         the service is stopped immediately.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq, service = makeReconnector(fireImmediately=False, clock=clock)
         cq.connectQueue[0].errback(Exception("no connection"))
         d = service.stopService()
         self.assertEqual(clock.getDelayedCalls(), [])
         self.successResultOf(d)
+
+
+from hypothesis import assume, strategies as st
+from hypothesis.stateful import RuleBasedStateMachine, rule, run_state_machine_as_test
+
+class ClientServiceRuleMachine(RuleBasedStateMachine):
+    def __init__(self, case):
+        self.case = case
+        super(ClientServiceRuleMachine, self).__init__()
+        self.clock = Clock()
+        self.stopDeferreds = []
+        self.whenConnectedDeferreds = []
+        self.cq, self.service = makeReconnector(
+            startService=False, fireImmediately=False, clock=self.clock)
+
+    @rule()
+    def start(self):
+        self.service.startService()
+
+    @rule()
+    def stop(self):
+        self.stopDeferreds.append(self.service.stopService())
+
+    @rule()
+    def connect(self):
+        assume(self.cq.connectQueue)
+        self.cq.connectQueue.pop(0).callback(None)
+
+    def timeout(self):
+        self.clock.advance(AT_LEAST_ONE_ATTEMPT)
+
+    def connectFailed(self):
+        assume(self.cq.connectQueue)
+        self.cq.connectQueue.pop(0).errback(Exception("no connection"))
+
+    def disconnect(self):
+        assume(self.cq.constructedProtocols)
+        self.cq.constructedProtocols.pop(0).connectionLost(Failure(IndentationError()))
+
+    def checkConnected(self):
+        self.whenConnectedDeferreds.append(self.service.whenConnected())
+
+
+class ClientServiceMachineTests(TestCase):
+    def test_stuff(self):
+        run_state_machine_as_test(lambda: ClientServiceRuleMachine(self))
