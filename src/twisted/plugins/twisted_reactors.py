@@ -6,93 +6,65 @@ from __future__ import absolute_import, division
 from twisted.application.reactors import Reactor
 from twisted.python.reflect import requireModule
 
-default = Reactor(
+def _addReactorToAll(shortName, moduleName, description):
+    """
+    @param shortName: Short name of reactor
+    @param moduleName: The fully-qualified module name of the reactor
+    @param description: Description of reactor
+    """
+    newReactor = None
+    if requireModule(moduleName) is not None:
+        newReactor = Reactor(shortName, moduleName, description)
+        __all__.extend([shortName])
+    return newReactor
+
+
+__all__ = []
+
+default = _addReactorToAll(
     'default', 'twisted.internet.default',
     'A reasonable default: poll(2) if available, otherwise select(2).')
 
-select = Reactor(
+select = _addReactorToAll(
     'select', 'twisted.internet.selectreactor', 'select(2)-based reactor.')
 
-poll = Reactor(
+poll = _addReactorToAll(
     'poll', 'twisted.internet.pollreactor', 'poll(2)-based reactor.')
-epoll = Reactor(
+epoll = _addReactorToAll(
     'epoll', 'twisted.internet.epollreactor', 'epoll(4)-based reactor.')
 
-kqueue = Reactor(
+kqueue = _addReactorToAll(
     'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
 
-__all__ = [
-    "default", "select", "poll", "epoll", "kqueue",
-]
+cf = _addReactorToAll(
+    'cf' , 'twisted.internet.cfreactor',
+    'CoreFoundation integration reactor.')
 
-if requireModule("twisted.internet.cfreactor") is not None:
-    cf = Reactor(
-        'cf' , 'twisted.internet.cfreactor',
-        'CoreFoundation integration reactor.')
+asyncio = _addReactorToAll(
+    'asyncio', 'twisted.internet.asyncioreactor',
+    'asyncio integration reactor')
 
-    __all__.extend([
-         "cf"
-    ])
+wx = _addReactorToAll(
+    'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
 
+gi = _addReactorToAll(
+    'gi', 'twisted.internet.gireactor',
+    'GObject Introspection integration reactor.')
 
-if requireModule("twisted.internet.asyncioreactor") is not None:
-    asyncio = Reactor(
-        'asyncio', 'twisted.internet.asyncioreactor',
-        'asyncio integration reactor')
+gtk3 = _addReactorToAll(
+     'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 integration reactor.')
 
-    __all__.extend([
-        "asyncio"
-    ])
+gtk2 = _addReactorToAll(
+    'gtk2', 'twisted.internet.gtk2reactor', 'Gtk2 integration reactor.')
 
-if requireModule("twisted.internet.wxreactor") is not None:
-    wx = Reactor(
-        'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
-    __all__.extend([
-        "wx"
-    ])
+glib2 = _addReactorToAll(
+    'glib2', 'twisted.internet.glib2reactor',
+    'GLib2 event-loop integration reactor.')
 
-if requireModule("twisted.internet.gireactor") is not None:
-    gi = Reactor(
-        'gi', 'twisted.internet.gireactor',
-        'GObject Introspection integration reactor.')
-    __all__.extend([
-         "gi"
-    ])
+win32er = _addReactorToAll(
+    'win32', 'twisted.internet.win32eventreactor',
+    'Win32 WaitForMultipleObjects-based reactor.')
 
-if requireModule("twisted.internet.gtk3reactor") is not None:
-    gtk3 = Reactor(
-         'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 integration reactor.')
-    __all__.extend([
-        "gtk3"
-    ])
-
-if requireModule("twisted.internet.gtk2reactor") is not None:
-    gtk2 = Reactor(
-        'gtk2', 'twisted.internet.gtk2reactor', 'Gtk2 integration reactor.')
-    __all__.extend([
-        "gtk2"
-])
-
-if requireModule("twisted.internet.glib2reactor") is not None:
-    glib2 = Reactor(
-        'glib2', 'twisted.internet.glib2reactor',
-        'GLib2 event-loop integration reactor.')
-    __all__.extend([
-    "glib2"
-])
-
-if requireModule("twisted.internet.win32eventreactor") is not None:
-    win32er = Reactor(
-        'win32', 'twisted.internet.win32eventreactor',
-        'Win32 WaitForMultipleObjects-based reactor.')
-    __all__.extend([
-        "win32er"
-    ])
-
-if requireModule("twisted.internet.iocpreactor") is not None:
-    iocp = Reactor(
-        'iocp', 'twisted.internet.iocpreactor',
-        'Win32 IO Completion Ports-based reactor.')
-    __all__.extend([
-        "iocp"
-    ])
+iocp = _addReactorToAll(
+    'iocp', 'twisted.internet.iocpreactor',
+    'Win32 IO Completion Ports-based reactor.')
