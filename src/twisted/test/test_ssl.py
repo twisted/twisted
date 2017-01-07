@@ -526,23 +526,17 @@ class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
         close cleanly, and only after the underlying TCP connection has
         disconnected.
         """
+        @implementer(interfaces.IHandshakeListener)
         class CloseAfterHandshake(protocol.Protocol):
             gotData = False
 
             def __init__(self):
                 self.done = defer.Deferred()
 
-            def connectionMade(self):
-                self.transport.write(b"a")
-
-            def dataReceived(self, data):
-                # If we got data, handshake is over:
-                self.gotData = True
+            def handshakeCompleted(self):
                 self.transport.loseConnection()
 
             def connectionLost(self, reason):
-                if not self.gotData:
-                    reason = RuntimeError("We never received the data!")
                 self.done.errback(reason)
                 del self.done
 
