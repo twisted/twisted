@@ -36,6 +36,7 @@ except ImportError:
     # Assuming SSL exists, we're using old version in reactor (i.e. non-protocol)
     newTLS = None
 
+from zope.interface import implementer
 
 class UnintelligentProtocol(basic.LineReceiver):
     """
@@ -160,13 +161,14 @@ class RecordingClientProtocol(protocol.Protocol):
 
 
 
+@implementer(interfaces.IHandshakeListener)
 class ImmediatelyDisconnectingProtocol(protocol.Protocol):
     """
     A protocol that disconnect immediately on connection. It fires the
     C{connectionDisconnected} deferred of its factory on connetion lost.
     """
 
-    def connectionMade(self):
+    def handshakeCompleted(self):
         self.transport.loseConnection()
 
 
