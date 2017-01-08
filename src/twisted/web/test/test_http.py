@@ -15,6 +15,7 @@ except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
 from zope.interface import provider
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
                                    intToBytes, NativeStringIO)
@@ -2717,6 +2718,16 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(trans.producerState, 'paused')
         proto._channel.requests[0].finish()
         self.assertEqual(trans.producerState, 'producing')
+
+
+    def test_provides_IDeprecatedHTTPChannelToRequestInterface(self):
+        """
+        L{http.Request} provides
+        L{http._IDeprecatedHTTPChannelToRequestInterface}, which
+        defines the interface used by L{http.HTTPChannel}.
+        """
+        req = http.Request(DummyChannel(), False)
+        verifyObject(http._IDeprecatedHTTPChannelToRequestInterface, req)
 
 
 
