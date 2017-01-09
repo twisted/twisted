@@ -117,6 +117,15 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         self.assertEqual(set(self.installedReactors), set(["fusion"]))
 
 
+    def test_installCorrectReactor(self):
+        self.patchInstallReactor()
+
+        options = TwistOptions()
+        options.parseOptions(["--reactor=fusion"])
+
+        self.assertEqual(set(self.installedReactors), set(["fusion"]))
+
+
     def test_installReactorBogus(self):
         """
         L{TwistOptions.installReactor} raises UsageError if an unknown reactor
