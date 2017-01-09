@@ -167,6 +167,9 @@ class TwistOptions(Options):
 
         Options.parseOptions(self, options=options)
 
+        if "reactor" not in self:
+            self["reactor"] = self.installReactor(self["reactorName"])
+
 
     @property
     def plugins(self):
