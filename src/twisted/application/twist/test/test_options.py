@@ -96,25 +96,16 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
     def test_reactor(self):
         """
-        L{TwistOptions.opt_reactor} sets the reactor name.
-        """
-        options = TwistOptions()
-        options.opt_reactor("fission")
-
-        self.assertEquals(options["reactorName"], "fission")
-
-
-    def test_installReactor(self):
-        """
-        L{TwistOptions.installReactor} installs the chosen reactor.
+        L{TwistOptions.installReactor} installs the chosen reactor and sets
+        the reactor name.
         """
         self.patchInstallReactor()
 
         options = TwistOptions()
         options.opt_reactor("fusion")
-        options.installReactor()
 
         self.assertEqual(set(self.installedReactors), set(["fusion"]))
+        self.assertEquals(options["reactorName"], "fusion")
 
 
     def test_installCorrectReactor(self):
@@ -139,9 +130,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         self.patchInstallReactor()
 
         options = TwistOptions()
-        options.opt_reactor("coal")
-
-        self.assertRaises(UsageError, options.installReactor)
+        self.assertRaises(UsageError, options.opt_reactor, "coal")
 
 
     def test_logLevelValid(self):
