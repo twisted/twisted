@@ -154,7 +154,6 @@ class TwistOptions(Options):
 
 
     def parseOptions(self, options=None):
-        self.installReactor()
         self.selectDefaultLogObserver()
 
         Options.parseOptions(self, options=options)
@@ -188,6 +187,8 @@ class TwistOptions(Options):
 
 
     def postOptions(self):
+        self.installReactor()
+
         Options.postOptions(self)
 
         if self.subCommand is None:

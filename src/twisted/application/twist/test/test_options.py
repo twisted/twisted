@@ -118,9 +118,14 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
 
     def test_installCorrectReactor(self):
+        """
+        L{TwistOptions.installReactor} installs the chosen reactor after the
+        command line options have been parsed.
+        """
         self.patchInstallReactor()
 
         options = TwistOptions()
+        options.subCommand = "test-subcommand"
         options.parseOptions(["--reactor=fusion"])
 
         self.assertEqual(set(self.installedReactors), set(["fusion"]))
@@ -374,6 +379,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         L{TwistOptions.postOptions} raises L{UsageError} is it has no
         sub-command.
         """
+        self.patchInstallReactor()
+
         options = TwistOptions()
 
         self.assertRaises(UsageError, options.postOptions)
