@@ -813,7 +813,14 @@ class Request:
             else:
                 return self._writeToContentLength(transport)
         else:
-            self._writeHeaders(transport, None)
+            # If the method semantics anticipate a body, include a
+            # Content-Length even if it is 0.
+            # https://tools.ietf.org/html/rfc7230#section-3.3.2
+            if self.method in (b"PUT", b"POST"):
+                contentLength = b"Content-Length: 0\r\n"
+            else:
+                contentLength = None
+            self._writeHeaders(transport, contentLength)
             return succeed(None)
 
 
