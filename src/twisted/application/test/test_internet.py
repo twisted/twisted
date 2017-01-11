@@ -859,7 +859,7 @@ class ClientServiceTests(SynchronousTestCase):
 
 
 from hypothesis import assume, strategies as st
-from hypothesis.stateful import RuleBasedStateMachine, rule, run_state_machine_as_test
+from hypothesis.stateful import RuleBasedStateMachine, rule, run_state_machine_as_test, precondition
 
 class ClientServiceRuleMachine(RuleBasedStateMachine):
     def __init__(self, case):
@@ -879,24 +879,33 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     def stop(self):
         self.stopDeferreds.append(self.service.stopService())
 
+    @precondition(lambda self: self.cq.connectQueue)
     @rule()
     def connect(self):
-        assume(self.cq.connectQueue)
         self.cq.connectQueue.pop(0).callback(None)
 
+    @rule()
     def timeout(self):
         self.clock.advance(AT_LEAST_ONE_ATTEMPT)
 
+    @precondition(lambda self: self.cq.connectQueue)
+    @rule()
     def connectFailed(self):
-        assume(self.cq.connectQueue)
         self.cq.connectQueue.pop(0).errback(Exception("no connection"))
 
+    @rule()
+    @precondition(lambda self: self.cq.constructedProtocols)
     def disconnect(self):
-        assume(self.cq.constructedProtocols)
         self.cq.constructedProtocols.pop(0).connectionLost(Failure(IndentationError()))
 
+    @rule()
     def checkConnected(self):
         self.whenConnectedDeferreds.append(self.service.whenConnected())
+        # TODO: Add an assertion
+        self.whenConnectedDeferreds[-1].addErrback(lambda _: None)
+
+    # TODO: assertions about self.whenConnectedDeferreds self.stopDeferreds
+
 
 
 class ClientServiceMachineTests(TestCase):
