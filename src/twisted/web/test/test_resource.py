@@ -160,10 +160,11 @@ class ResourceTests(TestCase):
         self.assertIdentical(
             child, resource.getChildWithDefault(b"foo", DummyRequest([])))
 
-    def test_putChildThrowsTypeErrorWithUnicode(self):
+
+    def test_putChildRaisesTypeErrorWithUnicode(self):
         """
-        L{resource.putChild} raises `TypeError` when anything but C{bytes} are passed in
-        for the C{path} parameter.
+        L{resource.putChild} raises L{TypeError} when anything but C{bytes} are
+        passed in for the C{path} parameter.
         """
         r = Resource()
         with self.assertRaises(TypeError) as e:
@@ -173,6 +174,7 @@ class ResourceTests(TestCase):
             "path must be bytes",
             e.exception.args[0]
         )
+
 
     def test_dynamicChildren(self):
         """
