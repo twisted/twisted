@@ -69,7 +69,7 @@ class IResource(Interface):
             available at I{http://example.com/foo/bar}.
         @type path: C{bytes}
 
-        @raises L{TypeError} if the path provided is not C{bytes}.
+        @raises L{TypeError} if the provided path is not C{bytes}.
         """
 
 
