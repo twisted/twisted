@@ -2186,10 +2186,10 @@ class RequestTests(TestCase):
     def test_sendRequestBodyErrorWithConsumerError(self):
         """
         Though there should be no way for the internal C{finishedConsuming}
-        L{Deferred} in L{Request._writeToContentLength} to fire a L{Failure}
-        after the C{finishedProducing} L{Deferred} has fired, in case this does
-        happen, the error should be logged with a message about how there's
-        probably a bug in L{Request}.
+        L{Deferred} in L{Request._writeToBodyProducerContentLength} to fire a
+        L{Failure} after the C{finishedProducing} L{Deferred} has fired, in
+        case this does happen, the error should be logged with a message about
+        how there's probably a bug in L{Request}.
 
         This is a whitebox test.
         """

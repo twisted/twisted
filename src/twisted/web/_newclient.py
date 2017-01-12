@@ -660,7 +660,7 @@ class Request:
         transport.writeSequence(requestLines)
 
 
-    def _writeToChunked(self, transport):
+    def _writeToBodyProducerChunked(self, transport):
         """
         Write this request to the given transport using chunked
         transfer-encoding to frame the body.
@@ -684,7 +684,7 @@ class Request:
         return d
 
 
-    def _writeToContentLength(self, transport):
+    def _writeToBodyProducerContentLength(self, transport):
         """
         Write this request to the given transport using content-length to frame
         the body.
@@ -797,6 +797,15 @@ class Request:
         return d
 
 
+    def _writeToEmptyBodyContentLength(self, transport):
+        """
+        Write this request to the given transport using content-length to frame
+        the (empty) body.
+        """
+        self._writeHeaders(transport, b"Content-Length: 0\r\n")
+        return succeed(None)
+
+
     def writeTo(self, transport):
         """
         Format this L{Request} as an HTTP/1.1 request and write it to the given
@@ -807,21 +816,18 @@ class Request:
             been completely written to the transport or with a L{Failure} if
             there is any problem generating the request bytes.
         """
-        if self.bodyProducer is not None:
-            if self.bodyProducer.length is UNKNOWN_LENGTH:
-                return self._writeToChunked(transport)
-            else:
-                return self._writeToContentLength(transport)
-        else:
+        if self.bodyProducer is None:
             # If the method semantics anticipate a body, include a
             # Content-Length even if it is 0.
             # https://tools.ietf.org/html/rfc7230#section-3.3.2
             if self.method in (b"PUT", b"POST"):
-                contentLength = b"Content-Length: 0\r\n"
+                self._writeToEmptyBodyContentLength(transport)
             else:
-                contentLength = None
-            self._writeHeaders(transport, contentLength)
-            return succeed(None)
+                self._writeHeaders(transport, None)
+        elif self.bodyProducer.length is UNKNOWN_LENGTH:
+            return self._writeToBodyProducerChunked(transport)
+        else:
+            return self._writeToBodyProducerContentLength(transport)
 
 
     def stopWriting(self):
