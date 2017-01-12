@@ -884,9 +884,12 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     def connect(self):
         self.cq.connectQueue.pop(0).callback(None)
 
+    @precondition(lambda self: self.clock.calls)
     @rule()
     def timeout(self):
-        self.clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.clock._sortCalls()
+        nextCall = self.clock.calls[0].getTime() - self.clock.seconds()
+        self.clock.advance(nextCall)
 
     @precondition(lambda self: self.cq.connectQueue)
     @rule()
