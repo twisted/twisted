@@ -664,6 +664,9 @@ class Request:
         """
         Write this request to the given transport using chunked
         transfer-encoding to frame the body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(transport, b'Transfer-Encoding: chunked\r\n')
         encoder = ChunkedEncoder(transport)
@@ -688,6 +691,9 @@ class Request:
         """
         Write this request to the given transport using content-length to frame
         the body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(
             transport,
@@ -801,6 +807,9 @@ class Request:
         """
         Write this request to the given transport using content-length to frame
         the (empty) body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(transport, b"Content-Length: 0\r\n")
         return succeed(None)
@@ -811,6 +820,9 @@ class Request:
         Format this L{Request} as an HTTP/1.1 request and write it to the given
         transport.  If bodyProducer is not None, it will be associated with an
         L{IConsumer}.
+
+        @param transport: The transport to which to write.
+        @type transport: L{twisted.internet.interfaces.ITransport} provider
 
         @return: A L{Deferred} which fires with L{None} when the request has
             been completely written to the transport or with a L{Failure} if
