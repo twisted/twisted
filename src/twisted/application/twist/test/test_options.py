@@ -7,6 +7,7 @@ Tests for L{twisted.application.twist._options}.
 
 from sys import stdout, stderr
 
+from twisted.internet import reactor
 from twisted.copyright import version
 from twisted.python.usage import UsageError
 from twisted.logger import LogLevel, textFileLogObserver, jsonFileLogObserver
@@ -131,6 +132,15 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
         options = TwistOptions()
         self.assertRaises(UsageError, options.opt_reactor, "coal")
+
+
+    def test_installReactorDefault(self):
+        """
+        L{TwistOptions.installReactor} returns the currently installed reactor
+        when the default reactor name is specified.
+        """
+        options = TwistOptions()
+        self.assertIdentical(reactor, options.installReactor('default'))
 
 
     def test_logLevelValid(self):
