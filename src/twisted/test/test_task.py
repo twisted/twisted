@@ -90,6 +90,36 @@ class ClockTests(unittest.TestCase):
         self.assertFalse(call.active())
 
 
+    def test_advanceDefault(self):
+        """
+        Advancing the clock without specifying an amount will
+        advance the clock to the time of the next delayed call.
+        """
+        events = []
+        c = task.Clock()
+        c.callLater(2, lambda: events.append(None))
+        c.callLater(3, lambda: events.append(None))
+        c.callLater(3, lambda: events.append(None))
+        c.advance()
+        self.assertEqual(len(events), 1)
+        self.assertEqual(c.seconds(), 2)
+        c.advance()
+        self.assertEqual(len(events), 3)
+        self.assertEqual(c.seconds(), 3)
+
+
+    def test_advanceDefaultNoCalls(self):
+        """
+        Advancing the clock without specifying an amount when there
+        are no pending calls won't advance the clock.
+        """
+        c = task.Clock()
+
+        c.advance()
+
+        self.assertEqual(c.seconds(), 0)
+
+
     def testAdvanceCancel(self):
         """
         Test attempting to cancel the call in a callback.
