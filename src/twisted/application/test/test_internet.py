@@ -481,7 +481,7 @@ def endpointForTesting(fireImmediately=False):
     @implementer(IStreamClientEndpoint)
     class ClientTestEndpoint(object):
         def connect(self, factory):
-            result = Deferred()
+            result = Deferred(canceller=info.connectQueue.remove)
             info.passedFactories.append(factory)
             @result.addCallback
             def createProtocol(ignored):
