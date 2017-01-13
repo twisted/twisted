@@ -712,7 +712,6 @@ class ClientServiceTests(SynchronousTestCase):
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
         d = service.stopService()
-        cq.connectQueue[1].errback(Exception())
         self.successResultOf(d)
 
 
