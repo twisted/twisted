@@ -12,13 +12,19 @@ import copy
 import os
 import pickle
 
+try:
+    from asyncio import new_event_loop
+    hasAsyncIO = True
+except ImportError:
+    hasAsyncIO = False
+
 from twisted.application import service, internet, app, reactors
 from twisted.internet import interfaces, defer, protocol, reactor
 from twisted.persisted import sob
 from twisted.plugins import twisted_reactors
 from twisted.protocols import wire, basic
 from twisted.python import usage
-from twisted.python.compat import (_PY3, NativeStringIO)
+from twisted.python.compat import NativeStringIO
 from twisted.python.runtime import platformType
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.test.proto_helpers import MemoryReactor
@@ -908,22 +914,22 @@ class HelpReactorsTests(unittest.TestCase):
         self.message = self.options.messageOutput.getvalue()
 
 
-    def test_asyncIOPy2(self):
+    def test_lacksAsyncIO(self):
         """
-        --help-reactors should NOT display the asyncIO reactor on Python 2
+        --help-reactors should NOT display the asyncIO reactor on Python < 3.4
         """
         self.assertNotIn(twisted_reactors.asyncio.description, self.message)
-    if _PY3:
-        test_asyncIOPy2.skip = "Not applicable on Python 3"
+    if hasAsyncIO:
+        test_lacksAsyncIO.skip = "Not applicable, asyncio is available"
 
 
-    def test_asyncIOPy3(self):
+    def test_hasAsyncIO(self):
         """
-        --help-reactors should display the asyncIO reactor on Python 3
+        --help-reactors should display the asyncIO reactor on Python >= 3.4
         """
         self.assertIn(twisted_reactors.asyncio.description, self.message)
-    if not _PY3:
-        test_asyncIOPy3.skip = "Not applicable on Python 2"
+    if not hasAsyncIO:
+        test_hasAsyncIO.skip = "asyncio library not available"
 
 
     def test_iocpWin32(self):
