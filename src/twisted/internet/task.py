@@ -808,7 +808,7 @@ class Clock:
         return self.calls
 
 
-    def advance(self, amount):
+    def advance(self, amount = None):
         """
         Move time on this clock forward by the given amount and run whatever
         pending calls should be run.
@@ -817,8 +817,14 @@ class Clock:
         @param amount: The number of seconds which to advance this clock's
         time.
         """
-        self.rightNow += amount
         self._sortCalls()
+        if amount is not None:
+            self.rightNow += amount
+        else:
+            if self.calls:
+                self.rightNow = max(self.calls[0].getTime(), self.rightNow)
+            else:
+                return
         while self.calls and self.calls[0].getTime() <= self.seconds():
             call = self.calls.pop(0)
             call.called = 1
