@@ -15,9 +15,11 @@ import pickle
 from twisted.application import service, internet, app, reactors
 from twisted.internet import interfaces, defer, protocol, reactor
 from twisted.persisted import sob
+from twisted.plugins import twisted_reactors
 from twisted.protocols import wire, basic
 from twisted.python import usage
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import (_PY3, NativeStringIO)
+from twisted.python.runtime import platformType
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial import unittest
@@ -889,3 +891,54 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
                                ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])
         self.assertIn("help-reactors", e.args[0])
+
+
+
+class HelpReactorsTests(unittest.TestCase):
+    """
+    --help-reactors lists the available reactors
+    """
+    def setUp(self):
+        """
+        Get the text from --help-reactors
+        """
+        self.options = app.ReactorSelectionMixin()
+        self.options.messageOutput = NativeStringIO()
+        self.assertRaises(SystemExit, self.options.opt_help_reactors)
+        self.message = self.options.messageOutput.getvalue()
+
+
+    def test_asyncIOPy2(self):
+        """
+        --help-reactors should NOT display the asyncIO reactor on Python 2
+        """
+        self.assertNotIn(twisted_reactors.asyncio.description, self.message)
+    if _PY3:
+        test_asyncIOPy2.skip = "Not applicable on Python 3"
+
+
+    def test_asyncIOPy3(self):
+        """
+        --help-reactors should display the asyncIO reactor on Python 3
+        """
+        self.assertIn(twisted_reactors.asyncio.description, self.message)
+    if not _PY3:
+        test_asyncIOPy3.skip = "Not applicable on Python 2"
+
+
+    def test_iocpWin32(self):
+        """
+        --help-reactors should display the iocp reactor on Windows
+        """
+        self.assertIn(twisted_reactors.iocp.description, self.message)
+    if platformType != "win32":
+        test_iocpWin32.skip = "Test only applicable on Windows"
+
+
+    def test_iocpNotWin32(self):
+        """
+        --help-reactors should NOT display the iocp reactor on Windows
+        """
+        self.assertNotIn(twisted_reactors.iocp.description, self.message)
+    if platformType != "win32":
+        test_iocpWin32.skip = "Test only applicable on Windows"
