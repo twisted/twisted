@@ -886,6 +886,7 @@ class InvocationTests(unittest.TestCase):
         Running trial against an empty file should succeed.
         This test makes sure that trial can find the script in the path.
         """
+        self.addCleanup(os.chdir, os.getcwd())
         scriptDirectory = FilePath(self.mktemp())
         scriptDirectory.makedirs()
         os.chdir(scriptDirectory.path)
