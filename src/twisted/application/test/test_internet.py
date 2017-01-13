@@ -894,6 +894,13 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     @precondition(lambda self: self.stopDeferreds)
     @invariant()
     def assertStopped(self):
+        """
+        If there are no connected protocols, all the deferreds returned from
+        L{ClientService.stopService} have fired with a success.
+
+        If there are connected protocols, none of the deferreds returned from
+        L{ClientService.stopService} have been fired.
+        """
         if not self.cq.constructedProtocols:
             for d in self.stopDeferreds:
                 self.case.successResultOf(d)
@@ -953,17 +960,17 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
 
     @invariant()
     def checkConnected(self):
+        """
+        """
         d = self.service.whenConnected()
         self.whenConnectedDeferreds.append(d)
-        if self.stopDeferreds:
+        if self.cq.connectQueue or self.clock.calls or self.stopDeferreds:
             self.case.assertNoResult(d)
         elif self.cq.constructedProtocols:
             for d in self.whenConnectedDeferreds:
                 self.case.assertEqual(self.case.successResultOf(d),
                                  self.cq.constructedProtocols[0]._protocol)
             self.whenConnectedDeferreds = []
-        elif self.cq.connectQueue or self.clock.calls:
-            self.case.assertNoResult(d)
         else:
             for d in self.whenConnectedDeferreds:
                 self.case.failureResultOf(d)
