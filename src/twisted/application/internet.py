@@ -830,8 +830,9 @@ class _ClientMachine(object):
 
     _init.upon(start, enter=_connecting,
                outputs=[_connect])
-    _init.upon(stop, enter=_init,
-               outputs=[])
+    _init.upon(stop, enter=_stopped,
+               outputs=[],
+               collector=lambda _: succeed(None))
 
     _connecting.upon(start, enter=_connecting, outputs=[])
     # Note that this synchonously triggers _connectionFailed in the
@@ -847,7 +848,10 @@ class _ClientMachine(object):
     _waiting.upon(start, enter=_waiting,
                   outputs=[])
     _waiting.upon(stop, enter=_stopped,
-                  outputs=[_waitForStop, _stopRetrying, _finishStopping],
+                  outputs=[_waitForStop,
+                           _cancelConnectWaiters,
+                           _stopRetrying,
+                           _finishStopping],
                   collector=_firstResult)
     _waiting.upon(_reconnect, enter=_connecting,
                   outputs=[_connect])
@@ -863,7 +867,8 @@ class _ClientMachine(object):
     _disconnecting.upon(start, enter=_restarting,
                         outputs=[_resetFailedAttempts])
     _disconnecting.upon(stop, enter=_disconnecting,
-                        outputs=[])
+                        outputs=[_waitForStop],
+                        collector=_firstResult)
     _disconnecting.upon(_clientDisconnected, enter=_stopped,
                         outputs=[_cancelConnectWaiters,
                                  _finishStopping,
@@ -876,14 +881,16 @@ class _ClientMachine(object):
     _restarting.upon(start, enter=_restarting,
                      outputs=[])
     _restarting.upon(stop, enter=_disconnecting,
-                     outputs=[])
+                     outputs=[_waitForStop],
+                     collector=_firstResult)
     _restarting.upon(_clientDisconnected, enter=_connecting,
                      outputs=[_finishStopping, _connect])
 
     _stopped.upon(start, enter=_connecting,
                   outputs=[_connect])
     _stopped.upon(stop, enter=_stopped,
-                  outputs=[])
+                  outputs=[],
+                  collector=lambda _: succeed(None))
 
     _init.upon(whenConnected, enter=_init,
                outputs=[_awaitingConnection],
