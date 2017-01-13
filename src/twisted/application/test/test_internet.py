@@ -951,25 +951,19 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     @invariant()
     def checkConnected(self):
         d = self.service.whenConnected()
+        self.whenConnectedDeferreds.append(d)
         if self.stopDeferreds:
             self.case.assertNoResult(d)
-            self.whenConnectedDeferreds.append(d)
         elif self.cq.constructedProtocols:
-            self.whenConnectedDeferreds.append(d)
             for d in self.whenConnectedDeferreds:
                 self.case.assertEqual(self.case.successResultOf(d),
                                  self.cq.constructedProtocols[0]._protocol)
             self.whenConnectedDeferreds = []
         elif self.cq.connectQueue or self.clock.calls:
             self.case.assertNoResult(d)
-            self.whenConnectedDeferreds.append(d)
         else:
-            self.whenConnectedDeferreds.append(d)
-            for n, d in enumerate(self.whenConnectedDeferreds):
-                try:
-                    self.case.failureResultOf(d)
-                except Exception as e:
-                    raise e.__class__("{0}, {1}/{3} = {2}".format(e, n, d.state, len(self.whenConnectedDeferreds)))
+            for d in self.whenConnectedDeferreds:
+                self.case.failureResultOf(d)
             self.whenConnectedDeferreds = []
 
 
