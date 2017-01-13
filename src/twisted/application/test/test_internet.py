@@ -890,6 +890,27 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
         """
         self.stopDeferreds.append(self.service.stopService())
 
+
+    @precondition(lambda self: self.stopDeferreds)
+    @invariant()
+    def assertStopped(self):
+        if not self.cq.constructedProtocols:
+            for d in self.stopDeferreds:
+                self.case.successResultOf(d)
+            self.stopDeferreds = []
+        else:
+            for d in self.stopDeferreds:
+                self.case.assertNoResult(d)
+
+
+    @invariant()
+    def assertSingleConnection(self):
+        """
+        There is only ever a single connection outstanding.
+        """
+        self.case.assertTrue(len(self.cq.connectQueue) + len(self.cq.constructedProtocols) <=  1)
+
+
     @precondition(lambda self: self.cq.connectQueue)
     @rule()
     def connect(self):
@@ -927,7 +948,8 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
             Failure(IndentationError())
         )
 
-    @rule()
+
+    @invariant()
     def checkConnected(self):
         self.whenConnectedDeferreds.append(self.service.whenConnected())
         # TODO: Add an assertion
