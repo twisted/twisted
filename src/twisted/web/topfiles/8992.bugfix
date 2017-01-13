@@ -1,0 +1,1 @@
+twisted.web's HTTP server no longer leaks file descriptors when timing out inactive clients using TLS connections.
