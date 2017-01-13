@@ -874,6 +874,7 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
         self.cq, self.service = makeReconnector(
             startService=False, fireImmediately=False, clock=self.clock)
 
+
     @rule()
     def start(self):
         """
@@ -907,7 +908,9 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
         """
         There is only ever a single connection outstanding.
         """
-        self.case.assertTrue(len(self.cq.connectQueue) + len(self.cq.constructedProtocols) <=  1)
+        connections = (
+            len(self.cq.connectQueue) + len(self.cq.constructedProtocols))
+        self.case.assertTrue(connections <= 1)
 
 
     @precondition(lambda self: self.cq.connectQueue)
@@ -941,7 +944,7 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     @precondition(lambda self: self.cq.constructedProtocols)
     def disconnect(self):
         """
-        If
+        If there is a connected protocol, disconnect it.
         """
         self.cq.constructedProtocols.pop(0).connectionLost(
             Failure(IndentationError())
@@ -967,11 +970,8 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
             self.whenConnectedDeferreds = []
 
 
-    # TODO: assertions about self.whenConnectedDeferreds self.stopDeferreds
 
-
-
-class ClientServiceMachineTests(TestCase):
+class ClientServiceMachineTests(SynchronousTestCase):
     """
     Tests exploring the state space of L{ClientService}.
     """
