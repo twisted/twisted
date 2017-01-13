@@ -902,9 +902,11 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     @precondition(lambda self: self.clock.calls)
     @rule()
     def timeout(self):
-        self.clock._sortCalls()
-        nextCall = self.clock.calls[0].getTime() - self.clock.seconds()
-        self.clock.advance(nextCall)
+        """
+        Advance the clock if there is a pending delayed call.
+        """
+        self.clock.advance()
+
 
     @precondition(lambda self: self.cq.connectQueue)
     @rule()
