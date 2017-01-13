@@ -32,6 +32,11 @@ from twisted.python.failure import Failure
 from twisted.logger import globalLogPublisher, formatEvent
 from twisted.test.proto_helpers import StringTransport
 
+from hypothesis.stateful import (
+    rule, precondition, invariant,
+    RuleBasedStateMachine, run_state_machine_as_test,
+)
+
 
 def fakeTargetFunction():
     """
@@ -578,8 +583,6 @@ class ClientServiceTests(SynchronousTestCase):
     Tests for L{ClientService}.
     """
 
-
-
     def test_startService(self):
         """
         When the service is started, a connection attempt is made.
@@ -858,10 +861,11 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(d)
 
 
-from hypothesis import assume, strategies as st
-from hypothesis.stateful import RuleBasedStateMachine, rule, run_state_machine_as_test, precondition
 
 class ClientServiceRuleMachine(RuleBasedStateMachine):
+    """
+    L{hypothesis} state machine for testing L{ClientService}.
+    """
     def __init__(self, case):
         self.case = case
         super(ClientServiceRuleMachine, self).__init__()
@@ -873,16 +877,27 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
 
     @rule()
     def start(self):
+        """
+        Start the service."
+        """
         self.service.startService()
+
 
     @rule()
     def stop(self):
+        """
+        Stop the service.
+        """
         self.stopDeferreds.append(self.service.stopService())
 
     @precondition(lambda self: self.cq.connectQueue)
     @rule()
     def connect(self):
+        """
+        Make a connection if there is a pending connection attempt.
+        """
         self.cq.connectQueue.pop(0).callback(None)
+
 
     @precondition(lambda self: self.clock.calls)
     @rule()
@@ -894,12 +909,21 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
     @precondition(lambda self: self.cq.connectQueue)
     @rule()
     def connectFailed(self):
+        """
+        Faile the connection if there is a pending connection attempt.
+        """
         self.cq.connectQueue.pop(0).errback(Exception("no connection"))
+
 
     @rule()
     @precondition(lambda self: self.cq.constructedProtocols)
     def disconnect(self):
-        self.cq.constructedProtocols.pop(0).connectionLost(Failure(IndentationError()))
+        """
+        If
+        """
+        self.cq.constructedProtocols.pop(0).connectionLost(
+            Failure(IndentationError())
+        )
 
     @rule()
     def checkConnected(self):
@@ -912,5 +936,12 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
 
 
 class ClientServiceMachineTests(TestCase):
-    def test_stuff(self):
+    """
+    Tests exploring the state space of L{ClientService}.
+    """
+
+    def test_stateSpace(self):
+        """
+        Explore the state space of L{ClientService}
+        """
         run_state_machine_as_test(lambda: ClientServiceRuleMachine(self))
