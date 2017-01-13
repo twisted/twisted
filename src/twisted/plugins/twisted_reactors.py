@@ -18,7 +18,7 @@ def _addReactorToAll(shortName, moduleName, description):
     newReactor = None
     if requireModule(moduleName) is not None:
         newReactor = Reactor(shortName, moduleName, description)
-        __all__.extend([shortName])
+        __all__.append(shortName)
     return newReactor
 
 
