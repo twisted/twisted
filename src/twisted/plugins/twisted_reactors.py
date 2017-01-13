@@ -6,6 +6,8 @@ from __future__ import absolute_import, division
 from twisted.application.reactors import Reactor
 from twisted.python.reflect import requireModule
 
+__all__ = []
+
 def _addReactorToAll(shortName, moduleName, description):
     """
 
@@ -21,8 +23,6 @@ def _addReactorToAll(shortName, moduleName, description):
         __all__.append(shortName)
     return newReactor
 
-
-__all__ = []
 
 default = _addReactorToAll(
     'default', 'twisted.internet.default',
