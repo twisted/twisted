@@ -20,7 +20,7 @@ from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python._oldstyle import _oldStyle
-from twisted.python.reflect import qual, namedAny
+from twisted.python.reflect import (qual, namedAny, requireModule)
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -501,8 +501,9 @@ class ReactorSelectionMixin:
         """
         rcts = sorted(self._getReactorTypes(), key=attrgetter('shortName'))
         for r in rcts:
-            self.messageOutput.write('    %-4s\t%s\n' %
-                                     (r.shortName, r.description))
+            if requireModule(r.moduleName) is not None:
+                self.messageOutput.write('    %-4s\t%s\n' %
+                                         (r.shortName, r.description))
         raise SystemExit(0)
 
 
