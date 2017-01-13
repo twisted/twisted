@@ -13,10 +13,9 @@ import os
 import pickle
 
 try:
-    from asyncio import new_event_loop
-    hasAsyncIO = True
+    import asyncio
 except ImportError:
-    hasAsyncIO = False
+    asyncio = None
 
 from twisted.application import service, internet, app, reactors
 from twisted.internet import interfaces, defer, protocol, reactor
@@ -919,7 +918,7 @@ class HelpReactorsTests(unittest.TestCase):
         --help-reactors should NOT display the asyncIO reactor on Python < 3.4
         """
         self.assertNotIn(twisted_reactors.asyncio.description, self.message)
-    if hasAsyncIO:
+    if asyncio:
         test_lacksAsyncIO.skip = "Not applicable, asyncio is available"
 
 
@@ -928,7 +927,7 @@ class HelpReactorsTests(unittest.TestCase):
         --help-reactors should display the asyncIO reactor on Python >= 3.4
         """
         self.assertIn(twisted_reactors.asyncio.description, self.message)
-    if not hasAsyncIO:
+    if not asyncio:
         test_hasAsyncIO.skip = "asyncio library not available"
 
 
