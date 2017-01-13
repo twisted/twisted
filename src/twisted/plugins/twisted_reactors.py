@@ -10,6 +10,8 @@ __all__ = []
 
 def _addReactorToAll(shortName, moduleName, description):
     """
+    Try to import a reactor by module name, and if that
+    works, add the shortname to __all__.
 
     @param shortName: Short name of reactor
     @param moduleName: The fully-qualified module name of the reactor
