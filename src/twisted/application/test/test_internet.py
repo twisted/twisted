@@ -32,6 +32,7 @@ from twisted.python.failure import Failure
 from twisted.logger import globalLogPublisher, formatEvent
 from twisted.test.proto_helpers import StringTransport
 
+from hypothesis import settings
 from hypothesis.stateful import (
     rule, precondition, invariant,
     RuleBasedStateMachine, run_state_machine_as_test,
@@ -987,4 +988,7 @@ class ClientServiceMachineTests(SynchronousTestCase):
         """
         Explore the state space of L{ClientService}
         """
-        run_state_machine_as_test(lambda: ClientServiceRuleMachine(self))
+        run_state_machine_as_test(
+            lambda: ClientServiceRuleMachine(self),
+            settings(max_examples=500, timeout=120),
+        )
