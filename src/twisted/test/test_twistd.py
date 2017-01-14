@@ -224,6 +224,7 @@ class ServerOptionsTests(unittest.TestCase):
             def __init__(self, name):
                 self.shortName = 'name of ' + name
                 self.description = 'description of ' + name
+                self.moduleName = 'twisted.internet.default'
 
         apple = FakeReactorInstaller('apple')
         banana = FakeReactorInstaller('banana')
