@@ -951,7 +951,7 @@ class HelpReactorsTests(unittest.TestCase):
         self.assertIn(twisted_reactors.iocp.description, self.message)
         self.assertIn("!" + twisted_reactors.iocp.shortName, self.message)
     if platformType == "win32":
-        test_iocpWin32.skip = "Test only applicable on Windows"
+        test_iocpNotWin32.skip = "Test only applicable on Windows"
 
 
     def test_onlySupportedReactors(self):
