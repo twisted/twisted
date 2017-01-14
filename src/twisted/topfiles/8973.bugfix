@@ -1,0 +1,1 @@
+IHandshakeListener providers connected via SSL4ClientEndpoint will now have their handshakeCompleted methods called.

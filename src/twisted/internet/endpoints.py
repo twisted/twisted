@@ -88,7 +88,8 @@ class _WrappingProtocol(Protocol):
         self._wrappedProtocol = wrappedProtocol
 
         for iface in [interfaces.IHalfCloseableProtocol,
-                      interfaces.IFileDescriptorReceiver]:
+                      interfaces.IFileDescriptorReceiver,
+                      interfaces.IHandshakeListener]:
             if iface.providedBy(self._wrappedProtocol):
                 directlyProvides(self, iface)
 
@@ -146,6 +147,14 @@ class _WrappingProtocol(Protocol):
         C{self._wrappedProtocol}
         """
         self._wrappedProtocol.writeConnectionLost()
+
+
+    def handshakeCompleted(self):
+        """
+        Proxy L{interfaces.IHandshakeListener} to our
+        C{self._wrappedProtocol}.
+        """
+        self._wrappedProtocol.handshakeCompleted()
 
 
 
