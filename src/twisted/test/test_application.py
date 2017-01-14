@@ -945,5 +945,5 @@ class HelpReactorsTests(unittest.TestCase):
         --help-reactors should NOT display the iocp reactor on Windows
         """
         self.assertNotIn(twisted_reactors.iocp.description, self.message)
-    if platformType != "win32":
+    if platformType == "win32":
         test_iocpWin32.skip = "Test only applicable on Windows"
