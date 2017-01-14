@@ -348,7 +348,7 @@ Since version 15.0.0, Twisted's ``Agent`` HTTP client will validate ``https`` UR
     Do not use ``getPage`` to retrieve HTTPS URLs; although we have not yet removed all the examples that use it, we discourage its use.
 
 You should ``pip install twisted[tls]`` in order to get all the dependencies necessary to do TLS properly.
-The :doc:`installation instructions <../../core/howto/optional>` gives more detail on optional dependencies and how to install them which may be of interest.
+The :doc:`installation instructions <../../installation/howto/optional>` gives more detail on optional dependencies and how to install them which may be of interest.
 
 For some uses, you may need to customize Agent's use of HTTPS; for example, to provide a client certificate, or to use a custom certificate authority for an internal network.
 
