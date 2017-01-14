@@ -304,3 +304,20 @@ class FlatFormattingTests(unittest.TestCase):
                 'log_format': 'simple message',
             }
         )
+
+
+    def test_flattenEventWithNoneFormat(self):
+        """
+        L{flattenEvent} will do nothing to an event with log_format set to
+        None.
+        """
+        inputEvent = {'a': 'b', 'c': 1, 'log_format': None}
+        flattenEvent(inputEvent)
+        self.assertEqual(
+            inputEvent,
+            {
+                'a': 'b',
+                'c': 1,
+                'log_format': None,
+            }
+        )

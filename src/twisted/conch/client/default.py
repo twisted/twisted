@@ -130,6 +130,31 @@ def isInKnownHosts(host, pubKey, options):
 
 
 
+def getHostKeyAlgorithms(host, options):
+    """
+    Look in known_hosts for a key corresponding to C{host}.
+    This can be used to change the order of supported key types
+    in the KEXINIT packet.
+
+    @type host: L{str}
+    @param host: the host to check in known_hosts
+    @type options: L{twisted.conch.client.options.ConchOptions}
+    @param options: options passed to client
+    @return: L{list} of L{str} representing key types or L{None}.
+    """
+    knownHosts = KnownHostsFile.fromPath(FilePath(
+        options['known-hosts']
+        or os.path.expanduser(_KNOWN_HOSTS)
+        ))
+    keyTypes = []
+    for entry in knownHosts.iterentries():
+        if entry.matchesHost(host):
+            if entry.keyType not in keyTypes:
+                keyTypes.append(entry.keyType)
+    return keyTypes or None
+
+
+
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def __init__(self, user, options, *args):
