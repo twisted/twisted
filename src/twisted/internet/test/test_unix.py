@@ -491,9 +491,11 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             return ancillary, expectedCount
 
         self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
-    if platform.isMacOSX() or sendmsgSkip is not None:
-        # Mac OS X's sendmsg fails if ancillary holds more than one entry.
-        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = True
+    if platform.isMacOSX():
+        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = (
+            "Multi control message ancillary sendmsg not supported on Mac.")
+    if sendmsgSkip is not None:
+        test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
 
     def test_multiFileDescriptorReceivedPerRecvmsgBadCMSG(self):
