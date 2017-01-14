@@ -872,6 +872,7 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
         self.clock = Clock()
         self.stopDeferreds = []
         self.whenConnectedDeferreds = []
+        self.started = False
         self.cq, self.service = makeReconnector(
             startService=False, fireImmediately=False, clock=self.clock)
 
@@ -882,6 +883,7 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
         Start the service."
         """
         self.service.startService()
+        self.started = True
 
 
     @rule()
@@ -974,7 +976,10 @@ class ClientServiceRuleMachine(RuleBasedStateMachine):
             self.whenConnectedDeferreds = []
         else:
             for d in self.whenConnectedDeferreds:
-                self.case.failureResultOf(d)
+                if not self.started:
+                    d.addErrback(lambda _: None)
+                else:
+                    self.case.failureResultOf(d)
             self.whenConnectedDeferreds = []
 
 
