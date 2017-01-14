@@ -915,18 +915,21 @@ class HelpReactorsTests(unittest.TestCase):
 
     def test_lacksAsyncIO(self):
         """
-        --help-reactors should NOT display the asyncIO reactor on Python < 3.4
+        --help-reactors should NOT display the asyncio reactor on Python < 3.4
         """
-        self.assertNotIn(twisted_reactors.asyncio.description, self.message)
+        self.assertIn(twisted_reactors.asyncio.description, self.message)
+        self.assertIn("!" + twisted_reactors.asyncio.shortName, self.message)
     if asyncio:
         test_lacksAsyncIO.skip = "Not applicable, asyncio is available"
 
 
     def test_hasAsyncIO(self):
         """
-        --help-reactors should display the asyncIO reactor on Python >= 3.4
+        --help-reactors should display the asyncio reactor on Python >= 3.4
         """
         self.assertIn(twisted_reactors.asyncio.description, self.message)
+        self.assertNotIn(
+            "!" + twisted_reactors.asyncio.shortName, self.message)
     if not asyncio:
         test_hasAsyncIO.skip = "asyncio library not available"
 
@@ -936,6 +939,7 @@ class HelpReactorsTests(unittest.TestCase):
         --help-reactors should display the iocp reactor on Windows
         """
         self.assertIn(twisted_reactors.iocp.description, self.message)
+        self.assertNotIn("!" + twisted_reactors.iocp.shortName, self.message)
     if platformType != "win32":
         test_iocpWin32.skip = "Test only applicable on Windows"
 
@@ -944,6 +948,22 @@ class HelpReactorsTests(unittest.TestCase):
         """
         --help-reactors should NOT display the iocp reactor on Windows
         """
-        self.assertNotIn(twisted_reactors.iocp.description, self.message)
+        self.assertIn(twisted_reactors.iocp.description, self.message)
+        self.assertIn("!" + twisted_reactors.iocp.shortName, self.message)
     if platformType == "win32":
         test_iocpWin32.skip = "Test only applicable on Windows"
+
+
+    def test_onlySupportedReactors(self):
+        """
+        --help-reactors with only supported reactors
+        """
+        def getReactorTypes():
+            yield twisted_reactors.default
+
+        options = app.ReactorSelectionMixin()
+        options._getReactorTypes = getReactorTypes
+        options.messageOutput = NativeStringIO()
+        self.assertRaises(SystemExit, options.opt_help_reactors)
+        message = options.messageOutput.getvalue()
+        self.assertNotIn("reactors not available", message)
