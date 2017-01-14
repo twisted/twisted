@@ -336,19 +336,29 @@ Customizing your HTTPS Configuration
 
 Everything you've read so far applies whether the scheme of the request URI is *HTTP* or *HTTPS* .
 
-By default, since version 15.0.0 (if you're using an earlier version, please upgrade, as this is a critical security feature!), Twisted will automatically validate ``https`` URLs against your platform's trust store to the best of its ability.
-Be sure to ``pip install twisted[tls]`` in order to get all the dependencies necessary to do TLS properly, but beyond that you should not need to do much.
+Since version 15.0.0, Twisted's ``Agent`` HTTP client will validate ``https`` URLs against your platform's trust store by default.
 
-However, for some uses, you may need to customize Agent's use of HTTPS; for example, to provide a client certificate, or to use a custom certificate authority for an internal network.
+.. note ::
+
+    If you're using an earlier version, please upgrade, as this is a *critical* security feature!
+
+.. note ::
+
+    Only ``Agent``, and things that use it, validates HTTPS.
+    Do not use ``getPage`` to retrieve HTTPS URLs; although we have not yet removed all the examples that use it, we discourage its use.
+
+You should ``pip install twisted[tls]`` in order to get all the dependencies necessary to do TLS properly.
+The :doc:`installation instructions <../../core/howto/optional>` gives more detail on optional dependencies and how to install them which may be of interest.
+
+For some uses, you may need to customize Agent's use of HTTPS; for example, to provide a client certificate, or to use a custom certificate authority for an internal network.
 
 Here, we're just going to show you how to inject the relevant TLS configuration into an Agent, so we'll use the simplest possible example, rather than a more useful but complex one.
 
 ``Agent``'s constructor takes an optional second argument, which allows you to customize its behavior with respect to HTTPS.
-The object passed here must implement the :api:`twisted.web.iweb.IPolicyForHTTPS` interface.
+The object passed here must provide the :api:`twisted.web.iweb.IPolicyForHTTPS` interface.
 
-So, here's our example.
-Using the very helpful ``badssl.com`` web API, we will construct a requst that fails to validate, because the certificate has the wrong hostname in it.
-The following Python program should produce a verification error, when run as ``python example.py https://wrong.host.badssl.com/``.
+Using the very helpful ``badssl.com`` web API, we will construct a request that fails to validate, because the certificate has the wrong hostname in it.
+The following Python program should produce a verification error when run as ``python example.py https://wrong.host.badssl.com/``.
 
 .. code-block:: python
 
@@ -361,7 +371,7 @@ The following Python program should produce a verification error, when run as ``
     @react
     def main(reactor):
         agent = Agent(reactor)
-        requested = agent.request(b"GET", sys.argv[1])
+        requested = agent.request(b"GET", sys.argv[1].encode("ascii"))
         def gotResponse(response):
             print(response.code)
         def noResponse(failure):
@@ -369,9 +379,10 @@ The following Python program should produce a verification error, when run as ``
             print(failure.value.reasons[0].getTraceback())
         return requested.addCallbacks(gotResponse, noResponse)
 
-This is because the certificate returned by ``wrong.host.badssl.com`` is actually for ``badssl.com``, and the hostnames don't match.
-In our pretend scenario, we want to construct an ``Agent`` that validates HTTPS certificates normally, _except_ for this one host, where it ignores the hostname mismatch and supplies the correct hostname manually, to work around this problem.
-In order to do that, we will supply our own policy that creates a per - netlocâ€“i.e. per host+port combination â€“ TLS configuration, like so:
+The verification error you see when running the above program is due to the mismatch between "``wrong.host.badssl.com``", the expected hostname derived from the URL, and "``badssl.com``", the hostname contained in the certificate presented by the server.
+In our pretend scenario, we want to construct an ``Agent`` that validates HTTPS certificates normally, _except_ for this one host.
+For ``"wrong.host.badssl.com"``, we wish to supply the correct hostname to check the certificate against manually, to work around this problem.
+In order to do that, we will supply our own policy that creates a different TLS configuration depending on the hostname, like so:
 
 .. code-block:: python
 
@@ -391,14 +402,13 @@ In order to do that, we will supply our own policy that creates a per - netlocâ€
             self._normalPolicy = BrowserLikePolicyForHTTPS()
         def creatorForNetloc(self, hostname, port):
             if hostname == b"wrong.host.badssl.com":
-                return optionsForClientTLS(u"badssl.com")
-            else:
-                return self._normalPolicy.creatorForNetloc(hostname, port)
+                hostname = b"badssl.com"
+            return self._normalPolicy.creatorForNetloc(hostname, port)
 
     @react
     def main(reactor):
         agent = Agent(reactor, OneHostnameWorkaroundPolicy())
-        requested = agent.request(b"GET", sys.argv[1])
+        requested = agent.request(b"GET", sys.argv[1].encode("ascii"))
         def gotResponse(response):
             print(response.code)
         def noResponse(failure):
@@ -407,6 +417,11 @@ In order to do that, we will supply our own policy that creates a per - netlocâ€
         return requested.addCallbacks(gotResponse, noResponse)
 
 Now, invoking ``python example.py https://wrong.host.badssl.com/`` will happily give us a ``200`` status code; however, running it with ``https://expired.badssl.com/`` or ``https://self-signed.badssl.com/`` or any of the other error hostnames should still give an error.
+
+.. note ::
+
+    The technique presented above does not *ignore the mismatching hostname*, but rather, it *provides the erroneous hostname specifically* so that the misconfiguration is expected.
+    Twisted does not document any facilities for disabling verification, since that makes TLS useless; instead, we strongly encourage you to figure out what properties you need from the connection and verify those.
 
 Using this TLS policy mechanism, you can customize Agent to use any feature of TLS that Twisted has support for, including the examples given above; client certificates, alternate trust roots, and so on.
 For a more detailed explanation of what options exist for client TLS configuration in Twisted, check out the documentation for the :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` API and the :doc:`Using SSL in Twisted <../../core/howto/ssl>` chapter of this documentation.
