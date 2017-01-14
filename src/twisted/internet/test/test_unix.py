@@ -494,7 +494,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     if platform.isMacOSX():
         test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = (
             "Multi control message ancillary sendmsg not supported on Mac.")
-    if sendmsgSkip is not None:
+    elif sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
 
