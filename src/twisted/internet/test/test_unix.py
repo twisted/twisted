@@ -409,7 +409,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # IReactorSocket.adoptStreamConnection once AF_UNIX support is
         # implemented; see https://twistedmatrix.com/trac/ticket/5573.
 
-        import socket
+        from socket import socketpair
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg
         from twisted.trial.unittest import SkipTest
@@ -436,7 +436,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             def _getLogPrefix(self, o):
                 pass
 
-        sendSocket, recvSocket = socket.socketpair(AF_UNIX, SOCK_STREAM)
+        sendSocket, recvSocket = socketpair(AF_UNIX, SOCK_STREAM)
         self.addCleanup(sendSocket.close)
         self.addCleanup(recvSocket.close)
 
@@ -446,13 +446,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         dataToSend = b'some data needs to be sent'
         fdsToSend = [sendSocket.fileno(), recvSocket.fileno()]
         ancillary, expectedCount = ancillaryPacker(fdsToSend)
-        try:
-            sendmsg(sendSocket, dataToSend, ancillary)
-        except (socket.error, OSError) as e:
-            # Some platforms fail if ancillary contains more than
-            # one entry (Mac OS 10.9 and 10.10, for example).
-            # No point in continuing if sendmsg fails, skip the test.
-            raise SkipTest('sendmsg failed: %s' % (e,))
+        sendmsg(sendSocket, dataToSend, ancillary)
 
         receiver.doRead()
 
@@ -498,7 +492,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             return ancillary, expectedCount
 
         self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
-    if sendmsgSkip is not None:
+    if platform.isMacOSX() or sendmsgSkip is not None:
+        # Mac OS X's sendmsg fails if ancillary holds more than one entry.
         test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
 
