@@ -412,7 +412,6 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         from socket import socketpair
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg
-        from twisted.trial.unittest import SkipTest
 
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(ConnectableProtocol):
