@@ -383,7 +383,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
-    def _SendmsgMixinFileDescriptorReceivedDriver(self, ancillaryPacker):
+    def _sendmsgMixinFileDescriptorReceivedDriver(self, ancillaryPacker):
         """
         Drive _SendmsgMixin via sendmsg socket calls to check that
         L{IFileDescriptorReceiver.fileDescriptorReceived} is called once
@@ -474,7 +474,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             expectedCount = 2
             return ancillary, expectedCount
 
-        self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+        self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgOneCMSG.skip = sendmsgSkip
 
@@ -495,7 +495,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             expectedCount = 2
             return ancillary, expectedCount
 
-        self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+        self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgTwoCMSGs.skip = sendmsgSkip
 
@@ -527,7 +527,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         origRecvmsg = sendmsg.recvmsg
         sendmsg.recvmsg = fakeRecvmsgUnsupportedAncillary
-        self._SendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+        self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
         sendmsg.recvmsg = origRecvmsg
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
