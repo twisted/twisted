@@ -388,11 +388,13 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         Drive _SendmsgMixin via sendmsg socket calls to check that
         L{IFileDescriptorReceiver.fileDescriptorReceived} is called once
         for each file descriptor received in the ancillary messages.
-        ancillaryPacker is called with a list of two file descriptors and
-        should return a two-tuple where: the first item is an iterable of
-        zero or more (cmsg_level, cmsg_type, cmsg_data) tuples for actual
-        sending via sendmsg; the second item is an integer indicating the
-        expected number of FDs to be received.
+
+        @param ancillaryPacker: A callable that will be given a list of
+            two file descriptors and should return a two-tuple where:
+            The first item is an iterable of zero or more (cmsg_level,
+            cmsg_type, cmsg_data) tuples for actual sending via sendmsg;
+            the second item is an integer indicating the expected number
+            of FDs to be received.
         """
         # Strategy:
         # - Create a UNIX socketpair.
