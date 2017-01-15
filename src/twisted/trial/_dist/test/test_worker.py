@@ -23,7 +23,7 @@ from twisted.internet.defer import fail, succeed
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone
 from twisted.python.compat import NativeStringIO as StringIO, unicode
-from twisted.python.reflect import qual
+from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
 
@@ -150,7 +150,7 @@ class LocalWorkerAMPTests(TestCase):
         Run a test, and encounter an error.
         """
         results = []
-        errorClass = qual(ValueError)
+        errorClass = fullyQualifiedName(ValueError)
         d = self.worker.callRemote(managercommands.AddError,
                                    testName=self.testName, error=b'error',
                                    errorClass=errorClass.encode("ascii"),
@@ -168,7 +168,7 @@ class LocalWorkerAMPTests(TestCase):
         the C{frames} argument passed to C{AddError}.
         """
         results = []
-        errorClass = qual(ValueError)
+        errorClass = fullyQualifiedName(ValueError)
         d = self.worker.callRemote(managercommands.AddError,
                                    testName=self.testName, error=b'error',
                                    errorClass=errorClass.encode("ascii"),
@@ -188,7 +188,7 @@ class LocalWorkerAMPTests(TestCase):
         Run a test, and fail.
         """
         results = []
-        failClass = qual(RuntimeError)
+        failClass = fullyQualifiedName(RuntimeError)
         d = self.worker.callRemote(managercommands.AddFailure,
                                    testName=self.testName, fail=b'fail',
                                    failClass=failClass.encode("ascii"),
