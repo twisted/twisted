@@ -22,7 +22,7 @@ from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import fail, succeed
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone
-from twisted.python.compat import (NativeStringIO as StringIO, unicode)
+from twisted.python.compat import NativeStringIO as StringIO, unicode
 from twisted.python.reflect import qual
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
