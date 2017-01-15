@@ -438,7 +438,6 @@ notPortedModules = [
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_release",
     "twisted.python.test.test_win32",
-    "twisted.spread.test.test_pbfailure",
     "twisted.tap.__init__",
     "twisted.tap.ftp",
     "twisted.tap.portforward",
