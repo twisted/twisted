@@ -183,6 +183,7 @@ class DelayedCallTests(TestCase):
         Create two L{DelayedCall} instanced scheduled to run at different
         times.
         """
+        self.patch(DelayedCall, 'debug', True)
         self.zero = self._getDelayedCallAt(0)
         self.one = self._getDelayedCallAt(1)
 
@@ -193,6 +194,7 @@ class DelayedCallTests(TestCase):
         C{str}, includes the unsigned id of the instance, as well as its state,
         the function to be called, and the function arguments.
         """
+        DelayedCall.debug = False
         dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
         self.assertEqual(
             str(dc),
