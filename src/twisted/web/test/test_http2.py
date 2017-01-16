@@ -2470,3 +2470,70 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         # Advancing the clock should do nothing.
         reactor.advance(101)
         self.assertEqual(transport.value(), sentData)
+
+
+    def test_timeoutEventuallyForcesConnectionClosed(self):
+        """
+        When a L{H2Connection} has timed the connection out, and the transport
+        doesn't get torn down within 15 seconds, it gets forcibly closed.
+        """
+        frameFactory = FrameFactory()
+        initialData = frameFactory.clientConnectionPreface()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+
+        # Advance the clock.
+        reactor.advance(100)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Advance the clock to see that we abort the connection.
+        reactor.advance(14)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+        reactor.advance(1)
+        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.aborted)
+
+
+    def test_losingConnectionCancelsTheAbort(self):
+        """
+        When a L{H2Connection} has timed the connection out, getting
+        C{connectionLost} called on it cancels the forcible connection close.
+        """
+        frameFactory = FrameFactory()
+        initialData = frameFactory.clientConnectionPreface()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+
+        # Advance the clock.
+        reactor.advance(100)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Advance the clock, but right before the end fire connectionLost.
+        reactor.advance(14)
+        conn.connectionLost(None)
+
+        # Check that the transport isn't forcibly closed.
+        reactor.advance(1)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
