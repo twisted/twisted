@@ -311,6 +311,38 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertFalse(transport.aborted)
 
 
+    def test_transportNotAbortedWithZeroAbortTimeout(self):
+        """
+        If the L{HTTPChannel} has its c{abortTimeout} set to L{None}, it never
+        aborts.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        factory = http.HTTPFactory()
+        protocol = factory.buildProtocol(None)
+        protocol._channel.abortTimeout = None
+
+        # This is a terrible violation of the abstraction later of
+        # _genericHTTPChannelProtocol, but we need to do it because
+        # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # See https://twistedmatrix.com/trac/ticket/8488
+        protocol._channel.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        self.assertFalse(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Force the initial timeout.
+        clock.advance(60)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Move an absurdly long way just to prove the point.
+        clock.advance(2**32)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+
     def test_noPipeliningApi(self):
         """
         Test that a L{http.Request} subclass with no queued kwarg works as

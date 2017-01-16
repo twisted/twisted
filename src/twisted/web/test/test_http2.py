@@ -2537,3 +2537,35 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         reactor.advance(1)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.aborted)
+
+
+    def test_losingConnectionWithNoAbortTimeOut(self):
+        """
+        When a L{H2Connection} has timed the connection out but the
+        C{abortTimeout} is set to L{None}, the connection is never aborted.
+        """
+        frameFactory = FrameFactory()
+        initialData = frameFactory.clientConnectionPreface()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+        conn.abortTimeout = None
+
+        # Advance the clock.
+        reactor.advance(100)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Advance the clock an arbitrarily long way, and confirm it never
+        # aborts.
+        reactor.advance(2**32)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
