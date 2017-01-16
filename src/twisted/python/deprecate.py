@@ -653,7 +653,7 @@ def warnAboutFunction(offender, warningString):
 
 
 
-def _passed(argspec, positional, keyword):
+def _passed_argspec(argspec, positional, keyword):
     """
     Take an I{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
@@ -696,6 +696,79 @@ def _passed(argspec, positional, keyword):
 
 
 
+def _passed_signature(signature, positional, keyword):
+    """
+    Take an I{inspect.Signature}, a tuple of positional arguments, and a dict of
+    keyword arguments, and return a mapping of arguments that were actually
+    passed to their passed values.
+
+    @param signature: The signature of the function to inspect.
+    @type signature: I{inspect.Signature}
+
+    @param positional: The positional arguments that were passed.
+    @type positional: L{tuple}
+
+    @param keyword: The keyword arguments that were passed.
+    @type keyword: L{dict}
+
+    @return: A dictionary mapping argument names (those declared in
+        C{signature}) to values that were passed explicitly by the user.
+    @rtype: L{dict} mapping L{str} to L{object}
+    """
+    result = {}
+    kwargs = None
+    for (n, (name, param)) in enumerate(signature.parameters.items()):
+        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+            # Varargs, for example: *args
+            result[name] = positional[n:]
+            n = len(positional)
+        elif param.kind == inspect.Parameter.VAR_KEYWORD:
+            # Variable keyword args, for example: **my_kwargs
+            kwargs = result[name] = {}
+        elif param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            if n < len(positional):
+                result[name] = positional[n]
+    if len(positional) > (n + 1):
+        raise TypeError("Too many arguments.")
+    for name, value in keyword.items():
+        if name in signature.parameters.keys():
+            if name in result:
+                raise TypeError("Already passed.")
+            result[name] = value
+        elif kwargs is not None:
+            kwargs[name] = value
+        else:
+            raise TypeError("no such param")
+    return result
+
+
+
+def _passed(spec, positional, keyword):
+    """
+    Passthru function for L{_passed_argspec} or L{_passed_signature}
+
+    @param spec: The argument specification for the function to inspect.
+    @type spec: I{inspect.ArgSpec} or I{inspect.Signature}
+
+    @param positional: The positional arguments that were passed.
+    @type positional: L{tuple}
+
+    @param keyword: The keyword arguments that were passed.
+    @type keyword: L{dict}
+
+    @return: A dictionary mapping argument names (those declared in C{argspec})
+        to values that were passed explicitly by the user.
+    @rtype: L{dict} mapping L{str} to L{object}
+    """
+    if isinstance(spec, inspect.ArgSpec):
+        # Python 2
+        return _passed_argspec(spec, positional, keyword)
+    elif isinstance(spec, inspect.Signature):
+        # Python 3
+        return _passed_signature(spec, positional, keyword)
+
+
+
 def _mutuallyExclusiveArguments(argumentPairs):
     """
     Decorator which causes its decoratee to raise a L{TypeError} if two of the
@@ -714,10 +787,15 @@ def _mutuallyExclusiveArguments(argumentPairs):
     @rtype: 1-argument callable taking a callable and returning a callable.
     """
     def wrapper(wrappee):
-        argspec = inspect.getargspec(wrappee)
+        if hasattr(inspect, "getfullargspec"):
+            # Python 3
+            spec = inspect.signature(wrappee)
+        else:
+            # Python 2
+            spec = inspect.getargspec(wrappee)
         @wraps(wrappee)
         def wrapped(*args, **kwargs):
-            arguments = _passed(argspec, args, kwargs)
+            arguments = _passed(spec, args, kwargs)
             for this, that in argumentPairs:
                 if this in arguments and that in arguments:
                     raise TypeError("nope")
