@@ -242,6 +242,75 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertTrue(transport.disconnecting)
 
 
+    def test_transportForciblyClosed(self):
+        """
+        If a timed out transport doesn't close after 15 seconds, the
+        L{HTTPChannel} will forcibly close it.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        factory = http.HTTPFactory()
+        protocol = factory.buildProtocol(None)
+
+        # This is a terrible violation of the abstraction later of
+        # _genericHTTPChannelProtocol, but we need to do it because
+        # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # See https://twistedmatrix.com/trac/ticket/8488
+        protocol._channel.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        self.assertFalse(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Force the initial timeout.
+        clock.advance(60)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Watch the transport get force-closed.
+        clock.advance(14)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+        clock.advance(1)
+        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.aborted)
+
+
+    def test_transportNotAbortedAfterConnectionLost(self):
+        """
+        If a timed out transport ends up calling C{connectionLost}, it prevents
+        the force-closure of the transport.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        factory = http.HTTPFactory()
+        protocol = factory.buildProtocol(None)
+
+        # This is a terrible violation of the abstraction later of
+        # _genericHTTPChannelProtocol, but we need to do it because
+        # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # See https://twistedmatrix.com/trac/ticket/8488
+        protocol._channel.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        self.assertFalse(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Force the initial timeout.
+        clock.advance(60)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+        # Move forward nearly to the timeout, then fire connectionLost.
+        clock.advance(14)
+        protocol.connectionLost(None)
+
+        # Check that the transport isn't forcibly closed.
+        clock.advance(1)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.aborted)
+
+
     def test_noPipeliningApi(self):
         """
         Test that a L{http.Request} subclass with no queued kwarg works as
