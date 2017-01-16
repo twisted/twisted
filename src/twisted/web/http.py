@@ -1705,10 +1705,21 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
     @type _waitingForTransport: L{bool}
+
+    @ivar abortTimeout: The number of seconds to wait after we attempt to shut
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
+    @type abortTimeout: L{int}
+
+    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
+        used to forcibly close the transport if it doesn't close cleanly.
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
 
     maxHeaders = 500
     totalHeadersSize = 16384
+    abortTimeout = 15
 
     length = 0
     persistent = 1
@@ -1725,6 +1736,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducer = None
     _requestProducerStreaming = None
     _waitingForTransport = False
+    _abortingCall = None
 
     def __init__(self):
         # the request queue
@@ -2006,13 +2018,36 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        if self.abortTimeout is not None:
+            # We use self.callLater because that's what TimeoutMixin does.
+            self._abortingCall = self.callLater(
+                self.abortTimeout, self.forceAbortClient
+            )
         self.loseConnection()
+
+
+    def forceAbortClient(self):
+        """
+        Called if C{abortTimeout} seconds have passed since the timeout fired,
+        and the connection still hasn't gone away. This can really only happen
+        on extremely bad connections or when clients are maliciously attempting
+        to keep connections open.
+        """
+        log.msg(
+            "Forcibly timing out client: %s" % str(self.transport.getPeer())
+        )
+        self.transport.abortConnection()
 
 
     def connectionLost(self, reason):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+        # If we were going to force-close the transport, we don't have to now.
+        if self._abortingCall is not None:
+            self._abortingCall.cancel()
+            self._abortingCall = None
 
 
     def isSecure(self):
