@@ -961,7 +961,12 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         @return: L{_passed}'s return value
         @rtype: L{dict}
         """
-        return _passed(inspect.getargspec(func), args, kw)
+        if hasattr(inspect, "signature"):
+            # Python 3
+            return _passed(inspect.signature(func), args, kw)
+        else:
+            # Python 2
+            return _passed(inspect.getargspec(func), args, kw)
 
 
     def test_passed_simplePositional(self):
