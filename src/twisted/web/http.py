@@ -2034,7 +2034,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         to keep connections open.
         """
         log.msg(
-            "Forcibly timing out client: %s" % str(self.transport.getPeer())
+            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
         )
         self.transport.abortConnection()
 
