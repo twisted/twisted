@@ -141,9 +141,6 @@ class Headers(object):
         @return: C{values}, with each item decoded
         @rtype: L{list} of L{unicode}
         """
-        if type(values) is not list:
-            return values
-
         newValues = []
 
         for value in values:
@@ -237,13 +234,15 @@ class Headers(object):
         @param default: The value to return if no header with the given C{name}
             exists.
 
-        @rtype: L{list} of strings, same type as C{name}
-        @return: A L{list} of values for the given header.
+        @rtype: L{list} of strings, same type as C{name} (except when
+            C{default} is returned).
+        @return: If the named header is present, a L{list} of its
+            values.  Otherwise, C{default}.
         """
         encodedName = self._encodeName(name)
         values = self._rawHeaders.get(encodedName, default)
 
-        if isinstance(name, unicode):
+        if isinstance(name, unicode) and values is not default:
             return self._decodeValues(values)
         return values
 
