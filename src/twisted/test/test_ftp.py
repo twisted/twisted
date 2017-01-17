@@ -7,15 +7,15 @@ FTP tests.
 
 import os
 import errno
-import codecs
 from io import BytesIO
 import getpass
+import string
+import random
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
 from twisted.trial import unittest
-from twisted.python.randbytes import insecureRandom
 from twisted.cred.portal import IRealm
 from twisted.protocols import basic
 from twisted.internet import reactor, task, protocol, defer, error
@@ -2745,7 +2745,9 @@ class SystemFTPRealmTests(unittest.TestCase):
         passed a username which has no corresponding home directory in the
         system's accounts database.
         """
-        user = codecs.encode(insecureRandom(4), 'hex').decode('ascii')
+        # Add a prefix in case starting with a digit is a problem
+        user = random.choice(string.ascii_letters) + ''.join(random.choice(
+            string.ascii_letters + string.digits) for _ in range(4))
         realm = ftp.SystemFTPRealm(self.mktemp())
         self.assertRaises(UnauthorizedLogin, realm.getHomeDirectory, user)
 
