@@ -2,8 +2,9 @@
 # See LICENSE for details.
 
 """
-A Factory for SSH servers, along with an OpenSSHFactory to use the same
-data sources as OpenSSH.
+A Factory for SSH servers.
+
+See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 
 Maintainer: Paul Swartz
 """
