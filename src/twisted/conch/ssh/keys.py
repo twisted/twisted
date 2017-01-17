@@ -807,12 +807,12 @@ class Key(object):
         Return a pretty representation of this object.
         """
         if self.type() == 'ED25519':
+            hexkey = binascii.hexlify(self.data())
+
             if self.isPublic():
-                return '<ed25519 Verification Key\nkey: %s\n>'\
-                       % (binascii.hexlify(self.data()),)
+                reprstr = '<ed25519 Verification Key\nkey: %s\n>' % (hexkey,)
             else:
-                return '<ed25519 Signing Key\nkey: %s\n>' % (binascii.hexlify(
-                    self.data()),)
+                reprstr = '<ed25519 Signing Key\nkey: %s\n>' % (hexkey,)
         elif self.type() == 'EC':
             data = self.data()
             name = data['curve'].decode('utf-8')
@@ -828,7 +828,7 @@ class Key(object):
                 else:
                     out += "\n%s:\n\t%s" % (k, v)
 
-            return out + ">\n"
+            reprstr = out + ">\n"
         else:
             lines = [
                 '<%s %s (%s bits)' % (
@@ -848,7 +848,8 @@ class Key(object):
                         o = o[:-1]
                     lines.append('\t' + o)
             lines[-1] = lines[-1] + '>'
-            return '\n'.join(lines)
+            reprstr = '\n'.join(lines)
+        return reprstr
 
     @property
     @deprecated(Version('Twisted', 16, 0, 0))
