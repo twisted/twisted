@@ -7,7 +7,8 @@ FTP tests.
 
 import os
 import errno
-from StringIO import StringIO
+import codecs
+from io import BytesIO
 import getpass
 
 from zope.interface import implementer
@@ -22,6 +23,7 @@ from twisted.internet.interfaces import IConsumer
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred import portal, checkers, credentials
 from twisted.python import failure, filepath, runtime
+from twisted.python.compat import xrange
 from twisted.test import proto_helpers
 
 from twisted.protocols import ftp, loopback
@@ -51,13 +53,17 @@ class Dummy(basic.LineReceiver):
 
 class _BufferingProtocol(protocol.Protocol):
     def connectionMade(self):
-        self.buffer = ''
+        self.buffer = b''
         self.d = defer.Deferred()
     def dataReceived(self, data):
         self.buffer += data
     def connectionLost(self, reason):
         self.d.callback(self)
 
+
+def passive_mode_msg(protocol, host='127.0.0.1', port=12345):
+    msg = '227 Entering Passive Mode (%s).' % (ftp.encodeHostPort(host, port),)
+    return msg.encode(protocol._encoding)
 
 
 class FTPServerTestCase(unittest.TestCase):
@@ -762,7 +768,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         # No files, so the file listing should be empty
         self._download('LIST', chainDeferred=d)
         def checkEmpty(result):
-            self.assertEqual('', result)
+            self.assertEqual(b'', result)
         return d.addCallback(checkEmpty)
 
     def test_LISTWithBinLsFlags(self):
@@ -781,10 +787,10 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         def checkDownload(download):
             names = []
             for line in download.splitlines():
-                names.append(line.split(' ')[-1])
+                names.append(line.split(b' ')[-1])
             self.assertEqual(2, len(names))
-            self.assertIn('foo', names)
-            self.assertIn('bar', names)
+            self.assertIn(b'foo', names)
+            self.assertIn(b'bar', names)
 
         return d.addCallback(checkDownload)
 
@@ -802,22 +808,22 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         # We expect 2 lines because there are two files.
         self._download('LIST', chainDeferred=d)
         def checkDownload(download):
-            self.assertEqual(2, len(download[:-2].split('\r\n')))
+            self.assertEqual(2, len(download[:-2].split(b'\r\n')))
         d.addCallback(checkDownload)
 
         # Download a names-only listing.
         self._download('NLST ', chainDeferred=d)
         def checkDownload(download):
-            filenames = download[:-2].split('\r\n')
+            filenames = download[:-2].split(b'\r\n')
             filenames.sort()
-            self.assertEqual(['bar', 'foo'], filenames)
+            self.assertEqual([b'bar', b'foo'], filenames)
         d.addCallback(checkDownload)
 
         # Download a listing of the 'foo' subdirectory.  'foo' has no files, so
         # the file listing should be empty.
         self._download('LIST foo', chainDeferred=d)
         def checkDownload(download):
-            self.assertEqual('', download)
+            self.assertEqual(b'', download)
         d.addCallback(checkDownload)
 
         # Change the current working directory to 'foo'.
@@ -829,7 +835,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         # because LIST uses the working directory by default.
         self._download('LIST', chainDeferred=d)
         def checkDownload(download):
-            self.assertEqual('', download)
+            self.assertEqual(b'', download)
         return d.addCallback(checkDownload)
 
 
@@ -891,8 +897,8 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             "LIST",
             (u'my resum\xe9', (
                 0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
-            'drwxrwxrwx   0 user      group                   '
-            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
+            b'drwxrwxrwx   0 user      group                   '
+            b'0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
 
     def test_LISTNonASCIIBytes(self):
@@ -902,10 +908,10 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         """
         return self._listTestHelper(
             "LIST",
-            ('my resum\xc3\xa9', (
+            (b'my resum\xc3\xa9', (
                 0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
-            'drwxrwxrwx   0 user      group                   '
-            '0 Jan 01  1970 my resum\xc3\xa9\r\n')
+            b'drwxrwxrwx   0 user      group                   '
+            b'0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
 
     def testManyLargeDownloads(self):
@@ -915,7 +921,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         # Download a range of different size files
         for size in range(100000, 110000, 500):
             with open(os.path.join(self.directory, '%d.txt' % (size,)), 'wb') as fObj:
-                fObj.write('x' * size)
+                fObj.write(b'x' * size)
 
             self._download('RETR %d.txt' % (size,), chainDeferred=d)
             def checkDownload(download, size=size):
@@ -972,9 +978,9 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         self._download('NLST ', chainDeferred=d)
         def checkDownload(download):
-            filenames = download[:-2].split('\r\n')
+            filenames = download[:-2].split(b'\r\n')
             filenames.sort()
-            self.assertEqual(['foo', 'test.txt'], filenames)
+            self.assertEqual([b'foo', b'test.txt'], filenames)
         return d.addCallback(checkDownload)
 
 
@@ -987,7 +993,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         self._download('NLST nonexistent.txt', chainDeferred=d)
         def checkDownload(download):
-            self.assertEqual('', download)
+            self.assertEqual(b'', download)
         return d.addCallback(checkDownload)
 
 
@@ -1000,7 +1006,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             "NLST",
             (u'my resum\xe9', (
                 0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
-            'my resum\xc3\xa9\r\n')
+            b'my resum\xc3\xa9\r\n')
 
 
     def test_NLSTNonASCIIBytes(self):
@@ -1009,9 +1015,9 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         """
         return self._listTestHelper(
             "NLST",
-            ('my resum\xc3\xa9', (
+            (b'my resum\xc3\xa9', (
                 0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
-            'my resum\xc3\xa9\r\n')
+            b'my resum\xc3\xa9\r\n')
 
 
     def test_NLSTOnPathToFile(self):
@@ -1027,8 +1033,8 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         self._download('NLST test.txt', chainDeferred=d)
 
         def checkDownload(download):
-            filenames = download[:-2].split('\r\n')
-            self.assertEqual(['test.txt'], filenames)
+            filenames = download[:-2].split(b'\r\n')
+            self.assertEqual([b'test.txt'], filenames)
         return d.addCallback(checkDownload)
 
 
@@ -1098,9 +1104,9 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
         self._download('NLST *.txt', chainDeferred=d)
 
         def checkDownload(download):
-            filenames = download[:-2].split('\r\n')
+            filenames = download[:-2].split(b'\r\n')
             filenames.sort()
-            self.assertEqual(['ceva.txt', 'test.txt'], filenames)
+            self.assertEqual([b'ceva.txt', b'test.txt'], filenames)
 
         return d.addCallback(checkDownload)
 
@@ -1273,12 +1279,12 @@ class DTPTests(unittest.TestCase):
         """
         dtpInstance = self.factory.buildProtocol(None)
         dtpInstance.makeConnection(self.transport)
-        lineContent = 'line content'
+        lineContent = b'line content'
 
         dtpInstance.sendLine(lineContent)
 
         dataSent = self.transport.value()
-        self.assertEqual(lineContent + '\r\n', dataSent)
+        self.assertEqual(lineContent + b'\r\n', dataSent)
 
 
 
@@ -1292,7 +1298,7 @@ class PrintLines(protocol.Protocol):
 
     def connectionMade(self):
         for line in self._lines:
-            self.transport.write(line + "\r\n")
+            self.transport.write(line.encode('latin-1') + b"\r\n")
         self.transport.loseConnection()
 
 
@@ -1417,7 +1423,7 @@ class FTPFileListingTests(unittest.TestCase):
         # This example derived from bug description in issue 514.
         fileList = ftp.FTPFileListProtocol()
         exampleLine = (
-            '-rw-r--r--   1 root     other        531 Jan 29 2003 README\n')
+            b'-rw-r--r--   1 root     other        531 Jan 29 2003 README\n')
         class PrintLine(protocol.Protocol):
             def connectionMade(self):
                 self.transport.write(exampleLine)
@@ -1513,16 +1519,16 @@ class FTPClientTests(unittest.TestCase):
         """
         Test the login part.
         """
-        self.assertEqual(self.transport.value(), '')
+        self.assertEqual(self.transport.value(), b'')
         self.client.lineReceived(
-            '331 Guest login ok, type your email address as password.')
-        self.assertEqual(self.transport.value(), 'USER anonymous\r\n')
+            b'331 Guest login ok, type your email address as password.')
+        self.assertEqual(self.transport.value(), b'USER anonymous\r\n')
         self.transport.clear()
         self.client.lineReceived(
-            '230 Anonymous login ok, access restrictions apply.')
-        self.assertEqual(self.transport.value(), 'TYPE I\r\n')
+            b'230 Anonymous login ok, access restrictions apply.')
+        self.assertEqual(self.transport.value(), b'TYPE I\r\n')
         self.transport.clear()
-        self.client.lineReceived('200 Type set to I.')
+        self.client.lineReceived(b'200 Type set to I.')
 
 
     def test_CDUP(self):
@@ -1540,9 +1546,9 @@ class FTPClientTests(unittest.TestCase):
 
         self._testLogin()
         d = self.client.cdup().addCallback(cbCdup)
-        self.assertEqual(self.transport.value(), 'CDUP\r\n')
+        self.assertEqual(self.transport.value(), b'CDUP\r\n')
         self.transport.clear()
-        self.client.lineReceived('250 Requested File Action Completed OK')
+        self.client.lineReceived(b'250 Requested File Action Completed OK')
         return d
 
 
@@ -1556,9 +1562,9 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.cdup()
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'CDUP\r\n')
+        self.assertEqual(self.transport.value(), b'CDUP\r\n')
         self.transport.clear()
-        self.client.lineReceived('550 ..: No such file or directory')
+        self.client.lineReceived(b'550 ..: No such file or directory')
         return d
 
 
@@ -1577,8 +1583,8 @@ class FTPClientTests(unittest.TestCase):
 
         self._testLogin()
         d = self.client.pwd().addCallback(cbPwd)
-        self.assertEqual(self.transport.value(), 'PWD\r\n')
-        self.client.lineReceived('257 "/bar/baz"')
+        self.assertEqual(self.transport.value(), b'PWD\r\n')
+        self.client.lineReceived(b'257 "/bar/baz"')
         return d
 
 
@@ -1592,8 +1598,8 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.pwd()
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PWD\r\n')
-        self.client.lineReceived('550 /bar/baz: No such file or directory')
+        self.assertEqual(self.transport.value(), b'PWD\r\n')
+        self.client.lineReceived(b'550 /bar/baz: No such file or directory')
         return d
 
 
@@ -1612,8 +1618,8 @@ class FTPClientTests(unittest.TestCase):
 
         self._testLogin()
         d = self.client.cwd("bar/foo").addCallback(cbCwd)
-        self.assertEqual(self.transport.value(), 'CWD bar/foo\r\n')
-        self.client.lineReceived('250 Requested File Action Completed OK')
+        self.assertEqual(self.transport.value(), b'CWD bar/foo\r\n')
+        self.client.lineReceived(b'250 Requested File Action Completed OK')
         return d
 
 
@@ -1627,8 +1633,8 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.cwd("bar/foo")
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'CWD bar/foo\r\n')
-        self.client.lineReceived('550 bar/foo: No such file or directory')
+        self.assertEqual(self.transport.value(), b'CWD bar/foo\r\n')
+        self.client.lineReceived(b'550 bar/foo: No such file or directory')
         return d
 
 
@@ -1644,7 +1650,7 @@ class FTPClientTests(unittest.TestCase):
         (XXX - This API should be based on producers and consumers)
         """
         def cbRetr(res, proto):
-            self.assertEqual(proto.buffer, 'x' * 1000)
+            self.assertEqual(proto.buffer, b'x' * 1000)
 
         def cbConnect(host, port, factory):
             self.assertEqual(host, '127.0.0.1')
@@ -1652,8 +1658,8 @@ class FTPClientTests(unittest.TestCase):
             proto = factory.buildProtocol((host, port))
             proto.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
-            proto.dataReceived("x" * 1000)
+                b'150 File status okay; about to open data connection.')
+            proto.dataReceived(b"x" * 1000)
             proto.connectionLost(failure.Failure(error.ConnectionDone("")))
 
         self.client.connectFactory = cbConnect
@@ -1661,13 +1667,12 @@ class FTPClientTests(unittest.TestCase):
         proto = _BufferingProtocol()
         d = self.client.retrieveFile("spam", proto)
         d.addCallback(cbRetr, proto)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'RETR spam\r\n')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'RETR spam\r\n')
         self.transport.clear()
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return d
 
 
@@ -1684,25 +1689,28 @@ class FTPClientTests(unittest.TestCase):
         def generatePort(portCmd):
             portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
             portCmd.protocol.makeConnection(proto_helpers.StringTransport())
-            portCmd.protocol.dataReceived("x" * 1000)
+            portCmd.protocol.dataReceived(b"x" * 1000)
             portCmd.protocol.connectionLost(
                 failure.Failure(error.ConnectionDone("")))
 
         def cbRetr(res, proto):
-            self.assertEqual(proto.buffer, 'x' * 1000)
+            self.assertEqual(proto.buffer, b'x' * 1000)
 
         self.client.generatePortCommand = generatePort
         self._testLogin()
         proto = _BufferingProtocol()
         d = self.client.retrieveFile("spam", proto)
         d.addCallback(cbRetr, proto)
-        self.assertEqual(self.transport.value(), 'PORT %s\r\n' %
-            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.assertEqual(
+            self.transport.value(),
+            ('PORT %s\r\n' %
+                (ftp.encodeHostPort('127.0.0.1', 9876),)).encode(
+                    self.client._encoding))
         self.transport.clear()
-        self.client.lineReceived('200 PORT OK')
-        self.assertEqual(self.transport.value(), 'RETR spam\r\n')
+        self.client.lineReceived(b'200 PORT OK')
+        self.assertEqual(self.transport.value(), b'RETR spam\r\n')
         self.transport.clear()
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return d
 
 
@@ -1720,7 +1728,7 @@ class FTPClientTests(unittest.TestCase):
             proto = factory.buildProtocol((host, port))
             proto.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
+                b'150 File status okay; about to open data connection.')
             proto.connectionLost(failure.Failure(error.ConnectionDone("")))
 
         self.client.connectFactory = cbConnect
@@ -1728,13 +1736,12 @@ class FTPClientTests(unittest.TestCase):
         proto = _BufferingProtocol()
         d = self.client.retrieveFile("spam", proto)
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'RETR spam\r\n')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'RETR spam\r\n')
         self.transport.clear()
-        self.client.lineReceived('550 spam: No such file or directory')
+        self.client.lineReceived(b'550 spam: No such file or directory')
         return d
 
 
@@ -1752,18 +1759,19 @@ class FTPClientTests(unittest.TestCase):
             tr = proto_helpers.StringTransportWithDisconnection()
             portCmd.protocol.makeConnection(tr)
             tr.protocol = portCmd.protocol
-            portCmd.protocol.dataReceived("x" * 500)
+            portCmd.protocol.dataReceived(b"x" * 500)
             l.append(tr)
 
         self.client.generatePortCommand = generatePort
         self._testLogin()
         proto = _BufferingProtocol()
         d = self.client.retrieveFile("spam", proto)
-        self.assertEqual(self.transport.value(), 'PORT %s\r\n' %
-            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.assertEqual(self.transport.value(), ('PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),)).encode(
+                self.client._encoding))
         self.transport.clear()
-        self.client.lineReceived('200 PORT OK')
-        self.assertEqual(self.transport.value(), 'RETR spam\r\n')
+        self.client.lineReceived(b'200 PORT OK')
+        self.assertEqual(self.transport.value(), b'RETR spam\r\n')
 
         self.assertTrue(l)
         l[0].loseConnection()
@@ -1790,13 +1798,13 @@ class FTPClientTests(unittest.TestCase):
         tr = proto_helpers.StringTransport()
         def cbStore(sender):
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
-            sender.transport.write("x" * 1000)
+                b'150 File status okay; about to open data connection.')
+            sender.transport.write(b"x" * 1000)
             sender.finish()
             sender.connectionLost(failure.Failure(error.ConnectionDone("")))
 
         def cbFinish(ign):
-            self.assertEqual(tr.value(), "x" * 1000)
+            self.assertEqual(tr.value(), b"x" * 1000)
 
         def cbConnect(host, port, factory):
             self.assertEqual(host, '127.0.0.1')
@@ -1809,13 +1817,12 @@ class FTPClientTests(unittest.TestCase):
         d1, d2 = self.client.storeFile("spam")
         d1.addCallback(cbStore)
         d2.addCallback(cbFinish)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'STOR spam\r\n')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'STOR spam\r\n')
         self.transport.clear()
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return defer.gatherResults([d1, d2])
 
 
@@ -1830,8 +1837,8 @@ class FTPClientTests(unittest.TestCase):
         tr = proto_helpers.StringTransport()
         def cbStore(sender):
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
-            sender.transport.write("x" * 1000)
+                b'150 File status okay; about to open data connection.')
+            sender.transport.write(b"x" * 1000)
             sender.finish()
             sender.connectionLost(failure.Failure(error.ConnectionDone("")))
 
@@ -1846,14 +1853,13 @@ class FTPClientTests(unittest.TestCase):
         d1, d2 = self.client.storeFile("spam")
         d1.addCallback(cbStore)
         self.assertFailure(d2, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'STOR spam\r\n')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'STOR spam\r\n')
         self.transport.clear()
         self.client.lineReceived(
-            '426 Transfer aborted.  Data connection closed.')
+            b'426 Transfer aborted.  Data connection closed.')
         return defer.gatherResults([d1, d2])
 
 
@@ -1872,21 +1878,22 @@ class FTPClientTests(unittest.TestCase):
             portCmd.protocol.makeConnection(tr)
 
         def cbStore(sender):
-            self.assertEqual(self.transport.value(), 'PORT %s\r\n' %
-                (ftp.encodeHostPort('127.0.0.1', 9876),))
+            self.assertEqual(self.transport.value(), ('PORT %s\r\n' %
+                (ftp.encodeHostPort('127.0.0.1', 9876),)).encode(
+                    self.client._encoding))
             self.transport.clear()
-            self.client.lineReceived('200 PORT OK')
-            self.assertEqual(self.transport.value(), 'STOR spam\r\n')
+            self.client.lineReceived(b'200 PORT OK')
+            self.assertEqual(self.transport.value(), b'STOR spam\r\n')
             self.transport.clear()
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
-            sender.transport.write("x" * 1000)
+                b'150 File status okay; about to open data connection.')
+            sender.transport.write(b"x" * 1000)
             sender.finish()
             sender.connectionLost(failure.Failure(error.ConnectionDone("")))
-            self.client.lineReceived('226 Transfer Complete.')
+            self.client.lineReceived(b'226 Transfer Complete.')
 
         def cbFinish(ign):
-            self.assertEqual(tr.value(), "x" * 1000)
+            self.assertEqual(tr.value(), b"x" * 1000)
 
         self.client.generatePortCommand = generatePort
         self._testLogin()
@@ -1928,11 +1935,11 @@ class FTPClientTests(unittest.TestCase):
             proto = factory.buildProtocol((host, port))
             proto.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
+                b'150 File status okay; about to open data connection.')
             sending = [
-                '-rw-r--r--    0 spam      egg      100 Oct 10 2006 foo\r\n',
-                '-rw-r--r--    3 spam      egg      100 Oct 10 2006 bar\r\n',
-                '-rw-r--r--    4 spam      egg      100 Oct 10 2006 baz\r\n',
+                b'-rw-r--r--    0 spam      egg      100 Oct 10 2006 foo\r\n',
+                b'-rw-r--r--    3 spam      egg      100 Oct 10 2006 bar\r\n',
+                b'-rw-r--r--    4 spam      egg      100 Oct 10 2006 baz\r\n',
             ]
             for i in sending:
                 proto.dataReceived(i)
@@ -1942,12 +1949,11 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         fileList = ftp.FTPFileListProtocol()
         d = self.client.list('foo/bar', fileList).addCallback(cbList, fileList)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'LIST foo/bar\r\n')
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'LIST foo/bar\r\n')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return d
 
 
@@ -1964,11 +1970,11 @@ class FTPClientTests(unittest.TestCase):
             portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
             portCmd.protocol.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
+                b'150 File status okay; about to open data connection.')
             sending = [
-                '-rw-r--r--    0 spam      egg      100 Oct 10 2006 foo\r\n',
-                '-rw-r--r--    3 spam      egg      100 Oct 10 2006 bar\r\n',
-                '-rw-r--r--    4 spam      egg      100 Oct 10 2006 baz\r\n',
+                b'-rw-r--r--    0 spam      egg      100 Oct 10 2006 foo\r\n',
+                b'-rw-r--r--    3 spam      egg      100 Oct 10 2006 bar\r\n',
+                b'-rw-r--r--    4 spam      egg      100 Oct 10 2006 baz\r\n',
             ]
             for i in sending:
                 portCmd.protocol.dataReceived(i)
@@ -1986,13 +1992,14 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         fileList = ftp.FTPFileListProtocol()
         d = self.client.list('foo/bar', fileList).addCallback(cbList, fileList)
-        self.assertEqual(self.transport.value(), 'PORT %s\r\n' %
-            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.assertEqual(self.transport.value(), ('PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),)).encode(
+                self.client._encoding))
         self.transport.clear()
-        self.client.lineReceived('200 PORT OK')
-        self.assertEqual(self.transport.value(), 'LIST foo/bar\r\n')
+        self.client.lineReceived(b'200 PORT OK')
+        self.assertEqual(self.transport.value(), b'LIST foo/bar\r\n')
         self.transport.clear()
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return d
 
 
@@ -2010,7 +2017,7 @@ class FTPClientTests(unittest.TestCase):
             proto = factory.buildProtocol((host, port))
             proto.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
+                b'150 File status okay; about to open data connection.')
             proto.connectionLost(failure.Failure(error.ConnectionDone("")))
 
         self.client.connectFactory = cbConnect
@@ -2018,12 +2025,11 @@ class FTPClientTests(unittest.TestCase):
         fileList = ftp.FTPFileListProtocol()
         d = self.client.list('foo/bar', fileList)
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'LIST foo/bar\r\n')
-        self.client.lineReceived('550 foo/bar: No such file or directory')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'LIST foo/bar\r\n')
+        self.client.lineReceived(b'550 foo/bar: No such file or directory')
         return d
 
 
@@ -2039,15 +2045,15 @@ class FTPClientTests(unittest.TestCase):
             portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
             portCmd.protocol.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
-            portCmd.protocol.dataReceived('foo\r\n')
-            portCmd.protocol.dataReceived('bar\r\n')
-            portCmd.protocol.dataReceived('baz\r\n')
+                b'150 File status okay; about to open data connection.')
+            portCmd.protocol.dataReceived(b'foo\r\n')
+            portCmd.protocol.dataReceived(b'bar\r\n')
+            portCmd.protocol.dataReceived(b'baz\r\n')
             portCmd.protocol.connectionLost(
                 failure.Failure(error.ConnectionDone("")))
 
         def cbList(res, proto):
-            fls = proto.buffer.splitlines()
+            fls = proto.buffer.decode(self.client._encoding).splitlines()
             expected = ["foo", "bar", "baz"]
             expected.sort()
             fls.sort()
@@ -2057,12 +2063,13 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         lstproto = _BufferingProtocol()
         d = self.client.nlst('foo/bar', lstproto).addCallback(cbList, lstproto)
-        self.assertEqual(self.transport.value(), 'PORT %s\r\n' %
-            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.assertEqual(self.transport.value(), ('PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),)).encode(
+                self.client._encoding))
         self.transport.clear()
-        self.client.lineReceived('200 PORT OK')
-        self.assertEqual(self.transport.value(), 'NLST foo/bar\r\n')
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(b'200 PORT OK')
+        self.assertEqual(self.transport.value(), b'NLST foo/bar\r\n')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return d
 
 
@@ -2076,7 +2083,7 @@ class FTPClientTests(unittest.TestCase):
         """
         def cbList(res, proto):
             fls = proto.buffer.splitlines()
-            expected = ["foo", "bar", "baz"]
+            expected = [b"foo", b"bar", b"baz"]
             expected.sort()
             fls.sort()
             self.assertEqual(fls, expected)
@@ -2087,22 +2094,21 @@ class FTPClientTests(unittest.TestCase):
             proto = factory.buildProtocol((host, port))
             proto.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
-            proto.dataReceived('foo\r\n')
-            proto.dataReceived('bar\r\n')
-            proto.dataReceived('baz\r\n')
+                b'150 File status okay; about to open data connection.')
+            proto.dataReceived(b'foo\r\n')
+            proto.dataReceived(b'bar\r\n')
+            proto.dataReceived(b'baz\r\n')
             proto.connectionLost(failure.Failure(error.ConnectionDone("")))
 
         self.client.connectFactory = cbConnect
         self._testLogin()
         lstproto = _BufferingProtocol()
         d = self.client.nlst('foo/bar', lstproto).addCallback(cbList, lstproto)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'NLST foo/bar\r\n')
-        self.client.lineReceived('226 Transfer Complete.')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'NLST foo/bar\r\n')
+        self.client.lineReceived(b'226 Transfer Complete.')
         return d
 
 
@@ -2121,7 +2127,7 @@ class FTPClientTests(unittest.TestCase):
             proto = factory.buildProtocol((host, port))
             proto.makeConnection(tr)
             self.client.lineReceived(
-                '150 File status okay; about to open data connection.')
+                b'150 File status okay; about to open data connection.')
             proto.connectionLost(failure.Failure(error.ConnectionDone("")))
 
         self.client.connectFactory = cbConnect
@@ -2129,12 +2135,11 @@ class FTPClientTests(unittest.TestCase):
         lstproto = _BufferingProtocol()
         d = self.client.nlst('foo/bar', lstproto)
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PASV\r\n')
+        self.assertEqual(self.transport.value(), b'PASV\r\n')
         self.transport.clear()
-        self.client.lineReceived('227 Entering Passive Mode (%s).' %
-            (ftp.encodeHostPort('127.0.0.1', 12345),))
-        self.assertEqual(self.transport.value(), 'NLST foo/bar\r\n')
-        self.client.lineReceived('550 foo/bar: No such file or directory')
+        self.client.lineReceived(passive_mode_msg(self.client))
+        self.assertEqual(self.transport.value(), b'NLST foo/bar\r\n')
+        self.client.lineReceived(b'550 foo/bar: No such file or directory')
         return d
 
 
@@ -2146,16 +2151,16 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
 
         d = self.client.rename("/spam", "/ham")
-        self.assertEqual(self.transport.value(), 'RNFR /spam\r\n')
+        self.assertEqual(self.transport.value(), b'RNFR /spam\r\n')
         self.transport.clear()
 
         fromResponse = (
             '350 Requested file action pending further information.\r\n')
-        self.client.lineReceived(fromResponse)
-        self.assertEqual(self.transport.value(), 'RNTO /ham\r\n')
+        self.client.lineReceived(fromResponse.encode(self.client._encoding))
+        self.assertEqual(self.transport.value(), b'RNTO /ham\r\n')
         toResponse = (
             '250 Requested File Action Completed OK')
-        self.client.lineReceived(toResponse)
+        self.client.lineReceived(toResponse.encode(self.client._encoding))
 
         d.addCallback(self.assertEqual, ([fromResponse], [toResponse]))
         return d
@@ -2171,12 +2176,12 @@ class FTPClientTests(unittest.TestCase):
         fromFile = "/foo/ba\nr/baz"
         toFile = "/qu\nux"
         self.client.rename(fromFile, toFile)
-        self.client.lineReceived("350 ")
-        self.client.lineReceived("250 ")
+        self.client.lineReceived(b"350 ")
+        self.client.lineReceived(b"250 ")
         self.assertEqual(
             self.transport.value(),
-            "RNFR /foo/ba\x00r/baz\r\n"
-            "RNTO /qu\x00ux\r\n")
+            b"RNFR /foo/ba\x00r/baz\r\n"
+            b"RNTO /qu\x00ux\r\n")
 
 
     def test_renameFromToFailingOnFirstError(self):
@@ -2188,12 +2193,12 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
 
         d = self.client.rename("/spam", "/ham")
-        self.assertEqual(self.transport.value(), 'RNFR /spam\r\n')
+        self.assertEqual(self.transport.value(), b'RNFR /spam\r\n')
         self.transport.clear()
 
-        self.client.lineReceived('550 Requested file unavailable.\r\n')
+        self.client.lineReceived(b'550 Requested file unavailable.\r\n')
         # The RNTO should not execute since the RNFR failed.
-        self.assertEqual(self.transport.value(), '')
+        self.assertEqual(self.transport.value(), b'')
 
         return self.assertFailure(d, ftp.CommandFailed)
 
@@ -2207,12 +2212,12 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
 
         d = self.client.rename("/spam", "/ham")
-        self.assertEqual(self.transport.value(), 'RNFR /spam\r\n')
+        self.assertEqual(self.transport.value(), b'RNFR /spam\r\n')
         self.transport.clear()
 
-        self.client.lineReceived('350 Requested file action pending further information.\r\n')
-        self.assertEqual(self.transport.value(), 'RNTO /ham\r\n')
-        self.client.lineReceived('550 Requested file unavailable.\r\n')
+        self.client.lineReceived(b'350 Requested file action pending further information.\r\n')
+        self.assertEqual(self.transport.value(), b'RNTO /ham\r\n')
+        self.client.lineReceived(b'550 Requested file unavailable.\r\n')
         return self.assertFailure(d, ftp.CommandFailed)
 
 
@@ -2225,8 +2230,8 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
 
         d = self.client.makeDirectory("/spam")
-        self.assertEqual(self.transport.value(), 'MKD /spam\r\n')
-        self.client.lineReceived('257 "/spam" created.')
+        self.assertEqual(self.transport.value(), b'MKD /spam\r\n')
+        self.client.lineReceived(b'257 "/spam" created.')
         return d.addCallback(self.assertEqual, ['257 "/spam" created.'])
 
 
@@ -2237,11 +2242,11 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.makeDirectory("/sp\nam")
-        self.assertEqual(self.transport.value(), 'MKD /sp\x00am\r\n')
+        self.assertEqual(self.transport.value(), b'MKD /sp\x00am\r\n')
         # This is necessary to make the Deferred fire.  The Deferred needs
         # to fire so that tearDown doesn't cause it to errback and fail this
         # or (more likely) a later test.
-        self.client.lineReceived('257 win')
+        self.client.lineReceived(b'257 win')
         return d
 
 
@@ -2253,8 +2258,8 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
 
         d = self.client.makeDirectory("/spam")
-        self.assertEqual(self.transport.value(), 'MKD /spam\r\n')
-        self.client.lineReceived('550 PERMISSION DENIED')
+        self.assertEqual(self.transport.value(), b'MKD /spam\r\n')
+        self.client.lineReceived(b'550 PERMISSION DENIED')
         return self.assertFailure(d, ftp.CommandFailed)
 
 
@@ -2270,8 +2275,8 @@ class FTPClientTests(unittest.TestCase):
 
         self._testLogin()
         d = self.client.getDirectory().addCallback(cbGet)
-        self.assertEqual(self.transport.value(), 'PWD\r\n')
-        self.client.lineReceived('257 "/bar/baz"')
+        self.assertEqual(self.transport.value(), b'PWD\r\n')
+        self.client.lineReceived(b'257 "/bar/baz"')
         return d
 
 
@@ -2284,8 +2289,8 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.getDirectory()
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PWD\r\n')
-        self.client.lineReceived('550 /bar/baz: No such file or directory')
+        self.assertEqual(self.transport.value(), b'PWD\r\n')
+        self.client.lineReceived(b'550 /bar/baz: No such file or directory')
         return d
 
 
@@ -2299,8 +2304,8 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.getDirectory()
         self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'PWD\r\n')
-        self.client.lineReceived('257 /bar/baz')
+        self.assertEqual(self.transport.value(), b'PWD\r\n')
+        self.client.lineReceived(b'257 /bar/baz')
         return d
 
 
@@ -2312,9 +2317,9 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeFile("/tmp/test")
-        self.assertEqual(self.transport.value(), 'DELE /tmp/test\r\n')
+        self.assertEqual(self.transport.value(), b'DELE /tmp/test\r\n')
         response = '250 Requested file action okay, completed.'
-        self.client.lineReceived(response)
+        self.client.lineReceived(response.encode(self.client._encoding))
         return d.addCallback(self.assertEqual, [response])
 
 
@@ -2327,9 +2332,9 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeFile("/tmp/test")
-        self.assertEqual(self.transport.value(), 'DELE /tmp/test\r\n')
+        self.assertEqual(self.transport.value(), b'DELE /tmp/test\r\n')
         response = '501 Syntax error in parameters or arguments.'
-        self.client.lineReceived(response)
+        self.client.lineReceived(response.encode(self.client._encoding))
         d = self.assertFailure(d, ftp.CommandFailed)
         d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
         return d
@@ -2344,7 +2349,7 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.removeFile("/tmp/test")
         response = '765 blah blah blah'
-        self.client.lineReceived(response)
+        self.client.lineReceived(response.encode(self.client._encoding))
         d = self.assertFailure(d, ftp.BadResponse)
         d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
         return d
@@ -2358,9 +2363,8 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeFile("/tmp/test")
-        response = ['250-perhaps a progress report',
-                    '250 okay']
-        map(self.client.lineReceived, response)
+        self.client.lineReceived(b'250-perhaps a progress report')
+        self.client.lineReceived(b'250 okay')
         return d.addCallback(self.assertTrue)
 
 
@@ -2372,9 +2376,9 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeDirectory('/tmp/test')
-        self.assertEqual(self.transport.value(), 'RMD /tmp/test\r\n')
+        self.assertEqual(self.transport.value(), b'RMD /tmp/test\r\n')
         response = '250 Requested file action okay, completed.'
-        self.client.lineReceived(response)
+        self.client.lineReceived(response.encode(self.client._encoding))
         return d.addCallback(self.assertEqual, [response])
 
 
@@ -2387,9 +2391,9 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeDirectory("/tmp/test")
-        self.assertEqual(self.transport.value(), 'RMD /tmp/test\r\n')
+        self.assertEqual(self.transport.value(), b'RMD /tmp/test\r\n')
         response = '501 Syntax error in parameters or arguments.'
-        self.client.lineReceived(response)
+        self.client.lineReceived(response.encode(self.client._encoding))
         d = self.assertFailure(d, ftp.CommandFailed)
         d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
         return d
@@ -2404,7 +2408,7 @@ class FTPClientTests(unittest.TestCase):
         self._testLogin()
         d = self.client.removeDirectory("/tmp/test")
         response = '765 blah blah blah'
-        self.client.lineReceived(response)
+        self.client.lineReceived(response.encode(self.client._encoding))
         d = self.assertFailure(d, ftp.BadResponse)
         d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
         return d
@@ -2418,9 +2422,8 @@ class FTPClientTests(unittest.TestCase):
         """
         self._testLogin()
         d = self.client.removeDirectory("/tmp/test")
-        response = ['250-perhaps a progress report',
-                    '250 okay']
-        map(self.client.lineReceived, response)
+        self.client.lineReceived(b'250-perhaps a progress report')
+        self.client.lineReceived(b'250 okay')
         return d.addCallback(self.assertTrue)
 
 
@@ -2430,20 +2433,20 @@ class FTPClientBasicTests(unittest.TestCase):
     def testGreeting(self):
         # The first response is captured as a greeting.
         ftpClient = ftp.FTPClientBasic()
-        ftpClient.lineReceived('220 Imaginary FTP.')
+        ftpClient.lineReceived(b'220 Imaginary FTP.')
         self.assertEqual(['220 Imaginary FTP.'], ftpClient.greeting)
 
     def testResponseWithNoMessage(self):
         # Responses with no message are still valid, i.e. three digits followed
         # by a space is complete response.
         ftpClient = ftp.FTPClientBasic()
-        ftpClient.lineReceived('220 ')
+        ftpClient.lineReceived(b'220 ')
         self.assertEqual(['220 '], ftpClient.greeting)
 
     def testMultilineResponse(self):
         ftpClient = ftp.FTPClientBasic()
         ftpClient.transport = proto_helpers.StringTransport()
-        ftpClient.lineReceived('220 Imaginary FTP.')
+        ftpClient.lineReceived(b'220 Imaginary FTP.')
 
         # Queue (and send) a dummy command, and set up a callback to capture the
         # result
@@ -2453,31 +2456,31 @@ class FTPClientBasicTests(unittest.TestCase):
         deferred.addErrback(self.fail)
 
         # Send the first line of a multiline response.
-        ftpClient.lineReceived('210-First line.')
+        ftpClient.lineReceived(b'210-First line.')
         self.assertEqual([], result)
 
         # Send a second line, again prefixed with "nnn-".
-        ftpClient.lineReceived('123-Second line.')
+        ftpClient.lineReceived(b'123-Second line.')
         self.assertEqual([], result)
 
         # Send a plain line of text, no prefix.
-        ftpClient.lineReceived('Just some text.')
+        ftpClient.lineReceived(b'Just some text.')
         self.assertEqual([], result)
 
         # Now send a short (less than 4 chars) line.
-        ftpClient.lineReceived('Hi')
+        ftpClient.lineReceived(b'Hi')
         self.assertEqual([], result)
 
         # Now send an empty line.
-        ftpClient.lineReceived('')
+        ftpClient.lineReceived(b'')
         self.assertEqual([], result)
 
         # And a line with 3 digits in it, and nothing else.
-        ftpClient.lineReceived('321')
+        ftpClient.lineReceived(b'321')
         self.assertEqual([], result)
 
         # Now finish it.
-        ftpClient.lineReceived('210 Done.')
+        ftpClient.lineReceived(b'210 Done.')
         self.assertEqual(
             ['210-First line.',
              '123-Second line.',
@@ -2495,19 +2498,19 @@ class FTPClientBasicTests(unittest.TestCase):
         # Create a client, and give it a greeting.
         ftpClient = ftp.FTPClientBasic()
         ftpClient.transport = proto_helpers.StringTransport()
-        ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
+        ftpClient.lineReceived(b'220 Welcome to Imaginary FTP.')
 
         # Queue a login with no password
         ftpClient.queueLogin('bob', None)
-        self.assertEqual('USER bob\r\n', ftpClient.transport.value())
+        self.assertEqual(b'USER bob\r\n', ftpClient.transport.value())
 
         # Clear the test buffer, acknowledge the USER command.
         ftpClient.transport.clear()
-        ftpClient.lineReceived('200 Hello bob.')
+        ftpClient.lineReceived(b'200 Hello bob.')
 
         # The client shouldn't have sent anything more (i.e. it shouldn't have
         # sent a PASS command).
-        self.assertEqual('', ftpClient.transport.value())
+        self.assertEqual(b'', ftpClient.transport.value())
 
 
     def test_noPasswordNeeded(self):
@@ -2517,20 +2520,20 @@ class FTPClientBasicTests(unittest.TestCase):
         # Create a client, and give it a greeting.
         ftpClient = ftp.FTPClientBasic()
         ftpClient.transport = proto_helpers.StringTransport()
-        ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
+        ftpClient.lineReceived(b'220 Welcome to Imaginary FTP.')
 
         # Queue a login with no password
         ftpClient.queueLogin('bob', 'secret')
-        self.assertEqual('USER bob\r\n', ftpClient.transport.value())
+        self.assertEqual(b'USER bob\r\n', ftpClient.transport.value())
 
         # Clear the test buffer, acknowledge the USER command with a 230
         # response code.
         ftpClient.transport.clear()
-        ftpClient.lineReceived('230 Hello bob.  No password needed.')
+        ftpClient.lineReceived(b'230 Hello bob.  No password needed.')
 
         # The client shouldn't have sent anything more (i.e. it shouldn't have
         # sent a PASS command).
-        self.assertEqual('', ftpClient.transport.value())
+        self.assertEqual(b'', ftpClient.transport.value())
 
 
 
@@ -2742,7 +2745,7 @@ class SystemFTPRealmTests(unittest.TestCase):
         passed a username which has no corresponding home directory in the
         system's accounts database.
         """
-        user = insecureRandom(4).encode('hex')
+        user = codecs.encode(insecureRandom(4), 'hex').decode('ascii')
         realm = ftp.SystemFTPRealm(self.mktemp())
         self.assertRaises(UnauthorizedLogin, realm.getHomeDirectory, user)
 
@@ -2875,7 +2878,7 @@ class IFTPShellTestsMixin:
         raise NotImplementedError()
 
 
-    def createFile(self, path, fileContent=''):
+    def createFile(self, path, fileContent=b''):
         """
         Create a file named C{path} with some content.
 
@@ -3139,7 +3142,7 @@ class IFTPShellTestsMixin:
         """
         Check the output of the stat method on a file.
         """
-        fileContent = 'wobble\n'
+        fileContent = b'wobble\n'
         self.createFile('file.txt', fileContent)
         d = self.shell.stat(('file.txt',), ('size', 'directory'))
         def cb(res):
@@ -3294,7 +3297,7 @@ class FTPShellTests(unittest.TestCase, IFTPShellTestsMixin):
         return self.root.child(path).isfile()
 
 
-    def createFile(self, path, fileContent=''):
+    def createFile(self, path, fileContent=b''):
         """
         Create a file named C{path} with some content.
         """
@@ -3397,12 +3400,12 @@ class IReadWriteTestsMixin:
         returning a C{Deferred} which fires when all the data has been sent
         to the consumer, and the data should be correctly send to the consumer.
         """
-        content = 'wobble\n'
+        content = b'wobble\n'
         consumer = TestConsumer()
         def cbGet(reader):
             return reader.send(consumer).addCallback(cbSend)
         def cbSend(res):
-            self.assertEqual("".join(consumer.buffer), content)
+            self.assertEqual(b"".join(consumer.buffer), content)
         return self.getFileReader(content).addCallback(cbGet)
 
 
@@ -3413,7 +3416,7 @@ class IReadWriteTestsMixin:
         receive data to be written. It should also have a close() method that
         returns a Deferred.
         """
-        content = 'elbbow\n'
+        content = b'elbbow\n'
         def cbGet(writer):
             return writer.receive().addCallback(cbReceive, writer)
         def cbReceive(consumer, writer):
@@ -3471,7 +3474,7 @@ class FTPReadWriteTests(unittest.TestCase, IReadWriteTestsMixin):
 class CloseTestWriter:
     closeStarted = False
     def receive(self):
-        self.s = StringIO()
+        self.s = BytesIO()
         fc = ftp.FileConsumer(self.s)
         return defer.succeed(fc)
     def close(self):
@@ -3499,19 +3502,19 @@ class FTPCloseTests(unittest.TestCase):
         f.shell.writer.d = defer.Deferred()
         f.factory = ftp.FTPFactory()
         f.factory.timeOut = None
-        f.makeConnection(StringIO())
+        f.makeConnection(BytesIO())
 
         di = ftp.DTP()
         di.factory = ftp.DTPFactory(f)
         f.dtpInstance = di
-        di.makeConnection(None)#
+        di.makeConnection(None)
 
         stor_done = []
         d = f.ftp_STOR("path")
         d.addCallback(stor_done.append)
         # the writer is still receiving data
         self.assertFalse(f.shell.writer.closeStarted, "close() called early")
-        di.dataReceived("some data here")
+        di.dataReceived(b"some data here")
         self.assertFalse(f.shell.writer.closeStarted, "close() called early")
         di.connectionLost("reason is ignored")
         # now we should be waiting in close()

@@ -27,7 +27,7 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-
+from twisted.python.compat import xrange, unicode
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
 # constants
@@ -401,6 +401,7 @@ class DTP(protocol.Protocol, object):
     _cons = None
     _onConnLost = None
     _buffer = None
+    _encoding = 'latin-1'
 
     def connectionMade(self):
         self.isConnected = True
@@ -419,7 +420,7 @@ class DTP(protocol.Protocol, object):
         @param line: The line to be sent.
         @type line: L{bytes}
         """
-        self.transport.write(line + '\r\n')
+        self.transport.write(line + b'\r\n')
 
 
     def _formatOneListResponse(self, name, size, directory, permissions, hardlinks, modified, owner, group):
@@ -427,7 +428,7 @@ class DTP(protocol.Protocol, object):
         Helper method to format one entry's info into a text entry like:
         'drwxrwxrwx   0 user   group   0 Jan 01  1970 filename.txt'
 
-        @param name: C{str} name of the entry (file or directory or link)
+        @param name: C{bytes} name of the entry (file or directory or link)
         @param size: C{int} size of the entry
         @param directory: evals to C{bool} - whether the entry is a directory
         @param permissions: L{twisted.python.filepath.Permissions} object
@@ -456,9 +457,9 @@ class DTP(protocol.Protocol, object):
 
         format = ('%(directory)s%(permissions)s%(hardlinks)4d '
                   '%(owner)-9s %(group)-9s %(size)15d %(date)12s '
-                  '%(name)s')
+                  )
 
-        return format % {
+        msg = (format % {
             'directory': directory and 'd' or '-',
             'permissions': permissions.shorthand(),
             'hardlinks': hardlinks,
@@ -466,12 +467,12 @@ class DTP(protocol.Protocol, object):
             'group': group[:8],
             'size': size,
             'date': formatDate(time.gmtime(modified)),
-            'name': name}
+        }).encode(self._encoding)
+        return msg + name
 
 
     def sendListResponse(self, name, response):
         self.sendLine(self._formatOneListResponse(name, *response))
-
 
     # Proxy IConsumer to our transport
     def registerProducer(self, producer, streaming):
@@ -680,8 +681,10 @@ class FileConsumer(object):
 
 class FTPOverflowProtocol(basic.LineReceiver):
     """FTP mini-protocol for when there are too many connections."""
+    _encoding = 'latin-1'
+
     def connectionMade(self):
-        self.sendLine(RESPONSE[TOO_MANY_CONNECTIONS])
+        self.sendLine(RESPONSE[TOO_MANY_CONNECTIONS].encode(self._encoding))
         self.transport.loseConnection()
 
 
@@ -736,11 +739,14 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
     passivePortRange = xrange(0, 1)
 
     listenFactory = reactor.listenTCP
+    _encoding = 'latin-1'
 
     def reply(self, key, *args):
         msg = RESPONSE[key] % args
-        self.sendLine(msg)
+        self.sendEncodedLine(msg)
 
+    def sendEncodedLine(self, line):
+        self.sendLine(line.encode(self._encoding))
 
     def connectionMade(self):
         self.state = self.UNAUTH
@@ -765,12 +771,15 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
     def lineReceived(self, line):
         self.resetTimeout()
         self.pauseProducing()
+        line = line.decode(self._encoding)
 
         def processFailed(err):
             if err.check(FTPCmdError):
-                self.sendLine(err.value.response())
+                self.sendLine(err.value.response().encode(self._encoding))
             elif (err.check(TypeError) and
-                  err.value.args[0].find('takes exactly') != -1):
+                    (err.value.args[0].find('takes exactly') != -1) or
+                    (err.value.args[0].find('required positional argument') !=
+                     -1)):
                 self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
             else:
                 log.msg("Unexpected FTP error")
@@ -939,8 +948,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
 
     def ftp_PORT(self, address):
-        addr = map(int, address.split(','))
-        ip = '%d.%d.%d.%d' % tuple(addr[:4])
+        addr = tuple(map(int, address.split(',')))
+        ip = '%d.%d.%d.%d' % addr[:4]
         port = addr[4] << 8 | addr[5]
 
         # if we have a DTP port set up, lose it.
@@ -1477,10 +1486,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
         http://tools.ietf.org/html/rfc2389
         """
-        self.sendLine(RESPONSE[FEAT_OK][0])
+        self.sendEncodedLine(RESPONSE[FEAT_OK][0])
         for feature in self.FEATURES:
-            self.sendLine(' ' + feature)
-        self.sendLine(RESPONSE[FEAT_OK][1])
+            self.sendEncodedLine(' ' + feature)
+        self.sendEncodedLine(RESPONSE[FEAT_OK][1])
 
     def ftp_OPTS(self, option):
         """
@@ -2447,6 +2456,7 @@ class FTPClientBasic(basic.LineReceiver):
     Foundations of an FTP client.
     """
     debug = False
+    _encoding = 'latin-1'
 
     def __init__(self):
         self.actionQueue = []
@@ -2490,6 +2500,11 @@ class FTPClientBasic(basic.LineReceiver):
             return
         basic.LineReceiver.sendLine(self, line)
 
+    def sendEncodedLine(self, line):
+        if line is None:
+            return
+        self.sendLine(line.encode(self._encoding))
+
     def sendNextCommand(self):
         """
         (Private) Processes the next command in the queue.
@@ -2512,7 +2527,7 @@ class FTPClientBasic(basic.LineReceiver):
         if self.debug:
             log.msg('<-- %s' % ftpCommand.text)
         self.nextDeferred = ftpCommand.deferred
-        self.sendLine(ftpCommand.text)
+        self.sendEncodedLine(ftpCommand.text)
 
     def queueCommand(self, ftpCommand):
         """
@@ -2593,6 +2608,7 @@ class FTPClientBasic(basic.LineReceiver):
         (Private) Parses the response messages from the FTP server.
         """
         # Add this line to the current response
+        line = line.decode(self._encoding)
         if self.debug:
             log.msg('--> %s' % line)
         self.response.append(line)
@@ -3155,12 +3171,14 @@ class FTPFileListProtocol(basic.LineReceiver):
         r'(?P<date>...\s+\d+\s+[\d:]+)\s+(?P<filename>.{1,}?)'
         r'( -> (?P<linktarget>[^\r]*))?\r?$'
     )
-    delimiter = '\n'
+    delimiter = b'\n'
+    _encoding = 'latin-1'
 
     def __init__(self):
         self.files = []
 
     def lineReceived(self, line):
+        line = line.decode(self._encoding)
         d = self.parseDirectoryLine(line)
         if d is None:
             self.unknownLine(line)
