@@ -745,8 +745,15 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
         msg = RESPONSE[key] % args
         self.sendEncodedLine(msg)
 
+
     def sendEncodedLine(self, line):
+        """
+        (Private) Encodes and sends a line
+
+        @param line: C{str}
+        """
         self.sendLine(line.encode(self._encoding))
+
 
     def connectionMade(self):
         self.state = self.UNAUTH
@@ -949,7 +956,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
     def ftp_PORT(self, address):
         addr = tuple(map(int, address.split(',')))
-        ip = '%d.%d.%d.%d' % addr[:4]
+        ip = '%d.%d.%d.%d' % tuple(addr[:4])
         port = addr[4] << 8 | addr[5]
 
         # if we have a DTP port set up, lose it.
@@ -2451,6 +2458,7 @@ class FTPDataPortFactory(protocol.ServerFactory):
         return self.protocol
 
 
+
 class FTPClientBasic(basic.LineReceiver):
     """
     Foundations of an FTP client.
@@ -2495,15 +2503,26 @@ class FTPClientBasic(basic.LineReceiver):
     def sendLine(self, line):
         """
         (Private) Sends a line, unless line is None.
+
+        @param line: Line to send
+        @type line: bytes
         """
         if line is None:
             return
         basic.LineReceiver.sendLine(self, line)
 
+
     def sendEncodedLine(self, line):
+        """
+        (Private) Encodes and sends a line, unless line is None.
+
+        @param line: Line to send
+        @type line: str
+        """
         if line is None:
             return
         self.sendLine(line.encode(self._encoding))
+
 
     def sendNextCommand(self):
         """
