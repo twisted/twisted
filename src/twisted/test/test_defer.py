@@ -2959,7 +2959,7 @@ class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
         self.assertFailure(deferred, defer.TimeoutError)
         warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             'twisted.internet.defer.timeout was deprecated in Twisted 16.8.0;'
