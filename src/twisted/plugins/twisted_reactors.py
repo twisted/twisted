@@ -4,59 +4,68 @@
 from __future__ import absolute_import, division
 
 from twisted.application.reactors import Reactor
-from twisted.python.compat import _PY3
+
+__all__ = []
 
 default = Reactor(
     'default', 'twisted.internet.default',
     'A reasonable default: poll(2) if available, otherwise select(2).')
+__all__.append('default')
 
 select = Reactor(
-    'select', 'twisted.internet.selectreactor', 'select(2)-based reactor.')
+    'select', 'twisted.internet.selectreactor', 'select(2) based reactor.')
+__all__.append('select')
 
 poll = Reactor(
-    'poll', 'twisted.internet.pollreactor', 'poll(2)-based reactor.')
+    'poll', 'twisted.internet.pollreactor', 'poll(2) based reactor.')
+__all__.append('poll')
+
 epoll = Reactor(
-    'epoll', 'twisted.internet.epollreactor', 'epoll(4)-based reactor.')
+    'epoll', 'twisted.internet.epollreactor', 'epoll(4) based reactor.')
+__all__.append('epoll')
 
 kqueue = Reactor(
-    'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
+    'kqueue', 'twisted.internet.kqreactor', 'kqueue(2) based reactor.')
+__all__.append('kqueue')
 
 cf = Reactor(
     'cf' , 'twisted.internet.cfreactor',
-    'CoreFoundation integration reactor.')
+    'CoreFoundation based reactor.')
+__all__.append('cf')
 
-__all__ = [
-    "default", "select", "poll", "epoll", "kqueue", "cf",
-]
+asyncio = Reactor(
+    'asyncio', 'twisted.internet.asyncioreactor',
+    'asyncio based reactor')
+__all__.append('asyncio')
 
-if _PY3:
-    asyncio = Reactor(
-        'asyncio', 'twisted.internet.asyncioreactor',
-        'asyncio integration reactor')
+wx = Reactor(
+    'wx', 'twisted.internet.wxreactor', 'wxPython based reactor.')
+__all__.append('wx')
 
-    __all__.extend([
-        "asyncio"
-    ])
-else:
-    wx = Reactor(
-        'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
-    gi = Reactor(
-        'gi', 'twisted.internet.gireactor',
-        'GObject Introspection integration reactor.')
-    gtk3 = Reactor(
-        'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 integration reactor.')
-    gtk2 = Reactor(
-        'gtk2', 'twisted.internet.gtk2reactor', 'Gtk2 integration reactor.')
-    glib2 = Reactor(
-        'glib2', 'twisted.internet.glib2reactor',
-        'GLib2 event-loop integration reactor.')
-    win32er = Reactor(
-        'win32', 'twisted.internet.win32eventreactor',
-        'Win32 WaitForMultipleObjects-based reactor.')
-    iocp = Reactor(
-        'iocp', 'twisted.internet.iocpreactor',
-        'Win32 IO Completion Ports-based reactor.')
+gi = Reactor(
+    'gi', 'twisted.internet.gireactor',
+    'GObject Introspection based reactor.')
+__all__.append('gi')
 
-    __all__.extend([
-        "wx", "gi", "gtk2", "gtk3", "glib2", "glade", "win32er", "iocp"
-    ])
+gtk3 = Reactor(
+    'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 based reactor.')
+__all__.append('gtk3')
+
+gtk2 = Reactor(
+    'gtk2', 'twisted.internet.gtk2reactor', 'Gtk2 based reactor.')
+__all__.append('gtk2')
+
+glib2 = Reactor(
+    'glib2', 'twisted.internet.glib2reactor',
+    'GLib2 based reactor.')
+__all__.append('glib2')
+
+win32er = Reactor(
+    'win32', 'twisted.internet.win32eventreactor',
+    'Win32 WaitForMultipleObjects based reactor.')
+__all__.append('win32er')
+
+iocp = Reactor(
+    'iocp', 'twisted.internet.iocpreactor',
+    'Win32 IO Completion Ports based reactor.')
+__all__.append('iocp')
