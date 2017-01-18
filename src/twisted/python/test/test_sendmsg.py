@@ -479,6 +479,22 @@ class CModuleSendmsgTests(TestCase):
         self.assertEqual(read(pipeOut.fileno(), 1024), "")
 
 
+    def test_sendmsgTwoAncillaryDoesNotSegfault(self):
+        """
+        L{sendmsg} with two FDs in two separate ancillary entries
+        does not segfault.
+        """
+        ancillary = [
+            (SOL_SOCKET, SCM_RIGHTS, pack("i", self.input.fileno())),
+            (SOL_SOCKET, SCM_RIGHTS, pack("i", self.output.fileno())),
+        ]
+        try:
+            send1msg(self.input.fileno(), b"some data", 0, ancillary)
+        except error:
+            # Ok as long as it doesn't segfault.
+            pass
+
+
 
 class CModuleRecvmsgTests(TestCase):
     """

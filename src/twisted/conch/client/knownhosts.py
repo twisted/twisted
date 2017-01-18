@@ -431,7 +431,7 @@ class KnownHostsFile(object):
             does not match the given key.
         """
         for lineidx, entry in enumerate(self.iterentries(), -len(self._added)):
-            if entry.matchesHost(hostname):
+            if entry.matchesHost(hostname) and entry.keyType == key.sshType():
                 if entry.matchesKey(key):
                     return True
                 else:
