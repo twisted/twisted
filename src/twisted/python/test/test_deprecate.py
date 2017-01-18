@@ -1043,6 +1043,31 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
                          dict(a=1, b=2, e=7))
 
 
+    def test_passedKeywordOnly(self):
+        """
+        Keyword only arguments follow varargs, and can only
+        be filled in by a positional parameter.  They are specified in
+        PEP 3102.
+        """
+        def func(*a, b=False):
+                pass
+
+        def func2(*a, b=False, c, d, e):
+                pass
+
+        self.assertEqual(self.checkPassed(func, 1, 2, 3),
+                         dict(a=(1, 2, 3), b=False))
+        self.assertEqual(self.checkPassed(func, 1, 2, 3, b=False),
+                         dict(a=(1, 2, 3), b=False))
+        self.assertEqual(self.checkPassed(func2, 1, 2, b=False, c=1, d=2, e=3),
+                         dict(a=(1, 2), b=False, c=1, d=2, e=3))
+        self.assertRaises(TypeError, self.checkPassed,
+                          func2, 1, 2, b=False, c=1, d=2)
+    if not _PY3:
+        test_passedKeywordOnly.skip = (
+            "keyword-only arguments (PEP 3102) are only in Python 3 and higher")
+
+
     def test_mutualExclusionPrimeDirective(self):
         """
         L{mutuallyExclusiveArguments} does not interfere in its

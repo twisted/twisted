@@ -717,18 +717,27 @@ def _passedSignature(signature, positional, keyword):
     """
     result = {}
     kwargs = None
+    numPositional = 0
     for (n, (name, param)) in enumerate(signature.parameters.items()):
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # Varargs, for example: *args
             result[name] = positional[n:]
-            n = len(positional)
+            numPositional = len(result[name]) + 1
         elif param.kind == inspect.Parameter.VAR_KEYWORD:
             # Variable keyword args, for example: **my_kwargs
             kwargs = result[name] = {}
         elif param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
             if n < len(positional):
                 result[name] = positional[n]
-    if len(positional) > (n + 1):
+                numPositional += 1
+        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+            if name not in keyword:
+                if param.default == inspect.Parameter.empty:
+                    raise TypeError("missing keyword arg {}".format(name))
+                else:
+                    result[name] = param.default
+
+    if len(positional) > numPositional:
         raise TypeError("Too many arguments.")
     for name, value in keyword.items():
         if name in signature.parameters.keys():
