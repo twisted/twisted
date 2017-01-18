@@ -1541,6 +1541,20 @@ class FTPClientTests(unittest.TestCase):
         self.client.lineReceived(b'200 Type set to I.')
 
 
+    def test_sendLine(self):
+        """
+            Test encoding behaviour of sendLine
+        """
+        self.assertEqual(self.transport.value(), b'')
+        self.client.sendLine(None)
+        self.assertEqual(self.transport.value(), b'')
+        self.client.sendLine('')
+        self.assertEqual(self.transport.value(), b'\r\n')
+        self.transport.clear()
+        self.client.sendLine(u'\xe9')
+        self.assertEqual(self.transport.value(), b'\xe9\r\n')
+
+
     def test_CDUP(self):
         """
         Test the CDUP command.

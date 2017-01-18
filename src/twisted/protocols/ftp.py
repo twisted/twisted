@@ -743,16 +743,18 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
     def reply(self, key, *args):
         msg = RESPONSE[key] % args
-        self.sendEncodedLine(msg)
+        self.sendLine(msg)
 
 
-    def sendEncodedLine(self, line):
+    def sendLine(self, line):
         """
         (Private) Encodes and sends a line
 
-        @param line: C{str}
+        @param line: L{bytes} or L{unicode}
         """
-        self.sendLine(line.encode(self._encoding))
+        if isinstance(line, unicode):
+            line = line.encode(self._encoding)
+        super(FTP, self).sendLine(line)
 
 
     def connectionMade(self):
@@ -778,15 +780,15 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
     def lineReceived(self, line):
         self.resetTimeout()
         self.pauseProducing()
-        line = line.decode(self._encoding)
+        if bytes != str:
+            line = line.decode(self._encoding)
 
         def processFailed(err):
             if err.check(FTPCmdError):
-                self.sendLine(err.value.response().encode(self._encoding))
-            elif (err.check(TypeError) and
-                    (err.value.args[0].find('takes exactly') != -1) or
-                    (err.value.args[0].find('required positional argument') !=
-                     -1)):
+                self.sendLine(err.value.response())
+            elif (err.check(TypeError) and any((
+                    msg in err.value.args[0] for msg in (
+                        'takes exactly', 'required positional argument')))):
                 self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
             else:
                 log.msg("Unexpected FTP error")
@@ -1493,10 +1495,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
 
         http://tools.ietf.org/html/rfc2389
         """
-        self.sendEncodedLine(RESPONSE[FEAT_OK][0])
+        self.sendLine(RESPONSE[FEAT_OK][0])
         for feature in self.FEATURES:
-            self.sendEncodedLine(' ' + feature)
-        self.sendEncodedLine(RESPONSE[FEAT_OK][1])
+            self.sendLine(' ' + feature)
+        self.sendLine(RESPONSE[FEAT_OK][1])
 
     def ftp_OPTS(self, option):
         """
@@ -2500,28 +2502,19 @@ class FTPClientBasic(basic.LineReceiver):
     def _cb_greeting(self, greeting):
         self.greeting = greeting
 
+
     def sendLine(self, line):
         """
-        (Private) Sends a line, unless line is None.
+        Sends a line, unless line is None.
 
         @param line: Line to send
-        @type line: bytes
+        @type line: L{bytes} or L{unicode}
         """
         if line is None:
             return
+        elif isinstance(line, unicode):
+            line = line.encode(self._encoding)
         basic.LineReceiver.sendLine(self, line)
-
-
-    def sendEncodedLine(self, line):
-        """
-        (Private) Encodes and sends a line, unless line is None.
-
-        @param line: Line to send
-        @type line: str
-        """
-        if line is None:
-            return
-        self.sendLine(line.encode(self._encoding))
 
 
     def sendNextCommand(self):
@@ -2546,7 +2539,7 @@ class FTPClientBasic(basic.LineReceiver):
         if self.debug:
             log.msg('<-- %s' % ftpCommand.text)
         self.nextDeferred = ftpCommand.deferred
-        self.sendEncodedLine(ftpCommand.text)
+        self.sendLine(ftpCommand.text)
 
     def queueCommand(self, ftpCommand):
         """
@@ -2627,7 +2620,9 @@ class FTPClientBasic(basic.LineReceiver):
         (Private) Parses the response messages from the FTP server.
         """
         # Add this line to the current response
-        line = line.decode(self._encoding)
+        if bytes != str:
+            line = line.decode(self._encoding)
+
         if self.debug:
             log.msg('--> %s' % line)
         self.response.append(line)
@@ -3197,7 +3192,8 @@ class FTPFileListProtocol(basic.LineReceiver):
         self.files = []
 
     def lineReceived(self, line):
-        line = line.decode(self._encoding)
+        if bytes != str:
+            line = line.decode(self._encoding)
         d = self.parseDirectoryLine(line)
         if d is None:
             self.unknownLine(line)
