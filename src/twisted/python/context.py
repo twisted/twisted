@@ -16,10 +16,14 @@ from __future__ import division, absolute_import
 
 from threading import local
 
+from twisted.python._oldstyle import _oldStyle
+
+
 defaultContextDict = {}
 
 setDefault = defaultContextDict.__setitem__
 
+@_oldStyle
 class ContextTracker:
     """
     A L{ContextTracker} provides a way to pass arbitrary key/value data up and

@@ -222,6 +222,10 @@ class UnsupportedMethod(Exception):
                 "but my first argument is not a sequence.")
 
 
+    def __str__(self):
+        return "Expected one of %r" % (self.allowedMethods,)
+
+
 
 class SchemeNotSupported(Exception):
     """
