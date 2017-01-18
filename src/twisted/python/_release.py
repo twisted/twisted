@@ -21,7 +21,7 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
-from twisted.python.compat import execfile
+from twisted.python.compat import execfile, _matchingString
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
@@ -60,7 +60,7 @@ def runCommand(args, **kwargs):
 
 
 
-def setStrContent(fileObj, content, encoding="utf-8"):
+def lenientSetStrContent(fileObj, content, encoding="utf-8"):
     """
     Write out C{content} as L{bytes} to a L{FilePath}.
 
@@ -200,8 +200,8 @@ class GitCommand(object):
         """
         runCommand(["git", "-C", fromDir.path,
                     "checkout-index", "--all", "--force",
-                    # Prefix has to end up with a "/" so that files get copied
-                    # to a directory whose name is the prefix.
+                    # --prefix has to end up with a "/" so that files
+                    # get copied to a directory whose name is the prefix.
                     "--prefix", exportDir.path + "/"])
 
 
@@ -253,7 +253,6 @@ class Project(object):
 
     def getVersion(self):
         """
-
         @return: A L{incremental.Version} specifying the version number of the
             project based on live python modules.
         """
@@ -537,18 +536,15 @@ class NewsBuilder(object):
         if not tickets:
             return
 
-        line = header + '\n' + '-' * len(header) + '\n'
-        if not isinstance(line, bytes):
-            line = line.encode("utf-8")
+        line = (_matchingString(header, b'') + b'\n'
+                + b'-' * len(header) + b'\n')
         fileObj.write(line)
         formattedTickets = []
         for (ticket, ignored) in tickets:
             formattedTickets.append('#' + str(ticket))
         entry = ' - ' + ', '.join(formattedTickets)
         entry = textwrap.fill(entry, subsequent_indent='   ')
-        line = entry + '\n\n'
-        if not isinstance(line, bytes):
-            line = line.encode("utf-8")
+        line = _matchingString(entry, b'') + b'\n\n'
         fileObj.write(line)
 
 

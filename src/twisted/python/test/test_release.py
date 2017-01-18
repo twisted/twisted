@@ -19,7 +19,7 @@ import tempfile
 import shutil
 
 from datetime import date
-from io import BytesIO as StringIO
+from io import BytesIO
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -27,16 +27,17 @@ except ImportError:
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.procutils import which
 from twisted.python import release
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
 
 from incremental import Version
 
 from subprocess import CalledProcessError
 
 from twisted.python._release import (
-    getNativeStrContent, setStrContent,
+    getStrContent, lenientSetStrContent,
     findTwistedProjects, replaceInFile, Project, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
@@ -198,7 +199,7 @@ class StructureAssertingMixin(object):
                 if not isinstance(content, str):
                     content = content.decode("utf-8")
                 content = content.replace('\n', os.linesep)
-                setStrContent(child, content)
+                lenientSetStrContent(child, content)
 
 
     def assertStructure(self, root, dirDict):
@@ -272,7 +273,7 @@ class ProjectTests(ExternalTempdirTestCase):
             directory.child('__init__.py').setContent(b'')
         directory.child('topfiles').createDirectory()
         generatedVersion = genVersion(*version)
-        setStrContent(directory.child('_version.py'), generatedVersion)
+        lenientSetStrContent(directory.child('_version.py'), generatedVersion)
         return Project(directory)
 
 
@@ -378,7 +379,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -395,7 +396,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "    '%s'\n"
             "def _bar():\n"
             "    '%s'" % (docstring, privateDocstring))
-        setStrContent(inputPath.child("__init__.py"), inputPathContent)
+        lenientSetStrContent(inputPath.child("__init__.py"), inputPathContent)
         outputPath = FilePath(self.mktemp())
 
         builder = APIBuilder()
@@ -441,7 +442,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
@@ -451,11 +452,12 @@ class APIBuilderTests(ExternalTempdirTestCase):
         initContent = (
             "def foo():\n"
             "    '%s'\n" % (docstring,))
-        setStrContent(packagePath.child("__init__.py"), initContent)
+        lenientSetStrContent(packagePath.child("__init__.py"), initContent)
         generatedVersion = genVersion("twisted", 1, 0, 0)
         if not isinstance(generatedVersion, bytes):
             generatedVersion = generatedVersion.encode("utf-8")
-        setStrContent(packagePath.child("_version.py"), generatedVersion)
+        lenientSetStrContent(packagePath.child("_version.py"),
+                             generatedVersion)
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -493,7 +495,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         """
         The templates and System for Twisted includes adding deprecations.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -521,7 +523,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "class Baz(object):\n"
             "    pass"
             "" % (docstring, privateDocstring))
-        setStrContent(inputPath.child("__init__.py"), initPyContent)
+        lenientSetStrContent(inputPath.child("__init__.py"), initPyContent)
 
         outputPath = FilePath(self.mktemp())
 
@@ -752,16 +754,14 @@ class NewsBuilderMixin(StructureAssertingMixin):
         L{NewsBuilder._writeHeader} accepts a file-like object opened for
         writing and a header string and writes out a news file header to it.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeHeader(output, "Super Awesometastic 32.16")
         content = output.getvalue()
-        if not isinstance(content, str):
-            content = content.decode("utf-8")
         self.assertEqual(
             content,
-            "Super Awesometastic 32.16\n"
-            "=========================\n"
-            "\n")
+            b"Super Awesometastic 32.16\n"
+            b"=========================\n"
+            b"\n")
 
 
     def test_writeSection(self):
@@ -771,24 +771,22 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges}) and writes out a section header and all
         of the given ticket information.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeSection(
             output, "Features",
             [(3, "Great stuff."),
              (17, "Very long line which goes on and on and on, seemingly "
               "without end until suddenly without warning it does end.")])
         content = output.getvalue()
-        if not isinstance(content, str):
-            content = content.decode("utf-8")
         self.assertEqual(
             content,
-            "Features\n"
-            "--------\n"
-            " - Great stuff. (#3)\n"
-            " - Very long line which goes on and on and on, seemingly "
-            "without end\n"
-            "   until suddenly without warning it does end. (#17)\n"
-            "\n")
+            b"Features\n"
+            b"--------\n"
+            b" - Great stuff. (#3)\n"
+            b" - Very long line which goes on and on and on, seemingly "
+            b"without end\n"
+            b"   until suddenly without warning it does end. (#17)\n"
+            b"\n")
 
 
     def test_writeMisc(self):
@@ -798,21 +796,19 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges} and writes out a section header and all
         of the ticket numbers, but excludes any descriptions.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeMisc(
             output, "Other",
             [(x, "") for x in range(2, 50, 3)])
         content = output.getvalue()
-        if not isinstance(content, str):
-            content = content.decode("utf-8")
         self.assertEqual(
             content,
-            "Other\n"
-            "-----\n"
-            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
-            "#38, #41,\n"
-            "   #44, #47\n"
-            "\n")
+            b"Other\n"
+            b"-----\n"
+            b" - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
+            b"#38, #41,\n"
+            b"   #44, #47\n"
+            b"\n")
 
 
     def test_build(self):
@@ -895,7 +891,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             'http://twistedmatrix.com/trac/ticket/<number>\n'
             '\n'
             'Blah blah other stuff.\n')
-        setStrContent(news, content)
+        lenientSetStrContent(news, content)
 
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
@@ -1204,8 +1200,10 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        setStrContent(self.sourceDir.child("conf.py"), self.confContent)
-        setStrContent(self.sourceDir.child("index.rst"), self.indexContent)
+        lenientSetStrContent(self.sourceDir.child("conf.py"),
+                             self.confContent)
+        lenientSetStrContent(self.sourceDir.child("index.rst"),
+                             self.indexContent)
 
 
     def verifyFileExists(self, fileDir, fileName):
@@ -1269,7 +1267,7 @@ class SphinxBuilderTests(TestCase):
         Creates and builds a fake Sphinx project as if via the command line,
         failing if there are any warnings.
         """
-        output = StringIO()
+        output = BytesIO()
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
