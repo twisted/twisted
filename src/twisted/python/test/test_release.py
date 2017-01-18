@@ -21,7 +21,6 @@ import shutil
 
 from datetime import date
 from io import BytesIO as StringIO
-from urllib2 import urlopen
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
@@ -58,29 +57,6 @@ else:
         pydoctorSkip = "Pydoctor is too old."
     else:
         pydoctorSkip = skip
-
-
-from twisted.python._release import intersphinxURLs
-
-def checkIntersphinxSkip():
-    """
-    Determine if we should skip the intersphinx tests.
-
-    @return: a skip message if we can't retrieve any of the relevant URLs.
-    """
-    skip = ""
-    for iu in intersphinxURLs:
-        try:
-            opened = urlopen(iu)
-        except Exception as e:
-            skip += "could not retrieve {} because {}\n".format(iu, e)
-        else:
-            opened.close()
-    if skip:
-        return skip
-
-if not pydoctorSkip:
-    pydoctorSkip = checkIntersphinxSkip()
 
 
 if not skip and which("sphinx-build"):
@@ -369,16 +345,16 @@ def doNotFailOnNetworkError(func):
         fetching fails.
     """
     @functools.wraps(func)
-    def _(*a, **kw):
+    def wrapper(*a, **kw):
         try:
             func(*a, **kw)
         except FailTest as e:
-            if "Failed to get object inventory" in e.args[0]:
+            if e.args[0].startswith("'Failed to get object inventory from "):
                 raise SkipTest(
                     ("This test is prone to intermittent network errors. "
-                     "See ticket 8753. Exception was: %r") % (e,))
+                     "See ticket 8753. Exception was: {!r}").format(e))
             raise
-    return _
+    return wrapper
 
 
 
