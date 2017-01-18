@@ -76,7 +76,7 @@ def setStrContent(fileObj, content, encoding="utf-8"):
 
 
 
-def getStrContent(fileObj, encoding="utf-8"):
+def getNativeStrContent(fileObj, encoding="utf-8"):
     """
     Get the content from a L{FilePath} and return it as L{str}.
 
@@ -447,7 +447,7 @@ class NewsBuilder(object):
         for child in path.children():
             base, ext = os.path.splitext(child.basename())
             if ext == ticketType:
-                childContent = getStrContent(child)
+                childContent = getNativeStrContent(child)
                 results.append((
                     int(base),
                     ' '.join(childContent.splitlines())))
@@ -577,7 +577,7 @@ class NewsBuilder(object):
                 changes.append((part, tickets))
         misc = self._findChanges(path, self._MISC)
 
-        oldNews = getStrContent(output)
+        oldNews = getNativeStrContent(output)
         with output.sibling('NEWS.new').open('w') as newNews:
             if oldNews.startswith(self._TICKET_HINT):
                 newNews.write(self._TICKET_HINT.encode("utf-8"))

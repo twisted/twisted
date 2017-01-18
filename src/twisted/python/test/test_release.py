@@ -36,7 +36,7 @@ from incremental import Version
 from subprocess import CalledProcessError
 
 from twisted.python._release import (
-    getStrContent, setStrContent,
+    getNativeStrContent, setStrContent,
     findTwistedProjects, replaceInFile, Project, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
@@ -222,7 +222,7 @@ class StructureAssertingMixin(object):
                                 % (child.path,))
                 self.assertStructure(child, expectation)
             else:
-                childContent = getStrContent(child)
+                childContent = getNativeStrContent(child)
                 if not isinstance(expectation, str):
                     expectation = expectation.decode("utf-8")
                 actual = childContent.replace(os.linesep, '\n')
@@ -403,14 +403,14 @@ class APIBuilderTests(ExternalTempdirTestCase):
                       outputPath)
 
         indexPath = outputPath.child("index.html")
-        indexContent = getStrContent(indexPath)
+        indexContent = getNativeStrContent(indexPath)
 
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
 
         quuxPath = outputPath.child("quux.html")
-        quuxContent = getStrContent(quuxPath)
+        quuxContent = getNativeStrContent(quuxPath)
         self.assertIn(
             '<a href="%s">%s</a>' % (projectURL, projectName),
             indexContent,
@@ -467,7 +467,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "API index %r did not exist." % (outputPath.path,))
 
         twistedPath = outputPath.child("twisted.html")
-        twistedContent = getStrContent(twistedPath)
+        twistedContent = getNativeStrContent(twistedPath)
         self.assertIn(
             '<a href="http://twistedmatrix.com/">Twisted</a>',
             twistedContent,
@@ -530,7 +530,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
                       outputPath)
 
         quuxPath = outputPath.child("quux.html")
-        quuxContent = getStrContent(quuxPath)
+        quuxContent = getNativeStrContent(quuxPath)
         self.assertTrue(
             quuxPath.exists(),
             "Package documentation file %r did not exist." % (quuxPath.path,))
@@ -549,12 +549,12 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
 
-        quuxFooContent = getStrContent(quuxPath.sibling('quux.foo.html'))
+        quuxFooContent = getNativeStrContent(quuxPath.sibling('quux.foo.html'))
         self.assertIn(
             'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
             quuxFooContent)
 
-        quuxBazContent = getStrContent(quuxPath.sibling('quux.Baz.html'))
+        quuxBazContent = getNativeStrContent(quuxPath.sibling('quux.Baz.html'))
         self.assertIn(
             'Baz was deprecated in Twisted 14.2.3; please use stuff instead.',
             quuxBazContent)
@@ -824,7 +824,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             "Super Awesometastic 32.16")
 
-        results = getStrContent(self.project.child('NEWS'))
+        results = getNativeStrContent(self.project.child('NEWS'))
         self.assertEqual(
             results,
             'Super Awesometastic 32.16\n'
@@ -874,7 +874,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         self.builder.build(
             project, project.child('NEWS'),
             "Super Awesometastic 32.16")
-        results = getStrContent(project.child('NEWS'))
+        results = getNativeStrContent(project.child('NEWS'))
         self.assertEqual(
             results,
             'Super Awesometastic 32.16\n'
@@ -899,7 +899,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
 
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
-        content = getStrContent(news)
+        content = getNativeStrContent(news)
         self.assertEqual(
             content,
             'Ticket numbers in this file can be looked up by visiting\n'
@@ -953,7 +953,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             'Some Thing 1.2')
 
-        newsContent = getStrContent(self.project.child('NEWS'))
+        newsContent = getNativeStrContent(self.project.child('NEWS'))
         self.assertEqual(
             newsContent,
             'Some Thing 1.2\n'
@@ -984,7 +984,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             'Project Name 5.0')
 
-        newsContent = getStrContent(self.project.child('NEWS'))
+        newsContent = getNativeStrContent(self.project.child('NEWS'))
         self.assertEqual(
             newsContent,
             'Project Name 5.0\n'
@@ -1086,7 +1086,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
 
         aggregateNews = project.child("NEWS")
 
-        aggregateContent = getStrContent(aggregateNews)
+        aggregateContent = getNativeStrContent(aggregateNews)
         self.assertIn("Third feature addition", aggregateContent)
         self.assertIn("Fixed that bug", aggregateContent)
         self.assertIn("Old boring stuff from the past", aggregateContent)
