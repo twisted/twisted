@@ -22,8 +22,9 @@ from twisted.python.deprecate import (
     getDeprecationWarningString,
     deprecated, _appendToDocstring, _getDeprecationDocstring,
     _fullyQualifiedName as fullyQualifiedName,
-    _passed, _mutuallyExclusiveArguments,
+    _mutuallyExclusiveArguments,
     deprecatedProperty,
+    _passedArgSpec, _passedSignature
 )
 
 from twisted.python.compat import _PY3
@@ -961,12 +962,12 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         @return: L{_passed}'s return value
         @rtype: L{dict}
         """
-        if hasattr(inspect, "signature"):
+        if getattr(inspect, "signature", None):
             # Python 3
-            return _passed(inspect.signature(func), args, kw)
+            return _passedSignature(inspect.signature(func), args, kw)
         else:
             # Python 2
-            return _passed(inspect.getargspec(func), args, kw)
+            return _passedArgSpec(inspect.getargspec(func), args, kw)
 
 
     def test_passed_simplePositional(self):

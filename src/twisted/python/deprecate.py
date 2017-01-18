@@ -653,7 +653,7 @@ def warnAboutFunction(offender, warningString):
 
 
 
-def _passed_argspec(argspec, positional, keyword):
+def _passedArgSpec(argspec, positional, keyword):
     """
     Take an L{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
@@ -696,7 +696,7 @@ def _passed_argspec(argspec, positional, keyword):
 
 
 
-def _passed_signature(signature, positional, keyword):
+def _passedSignature(signature, positional, keyword):
     """
     Take an L{inspect.Signature}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
@@ -743,32 +743,6 @@ def _passed_signature(signature, positional, keyword):
 
 
 
-def _passed(spec, positional, keyword):
-    """
-    Passthru function for L{_passed_argspec} or L{_passed_signature}
-
-    @param spec: The argument specification for the function to inspect.
-    @type spec: I{inspect.ArgSpec} or I{inspect.Signature}
-
-    @param positional: The positional arguments that were passed.
-    @type positional: L{tuple}
-
-    @param keyword: The keyword arguments that were passed.
-    @type keyword: L{dict}
-
-    @return: A dictionary mapping argument names (those declared in C{argspec})
-        to values that were passed explicitly by the user.
-    @rtype: L{dict} mapping L{str} to L{object}
-    """
-    if isinstance(spec, inspect.ArgSpec):
-        # Python 2
-        return _passed_argspec(spec, positional, keyword)
-    elif isinstance(spec, inspect.Signature):
-        # Python 3
-        return _passed_signature(spec, positional, keyword)
-
-
-
 def _mutuallyExclusiveArguments(argumentPairs):
     """
     Decorator which causes its decoratee to raise a L{TypeError} if two of the
@@ -787,12 +761,15 @@ def _mutuallyExclusiveArguments(argumentPairs):
     @rtype: 1-argument callable taking a callable and returning a callable.
     """
     def wrapper(wrappee):
-        if hasattr(inspect, "getfullargspec"):
+        if getattr(inspect, "signature", None):
             # Python 3
             spec = inspect.signature(wrappee)
+            _passed = _passedSignature
         else:
             # Python 2
             spec = inspect.getargspec(wrappee)
+            _passed = _passedArgSpec
+
         @wraps(wrappee)
         def wrapped(*args, **kwargs):
             arguments = _passed(spec, args, kwargs)
