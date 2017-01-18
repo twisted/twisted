@@ -68,7 +68,7 @@ Overview
 To release Twisted, we
 
 1. Prepare for a release
-2. Release N release candidates
+2. Release one or more release candidates
 3. Release the final release
 
 
@@ -198,7 +198,7 @@ Cut the tarballs & installers
 
    - ``python setup.py sdist --formats=bztar -d /tmp/twisted-release``
 
-2. Build Windows whl
+2. Build Windows wheel
 
   - Download the latest ``.whl`` files from `Buildbot <https://buildbot.twistedmatrix.com/builds/twisted-packages/>`_ and save them in the staging directory
 
