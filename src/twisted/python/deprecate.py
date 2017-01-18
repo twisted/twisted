@@ -655,7 +655,7 @@ def warnAboutFunction(offender, warningString):
 
 def _passed_argspec(argspec, positional, keyword):
     """
-    Take an I{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
+    Take an L{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
 
@@ -698,7 +698,7 @@ def _passed_argspec(argspec, positional, keyword):
 
 def _passed_signature(signature, positional, keyword):
     """
-    Take an I{inspect.Signature}, a tuple of positional arguments, and a dict of
+    Take an L{inspect.Signature}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
 
