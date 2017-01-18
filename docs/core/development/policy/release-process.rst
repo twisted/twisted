@@ -103,7 +103,7 @@ Prepare for a release
 
 
 How to do a release candidate
------------------------
+-----------------------------
 
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
 2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL.rst``.
