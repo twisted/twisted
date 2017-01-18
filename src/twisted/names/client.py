@@ -30,6 +30,7 @@ from twisted.internet import error, defer, interfaces, protocol
 from twisted.python import log, failure
 from twisted.names import (
     dns, common, resolve, cache, root, hosts as hostsModule)
+from twisted.internet.abstract import isIPv6Address
 
 
 
@@ -211,7 +212,7 @@ class Resolver(common.ResolverBase):
             return self.dynServers[self.index - serverL]
 
 
-    def _connectedProtocol(self):
+    def _connectedProtocol(self, interface=''):
         """
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
@@ -219,7 +220,8 @@ class Resolver(common.ResolverBase):
         proto = dns.DNSDatagramProtocol(self, reactor=self._reactor)
         while True:
             try:
-                self._reactor.listenUDP(dns.randomSource(), proto)
+                self._reactor.listenUDP(dns.randomSource(), proto,
+                                        interface=interface)
             except error.CannotListenError:
                 pass
             else:
@@ -260,7 +262,10 @@ class Resolver(common.ResolverBase):
         @return: A L{Deferred} which will be called back with the result of the
             query.
         """
-        protocol = self._connectedProtocol()
+        if isIPv6Address(args[0][0]):
+            protocol = self._connectedProtocol(interface='::')
+        else:
+            protocol = self._connectedProtocol()
         d = protocol.query(*args)
         def cbQueried(result):
             protocol.transport.stopListening()
