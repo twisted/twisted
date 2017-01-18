@@ -660,7 +660,7 @@ def _passedArgSpec(argspec, positional, keyword):
     passed to their passed values.
 
     @param argspec: The argument specification for the function to inspect.
-    @type argspec: I{inspect.ArgSpec}
+    @type argspec: L{inspect.ArgSpec}
 
     @param positional: The positional arguments that were passed.
     @type positional: L{tuple}
@@ -703,7 +703,7 @@ def _passedSignature(signature, positional, keyword):
     passed to their passed values.
 
     @param signature: The signature of the function to inspect.
-    @type signature: I{inspect.Signature}
+    @type signature: L{inspect.Signature}
 
     @param positional: The positional arguments that were passed.
     @type positional: L{tuple}
