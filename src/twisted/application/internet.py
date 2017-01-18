@@ -816,6 +816,16 @@ class _ClientMachine(object):
         return result
 
 
+    @_machine.output()
+    def _deferredSucceededWithNone(self):
+        """
+        Return a deferred that has already fired with L{None}.
+
+        @return: A L{Deferred} that has already fired with L{None}.
+        """
+        return succeed(None)
+
+
     def _unawait(self, value):
         """
         Fire all outstanding L{ClientService.whenConnected} L{Deferred}s.
@@ -831,8 +841,8 @@ class _ClientMachine(object):
     _init.upon(start, enter=_connecting,
                outputs=[_connect])
     _init.upon(stop, enter=_stopped,
-               outputs=[],
-               collector=lambda _: succeed(None))
+               outputs=[_deferredSucceededWithNone],
+               collector=_firstResult)
 
     _connecting.upon(start, enter=_connecting, outputs=[])
     # Note that this synchonously triggers _connectionFailed in the
@@ -889,8 +899,8 @@ class _ClientMachine(object):
     _stopped.upon(start, enter=_connecting,
                   outputs=[_connect])
     _stopped.upon(stop, enter=_stopped,
-                  outputs=[],
-                  collector=lambda _: succeed(None))
+                  outputs=[_deferredSucceededWithNone],
+                  collector=_firstResult)
 
     _init.upon(whenConnected, enter=_init,
                outputs=[_awaitingConnection],
