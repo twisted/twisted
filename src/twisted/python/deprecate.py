@@ -726,7 +726,8 @@ def _passedSignature(signature, positional, keyword):
         elif param.kind == inspect.Parameter.VAR_KEYWORD:
             # Variable keyword args, for example: **my_kwargs
             kwargs = result[name] = {}
-        elif param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+        elif param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            inspect.Parameter.POSITIONAL_ONLY):
             if n < len(positional):
                 result[name] = positional[n]
                 numPositional += 1
