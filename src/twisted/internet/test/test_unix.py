@@ -502,7 +502,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
         _SendmsgMixin handles multiple file descriptors per recvmsg, calling
         L{IFileDescriptorReceiver.fileDescriptorReceived} once per received
-        file descriptor. Scenario: unsupported CMSGs with no FDs.
+        file descriptor. Scenario: unsupported CMSGs.
         """
         # Given that we can't just send random/invalid ancillary data via the
         # packer for it to be sent via sendmsg -- the kernel would not accept
@@ -523,8 +523,22 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             flags = 0
             return sendmsg.RecievedMessage(data, ancillary, flags)
 
+        events = []
+        addObserver(events.append)
+        self.addCleanup(removeObserver, events.append)
+
         self.patch(sendmsg, "recvmsg", fakeRecvmsgUnsupportedAncillary)
         self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
+
+        # Verify the expected message was logged.
+        expectedMessage = 'received unsupported ancillary data'
+        for event in events:
+            if expectedMessage in event['format']:
+                break
+        else:
+            self.fail(
+                'Expected message %r not found in logged events %r' % (
+                    expectedMessage, events))
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
 
