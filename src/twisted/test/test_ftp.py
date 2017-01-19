@@ -211,6 +211,8 @@ class FTPServerTestCase(unittest.TestCase):
     def _userLogin(self):
         """
         Authenticates the FTP client using the test account.
+
+        @return: L{Deferred} of command response
         """
         d = self.assertCommandResponse(
             'USER %s' % (self.username),
@@ -247,6 +249,9 @@ class FTPAnonymousTests(FTPServerTestCase):
 
 
 class BasicFTPServerTests(FTPServerTestCase):
+    """
+    Basic functionality of FTP server.
+    """
     def test_tooManyConnections(self):
         """
         When the connection limit is reached, the server should send an
@@ -270,7 +275,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         return d
 
 
-    def testNotLoggedInReply(self):
+    def test_NotLoggedInReply(self):
         """
         When not logged in, most commands other than USER and PASS should
         get NOT_LOGGED_IN errors, but some can be called before USER and PASS.
@@ -307,7 +312,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         return defer.DeferredList(deferreds, fireOnOneErrback=True)
 
 
-    def testPASSBeforeUSER(self):
+    def test_PASSBeforeUSER(self):
         """
         Issuing PASS before USER should give an error.
         """
@@ -317,7 +322,7 @@ class BasicFTPServerTests(FTPServerTestCase):
              "USER required before PASS"])
 
 
-    def testNoParamsForUSER(self):
+    def test_NoParamsForUSER(self):
         """
         Issuing USER without a username is a syntax error.
         """
@@ -326,7 +331,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             ['500 Syntax error: USER requires an argument.'])
 
 
-    def testNoParamsForPASS(self):
+    def test_NoParamsForPASS(self):
         """
         Issuing PASS without a password is a syntax error.
         """
@@ -360,13 +365,18 @@ class BasicFTPServerTests(FTPServerTestCase):
         return d
 
 
-    def testAnonymousLogin(self):
+    def test_AnonymousLogin(self):
+        """
+        Login with userid 'anonymous'
+        """
         return self._anonymousLogin()
 
 
-    def testQuit(self):
+    def test_Quit(self):
         """
         Issuing QUIT should return a 221 message.
+
+        @return: L{Deferred} of command response
         """
         d = self._anonymousLogin()
         return self.assertCommandResponse(
@@ -375,9 +385,13 @@ class BasicFTPServerTests(FTPServerTestCase):
             chainDeferred=d)
 
 
-    def testAnonymousLoginDenied(self):
-        # Reconfigure the server to disallow anonymous access, and to have an
-        # IUsernamePassword checker that always rejects.
+    def test_AnonymousLoginDenied(self):
+        """
+        Reconfigure the server to disallow anonymous access, and to have an
+        IUsernamePassword checker that always rejects.
+
+        @return: L{Deferred} of command response
+        """
         self.factory.allowAnonymous = False
         denyAlwaysChecker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
         self.factory.portal.registerChecker(denyAlwaysChecker,
@@ -406,6 +420,8 @@ class BasicFTPServerTests(FTPServerTestCase):
         """
         When an anonymous user attempts to edit the server-side filesystem, they
         will receive a 550 error with a descriptive message.
+
+        @return: L{Deferred} of command response
         """
         d = self._anonymousLogin()
         return self.assertCommandFailed(
@@ -414,7 +430,12 @@ class BasicFTPServerTests(FTPServerTestCase):
               chainDeferred=d)
 
 
-    def testUnknownCommand(self):
+    def test_UnknownCommand(self):
+        """
+        Send an invalid command.
+
+        @return: L{Deferred} of command response
+        """
         d = self._anonymousLogin()
         return self.assertCommandFailed(
             'GIBBERISH',
@@ -422,7 +443,12 @@ class BasicFTPServerTests(FTPServerTestCase):
             chainDeferred=d)
 
 
-    def testRETRBeforePORT(self):
+    def test_RETRBeforePORT(self):
+        """
+        Send RETR before sending PORT.
+
+        @return: L{Deferred} of command response
+        """
         d = self._anonymousLogin()
         return self.assertCommandFailed(
             'RETR foo',
@@ -431,7 +457,12 @@ class BasicFTPServerTests(FTPServerTestCase):
             chainDeferred=d)
 
 
-    def testSTORBeforePORT(self):
+    def test_STORBeforePORT(self):
+        """
+        Send STOR before sending PORT.
+
+        @return: L{Deferred} of command response
+        """
         d = self._anonymousLogin()
         return self.assertCommandFailed(
             'STOR foo',
@@ -440,7 +471,12 @@ class BasicFTPServerTests(FTPServerTestCase):
             chainDeferred=d)
 
 
-    def testBadCommandArgs(self):
+    def test_BadCommandArgs(self):
+        """
+        Send command with bad arguments.
+
+        @return: L{Deferred} of command response
+        """
         d = self._anonymousLogin()
         self.assertCommandFailed(
             'MODE z',
@@ -453,7 +489,10 @@ class BasicFTPServerTests(FTPServerTestCase):
         return d
 
 
-    def testDecodeHostPort(self):
+    def test_DecodeHostPort(self):
+        """
+        Decode a host port.
+        """
         self.assertEqual(ftp.decodeHostPort('25,234,129,22,100,23'),
                 ('25.234.129.22', 25623))
         nums = range(6)
@@ -593,7 +632,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         self.assertEqual(portRange, protocol.wrappedProtocol.passivePortRange)
 
 
-    def testFEAT(self):
+    def test_FEAT(self):
         """
         When the server receives 'FEAT', it should report the list of supported
         features. (Additionally, ensure that the server reports various
@@ -610,7 +649,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         return d.addCallback(gotResponse)
 
 
-    def testOPTS(self):
+    def test_OPTS(self):
         """
         When the server receives 'OPTS something', it should report
         that the FTP server does not support the option called 'something'.
@@ -672,11 +711,19 @@ class BasicFTPServerTests(FTPServerTestCase):
         d = self._userLogin()
 
         def failingOpenForWriting(ignore):
+            """
+            Override openForWriting.
+
+            @param ignore: ignored, used for callback
+            @return: an error
+            """
             return defer.fail(AssertionError())
 
         def sendPASV(result):
             """
             Send the PASV command required before port.
+
+            @param result: parameter used in L{Deferred}
             """
             return self.client.queueStringCommand('PASV')
 
@@ -684,6 +731,8 @@ class BasicFTPServerTests(FTPServerTestCase):
             """
             Fake an incoming connection and create a mock DTPInstance so
             that PORT command will start processing the request.
+
+            @param result: parameter used in L{Deferred}
             """
             self.serverProtocol.dtpFactory.deferred.callback(None)
             self.serverProtocol.dtpInstance = object()
@@ -693,6 +742,8 @@ class BasicFTPServerTests(FTPServerTestCase):
         def checkLogs(result):
             """
             Check that unknown errors are logged.
+
+            @param result: parameter used in L{Deferred}
             """
             logs = self.flushLoggedErrors()
             self.assertEqual(1, len(logs))
@@ -827,9 +878,17 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
 
 
 class FTPServerPasvDataConnectionTests(FTPServerTestCase):
+    """
+    PASV data connection.
+    """
     def _makeDataConnection(self, ignored=None):
-        # Establish a passive data connection (i.e. client connecting to
-        # server).
+        """
+        Establish a passive data connection (i.e. client connecting to
+        server).
+
+        @param ignored: ignored
+        @return: L{Deferred.addCallback}
+        """
         d = self.client.queueStringCommand('PASV')
         def gotPASV(responseLines):
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
@@ -839,12 +898,19 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
 
     def _download(self, command, chainDeferred=None):
+        """
+        Download file.
+
+        @param command: command to run
+        @param chainDeferred: L{Deferred} used to queue commands.
+        @return: L{Deferred} of command response
+        """
         if chainDeferred is None:
             chainDeferred = defer.succeed(None)
 
         chainDeferred.addCallback(self._makeDataConnection)
         def queueCommand(downloader):
-            # wait for the command to return, and the download connection to be
+            # Wait for the command to return, and the download connection to be
             # closed.
             d1 = self.client.queueStringCommand(command)
             d2 = downloader.d
@@ -1005,6 +1071,8 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         """
         When LIST receive a filename as byte string from L{IFTPShell.list}
         it will just pass the data to lower level without any change.
+
+        @return: L{_listTestHelper}
         """
         return self._listTestHelper(
             "LIST",
@@ -1014,13 +1082,19 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             b'0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
 
-    def testManyLargeDownloads(self):
+    def test_ManyLargeDownloads(self):
+        """
+        Download many large files.
+
+        @return: L{Deferred}
+        """
         # Login
         d = self._anonymousLogin()
 
         # Download a range of different size files
         for size in range(100000, 110000, 500):
-            with open(os.path.join(self.directory, '%d.txt' % (size,)), 'wb') as fObj:
+            with open(os.path.join(self.directory,
+                      '%d.txt' % (size,)), 'wb') as fObj:
                 fObj.write(b'x' * size)
 
             self._download('RETR %d.txt' % (size,), chainDeferred=d)
@@ -1157,25 +1231,34 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
                 return p
         dataPort = reactor.listenTCP(0, DataFactory(), interface='127.0.0.1')
         self.dataPorts.append(dataPort)
-        cmd = 'PORT ' + ftp.encodeHostPort('127.0.0.1', dataPort.getHost().port)
+        cmd = 'PORT ' + ftp.encodeHostPort('127.0.0.1',
+                                           dataPort.getHost().port)
         self.client.queueStringCommand(cmd)
         return deferred
 
 
     def tearDown(self):
-        l = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
+        """
+        Tear down the connection.
+
+        @return: L{defer.DeferredList}
+        """
+        l = [defer.maybeDeferred(port.stopListening)
+             for port in self.dataPorts]
         d = defer.maybeDeferred(
             FTPServerPasvDataConnectionTests.tearDown, self)
         l.append(d)
         return defer.DeferredList(l, fireOnOneErrback=True)
 
 
-    def testPORTCannotConnect(self):
+    def test_PORTCannotConnect(self):
+        """
+        Listen on a port, and immediately stop listening as a way to find a
+        port number that is definitely closed.
+        """
         # Login
         d = self._anonymousLogin()
 
-        # Listen on a port, and immediately stop listening as a way to find a
-        # port number that is definitely closed.
         def loggedIn(ignored):
             port = reactor.listenTCP(0, protocol.Factory(),
                                      interface='127.0.0.1')
@@ -1428,11 +1511,15 @@ class FTPFileListingTests(unittest.TestCase):
         return d
 
 
-    def testOneLine(self):
-        # This example line taken from the docstring for FTPFileListProtocol
+    def test_OneLine(self):
+        """
+        This example line taken from the docstring for FTPFileListProtocol
+
+        @return: L{Deferred} of command response
+        """
         line = '-rw-r--r--   1 root     other        531 Jan 29 03:26 README'
-        def check(file_other):
-            ((file,), other) = file_other
+        def check(fileOther):
+            ((file,), other) = fileOther
             self.assertFalse(other,
                              'unexpect unparsable lines: %s' % (repr(other),))
             self.assertTrue(file['filetype'] == '-', 'misparsed fileitem')
@@ -1447,7 +1534,10 @@ class FTPFileListingTests(unittest.TestCase):
         return self.getFilesForLines([line]).addCallback(check)
 
 
-    def testVariantLines(self):
+    def test_VariantLines(self):
+        """
+        Variant lines.
+        """
         line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A'
         line2 = 'lrw-r--r--   1 root     other          1 Jan 29 03:26 B -> A'
         line3 = 'woohoo! '
@@ -1477,7 +1567,10 @@ class FTPFileListingTests(unittest.TestCase):
         return self.getFilesForLines([line1, line2, line3]).addCallback(check)
 
 
-    def testUnknownLine(self):
+    def test_UnknownLine(self):
+        """
+        Unknown lines.
+        """
         def check(result):
             (files, others) = result
             self.assertFalse(files, 'unexpected file entries')
@@ -1487,10 +1580,10 @@ class FTPFileListingTests(unittest.TestCase):
 
 
     def test_filenameWithUnescapedSpace(self):
-        '''
+        """
         Will parse filenames and linktargets containing unescaped
         space characters.
-        '''
+        """
         line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A B'
         line2 = (
             'lrw-r--r--   1 root     other          1 Jan 29 03:26 '
@@ -1510,10 +1603,10 @@ class FTPFileListingTests(unittest.TestCase):
 
 
     def test_filenameWithEscapedSpace(self):
-        '''
+        """
         Will parse filenames and linktargets containing escaped
         space characters.
-        '''
+        """
         line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A\ B'
         line2 = (
             'lrw-r--r--   1 root     other          1 Jan 29 03:26 '
@@ -1532,8 +1625,12 @@ class FTPFileListingTests(unittest.TestCase):
         return self.getFilesForLines([line1, line2]).addCallback(check)
 
 
-    def testYear(self):
-        # This example derived from bug description in issue 514.
+    def test_Year(self):
+        """
+        This example derived from bug description in issue 514.
+
+        @return: L{Deferred} of command response
+        """
         fileList = ftp.FTPFileListProtocol()
         exampleLine = (
             b'-rw-r--r--   1 root     other        531 Jan 29 2003 README\n')
@@ -1545,7 +1642,8 @@ class FTPFileListingTests(unittest.TestCase):
         def check(ignored):
             file = fileList.files[0]
             self.assertTrue(file['size'] == 531, 'misparsed fileitem')
-            self.assertTrue(file['date'] == 'Jan 29 2003', 'misparsed fileitem')
+            self.assertTrue(file['date'] ==
+                            'Jan 29 2003', 'misparsed fileitem')
             self.assertTrue(file['filename'] == 'README', 'misparsed fileitem')
 
         d = loopback.loopbackAsync(PrintLine(), fileList)
@@ -1554,8 +1652,13 @@ class FTPFileListingTests(unittest.TestCase):
 
 
 class FTPClientFailedRETRAndErrbacksUponDisconnectTests(unittest.TestCase):
-
-    def testFailedRETR(self):
+    """
+    FTP client fails and RETR fails and disconnects.
+    """
+    def test_FailedRETR(self):
+        """
+        RETR fails.
+        """
         f = protocol.Factory()
         f.noisy = 0
         port = reactor.listenTCP(0, f, interface="127.0.0.1")
@@ -2558,10 +2661,12 @@ class FTPClientTests(unittest.TestCase):
 
 
 class FTPClientBasicTests(unittest.TestCase):
-
+    """
+    FTP client
+    """
     def test_greeting(self):
         """
-            The first response is captured as a greeting.
+        The first response is captured as a greeting.
         """
         ftpClient = ftp.FTPClientBasic()
         ftpClient.lineReceived(b'220 Imaginary FTP.')
@@ -2570,21 +2675,24 @@ class FTPClientBasicTests(unittest.TestCase):
 
     def test_responseWithNoMessage(self):
         """
-            Responses with no message are still valid, i.e. three digits
-            followed by a space is complete response.
+        Responses with no message are still valid, i.e. three digits
+        followed by a space is complete response.
         """
         ftpClient = ftp.FTPClientBasic()
         ftpClient.lineReceived(b'220 ')
         self.assertEqual(['220 '], ftpClient.greeting)
 
 
-    def testMultilineResponse(self):
+    def test_MultilineResponse(self):
+        """
+        Multiline response
+        """
         ftpClient = ftp.FTPClientBasic()
         ftpClient.transport = proto_helpers.StringTransport()
         ftpClient.lineReceived(b'220 Imaginary FTP.')
 
-        # Queue (and send) a dummy command, and set up a callback to capture the
-        # result
+        # Queue (and send) a dummy command, and set up a callback
+        # to capture the result
         deferred = ftpClient.queueStringCommand('BLAH')
         result = []
         deferred.addCallback(result.append)
@@ -2673,7 +2781,13 @@ class FTPClientBasicTests(unittest.TestCase):
 
 
 class PathHandlingTests(unittest.TestCase):
-    def testNormalizer(self):
+    """
+    Handling paths.
+    """
+    def test_Normalizer(self):
+        """
+        Normalize paths.
+        """
         for inp, outp in [('a', ['a']),
                           ('/a', ['a']),
                           ('/', []),
@@ -3457,6 +3571,9 @@ class TestConsumer(object):
         """
         Simple register of producer, checks that no register has happened
         before.
+
+        @param producer: pull producer to use
+        @param streaming: unused
         """
         assert self.producer is None
         self.buffer = []
@@ -3475,6 +3592,8 @@ class TestConsumer(object):
     def write(self, data):
         """
         Save the data received.
+
+        @param data: data to append
         """
         self.buffer.append(data)
         self.producer.resumeProducing()
@@ -3513,6 +3632,8 @@ class IReadWriteTestsMixin:
     def getFileReader(self, content):
         """
         Return an object providing C{IReadFile}, ready to send data C{content}.
+
+        @param content: data to send
         """
         raise NotImplementedError()
 
@@ -3609,20 +3730,36 @@ class FTPReadWriteTests(unittest.TestCase, IReadWriteTestsMixin):
 
 @implementer(ftp.IWriteFile)
 class CloseTestWriter:
+    """
+    Close writing to a file.
+    """
     closeStarted = False
     def receive(self):
+        """
+        Receive bytes.
+
+        @return: L{Deferred}
+        """
         self.buffer = BytesIO()
         fc = ftp.FileConsumer(self.buffer)
         return defer.succeed(fc)
 
 
     def close(self):
+        """
+        Close bytes.
+
+        @return: L{Deferred}
+        """
         self.closeStarted = True
         return self.d
 
 
 
 class CloseTestShell:
+    """
+    Close writing shell.
+    """
     def openForWriting(self, segs):
         return defer.succeed(self.writer)
 
