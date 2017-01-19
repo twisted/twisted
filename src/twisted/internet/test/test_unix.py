@@ -523,10 +523,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             flags = 0
             return sendmsg.RecievedMessage(data, ancillary, flags)
 
-        origRecvmsg = sendmsg.recvmsg
-        sendmsg.recvmsg = fakeRecvmsgUnsupportedAncillary
+        self.patch(sendmsg, "recvmsg", fakeRecvmsgUnsupportedAncillary)
         self._sendmsgMixinFileDescriptorReceivedDriver(ancillaryPacker)
-        sendmsg.recvmsg = origRecvmsg
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
 
