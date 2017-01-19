@@ -24,7 +24,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
-from twisted.names.test.test_util import MemoryReactor
+from twisted.names.test import test_util
 
 from twisted.test import proto_helpers
 
@@ -332,11 +332,11 @@ class ResolverTests(unittest.TestCase):
         """
         protocol = StubDNSDatagramProtocol()
 
-        servers = [object(), object()]
-        dynServers = [object(), object()]
+        servers = [("::1", 53), ("::2", 53)]
+        dynServers = [("::3", 53), ("::4", 53)]
         resolver = client.Resolver(servers=servers)
         resolver.dynServers = dynServers
-        resolver._connectedProtocol = lambda: protocol
+        resolver._connectedProtocol = lambda interface: protocol
 
         expectedResult = object()
         queryResult = resolver.queryUDP(None)
@@ -499,7 +499,7 @@ class ResolverTests(unittest.TestCase):
         L{client.Resolver._connectedProtocol} should pass that reactor
         to L{twisted.names.dns.DNSDatagramProtocol}.
         """
-        reactor = MemoryReactor()
+        reactor = test_util.MemoryReactor()
         resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
         proto = resolver._connectedProtocol()
         self.assertIs(proto._reactor, reactor)
@@ -528,6 +528,20 @@ class ResolverTests(unittest.TestCase):
         self.assertEqual(len(set(protocols)), 2)
 
 
+    def test_ipv6Resolver(self):
+        """
+        If the resolver is ipv6, open a ipv6 port.
+        """
+
+        fake = test_util.MemoryReactor()
+        resolver = client.Resolver(servers=[('::1', 53)],
+                                   reactor=fake)
+        resolver.query(dns.Query(b'foo.example.com'))
+        [(proto, transport)] = fake.udpPorts.items()
+        interface = transport.getHost().host
+        self.assertEqual("::", interface)
+
+
     def test_disallowedPort(self):
         """
         If a port number is initially selected which cannot be bound, the
@@ -536,7 +550,7 @@ class ResolverTests(unittest.TestCase):
         ports = []
 
         class FakeReactor(object):
-            def listenUDP(self, port, *args):
+            def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 if len(ports) == 1:
                     raise CannotListenError(None, port, None)

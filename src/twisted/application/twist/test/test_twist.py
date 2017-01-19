@@ -13,7 +13,7 @@ from ...service import IService, MultiService
 from ...runner._exit import ExitStatus
 from ...runner._runner import Runner, RunnerOptions
 from ...runner.test.test_runner import DummyExit
-from ...twist import _options, _twist
+from ...twist import _twist
 from .._options import TwistOptions
 from .._twist import Twist
 
@@ -45,12 +45,12 @@ class TwistTests(twisted.trial.unittest.TestCase):
         """
         self.installedReactors = {}
 
-        def installReactor(name):
+        def installReactor(_, name):
             reactor = MemoryReactor()
             self.installedReactors[name] = reactor
             return reactor
 
-        self.patch(_options, "installReactor", installReactor)
+        self.patch(TwistOptions, "installReactor", installReactor)
 
 
     def patchStartService(self):
