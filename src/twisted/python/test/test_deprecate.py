@@ -27,7 +27,7 @@ from twisted.python.deprecate import (
     _passedArgSpec, _passedSignature
 )
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, execfile
 from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
@@ -1043,31 +1043,6 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
                          dict(a=1, b=2, e=7))
 
 
-    def test_passedKeywordOnly(self):
-        """
-        Keyword only arguments follow varargs, and can only
-        be filled in by a positional parameter.  They are specified in
-        PEP 3102.
-        """
-        def func(*a, b=False):
-                pass
-
-        def func2(*a, b=False, c, d, e):
-                pass
-
-        self.assertEqual(self.checkPassed(func, 1, 2, 3),
-                         dict(a=(1, 2, 3), b=False))
-        self.assertEqual(self.checkPassed(func, 1, 2, 3, b=False),
-                         dict(a=(1, 2, 3), b=False))
-        self.assertEqual(self.checkPassed(func2, 1, 2, b=False, c=1, d=2, e=3),
-                         dict(a=(1, 2), b=False, c=1, d=2, e=3))
-        self.assertRaises(TypeError, self.checkPassed,
-                          func2, 1, 2, b=False, c=1, d=2)
-    if not _PY3:
-        test_passedKeywordOnly.skip = (
-            "keyword-only arguments (PEP 3102) are only in Python 3 and higher")
-
-
     def test_mutualExclusionPrimeDirective(self):
         """
         L{mutuallyExclusiveArguments} does not interfere in its
@@ -1093,3 +1068,30 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             return a + b
 
         self.assertRaises(TypeError, func, a=3, b=4)
+
+
+
+if sys.version_info >= (3,):
+    _path = FilePath(__file__).parent().child("_deprecatetests.py3only")
+
+    _g = {}
+    execfile(_path.path, _g)
+
+    KeywordOnlyTests = _g["KeywordOnlyTests"]
+else:
+    from twisted.trial.unittest import TestCase
+
+    class KeywordOnlyTests(TestCase):
+        """
+        A dummy class to show that this test file was discovered but the tests
+        are unable to be ran in this version of Python.
+        """
+        skip = (
+            "keyword only arguments (PEP 3102) are "
+            "only in Python 3 and higher")
+
+        def test_notAvailable(self):
+            """
+            A skipped test to show that this was not ran because the Python is
+            too old.
+            """
