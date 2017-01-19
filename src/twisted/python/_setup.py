@@ -409,8 +409,6 @@ notPortedModules = [
     "twisted.news.test.test_database",
     "twisted.news.test.test_news",
     "twisted.news.test.test_nntp",
-    "twisted.plugins.twisted_conch",
-    "twisted.plugins.twisted_ftp",
     "twisted.plugins.twisted_inet",
     "twisted.plugins.twisted_mail",
     "twisted.plugins.twisted_names",
