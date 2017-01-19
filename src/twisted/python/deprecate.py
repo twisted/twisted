@@ -737,6 +737,9 @@ def _passedSignature(signature, positional, keyword):
                     raise TypeError("missing keyword arg {}".format(name))
                 else:
                     result[name] = param.default
+        else:
+            raise TypeError("'{}' parameter is invalid kind: {}".format(
+                                 name, param.kind))
 
     if len(positional) > numPositional:
         raise TypeError("Too many arguments.")

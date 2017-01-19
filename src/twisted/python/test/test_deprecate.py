@@ -1070,6 +1070,31 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         self.assertRaises(TypeError, func, a=3, b=4)
 
 
+    def test_invalidParameterType(self):
+        """
+        Create a fake signature with an invalid parameter
+        type to test error handling.
+        """
+        class FakeSignature:
+            def __init__(self, parameters):
+                self.parameters = parameters
+
+        class FakeParameter:
+            def __init__(self, name, kind):
+                self.name = name
+                self.kind = kind
+
+        def func(a, b):
+            pass
+
+        parameters = inspect.signature(func).parameters
+        dummyParameters = parameters.copy()
+        dummyParameters['c'] = FakeParameter("fake", "fake")
+        fakeSig = FakeSignature(dummyParameters)
+        self.assertRaises(TypeError, _passedSignature, fakeSig, (1, 2), {})
+    if not getattr(inspect, "signature", None):
+        test_invalidParameterType.skip = "inspect.signature() not available"
+
 
 if sys.version_info >= (3,):
     _path = FilePath(__file__).parent().child("_deprecatetests.py.3only")
