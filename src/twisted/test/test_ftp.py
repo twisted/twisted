@@ -110,7 +110,8 @@ class FTPServerTestCase(unittest.TestCase):
 
         self.factory = ftp.FTPFactory(portal=p,
                                       userAnonymous=self.userAnonymous)
-        port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        self.port = port = reactor.listenTCP(
+            0, self.factory, interface="127.0.0.1")
         self.addCleanup(port.stopListening)
 
         # Hook the server's buildProtocol to make the protocol instance
@@ -225,6 +226,29 @@ class FTPAnonymousTests(FTPServerTestCase):
 
 
 class BasicFTPServerTests(FTPServerTestCase):
+    def test_tooManyConnections(self):
+        """
+        When the connection limit is reached, the server should send an
+        appropriate response
+        """
+        self.factory.connectionLimit = 1
+        cc = protocol.ClientCreator(reactor, _BufferingProtocol)
+        d = cc.connectTCP("127.0.0.1", self.port.getHost().port)
+
+        @d.addCallback
+        def gotClient(proto):
+            return proto.d
+
+        @d.addCallback
+        def onConnectionLost(proto):
+            self.assertEqual(
+                b'421 Too many users right now, try again in a few minutes.'
+                b'\r\n',
+                proto.buffer)
+
+        return d
+
+
     def testNotLoggedInReply(self):
         """
         When not logged in, most commands other than USER and PASS should
@@ -287,6 +311,30 @@ class BasicFTPServerTests(FTPServerTestCase):
             'PASS',
             ['500 Syntax error: PASS requires an argument.'],
             chainDeferred=d)
+
+
+    def test_loginError(self):
+        """
+        Unexpected exceptions from the login handler are caught
+        """
+        def _fake_loginhandler(*args, **kwargs):
+            return defer.fail(AssertionError('test exception'))
+
+        self.serverProtocol.portal.login = _fake_loginhandler
+        d = self.client.queueStringCommand('USER foo')
+        self.assertCommandFailed(
+            'PASS bar',
+            ['550 Requested action not taken: internal server error'],
+            chainDeferred=d)
+
+        @d.addCallback
+        def checkLogs(result):
+            logs = self.flushLoggedErrors()
+            self.assertEqual(1, len(logs))
+            self.assertIsInstance(logs[0].value, AssertionError)
+
+        return d
+
 
     def testAnonymousLogin(self):
         return self._anonymousLogin()
@@ -767,7 +815,6 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             (ignored, downloader) = result
             return downloader.buffer
         return chainDeferred.addCallback(downloadDone)
-
 
     def test_LISTEmpty(self):
         """
