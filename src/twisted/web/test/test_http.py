@@ -3272,3 +3272,27 @@ class ChannelProductionTests(unittest.TestCase):
             self.assertEqual(responseBody, expectedResponseBody)
 
         return responseComplete.addCallback(validate)
+
+
+    def test_HTTPChannelUnregistersSelfWhenTimingOut(self):
+        """
+        L{HTTPChannel} unregisters itself when it times out a connection.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+
+        # Patch the channel's callLater method.
+        channel.timeOut = 100
+        channel.callLater = clock.callLater
+        channel.makeConnection(transport)
+
+        # Tick the clock forward almost to the timeout.
+        clock.advance(99)
+        self.assertIs(transport.producer, channel)
+        self.assertIs(transport.streaming, True)
+
+        # Fire the timeout.
+        clock.advance(1)
+        self.assertIs(transport.producer, None)
+        self.assertIs(transport.streaming, None)
