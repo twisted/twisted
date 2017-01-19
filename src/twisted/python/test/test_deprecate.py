@@ -1072,7 +1072,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
 
 
 if sys.version_info >= (3,):
-    _path = FilePath(__file__).parent().child("_deprecatetests.py3only")
+    _path = FilePath(__file__).parent().child("_deprecatetests.py3.only")
 
     _g = {}
     execfile(_path.path, _g)
