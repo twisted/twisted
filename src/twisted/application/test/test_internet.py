@@ -879,21 +879,26 @@ class ClientServiceTests(SynchronousTestCase):
     def test_whenConnectedErrbacksOnStopService(self):
         """
         L{ClientService.whenConnected} returns a L{Deferred} that
-        errbacks with L{CancelledError} if the connection fails before
-        L{ClientService.stopService} is called.
+        errbacks with L{CancelledError} if
+        L{ClientService.stopService} is called between connection
+        attempts.
         """
         clock = Clock()
         cq, service = self.makeReconnector(fireImmediately=False,
                                            clock=clock)
         beforeErrbackAndStop = service.whenConnected()
 
-        # The protocol fails to connect, and the service is waiting.
+        # The protocol fails to connect, and the service is waiting to
+        # reconnect.
         cq.connectQueue[0].errback(Exception("no connection"))
+
         service.stopService()
         afterErrbackAndStop = service.whenConnected()
 
-        self.failureResultOf(beforeErrbackAndStop)
-        self.failureResultOf(afterErrbackAndStop)
+        self.assertIsInstance(self.failureResultOf(beforeErrbackAndStop).value,
+                              CancelledError)
+        self.assertIsInstance(self.failureResultOf(afterErrbackAndStop).value,
+                              CancelledError)
 
 
     def test_stopServiceWhileDisconnecting(self):
