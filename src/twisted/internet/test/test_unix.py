@@ -508,7 +508,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # packer for it to be sent via sendmsg -- the kernel would not accept
         # it -- we'll temporarily replace recvmsg with a fake one that produces
         # a non-supported ancillary message level/type. This being said, from
-        # the perspective of the ancillaryPacker, all that is required it to
+        # the perspective of the ancillaryPacker, all that is required is to
         # let the test driver know that 0 file descriptors are expected.
         from twisted.python import sendmsg
 
