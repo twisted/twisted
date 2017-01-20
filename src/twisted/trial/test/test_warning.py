@@ -376,11 +376,13 @@ class CollectWarningsTests(SynchronousTestCase):
         """
         firstMessage = "dummy calls observer warning"
         secondMessage = firstMessage[::-1]
+        thirdMessage = Warning(1, 2, 3)
         events = []
         def f():
             events.append('call')
             warnings.warn(firstMessage)
             warnings.warn(secondMessage)
+            warnings.warn(thirdMessage)
             events.append('returning')
 
         _collectWarnings(events.append, f)
@@ -388,8 +390,9 @@ class CollectWarningsTests(SynchronousTestCase):
         self.assertEqual(events[0], 'call')
         self.assertEqual(events[1].message, firstMessage)
         self.assertEqual(events[2].message, secondMessage)
-        self.assertEqual(events[3], 'returning')
-        self.assertEqual(len(events), 4)
+        self.assertEqual(events[3].message, str(thirdMessage))
+        self.assertEqual(events[4], 'returning')
+        self.assertEqual(len(events), 5)
 
 
     def test_suppresses(self):
