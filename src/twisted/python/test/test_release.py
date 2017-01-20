@@ -358,6 +358,43 @@ def doNotFailOnNetworkError(func):
 
 
 
+class DoNotFailTests(TestCase):
+    """
+    Tests for L{doNotFailOnNetworkError}.
+    """
+
+    def test_skipsOnAssertionError(self):
+        """
+        When the test raises L{FailTest} and the assertion failure starts with
+        "'Failed to get object inventory from ", the test will be skipped
+        instead.
+        """
+        @doNotFailOnNetworkError
+        def inner():
+            self.assertEqual("Failed to get object inventory from blah", "")
+
+        try:
+            inner()
+        except Exception as e:
+            self.assertIsInstance(e, SkipTest)
+
+
+    def test_doesNotSkipOnDifferentError(self):
+        """
+        If there is a L{FailTest} that is not the intersphinx fetching error,
+        it will be passed through.
+        """
+        @doNotFailOnNetworkError
+        def inner():
+            self.assertEqual("Error!!!!", "")
+
+        try:
+            inner()
+        except Exception as e:
+            self.assertIsInstance(e, FailTest)
+
+
+
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
