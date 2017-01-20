@@ -18,9 +18,9 @@ class Finger(basic.LineReceiver):
             slash_w = 1
         user = parts[-1]
         if b'@' in user:
-            host_place = user.rfind(b'@')
-            user = user[:host_place]
-            host = user[host_place+1:]
+            hostPlace = user.rfind(b'@')
+            user = user[:hostPlace]
+            host = user[hostPlace+1:]
             return self.forwardQuery(slash_w, user, host)
         if user:
             return self.getUser(slash_w, user)
