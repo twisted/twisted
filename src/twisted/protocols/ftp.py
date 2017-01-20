@@ -221,6 +221,9 @@ def errnoToFailure(e, path):
         return defer.fail()
 
 
+_testTranslation = fnmatch.translate('TEST')
+
+
 def _isGlobbingExpression(segments=None):
     """
     Helper for checking if a FTPShell `segments` contains a wildcard Unix
@@ -240,14 +243,15 @@ def _isGlobbingExpression(segments=None):
         return False
 
     # To check that something is a glob expression, we convert it to
-    # Regular Expression. If the result is the same as the original expression
-    # then it contains no globbing expression.
+    # Regular Expression.
+    # We compare it to the translation of a known non-glob expression.
+    # If the result is the same as the original expression then it contains no
+    # globbing expression.
     globCandidate = segments[-1]
-    # A set of default regex rules is added to all strings.
-    emptyTranslations = fnmatch.translate('')
     globTranslations = fnmatch.translate(globCandidate)
+    nonGlobTranslations = _testTranslation.replace('TEST', globCandidate, 1)
 
-    if globCandidate + emptyTranslations == globTranslations:
+    if nonGlobTranslations == globTranslations:
         return False
     else:
         return True
