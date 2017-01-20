@@ -288,7 +288,7 @@ class FingerService(service.Service):
         return defer.succeed(self.users.get(user, "No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def startService(self):
         self._read()
