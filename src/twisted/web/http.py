@@ -2006,7 +2006,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
-        policies.TimeoutMixin.timeoutConnection(self)
+        self.loseConnection()
 
 
     def connectionLost(self, reason):

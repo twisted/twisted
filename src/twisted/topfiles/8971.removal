@@ -1,0 +1,1 @@
+twisted.internet.defer.timeout is deprecated in favor of twisted.internet.defer.Deferred.addTimeout
