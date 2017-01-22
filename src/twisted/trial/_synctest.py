@@ -785,11 +785,7 @@ class _Assertions(pyunit.TestCase, object):
             L{Deferred<twisted.internet.defer.Deferred>} has a result.
         """
         try:
-            result = defer.extractCurrentResult(
-                deferred,
-                raises=False,
-                passthrough=True,
-            )
+            result = defer.observeCurrentResult(deferred, raises=False)
         except defer.NoCurrentResult:
             pass
         else:

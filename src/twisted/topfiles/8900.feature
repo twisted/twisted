@@ -1,2 +1,3 @@
-The new function twisted.internet.defer.extractCurrentResult enables extracting
-the current result of an already fired Deferred.
+The new functions twisted.internet.defer.extractCurrentResult and
+twisted.internet.defer.observeCurrentResult enables extracting or observing the
+current result of an already fired Deferred.
