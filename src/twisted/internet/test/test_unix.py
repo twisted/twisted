@@ -519,7 +519,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         def fakeRecvmsgUnsupportedAncillary(skt, *args, **kwargs):
             data = b'some data'
-            ancillary = [(SOL_SOCKET+1, sendmsg.SCM_RIGHTS+1, b'')]
+            ancillary = [(None, None, b'')]
             flags = 0
             return sendmsg.RecievedMessage(data, ancillary, flags)
 
