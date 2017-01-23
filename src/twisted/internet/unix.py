@@ -175,7 +175,7 @@ class _SendmsgMixin(object):
         for cmsgLevel, cmsgType, cmsgData in ancillary:
             if (cmsgLevel == socket.SOL_SOCKET and
                 cmsgType == sendmsg.SCM_RIGHTS):
-                self._ancillary_SOL_SOCKET_SCM_RIGHTS(cmsgData)
+                self._ancillaryLevelSOLSOCKETTypeSCMRIGHTS(cmsgData)
             else:
                 log.msg(
                     format=(
@@ -191,7 +191,7 @@ class _SendmsgMixin(object):
         return self._dataReceived(data)
 
 
-    def _ancillary_SOL_SOCKET_SCM_RIGHTS(self, cmsgData):
+    def _ancillaryLevelSOLSOCKETTypeSCMRIGHTS(self, cmsgData):
 
         """
         Processes ancillary data with level SOL_SOCKET and type SCM_RIGHTS,
@@ -200,6 +200,9 @@ class _SendmsgMixin(object):
         Calls L{IFileDescriptorReceiver.fileDescriptorReceived} once for each
         received file descriptor or logs a message if the protocol does not
         implement L{IFileDescriptorReceiver}.
+
+        @param cmsgData: Ancillary data payload.
+        @type cmsgData: L{bytes}
         """
 
         fdCount = len(cmsgData) // 4
