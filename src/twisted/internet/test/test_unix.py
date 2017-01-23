@@ -8,8 +8,8 @@ Tests for implementations of L{IReactorUNIX}.
 from __future__ import division, absolute_import
 
 from stat import S_IMODE
-from os import stat, close, urandom
-from tempfile import mktemp
+from os import stat, close, urandom, unlink, rmdir, path, fstat
+from tempfile import mktemp, mkdtemp
 from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
 from hashlib import md5
@@ -392,18 +392,20 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         @param ancillaryPacker: A callable that will be given a list of
             two file descriptors and should return a two-tuple where:
             The first item is an iterable of zero or more (cmsg_level,
-            cmsg_type, cmsg_data) tuples for actual sending via sendmsg;
-            the second item is an integer indicating the expected number
-            of FDs to be received.
+            cmsg_type, cmsg_data) tuples in the same order as the given
+            list for actual sending via sendmsg; the second item is an
+            integer indicating the expected number of FDs to be received.
         """
         # Strategy:
         # - Create a UNIX socketpair.
+        # - Bind each socket to a known address.
         # - Associate one end to a FakeReceiver and FakeProtocol.
         # - Call sendmsg on the other end to send FDs as ancillary data.
         #   (ancillary data is obtained calling ancillaryPacker with
         #   the two FDs associated with the socketpair)
         # - Call doRead in the FakeReceiver.
         # - Verify results on FakeProtocol.
+        #   (using known bound addresses to verify correct order)
 
         # TODO: replace FakeReceiver test approach with one based in
         # IReactorSocket.adoptStreamConnection once AF_UNIX support is
@@ -413,12 +415,18 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg
 
+        def deviceInodeTuple(fd):
+            fs = fstat(fd)
+            return (fs.st_dev, fs.st_ino)
+
         @implementer(IFileDescriptorReceiver)
         class FakeProtocol(ConnectableProtocol):
             def __init__(self):
                 self.fds = []
+                self.deviceInodes = []
             def fileDescriptorReceived(self, fd):
                 self.fds.append(fd)
+                self.deviceInodes.append(deviceInodeTuple(fd))
                 close(fd)
 
         class FakeReceiver(_SendmsgMixin):
@@ -439,6 +447,19 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.addCleanup(sendSocket.close)
         self.addCleanup(recvSocket.close)
 
+        # Bind sockets to known addresses to support the use of fstat
+        # to obtain useful underlying st_dev/st_ino. These will be used
+        # in FD comparison to validate that the order in which FDs are
+        # sent matches the order they are received.
+        tempdir = mkdtemp()
+        self.addCleanup(rmdir, tempdir)
+        sendSocketAddr = path.join(tempdir, 'send.socket')
+        recvSocketAddr = path.join(tempdir, 'recv.socket')
+        sendSocket.bind(sendSocketAddr)
+        recvSocket.bind(recvSocketAddr)
+        self.addCleanup(unlink, sendSocketAddr)
+        self.addCleanup(unlink, recvSocketAddr)
+
         proto = FakeProtocol()
         receiver = FakeReceiver(recvSocket, proto)
 
@@ -454,6 +475,11 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         # Verify that received FDs are different from the sent ones.
         self.assertFalse(set(fdsToSend).intersection(set(proto.fds)))
+
+        # Verify that FDs were received in the same order, if any.
+        if proto.fds:
+            deviceInodesSent = [deviceInodeTuple(fd) for fd in fdsToSend]
+            self.assertEqual(deviceInodesSent, proto.deviceInodes)
 
 
     def test_multiFileDescriptorReceivedPerRecvmsgOneCMSG(self):
