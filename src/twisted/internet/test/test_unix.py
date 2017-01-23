@@ -532,13 +532,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         # Verify the expected message was logged.
         expectedMessage = 'received unsupported ancillary data'
-        for event in events:
-            if expectedMessage in event['format']:
-                break
-        else:
-            self.fail(
-                'Expected message %r not found in logged events %r' % (
-                    expectedMessage, events))
+        found = any(expectedMessage in e['format'] for e in events)
+        self.assertTrue(found, 'Expected message not found in logged events')
     if sendmsgSkip is not None:
         test_multiFileDescriptorReceivedPerRecvmsgBadCMSG.skip = sendmsgSkip
 
