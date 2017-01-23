@@ -1087,6 +1087,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b):
             pass
 
+        func(1, 2)
         parameters = inspect.signature(func).parameters
         dummyParameters = parameters.copy()
         dummyParameters['c'] = FakeParameter("fake", "fake")
