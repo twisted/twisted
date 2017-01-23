@@ -655,12 +655,12 @@ def warnAboutFunction(offender, warningString):
 
 def _passedArgSpec(argspec, positional, keyword):
     """
-    Take an L{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
+    Take an I{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
 
     @param argspec: The argument specification for the function to inspect.
-    @type argspec: L{inspect.ArgSpec}
+    @type argspec: I{inspect.ArgSpec}
 
     @param positional: The positional arguments that were passed.
     @type positional: L{tuple}
