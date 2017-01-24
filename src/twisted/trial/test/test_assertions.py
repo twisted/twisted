@@ -1036,13 +1036,12 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
         that fails with an exception type that was not expected, and the
-        L{SynchronousTestCase.failureException} message contains the original
-        failure traceback as well as the expected exception type.
+        L{SynchronousTestCase.failureException} message contains the expected
+        exception type.
         """
         try:
             self.failureResultOf(fail(self.failure), KeyError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
             self.assertIn(
                 "Failure of type ({0}.{1}) expected on".format(
                     KeyError.__module__, KeyError.__name__
@@ -1051,19 +1050,31 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             )
 
 
+    def test_failureResultOfWithWrongFailureOneExpectedFailureHasTB(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        that fails with an exception type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        failure traceback.
+        """
+        try:
+            self.failureResultOf(fail(self.failure), KeyError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+
+
     def test_failureResultOfWithWrongFailureMultiExpectedFailures(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
         with an exception type that was not expected, and the
-        L{SynchronousTestCase.failureException} message contains the original
-        failure traceback as well as the expected exception types in the error
-        message.
+        L{SynchronousTestCase.failureException} message contains the expected
+        exception types in the error message.
         """
         try:
             self.failureResultOf(fail(self.failure), KeyError, IOError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
             self.assertIn(
                 "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
                     KeyError.__module__, KeyError.__name__,
@@ -1071,6 +1082,20 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
                 ),
                 str(e)
             )
+
+
+    def test_failureResultOfWithWrongFailureMultiExpectedFailuresHasTB(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with an exception type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        failure traceback in the error message.
+        """
+        try:
+            self.failureResultOf(fail(self.failure), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
 
 
     def test_successResultOfWithSuccessResult(self):

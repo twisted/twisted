@@ -113,12 +113,11 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} when called with a coroutine
         that raises an exception with a failure type that was not expected, and
         the L{SynchronousTestCase.failureException} message contains the
-        original failure exception as well as the expected exception type.
+        expected exception type.
         """
         try:
             self.failureResultOf(self.raisesException(), KeyError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
             self.assertIn(
                 "Failure of type ({0}.{1}) expected on".format(
                     KeyError.__module__, KeyError.__name__
@@ -127,19 +126,32 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             )
 
 
+    def test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a coroutine
+        that raises an exception with a failure type that was not expected, and
+        the L{SynchronousTestCase.failureException} message contains the
+        original exception traceback.
+        """
+        try:
+            self.failureResultOf(self.raisesException(), KeyError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+
+
+
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a coroutine
         that raises an exception of a type that was not expected, and the
-        L{SynchronousTestCase.failureException} message contains the original
-        exception traceback as well as the expected exception types in the
-        error message.
+        L{SynchronousTestCase.failureException} message contains expected
+        exception types in the error message.
         """
         try:
             self.failureResultOf(self.raisesException(), KeyError, IOError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
             self.assertIn(
                 "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
                     KeyError.__module__, KeyError.__name__,
@@ -147,6 +159,22 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
                 ),
                 str(e)
             )
+
+
+    def test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB(
+        self
+    ):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a coroutine
+        that raises an exception of a type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        exception traceback in the error message.
+        """
+        try:
+            self.failureResultOf(self.raisesException(), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
 
 
     def test_successResultOfWithSuccessResult(self):
@@ -158,35 +186,6 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         """
         self.assertIdentical(
             self.result, self.successResultOf(self.successResult())
-        )
-
-
-    def test_failureResultOfWithExpectedFailureResult(self):
-        """
-        When passed a coroutine which currently has an exception result (ie, if
-        converted into a L{Deferred}, L{Deferred.addErrback} would cause the
-        added errback to be called before C{addErrback} returns),
-        L{SynchronousTestCase.failureResultOf} returns a L{Failure} containing
-        that exception, if the exception type is expected.
-        """
-        self.assertIdentical(
-            self.failure,
-            self.failureResultOf(
-                self.raisesException(), self.failure.type, KeyError
-            )
-        )
-
-
-    def test_failureResultOfWithFailureResult(self):
-        """
-        When passed a coroutine which currently has an exception result (ie, if
-        converted into a L{Deferred}, L{Deferred.addErrback} would cause the
-        added errback to be called before C{addErrback} returns),
-        L{SynchronousTestCase.failureResultOf} returns returns a L{Failure}
-        containing that exception.
-        """
-        self.assertIdentical(
-            self.failure, self.failureResultOf(self.raisesException())
         )
 
 
