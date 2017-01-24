@@ -24,6 +24,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
 
     result = object()
     exception = Exception("Bad times")
+    failure = Failure(exception)
 
 
     async def successResult(self):
