@@ -1161,6 +1161,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
     def test_assertNoResult(self):
         """
         When passed a L{Deferred} with no current result,
+        L{SynchronousTestCase.assertNoResult} does not raise an exception.
         """
         self.assertNoResult(Deferred())
 
