@@ -31,7 +31,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
 
 
     async def noCurrentResult(self):
-        await Future()
+        await Deferred()
 
 
     async def raisesException(self):
