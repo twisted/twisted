@@ -262,7 +262,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             return await d
 
         c = noCurrentResult()
-        self.assertNoResult(c)
+        self.assertNoResult(d)
         d.callback(self.result)
         self.assertEqual(self.result, self.successResultOf(c))
 
@@ -281,9 +281,9 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             return await d
 
         c = noCurrentResult()
-        self.assertNoResult(c)
+        self.assertNoResult(d)
         d.errback(f)
-        self.assertEqual(f, self.failureResultOf(c))
+        self.assertEqual(f.value, self.failureResultOf(c).value)
 
 
     def test_assertNoResultSwallowsImmediateFailure(self):
@@ -299,7 +299,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
 
         c = raisesException()
         try:
-            self.assertNoResult(c)
+            self.assertNoResult(d)
         except self.failureException:
             pass
         self.assertEqual(None, self.successResultOf(c))
