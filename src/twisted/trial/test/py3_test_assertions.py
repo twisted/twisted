@@ -72,6 +72,10 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
+    test_successResultOfWithFailureHasTraceback.todo = (
+        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
+    )
+
 
     def test_failureResultOfWithoutResult(self):
         """
@@ -139,6 +143,9 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
 
+    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (
+        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
+    )
 
 
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
@@ -175,6 +182,10 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             self.failureResultOf(self.raisesException(), KeyError, IOError)
         except self.failureException as e:
             self.assertIn(self.failure.getTraceback(), str(e))
+
+    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (
+        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
+    )
 
 
     def test_successResultOfWithSuccessResult(self):
