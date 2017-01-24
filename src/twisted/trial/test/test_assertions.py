@@ -17,6 +17,7 @@ from __future__ import division, absolute_import
 import warnings
 import unittest as pyunit
 
+from twisted.python.compat import _PY3
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
@@ -957,17 +958,20 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
     L{SynchronousTestCase.failureResultOf}, and
     L{SynchronousTestCase.assertNoResult}.
     """
+
     result = object()
     failure = Failure(Exception("Bad times"))
 
-    def test_withoutSuccessResult(self):
+
+    def test_withoutResult(self):
         """
         L{SynchronousTestCase.successResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
         with no current result.
         """
         self.assertRaises(
-            self.failureException, self.successResultOf, Deferred())
+            self.failureException, self.successResultOf, Deferred()
+        )
 
 
     def test_successResultOfWithFailure(self):
@@ -977,7 +981,8 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         with a failure result.
         """
         self.assertRaises(
-            self.failureException, self.successResultOf, fail(self.failure))
+            self.failureException, self.successResultOf, fail(self.failure)
+        )
 
 
     def test_successResultOfWithFailureHasTraceback(self):
@@ -992,14 +997,15 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.assertIn(self.failure.getTraceback(), str(e))
 
 
-    def test_withoutFailureResult(self):
+    def test_failureResultOfWithoutResult(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
         with no current result.
         """
         self.assertRaises(
-            self.failureException, self.failureResultOf, Deferred())
+            self.failureException, self.failureResultOf, Deferred()
+        )
 
 
     def test_failureResultOfWithSuccess(self):
@@ -1009,26 +1015,29 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         with a success result.
         """
         self.assertRaises(
-            self.failureException, self.failureResultOf, succeed(self.result))
+            self.failureException, self.failureResultOf, succeed(self.result)
+        )
+
 
     def test_failureResultOfWithWrongFailure(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
-        with a failure type that was not expected.
+        that fails with an exception type that was not expected.
         """
         self.assertRaises(
-            self.failureException, self.failureResultOf, fail(self.failure),
-            KeyError)
+            self.failureException,
+            self.failureResultOf, fail(self.failure), KeyError
+        )
 
 
     def test_failureResultOfWithWrongFailureOneExpectedFailure(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
-        with a failure type that was not expected, and the
+        that fails with an exception type that was not expected, and the
         L{SynchronousTestCase.failureException} message contains the original
-        failure traceback as well as the expected failure type
+        failure traceback as well as the expected exception type.
         """
         try:
             self.failureResultOf(fail(self.failure), KeyError)
@@ -1036,18 +1045,20 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.assertIn(self.failure.getTraceback(), str(e))
             self.assertIn(
                 "Failure of type ({0}.{1}) expected on".format(
-                    KeyError.__module__, KeyError.__name__),
-                str(e))
+                    KeyError.__module__, KeyError.__name__
+                ),
+                str(e)
+            )
 
 
-    def test_failureResultOfWithWrongFailureMultiExpectedFailure(self):
+    def test_failureResultOfWithWrongFailureMultiExpectedFailures(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
         L{SynchronousTestCase.failureException} when called with a L{Deferred}
-        with a failure type that was not expected, and the
+        with an exception type that was not expected, and the
         L{SynchronousTestCase.failureException} message contains the original
-        failure traceback as well as the expected failure types in the error
-        message
+        failure traceback as well as the expected exception types in the error
+        message.
         """
         try:
             self.failureResultOf(fail(self.failure), KeyError, IOError)
@@ -1056,11 +1067,13 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.assertIn(
                 "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
                     KeyError.__module__, KeyError.__name__,
-                    IOError.__module__, IOError.__name__),
-                str(e))
+                    IOError.__module__, IOError.__name__,
+                ),
+                str(e)
+            )
 
 
-    def test_withSuccessResult(self):
+    def test_successResultOfWithSuccessResult(self):
         """
         When passed a L{Deferred} which currently has a result (ie,
         L{Deferred.addCallback} would cause the added callback to be called
@@ -1071,20 +1084,22 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.result, self.successResultOf(succeed(self.result)))
 
 
-    def test_withExpectedFailureResult(self):
+    def test_failureResultOfWithExpectedFailureResult(self):
         """
         When passed a L{Deferred} which currently has a L{Failure} result (ie,
         L{Deferred.addErrback} would cause the added errback to be called
         before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
-        returns that L{Failure} if that L{Failure}'s type is expected.
+        returns that L{Failure} if its contained exception type is expected.
         """
         self.assertIdentical(
             self.failure,
-            self.failureResultOf(fail(self.failure), self.failure.type,
-                                 KeyError))
+            self.failureResultOf(
+                fail(self.failure), self.failure.type, KeyError
+            )
+        )
 
 
-    def test_withFailureResult(self):
+    def test_failureResultOfWithFailureResult(self):
         """
         When passed a L{Deferred} which currently has a L{Failure} result
         (ie, L{Deferred.addErrback} would cause the added errback to be called
@@ -1092,27 +1107,30 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         returns that L{Failure}.
         """
         self.assertIdentical(
-            self.failure, self.failureResultOf(fail(self.failure)))
+            self.failure, self.failureResultOf(fail(self.failure))
+        )
 
 
     def test_assertNoResultSuccess(self):
         """
         When passed a L{Deferred} which currently has a success result (see
-        L{test_withSuccessResult}), L{SynchronousTestCase.assertNoResult} raises
-        L{SynchronousTestCase.failureException}.
+        L{test_withSuccessResult}), L{SynchronousTestCase.assertNoResult}
+        raises L{SynchronousTestCase.failureException}.
         """
         self.assertRaises(
-            self.failureException, self.assertNoResult, succeed(self.result))
+            self.failureException, self.assertNoResult, succeed(self.result)
+        )
 
 
     def test_assertNoResultFailure(self):
         """
         When passed a L{Deferred} which currently has a failure result (see
-        L{test_withFailureResult}), L{SynchronousTestCase.assertNoResult} raises
-        L{SynchronousTestCase.failureException}.
+        L{test_withFailureResult}), L{SynchronousTestCase.assertNoResult}
+        raises L{SynchronousTestCase.failureException}.
         """
         self.assertRaises(
-            self.failureException, self.assertNoResult, fail(self.failure))
+            self.failureException, self.assertNoResult, fail(self.failure)
+        )
 
 
     def test_assertNoResult(self):
@@ -1158,6 +1176,11 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         except self.failureException:
             pass
         self.assertEqual(None, self.successResultOf(d))
+
+
+
+if _PY3:
+    from .py3_test_assertions import ResultOfCoroutineAssertionsTests
 
 
 
