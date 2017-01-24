@@ -14,10 +14,10 @@ demonstrated to work earlier in the file are used by those later in the file
 
 from __future__ import division, absolute_import
 
+import sys
 import warnings
 import unittest as pyunit
 
-from twisted.python.compat import _PY3
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
@@ -1205,7 +1205,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
 
 
 
-if _PY3:
+if sys.version_info >= (3, 5):
     from .py3_test_assertions import ResultOfCoroutineAssertionsTests
 
 
