@@ -18,7 +18,9 @@ from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
-    getDeprecationWarningString, warnAboutFunction)
+    getDeprecationWarningString, warnAboutFunction
+)
+from twisted.internet.defer import ensureDeferred
 
 from twisted.trial import itrial, util
 
@@ -686,6 +688,7 @@ class _Assertions(pyunit.TestCase, object):
 
         @return: The result of C{deferred}.
         """
+        deferred = ensureDeferred(deferred)
         result = []
         deferred.addBoth(result.append)
         if not result:
@@ -726,6 +729,7 @@ class _Assertions(pyunit.TestCase, object):
         @return: The failure result of C{deferred}.
         @rtype: L{failure.Failure}
         """
+        deferred = ensureDeferred(deferred)
         result = []
         deferred.addBoth(result.append)
         if not result:
@@ -770,6 +774,7 @@ class _Assertions(pyunit.TestCase, object):
         @raise SynchronousTestCase.failureException: If the
             L{Deferred<twisted.internet.defer.Deferred>} has a result.
         """
+        deferred = ensureDeferred(deferred)
         result = []
         def cb(res):
             result.append(res)
