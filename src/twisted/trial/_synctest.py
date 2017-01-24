@@ -691,17 +691,23 @@ class _Assertions(pyunit.TestCase, object):
         deferred = ensureDeferred(deferred)
         result = []
         deferred.addBoth(result.append)
+
         if not result:
             self.fail(
-                "Success result expected on %r, found no result instead" % (
-                    deferred,))
-        elif isinstance(result[0], failure.Failure):
+                "Success result expected on {!r}, found no result instead"
+                .format(deferred)
+            )
+
+        result = result[0]
+
+        if isinstance(result, failure.Failure):
             self.fail(
-                "Success result expected on %r, "
-                "found failure result instead:\n%s" % (
-                    deferred, result[0].getTraceback()))
-        else:
-            return result[0]
+                "Success result expected on {!r}, "
+                "found failure result instead:\n{}"
+                .format(deferred, result.getTraceback())
+            )
+
+        return result
 
 
     def failureResultOf(self, deferred, *expectedExceptionTypes):
@@ -732,27 +738,41 @@ class _Assertions(pyunit.TestCase, object):
         deferred = ensureDeferred(deferred)
         result = []
         deferred.addBoth(result.append)
+
         if not result:
             self.fail(
-                "Failure result expected on %r, found no result instead" % (
-                    deferred,))
-        elif not isinstance(result[0], failure.Failure):
+                "Failure result expected on {!r}, found no result instead"
+                .format(deferred)
+            )
+
+        result = result[0]
+
+        if not isinstance(result, failure.Failure):
             self.fail(
-                "Failure result expected on %r, "
-                "found success result (%r) instead" % (deferred, result[0]))
-        elif (expectedExceptionTypes and
-              not result[0].check(*expectedExceptionTypes)):
+                "Failure result expected on {!r}, "
+                "found success result ({!r}) instead"
+                .format(deferred, result)
+            )
+
+        if (
+            expectedExceptionTypes and
+            not result.check(*expectedExceptionTypes)
+        ):
             expectedString = " or ".join([
-                '.'.join((t.__module__, t.__name__)) for t in
-                expectedExceptionTypes])
+                ".".join((t.__module__, t.__name__))
+                for t in expectedExceptionTypes
+            ])
 
             self.fail(
-                "Failure of type (%s) expected on %r, "
-                "found type %r instead: %s" % (
-                    expectedString, deferred, result[0].type,
-                    result[0].getTraceback()))
-        else:
-            return result[0]
+                "Failure of type ({}) expected on {!r}, "
+                "found type {!r} instead: {}"
+                .format(
+                    expectedString, deferred, result.type,
+                    result.getTraceback()
+                )
+            )
+
+        return result
 
 
     def assertNoResult(self, deferred):
@@ -776,17 +796,21 @@ class _Assertions(pyunit.TestCase, object):
         """
         deferred = ensureDeferred(deferred)
         result = []
+
         def cb(res):
             result.append(res)
             return res
+
         deferred.addBoth(cb)
+
         if result:
             # If there is already a failure, the self.fail below will
             # report it, so swallow it in the deferred
             deferred.addErrback(lambda _: None)
             self.fail(
-                "No result expected on %r, found %r instead" % (
-                    deferred, result[0]))
+                "No result expected on {!r}, found {!r} instead"
+                .format(deferred, result[0])
+            )
 
 
     def assertRegex(self, text, regex, msg=None):
