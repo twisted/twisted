@@ -1,20 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Tests specific to Python 3 to add to
-L{twisted.trial.unittest.test.test_assertions}.
-"""
-
-from __future__ import division, absolute_import
-
-from asyncio import Future
-
-from twisted.python.failure import Failure
-from twisted.trial import unittest
-from twisted.internet.defer import Deferred, fail, succeed
-
-
 class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
     """
     Tests for L{SynchronousTestCase.successResultOf},

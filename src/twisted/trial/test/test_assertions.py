@@ -18,6 +18,7 @@ import sys
 import warnings
 import unittest as pyunit
 
+from twisted.python.filepath import FilePath
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
@@ -1206,7 +1207,23 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
 
 
 if sys.version_info >= (3, 5):
-    from .py3_test_assertions import ResultOfCoroutineAssertionsTests
+    p = FilePath(__file__).parent().child("_assertiontests.py.3only")
+    with p.open() as f:
+        exec(f.read())
+    del p, f
+else:
+    class ResultOfCoroutineAssertionsTests(unittest._assertiontests.py3):
+        """
+        A dummy class to show that this test file was discovered but the tests
+        are unable to be run in this version of Python.
+        """
+        skip = "async/await is not available before Python 3.5"
+
+        def test_notAvailable(self):
+            """
+            A skipped test to show that this was not run because the Python is
+            too old.
+            """
 
 
 
