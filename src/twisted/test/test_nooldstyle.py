@@ -150,6 +150,8 @@ class NewStyleOnly(object):
             module = namedAny(self.module)
         except ImportError as e:
             raise unittest.SkipTest("Not importable: {}".format(e))
+        except SyntaxError as e:
+            raise unittest.SkipTest("Invalid syntax: {}".format(e))
 
         oldStyleClasses = []
 
