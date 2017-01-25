@@ -1212,7 +1212,7 @@ if sys.version_info >= (3, 5):
         exec(f.read())
     del p, f
 else:
-    class ResultOfCoroutineAssertionsTests(unittest._assertiontests.py3):
+    class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         """
         A dummy class to show that this test file was discovered but the tests
         are unable to be run in this version of Python.
