@@ -1207,10 +1207,10 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
 
 
 if sys.version_info >= (3, 5):
-    p = FilePath(__file__).parent().child("_assertiontests.py.3only")
-    with p.open() as f:
-        exec(f.read())
-    del p, f
+    _p = FilePath(__file__).parent().child("_assertiontests.py.3only")
+    with _p.open() as _f:
+        exec(_f.read())
+    del _p, _f
 else:
     class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         """
