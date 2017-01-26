@@ -105,9 +105,9 @@ class H2Connection(Protocol, TimeoutMixin):
     @type _sender: L{twisted.internet.task.LoopingCall}
 
     @ivar abortTimeout: The number of seconds to wait after we attempt to shut
-    the transport down cleanly to give up and forcibly terminate it. This
-    is only used when we time a connection out, to prevent errors causing
-    the FD to get leaked. If this is L{None}, we will wait forever.
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
     @type abortTimeout: L{int}
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
