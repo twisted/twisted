@@ -20,7 +20,7 @@ import tempfile
 import shutil
 
 from datetime import date
-from io import BytesIO as StringIO
+from io import BytesIO
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
