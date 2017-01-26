@@ -245,7 +245,11 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    with open(filename, "rbU") as fin:
+    if _PY3:
+        mode = "rb"
+    else:
+        mode = "rbU"
+    with open(filename, mode) as fin:
         source = fin.read()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
