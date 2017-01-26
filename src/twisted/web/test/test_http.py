@@ -130,6 +130,28 @@ class LoopbackHTTPClient(http.HTTPClient):
         self.transport.write(b"0123456789")
 
 
+def parametrizeTimeoutMixin(protocol, reactor):
+    """
+    Parametrizes the L{TimeoutMixin} so that it works with whatever reactor is
+    being used by the test.
+
+    @param protocol: A L{_GenericHTTPChannel} or something implementing a
+        similar interface.
+    @type protocol: L{_GenericHTTPChannel}
+
+    @param reactor: An L{IReactorTime} implementation.
+    @type reactor: L{IReactorTime}
+
+    @return: The C{channel}, with its C{callLater} method patched.
+    """
+    # This is a terrible violation of the abstraction later of
+    # _genericHTTPChannelProtocol, but we need to do it because
+    # policies.TimeoutMixin doesn't accept a reactor on the object.
+    # See https://twistedmatrix.com/trac/ticket/8488
+    protocol._channel.callLater = reactor.callLater
+    return protocol
+
+
 class ResponseTestMixin(object):
     """
     A mixin that provides a simple means of comparing an actual response string
@@ -228,12 +250,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         transport = StringTransport()
         factory = http.HTTPFactory()
         protocol = factory.buildProtocol(None)
-
-        # This is a terrible violation of the abstraction later of
-        # _genericHTTPChannelProtocol, but we need to do it because
-        # policies.TimeoutMixin doesn't accept a reactor on the object.
-        # See https://twistedmatrix.com/trac/ticket/8488
-        protocol._channel.callLater = clock.callLater
+        protocol = parametrizeTimeoutMixin(protocol, clock)
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         clock.advance(59)
@@ -251,12 +268,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         transport = StringTransport()
         factory = http.HTTPFactory()
         protocol = factory.buildProtocol(None)
-
-        # This is a terrible violation of the abstraction later of
-        # _genericHTTPChannelProtocol, but we need to do it because
-        # policies.TimeoutMixin doesn't accept a reactor on the object.
-        # See https://twistedmatrix.com/trac/ticket/8488
-        protocol._channel.callLater = clock.callLater
+        protocol = parametrizeTimeoutMixin(protocol, clock)
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         self.assertFalse(transport.disconnecting)
@@ -285,12 +297,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         transport = StringTransport()
         factory = http.HTTPFactory()
         protocol = factory.buildProtocol(None)
-
-        # This is a terrible violation of the abstraction later of
-        # _genericHTTPChannelProtocol, but we need to do it because
-        # policies.TimeoutMixin doesn't accept a reactor on the object.
-        # See https://twistedmatrix.com/trac/ticket/8488
-        protocol._channel.callLater = clock.callLater
+        protocol = parametrizeTimeoutMixin(protocol, clock)
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         self.assertFalse(transport.disconnecting)
@@ -321,12 +328,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         factory = http.HTTPFactory()
         protocol = factory.buildProtocol(None)
         protocol._channel.abortTimeout = None
-
-        # This is a terrible violation of the abstraction later of
-        # _genericHTTPChannelProtocol, but we need to do it because
-        # policies.TimeoutMixin doesn't accept a reactor on the object.
-        # See https://twistedmatrix.com/trac/ticket/8488
-        protocol._channel.callLater = clock.callLater
+        protocol = parametrizeTimeoutMixin(protocol, clock)
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         self.assertFalse(transport.disconnecting)
@@ -2770,15 +2772,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory.startFactory()
         protocol = factory.buildProtocol(None)
         transport = StringTransport()
+        protocol = parametrizeTimeoutMixin(protocol, clock)
 
         # Confirm that the timeout is what we think it is.
         self.assertEqual(protocol.timeOut, 100)
 
-        # This is a terrible violation of the abstraction later of
-        # _genericHTTPChannelProtocol, but we need to do it because
-        # policies.TimeoutMixin doesn't accept a reactor on the object.
-        # See https://twistedmatrix.com/trac/ticket/8488
-        protocol._channel.callLater = clock.callLater
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         clock.advance(99)
