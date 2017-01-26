@@ -1448,6 +1448,12 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
                           common.NS(b'unused-key'))
 
 
+    def test_checkBad_25519_Size(self):
+        self.proto.kexAlg = b"curve25519-sha256@libssh.org"
+        self.proto.keyAlg = b'ssh-rsa'
+        self.assertRaises(ValueError, self.proto._ssh_KEX_ECDH_INIT, common.NS(keydata.publicED25519openssh[12:20]))
+
+
     def test_checkBad_KEX_INIT_CurveName(self):
         """
         Test that if the server received a bad name for a curve
@@ -1999,6 +2005,43 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
                        common.NS(encPub) + common.NS(b'bad-signature'))
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
+    def test_checkBad_25519_Size(self):
+        """
+        Test that KEX_ECDH_REPLY disconnects if the ed25519 keysize is bad.
+        """
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b"curve25519-sha256@libssh.org") +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+
+        self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
+
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
+                                                    default_backend())
+        self.proto.ecPub = self.proto.ecPriv.public_key()
+
+        # Generate the private key
+        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        # Get the public key
+        thisPub = thisPriv.public_key()
+        encPub = thisPub.public_numbers().encode_point()
+        self.proto.kexAlg = b"curve25519-sha256@libssh.org"
+        self.proto._ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+                       common.NS(keydata.publicED25519openssh[12:20]) + common.NS(b'bad-signature'))
+        self.checkDisconnected(transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE)
 
 
     def test_disconnectNEWKEYSData(self):

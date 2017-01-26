@@ -1280,11 +1280,6 @@ class SSHServerTransport(SSHTransportBase):
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
         if self.kexAlg.find(b'25519') != -1:
-            # Make sure the size is correct
-            if len(pktPub) != 32:
-                self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                    b'bad key size')
-
             # Turn the public key into a public key object
             theirECPub = nacl.public.PublicKey(pktPub)
 
@@ -1671,12 +1666,6 @@ class SSHClientTransport(SSHTransportBase):
             theirECHost = hostKey
 
             if self.kexAlg.find(b'curve25519') >= 0:
-                # Make sure the size is correct
-                if len(pubKey) != 32:
-                    self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                        b'bad key size')
-
-                # Turn the public key into a public key object
                 theirECPub = nacl.public.PublicKey(pubKey)
 
                 # Compute the shared secret
