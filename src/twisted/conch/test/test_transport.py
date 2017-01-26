@@ -1449,6 +1449,10 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
 
 
     def test_checkBad_25519_Size(self):
+        """
+        Test that if the server receives an ed25519 key that is smaller
+        than 32 bits, we raise a ValueError.
+        """
         self.proto.kexAlg = b"curve25519-sha256@libssh.org"
         self.proto.keyAlg = b'ssh-rsa'
         self.assertRaises(ValueError, self.proto._ssh_KEX_ECDH_INIT,
@@ -2034,11 +2038,6 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
                                                     default_backend())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
-        # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
-        # Get the public key
-        thisPub = thisPriv.public_key()
-        encPub = thisPub.public_numbers().encode_point()
         self.proto.kexAlg = b"curve25519-sha256@libssh.org"
         self.proto._ssh_KEX_ECDH_REPLY(
             common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
