@@ -37,7 +37,7 @@ from incremental import Version
 from subprocess import CalledProcessError
 
 from twisted.python._release import (
-    getStrContent, lenientSetStrContent,
+    getNativeStrContent, lenientSetStrContent,
     findTwistedProjects, replaceInFile, Project, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
