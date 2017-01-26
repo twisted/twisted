@@ -860,3 +860,108 @@ class ClientServiceTests(SynchronousTestCase):
         d = service.stopService()
         self.assertEqual(clock.getDelayedCalls(), [])
         self.successResultOf(d)
+
+
+    def test_stopServiceBeforeStartService(self):
+        """
+        Calling L{ClientService.stopService} before
+        L{ClientService.startService} returns a L{Deferred} that has
+        already fired with L{None}.
+        """
+        clock = Clock()
+        _, service = self.makeReconnector(fireImmediately=False,
+                                          startService=False,
+                                          clock=clock)
+        d = service.stopService()
+        self.assertIsNone(self.successResultOf(d))
+
+
+    def test_whenConnectedErrbacksOnStopService(self):
+        """
+        L{ClientService.whenConnected} returns a L{Deferred} that
+        errbacks with L{CancelledError} if
+        L{ClientService.stopService} is called between connection
+        attempts.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        beforeErrbackAndStop = service.whenConnected()
+
+        # The protocol fails to connect, and the service is waiting to
+        # reconnect.
+        cq.connectQueue[0].errback(Exception("no connection"))
+
+        service.stopService()
+        afterErrbackAndStop = service.whenConnected()
+
+        self.assertIsInstance(self.failureResultOf(beforeErrbackAndStop).value,
+                              CancelledError)
+        self.assertIsInstance(self.failureResultOf(afterErrbackAndStop).value,
+                              CancelledError)
+
+
+    def test_stopServiceWhileDisconnecting(self):
+        """
+        Calling L{ClientService.stopService} twice after it has
+        connected (that is, stopping it while it is disconnecting)
+        returns a L{Deferred} each time that fires when the
+        disconnection has completed.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        # The protocol connects
+        cq.connectQueue[0].callback(None)
+
+        # The protocol begins disconnecting
+        firstStopDeferred = service.stopService()
+        # The protocol continues disconnecting
+        secondStopDeferred = service.stopService()
+
+        # The protocol is disconnected
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+
+        self.successResultOf(firstStopDeferred)
+        self.successResultOf(secondStopDeferred)
+
+
+    def test_stopServiceWhileRestarting(self):
+        """
+        Calling L{ClientService.stopService} after calling a
+        reconnection attempt returns a L{Deferred} that fires when the
+        disconnection has completed.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        # The protocol connects
+        cq.connectQueue[0].callback(None)
+
+        # The protocol begins disconnecting
+        firstStopDeferred = service.stopService()
+        # The protocol begins reconnecting
+        service.startService()
+        # The protocol begins disconnecting again
+        secondStopDeferred = service.stopService()
+
+        # The protocol is disconnected
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+
+        self.successResultOf(firstStopDeferred)
+        self.successResultOf(secondStopDeferred)
+
+
+    def test_stopServiceOnStoppedService(self):
+        """
+        Calling L{ClientService.stopService} on a stopped service
+        returns a L{Deferred} that has already fired with L{None}.
+        """
+        clock = Clock()
+        _, service = self.makeReconnector(fireImmediately=False,
+                                          clock=clock)
+        firstStopDeferred = service.stopService()
+        secondStopDeferred = service.stopService()
+
+        self.assertIsNone(self.successResultOf(firstStopDeferred))
+        self.assertIsNone(self.successResultOf(secondStopDeferred))
