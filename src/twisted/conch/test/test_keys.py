@@ -1061,11 +1061,11 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         L{keys.Key.toString} serializes a ED25519 key in OpenSSH format.
         """
-        key = keys.Key.fromString(keydata.privateED25519_openssh)
+        key = keys.Key.fromString(keydata.privateED25519openssh)
         self.assertEqual(key.public().toString('openssh', b'comment'),
-                         keydata.publicED25519_openssh)
+                         keydata.publicED25519openssh)
         self.assertEqual(key.public().toString('openssh'),
-                         keydata.publicED25519_openssh[:-8])
+                         keydata.publicED25519openssh[:-8])
 
 
     def test_toLSHRSA(self):

@@ -1451,7 +1451,8 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
     def test_checkBad_25519_Size(self):
         self.proto.kexAlg = b"curve25519-sha256@libssh.org"
         self.proto.keyAlg = b'ssh-rsa'
-        self.assertRaises(ValueError, self.proto._ssh_KEX_ECDH_INIT, common.NS(keydata.publicED25519openssh[12:20]))
+        self.assertRaises(ValueError, self.proto._ssh_KEX_ECDH_INIT,
+                          common.NS(keydata.publicED25519openssh[12:20]))
 
 
     def test_checkBad_KEX_INIT_CurveName(self):
@@ -2039,8 +2040,10 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_numbers().encode_point()
         self.proto.kexAlg = b"curve25519-sha256@libssh.org"
-        self.proto._ssh_KEX_ECDH_REPLY(common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
-                       common.NS(keydata.publicED25519openssh[12:20]) + common.NS(b'bad-signature'))
+        self.proto._ssh_KEX_ECDH_REPLY(
+            common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+            common.NS(keydata.publicED25519openssh[12:20])
+            + common.NS(b'bad-signature'))
         self.checkDisconnected(transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE)
 
 

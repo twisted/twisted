@@ -124,7 +124,7 @@ AwEHoUQDQgAEqKZfUNnv5CPRKl948xujWlvrIaQBvmXt24LWXznnIPu0R9B+qTtt
 zu/jpZ7WEszLPo5tQFiCQ3/fifjYXi+l4A==
 -----END EC PRIVATE KEY-----"""
 
-# This name breaks convention, but needs to be this way until txchecker is fixed.
+# This name breaks convention, but must be this way until txchecker is fixed.
 privateED25519openssh = b"""-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
 QyNTUxOQAAACAVhRHr+5kp7khHVqV+AZ0aj52chGVvnbYeX5AOhOHiDAAAAJhWJn55ViZ+
@@ -133,7 +133,7 @@ AAAEBh7vZt1Kj8XMWXKTHb3JyHz1uk0nP1Fk0xW9fBkHH/AxWFEev7mSnuSEdWpX4BnRqP
 nZyEZW+dth5fkA6E4eIMAAAAEw==
 -----END OPENSSH PRIVATE KEY-----"""
 
-# This name breaks convention, but needs to be this way until txchecker is fixed.
+# This name breaks convention, but must be this way until txchecker is fixed.
 publicED25519openssh = (b"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBWFEev7mSnuS"
 b"EdWpX4BnRqPnZyEZW+dth5fkA6E4eIM comment")
 
