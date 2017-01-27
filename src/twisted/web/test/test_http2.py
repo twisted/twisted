@@ -2494,15 +2494,15 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Advance the clock to see that we abort the connection.
         reactor.advance(14)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
         reactor.advance(1)
         self.assertTrue(transport.disconnecting)
-        self.assertTrue(transport.aborted)
+        self.assertTrue(transport.disconnected)
 
 
     def test_losingConnectionCancelsTheAbort(self):
@@ -2527,7 +2527,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Advance the clock, but right before the end fire connectionLost.
         reactor.advance(14)
@@ -2536,7 +2536,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         # Check that the transport isn't forcibly closed.
         reactor.advance(1)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
 
     def test_losingConnectionWithNoAbortTimeOut(self):
@@ -2562,10 +2562,10 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Advance the clock an arbitrarily long way, and confirm it never
         # aborts.
         reactor.advance(2**32)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)

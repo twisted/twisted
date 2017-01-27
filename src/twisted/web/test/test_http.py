@@ -272,20 +272,20 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         self.assertFalse(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Force the initial timeout.
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Watch the transport get force-closed.
         clock.advance(14)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
         clock.advance(1)
         self.assertTrue(transport.disconnecting)
-        self.assertTrue(transport.aborted)
+        self.assertTrue(transport.disconnected)
 
 
     def test_transportNotAbortedAfterConnectionLost(self):
@@ -301,12 +301,12 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         self.assertFalse(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Force the initial timeout.
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Move forward nearly to the timeout, then fire connectionLost.
         clock.advance(14)
@@ -315,7 +315,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         # Check that the transport isn't forcibly closed.
         clock.advance(1)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
 
     def test_transportNotAbortedWithZeroAbortTimeout(self):
@@ -332,17 +332,17 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
         self.assertFalse(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Force the initial timeout.
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
         # Move an absurdly long way just to prove the point.
         clock.advance(2**32)
         self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.aborted)
+        self.assertFalse(transport.disconnected)
 
 
     def test_noPipeliningApi(self):
