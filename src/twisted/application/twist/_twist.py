@@ -97,16 +97,12 @@ class Twist(object):
         """
         runnerOptions = {}
 
-        for runnerOpt, twistOpt in (
-            (RunnerOptions.fileLogObserverFactory, "fileLogObserverFactory"),
-        ):
-            runnerOptions[runnerOpt] = twistOptions[twistOpt]
-
         return dict(
             options=runnerOptions,
             reactor=twistOptions["reactor"],
             defaultLogLevel=twistOptions["logLevel"],
             logFile=twistOptions["logFile"],
+            fileLogObserverFactory=twistOptions["fileLogObserverFactory"],
         )
 
 

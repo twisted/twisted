@@ -35,7 +35,8 @@ class Runner(object):
         self, options={},
         reactor=None,
         pidFile=nonePIDFile, kill=False,
-        defaultLogLevel=LogLevel.info, logFile=stderr,
+        defaultLogLevel=LogLevel.info,
+        logFile=stderr, fileLogObserverFactory=textFileLogObserver,
     ):
         """
         @param options: Configuration options for this runner.
@@ -57,13 +58,19 @@ class Runner(object):
 
         @param logFile: A file stream to write logging output to.
         @type logFile: writable file-like object
+
+        @param fileLogObserverFactory: A factory for the file log observer to
+            use when starting the logging system.
+        @type pidFile: callable that takes a single writable file-like object
+            argument and returns a L{twisted.logger.FileLogObserver}
         """
-        self.options         = options
-        self.reactor         = reactor
-        self.pidFile         = pidFile
-        self.kill            = kill
-        self.defaultLogLevel = defaultLogLevel
-        self.logFile         = logFile
+        self.options                = options
+        self.reactor                = reactor
+        self.pidFile                = pidFile
+        self.kill                   = kill
+        self.defaultLogLevel        = defaultLogLevel
+        self.logFile                = logFile
+        self.fileLogObserverFactory = fileLogObserverFactory
 
 
     def run(self):
@@ -121,9 +128,7 @@ class Runner(object):
         """
         logFile = self.logFile
 
-        fileLogObserverFactory = self.options.get(
-            RunnerOptions.fileLogObserverFactory, textFileLogObserver
-        )
+        fileLogObserverFactory = self.fileLogObserverFactory
 
         fileLogObserver = fileLogObserverFactory(logFile)
 
@@ -187,12 +192,6 @@ class RunnerOptions(Names):
     These are meant to be used as keys in the options given to L{Runner}, with
     corresponding values as noted below.
 
-    @cvar fileLogObserverFactory: What file log observer to use when starting
-        the logging system.
-        Corresponding value: callable that returns a
-        L{twisted.logger.FileLogObserver}
-    @type fileLogObserverFactory: L{NamedConstant}
-
     @cvar whenRunning: Hook to call when the reactor is running.
         This can be considered the Twisted equivalent to C{main()}.
         Corresponding value: callable that takes the options mapping given to
@@ -204,6 +203,5 @@ class RunnerOptions(Names):
     @type reactorExited: L{NamedConstant}
     """
 
-    fileLogObserverFactory = NamedConstant()
     whenRunning            = NamedConstant()
     reactorExited          = NamedConstant()

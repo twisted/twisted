@@ -136,12 +136,11 @@ class TwistTests(twisted.trial.unittest.TestCase):
         self.assertEqual(
             Twist.runnerOptions(options),
             dict(
-                options={
-                    RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
-                },
+                options={},
                 reactor=self.installedReactors["default"],
                 defaultLogLevel=LogLevel.info,
                 logFile=stdout,
+                fileLogObserverFactory=jsonFileLogObserver,
             )
         )
 
@@ -194,12 +193,11 @@ class TwistTests(twisted.trial.unittest.TestCase):
         self.assertEqual(
             runners[0].args,
             dict(
-                options={
-                    RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
-                },
+                options={},
                 reactor=self.installedReactors["default"],
                 defaultLogLevel=LogLevel.info,
                 logFile=stdout,
+                fileLogObserverFactory=jsonFileLogObserver,
             )
         )
         self.assertEqual(runners[0].runs, 1)

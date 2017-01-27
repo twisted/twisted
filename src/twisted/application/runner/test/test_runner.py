@@ -241,11 +241,9 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         # Start logging
         runner = Runner(
-            {
-                RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
-            },
             defaultLogLevel=LogLevel.critical,
             logFile=logFile,
+            fileLogObserverFactory=MockFileLogObserver,
         )
         runner.startLogging()
 
