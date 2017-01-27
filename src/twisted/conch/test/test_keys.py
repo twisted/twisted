@@ -351,6 +351,31 @@ G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
         self.assertRaises(keys.BadKeyError,
             keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
 
+    def test_fromOpenSSHBadRSADeocde(self):
+            """
+            Tests for invalid key types.
+            """
+            badKey = b"""-----BEGIN RSA PRIVATE KEY-----
+    MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
+    LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
+    Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
+    G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
+    -----END RSA PRIVATE KEY-----"""
+            self.assertRaises(keys.BadKeyError,
+                              keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
+
+    def test_fromOpenSSHBadDSADeocde(self):
+            """
+            Tests for invalid key types.
+            """
+            badKey = b"""-----BEGIN DSA PRIVATE KEY-----
+    MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
+    LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
+    Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
+    G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
+    -----END DSA PRIVATE KEY-----"""
+            self.assertRaises(keys.BadKeyError,
+                              keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
 
     def test_fromOpenSSH_with_whitespace(self):
         """
@@ -892,6 +917,20 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertFalse(eckey.isPublic())
         self.assertEqual(keydata.ECDatanistp256, eckey.data())
 
+    def test_fromPrivateBlobED25519(self):
+        """
+        A private ED25519 key is correctly generated from a private key blob.
+        """
+        edblob = (
+            common.NS(b'ssh-ed25519') +
+            common.NS(keydata.ED25519Data['signing'][:32])
+        )
+
+        edkey = keys.Key._fromString_PRIVATE_BLOB(edblob)
+
+        self.assertFalse(edkey.isPublic())
+        self.assertEqual(keydata.ED25519Data, edkey.data())
+
 
     def test_blobRSA(self):
         """
@@ -1184,7 +1223,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
-        self.assertFalse(key.verify(b'bad-sig', data))
+
+        badsignature = signature[:15] + common.NS(b'bad-sig')
+        self.assertFalse(key.verify(badsignature, data))
 
 
     def test_verifyRSA(self):
