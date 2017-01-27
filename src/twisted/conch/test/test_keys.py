@@ -338,6 +338,7 @@ class KeyTests(unittest.TestCase):
         self._testPublicPrivateFromString(keydata.publicDSA_openssh,
                 keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
 
+
     def test_fromOpenSSHErrors(self):
         """
         Tests for invalid key types.
@@ -351,31 +352,34 @@ G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
         self.assertRaises(keys.BadKeyError,
             keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
 
+
     def test_fromOpenSSHBadRSADeocde(self):
-            """
-            Tests for invalid key types.
-            """
-            badKey = b"""-----BEGIN RSA PRIVATE KEY-----
-    MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
-    LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
-    Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
-    G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
-    -----END RSA PRIVATE KEY-----"""
-            self.assertRaises(keys.BadKeyError,
-                              keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
+        """
+        Tests for invalid RSA key.
+        """
+        badKey = b"""-----BEGIN RSA PRIVATE KEY-----
+MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
+LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
+Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
+G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
+-----END RSA PRIVATE KEY-----"""
+        self.assertRaises(keys.BadKeyError,
+                          keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
+
 
     def test_fromOpenSSHBadDSADeocde(self):
-            """
-            Tests for invalid key types.
-            """
-            badKey = b"""-----BEGIN DSA PRIVATE KEY-----
-    MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
-    LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
-    Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
-    G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
-    -----END DSA PRIVATE KEY-----"""
-            self.assertRaises(keys.BadKeyError,
-                              keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
+        """
+        Tests for invalid DSA key.
+        """
+        badKey = b"""-----BEGIN DSA PRIVATE KEY-----
+MIGkAgEBBDAtAi7I8j73WCX20qUM5hhHwHuFzYWYYILs2Sh8UZ+awNkARZ/Fu2LU
+LLl5RtOQpbWgBwYFK4EEACKhZANiAATU17sA9P5FRwSknKcFsjjsk0+E3CeXPYX0
+Tk/M0HK3PpWQWgrO8JdRHP9eFE9O/23P8BumwFt7F/AvPlCzVd35VfraFT0o4cCW
+G0RqpQ+np31aKmeJshkcYALEchnU+tQ=
+-----END DSA PRIVATE KEY-----"""
+        self.assertRaises(keys.BadKeyError,
+                          keys.Key._fromString_PRIVATE_OPENSSH, badKey, None)
+
 
     def test_fromOpenSSH_with_whitespace(self):
         """
@@ -916,6 +920,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertFalse(eckey.isPublic())
         self.assertEqual(keydata.ECDatanistp256, eckey.data())
+
 
     def test_fromPrivateBlobED25519(self):
         """
