@@ -206,7 +206,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         predicate set to the given log level that contains a file observer of
         the given type which writes to the given file.
         """
-        logFile = object()
+        logFile = BytesIO()
 
         # Patch the log beginner so that we don't try to start the already
         # running (started by trial) logging system.
@@ -242,10 +242,10 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Start logging
         runner = Runner(
             {
-                RunnerOptions.logFile: logFile,
                 RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
             },
             defaultLogLevel=LogLevel.critical,
+            logFile=logFile,
         )
         runner.startLogging()
 

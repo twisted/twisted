@@ -98,7 +98,6 @@ class Twist(object):
         runnerOptions = {}
 
         for runnerOpt, twistOpt in (
-            (RunnerOptions.logFile, "logFile"),
             (RunnerOptions.fileLogObserverFactory, "fileLogObserverFactory"),
         ):
             runnerOptions[runnerOpt] = twistOptions[twistOpt]
@@ -107,6 +106,7 @@ class Twist(object):
             options=runnerOptions,
             reactor=twistOptions["reactor"],
             defaultLogLevel=twistOptions["logLevel"],
+            logFile=twistOptions["logFile"],
         )
 
 

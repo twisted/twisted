@@ -35,7 +35,7 @@ class Runner(object):
         self, options={},
         reactor=None,
         pidFile=nonePIDFile, kill=False,
-        defaultLogLevel=LogLevel.info,
+        defaultLogLevel=LogLevel.info, logFile=stderr,
     ):
         """
         @param options: Configuration options for this runner.
@@ -54,12 +54,16 @@ class Runner(object):
         @param defaultLogLevel: The default log level to start the logging
             system with.
         @type defaultLogLevel: L{NamedConstant} from L{LogLevel}
+
+        @param logFile: A file stream to write logging output to.
+        @type logFile: writable file-like object
         """
         self.options         = options
         self.reactor         = reactor
         self.pidFile         = pidFile
         self.kill            = kill
         self.defaultLogLevel = defaultLogLevel
+        self.logFile         = logFile
 
 
     def run(self):
@@ -115,7 +119,7 @@ class Runner(object):
         """
         Start the L{twisted.logger} logging system.
         """
-        logFile = self.options.get(RunnerOptions.logFile, stderr)
+        logFile = self.logFile
 
         fileLogObserverFactory = self.options.get(
             RunnerOptions.fileLogObserverFactory, textFileLogObserver
@@ -183,10 +187,6 @@ class RunnerOptions(Names):
     These are meant to be used as keys in the options given to L{Runner}, with
     corresponding values as noted below.
 
-    @cvar logFile: A file stream to write logging output to.
-        Corresponding value: writable file like object.
-    @type logFile: L{NamedConstant}
-
     @cvar fileLogObserverFactory: What file log observer to use when starting
         the logging system.
         Corresponding value: callable that returns a
@@ -204,7 +204,6 @@ class RunnerOptions(Names):
     @type reactorExited: L{NamedConstant}
     """
 
-    logFile                = NamedConstant()
     fileLogObserverFactory = NamedConstant()
     whenRunning            = NamedConstant()
     reactorExited          = NamedConstant()

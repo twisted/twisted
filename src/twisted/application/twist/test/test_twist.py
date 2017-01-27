@@ -137,11 +137,11 @@ class TwistTests(twisted.trial.unittest.TestCase):
             Twist.runnerOptions(options),
             dict(
                 options={
-                    RunnerOptions.logFile: stdout,
                     RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
                 },
                 reactor=self.installedReactors["default"],
                 defaultLogLevel=LogLevel.info,
+                logFile=stdout,
             )
         )
 
@@ -195,11 +195,11 @@ class TwistTests(twisted.trial.unittest.TestCase):
             runners[0].args,
             dict(
                 options={
-                    RunnerOptions.logFile: stdout,
                     RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
                 },
                 reactor=self.installedReactors["default"],
                 defaultLogLevel=LogLevel.info,
+                logFile=stdout,
             )
         )
         self.assertEqual(runners[0].runs, 1)
