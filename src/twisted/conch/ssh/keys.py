@@ -473,9 +473,9 @@ class Key(object):
                     ).private_key(default_backend())
                 )
             elif kind == b'DSA':
-                p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
                 if len(decodedKey) < 6:
                     raise BadKeyError('DSA key failed to decode properly')
+                p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
                 return cls(
                     dsa.DSAPrivateNumbers(
                         x=x,
