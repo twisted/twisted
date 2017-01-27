@@ -1128,6 +1128,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                          + b'D/////////\n/w'
                          + keydata.privateED25519openssh[180:])
 
+        self.assertEqual(key.toString('openssh'),
+                         keydata.privateED25519openssh[:166]
+                         + b'ID/////////\n/w'
+                         + keydata.privateED25519openssh[180:-57]
+                         + b'Q==\n-----END OPENSSH PRIVATE KEY-----')
+
 
     def test_toLSHRSA(self):
         """
