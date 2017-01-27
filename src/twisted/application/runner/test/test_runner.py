@@ -240,11 +240,13 @@ class RunnerTests(twisted.trial.unittest.TestCase):
                 FileLogObserver.__init__(self, outFile, str)
 
         # Start logging
-        runner = Runner({
-            RunnerOptions.logFile: logFile,
-            RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
-            RunnerOptions.defaultLogLevel: LogLevel.critical,
-        })
+        runner = Runner(
+            {
+                RunnerOptions.logFile: logFile,
+                RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
+            },
+            defaultLogLevel=LogLevel.critical,
+        )
         runner.startLogging()
 
         # Check for a filtering observer

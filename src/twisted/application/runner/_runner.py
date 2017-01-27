@@ -32,7 +32,10 @@ class Runner(object):
 
 
     def __init__(
-        self, options={}, reactor=None, pidFile=nonePIDFile, kill=False
+        self, options={},
+        reactor=None,
+        pidFile=nonePIDFile, kill=False,
+        defaultLogLevel=LogLevel.info,
     ):
         """
         @param options: Configuration options for this runner.
@@ -47,11 +50,16 @@ class Runner(object):
         @param kill: Whether this runner should kill an existing running
             instance of the application.
         @type kill: L{bool}
+
+        @param defaultLogLevel: The default log level to start the logging
+            system with.
+        @type defaultLogLevel: L{NamedConstant} from L{LogLevel}
         """
-        self.options = options
-        self.reactor = reactor
-        self.pidFile = pidFile
-        self.kill    = kill
+        self.options         = options
+        self.reactor         = reactor
+        self.pidFile         = pidFile
+        self.kill            = kill
+        self.defaultLogLevel = defaultLogLevel
 
 
     def run(self):
@@ -116,9 +124,7 @@ class Runner(object):
         fileLogObserver = fileLogObserverFactory(logFile)
 
         logLevelPredicate = LogLevelFilterPredicate(
-            defaultLogLevel=self.options.get(
-                RunnerOptions.defaultLogLevel, LogLevel.info
-            )
+            defaultLogLevel=self.defaultLogLevel
         )
 
         filteringObserver = FilteringLogObserver(
@@ -177,11 +183,6 @@ class RunnerOptions(Names):
     These are meant to be used as keys in the options given to L{Runner}, with
     corresponding values as noted below.
 
-    @cvar defaultLogLevel: The default log level to start the logging system
-        with.
-        Corresponding value: L{NamedConstant} from L{LogLevel}.
-    @type defaultLogLevel: L{NamedConstant}
-
     @cvar logFile: A file stream to write logging output to.
         Corresponding value: writable file like object.
     @type logFile: L{NamedConstant}
@@ -203,7 +204,6 @@ class RunnerOptions(Names):
     @type reactorExited: L{NamedConstant}
     """
 
-    defaultLogLevel        = NamedConstant()
     logFile                = NamedConstant()
     fileLogObserverFactory = NamedConstant()
     whenRunning            = NamedConstant()
