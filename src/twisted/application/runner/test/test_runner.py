@@ -5,7 +5,6 @@
 Tests for L{twisted.application.runner._runner}.
 """
 
-import sys
 from signal import SIGTERM
 from io import BytesIO
 import errno
@@ -14,14 +13,13 @@ from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
     FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
 )
-from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
 from .._pidfile import PIDFile, NonePIDFile
 from .._runner import Runner, RunnerOptions
 from .test_pidfile import DummyFilePath
-from .reactor import MockReactor
+from .mockreactor import MockReactor
 
 import twisted.trial.unittest
 
@@ -311,7 +309,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         L{Runner.startReactor} with the C{reactor} argument runs the given
         reactor.
         """
-        reactor = MemoryReactor()
+        reactor = MockReactor(self)
         runner = Runner(reactor=reactor)
         runner.startReactor()
 
@@ -332,7 +330,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         options = {
             RunnerOptions.whenRunning: txmain,
         }
-        runner = Runner(options, reactor=MemoryReactor())
+        runner = Runner(options, reactor=MockReactor(self))
         runner.startReactor()
 
         self.assertEqual(len(optionsSeen), 1)
