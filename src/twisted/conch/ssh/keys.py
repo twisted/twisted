@@ -808,10 +808,10 @@ class Key(object):
         """
         if self.type() == 'ED25519':
             if self.isPublic():
-                reprstr = '<ed25519 Verification Key\nkey: %s>' %\
+                reprstr = '<ed25519 Verification Key\nkey: %s>' % \
                           (self.data()['verify'],)
             else:
-                reprstr = '<ed25519 Signing Key\nkey: %s>' %\
+                reprstr = '<ed25519 Signing Key\nkey: %s>' % \
                           (self.data()['signing'],)
         elif self.type() == 'EC':
             data = self.data()

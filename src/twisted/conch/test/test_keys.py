@@ -240,10 +240,12 @@ class KeyTests(unittest.TestCase):
                 'public_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_openssh),
                 'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicECDSA_openssh),
-                'public_openssh')
-        self.assertEqual(keys.Key._guessStringType(keydata.publicED25519openssh),
-                'public_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicECDSA_openssh),
+            'public_openssh')
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicED25519openssh),
+            'public_openssh')
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateRSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(
@@ -1174,6 +1176,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+        self.assertFalse(key.verify(b'bad-sig', data))
 
 
     def test_verifyRSA(self):
@@ -1305,9 +1308,9 @@ y:""" +
         The repr of a L{keys.Key} contains all the OpenSSH format for ED25519
         public keys.
         """
-        teststr = '<ed25519 Verification Key\nkey: %s>' %\
-               (b'\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R\xf9\xfe\xa5T\xdf'
-                b'\xc3\xe6\xfd\xcb\xa4{\x8e\x06P\xc1\xb6,\xcdg\xc4')
+        teststr = '<ed25519 Verification Key\nkey: %s>' % \
+            (b'\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R\xf9\xfe\xa5T\xdf'
+                b'\xc3\xe6\xfd\xcb\xa4{\x8e\x06P\xc1\xb6,\xcdg\xc4',)
 
         self.assertEqual(repr(keys.Key(self.ed25519Obj).public()), teststr)
 
@@ -1317,12 +1320,12 @@ y:""" +
         The repr of a L{keys.Key} contains all the OpenSSH format for ED25519
         private keys.
         """
-        teststr = '<ed25519 Signing Key\nkey: %s>' %\
-                (b'\xab\xef\x82\xc2ng\xab\x82\xfb\xa1\x82\xf6S\x9b'
-                    b'\x01\x96\xd8M]\x86\x8f\x13\xbe|_\xf2\x1bG\x85G'
-                    b'\xd8\x85\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R'
-                    b'\xf9\xfe\xa5T\xdf\xc3\xe6\xfd\xcb\xa4{\x8e\x06P'
-                    b'\xc1\xb6,\xcdg\xc4')
+        teststr = '<ed25519 Signing Key\nkey: %s>' % \
+            (b'\xab\xef\x82\xc2ng\xab\x82\xfb\xa1\x82\xf6S\x9b'
+                b'\x01\x96\xd8M]\x86\x8f\x13\xbe|_\xf2\x1bG\x85G'
+                b'\xd8\x85\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R'
+                b'\xf9\xfe\xa5T\xdf\xc3\xe6\xfd\xcb\xa4{\x8e\x06P'
+                b'\xc1\xb6,\xcdg\xc4',)
 
         self.assertEqual(repr(keys.Key(self.ed25519Obj)), teststr)
 
