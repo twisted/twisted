@@ -31,23 +31,34 @@ class Runner(object):
     log = Logger()
 
 
-    def __init__(self, options={}, reactor=None):
+    def __init__(
+        self, options={}, reactor=None, pidFile=nonePIDFile, kill=False
+    ):
         """
         @param options: Configuration options for this runner.
         @type options: mapping of L{RunnerOptions} to values
 
         @param reactor: The reactor to start and run the application in.
         @type reactor: L{IReactorCore}
+
+        @param pidFile: The file to store the running process ID in.
+        @type pidFile: L{IPIDFile}
+
+        @param kill: Whether this runner should kill an existing running
+            instance of the application.
+        @type kill: L{bool}
         """
         self.options = options
         self.reactor = reactor
+        self.pidFile = pidFile
+        self.kill    = kill
 
 
     def run(self):
         """
         Run this command.
         """
-        pidFile = self.options.get(RunnerOptions.pidFile, nonePIDFile)
+        pidFile = self.pidFile
 
         self.killIfRequested()
 
@@ -64,26 +75,24 @@ class Runner(object):
 
     def killIfRequested(self):
         """
-        Kill a running instance of this application if L{RunnerOptions.kill} is
-        specified and L{True} in C{self.options}.
-        This requires that L{RunnerOptions.pidFile} also be specified;
-        exit with L{ExitStatus.EX_USAGE} if kill is requested with no PID file.
+        If C{self.kill} is true, attempt to kill a running instance of the
+        application.
         """
-        pidFile = self.options.get(RunnerOptions.pidFile)
+        pidFile = self.pidFile
 
-        if self.options.get(RunnerOptions.kill, False):
-            if pidFile is None:
+        if self.kill:
+            if pidFile is nonePIDFile:
                 exit(ExitStatus.EX_USAGE, "No PID file specified.")
                 return  # When testing, patched exit doesn't exit
-            else:
-                try:
-                    pid = pidFile.read()
-                except EnvironmentError:
-                    exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
-                    return  # When testing, patched exit doesn't exit
-                except InvalidPIDFileError:
-                    exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
-                    return  # When testing, patched exit doesn't exit
+
+            try:
+                pid = pidFile.read()
+            except EnvironmentError:
+                exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
+                return  # When testing, patched exit doesn't exit
+            except InvalidPIDFileError:
+                exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
+                return  # When testing, patched exit doesn't exit
 
             self.startLogging()
             self.log.info("Terminating process: {pid}", pid=pid)
@@ -172,14 +181,6 @@ class RunnerOptions(Names):
     These are meant to be used as keys in the options given to L{Runner}, with
     corresponding values as noted below.
 
-    @cvar pidFile: The PID file to use.
-        Corresponding value: L{IPIDFile}.
-    @type pidFile: L{NamedConstant}
-
-    @cvar kill: Whether this runner should kill an existing running instance.
-        Corresponding value: L{bool}.
-    @type kill: L{NamedConstant}
-
     @cvar defaultLogLevel: The default log level to start the logging system
         with.
         Corresponding value: L{NamedConstant} from L{LogLevel}.
@@ -206,8 +207,6 @@ class RunnerOptions(Names):
     @type reactorExited: L{NamedConstant}
     """
 
-    pidFile                = NamedConstant()
-    kill                   = NamedConstant()
     defaultLogLevel        = NamedConstant()
     logFile                = NamedConstant()
     fileLogObserverFactory = NamedConstant()

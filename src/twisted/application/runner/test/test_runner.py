@@ -88,7 +88,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         pidFile = DummyPIDFile()
 
-        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
+        runner = DummyRunner(pidFile=pidFile)
 
         self.assertFalse(pidFile.entered)
         self.assertFalse(pidFile.exited)
@@ -108,7 +108,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
         pidFile.isRunning = lambda: True
 
-        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
+        runner = DummyRunner(pidFile=pidFile)
         runner.run()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
@@ -129,11 +129,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithoutPIDFile(self):
         """
-        L{Runner.killIfRequested} with L{RunnerOptions.kill} but without
-        L{RunnerOptions.pidFile}, exits with L{ExitStatus.EX_USAGE} and
-        the expected message, and also doesn't indiscriminately murder anyone.
+        L{Runner.killIfRequested} when C{kill} is true but C{pidFile} is
+        L{nonePIDFile} exits with L{ExitStatus.EX_USAGE} and the expected
+        message; and also doesn't indiscriminately murder anyone.
         """
-        runner = Runner({RunnerOptions.kill: True})
+        runner = Runner(kill=True)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [])
@@ -143,15 +143,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFile(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and
-        L{RunnerOptions.pidFile} performs a targeted killing of the
-        appropriate process.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        performs a targeted killing of the appropriate process.
         """
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [(self.pid, SIGTERM)])
@@ -161,9 +157,8 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileCantRead(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} that it can't read exits with
-        L{ExitStatus.EX_IOERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        that it can't read exits with L{ExitStatus.EX_IOERR}.
         """
         pidFile = PIDFile(DummyFilePath(None))
 
@@ -172,10 +167,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         pidFile.read = read
 
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
@@ -184,15 +176,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileEmpty(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} containing no value exits with
-        L{ExitStatus.EX_DATAERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        containing no value exits with L{ExitStatus.EX_DATAERR}.
         """
         pidFile = PIDFile(DummyFilePath(b""))
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
@@ -201,15 +189,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} containing a non-integer value exits with
-        L{ExitStatus.EX_DATAERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        containing a non-integer value exits with L{ExitStatus.EX_DATAERR}.
         """
         pidFile = PIDFile(DummyFilePath(b"** totally not a number, dude **"))
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
