@@ -86,8 +86,13 @@ ECDatanistp521 = {
 }
 
 ED25519Data = {
-    'seed': binascii.unhexlify(
-        'abef82c26e67ab82fba182f6539b0196d84d5d868f13be7c5ff21b478547d885')
+    'signing': binascii.unhexlify(
+        '47f0d30544cea87b5db741fe2ed8d90c1aa3802a6a3d70f580df344b3c2efabe'
+        '5efddfee48d4249b3e902996d37509835bd7a5912cf89778f1d2857f33d96123'
+    ),
+    'verify': binascii.unhexlify(
+        '5efddfee48d4249b3e902996d37509835bd7a5912cf89778f1d2857f33d96123'
+    )
 }
 
 privateECDSA_openssh521 = b"""-----BEGIN EC PRIVATE KEY-----

@@ -14,6 +14,7 @@ import warnings
 
 from hashlib import md5, sha256
 import base64
+import struct
 
 from incremental import Version
 
@@ -809,10 +810,10 @@ class Key(object):
         if self.type() == 'ED25519':
             if self.isPublic():
                 reprstr = '<ed25519 Verification Key\nkey: %s>' % \
-                          (self.data()['verify'],)
+                          (binascii.hexlify(self.data()['verify']),)
             else:
                 reprstr = '<ed25519 Signing Key\nkey: %s>' % \
-                          (self.data()['signing'],)
+                          (binascii.hexlify(self.data()['signing']),)
         elif self.type() == 'EC':
             data = self.data()
             name = data['curve'].decode('utf-8')
@@ -1290,7 +1291,8 @@ class Key(object):
                           + b64Data + b' ' + extra).strip()
         else:
             if self.type() == 'ED25519':
-                # Openssh-key-v1 specification:
+                # OpenSSH loosely follows the openssh-key-v1 specification
+                # found here:
                 # http://cvsweb.openbsd.org/cgi-bin/cvsweb/
                 # src/usr.bin/ssh/PROTOCOL.key
                 basestr = b'openssh-key-v1\x00\x00'
@@ -1300,8 +1302,12 @@ class Key(object):
                 verstr += common.NS(self._keyObject.verify_key._key)
                 basestr += common.NS(verstr)
 
-                keystr = bytearray(randbytes.secureRandom(4))
-                keystr += bytearray(randbytes.secureRandom(4))
+                # Part of the openssh-key-v1 spec is to have a random
+                # number repeat itself to verify successful decryption.
+                # Which means every time toString is called here,
+                # the output will be slightly different.
+                randstr = bytearray(randbytes.secureRandom(4))
+                keystr = randstr + randstr
                 keystr += verstr
                 keystr += common.NS(self._keyObject._signing_key)
 
@@ -1309,7 +1315,6 @@ class Key(object):
                     keystr += common.NS(extra)
 
                 i = 1
-                import struct
                 while len(keystr) % 8 != 0:
                     keystr += struct.pack('b', i)
                     i += 1

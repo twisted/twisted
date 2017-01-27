@@ -195,8 +195,12 @@ class KeyTests(unittest.TestCase):
             curve=keydata.ECDatanistp521['curve']
         )._keyObject
         self.ed25519Obj = keys.Key._fromED25519Components(
-            seed=keydata.ED25519Data['seed'],
+            seed=keydata.ED25519Data['signing'][:32],
             isPrivate=True
+        )._keyObject
+        self.ed25519publicObj = keys.Key._fromED25519Components(
+            seed=keydata.ED25519Data['verify'],
+            isPrivate=False
         )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
             b'\x00\x00`N\xac\xb4@qK\xa0(\xc3\xf2h \xd3\xdd\xee6Np\x9d_'
@@ -270,6 +274,8 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key._guessStringType(
             b'\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x01'),
             'blob')
+        self.assertEqual(keys.Key._guessStringType(
+            b'\x00\x00\x00\x0bssh-ed25519'), 'blob')
         self.assertEqual(keys.Key._guessStringType(b'not a key'),
                 None)
 
@@ -316,6 +322,8 @@ class KeyTests(unittest.TestCase):
         """
         Test that keys are correctly generated from OpenSSH strings.
         """
+        self._testPublicPrivateFromString(keydata.publicED25519openssh,
+                keydata.privateED25519openssh, 'ED25519', keydata.ED25519Data)
         self._testPublicPrivateFromString(keydata.publicECDSA_openssh,
                 keydata.privateECDSA_openssh, 'EC', keydata.ECDatanistp256)
         self._testPublicPrivateFromString(keydata.publicRSA_openssh,
@@ -935,7 +943,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         Return the over-the-wire SSH format of the ED25519 public key.
         """
         self.assertEqual(
-            keys.Key(self.ed25519Obj).blob(),
+            keys.Key(self.ed25519publicObj).blob(),
             common.NS(b'ssh-ed25519') +
             common.NS(self.ed25519Obj.verify_key._key)
         )
@@ -1309,8 +1317,7 @@ y:""" +
         public keys.
         """
         teststr = '<ed25519 Verification Key\nkey: %s>' % \
-            (b'\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R\xf9\xfe\xa5T\xdf'
-                b'\xc3\xe6\xfd\xcb\xa4{\x8e\x06P\xc1\xb6,\xcdg\xc4',)
+        (b'5efddfee48d4249b3e902996d37509835bd7a5912cf89778f1d2857f33d96123',)
 
         self.assertEqual(repr(keys.Key(self.ed25519Obj).public()), teststr)
 
@@ -1321,11 +1328,9 @@ y:""" +
         private keys.
         """
         teststr = '<ed25519 Signing Key\nkey: %s>' % \
-            (b'\xab\xef\x82\xc2ng\xab\x82\xfb\xa1\x82\xf6S\x9b'
-                b'\x01\x96\xd8M]\x86\x8f\x13\xbe|_\xf2\x1bG\x85G'
-                b'\xd8\x85\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R'
-                b'\xf9\xfe\xa5T\xdf\xc3\xe6\xfd\xcb\xa4{\x8e\x06P'
-                b'\xc1\xb6,\xcdg\xc4',)
+                  (b'47f0d30544cea87b5db741fe2ed8d90c1aa3802a6a3d70f580df344'
+                    b'b3c2efabe5efddfee48d4249b3e902996d37509835bd7a5912cf89'
+                    b'778f1d2857f33d96123',)
 
         self.assertEqual(repr(keys.Key(self.ed25519Obj)), teststr)
 
