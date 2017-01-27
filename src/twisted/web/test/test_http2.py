@@ -2350,6 +2350,34 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertEqual(frames[-1].last_stream_id, lastStreamID)
 
 
+    def prepareAbortTest(self, abortTimeout=H2Connection.abortTimeout):
+        """
+        Does the common setup for tests that want to test the aborting
+        functionality of the HTTP/2 stack.
+        """
+        frameFactory = FrameFactory()
+        initialData = frameFactory.clientConnectionPreface()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+        conn.abortTimeout = abortTimeout
+
+        # Advance the clock.
+        reactor.advance(100)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.disconnected)
+
+        return reactor, conn, transport
+
+
     def test_timeoutAfterInactivity(self):
         """
         When a L{H2Connection} does not receive any data for more than the
@@ -2477,24 +2505,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         When a L{H2Connection} has timed the connection out, and the transport
         doesn't get torn down within 15 seconds, it gets forcibly closed.
         """
-        frameFactory = FrameFactory()
-        initialData = frameFactory.clientConnectionPreface()
-
-        reactor, conn, transport = self.initiateH2Connection(
-            initialData, requestFactory=DummyHTTPHandler,
-        )
-
-        # Advance the clock.
-        reactor.advance(100)
-
-        self.assertTimedOut(
-            transport.value(),
-            frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
-            lastStreamID=0
-        )
-        self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.disconnected)
+        reactor, conn, transport = self.prepareAbortTest()
 
         # Advance the clock to see that we abort the connection.
         reactor.advance(14)
@@ -2510,24 +2521,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         When a L{H2Connection} has timed the connection out, getting
         C{connectionLost} called on it cancels the forcible connection close.
         """
-        frameFactory = FrameFactory()
-        initialData = frameFactory.clientConnectionPreface()
-
-        reactor, conn, transport = self.initiateH2Connection(
-            initialData, requestFactory=DummyHTTPHandler,
-        )
-
-        # Advance the clock.
-        reactor.advance(100)
-
-        self.assertTimedOut(
-            transport.value(),
-            frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
-            lastStreamID=0
-        )
-        self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.disconnected)
+        reactor, conn, transport = self.prepareAbortTest()
 
         # Advance the clock, but right before the end fire connectionLost.
         reactor.advance(14)
@@ -2544,25 +2538,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         When a L{H2Connection} has timed the connection out but the
         C{abortTimeout} is set to L{None}, the connection is never aborted.
         """
-        frameFactory = FrameFactory()
-        initialData = frameFactory.clientConnectionPreface()
-
-        reactor, conn, transport = self.initiateH2Connection(
-            initialData, requestFactory=DummyHTTPHandler,
-        )
-        conn.abortTimeout = None
-
-        # Advance the clock.
-        reactor.advance(100)
-
-        self.assertTimedOut(
-            transport.value(),
-            frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
-            lastStreamID=0
-        )
-        self.assertTrue(transport.disconnecting)
-        self.assertFalse(transport.disconnected)
+        reactor, conn, transport = self.prepareAbortTest(abortTimeout=None)
 
         # Advance the clock an arbitrarily long way, and confirm it never
         # aborts.
