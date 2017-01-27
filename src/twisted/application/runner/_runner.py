@@ -134,10 +134,6 @@ class Runner(object):
         the reactor is running, then start the reactor.
         """
         if self.reactor is None:
-            # reactor = defaultReactor
-            # reactor.install()
-            # self.reactor = reactor
-
             defaultReactor.install()
             from twisted.internet import reactor
             self.reactor = reactor
