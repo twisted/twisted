@@ -5,6 +5,7 @@
 Tests for L{twisted.application.runner._runner}.
 """
 
+import sys
 from signal import SIGTERM
 from io import BytesIO
 import errno
@@ -20,6 +21,7 @@ from .._exit import ExitStatus
 from .._pidfile import PIDFile, NonePIDFile
 from .._runner import Runner, RunnerOptions
 from .test_pidfile import DummyFilePath
+from .reactor import MockReactor
 
 import twisted.trial.unittest
 
@@ -291,14 +293,13 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_startReactorWithoutReactor(self):
         """
-        L{Runner.startReactor} without L{RunnerOptions.reactor} runs the default
+        L{Runner.startReactor} without the C{reactor} argument runs the default
         reactor.
         """
-        # Patch defaultReactor
-        reactor = MemoryReactor()
+        reactor = MockReactor(self)
         self.patch(_runner, "defaultReactor", reactor)
 
-        runner = Runner({})
+        runner = Runner()
         runner.startReactor()
 
         self.assertTrue(reactor.hasInstalled)
@@ -307,10 +308,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_startReactorWithReactor(self):
         """
-        L{Runner.startReactor} with L{RunnerOptions.reactor} runs that reactor.
+        L{Runner.startReactor} with the C{reactor} argument runs the given
+        reactor.
         """
         reactor = MemoryReactor()
-        runner = Runner({RunnerOptions.reactor: reactor})
+        runner = Runner(reactor=reactor)
         runner.startReactor()
 
         self.assertTrue(reactor.hasRun)
@@ -328,10 +330,9 @@ class RunnerTests(twisted.trial.unittest.TestCase):
             optionsSeen.append(options)
 
         options = {
-            RunnerOptions.reactor: MemoryReactor(),
             RunnerOptions.whenRunning: txmain,
         }
-        runner = Runner(options)
+        runner = Runner(options, reactor=MemoryReactor())
         runner.startReactor()
 
         self.assertEqual(len(optionsSeen), 1)

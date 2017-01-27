@@ -135,12 +135,14 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(
             Twist.runnerOptions(options),
-            {
-                RunnerOptions.reactor: self.installedReactors["default"],
-                RunnerOptions.defaultLogLevel: LogLevel.info,
-                RunnerOptions.logFile: stdout,
-                RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
-            }
+            dict(
+                options={
+                    RunnerOptions.defaultLogLevel: LogLevel.info,
+                    RunnerOptions.logFile: stdout,
+                    RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
+                },
+                reactor=self.installedReactors["default"],
+            )
         )
 
 
@@ -173,8 +175,8 @@ class TwistTests(twisted.trial.unittest.TestCase):
         runners = []
 
         class Runner(object):
-            def __init__(self, options):
-                self.options = options
+            def __init__(self, **kwargs):
+                self.args = kwargs
                 self.runs = 0
                 runners.append(self)
 
@@ -190,12 +192,14 @@ class TwistTests(twisted.trial.unittest.TestCase):
         self.assertEqual(len(self.serviceStarts), 1)
         self.assertEqual(len(runners), 1)
         self.assertEqual(
-            runners[0].options,
-            {
-                RunnerOptions.reactor: self.installedReactors["default"],
-                RunnerOptions.defaultLogLevel: LogLevel.info,
-                RunnerOptions.logFile: stdout,
-                RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
-            }
+            runners[0].args,
+            dict(
+                options={
+                    RunnerOptions.defaultLogLevel: LogLevel.info,
+                    RunnerOptions.logFile: stdout,
+                    RunnerOptions.fileLogObserverFactory: jsonFileLogObserver,
+                },
+                reactor=self.installedReactors["default"],
+            )
         )
         self.assertEqual(runners[0].runs, 1)

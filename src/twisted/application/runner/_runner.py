@@ -31,12 +31,16 @@ class Runner(object):
     log = Logger()
 
 
-    def __init__(self, options):
+    def __init__(self, options={}, reactor=None):
         """
         @param options: Configuration options for this runner.
         @type options: mapping of L{RunnerOptions} to values
+
+        @param reactor: The reactor to start and run the application in.
+        @type reactor: L{IReactorCore}
         """
         self.options = options
+        self.reactor = reactor
 
 
     def run(self):
@@ -118,15 +122,18 @@ class Runner(object):
     def startReactor(self):
         """
         Register C{self.whenRunning} with the reactor so that it is called once
-        the reactor is running and start the reactor.
-        If L{RunnerOptions.reactor} is specified in C{self.options}, use that
-        reactor; otherwise use the default reactor.
+        the reactor is running, then start the reactor.
         """
-        reactor = self.options.get(RunnerOptions.reactor)
-        if reactor is None:
-            reactor = defaultReactor
-            reactor.install()
-            self.options[RunnerOptions.reactor] = reactor
+        if self.reactor is None:
+            # reactor = defaultReactor
+            # reactor.install()
+            # self.reactor = reactor
+
+            defaultReactor.install()
+            from twisted.internet import reactor
+            self.reactor = reactor
+        else:
+            reactor = self.reactor
 
         reactor.callWhenRunning(self.whenRunning)
 
@@ -165,10 +172,6 @@ class RunnerOptions(Names):
     These are meant to be used as keys in the options given to L{Runner}, with
     corresponding values as noted below.
 
-    @cvar reactor: The reactor to start.
-        Corresponding value: L{IReactorCore}.
-    @type reactor: L{NamedConstant}
-
     @cvar pidFile: The PID file to use.
         Corresponding value: L{IPIDFile}.
     @type pidFile: L{NamedConstant}
@@ -203,7 +206,6 @@ class RunnerOptions(Names):
     @type reactorExited: L{NamedConstant}
     """
 
-    reactor                = NamedConstant()
     pidFile                = NamedConstant()
     kill                   = NamedConstant()
     defaultLogLevel        = NamedConstant()

@@ -98,14 +98,16 @@ class Twist(object):
         runnerOptions = {}
 
         for runnerOpt, twistOpt in (
-            (RunnerOptions.reactor, "reactor"),
             (RunnerOptions.defaultLogLevel, "logLevel"),
             (RunnerOptions.logFile, "logFile"),
             (RunnerOptions.fileLogObserverFactory, "fileLogObserverFactory"),
         ):
             runnerOptions[runnerOpt] = twistOptions[twistOpt]
 
-        return runnerOptions
+        return dict(
+            options=runnerOptions,
+            reactor=twistOptions["reactor"],
+        )
 
 
     @staticmethod
@@ -116,7 +118,7 @@ class Twist(object):
         @param runnerOptions: Options to pass to the runner.
         @type runnerOptions: L{RunnerOptions}
         """
-        runner = Runner(runnerOptions)
+        runner = Runner(**runnerOptions)
         runner.run()
 
 
