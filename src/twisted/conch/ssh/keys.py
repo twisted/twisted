@@ -807,12 +807,12 @@ class Key(object):
         Return a pretty representation of this object.
         """
         if self.type() == 'ED25519':
-            hexkey = binascii.hexlify(self.data())
-
             if self.isPublic():
-                reprstr = '<ed25519 Verification Key\nkey: %s\n>' % (hexkey,)
+                reprstr = '<ed25519 Verification Key\nkey: %s>' %\
+                          (self.data()['verify'],)
             else:
-                reprstr = '<ed25519 Signing Key\nkey: %s\n>' % (hexkey,)
+                reprstr = '<ed25519 Signing Key\nkey: %s>' %\
+                          (self.data()['signing'],)
         elif self.type() == 'EC':
             data = self.data()
             name = data['curve'].decode('utf-8')
@@ -828,7 +828,7 @@ class Key(object):
                 else:
                     out += "\n%s:\n\t%s" % (k, v)
 
-            reprstr = out + ">\n"
+            reprstr = out + ">"
         else:
             lines = [
                 '<%s %s (%s bits)' % (
@@ -1291,7 +1291,8 @@ class Key(object):
         else:
             if self.type() == 'ED25519':
                 # Openssh-key-v1 specification:
-                # cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/
+                # http://cvsweb.openbsd.org/cgi-bin/cvsweb/
+                # src/usr.bin/ssh/PROTOCOL.key
                 basestr = b'openssh-key-v1\x00\x00'
                 basestr += b'\x00\x00\x04none\x00' * 2
                 basestr += b"\x00\x00" * 3 + b"\x01"
@@ -1299,9 +1300,20 @@ class Key(object):
                 verstr += common.NS(self._keyObject.verify_key._key)
                 basestr += common.NS(verstr)
 
-                keystr = str(randbytes.secureRandom(4)) * 2
+                keystr = bytearray(randbytes.secureRandom(4))
+                keystr += bytearray(randbytes.secureRandom(4))
                 keystr += verstr
                 keystr += common.NS(self._keyObject._signing_key)
+
+                if extra:
+                    keystr += common.NS(extra)
+
+                i = 1
+                import struct
+                while len(keystr) % 8 != 0:
+                    keystr += struct.pack('b', i)
+                    i += 1
+
                 basestr += common.NS(keystr)
 
                 b64str = base64.b64encode(basestr)
@@ -1309,10 +1321,10 @@ class Key(object):
 
                 i = 0
                 while i < len(b64str):
-                    retstr += b64str[i: i + 70] + '\n'
+                    retstr += b64str[i: i + 70] + b'\n'
                     i += 70
 
-                retstr += b'-----END OPENSSH PRIVATE KEY-----\n'
+                retstr += b'-----END OPENSSH PRIVATE KEY-----'
             elif self.type() == 'EC':
                 # EC keys has complex ASN.1 structure hence we do this this way.
                 if not extra:
@@ -1536,8 +1548,13 @@ class Key(object):
 
         keyType = self.type()
         if keyType == 'ED25519':
+            if self.isPublic():
+                key = self._keyObject
+            else:
+                key = self._keyObject.verify_key
+
             try:
-                self._keyObject.verify(data, common.getNS(signature)[0])
+                key.verify(data, common.getNS(signature)[0])
                 return True
             except:
                 return False

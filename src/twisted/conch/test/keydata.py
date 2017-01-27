@@ -127,15 +127,15 @@ zu/jpZ7WEszLPo5tQFiCQ3/fifjYXi+l4A==
 # This name breaks convention, but must be this way until txchecker is fixed.
 privateED25519openssh = b"""-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACAVhRHr+5kp7khHVqV+AZ0aj52chGVvnbYeX5AOhOHiDAAAAJhWJn55ViZ+
-eQAAAAtzc2gtZWQyNTUxOQAAACAVhRHr+5kp7khHVqV+AZ0aj52chGVvnbYeX5AOhOHiDA
-AAAEBh7vZt1Kj8XMWXKTHb3JyHz1uk0nP1Fk0xW9fBkHH/AxWFEev7mSnuSEdWpX4BnRqP
-nZyEZW+dth5fkA6E4eIMAAAAEw==
+QyNTUxOQAAACBe/d/uSNQkmz6QKZbTdQmDW9elkSz4l3jx0oV/M9lhIwAAAJAOJ9ILDifS
+CwAAAAtzc2gtZWQyNTUxOQAAACBe/d/uSNQkmz6QKZbTdQmDW9elkSz4l3jx0oV/M9lhIw
+AAAEBH8NMFRM6oe123Qf4u2NkMGqOAKmo9cPWA3zRLPC76vl793+5I1CSbPpApltN1CYNb
+16WRLPiXePHShX8z2WEjAAAAB2NvbW1lbnQBAgMEBQY=
 -----END OPENSSH PRIVATE KEY-----"""
 
 # This name breaks convention, but must be this way until txchecker is fixed.
-publicED25519openssh = (b"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBWFEev7mSnuS"
-b"EdWpX4BnRqPnZyEZW+dth5fkA6E4eIM comment")
+publicED25519openssh = (b"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF793+5I1CSbPpA"
+b"pltN1CYNb16WRLPiXePHShX8z2WEj comment")
 
 publicRSA_openssh = (b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBE"
 b"vLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYL"

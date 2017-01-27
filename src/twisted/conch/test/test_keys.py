@@ -228,7 +228,7 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj).size(), 256)
         self.assertEqual(keys.Key(self.ecObj384).size(), 384)
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
-
+        self.assertEqual(keys.Key(self.ed25519Obj).size(), 32)
 
 
     def test__guessStringType(self):
@@ -241,6 +241,8 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_openssh),
                 'public_openssh')
         self.assertEqual(keys.Key._guessStringType(keydata.publicECDSA_openssh),
+                'public_openssh')
+        self.assertEqual(keys.Key._guessStringType(keydata.publicED25519openssh),
                 'public_openssh')
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateRSA_openssh), 'private_openssh')
@@ -1064,8 +1066,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateED25519openssh)
         self.assertEqual(key.public().toString('openssh', b'comment'),
                          keydata.publicED25519openssh)
-        self.assertEqual(key.public().toString('openssh'),
-                         keydata.publicED25519openssh[:-8])
+
+        # We need to patch the comparison value because SecureRandom
+        # gets patched when run as a unit test.
+        self.assertEqual(key.toString('openssh', b'comment'),
+                         keydata.privateED25519openssh[:167]
+                         + b'D/////////\n/w'
+                         + keydata.privateED25519openssh[180:])
 
 
     def test_toLSHRSA(self):
@@ -1155,6 +1162,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key384.verify(signature384, data))
         self.assertTrue(key521.public().verify(signature521, data))
         self.assertTrue(key521.verify(signature521, data))
+
+
+    def test_signAndVerifyED25519(self):
+        """
+        Signed data can be verified using ED25519.
+        """
+        data = b'some-data'
+        key = keys.Key.fromString(keydata.privateED25519openssh)
+        signature = key.sign(data)
+
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
 
 
     def test_verifyRSA(self):
@@ -1260,7 +1279,7 @@ x:
 \t76282513020392096317118503144964731774299773481750550543382904345687059013883
 y:""" +
 "\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
+"6683104>")
 
 
     def test_reprPrivateECDSA(self):
@@ -1278,8 +1297,34 @@ x:
 \t76282513020392096317118503144964731774299773481750550543382904345687059013883
 y:""" +
 "\n\t8154319786460285263226566476944164753434437589431431968106113715931064" +
-"6683104>\n")
+"6683104>")
 
+
+    def test_reprPublicED25519(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for ED25519
+        public keys.
+        """
+        teststr = '<ed25519 Verification Key\nkey: %s>' %\
+               (b'\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R\xf9\xfe\xa5T\xdf'
+                b'\xc3\xe6\xfd\xcb\xa4{\x8e\x06P\xc1\xb6,\xcdg\xc4')
+
+        self.assertEqual(repr(keys.Key(self.ed25519Obj).public()), teststr)
+
+
+    def test_reprPrivateED25519(self):
+        """
+        The repr of a L{keys.Key} contains all the OpenSSH format for ED25519
+        private keys.
+        """
+        teststr = '<ed25519 Signing Key\nkey: %s>' %\
+                (b'\xab\xef\x82\xc2ng\xab\x82\xfb\xa1\x82\xf6S\x9b'
+                    b'\x01\x96\xd8M]\x86\x8f\x13\xbe|_\xf2\x1bG\x85G'
+                    b'\xd8\x85\xa1\x1f\xa0,\x93\xb6w\x8a\xc0\x8e\xe4R'
+                    b'\xf9\xfe\xa5T\xdf\xc3\xe6\xfd\xcb\xa4{\x8e\x06P'
+                    b'\xc1\xb6,\xcdg\xc4')
+
+        self.assertEqual(repr(keys.Key(self.ed25519Obj)), teststr)
 
 
 class KeyKeyObjectTests(unittest.TestCase):
