@@ -270,6 +270,10 @@ class IOPumpTests(TestCase):
         it.  Verify that a streaming producer registered with one of the
         transports does not receive invalid L{IPushProducer} method calls and
         ends in the right state.
+
+        @param mode: C{u"server"} to test a producer registered with the
+            server transport.  C{u"client"} to test a producer registered with
+            the client transport.
         """
         serverProto = Protocol()
         serverTransport = FakeTransport(serverProto, isServer=False)
