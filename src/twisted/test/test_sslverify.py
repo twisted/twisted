@@ -888,7 +888,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
 
         message = ("Passing method to twisted.internet.ssl.CertificateOptions "
-                   "was deprecated in Twisted NEXT. Please use a combination "
+                   "was deprecated in Twisted 17.1.0rc1. Please use a combination "
                    "of insecurelyLowerMinimumTo, raiseMinimumTo, and "
                    "lowerMaximumSecurityTo instead, as Twisted will correctly "
                    "configure the method.")
