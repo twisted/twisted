@@ -1,0 +1,1 @@
+Fix crash when using SynchronousTestCase with Warning object which does not store a string as its first argument (like libmysqlclient).
