@@ -77,7 +77,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2016 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2017 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
