@@ -121,6 +121,9 @@ class StrictPushProducerTests(TestCase):
     def assertStopped(self, producer):
         """
         Assert that the given producer is in the stopped state.
+
+        @param producer: The producer to verify.
+        @type producer: L{StrictPushProducer}
         """
         self.assertEqual(producer._state, u"stopped")
 
@@ -128,6 +131,9 @@ class StrictPushProducerTests(TestCase):
     def assertPaused(self, producer):
         """
         Assert that the given producer is in the paused state.
+
+        @param producer: The producer to verify.
+        @type producer: L{StrictPushProducer}
         """
         self.assertEqual(producer._state, u"paused")
 
@@ -135,6 +141,9 @@ class StrictPushProducerTests(TestCase):
     def assertRunning(self, producer):
         """
         Assert that the given producer is in the running state.
+
+        @param producer: The producer to verify.
+        @type producer: L{StrictPushProducer}
         """
         self.assertEqual(producer._state, u"running")
 
