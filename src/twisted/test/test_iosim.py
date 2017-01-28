@@ -276,7 +276,7 @@ class IOPumpTests(TestCase):
             the client transport.
         """
         serverProto = Protocol()
-        serverTransport = FakeTransport(serverProto, isServer=False)
+        serverTransport = FakeTransport(serverProto, isServer=True)
 
         clientProto = Protocol()
         clientTransport = FakeTransport(clientProto, isServer=False)
