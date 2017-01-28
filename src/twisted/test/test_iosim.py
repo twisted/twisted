@@ -50,7 +50,7 @@ class FakeTransportTests(TestCase):
 @implementer(IPushProducer)
 class StrictPushProducer(object):
     """
-    A L{IPushProducer} implementation which produces nothing but enforces
+    An L{IPushProducer} implementation which produces nothing but enforces
     preconditions on its state transition methods.
     """
     _state = u"running"
@@ -75,6 +75,179 @@ class StrictPushProducer(object):
                 u"Cannot resume {} IPushProducer".format(self._state)
             )
         self._state = u"running"
+
+
+
+class StrictPushProducerTests(TestCase):
+    """
+    Tests for L{StrictPushProducer}.
+    """
+    def _initial(self):
+        """
+        @return: A new L{StrictPushProducer} which has not been through any state
+            changes.
+        """
+        return StrictPushProducer()
+
+
+    def _stopped(self):
+        """
+        @return: A new, stopped L{StrictPushProducer}.
+        """
+        producer = StrictPushProducer()
+        producer.stopProducing()
+        return producer
+
+
+    def _paused(self):
+        """
+        @return: A new, paused L{StrictPushProducer}.
+        """
+        producer = StrictPushProducer()
+        producer.pauseProducing()
+        return producer
+
+
+    def _resumed(self):
+        """
+        @return: A new L{StrictPushProducer} which has been paused and resumed.
+        """
+        producer = StrictPushProducer()
+        producer.pauseProducing()
+        producer.resumeProducing()
+        return producer
+
+
+    def assertStopped(self, producer):
+        """
+        Assert that the given producer is in the stopped state.
+        """
+        self.assertEqual(producer._state, u"stopped")
+
+
+    def assertPaused(self, producer):
+        """
+        Assert that the given producer is in the paused state.
+        """
+        self.assertEqual(producer._state, u"paused")
+
+
+    def assertRunning(self, producer):
+        """
+        Assert that the given producer is in the running state.
+        """
+        self.assertEqual(producer._state, u"running")
+
+
+    def test_stopThenStop(self):
+        """
+        L{StrictPushProducer.stopProducing} raises L{ValueError} if called when
+        the producer is stopped.
+        """
+        self.assertRaises(ValueError, self._stopped().stopProducing)
+
+
+    def test_stopThenPause(self):
+        """
+        L{StrictPushProducer.pauseProducing} raises L{ValueError} if called when
+        the producer is stopped.
+        """
+        self.assertRaises(ValueError, self._stopped().pauseProducing)
+
+
+    def test_stopThenResume(self):
+        """
+        L{StrictPushProducer.resumeProducing} raises L{ValueError} if called when
+        the producer is stopped.
+        """
+        self.assertRaises(ValueError, self._stopped().resumeProducing)
+
+
+    def test_pauseThenStop(self):
+        """
+        L{StrictPushProducer} is stopped if C{stopProducing} is called on a paused
+        producer.
+        """
+        producer = self._paused()
+        producer.stopProducing()
+        self.assertStopped(producer)
+
+
+    def test_pauseThenPause(self):
+        """
+        L{StrictPushProducer.pauseProducing} raises L{ValueError} if called on a
+        paused producer.
+        """
+        producer = self._paused()
+        self.assertRaises(ValueError, producer.pauseProducing)
+
+
+    def test_pauseThenResume(self):
+        """
+        L{StrictPushProducer} is resumed if C{resumeProducing} is called on a
+        paused producer.
+        """
+        producer = self._paused()
+        producer.resumeProducing()
+        self.assertRunning(producer)
+
+
+    def test_resumeThenStop(self):
+        """
+        L{StrictPushProducer} is stopped if C{stopProducing} is called on a
+        resumed producer.
+        """
+        producer = self._resumed()
+        producer.stopProducing()
+        self.assertStopped(producer)
+
+
+    def test_resumeThenPause(self):
+        """
+        L{StrictPushProducer} is paused if C{pauseProducing} is called on a
+        resumed producer.
+        """
+        producer = self._resumed()
+        producer.pauseProducing()
+        self.assertPaused(producer)
+
+
+    def test_resumeThenResume(self):
+        """
+        L{StrictPushProducer.resumeProducing} raises L{ValueError} if called on a
+        resumed producer.
+        """
+        producer = self._resumed()
+        self.assertRaises(ValueError, producer.resumeProducing)
+
+
+    def test_stop(self):
+        """
+        L{StrictPushProducer} is stopped if C{stopProducing} is called in the
+        initial state.
+        """
+        producer = self._initial()
+        producer.stopProducing()
+        self.assertStopped(producer)
+
+
+    def test_pause(self):
+        """
+        L{StrictPushProducer} is paused if C{pauseProducing} is called in the
+        initial state.
+        """
+        producer = self._initial()
+        producer.pauseProducing()
+        self.assertPaused(producer)
+
+
+    def test_resume(self):
+        """
+        L{StrictPushProducer} raises L{ValueError} if C{resumeProducing} is called
+        in the initial state.
+        """
+        producer = self._initial()
+        self.assertRaises(ValueError, producer.resumeProducing)
 
 
 
