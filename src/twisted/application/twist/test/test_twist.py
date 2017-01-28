@@ -11,7 +11,7 @@ from twisted.logger import LogLevel, jsonFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
 from ...service import IService, MultiService
 from ...runner._exit import ExitStatus
-from ...runner._runner import Runner, RunnerOptions
+from ...runner._runner import Runner
 from ...runner.test.test_runner import DummyExit
 from ...twist import _twist
 from .._options import TwistOptions
@@ -124,19 +124,18 @@ class TwistTests(twisted.trial.unittest.TestCase):
         )
 
 
-    def test_runnerOptions(self):
+    def test_runnerArguments(self):
         """
-        L{Twist.runnerOptions} translates L{TwistOptions} to a L{RunnerOptions}
-        map.
+        L{Twist.runnerArguments} translates L{TwistOptions} to runner
+        arguments.
         """
         options = Twist.options([
             "twist", "--reactor=default", "--log-format=json", "web"
         ])
 
         self.assertEqual(
-            Twist.runnerOptions(options),
+            Twist.runnerArguments(options),
             dict(
-                options={},
                 reactor=self.installedReactors["default"],
                 defaultLogLevel=LogLevel.info,
                 logFile=stdout,
@@ -149,19 +148,21 @@ class TwistTests(twisted.trial.unittest.TestCase):
         """
         L{Twist.run} runs the runner with the given options.
         """
-        options = TwistOptions()
-        runner = Runner(options)
-
-        optionsSeen = []
+        argsSeen = []
 
         self.patch(
-            Runner, "run", lambda self: optionsSeen.append(self.options)
+            Runner, "__init__", lambda self, **args: argsSeen.append(args)
+        )
+        self.patch(
+            Runner, "run", lambda self: None
         )
 
-        runner.run()
+        twistOptions = Twist.options(["twist", "web"])
+        runnerArguments = Twist.runnerArguments(twistOptions)
+        Twist.run(runnerArguments)
 
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        self.assertEqual(len(argsSeen), 1)
+        self.assertEqual(argsSeen[0], runnerArguments)
 
 
     def test_main(self):
@@ -193,7 +194,6 @@ class TwistTests(twisted.trial.unittest.TestCase):
         self.assertEqual(
             runners[0].args,
             dict(
-                options={},
                 reactor=self.installedReactors["default"],
                 defaultLogLevel=LogLevel.info,
                 logFile=stdout,

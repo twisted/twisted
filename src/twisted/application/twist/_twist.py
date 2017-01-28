@@ -11,7 +11,7 @@ import sys
 from twisted.python.usage import UsageError
 from ..service import Application, IService
 from ..runner._exit import exit, ExitStatus
-from ..runner._runner import Runner, RunnerOptions
+from ..runner._runner import Runner
 from ._options import TwistOptions
 
 
@@ -84,21 +84,19 @@ class Twist(object):
 
 
     @staticmethod
-    def runnerOptions(twistOptions):
+    def runnerArguments(twistOptions):
         """
-        Take options obtained from command line and configure options for the
-        application runner.
+        Take options obtained from command line and configure arguments to pass
+        to the application runner.
 
-        @param twistOptions: Command line options to convert to runner options.
+        @param twistOptions: Command line options to convert to runner
+            arguments.
         @type twistOptions: L{TwistOptions}
 
-        @return: The corresponding runner options.
-        @rtype: L{RunnerOptions}
+        @return: The corresponding runner arguments.
+        @rtype: L{dict}
         """
-        runnerOptions = {}
-
         return dict(
-            options=runnerOptions,
             reactor=twistOptions["reactor"],
             defaultLogLevel=twistOptions["logLevel"],
             logFile=twistOptions["logFile"],
@@ -107,14 +105,14 @@ class Twist(object):
 
 
     @staticmethod
-    def run(runnerOptions):
+    def run(runnerArguments):
         """
         Run the application service.
 
-        @param runnerOptions: Options to pass to the runner.
-        @type runnerOptions: L{RunnerOptions}
+        @param runnerArguments: Arguments to pass to the runner.
+        @type runnerArguments: L{dict}
         """
-        runner = Runner(**runnerOptions)
+        runner = Runner(**runnerArguments)
         runner.run()
 
 
@@ -136,4 +134,4 @@ class Twist(object):
         )
 
         cls.startService(reactor, service)
-        cls.run(cls.runnerOptions(options))
+        cls.run(cls.runnerArguments(options))

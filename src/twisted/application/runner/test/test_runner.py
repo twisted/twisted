@@ -17,7 +17,7 @@ from twisted.logger import (
 from ...runner import _runner
 from .._exit import ExitStatus
 from .._pidfile import PIDFile, NonePIDFile
-from .._runner import Runner, RunnerOptions
+from .._runner import Runner
 from .test_pidfile import DummyFilePath
 from .mockreactor import MockReactor
 
@@ -117,8 +117,8 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killNotRequested(self):
         """
-        L{Runner.killIfRequested} without L{RunnerOptions.kill} doesn't exit
-        and doesn't indiscriminately murder anyone.
+        L{Runner.killIfRequested} when C{kill} is false doesn't exit and
+        doesn't indiscriminately murder anyone.
         """
         runner = Runner({})
         runner.killIfRequested()
@@ -300,61 +300,51 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         self.assertTrue(reactor.hasRun)
 
 
-    def test_startReactorWithWhenRunning(self):
+    def test_startReactorWhenRunning(self):
         """
-        L{Runner.startReactor} with L{RunnerOptions.whenRunning} ensures that
-        the given callable is called with the runner's options when the reactor
-        is running.
+        L{Runner.startReactor} ensures that C{whenRunning} is called with
+        C{whenRunningArguments} when the reactor is running.
         """
-        optionsSeen = []
+        self._test_hook("whenRunning", "startReactor")
 
-        def txmain(options):
-            optionsSeen.append(options)
 
-        options = {
-            RunnerOptions.whenRunning: txmain,
+    def test_whenRunningWithArguments(self):
+        """
+        L{Runner.whenRunning} calls C{whenRunning} with
+        C{whenRunningArguments}.
+        """
+        self._test_hook("whenRunning")
+
+
+    def test_reactorExitedWithArguments(self):
+        """
+        L{Runner.whenRunning} calls C{reactorExited} with
+        C{reactorExitedArguments}.
+        """
+        self._test_hook("reactorExited")
+
+
+    def _test_hook(self, methodName, callerName=None):
+        if callerName is None:
+            callerName = methodName
+
+        arguments = dict(a=object(), b=object(), c=object())
+        argumentsSeen = []
+
+        def hook(**arguments):
+            argumentsSeen.append(arguments)
+
+        runnerArguments = {
+            methodName: hook,
+            "{}Arguments".format(methodName): arguments.copy(),
         }
-        runner = Runner(options, reactor=MockReactor(self))
-        runner.startReactor()
+        runner = Runner(reactor=MockReactor(self), **runnerArguments)
 
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        hookCaller = getattr(runner, callerName)
+        hookCaller()
 
-
-    def test_whenRunningWithWhenRunning(self):
-        """
-        L{Runner.whenRunning} with L{RunnerOptions.whenRunning} calls the given
-        callable with the runner's options.
-        """
-        optionsSeen = []
-
-        def txmain(options):
-            optionsSeen.append(options)
-
-        options = {RunnerOptions.whenRunning: txmain}
-        runner = Runner(options)
-        runner.whenRunning()
-
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
-
-
-    def test_reactorExitedWithReactorExited(self):
-        """
-        L{Runner.reactorExited} with L{RunnerOptions.reactorExited} calls the
-        given callable with the runner's options.
-        """
-        optionsSeen = []
-
-        def exited(options):
-            optionsSeen.append(options)
-
-        options = {RunnerOptions.reactorExited: exited}
-        runner = Runner(options)
-        runner.reactorExited()
-
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        self.assertEqual(len(argumentsSeen), 1)
+        self.assertEqual(argumentsSeen[0], arguments)
 
 
 

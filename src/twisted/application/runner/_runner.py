@@ -32,16 +32,15 @@ class Runner(object):
 
 
     def __init__(
-        self, options={},
+        self,
         reactor=None,
         pidFile=nonePIDFile, kill=False,
         defaultLogLevel=LogLevel.info,
         logFile=stderr, fileLogObserverFactory=textFileLogObserver,
+        whenRunning=lambda **_: None, whenRunningArguments={},
+        reactorExited=lambda **_: None, reactorExitedArguments={},
     ):
         """
-        @param options: Configuration options for this runner.
-        @type options: mapping of L{RunnerOptions} to values
-
         @param reactor: The reactor to start and run the application in.
         @type reactor: L{IReactorCore}
 
@@ -63,14 +62,35 @@ class Runner(object):
             use when starting the logging system.
         @type pidFile: callable that takes a single writable file-like object
             argument and returns a L{twisted.logger.FileLogObserver}
+
+        @param whenRunning: Hook to call after the reactor is running;
+            this is where the application code that relies on the reactor gets
+            called.
+        @type whenRunning: callable that takes the keyword arguments specified
+            by C{whenRunningArguments}
+
+        @param whenRunningArguments: Keyword arguments to pass to
+            C{whenRunning} when it is called.
+        @type whenRunningArguments: L{dict}
+
+        @param reactorExited: Hook to call after the reactor exits.
+        @type reactorExited: callable that takes the keyword arguments
+            specified by C{reactorExitedArguments}
+
+        @param reactorExitedArguments: Keyword arguments to pass to
+            C{reactorExited} when it is called.
+        @type reactorExitedArguments: L{dict}
         """
-        self.options                = options
         self.reactor                = reactor
         self.pidFile                = pidFile
         self.kill                   = kill
         self.defaultLogLevel        = defaultLogLevel
         self.logFile                = logFile
         self.fileLogObserverFactory = fileLogObserverFactory
+        self.whenRunningHook        = whenRunning
+        self.whenRunningArguments   = whenRunningArguments
+        self.reactorExitedHook      = reactorExited
+        self.reactorExitedArguments = reactorExitedArguments
 
 
     def run(self):
@@ -163,45 +183,17 @@ class Runner(object):
 
     def whenRunning(self):
         """
-        If L{RunnerOptions.whenRunning} is specified in C{self.options}, call
-        it.
+        Call C{self.whenRunning}.
 
-        @note: This method is called when the reactor is running.
+        @note: This method is called after the reactor starts running.
         """
-        whenRunning = self.options.get(RunnerOptions.whenRunning)
-        if whenRunning is not None:
-            whenRunning(self.options)
+        self.whenRunningHook(**self.whenRunningArguments)
 
 
     def reactorExited(self):
         """
-        If L{RunnerOptions.reactorExited} is specified in C{self.options}, call
-        it.
+        Call C{self.reactorExited}.
 
-        @note: This method is called after the reactor has exited.
+        @note: This method is called after the reactor exits.
         """
-        reactorExited = self.options.get(RunnerOptions.reactorExited)
-        if reactorExited is not None:
-            reactorExited(self.options)
-
-
-
-class RunnerOptions(Names):
-    """
-    Names for options recognized by L{Runner}.
-    These are meant to be used as keys in the options given to L{Runner}, with
-    corresponding values as noted below.
-
-    @cvar whenRunning: Hook to call when the reactor is running.
-        This can be considered the Twisted equivalent to C{main()}.
-        Corresponding value: callable that takes the options mapping given to
-        the runner as an argument.
-    @type whenRunning: L{NamedConstant}
-
-    @cvar reactorExited: Hook to call when the reactor has exited.
-        Corresponding value: callable that takes an empty arguments list
-    @type reactorExited: L{NamedConstant}
-    """
-
-    whenRunning            = NamedConstant()
-    reactorExited          = NamedConstant()
+        self.reactorExitedHook(**self.reactorExitedArguments)
