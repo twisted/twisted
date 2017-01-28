@@ -1,6 +1,15 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 17.1.0rc1 (2017-01-28)
+====================================
+
+Bugfixes
+--------
+ - twisted.names.authority.BindAuthority has been ported to Python 3.
+   (#8880)
+
+
 Twisted Names 16.6.0 (2016-11-17)
 =================================
 
