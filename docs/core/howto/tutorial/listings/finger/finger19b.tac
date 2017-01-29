@@ -233,16 +233,16 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
         return defer.succeed(list(self.users.keys()))

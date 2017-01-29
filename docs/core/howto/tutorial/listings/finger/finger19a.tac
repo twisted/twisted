@@ -193,11 +193,11 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 @implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
         return defer.succeed(list(self.users.keys()))
@@ -207,7 +207,7 @@ class MemoryFingerService(service.Service):
 
 
 application = service.Application('finger', uid=1, gid=1)
-f = MemoryFingerService(moshez='Happy and well')
+f = MemoryFingerService({b'moshez': b'Happy and well')
 serviceCollection = service.IServiceCollection(application)
 strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
