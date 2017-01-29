@@ -166,7 +166,7 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
     def showWarning(message, category, filename, lineno, file=None, line=None):
         assert isinstance(message, Warning)
         observeWarning(_Warning(
-                message.args[0], category, filename, lineno))
+                str(message), category, filename, lineno))
 
     # Disable the per-module cache for every module otherwise if the warning
     # which the caller is expecting us to collect was already emitted it won't
