@@ -19,7 +19,7 @@ class FTPOptionsTests(TestCase):
     Tests for the command line option parser used for C{twistd ftp}.
     """
 
-    usernamePassword = ('iamuser', 'thisispassword')
+    usernamePassword = (b'iamuser', b'thisispassword')
 
     def setUp(self):
         """
@@ -27,7 +27,7 @@ class FTPOptionsTests(TestCase):
         """
         self.filename = self.mktemp()
         f = FilePath(self.filename)
-        f.setContent(':'.join(self.usernamePassword))
+        f.setContent(b':'.join(self.usernamePassword))
         self.options = Options()
 
 
