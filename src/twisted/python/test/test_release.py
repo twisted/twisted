@@ -50,7 +50,7 @@ testingSphinxConf = "master_doc = 'index'\n"
 
 try:
     import pydoctor.driver
-    # it might not be installed, or it might use syntax not available in
+    # It might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
     pydoctorSkip = "Pydoctor is not present."
@@ -1224,7 +1224,7 @@ class SphinxBuilderTests(TestCase):
         """
         self.builder = SphinxBuilder()
 
-        # set up a place for a fake sphinx project
+        # Set up a place for a fake sphinx project
         self.twistedRootDir = FilePath(self.mktemp())
         self.sphinxDir = self.twistedRootDir.child("docs")
         self.sphinxDir.makedirs()
@@ -1269,16 +1269,16 @@ class SphinxBuilderTests(TestCase):
 
         @return: L{None}
         """
-        # check that file exists
+        # Check that file exists
         fpath = fileDir.child(fileName)
         self.assertTrue(fpath.exists())
 
-        # check that the output files have some content
+        # Check that the output files have some content
         fcontents = fpath.getContent()
         self.assertTrue(len(fcontents) > 0)
 
-        # check that the html files are at least html-ish
-        # this is not a terribly rigorous check
+        # Check that the html files are at least html-ish.
+        # This is not a terribly rigorous check.
         if fpath.path.endswith('.html'):
             self.assertIn(b"<body", fcontents)
 
@@ -1344,7 +1344,7 @@ class SphinxBuilderTests(TestCase):
         Check that SphinxBuilder.build fails when run against a non-sphinx
         directory.
         """
-        # note no fake sphinx project is created
+        # Note no fake sphinx project is created
         self.assertRaises(CalledProcessError,
                           self.builder.build,
                           self.sphinxDir)
