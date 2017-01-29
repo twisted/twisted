@@ -12,7 +12,7 @@ class MemoryFingerService(service.Service):
         self.users = kwargs
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
         return defer.succeed(list(self.users.keys()))
@@ -21,7 +21,7 @@ class MemoryFingerService(service.Service):
         self.users[user] = status
 
 
-f = MemoryFingerService(moshez='Happy and well')
+f = MemoryFingerService(moshez=b'Happy and well')
 serviceCollection = service.IServiceCollection(application)
 strports.service("tcp:1079:interface=127.0.0.1", IFingerSetterFactory(f)
                    ).setServiceParent(serviceCollection)

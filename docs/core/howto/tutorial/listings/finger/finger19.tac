@@ -12,12 +12,12 @@ class IFingerService(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def getUsers():
         """
-        Return a deferred returning a list of strings.
+        Return a deferred returning a L{list} of L{bytes}.
         """
 
 

@@ -5,7 +5,7 @@ from twisted.protocols import basic
 
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
-        self.transport.write(self.factory.getUser(user)+"\r\n")
+        self.transport.write(self.factory.getUser(user) + b"\r\n")
         self.transport.loseConnection()
 
 class FingerFactory(protocol.ServerFactory):
@@ -15,8 +15,8 @@ class FingerFactory(protocol.ServerFactory):
         self.users = kwargs
 
     def getUser(self, user):
-        return self.users.get(user, "No such user")
+        return self.users.get(user, b"No such user")
 
 fingerEndpoint = endpoints.serverFromString(reactor, "tcp:1079")
-fingerEndpoint.listen(FingerFactory(moshez='Happy and well'))
+fingerEndpoint.listen(FingerFactory(moshez=b'Happy and well'))
 reactor.run()
