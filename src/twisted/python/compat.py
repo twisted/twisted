@@ -245,7 +245,7 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    with open(filename, "rbU") as fin:
+    with open(filename, "rb") as fin:
         source = fin.read()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
