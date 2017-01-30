@@ -1279,7 +1279,7 @@ class SSHServerTransport(SSHTransportBase):
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        if self.kexAlg.find(b'25519') != -1:
+        if b'25519' in self.kexAlg:
             # Turn the public key into a public key object
             theirECPub = nacl.public.PublicKey(pktPub)
 
