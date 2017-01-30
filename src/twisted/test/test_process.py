@@ -2340,6 +2340,49 @@ class DumbWin32ProcTests(unittest.TestCase):
         self.assertEqual(program, "/usr/bin/python")
 
 
+
+class Win32CreateProcessFlagsTest(unittest.TestCase):
+    """
+    Check the flags passed to CreateProcess.
+    """
+
+    @defer.inlineCallbacks
+    def test_flags(self):
+        """
+        Verify that the flags passed to win32process.CreateProcess() prevent a
+        new console window from being created. See bug #5726 for a script to
+        test this interactively.
+        """
+        from twisted.internet import _dumbwin32proc
+        flags = []
+        real_CreateProcess = _dumbwin32proc.win32process.CreateProcess
+
+        def fake_createprocess(_appName, _commandLine, _processAttributes,
+                            _threadAttributes, _bInheritHandles, creationFlags,
+                            _newEnvironment, _currentDirectory, startupinfo):
+            """Store the creationFlags for later comparing."""
+            flags.append(creationFlags)
+            return real_CreateProcess(_appName, _commandLine,
+                            _processAttributes, _threadAttributes,
+                            _bInheritHandles, creationFlags, _newEnvironment,
+                            _currentDirectory, startupinfo)
+
+        self.patch(_dumbwin32proc.win32process, "CreateProcess",
+                   fake_createprocess)
+        exe = sys.executable
+        scriptPath = FilePath(__file__).sibling("process_cmdline.py")
+
+        d = defer.Deferred()
+        processProto = TrivialProcessProtocol(d)
+        comspec = str(os.environ["COMSPEC"])
+        cmd = [comspec, "/c", exe, scriptPath.path]
+        _dumbwin32proc.Process(reactor, processProto, None, cmd, {}, None)
+        yield d
+        self.assertEqual(flags,
+                         [_dumbwin32proc.win32process.CREATE_NO_WINDOW])
+
+
+
 class UtilTests(unittest.TestCase):
     """
     Tests for process-related helper functions (currently only
@@ -2551,6 +2594,7 @@ if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(re
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
     DumbWin32ProcTests.skip = skipMessage
+    Win32CreateProcessFlagsTest.skip = skipMessage
     Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):
