@@ -2341,7 +2341,7 @@ class DumbWin32ProcTests(unittest.TestCase):
 
 
 
-class Win32CreateProcessFlagsTest(unittest.TestCase):
+class Win32CreateProcessFlagsTests(unittest.TestCase):
     """
     Check the flags passed to CreateProcess.
     """
@@ -2355,20 +2355,35 @@ class Win32CreateProcessFlagsTest(unittest.TestCase):
         """
         from twisted.internet import _dumbwin32proc
         flags = []
-        real_CreateProcess = _dumbwin32proc.win32process.CreateProcess
+        realCreateProcess = _dumbwin32proc.win32process.CreateProcess
 
-        def fake_createprocess(_appName, _commandLine, _processAttributes,
-                            _threadAttributes, _bInheritHandles, creationFlags,
-                            _newEnvironment, _currentDirectory, startupinfo):
-            """Store the creationFlags for later comparing."""
+        def fakeCreateprocess(appName, commandLine, processAttributes,
+                              threadAttributes, bInheritHandles, creationFlags,
+                              newEnvironment, currentDirectory, startupinfo):
+            """
+            See the Windows API documentation for I{CreateProcess} for further details.
+
+            @param appName: The name of the module to be executed
+            @param commandLine: The command line to be executed.
+            @param processAttributes: Pointer to SECURITY_ATTRIBUTES structure or None.
+            @param threadAttributes: Pointer to SECURITY_ATTRIBUTES structure or  None
+            @param bInheritHandles: boolean to determine if inheritable handles from this
+                                    process are inherited in the new process
+            @param creationFlags: flags that control priority flags and creation of process.
+            @param newEnvironment: pointer to new environment block for new process, or None.
+            @param currentDirectory: full path to current directory of new process.
+            @param startupinfo: Pointer to STARTUPINFO or STARTUPINFOEX structure
+            @return: True on success, False on failure
+            @rtype: L{bool}
+            """
             flags.append(creationFlags)
-            return real_CreateProcess(_appName, _commandLine,
-                            _processAttributes, _threadAttributes,
-                            _bInheritHandles, creationFlags, _newEnvironment,
-                            _currentDirectory, startupinfo)
+            return realCreateProcess(appName, commandLine,
+                            processAttributes, threadAttributes,
+                            bInheritHandles, creationFlags, newEnvironment,
+                            currentDirectory, startupinfo)
 
         self.patch(_dumbwin32proc.win32process, "CreateProcess",
-                   fake_createprocess)
+                   fakeCreateprocess)
         exe = sys.executable
         scriptPath = FilePath(__file__).sibling("process_cmdline.py")
 
