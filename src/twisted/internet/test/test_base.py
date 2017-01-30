@@ -162,6 +162,7 @@ def nothing():
     """
 
 
+
 class DelayedCallMixin(object):
     """
     L{DelayedCall}
@@ -273,7 +274,7 @@ class DelayedCallMixin(object):
 
 
 
-class DelayedCallNoDebug(DelayedCallMixin, TestCase):
+class DelayedCallNoDebugTests(DelayedCallMixin, TestCase):
     """
     L{DelayedCall}
     """
@@ -299,7 +300,7 @@ class DelayedCallNoDebug(DelayedCallMixin, TestCase):
 
 
 
-class DelayedCallDebug(DelayedCallMixin, TestCase):
+class DelayedCallDebugTests(DelayedCallMixin, TestCase):
     """
     L{DelayedCall}
     """
