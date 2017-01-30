@@ -8,7 +8,7 @@ Tests for implementations of L{IReactorUNIX}.
 from __future__ import division, absolute_import
 
 from stat import S_IMODE
-from os import stat, close, urandom, unlink, rmdir, path, fstat
+from os import stat, close, urandom, unlink, fstat
 from tempfile import mktemp, mkstemp
 from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
