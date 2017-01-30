@@ -49,7 +49,7 @@ def runCommand(args, **kwargs):
 
     @param args: arguments passed to L{subprocess.check_output}
     @param kwargs: keyword arguments passed to L{subprocess.check_output}
-    @return: data from L{subprocess.checkoutput}
+    @return: data from L{subprocess.check_output}
     @rtype: L{bytes}
     """
     kwargs['stderr'] = STDOUT
