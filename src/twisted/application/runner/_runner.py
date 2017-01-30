@@ -51,7 +51,7 @@ class Runner(object):
 
         @param defaultLogLevel: The default log level to start the logging
             system with.
-        @type defaultLogLevel: L{NamedConstant} from L{LogLevel}
+        @type defaultLogLevel: L{constantly.NamedConstant} from L{LogLevel}
 
         @param logFile: A file stream to write logging output to.
         @type logFile: writable file-like object
