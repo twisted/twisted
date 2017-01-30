@@ -2609,7 +2609,7 @@ if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(re
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
     DumbWin32ProcTests.skip = skipMessage
-    Win32CreateProcessFlagsTest.skip = skipMessage
+    Win32CreateProcessFlagsTests.skip = skipMessage
     Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):
