@@ -305,7 +305,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         L{Runner.startReactor} ensures that C{whenRunning} is called with
         C{whenRunningArguments} when the reactor is running.
         """
-        self._test_hook("whenRunning", "startReactor")
+        self._testHook("whenRunning", "startReactor")
 
 
     def test_whenRunningWithArguments(self):
@@ -313,7 +313,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         L{Runner.whenRunning} calls C{whenRunning} with
         C{whenRunningArguments}.
         """
-        self._test_hook("whenRunning")
+        self._testHook("whenRunning")
 
 
     def test_reactorExitedWithArguments(self):
@@ -321,10 +321,24 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         L{Runner.whenRunning} calls C{reactorExited} with
         C{reactorExitedArguments}.
         """
-        self._test_hook("reactorExited")
+        self._testHook("reactorExited")
 
 
-    def _test_hook(self, methodName, callerName=None):
+    def _testHook(self, methodName, callerName=None):
+        """
+        Verify that the named hook is run with the expected arguments as
+        specified by the arguments used to create the L{Runner}, when the
+        specified caller is invoked.
+
+        @param methodName: The name of the hook to verify.
+        @type methodName: L{str}
+
+        @param callerName: The name of the method that is expected to cause the
+            hook to be called.
+            If C{None}, use the L{Runner} method with the same name as the
+            hook.
+        @type callerName: L{str}
+        """
         if callerName is None:
             callerName = methodName
 
