@@ -38,14 +38,12 @@ class KeywordOnlyTests(SynchronousTestCase):
             """
             b is a keyword-only argument, with a default value.
             """
-            pass
 
         def func2(*a, b=True, c, d, e):
             """
             b, c, d, e  are keyword-only arguments.
             b has a default value.
             """
-            pass
 
         self.assertEqual(self.checkPassed(func1, 1, 2, 3),
                          dict(a=(1, 2, 3), b=True))
