@@ -162,9 +162,9 @@ def nothing():
     """
 
 
-class DelayedCallTests(TestCase):
+class DelayedCallMixin(object):
     """
-    Tests for L{DelayedCall}.
+    L{DelayedCall}
     """
     def _getDelayedCallAt(self, time):
         """
@@ -183,7 +183,6 @@ class DelayedCallTests(TestCase):
         Create two L{DelayedCall} instanced scheduled to run at different
         times.
         """
-        self.patch(DelayedCall, 'debug', True)
         self.zero = self._getDelayedCallAt(0)
         self.one = self._getDelayedCallAt(1)
 
@@ -191,10 +190,9 @@ class DelayedCallTests(TestCase):
     def test_str(self):
         """
         The string representation of a L{DelayedCall} instance, as returned by
-        C{str}, includes the unsigned id of the instance, as well as its state,
+        L{str}, includes the unsigned id of the instance, as well as its state,
         the function to be called, and the function arguments.
         """
-        DelayedCall.debug = False
         dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
         self.assertEqual(
             str(dc),
@@ -272,3 +270,57 @@ class DelayedCallTests(TestCase):
         self.assertTrue(self.zero != self.one)
         self.assertFalse(self.zero != self.zero)
         self.assertFalse(self.one != self.one)
+
+
+
+class DelayedCallNoDebug(DelayedCallMixin, TestCase):
+    """
+    L{DelayedCall}
+    """
+    def setUp(self):
+        """
+        Turn debug off.
+        """
+        self.patch(DelayedCall, 'debug', False)
+        DelayedCallMixin.setUp(self)
+
+
+    def test_str(self):
+        """
+        The string representation of a L{DelayedCall} instance, as returned by
+        L{str}, includes the unsigned id of the instance, as well as its state,
+        the function to be called, and the function arguments.
+        """
+        dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
+        expected = (
+            "<DelayedCall 0x{:x} [10.5s] called=0 cancelled=0 "
+            "nothing(3, A=5)>".format(id(dc)))
+        self.assertEqual(str(dc), expected)
+
+
+
+class DelayedCallDebug(DelayedCallMixin, TestCase):
+    """
+    L{DelayedCall}
+    """
+    def setUp(self):
+        """
+        Turn debug on.
+        """
+        self.patch(DelayedCall, 'debug', True)
+        DelayedCallMixin.setUp(self)
+
+
+    def test_str(self):
+        """
+        The string representation of a L{DelayedCall} instance, as returned by
+        L{str}, includes the unsigned id of the instance, as well as its state,
+        the function to be called, and the function arguments.
+        """
+        dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
+        expectedRegexp = (
+            "<DelayedCall 0x{:x} \\[10.5s\\] called=0 cancelled=0 "
+            "nothing\\(3, A=5\\)\n\n"
+            "traceback at creation:".format(id(dc)))
+        self.assertRegex(
+            str(dc), expectedRegexp)
