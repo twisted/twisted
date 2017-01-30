@@ -10,8 +10,6 @@ from sys import stderr
 from signal import SIGTERM
 from os import kill
 
-from constantly import Names, NamedConstant
-
 from twisted.logger import (
     globalLogBeginner, textFileLogObserver,
     FilteringLogObserver, LogLevelFilterPredicate,
