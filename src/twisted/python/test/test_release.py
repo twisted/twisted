@@ -7,7 +7,7 @@ Tests for L{twisted.python.release} and L{twisted.python._release}.
 All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
-# pylint: disable=W9401,W9402
+# pylint: disable=I0011,W9401,W9402
 
 from __future__ import print_function
 
