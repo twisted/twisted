@@ -2350,8 +2350,8 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
     def test_flags(self):
         """
         Verify that the flags passed to win32process.CreateProcess() prevent a
-        new console window from being created. See bug #5726 for a script to
-        test this interactively.
+        new console window from being created. See http://tm.tl/5726
+        for a script to test this interactively.
         """
         from twisted.internet import _dumbwin32proc
         flags = []
