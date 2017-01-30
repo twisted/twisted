@@ -332,7 +332,8 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         # Now, process each request one at a time.
         while a.requests:
             self.assertEqual(1, len(a.requests))
-            a.requests[0].delayedProcess()
+            request = a.requests[0].original
+            request.delayedProcess()
 
         value = b.value()
         self.assertResponseEquals(value, self.expected_response)
@@ -471,7 +472,8 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         # Now, process each request one at a time.
         while a.requests:
             self.assertEqual(1, len(a.requests))
-            a.requests[0].delayedProcess()
+            request = a.requests[0].original
+            request.delayedProcess()
 
         value = b.value()
         self.assertResponseEquals(value, self.expectedResponses)
@@ -3159,7 +3161,7 @@ class ChannelProductionTests(unittest.TestCase):
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
-        request = channel.requests[0]
+        request = channel.requests[0].original
 
         # Register a dummy producer.
         producer = DummyProducer()
@@ -3207,7 +3209,7 @@ class ChannelProductionTests(unittest.TestCase):
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
-        request = channel.requests[0]
+        request = channel.requests[0].original
 
         # Register a dummy producer.
         producer = DummyProducer()
@@ -3248,7 +3250,7 @@ class ChannelProductionTests(unittest.TestCase):
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
-        request = channel.requests[0]
+        request = channel.requests[0].original
 
         # Register a dummy producer.
         producer = DummyProducer()
@@ -3336,7 +3338,8 @@ class ChannelProductionTests(unittest.TestCase):
         channel.makeConnection(transport)
 
         channel.dataReceived(self.request)
-        responseComplete = channel.requests[0]._actualProducer.result
+        request = channel.requests[0].original
+        responseComplete = request._actualProducer.result
 
         def validate(ign):
             responseBody = transport.value().split(b'\r\n\r\n', 1)[1]
