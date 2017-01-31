@@ -234,11 +234,11 @@ class ProcmonTests(unittest.TestCase):
         L{twisted.internet.interfaces.ILoggingProcessProtocol}.
         """
         @implementer(interfaces.ILoggingProcessProtocol)
-        class CustomTestLoggingProtocol(ProcessProtocol):
-            "Custom logging process protocol"
+        class DummyLoggingProtocol(ProcessProtocol):
+            "Custom logging process protocol for this test"
         self.pm.addProcess("foo", ["foo"])
-        self.pm.startProcess("foo", CustomTestLoggingProtocol)
-        self.assertIsInstance(self.pm.protocols["foo"], CustomTestLoggingProtocol)
+        self.pm.startProcess("foo", DummyLoggingProtocol)
+        self.assertIsInstance(self.pm.protocols["foo"], DummyLoggingProtocol)
         self.assertIn("foo", self.pm.timeStarted.keys())
 
 
