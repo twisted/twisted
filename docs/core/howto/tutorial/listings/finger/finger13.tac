@@ -8,11 +8,11 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return 'Internal error in server'
+            return b'Internal error in server'
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
@@ -29,11 +29,11 @@ class FingerSetterProtocol(basic.LineReceiver):
         self.factory.setUser(user, status)
 
 class FingerService(service.Service):
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def setUser(self, user, status):
         self.users[user] = status
@@ -51,7 +51,7 @@ class FingerService(service.Service):
         return f
 
 application = service.Application('finger', uid=1, gid=1)
-f = FingerService(moshez='Happy and well')
+f = FingerService({b'moshez': b'Happy and well'})
 serviceCollection = service.IServiceCollection(application)
 strports.service("tcp:79", f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
