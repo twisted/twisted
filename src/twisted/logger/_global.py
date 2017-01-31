@@ -23,6 +23,8 @@ from ._io import LoggingFile
 from ._file import FileLogObserver
 
 
+_INITIAL_BUFFER_MAX = 256
+
 
 MORE_THAN_ONCE_WARNING = (
     "Warning: primary log target selected twice at <{fileNow}:{lineNow}> - "
@@ -74,7 +76,7 @@ class LogBeginner(object):
     """
 
     def __init__(self, publisher, errorStream, stdio, warningsModule):
-        self._initialBuffer = LimitedHistoryLogObserver()
+        self._initialBuffer = LimitedHistoryLogObserver(_INITIAL_BUFFER_MAX)
         self._publisher = publisher
         self._log = Logger(observer=publisher)
         self._stdio = stdio
