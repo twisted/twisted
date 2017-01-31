@@ -506,6 +506,10 @@ This:
 
 It is an error to call :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` more than once.
 
+.. note:: If the global log publisher is never started, the in-memory event buffer holds (a bounded number of) log events indefinitely.
+	  This may unexpectedly increase application memory or CPU usage.
+	  It is highly recommended that the global log publisher be started as early as feasible.
+
 
 Provided log observers
 ----------------------
