@@ -186,13 +186,12 @@ class _SendmsgMixin(object):
                     hostAddress=self.getHost(), peerAddress=self.getPeer(),
                     protocolName=self._getLogPrefix(self.protocol),
                     cmsgLevel=cmsgLevel, cmsgType=cmsgType,
-                    )
+                )
 
         return self._dataReceived(data)
 
 
     def _ancillaryLevelSOLSOCKETTypeSCMRIGHTS(self, cmsgData):
-
         """
         Processes ancillary data with level SOL_SOCKET and type SCM_RIGHTS,
         indicating that the ancillary data payload holds file descriptors.
@@ -218,7 +217,7 @@ class _SendmsgMixin(object):
                     "descriptor received (from %(peerAddress)r)."),
                 hostAddress=self.getHost(), peerAddress=self.getPeer(),
                 protocolName=self._getLogPrefix(self.protocol),
-                )
+            )
             for fd in fds:
                 os.close(fd)
 
