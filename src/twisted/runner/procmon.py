@@ -238,10 +238,10 @@ class ProcessMonitor(service.Service):
                                                          name)
 
 
-    def startProcess(self, name, proto = None):
+    def startProcess(self, name, protocolFactory = LoggingProtocol):
         """
         @param name: The name of the process to be started
-        @param proto: A custom L{twisted.internet.interfaces.ILoggingProcessProtocol} object
+        @param protocolFactory: ?
         """
         # If a protocol instance already exists, it means the process is
         # already running
@@ -250,8 +250,7 @@ class ProcessMonitor(service.Service):
 
         args, uid, gid, env = self.processes[name]
 
-        if proto is None:
-            proto = LoggingProtocol()
+        proto = protocolFactory()
         proto.service = self
         proto.name = name
         self.protocols[name] = proto
