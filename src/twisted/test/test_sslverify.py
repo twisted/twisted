@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 import sys
 import itertools
+import datetime
 
 from zope.interface import implementer
 from twisted.python.reflect import requireModule
@@ -23,6 +24,17 @@ if requireModule("OpenSSL"):
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
+
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import (
+        PrivateFormat, NoEncryption
+    )
+
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives.serialization import Encoding
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -51,7 +63,7 @@ from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
 from twisted.internet import protocol, defer, reactor
-from twisted.internet._idna import _idnaText, _idnaBytes
+from twisted.internet._idna import _idnaText
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
@@ -137,33 +149,88 @@ def makeCertificate(**kw):
 
 
 
-def certificatesForAuthorityAndServer(commonName=b'example.com'):
+def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
     """
     Create a self-signed CA certificate and server certificate signed by the
     CA.
 
-    @param commonName: The C{commonName} to embed in the certificate.
-    @type commonName: L{bytes}
+    @param serviceIdentity: The identity (hostname) of the server.
+    @type serviceIdentity: L{unicode}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
     @rtype: L{tuple} of (L{sslverify.Certificate},
         L{sslverify.PrivateCertificate})
     """
-    serverDN = sslverify.DistinguishedName(commonName=commonName)
-    serverKey = sslverify.KeyPair.generate()
-    serverCertReq = serverKey.certificateRequest(serverDN)
+    commonNameForCA = x509.Name(
+        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example CA')]
+    )
+    commonNameForServer = x509.Name(
+        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example Server')]
+    )
+    oneDay = datetime.timedelta(1, 0, 0)
+    privateKeyForCA = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=4096,
+        backend=default_backend()
+    )
+    publicKeyForCA = privateKeyForCA.public_key()
+    caCertificate = (
+        x509.CertificateBuilder()
+        .subject_name(commonNameForCA)
+        .issuer_name(commonNameForCA)
+        .not_valid_before(datetime.datetime.today() - oneDay)
+        .not_valid_after(datetime.datetime.today() + oneDay)
+        .serial_number(x509.random_serial_number())
+        .public_key(publicKeyForCA)
+        .add_extension(
+            x509.BasicConstraints(ca=True, path_length=9), critical=True,
+        )
+        .sign(
+            private_key=privateKeyForCA, algorithm=hashes.SHA256(),
+            backend=default_backend()
+        )
+    )
+    privateKeyForServer = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=4096,
+        backend=default_backend()
+    )
+    publicKeyForServer = privateKeyForServer.public_key()
+    serverCertificate = (
+        x509.CertificateBuilder()
+        .subject_name(commonNameForServer)
+        .issuer_name(commonNameForCA)
+        .not_valid_before(datetime.datetime.today() - oneDay)
+        .not_valid_after(datetime.datetime.today() + oneDay)
+        .serial_number(x509.random_serial_number())
+        .public_key(publicKeyForServer)
+        .add_extension(
+            x509.BasicConstraints(ca=False, path_length=None), critical=True,
+        )
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [x509.DNSName(serviceIdentity)]
+            ),
+            critical=True,
+        )
+        .sign(
+            private_key=privateKeyForCA, algorithm=hashes.SHA256(),
+            backend=default_backend()
+        )
+    )
+    caSelfCert = sslverify.Certificate.loadPEM(
+        caCertificate.public_bytes(Encoding.PEM)
+    )
+    serverCert = sslverify.PrivateCertificate.loadPEM(
+        b"\n".join([privateKeyForServer.private_bytes(
+                        Encoding.PEM,
+                        PrivateFormat.TraditionalOpenSSL,
+                        NoEncryption(),
+                    ),
+                    serverCertificate.public_bytes(Encoding.PEM)])
+    )
 
-    caDN = sslverify.DistinguishedName(commonName=b'CA')
-    caKey= sslverify.KeyPair.generate()
-    caCertReq = caKey.certificateRequest(caDN)
-    caSelfCertData = caKey.signCertificateRequest(
-            caDN, caCertReq, lambda dn: True, 516)
-    caSelfCert = caKey.newCertificate(caSelfCertData)
-
-    serverCertData = caKey.signCertificateRequest(
-            caDN, serverCertReq, lambda dn: True, 516)
-    serverCert = serverKey.newCertificate(serverCertData)
     return caSelfCert, serverCert
 
 
@@ -1700,8 +1767,9 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        serverIDNA = _idnaBytes(serverHostname)
-        serverCA, serverCert = certificatesForAuthorityAndServer(serverIDNA)
+        serverCA, serverCert = certificatesForAuthorityAndServer(
+            serverHostname
+        )
         other = {}
         passClientCert = None
         clientCA, clientCert = certificatesForAuthorityAndServer(u'client')
@@ -1723,7 +1791,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         serverContextSetup(serverOpts.getContext())
         if not validCertificate:
             serverCA, otherServer = certificatesForAuthorityAndServer(
-                serverIDNA
+                serverHostname
             )
         if buggyInfoCallback:
             def broken(*a, **k):

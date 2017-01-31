@@ -726,13 +726,11 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         cmd = ('-p {} -l testuser '
                '--known-hosts kh_test '
                '--user-authentications publickey '
-               '--host-key-algorithms ssh-rsa '
                '-a '
                '-i dsa_test '
                '-v '.format(port) + sshArgs +
                ' 127.0.0.1 ' + remoteCommand)
         cmds = _makeArgs(conchArgs + cmd.split())
-        log.msg(str(cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         encodedCmds = []
@@ -765,9 +763,23 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
         d = self.execute(
             remoteCommand='echo goodbye',
             process=ConchTestOpenSSHProcess(),
-            conchArgs=['--log', '--logfile', logPath.path]
+            conchArgs=['--log', '--logfile', logPath.path,
+                       '--host-key-algorithms', 'ssh-rsa']
             )
 
         d.addCallback(self.assertEqual, b'goodbye\n')
         d.addCallback(cb_check_log)
+        return d
+
+
+    def test_runWithNoHostAlgorithmsSpecified(self):
+        """
+        Do not use --host-key-algorithms flag on command line.
+        """
+        d = self.execute(
+            remoteCommand='echo goodbye',
+            process=ConchTestOpenSSHProcess()
+            )
+
+        d.addCallback(self.assertEqual, b'goodbye\n')
         return d

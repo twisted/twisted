@@ -3,8 +3,15 @@
 
 # You can run this .tac file directly with:
 #    twistd -ny demo_recvline.tac
+#
+# Re-using a private key is dangerous, generate one.
+#
+# For this example you can use:
+#
+# $ ckeygen -t rsa -f ssh-keys/ssh_host_rsa_key
 
-"""Demonstrates line-at-a-time handling with basic line-editing support.
+"""
+Demonstrates line-at-a-time handling with basic line-editing support.
 
 This is a variation on the echo server.  It sets up two listening
 ports: one on 6022 which accepts ssh connections; one on 6023 which
@@ -18,14 +25,16 @@ HistoricRecvline, which the demo protocol subclasses, provides basic
 line editing and input history features.
 """
 
+from twisted.application import internet, service
 from twisted.conch import recvline
 from twisted.conch.insults import insults
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
-
-from twisted.internet import protocol
-from twisted.application import internet, service
+from twisted.conch.ssh import keys
+from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.cred import checkers, portal
+from twisted.internet import protocol
+
+
 
 class DemoRecvLine(recvline.HistoricRecvLine):
     """Simple echo protocol.
@@ -43,7 +52,7 @@ class DemoRecvLine(recvline.HistoricRecvLine):
         self.terminal.write(self.ps[self.pn])
 
 def makeService(args):
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
     f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
@@ -63,6 +72,8 @@ def makeService(args):
     rlm.chainedProtocolFactory = chainProtocolFactory
     ptl = portal.Portal(rlm, [checker])
     f = ConchFactory(ptl)
+    f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
+    f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
     csvc = internet.TCPServer(args['ssh'], f)
 
     m = service.MultiService()

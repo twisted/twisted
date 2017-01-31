@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=I0011,C0103,C9302,W9401,W9402
+
 """
 Setuptools convenience functionality.
 
@@ -150,7 +152,7 @@ if not _PY3:
 
 
 
-class ConditionalExtension(Extension):
+class ConditionalExtension(Extension, object):
     """
     An extension module that will only be compiled if certain conditions are
     met.
@@ -227,6 +229,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
 
     requirements.append("constantly >= 15.1")
     requirements.append("incremental >= 16.10.1")
+    requirements.append("Automat >= 0.3.0")
 
     arguments.update(dict(
         packages=find_packages("src"),
@@ -247,7 +250,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
 
 
 
-class BuildPy3(build_py):
+class BuildPy3(build_py, object):
     """
     A version of build_py that doesn't install the modules that aren't yet
     ported to Python 3.
@@ -264,7 +267,7 @@ class BuildPy3(build_py):
 ## Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext):
+class build_ext_twisted(build_ext.build_ext, object):
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.
@@ -406,8 +409,6 @@ notPortedModules = [
     "twisted.news.test.test_database",
     "twisted.news.test.test_news",
     "twisted.news.test.test_nntp",
-    "twisted.plugins.twisted_conch",
-    "twisted.plugins.twisted_ftp",
     "twisted.plugins.twisted_inet",
     "twisted.plugins.twisted_mail",
     "twisted.plugins.twisted_names",
@@ -416,8 +417,6 @@ notPortedModules = [
     "twisted.plugins.twisted_runner",
     "twisted.plugins.twisted_socks",
     "twisted.plugins.twisted_words",
-    "twisted.protocols.finger",
-    "twisted.protocols.ftp",
     "twisted.protocols.ident",
     "twisted.protocols.mice.__init__",
     "twisted.protocols.mice.mouseman",
@@ -435,18 +434,13 @@ notPortedModules = [
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_release",
     "twisted.python.test.test_win32",
-    "twisted.spread.test.test_pbfailure",
     "twisted.tap.__init__",
-    "twisted.tap.ftp",
     "twisted.tap.portforward",
     "twisted.tap.socks",
     "twisted.test.crash_test_dummy",
     "twisted.test.myrebuilder1",
     "twisted.test.myrebuilder2",
-    "twisted.test.test_finger",
     "twisted.test.test_formmethod",
-    "twisted.test.test_ftp",
-    "twisted.test.test_ftp_options",
     "twisted.test.test_hook",
     "twisted.test.test_ident",
     "twisted.test.test_rebuild",

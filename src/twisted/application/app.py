@@ -19,7 +19,8 @@ from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.reflect import qual, namedAny
+from twisted.python._oldstyle import _oldStyle
+from twisted.python.reflect import (qual, namedAny, namedModule)
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -479,6 +480,7 @@ def _reactorAction():
 
 
 
+@_oldStyle
 class ReactorSelectionMixin:
     """
     Provides options for selecting a reactor to install.
@@ -498,9 +500,21 @@ class ReactorSelectionMixin:
         Display a list of possibly available reactor names.
         """
         rcts = sorted(self._getReactorTypes(), key=attrgetter('shortName'))
+        notWorkingReactors = ""
         for r in rcts:
-            self.messageOutput.write('    %-4s\t%s\n' %
-                                     (r.shortName, r.description))
+            try:
+                namedModule(r.moduleName)
+                self.messageOutput.write('    %-4s\t%s\n' %
+                                         (r.shortName, r.description))
+            except ImportError as e:
+                notWorkingReactors += ('    !%-4s\t%s (%s)\n' %
+                                       (r.shortName, r.description, e.args[0]))
+
+        if notWorkingReactors:
+            self.messageOutput.write('\n')
+            self.messageOutput.write('    reactors not available '
+                                     'on this platform:\n\n')
+            self.messageOutput.write(notWorkingReactors)
         raise SystemExit(0)
 
 

@@ -44,7 +44,9 @@ if requireModule('cryptography') and requireModule('pyasn1.type'):
     from twisted.conch.avatar import ConchUser
 
     from twisted.conch.test.keydata import (
-        publicRSA_openssh, privateRSA_openssh, privateDSA_openssh)
+        publicRSA_openssh, privateRSA_openssh,
+        privateRSA_openssh_encrypted_aes,
+        privateDSA_openssh)
 
     from twisted.conch.endpoints import (
         _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
@@ -199,6 +201,7 @@ class CommandFactory(SSHFactory):
             b'ssh-rsa': Key.fromString(data=publicRSA_openssh)
             }
 
+
     @property
     def privateKeys(self):
         return {
@@ -215,6 +218,7 @@ class CommandFactory(SSHFactory):
     # and failure.  There is an off-by-one in the implementation of this
     # feature in Conch, so set it to 0 in order to allow 1 attempt.
     attemptsBeforeDisconnect = 0
+
 
 
 @implementer(IAddress)
@@ -517,8 +521,8 @@ class SSHCommandClientEndpointTestsMixin(object):
         connectionLost = []
         protocol.connectionLost = connectionLost.append
 
-        # Figure out which channel on the connection this protocol is associated
-        # with so the test can do a write on it.
+        # Figure out which channel on the connection this protocol is
+        # associated with so the test can do a write on it.
         channelId = protocol.transport.id
         server.service.channels[channelId].loseConnection()
 
@@ -545,8 +549,9 @@ class SSHCommandClientEndpointTestsMixin(object):
         connectionLost = []
         protocol.connectionLost = connectionLost.append
 
-        # Figure out which channel on the connection this protocol is associated
-        # with so the test can simulate command exit and channel close.
+        # Figure out which channel on the connection this protocol is
+        # associated with so the test can simulate command exit and
+        # channel close.
         channelId = protocol.transport.id
         channel = server.service.channels[channelId]
 
@@ -610,8 +615,8 @@ class SSHCommandClientEndpointTestsMixin(object):
 
         @param noArgs:
         """
-        # Figure out which channel the test is going to send data over so we can
-        # look for it to arrive at the right place on the server.
+        # Figure out which channel the test is going to send data over
+        # so we can look for it to arrive at the right place on the server.
         channelId = protocol.transport.id
 
         recorder = []
@@ -861,10 +866,13 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         L{Deferred} returned by L{SSHCommandClientEndpoint.connect} fires with
         a L{Failure} wrapping L{HostKeyChanged}.
         """
-        differentKey = Key.fromString(privateDSA_openssh).public()
-        knownHosts = KnownHostsFile(self.mktemp())
+        firstKey = Key.fromString(privateRSA_openssh).public()
+        knownHosts = KnownHostsFile(FilePath(self.mktemp()))
         knownHosts.addHostKey(
-            networkString(self.serverAddress.host), differentKey)
+            networkString(self.serverAddress.host), firstKey)
+        # Add a different RSA key with the same hostname
+        differentKey = Key.fromString(privateRSA_openssh_encrypted_aes,
+                                      passphrase=b'testxp').public()
         knownHosts.addHostKey(self.hostname, differentKey)
 
         # The UI may answer true to any questions asked of it; they should

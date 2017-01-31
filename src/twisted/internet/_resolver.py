@@ -173,7 +173,8 @@ class SimpleResolverComplexifier(object):
         resolutionReceiver.resolutionBegan(resolution)
         onAddress = self._simpleResolver.getHostByName(hostName)
         def addressReceived(address):
-            resolutionReceiver.addressResolved(IPv4Address('TCP', address, 0))
+            resolutionReceiver.addressResolved(IPv4Address('TCP', address,
+                                                           portNumber))
         def errorReceived(error):
             if not error.check(DNSLookupError):
                 self._log.failure("while looking up {name} with {resolver}",
