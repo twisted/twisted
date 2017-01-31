@@ -175,7 +175,7 @@ class LogBeginnerTests(unittest.TestCase):
         events = []
         beginner.beginLoggingTo([events.append])
         self.assertEqual(
-            range(1, limit + 1),
+            list(range(1, limit + 1)),
             list(event["count"] for event in events),
         )
 
