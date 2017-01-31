@@ -89,7 +89,7 @@ class LogBeginner(object):
         @param initialBufferSize: The size of the event buffer into which
             events are collected until C{beginLoggingTo} is called.  Or
             C{None} to use the default size.
-        @type initialBufferSize: L{int} or L{NoneType}
+        @type initialBufferSize: L{int} or L{types.NoneType}
         """
         if initialBufferSize is None:
             initialBufferSize = self._DEFAULT_BUFFER_SIZE
