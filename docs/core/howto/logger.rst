@@ -498,7 +498,12 @@ Logging is started by registering the first set of observers with the global log
 
     log.info("Hello, again")
 
-What this does is add the given observers (in this example, the ``PrintingObserver`` ) with the global log observer, then forwards all of the events that were stored in memory prior to calling :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` to these observers, and gets rid of the :api:`twisted.logger.LimitedHistoryLogObserver <LimitedHistoryLogObserver>` , as it is no longer needed.
+This:
+
+* Adds the given observers (in this example, the ``PrintingObserver`` ) to the global log observer
+* Forwards all of the events that were stored in memory prior to calling :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` to these observers
+* Gets rid of the :api:`twisted.logger.LimitedHistoryLogObserver <LimitedHistoryLogObserver>` , as it is no longer needed.
+
 It is an error to call :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` more than once.
 
 
