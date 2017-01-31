@@ -153,6 +153,55 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertEqual([event], events2)
 
 
+    def _bufferLimitTest(self, limit, beginner):
+        """
+        Verify that when more than C{limit} events are logged to L{LogBeginner},
+        only the last C{limit} are replayed by L{LogBeginner.beginLoggingTo}.
+
+        @param limit: The maximum number of events the log beginner should
+            buffer.
+        @type limit: L{int}
+
+        @param beginner: The L{LogBeginner} against which to verify.
+        @type beginner: L{LogBeginner}
+
+        @raise: C{self.failureException} if the wrong events are replayed by
+            C{beginner}.
+
+        @return: L{None}
+        """
+        for count in range(limit + 1):
+            self.publisher(dict(count=count))
+        events = []
+        beginner.beginLoggingTo([events.append])
+        self.assertEqual(
+            list(range(1, limit + 1)),
+            list(event["count"] for event in events),
+        )
+
+
+    def test_defaultBufferLimit(self):
+        """
+        Up to C{LogBeginner._DEFAULT_BUFFER_SIZE} log events are buffered for
+        replay by L{LogBeginner.beginLoggingTo}.
+        """
+        limit = LogBeginner._DEFAULT_BUFFER_SIZE
+        self._bufferLimitTest(limit, self.beginner)
+
+
+    def test_overrideBufferLimit(self):
+        """
+        The size of the L{LogBeginner} event buffer can be overridden with the
+        C{initialBufferSize} initilizer argument.
+        """
+        limit = 3
+        beginner = LogBeginner(
+            self.publisher, self.errorStream, self.sysModule,
+            self.warningsModule, initialBufferSize=limit,
+        )
+        self._bufferLimitTest(limit, beginner)
+
+
     def test_beginLoggingToTwice(self):
         """
         When invoked twice, L{LogBeginner.beginLoggingTo} will emit a log
