@@ -2763,9 +2763,23 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
+    def joinSourceGroup(self, addr, source, interface=""):
+        """
+        Join a source-specific multicast group. Returns L{Deferred} of
+        success or failure.
+
+        If an error occurs, the returned L{Deferred} will fail with
+        L{error.MulticastJoinError}.
+        """
+
     def leaveGroup(addr, interface=""):
         """
         Leave multicast group, return L{Deferred} of success.
+        """
+
+    def leaveSourceGroup(self, addr, source, interface=""):
+        """
+        Leave source-specific multicast group, return L{Deferred} of success.
         """
 
 
