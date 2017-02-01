@@ -653,7 +653,7 @@ def warnAboutFunction(offender, warningString):
 
 
 
-def _passed(argspec, positional, keyword):
+def _passedArgSpec(argspec, positional, keyword):
     """
     Take an I{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
@@ -696,6 +696,66 @@ def _passed(argspec, positional, keyword):
 
 
 
+def _passedSignature(signature, positional, keyword):
+    """
+    Take an L{inspect.Signature}, a tuple of positional arguments, and a dict of
+    keyword arguments, and return a mapping of arguments that were actually
+    passed to their passed values.
+
+    @param signature: The signature of the function to inspect.
+    @type signature: L{inspect.Signature}
+
+    @param positional: The positional arguments that were passed.
+    @type positional: L{tuple}
+
+    @param keyword: The keyword arguments that were passed.
+    @type keyword: L{dict}
+
+    @return: A dictionary mapping argument names (those declared in
+        C{signature}) to values that were passed explicitly by the user.
+    @rtype: L{dict} mapping L{str} to L{object}
+    """
+    result = {}
+    kwargs = None
+    numPositional = 0
+    for (n, (name, param)) in enumerate(signature.parameters.items()):
+        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+            # Varargs, for example: *args
+            result[name] = positional[n:]
+            numPositional = len(result[name]) + 1
+        elif param.kind == inspect.Parameter.VAR_KEYWORD:
+            # Variable keyword args, for example: **my_kwargs
+            kwargs = result[name] = {}
+        elif param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            inspect.Parameter.POSITIONAL_ONLY):
+            if n < len(positional):
+                result[name] = positional[n]
+                numPositional += 1
+        elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+            if name not in keyword:
+                if param.default == inspect.Parameter.empty:
+                    raise TypeError("missing keyword arg {}".format(name))
+                else:
+                    result[name] = param.default
+        else:
+            raise TypeError("'{}' parameter is invalid kind: {}".format(
+                                 name, param.kind))
+
+    if len(positional) > numPositional:
+        raise TypeError("Too many arguments.")
+    for name, value in keyword.items():
+        if name in signature.parameters.keys():
+            if name in result:
+                raise TypeError("Already passed.")
+            result[name] = value
+        elif kwargs is not None:
+            kwargs[name] = value
+        else:
+            raise TypeError("no such param")
+    return result
+
+
+
 def _mutuallyExclusiveArguments(argumentPairs):
     """
     Decorator which causes its decoratee to raise a L{TypeError} if two of the
@@ -714,10 +774,18 @@ def _mutuallyExclusiveArguments(argumentPairs):
     @rtype: 1-argument callable taking a callable and returning a callable.
     """
     def wrapper(wrappee):
-        argspec = inspect.getargspec(wrappee)
+        if getattr(inspect, "signature", None):
+            # Python 3
+            spec = inspect.signature(wrappee)
+            _passed = _passedSignature
+        else:
+            # Python 2
+            spec = inspect.getargspec(wrappee)
+            _passed = _passedArgSpec
+
         @wraps(wrappee)
         def wrapped(*args, **kwargs):
-            arguments = _passed(argspec, args, kwargs)
+            arguments = _passed(spec, args, kwargs)
             for this, that in argumentPairs:
                 if this in arguments and that in arguments:
                     raise TypeError("nope")
