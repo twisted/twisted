@@ -1,0 +1,1 @@
+twisted.logger now buffers only 200 events by default (reduced from 65536) while waiting for observers to be configured.

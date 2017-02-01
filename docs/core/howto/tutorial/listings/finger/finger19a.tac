@@ -11,10 +11,10 @@ import cgi
 class IFingerService(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def getUsers():
-        """Return a deferred returning a list of strings"""
+        """Return a deferred returning a L{list} of L{bytes}"""
 
 class IFingerSetterService(Interface):
 
@@ -30,7 +30,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -38,10 +38,10 @@ class FingerProtocol(basic.LineReceiver):
 class IFingerFactory(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """Return a protocol returning L{bytes}"""
 
 
 @implementer(IFingerFactory)
@@ -74,10 +74,10 @@ class FingerSetterProtocol(basic.LineReceiver):
 class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """Return a protocol returning L{bytes}"""
 
 
 @implementer(IFingerSetterFactory)
@@ -193,21 +193,21 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 @implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def setUser(self, user, status):
         self.users[user] = status
 
 
 application = service.Application('finger', uid=1, gid=1)
-f = MemoryFingerService(moshez='Happy and well')
+f = MemoryFingerService({b'moshez': b'Happy and well')
 serviceCollection = service.IServiceCollection(application)
 strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
