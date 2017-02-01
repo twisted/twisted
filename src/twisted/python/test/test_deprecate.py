@@ -1073,7 +1073,8 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
     def test_invalidParameterType(self):
         """
         Create a fake signature with an invalid parameter
-        type to test error handling.
+        type to test error handling.  The valid parameter
+        types are specified in L{inspect.Parameter}.
         """
         class FakeSignature:
             def __init__(self, parameters):
