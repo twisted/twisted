@@ -459,8 +459,6 @@ notPortedModules = [
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
     "twisted.web.twcgi",
-    "twisted.words.protocols.oscar",
     "twisted.words.tap",
-    "twisted.words.test.test_oscar",
     "twisted.words.test.test_tap",
 ]
