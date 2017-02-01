@@ -952,14 +952,14 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         Test an invocation of L{passed} with the given function, arguments, and
         keyword arguments.
 
-        @param func: A function whose argspec to pass to L{_passed}.
+        @param func: A function whose argspec will be inspected.
         @type func: A callable.
 
-        @param args: The arguments which could be passed to L{func}.
+        @param args: The arguments which could be passed to C{func}.
 
-        @param kw: The keyword arguments which could be passed to L{func}.
+        @param kw: The keyword arguments which could be passed to C{func}.
 
-        @return: L{_passed}'s return value
+        @return: L{_passedSignature} or L{_passedArgSpec}'s return value
         @rtype: L{dict}
         """
         if getattr(inspect, "signature", None):
