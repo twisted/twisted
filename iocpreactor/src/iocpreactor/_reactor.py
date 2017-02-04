@@ -15,7 +15,7 @@ from twisted.python import log, failure
 from twisted.internet._dumbwin32proc import Process
 from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 
-from iocpreactor import _iocp
+from iocpreactor import _iocpreactor as _iocp
 from iocpreactor._const import WAIT_TIMEOUT
 from iocpreactor import _tcp as tcp, _udp as udp
 

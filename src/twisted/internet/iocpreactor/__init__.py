@@ -12,7 +12,7 @@ from iocpreactor import (
     _reactor as reactor,
     _tcp as tcp,
     _udp as udp,
-    _iocp as iocpsupport
+    _iocpsupport as iocpsupport
 )
 
 
