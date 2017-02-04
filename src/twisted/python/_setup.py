@@ -176,20 +176,6 @@ _EXTENSIONS = [
         condition=lambda _: _isCPython),
 
     ConditionalExtension(
-        "twisted.internet.iocpreactor.iocpsupport",
-        sources=[
-            "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-            "src/twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c",
-            ],
-        libraries=["ws2_32"],
-        condition=lambda _: _isCPython and sys.platform == "win32"),
-
-    ConditionalExtension(
-        "twisted.python._sendmsg",
-        sources=["src/twisted/python/_sendmsg.c"],
-        condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-    ConditionalExtension(
         "twisted.runner.portmap",
         sources=["src/twisted/runner/portmap.c"],
         condition=lambda builder: not _PY3 and
