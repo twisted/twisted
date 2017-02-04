@@ -17,13 +17,11 @@ from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
 from twisted.python import log, failure, reflect
 from twisted.python.compat import _PY3, nativeString
 
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
-from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import SO_UPDATE_CONNECT_CONTEXT
-from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
+from iocpreactor import _iocp, _abstract as abstract
+from iocpreactor._interfaces import IReadWriteHandle
+from iocpreactor._const import (
+    ERROR_IO_PENDING, SO_UPDATE_CONNECT_CONTEXT, SO_UPDATE_ACCEPT_CONTEXT,
+    ERROR_CONNECTION_REFUSED, ERROR_NETWORK_UNREACHABLE)
 
 try:
     from twisted.internet._newtls import startTLS as _startTLS

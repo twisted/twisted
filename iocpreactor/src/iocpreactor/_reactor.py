@@ -15,9 +15,9 @@ from twisted.python import log, failure
 from twisted.internet._dumbwin32proc import Process
 from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 
-from twisted.internet.iocpreactor import iocpsupport as _iocp
-from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
-from twisted.internet.iocpreactor import tcp, udp
+from iocpreactor import _iocp
+from iocpreactor._const import WAIT_TIMEOUT
+from iocpreactor import _tcp as tcp, _udp as udp
 
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
@@ -27,7 +27,7 @@ except ImportError:
     TLSMemoryBIOFactory = None
     _extraInterfaces = ()
     warnings.warn(
-        "pyOpenSSL 0.10 or newer is required for SSL support in iocpreactor. "
+        "pyOpenSSL 0.16 or newer is required for SSL support in iocpreactor. "
         "It is missing, so the reactor will not support SSL APIs.")
 else:
     _extraInterfaces = (interfaces.IReactorSSL,)

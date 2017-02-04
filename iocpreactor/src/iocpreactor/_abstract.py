@@ -13,9 +13,8 @@ from twisted.python.compat import unicode
 from zope.interface import implementer
 import errno
 
-from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor import iocpsupport as _iocp
+from iocpreactor._const import ERROR_HANDLE_EOF,  ERROR_IO_PENDING
+from iocpreactor import _iocp
 
 
 @implementer(interfaces.IPushProducer, interfaces.IConsumer,

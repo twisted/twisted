@@ -13,11 +13,11 @@ from twisted.internet import defer, address, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log, failure
 
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_PORT_UNREACHABLE
-from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
+from iocpreactor._const import ERROR_IO_PENDING
+from iocpreactor._const import ERROR_CONNECTION_REFUSED
+from iocpreactor._const import ERROR_PORT_UNREACHABLE
+from iocpreactor._interfaces import IReadWriteHandle
+from iocpreactor import _iocp, _abstract as abstract
 
 
 
