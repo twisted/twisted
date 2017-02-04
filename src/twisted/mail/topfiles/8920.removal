@@ -1,0 +1,1 @@
+twisted.mail.tap (the twist plugin for mail) no longer accepts the --pop3s option or implicit port numbers to --pop3 and --smtp. This functionality has been deprecated since 11.0.
