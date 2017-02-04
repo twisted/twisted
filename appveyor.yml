@@ -43,7 +43,7 @@ environment:
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-alldeps-withcov-windows,codecov-publish
-      TWISTED_REACTOR: "iocp"
+      TWISTED_REACTOR: "iocpreactor"
     - PYTHON_HOME: C:\\PYTHON34-x64
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
@@ -60,6 +60,16 @@ environment:
       # so we can only choose the default reactor here:
       # https://twistedmatrix.com/trac/ticket/8745
       TWISTED_REACTOR: "default"
+
+    # IOCPReactor tests
+    - PYTHON_HOME: C:\\Python27-x64
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      TOXENV: iocpreactor,codecov-publish
+    - PYTHON_HOME: C:\\PYTHON35-x64
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
+      TOXENV: iocpreactor,codecov-publish
 
 matrix:
   allow_failures:
