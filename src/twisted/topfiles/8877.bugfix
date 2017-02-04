@@ -1,1 +1,0 @@
-twisted.names.client.Resolver can now resolve names with IPv6 DNS servers.
