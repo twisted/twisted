@@ -17,7 +17,7 @@ from iocpreactor._const import ERROR_IO_PENDING
 from iocpreactor._const import ERROR_CONNECTION_REFUSED
 from iocpreactor._const import ERROR_PORT_UNREACHABLE
 from iocpreactor._interfaces import IReadWriteHandle
-from iocpreactor import _iocpreactor as _iocp, _abstract as abstract
+from iocpreactor import _iocpsupport as _iocp, _abstract as abstract
 
 
 

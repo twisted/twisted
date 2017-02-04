@@ -17,7 +17,7 @@ from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
 from twisted.python import log, failure, reflect
 from twisted.python.compat import _PY3, nativeString
 
-from iocpreactor import _iocpreactor as _iocp, _abstract as abstract
+from iocpreactor import _iocpsupport as _iocp, _abstract as abstract
 from iocpreactor._interfaces import IReadWriteHandle
 from iocpreactor._const import (
     ERROR_IO_PENDING, SO_UPDATE_CONNECT_CONTEXT, SO_UPDATE_ACCEPT_CONTEXT,
