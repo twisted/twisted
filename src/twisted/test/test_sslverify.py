@@ -888,10 +888,10 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
 
         message = ("Passing method to twisted.internet.ssl.CertificateOptions "
-                   "was deprecated in Twisted 17.1.0. Please use a combination "
-                   "of insecurelyLowerMinimumTo, raiseMinimumTo, and "
-                   "lowerMaximumSecurityTo instead, as Twisted will correctly "
-                   "configure the method.")
+                   "was deprecated in Twisted 17.1.0. Please use a "
+                   "combination of insecurelyLowerMinimumTo, raiseMinimumTo, "
+                   "and lowerMaximumSecurityTo instead, as Twisted will "
+                   "correctly configure the method.")
 
         warnings = self.flushWarnings([self.test_methodIsDeprecated])
         self.assertEqual(1, len(warnings))
