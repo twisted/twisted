@@ -1,4 +1,4 @@
-Twisted 16.6.0
+Twisted 17.1.0
 ==============
 
 |pypi|
@@ -8,9 +8,9 @@ Twisted 16.6.0
 
 .. code::
 
-    <derwolfe> Twisted - thank you for continuing to be fun to use and relatively easy to test 😃
+    <hawkowl> we have always been at war with 16.7
 
-For information on what's new in Twisted 16.6.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.1.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
