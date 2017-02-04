@@ -27,7 +27,7 @@ if __name__ == "__main__":
         ],
         ext_modules=[
             Extension(
-                "iocpreactor._iocp",
+                "iocpreactor._iocpsupport",
                 sources=[
                     "src/iocpreactor/iocpsupport/iocpsupport.c",
                     "src/iocpreactor/iocpsupport/winsock_pointers.c"
