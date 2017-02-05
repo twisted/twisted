@@ -2,10 +2,11 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.internet.iocpreactor}.
+Tests for L{iocpreactor}.
 """
 
 import errno
+
 from array import array
 from struct import pack
 from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, error, socket
@@ -16,14 +17,11 @@ from twisted.trial import unittest
 from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
 
-try:
-    from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
-    from twisted.internet.iocpreactor.reactor import IOCPReactor, EVENTS_PER_LOOP, KEY_NORMAL
-    from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-    from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
-    from twisted.internet.iocpreactor.abstract import FileHandle
-except ImportError:
-    skip = 'This test only applies to IOCPReactor'
+from iocpreactor import _iocp, _tcp as tcp, _udp as udp
+from iocpreactor._reactor import IOCPReactor, EVENTS_PER_LOOP, KEY_NORMAL
+from iocpreactor._interfaces import IReadWriteHandle
+from iocpreactor._const import SO_UPDATE_ACCEPT_CONTEXT
+from iocpreactor._abstract import FileHandle
 
 try:
     socket(AF_INET6, SOCK_STREAM).close()
@@ -34,7 +32,7 @@ else:
 
 class SupportTests(unittest.TestCase):
     """
-    Tests for L{twisted.internet.iocpreactor.iocpsupport}, low-level reactor
+    Tests for L{iocpreactor.iocpsupport}, low-level reactor
     implementation helpers.
     """
     def _acceptAddressTest(self, family, localhost):
@@ -57,13 +55,19 @@ class SupportTests(unittest.TestCase):
         except error as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
+        completionPort = _iocp.CompletionPort()
         server = socket(family, SOCK_STREAM)
+        completionPort.addHandle(server.fileno(), KEY_NORMAL)
         self.addCleanup(server.close)
         buff = array('B', b'\0' * 256)
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
-        server.setsockopt(
-            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', port.fileno()))
+
+        # Wait for the connect for a while
+        completionPort.getEvent(1000)
+
+        server.setsockopt(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+                          pack('P', port.fileno()))
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
             _iocp.get_accept_addrs(server.fileno(), buff))
@@ -147,4 +151,3 @@ class IOCPReactorTests(unittest.TestCase):
         self.assertEqual(fd.counter, EVENTS_PER_LOOP)
         ir.doIteration(0)
         self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
-
