@@ -12,9 +12,11 @@ from iocpreactor import (
     _reactor as reactor,
     _tcp as tcp,
     _udp as udp,
-    _iocpsupport
+    _iocpsupport,
+    install
 )
 
 
 
-__all__ = ["abstract", "const", "interfaces", "reactor", "tcp", "udp"]
+__all__ = ["abstract", "const", "interfaces", "reactor", "tcp", "udp",
+           "install"]
