@@ -14,7 +14,7 @@ from zope.interface import implementer
 import errno
 
 from iocpreactor._const import ERROR_HANDLE_EOF,  ERROR_IO_PENDING
-from iocpreactor import _iocp
+from iocpreactor import _iocpsupport as _iocp
 
 
 @implementer(interfaces.IPushProducer, interfaces.IConsumer,
