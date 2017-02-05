@@ -528,9 +528,10 @@ class URL(object):
 
         For example::
 
-            >>> (URL.fromText(u"http://localhost/a/b?x=y")
-                 .child(u"c", u"d").asText())
-            u'http://localhost/a/b/c?x=y'
+            >>> u = URL.fromText(u"http://localhost/a/b?x=y")
+            >>> v = u.child(u"c", u"d")
+            >>> print(v.asText())
+            u'http://localhost/a/b/c/d?x=y'
 
         @param segments: A path segment.
         @type segments: L{tuple} of L{unicode}
