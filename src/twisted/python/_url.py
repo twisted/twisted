@@ -531,7 +531,7 @@ class URL(object):
             >>> u = URL.fromText(u"http://localhost/a/b?x=y")
             >>> v = u.child(u"c", u"d")
             >>> print(v.asText())
-            u'http://localhost/a/b/c/d?x=y'
+            http://localhost/a/b/c/d?x=y
 
         @param segments: A path segment.
         @type segments: L{tuple} of L{unicode}
