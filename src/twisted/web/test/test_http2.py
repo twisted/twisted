@@ -2288,6 +2288,9 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         (b'custom-header', b'2'),
     ]
 
+    # A sentinel object used to flag default timeouts
+    _DEFAULT = object()
+
 
     def patch_TimeoutMixin_clock(self, connection, reactor):
         """
@@ -2350,11 +2353,14 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertEqual(frames[-1].last_stream_id, lastStreamID)
 
 
-    def prepareAbortTest(self, abortTimeout=H2Connection.abortTimeout):
+    def prepareAbortTest(self, abortTimeout=_DEFAULT):
         """
         Does the common setup for tests that want to test the aborting
         functionality of the HTTP/2 stack.
         """
+        if abortTimeout is self._DEFAULT:
+            abortTimeout = H2Connection.abortTimeout
+
         frameFactory = FrameFactory()
         initialData = frameFactory.clientConnectionPreface()
 
