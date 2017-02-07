@@ -1573,6 +1573,10 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
     """
 
     def __init__(self, tokens):
+        """
+        @param tokens: initial value of L{tokens} and L{limit}
+        @type tokens: L{int}
+        """
         _ConcurrencyPrimitive.__init__(self)
         if tokens < 1:
             raise ValueError("DeferredSemaphore requires tokens >= 1")
