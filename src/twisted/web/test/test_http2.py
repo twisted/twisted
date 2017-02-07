@@ -2357,6 +2357,13 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         """
         Does the common setup for tests that want to test the aborting
         functionality of the HTTP/2 stack.
+
+        @param abortTimeout: The value to use for the abortTimeout. Defaults to
+            whatever is set on L{H2Connection.abortTimeout}.
+        @type abortTimeout: L{int} or L{None}
+
+        @return: A tuple of the reactor being used for the connection, the
+            connection itself, and the transport.
         """
         if abortTimeout is self._DEFAULT:
             abortTimeout = H2Connection.abortTimeout
