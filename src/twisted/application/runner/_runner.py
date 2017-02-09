@@ -163,6 +163,9 @@ class Runner(object):
 
     def startReactor(self):
         """
+        If C{self.reactor} is L{None}, install the default reactor and set
+        C{self.reactor} to the default reactor.
+
         Register C{self.whenRunning} with the reactor so that it is called once
         the reactor is running, then start the reactor.
         """
