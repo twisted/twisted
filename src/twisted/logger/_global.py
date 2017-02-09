@@ -71,10 +71,29 @@ class LogBeginner(object):
     @ivar _stdio: An object with C{stderr} and C{stdout} attributes (like the
         L{sys} module) which will be replaced when redirecting standard I/O.
     @type _stdio: L{object}
+
+    @cvar _DEFAULT_BUFFER_SIZE: The default size for the initial log events
+        buffer.
+    @type _DEFAULT_BUFFER_SIZE: L{int}
     """
 
-    def __init__(self, publisher, errorStream, stdio, warningsModule):
-        self._initialBuffer = LimitedHistoryLogObserver()
+    _DEFAULT_BUFFER_SIZE = 200
+
+    def __init__(
+        self, publisher, errorStream, stdio, warningsModule,
+        initialBufferSize=None,
+    ):
+        """
+        Initialize this L{LogBeginner}.
+
+        @param initialBufferSize: The size of the event buffer into which
+            events are collected until C{beginLoggingTo} is called.  Or
+            C{None} to use the default size.
+        @type initialBufferSize: L{int} or L{types.NoneType}
+        """
+        if initialBufferSize is None:
+            initialBufferSize = self._DEFAULT_BUFFER_SIZE
+        self._initialBuffer = LimitedHistoryLogObserver(size=initialBufferSize)
         self._publisher = publisher
         self._log = Logger(observer=publisher)
         self._stdio = stdio
