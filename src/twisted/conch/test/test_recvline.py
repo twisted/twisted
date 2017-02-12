@@ -747,7 +747,7 @@ class HistoricRecvlineLoopbackMixin:
              b">>> done"])
 
 
-    def testDownArrowToPartialLineInHistory(self):
+    def test_DownArrowToPartialLineInHistory(self):
         """
         Pressing down arrow to visit an entry that was added to the
         history by pressing the up arrow instead of return does not
