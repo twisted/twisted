@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 17.1.0 (2017-02-04)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.tap (the twist plugin for mail) no longer accepts the
+   --pop3s option or implicit port numbers to --pop3 and --smtp. This
+   functionality has been deprecated since 11.0. (#8920)
+
+
 Twisted Mail 16.6.0 (2016-11-17)
 ================================
 
