@@ -1,6 +1,38 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 17.1.0 (2017-02-04)
+===============================
+
+Features
+--------
+ - twisted.web.client.Agent now sets ``Content-Length: 0`` for PUT and
+   POST requests made without a body producer. (#8984)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPFactory now times connections out after one
+   minute of no data from the client being received, before the
+   request is complete, rather than twelve hours. (#3746)
+ - twisted.web.http.HTTPChannel, the server class for Twisted's
+   HTTP/1.1 server, now exerts backpressure against clients that do
+   not read responses. This means that if a client stops reading from
+   a socket for long enough, Twisted will stop reading further
+   requests from that client until it consumes some responses. (#8868)
+ - twisted.web.http_headers.Headers.getRawHeaders no longer attempts
+   to decode the default value when called with a unicode header name.
+   (#8974)
+ - twisted.web.http.HTTPChannel is less likely to leak file
+   descriptors when timing out clients using HTTPS connections. In
+   some cases it is still possible to leak a file descriptor when
+   timing out HTTP clients: further patches will address this issue.
+   (#8992)
+
+Other
+-----
+ - #7744, #8909, #8935
+
+
 Twisted Web 16.6.0 (2016-11-17)
 ===============================
 

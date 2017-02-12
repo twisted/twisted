@@ -1,6 +1,208 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 17.1.0 (2017-02-04)
+================================
+
+Features
+--------
+ - Added a new interface,
+   twisted.internet.interfaces.IHostnameResolver, which is an
+   improvement to twisted.internet.interfaces.IResolverSimple that
+   supports resolving multiple addresses as well as resolving IPv6
+   addresses.  This is a native, asynchronous, Twisted analogue to
+   getaddrinfo. (#4362)
+ - twisted.web.client.Agent now uses HostnameEndpoint internally; as a
+   consequence, it now supports IPv6, as well as making connections
+   faster and more reliably to hosts that have more than one DNS name.
+   (#6712)
+ - twisted.internet.ssl.CertificateOptions now has the new constructor
+   argument 'raiseMinimumTo', allowing you to increase the minimum TLS
+   version to this version or Twisted's default, whichever is higher.
+   The additional new constructor arguments 'lowerMaximumSecurityTo'
+   and 'insecurelyLowerMinimumTo' allow finer grained control over
+   negotiated versions that don't honour Twisted's defaults, for
+   working around broken peers, at the cost of reducing the security
+   of the TLS it will negotiate. (#6800)
+ - twisted.internet.ssl.CertificateOptions now sets the OpenSSL
+   context's mode to MODE_RELEASE_BUFFERS, which will free the
+   read/write buffers on idle TLS connections to save memory. (#8247)
+ - trial --help-reactors will only list reactors which can be
+   imported.  (#8745)
+ - twisted.internet.endpoints.HostnameEndpoint now uses the passed
+   reactor's implementation of
+   twisted.internet.interfaces.IReactorPluggableResolver to resolve
+   hostnames rather than its own deferToThread/getaddrinfo wrapper;
+   this makes its hostname resolution pluggable via a public API.
+   (#8922)
+ - twisted.internet.reactor.spawnProcess now does not emit a
+   deprecation warning on Unicode arguments. It will encode Unicode
+   arguments down to bytes using the filesystem encoding on UNIX and
+   Python 2 on Windows, and pass Unicode through unchanged on Python 3
+   on Windows. (#8941)
+ - twisted.trial._dist.test.test_distreporter now works on Python 3.
+   (#8943)
+
+Bugfixes
+--------
+ - trial --help-reactors will now display iocp and win32er reactors
+   with Python 3. (#8745)
+ - twisted.logger._flatten.flattenEvent now handles log_format being
+   None instead of assuming the value is always a string. (#8860)
+ - twisted.protocol.ftp is now Python 3 compatible (#8865)
+ - twisted.names.client.Resolver can now resolve names with IPv6 DNS
+   servers. (#8877)
+ - twisted.application.internet.ClientService now waits for existing
+   connections to disconnect before trying to connect again when
+   restarting. (#8899)
+ - twisted.internet.unix.Server.doRead and
+   twisted.internet.unix.Client.doRead no longer fail if recvmsg's
+   ancilliary data contains more than one file descriptor. (#8911)
+ - twist on Python 3 now correctly prints the help text when given no
+   plugin to run. (#8918)
+ - twisted.python.sendmsg.sendmsg no longer segfaults on Linux +
+   Python 2. (#8969)
+ - IHandshakeListener providers connected via SSL4ClientEndpoint will
+   now have their handshakeCompleted methods called. (#8973)
+ - The twist script now respects the --reactor option. (#8983)
+ - Fix crash when using SynchronousTestCase with Warning object which
+   does not store a string as its first argument (like
+   libmysqlclient). (#9005)
+ - twisted.python.compat.execfile() does not open files with the
+   deprecated 'U' flag on Python 3. (#9012)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.ssl.CertificateOption's 'method' constructor
+   argument is now deprecated, in favour of the new 'raiseMinimumTo',
+   'lowerMaximumSecurityTo', and 'insecurelyLowerMinimumTo' arguments.
+   (#6800)
+ - twisted.protocols.telnet (not to be confused with the supported
+   twisted.conch.telnet), deprecated since Twisted 2.5, has been
+   removed. (#8925)
+ - twisted.application.strports.parse, as well as the deprecated
+   default arguments in strports.service/listen, deprecated since
+   Twisted 10.2, has been removed. (#8926)
+ - twisted.web.client.getPage and twisted.web.client.downloadPage have
+   been deprecated in favour of https://pypi.org/project/treq and
+   twisted.web.client.Agent. (#8960)
+ - twisted.internet.defer.timeout is deprecated in favor of
+   twisted.internet.defer.Deferred.addTimeout (#8971)
+
+Other
+-----
+ - #7879, #8583, #8764, #8809, #8859, #8906, #8910, #8913, #8916,
+   #8934, #8945, #8949, #8950, #8952, #8953, #8959, #8962, #8963,
+   #8967, #8975, #8976, #8993, #9013
+
+
+Twisted Conch 17.1.0 (2017-02-04)
+=================================
+
+Features
+--------
+ - twisted.conch.manhole now works on Python 3. (#8327)
+ - Twisted Conch now supports ECDH key exchanges. (#8730)
+ - Add support in twisted.conch.ssh for hmac-sha2-384 (#8784)
+ - conch and cftp scripts now work on Python 3. (#8791)
+ - twisted.conch.ssh supports ECDH key exchange. (#8811)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.keys.Key.fromString now supports OpenSSL private
+   keys with Windows line endings (\r\n) again (broken since 16.6.0).
+   (#8928)
+
+Improved Documentation
+----------------------
+ - The documentation for
+   twisted.conch.endpoints.SSHCommandClientEndpoint.existingConnection
+   now describes where the value for the connection parameter might
+   come from. (#8892)
+
+Other
+-----
+ - #8890, #8894, #8957, #8958, #8968
+
+
+Twisted Mail 17.1.0 (2017-02-04)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.tap (the twist plugin for mail) no longer accepts the
+   --pop3s option or implicit port numbers to --pop3 and --smtp. This
+   functionality has been deprecated since 11.0. (#8920)
+
+
+Twisted Names 17.1.0 (2017-02-04)
+=================================
+
+Bugfixes
+--------
+ - twisted.names.authority.BindAuthority has been ported to Python 3.
+   (#8880)
+
+
+Twisted News 17.1.0 (2017-02-04)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 17.1.0 (2017-02-04)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 17.1.0 (2017-02-04)
+==================================
+
+Bugfixes
+--------
+ - On Python 3, procmon now handles process output without exceptions
+   (#8919)
+
+
+Twisted Web 17.1.0 (2017-02-04)
+===============================
+
+Features
+--------
+ - twisted.web.client.Agent now sets ``Content-Length: 0`` for PUT and
+   POST requests made without a body producer. (#8984)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPFactory now times connections out after one
+   minute of no data from the client being received, before the
+   request is complete, rather than twelve hours. (#3746)
+ - twisted.web.http.HTTPChannel, the server class for Twisted's
+   HTTP/1.1 server, now exerts backpressure against clients that do
+   not read responses. This means that if a client stops reading from
+   a socket for long enough, Twisted will stop reading further
+   requests from that client until it consumes some responses. (#8868)
+ - twisted.web.http_headers.Headers.getRawHeaders no longer attempts
+   to decode the default value when called with a unicode header name.
+   (#8974)
+ - twisted.web.http.HTTPChannel is less likely to leak file
+   descriptors when timing out clients using HTTPS connections. In
+   some cases it is still possible to leak a file descriptor when
+   timing out HTTP clients: further patches will address this issue.
+   (#8992)
+
+Other
+-----
+ - #7744, #8909, #8935
+
+
+Twisted Words 17.1.0 (2017-02-04)
+=================================
+
+No significant changes have been made for this release.
+
+
 Twisted Core 16.6.0 (2016-11-17)
 ================================
 
