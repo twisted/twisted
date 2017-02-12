@@ -42,18 +42,7 @@ class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(
     """
     Proxy L{_IDeprecatedHTTPChannelToRequestInterface}.  Used to
     assert that the interface matches what L{HTTPChannel} expects.
-
-    Implements L{__eq__} and L{__ne__} so sanity checks inside
-    L{HTTPChannel} pass.
     """
-
-    def __eq__(self, other):
-        return self.original == other
-
-
-    def __ne__(self, other):
-        return not self == other
-
 
     @classmethod
     def wrap(cls, clsToWrap):
@@ -2894,6 +2883,62 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         verifyObject(http._IDeprecatedHTTPChannelToRequestInterface, req)
+
+
+    def test_eq(self):
+        """
+        A L{http.Request} is equal to itself.
+        """
+        req = http.Request(DummyChannel(), False)
+        self.assertEqual(req, req)
+
+
+    def test_ne(self):
+        """
+        A L{http.Request} is not equal to another object.
+        """
+        req = http.Request(DummyChannel(), False)
+        self.assertNotEqual(req, http.Request(DummyChannel(), False))
+
+
+    def test_eqWithNonRequest(self):
+        """
+        A L{http.Request} on the left hand side of an equality
+        comparison to an instance that is not a L{http.Request} hands
+        the comparison off to that object's C{__eq__} implementation.
+        """
+        eqCalls = []
+
+        class _NotARequest(object):
+
+            def __eq__(self, other):
+                eqCalls.append(other)
+                return True
+
+        req = http.Request(DummyChannel(), False)
+
+        self.assertEqual(req, _NotARequest())
+        self.assertEqual(eqCalls, [req])
+
+
+    def test_neWithNonRequest(self):
+        """
+        A L{http.Request} on the left hand side of an inequality
+        comparison to an instance that is not a L{http.Request} hands
+        the comparison off to that object's C{__ne__} implementation.
+        """
+        eqCalls = []
+
+        class _NotARequest(object):
+
+            def __ne__(self, other):
+                eqCalls.append(other)
+                return True
+
+        req = http.Request(DummyChannel(), False)
+
+        self.assertNotEqual(req, _NotARequest())
+        self.assertEqual(eqCalls, [req])
 
 
 
