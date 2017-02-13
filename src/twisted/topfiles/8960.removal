@@ -1,1 +1,0 @@
-twisted.web.client.getPage and twisted.web.client.downloadPage have been deprecated in favour of https://pypi.org/project/treq and twisted.web.client.Agent.
