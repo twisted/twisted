@@ -17,7 +17,6 @@ from twisted.logger import (
     FilteringLogObserver, LogLevelFilterPredicate,
     LogLevel, Logger,
 )
-from twisted.internet import default as defaultReactor
 
 from ._exit import exit, ExitStatus
 from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError
