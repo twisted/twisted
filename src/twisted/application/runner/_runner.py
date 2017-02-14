@@ -75,7 +75,7 @@ class Runner(object):
 
     _log = Logger()
 
-    _reactor                = attrib(default=None)
+    _reactor                = attrib()
     _pidFile                = attrib(default=nonePIDFile)
     _kill                   = attrib(default=False)
     _defaultLogLevel        = attrib(default=LogLevel.info)
@@ -159,23 +159,13 @@ class Runner(object):
 
     def startReactor(self):
         """
-        If C{self._reactor} is L{None}, install the default reactor and set
-        C{self._reactor} to the default reactor.
-
         Register C{self._whenRunning} with the reactor so that it is called
         once the reactor is running, then start the reactor.
         """
-        if self._reactor is None:
-            defaultReactor.install()
-            from twisted.internet import reactor
-            self._reactor = reactor
-        else:
-            reactor = self._reactor
-
-        reactor.callWhenRunning(self.whenRunning)
+        self._reactor.callWhenRunning(self.whenRunning)
 
         self._log.info("Starting reactor...")
-        reactor.run()
+        self._reactor.run()
 
 
     def whenRunning(self):
