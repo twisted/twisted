@@ -30,47 +30,47 @@ class Runner(object):
     Twisted application runner.
 
     @cvar _log: The logger attached to this class.
-    @type reactor: L{Logger}
+    @type _log: L{Logger}
 
     @ivar _reactor: The reactor to start and run the application in.
-    @type reactor: L{IReactorCore}
+    @type _reactor: L{IReactorCore}
 
     @ivar _pidFile: The file to store the running process ID in.
-    @type pidFile: L{IPIDFile}
+    @type _pidFile: L{IPIDFile}
 
     @ivar _kill: Whether this runner should kill an existing running
         instance of the application.
-    @type kill: L{bool}
+    @type _kill: L{bool}
 
     @ivar _defaultLogLevel: The default log level to start the logging
         system with.
-    @type defaultLogLevel: L{constantly.NamedConstant} from L{LogLevel}
+    @type _defaultLogLevel: L{constantly.NamedConstant} from L{LogLevel}
 
     @ivar _logFile: A file stream to write logging output to.
-    @type logFile: writable file-like object
+    @type _logFile: writable file-like object
 
     @ivar _fileLogObserverFactory: A factory for the file log observer to
         use when starting the logging system.
-    @type pidFile: callable that takes a single writable file-like object
+    @type _pidFile: callable that takes a single writable file-like object
         argument and returns a L{twisted.logger.FileLogObserver}
 
     @ivar _whenRunning: Hook to call after the reactor is running;
         this is where the application code that relies on the reactor gets
         called.
-    @type whenRunning: callable that takes the keyword arguments specified
+    @type _whenRunning: callable that takes the keyword arguments specified
         by C{whenRunningArguments}
 
     @ivar _whenRunningArguments: Keyword arguments to pass to
         C{whenRunning} when it is called.
-    @type whenRunningArguments: L{dict}
+    @type _whenRunningArguments: L{dict}
 
     @ivar _reactorExited: Hook to call after the reactor exits.
-    @type reactorExited: callable that takes the keyword arguments
+    @type _reactorExited: callable that takes the keyword arguments
         specified by C{reactorExitedArguments}
 
     @ivar _reactorExitedArguments: Keyword arguments to pass to
         C{reactorExited} when it is called.
-    @type reactorExitedArguments: L{dict}
+    @type _reactorExitedArguments: L{dict}
     """
 
     _log = Logger()
