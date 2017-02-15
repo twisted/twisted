@@ -88,7 +88,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         pidFile = DummyPIDFile()
 
-        runner = DummyRunner(pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
 
         self.assertFalse(pidFile.entered)
         self.assertFalse(pidFile.exited)
@@ -108,7 +108,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
         pidFile.isRunning = lambda: True
 
-        runner = DummyRunner(pidFile=pidFile)
+        runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
         runner.run()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
