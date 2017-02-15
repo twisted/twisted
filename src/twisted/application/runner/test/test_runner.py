@@ -68,7 +68,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} calls the expected methods in order.
         """
-        runner = DummyRunner()
+        runner = RecordingRunner()
         runner.run()
 
         self.assertEqual(
@@ -86,7 +86,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} uses the provided PID file.
         """
-        pidFile = DummyPIDFile()
+        pidFile = RecordingPIDFile()
 
         runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
 
@@ -348,11 +348,9 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
 
 
-class DummyRunner(Runner):
+class RecordingRunner(Runner):
     """
-    Stub for L{Runner}.
-
-    Keep track of calls to some methods without actually doing anything.
+    Subclass of L{Runner} that keeps track of calls to select methods.
     """
     def __init__(self, reactor=None, **kwargs):
         if reactor is None:
@@ -380,11 +378,9 @@ class DummyRunner(Runner):
 
 
 
-class DummyPIDFile(NonePIDFile):
+class RecordingPIDFile(NonePIDFile):
     """
-    Stub for L{PIDFile}.
-
-    Tracks context manager entry/exit without doing anything.
+    L{IPIDFile} that keeps track of context manager entry/exit.
     """
     def __init__(self):
         NonePIDFile.__init__(self)
