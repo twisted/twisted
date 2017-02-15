@@ -12,19 +12,19 @@ def catchError(err):
 class IFingerService(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def getUsers():
-        """Return a deferred returning a list of strings"""
+        """Return a deferred returning a L{list} of L{bytes}"""
 
 
 class IFingerFactory(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """Return a protocol returning L{bytes}"""
 
 class FingerProtocol(basic.LineReceiver):
 
@@ -57,7 +57,7 @@ components.registerAdapter(FingerFactoryFromService,
 class FingerClient(protocol.Protocol):
 
     def connectionMade(self):
-        self.transport.write(self.factory.user+"\r\n")
+        self.transport.write(self.factory.user + b"\r\n")
         self.buf = []
 
     def dataReceived(self, data):
