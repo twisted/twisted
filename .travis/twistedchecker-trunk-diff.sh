@@ -4,9 +4,9 @@
 # of the changes since trunk.
 #
 # Call it as:
-# * SCRIPT_NAME twisted
-# * SCRIPT_NAME twisted/words/
-# * SCRIPT_NAME twisted.words
+# * tox -e txchecker-travis-required twisted
+# * tox -e txchecker-travis-required twisted/words/
+# * tox -e txchecker-travis-all twisted.words
 
 set -e  # Exit with error is a command exits with an unchecked error.
 set -u  # Exit with error if an undefined variable is dereferenced.
