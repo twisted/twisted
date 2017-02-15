@@ -68,11 +68,27 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} calls the expected methods in order.
         """
-        runner = RecordingRunner()
+
+        calledMethods = []
+
+        class RecordingRunner(Runner):
+            """
+            Subclass of L{Runner} that keeps track of calls to select methods.
+            """
+            def killIfRequested(self):
+                calledMethods.append("killIfRequested")
+            def startLogging(self):
+                calledMethods.append("startLogging")
+            def startReactor(self):
+                calledMethods.append("startReactor")
+            def reactorExited(self):
+                calledMethods.append("reactorExited")
+
+        runner = RecordingRunner(reactor=MemoryReactor())
         runner.run()
 
         self.assertEqual(
-            runner.calledMethods,
+            calledMethods,
             [
                 "killIfRequested",
                 "startLogging",
@@ -345,36 +361,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(len(argumentsSeen), 1)
         self.assertEqual(argumentsSeen[0], arguments)
-
-
-
-class RecordingRunner(Runner):
-    """
-    Subclass of L{Runner} that keeps track of calls to select methods.
-    """
-    def __init__(self, reactor=None, **kwargs):
-        if reactor is None:
-            reactor = MemoryReactor()
-
-        Runner.__init__(self, reactor=reactor, **kwargs)
-
-        self.calledMethods = []
-
-
-    def killIfRequested(self):
-        self.calledMethods.append("killIfRequested")
-
-
-    def startLogging(self):
-        self.calledMethods.append("startLogging")
-
-
-    def startReactor(self):
-        self.calledMethods.append("startReactor")
-
-
-    def reactorExited(self):
-        self.calledMethods.append("reactorExited")
 
 
 
