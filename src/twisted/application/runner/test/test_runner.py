@@ -71,20 +71,24 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         calledMethods = []
 
-        class RecordingRunner(Runner):
-            """
-            Subclass of L{Runner} that keeps track of calls to select methods.
-            """
-            def killIfRequested(self):
-                calledMethods.append("killIfRequested")
-            def startLogging(self):
-                calledMethods.append("startLogging")
-            def startReactor(self):
-                calledMethods.append("startReactor")
-            def reactorExited(self):
-                calledMethods.append("reactorExited")
+        self.patch(
+            Runner, "killIfRequested",
+            lambda self: calledMethods.append("killIfRequested")
+        )
+        self.patch(
+            Runner, "startLogging",
+            lambda self: calledMethods.append("startLogging")
+        )
+        self.patch(
+            Runner, "startReactor",
+            lambda self: calledMethods.append("startReactor")
+        )
+        self.patch(
+            Runner, "reactorExited",
+            lambda self: calledMethods.append("reactorExited")
+        )
 
-        runner = RecordingRunner(reactor=MemoryReactor())
+        runner = Runner(reactor=MemoryReactor())
         runner.run()
 
         self.assertEqual(
