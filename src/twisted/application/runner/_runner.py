@@ -10,8 +10,6 @@ from sys import stderr
 from signal import SIGTERM
 from os import kill
 
-from constantly import Names, NamedConstant
-
 from twisted.logger import (
     globalLogBeginner, textFileLogObserver,
     FilteringLogObserver, LogLevelFilterPredicate,
@@ -31,19 +29,73 @@ class Runner(object):
     log = Logger()
 
 
-    def __init__(self, options):
+    def __init__(
+        self,
+        reactor=None,
+        pidFile=nonePIDFile, kill=False,
+        defaultLogLevel=LogLevel.info,
+        logFile=stderr, fileLogObserverFactory=textFileLogObserver,
+        whenRunning=lambda **_: None, whenRunningArguments={},
+        reactorExited=lambda **_: None, reactorExitedArguments={},
+    ):
         """
-        @param options: Configuration options for this runner.
-        @type options: mapping of L{RunnerOptions} to values
+        @param reactor: The reactor to start and run the application in.
+        @type reactor: L{IReactorCore}
+
+        @param pidFile: The file to store the running process ID in.
+        @type pidFile: L{IPIDFile}
+
+        @param kill: Whether this runner should kill an existing running
+            instance of the application.
+        @type kill: L{bool}
+
+        @param defaultLogLevel: The default log level to start the logging
+            system with.
+        @type defaultLogLevel: L{constantly.NamedConstant} from L{LogLevel}
+
+        @param logFile: A file stream to write logging output to.
+        @type logFile: writable file-like object
+
+        @param fileLogObserverFactory: A factory for the file log observer to
+            use when starting the logging system.
+        @type pidFile: callable that takes a single writable file-like object
+            argument and returns a L{twisted.logger.FileLogObserver}
+
+        @param whenRunning: Hook to call after the reactor is running;
+            this is where the application code that relies on the reactor gets
+            called.
+        @type whenRunning: callable that takes the keyword arguments specified
+            by C{whenRunningArguments}
+
+        @param whenRunningArguments: Keyword arguments to pass to
+            C{whenRunning} when it is called.
+        @type whenRunningArguments: L{dict}
+
+        @param reactorExited: Hook to call after the reactor exits.
+        @type reactorExited: callable that takes the keyword arguments
+            specified by C{reactorExitedArguments}
+
+        @param reactorExitedArguments: Keyword arguments to pass to
+            C{reactorExited} when it is called.
+        @type reactorExitedArguments: L{dict}
         """
-        self.options = options
+        self.reactor                = reactor
+        self.pidFile                = pidFile
+        self.kill                   = kill
+        self.defaultLogLevel        = defaultLogLevel
+        self.logFile                = logFile
+        self.fileLogObserverFactory = fileLogObserverFactory
+        self.whenRunningHook        = whenRunning
+        self.whenRunningArguments   = whenRunningArguments
+        self.reactorExitedHook      = reactorExited
+        self.reactorExitedArguments = reactorExitedArguments
 
 
     def run(self):
         """
         Run this command.
         """
-        pidFile = self.options.get(RunnerOptions.pidFile, nonePIDFile)
+        pidFile = self.pidFile
 
         self.killIfRequested()
 
@@ -60,26 +112,24 @@ class Runner(object):
 
     def killIfRequested(self):
         """
-        Kill a running instance of this application if L{RunnerOptions.kill} is
-        specified and L{True} in C{self.options}.
-        This requires that L{RunnerOptions.pidFile} also be specified;
-        exit with L{ExitStatus.EX_USAGE} if kill is requested with no PID file.
+        If C{self.kill} is true, attempt to kill a running instance of the
+        application.
         """
-        pidFile = self.options.get(RunnerOptions.pidFile)
+        pidFile = self.pidFile
 
-        if self.options.get(RunnerOptions.kill, False):
-            if pidFile is None:
+        if self.kill:
+            if pidFile is nonePIDFile:
                 exit(ExitStatus.EX_USAGE, "No PID file specified.")
                 return  # When testing, patched exit doesn't exit
-            else:
-                try:
-                    pid = pidFile.read()
-                except EnvironmentError:
-                    exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
-                    return  # When testing, patched exit doesn't exit
-                except InvalidPIDFileError:
-                    exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
-                    return  # When testing, patched exit doesn't exit
+
+            try:
+                pid = pidFile.read()
+            except EnvironmentError:
+                exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
+                return  # When testing, patched exit doesn't exit
+            except InvalidPIDFileError:
+                exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
+                return  # When testing, patched exit doesn't exit
 
             self.startLogging()
             self.log.info("Terminating process: {pid}", pid=pid)
@@ -94,18 +144,14 @@ class Runner(object):
         """
         Start the L{twisted.logger} logging system.
         """
-        logFile = self.options.get(RunnerOptions.logFile, stderr)
+        logFile = self.logFile
 
-        fileLogObserverFactory = self.options.get(
-            RunnerOptions.fileLogObserverFactory, textFileLogObserver
-        )
+        fileLogObserverFactory = self.fileLogObserverFactory
 
         fileLogObserver = fileLogObserverFactory(logFile)
 
         logLevelPredicate = LogLevelFilterPredicate(
-            defaultLogLevel=self.options.get(
-                RunnerOptions.defaultLogLevel, LogLevel.info
-            )
+            defaultLogLevel=self.defaultLogLevel
         )
 
         filteringObserver = FilteringLogObserver(
@@ -117,16 +163,18 @@ class Runner(object):
 
     def startReactor(self):
         """
+        If C{self.reactor} is L{None}, install the default reactor and set
+        C{self.reactor} to the default reactor.
+
         Register C{self.whenRunning} with the reactor so that it is called once
-        the reactor is running and start the reactor.
-        If L{RunnerOptions.reactor} is specified in C{self.options}, use that
-        reactor; otherwise use the default reactor.
+        the reactor is running, then start the reactor.
         """
-        reactor = self.options.get(RunnerOptions.reactor)
-        if reactor is None:
-            reactor = defaultReactor
-            reactor.install()
-            self.options[RunnerOptions.reactor] = reactor
+        if self.reactor is None:
+            defaultReactor.install()
+            from twisted.internet import reactor
+            self.reactor = reactor
+        else:
+            reactor = self.reactor
 
         reactor.callWhenRunning(self.whenRunning)
 
@@ -136,78 +184,17 @@ class Runner(object):
 
     def whenRunning(self):
         """
-        If L{RunnerOptions.whenRunning} is specified in C{self.options}, call
-        it.
+        Call C{self.whenRunning}.
 
-        @note: This method is called when the reactor is running.
+        @note: This method is called after the reactor starts running.
         """
-        whenRunning = self.options.get(RunnerOptions.whenRunning)
-        if whenRunning is not None:
-            whenRunning(self.options)
+        self.whenRunningHook(**self.whenRunningArguments)
 
 
     def reactorExited(self):
         """
-        If L{RunnerOptions.reactorExited} is specified in C{self.options}, call
-        it.
+        Call C{self.reactorExited}.
 
-        @note: This method is called after the reactor has exited.
+        @note: This method is called after the reactor exits.
         """
-        reactorExited = self.options.get(RunnerOptions.reactorExited)
-        if reactorExited is not None:
-            reactorExited(self.options)
-
-
-
-class RunnerOptions(Names):
-    """
-    Names for options recognized by L{Runner}.
-    These are meant to be used as keys in the options given to L{Runner}, with
-    corresponding values as noted below.
-
-    @cvar reactor: The reactor to start.
-        Corresponding value: L{IReactorCore}.
-    @type reactor: L{NamedConstant}
-
-    @cvar pidFile: The PID file to use.
-        Corresponding value: L{IPIDFile}.
-    @type pidFile: L{NamedConstant}
-
-    @cvar kill: Whether this runner should kill an existing running instance.
-        Corresponding value: L{bool}.
-    @type kill: L{NamedConstant}
-
-    @cvar defaultLogLevel: The default log level to start the logging system
-        with.
-        Corresponding value: L{NamedConstant} from L{LogLevel}.
-    @type defaultLogLevel: L{NamedConstant}
-
-    @cvar logFile: A file stream to write logging output to.
-        Corresponding value: writable file like object.
-    @type logFile: L{NamedConstant}
-
-    @cvar fileLogObserverFactory: What file log observer to use when starting
-        the logging system.
-        Corresponding value: callable that returns a
-        L{twisted.logger.FileLogObserver}
-    @type fileLogObserverFactory: L{NamedConstant}
-
-    @cvar whenRunning: Hook to call when the reactor is running.
-        This can be considered the Twisted equivalent to C{main()}.
-        Corresponding value: callable that takes the options mapping given to
-        the runner as an argument.
-    @type whenRunning: L{NamedConstant}
-
-    @cvar reactorExited: Hook to call when the reactor has exited.
-        Corresponding value: callable that takes an empty arguments list
-    @type reactorExited: L{NamedConstant}
-    """
-
-    reactor                = NamedConstant()
-    pidFile                = NamedConstant()
-    kill                   = NamedConstant()
-    defaultLogLevel        = NamedConstant()
-    logFile                = NamedConstant()
-    fileLogObserverFactory = NamedConstant()
-    whenRunning            = NamedConstant()
-    reactorExited          = NamedConstant()
+        self.reactorExitedHook(**self.reactorExitedArguments)
