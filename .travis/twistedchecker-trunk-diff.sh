@@ -31,13 +31,13 @@ git fetch origin "+refs/heads/trunk:refs/remotes/origin/trunk";
 
 # Explicitly ignore extension modules.
 # See: https://github.com/twisted/twistedchecker/issues/118
-mkdir -p build/;
+mkdir -p "${TOX_TMP_DIR}";
 twistedchecker \
     --ignore="raiser.so,portmap.so,_sendmsg.so" \
     --disable="${TWISTEDCHECKER_SKIP_WARNINGS:-}" \
     --output-format=parseable \
     "${target}" \
-    > "build/twistedchecker-branch.report" || true;
+    > "${TOX_TMP_DIR}/twistedchecker-branch.report" || true;
 
 # Make sure repo is producing the diff with prefix so that the output of
 # `git diff` can be parsed by diff_cover.
@@ -47,4 +47,4 @@ diff-quality \
     --violations=pylint \
     --fail-under=100 \
     --compare-branch=origin/trunk \
-    build/twistedchecker-branch.report;
+    "${TOX_TMP_DIR}/twistedchecker-branch.report";
