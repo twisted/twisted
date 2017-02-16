@@ -106,12 +106,23 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} uses the provided PID file.
         """
-        pidFile = RecordingPIDFile()
+
+        def __enter__(self):
+            self.entered = True
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.exited = True
+
+        self.patch(NonePIDFile, "__enter__", __enter__)
+        self.patch(NonePIDFile, "__exit__", __exit__)
+
+        pidFile = NonePIDFile()
 
         runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
 
-        self.assertFalse(pidFile.entered)
-        self.assertFalse(pidFile.exited)
+        self.assertFalse(hasattr(pidFile, "entered"))
+        self.assertFalse(hasattr(pidFile, "exited"))
 
         runner.run()
 
@@ -365,27 +376,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(len(argumentsSeen), 1)
         self.assertEqual(argumentsSeen[0], arguments)
-
-
-
-class RecordingPIDFile(NonePIDFile):
-    """
-    L{IPIDFile} that keeps track of context manager entry/exit.
-    """
-    def __init__(self):
-        NonePIDFile.__init__(self)
-
-        self.entered = False
-        self.exited  = False
-
-
-    def __enter__(self):
-        self.entered = True
-        return self
-
-
-    def __exit__(self, excType, excValue, traceback):
-        self.exited  = True
 
 
 
