@@ -3,7 +3,7 @@ from twisted.protocols import basic
 
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
-        self.transport.write("No such user\r\n")
+        self.transport.write(b"No such user\r\n")
         self.transport.loseConnection()
 
 class FingerFactory(protocol.ServerFactory):

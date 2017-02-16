@@ -13,13 +13,13 @@ from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
     FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
 )
-from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
 from .._pidfile import PIDFile, NonePIDFile
-from .._runner import Runner, RunnerOptions
+from .._runner import Runner
 from .test_pidfile import DummyFilePath
+from .mockreactor import MockReactor
 
 import twisted.trial.unittest
 
@@ -88,7 +88,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         pidFile = DummyPIDFile()
 
-        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
+        runner = DummyRunner(pidFile=pidFile)
 
         self.assertFalse(pidFile.entered)
         self.assertFalse(pidFile.exited)
@@ -108,7 +108,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
         pidFile.isRunning = lambda: True
 
-        runner = DummyRunner({RunnerOptions.pidFile: pidFile})
+        runner = DummyRunner(pidFile=pidFile)
         runner.run()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_CONFIG)
@@ -117,8 +117,8 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killNotRequested(self):
         """
-        L{Runner.killIfRequested} without L{RunnerOptions.kill} doesn't exit
-        and doesn't indiscriminately murder anyone.
+        L{Runner.killIfRequested} when C{kill} is false doesn't exit and
+        doesn't indiscriminately murder anyone.
         """
         runner = Runner({})
         runner.killIfRequested()
@@ -129,11 +129,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithoutPIDFile(self):
         """
-        L{Runner.killIfRequested} with L{RunnerOptions.kill} but without
-        L{RunnerOptions.pidFile}, exits with L{ExitStatus.EX_USAGE} and
-        the expected message, and also doesn't indiscriminately murder anyone.
+        L{Runner.killIfRequested} when C{kill} is true but C{pidFile} is
+        L{nonePIDFile} exits with L{ExitStatus.EX_USAGE} and the expected
+        message; and also doesn't indiscriminately murder anyone.
         """
-        runner = Runner({RunnerOptions.kill: True})
+        runner = Runner(kill=True)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [])
@@ -143,15 +143,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFile(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and
-        L{RunnerOptions.pidFile} performs a targeted killing of the
-        appropriate process.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        performs a targeted killing of the appropriate process.
         """
         pidFile = PIDFile(DummyFilePath(self.pidFileContent))
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.kill.calls, [(self.pid, SIGTERM)])
@@ -161,9 +157,8 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileCantRead(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} that it can't read exits with
-        L{ExitStatus.EX_IOERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        that it can't read exits with L{ExitStatus.EX_IOERR}.
         """
         pidFile = PIDFile(DummyFilePath(None))
 
@@ -172,10 +167,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         pidFile.read = read
 
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
@@ -184,15 +176,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileEmpty(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} containing no value exits with
-        L{ExitStatus.EX_DATAERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        containing no value exits with L{ExitStatus.EX_DATAERR}.
         """
         pidFile = PIDFile(DummyFilePath(b""))
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
@@ -201,15 +189,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
-        L{RunnerOptions.pidFile} containing a non-integer value exits with
-        L{ExitStatus.EX_DATAERR}.
+        L{Runner.killIfRequested} when C{kill} is true and given a C{pidFile}
+        containing a non-integer value exits with L{ExitStatus.EX_DATAERR}.
         """
         pidFile = PIDFile(DummyFilePath(b"** totally not a number, dude **"))
-        runner = Runner({
-            RunnerOptions.kill: True,
-            RunnerOptions.pidFile: pidFile,
-        })
+        runner = Runner(kill=True, pidFile=pidFile)
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
@@ -222,7 +206,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         predicate set to the given log level that contains a file observer of
         the given type which writes to the given file.
         """
-        logFile = object()
+        logFile = BytesIO()
 
         # Patch the log beginner so that we don't try to start the already
         # running (started by trial) logging system.
@@ -256,11 +240,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
                 FileLogObserver.__init__(self, outFile, str)
 
         # Start logging
-        runner = Runner({
-            RunnerOptions.logFile: logFile,
-            RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
-            RunnerOptions.defaultLogLevel: LogLevel.critical,
-        })
+        runner = Runner(
+            defaultLogLevel=LogLevel.critical,
+            logFile=logFile,
+            fileLogObserverFactory=MockFileLogObserver,
+        )
         runner.startLogging()
 
         # Check for a filtering observer
@@ -291,14 +275,13 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_startReactorWithoutReactor(self):
         """
-        L{Runner.startReactor} without L{RunnerOptions.reactor} runs the default
+        L{Runner.startReactor} without the C{reactor} argument runs the default
         reactor.
         """
-        # Patch defaultReactor
-        reactor = MemoryReactor()
+        reactor = MockReactor(self)
         self.patch(_runner, "defaultReactor", reactor)
 
-        runner = Runner({})
+        runner = Runner()
         runner.startReactor()
 
         self.assertTrue(reactor.hasInstalled)
@@ -307,71 +290,75 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
     def test_startReactorWithReactor(self):
         """
-        L{Runner.startReactor} with L{RunnerOptions.reactor} runs that reactor.
+        L{Runner.startReactor} with the C{reactor} argument runs the given
+        reactor.
         """
-        reactor = MemoryReactor()
-        runner = Runner({RunnerOptions.reactor: reactor})
+        reactor = MockReactor(self)
+        runner = Runner(reactor=reactor)
         runner.startReactor()
 
         self.assertTrue(reactor.hasRun)
 
 
-    def test_startReactorWithWhenRunning(self):
+    def test_startReactorWhenRunning(self):
         """
-        L{Runner.startReactor} with L{RunnerOptions.whenRunning} ensures that
-        the given callable is called with the runner's options when the reactor
-        is running.
+        L{Runner.startReactor} ensures that C{whenRunning} is called with
+        C{whenRunningArguments} when the reactor is running.
         """
-        optionsSeen = []
+        self._testHook("whenRunning", "startReactor")
 
-        def txmain(options):
-            optionsSeen.append(options)
 
-        options = {
-            RunnerOptions.reactor: MemoryReactor(),
-            RunnerOptions.whenRunning: txmain,
+    def test_whenRunningWithArguments(self):
+        """
+        L{Runner.whenRunning} calls C{whenRunning} with
+        C{whenRunningArguments}.
+        """
+        self._testHook("whenRunning")
+
+
+    def test_reactorExitedWithArguments(self):
+        """
+        L{Runner.whenRunning} calls C{reactorExited} with
+        C{reactorExitedArguments}.
+        """
+        self._testHook("reactorExited")
+
+
+    def _testHook(self, methodName, callerName=None):
+        """
+        Verify that the named hook is run with the expected arguments as
+        specified by the arguments used to create the L{Runner}, when the
+        specified caller is invoked.
+
+        @param methodName: The name of the hook to verify.
+        @type methodName: L{str}
+
+        @param callerName: The name of the method that is expected to cause the
+            hook to be called.
+            If C{None}, use the L{Runner} method with the same name as the
+            hook.
+        @type callerName: L{str}
+        """
+        if callerName is None:
+            callerName = methodName
+
+        arguments = dict(a=object(), b=object(), c=object())
+        argumentsSeen = []
+
+        def hook(**arguments):
+            argumentsSeen.append(arguments)
+
+        runnerArguments = {
+            methodName: hook,
+            "{}Arguments".format(methodName): arguments.copy(),
         }
-        runner = Runner(options)
-        runner.startReactor()
+        runner = Runner(reactor=MockReactor(self), **runnerArguments)
 
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        hookCaller = getattr(runner, callerName)
+        hookCaller()
 
-
-    def test_whenRunningWithWhenRunning(self):
-        """
-        L{Runner.whenRunning} with L{RunnerOptions.whenRunning} calls the given
-        callable with the runner's options.
-        """
-        optionsSeen = []
-
-        def txmain(options):
-            optionsSeen.append(options)
-
-        options = {RunnerOptions.whenRunning: txmain}
-        runner = Runner(options)
-        runner.whenRunning()
-
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
-
-
-    def test_reactorExitedWithReactorExited(self):
-        """
-        L{Runner.reactorExited} with L{RunnerOptions.reactorExited} calls the
-        given callable with the runner's options.
-        """
-        optionsSeen = []
-
-        def exited(options):
-            optionsSeen.append(options)
-
-        options = {RunnerOptions.reactorExited: exited}
-        runner = Runner(options)
-        runner.reactorExited()
-
-        self.assertEqual(len(optionsSeen), 1)
-        self.assertIdentical(optionsSeen[0], options)
+        self.assertEqual(len(argumentsSeen), 1)
+        self.assertEqual(argumentsSeen[0], arguments)
 
 
 

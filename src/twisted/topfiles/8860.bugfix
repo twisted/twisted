@@ -1,1 +1,0 @@
-twisted.logger._flatten.flattenEvent now handles log_format being None instead of assuming the value is always a string.
