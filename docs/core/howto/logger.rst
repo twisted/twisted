@@ -339,10 +339,10 @@ Specifically, a log observer:
 
 - must be prepared to be called from threads other than the main thread (or I/O thread, or reactor thread)
 - must be prepared to be called from multiple threads concurrently
-- must not interact with other Twisted APIs that are not explicitly thread-safe without first taking precautions like using :api:`twisted.internet.interfaces.IReactorThreads.callFromThread <callFromThread>`
+- must not interact with other Twisted APIs that are not explicitly thread-safe without first taking precautions like using :api:`twisted.internet.interfaces.IReactorFromThreads.callFromThread <callFromThread>`
 
 Keep in mind that this is true even if you elect not to explicitly interact with any threads from your program.
-Twisted itself may log messages from threads, and Twisted may internally use APIs like :api:`twisted.internet.interfaces.IReactorThreads.callInThread <callInThread>` ; for example, Twisted uses threads to look up hostnames when making an outgoing connection.
+Twisted itself may log messages from threads, and Twisted may internally use APIs like :api:`twisted.internet.interfaces.IReactorInThreads.callInThread <callInThread>` ; for example, Twisted uses threads to look up hostnames when making an outgoing connection.
 
 Given this extra wrinkle, it's usually best to see if you can find an existing log observer implementation that does what you need before implementing your own; thread safety can be tricky to implement.
 Luckily, :api:`twisted.logger <twisted.logger>` comes with several useful observers, which are documented below.
