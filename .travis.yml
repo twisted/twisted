@@ -48,6 +48,8 @@ matrix:
       env: TOXENV=txchecker-travis-required
     - python: 2.7
       env: TOXENV=txchecker-travis-all
+    - python: 2.7
+      env: TOXENV=downstream
   allow_failures:
     - env: TOXENV=txchecker-travis-all
 
