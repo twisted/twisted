@@ -3017,3 +3017,25 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
         self.assertEqual(results, [])
         self.assertEqual(errors, [theFailure])
+
+
+    def test_futureToDeferredFutureCancelled(self):
+        """
+        L{defer.futureToDeferred} makes a L{defer.Deferred} fire with
+        an L{asyncio.CancelledError} when the given
+        L{asyncio.Future} is cancelled.
+        """
+        from asyncio import Future, new_event_loop, CancelledError
+
+        loop = new_event_loop()
+        canceled = Future(loop=loop)
+
+        d = defer.futureToDeferred(canceled)
+
+        canceled.cancel()
+
+        # loop.run_until_complete directly calls Future.result(), so
+        # it raises whatever Future.result() raises
+        self.assertRaises(CancelledError, loop.run_until_complete, canceled)
+
+        self.failureResultOf(d).trap(CancelledError)
