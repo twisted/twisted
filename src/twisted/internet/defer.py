@@ -1833,6 +1833,8 @@ if _PY34PLUS:
         """
         Adapt an L{asyncio.future} to a L{Deferred}.
 
+        @since: Twisted NEXT
+
         @param future: The Future to adapt.
         @type future: L{asyncio.Future}
 
@@ -1856,6 +1858,8 @@ if _PY34PLUS:
     def deferredToFuture(loop, deferred):
         """
         Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+
+        @since: Twisted NEXT
 
         @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
         @type loop: L{asyncio.AbstractEventLoop} or similar
