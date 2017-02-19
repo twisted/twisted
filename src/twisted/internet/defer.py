@@ -1853,7 +1853,6 @@ if _PY34PLUS:
         return d
 
 
-
     def deferredToFuture(loop, deferred):
         """
         Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.

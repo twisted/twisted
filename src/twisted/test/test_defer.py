@@ -2972,6 +2972,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
     if not _PY34PLUS:
         skip = "Cannot run on Pythons before 3.4."
 
+
     def test_deferredToFuture(self):
         """
         L{defer.deferredToFuture} makes a L{asyncio.Future} fire when the given
