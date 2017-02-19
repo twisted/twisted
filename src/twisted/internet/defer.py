@@ -1831,7 +1831,7 @@ if _PY34PLUS:
 
     def futureToDeferred(future):
         """
-        Adapt an L{asyncio.future} to a L{Deferred}.
+        Adapt an L{asyncio.Future} to a L{Deferred}.
 
         @since: Twisted NEXT
 
