@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb,twisted.internet.test.test_coroutines -*-
+# -*- test-case-name: twisted.test.test_defer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
