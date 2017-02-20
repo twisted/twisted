@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb -*-
+# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb,twisted.internet.test.test_coroutines -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -1849,7 +1849,7 @@ if _PY34PLUS:
             try:
                 d.callback(result.result())
             except:
-                d.errback(failure.Failure(result.exception()))
+                d.errback(failure.Failure())
 
         asyncio.ensure_future(future).add_done_callback(_adapt)
         return d
