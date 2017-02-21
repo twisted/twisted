@@ -3069,12 +3069,6 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertEqual(self.successResultOf(d), 7)
 
 
-        """
-        """
-        loop = new_event_loop()
-        callAllSoonCalls(loop)
-
-
     def test_fromFutureFutureCancelled(self):
         """
         L{defer.Deferred.fromFuture} makes a L{defer.Deferred} fire with
@@ -3082,9 +3076,24 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{asyncio.Future} is cancelled.
         """
         loop = new_event_loop()
-        canceled = Future(loop=loop)
-        d = defer.Deferred.fromFuture(canceled)
-        canceled.cancel()
+        cancelled = Future(loop=loop)
+        d = defer.Deferred.fromFuture(cancelled)
+        cancelled.cancel()
         callAllSoonCalls(loop)
-        self.assertRaises(CancelledError, canceled.result)
+        self.assertRaises(CancelledError, cancelled.result)
+        self.failureResultOf(d).trap(CancelledError)
+
+
+    def test_fromFutureDeferredCancelled(self):
+        """
+        L{defer.Deferred.fromFuture} makes a L{defer.Deferred} which, when
+        cancelled, cancels the L{asyncio.Future} it was created from.
+        """
+        loop = new_event_loop()
+        cancelled = Future(loop=loop)
+        d = defer.Deferred.fromFuture(cancelled)
+        d.cancel()
+        callAllSoonCalls(loop)
+        self.assertEqual(cancelled.cancelled(), True)
+        self.assertRaises(CancelledError, cancelled.result)
         self.failureResultOf(d).trap(CancelledError)

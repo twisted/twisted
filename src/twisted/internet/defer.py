@@ -816,13 +816,24 @@ class Deferred:
         @return: A Deferred which will fire when the Future fires.
         @rtype: L{Deferred}
         """
-        self = cls()
         def adapt(result):
             try:
                 extracted = result.result()
             except:
                 extracted = failure.Failure()
-            self.callback(extracted)
+            adapt.actual.callback(extracted)
+        futureCancel = object()
+        def cancel(reself):
+            future.cancel()
+            reself.callback(futureCancel)
+        self = cls(cancel)
+        adapt.actual = self
+        def uncancel(result):
+            if result is futureCancel:
+                adapt.actual = Deferred()
+                return adapt.actual
+            return result
+        self.addCallback(uncancel)
         future.add_done_callback(adapt)
         return self
 
