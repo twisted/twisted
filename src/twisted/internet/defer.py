@@ -757,10 +757,10 @@ class Deferred:
         """
         Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
 
-        @note: converting a L{Deferred} to a L{Future} consumes both its result
-            and its errors, so this method implicitly converts C{self} into a
-            L{Deferred} firing with L{None}, regardless of what its result
-            previously would have been.
+        @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
+            its result and its errors, so this method implicitly converts
+            C{self} into a L{Deferred} firing with L{None}, regardless of what
+            its result previously would have been.
 
         @since: Twisted NEXT
 
@@ -799,14 +799,14 @@ class Deferred:
         """
         Adapt an L{asyncio.Future} to a L{Deferred}.
 
-        @note: This creates a L{Deferred} from a L{Future}, I{not} from a
-            C{coroutine}; in other words, you will need to call
+        @note: This creates a L{Deferred} from a L{asyncio.Future}, I{not} from
+            a C{coroutine}; in other words, you will need to call
             L{asyncio.async}, L{asyncio.ensure_future},
             L{asyncio.AbstractEventLoop.create_task} or create an
-            L{asyncio.Task} yourself to get from a C{coroutine} to a L{Future}
-            if what you have is an awaitable coroutine and not a L{Future}.
-            (The length of this list of techniques is exactly why we have left
-            it to the caller!)
+            L{asyncio.Task} yourself to get from a C{coroutine} to a
+            L{asyncio.Future} if what you have is an awaitable coroutine and
+            not a L{asyncio.Future}.  (The length of this list of techniques is
+            exactly why we have left it to the caller!)
 
         @since: Twisted NEXT
 
