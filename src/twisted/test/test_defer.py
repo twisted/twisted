@@ -3040,6 +3040,21 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertRaises(CancelledError, aFuture.result)
 
 
+    def test_asFutureFailure(self):
+        """
+        L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire with an
+        exception when the given L{defer.Deferred} does.
+        """
+        d = defer.Deferred()
+        theFailure = failure.Failure(ZeroDivisionError())
+        loop = new_event_loop()
+        future = d.asFuture(loop)
+        callAllSoonCalls(loop)
+        d.errback(theFailure)
+        callAllSoonCalls(loop)
+        self.assertRaises(ZeroDivisionError, future.result)
+
+
     def test_fromFuture(self):
         """
         L{defer.Deferred.fromFuture} returns a L{defer.Deferred} that fires
@@ -3054,19 +3069,10 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertEqual(self.successResultOf(d), 7)
 
 
-    def test_asFutureFailure(self):
         """
-        L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire with an
-        exception when the given L{defer.Deferred} does.
         """
-        d = defer.Deferred()
-        theFailure = failure.Failure(ZeroDivisionError())
         loop = new_event_loop()
-        future = d.asFuture(loop)
         callAllSoonCalls(loop)
-        d.errback(theFailure)
-        callAllSoonCalls(loop)
-        self.assertRaises(ZeroDivisionError, future.result)
 
 
     def test_fromFutureFutureCancelled(self):
