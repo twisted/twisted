@@ -2980,6 +2980,9 @@ def callAllSoonCalls(loop):
     """
     Tickle an asyncio event loop to call all of the things scheduled with
     call_soon, inasmuch as this can be done via the public API.
+
+    @param loop: The asyncio event loop to flush the previously-called
+        C{call_soon} entries from.
     """
     loop.call_soon(loop.stop)
     loop.run_forever()
