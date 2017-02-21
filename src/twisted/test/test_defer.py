@@ -3005,6 +3005,41 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         self.assertEqual(aFuture.result(), 13)
 
 
+    def test_asFutureCancelFuture(self):
+        """
+        L{defer.Deferred.asFuture} returns a L{asyncio.Future} which, when
+        cancelled, will cancel the original L{defer.Deferred}.
+        """
+        def canceler(dprime):
+            canceler.called = True
+        canceler.called = False
+        d = defer.Deferred(canceler)
+        loop = new_event_loop()
+        aFuture = d.asFuture(loop)
+        aFuture.cancel()
+        callAllSoonCalls(loop)
+        self.assertEqual(canceler.called, True)
+        self.assertEqual(self.successResultOf(d), None)
+        self.assertRaises(CancelledError, aFuture.result)
+
+
+    def test_asFutureSuccessCancel(self):
+        """
+        While Futures don't support succeeding in response to cancellation,
+        Deferreds do; if a Deferred is coerced into a success by a Future
+        cancellation, that should just be ignored.
+        """
+        def canceler(dprime):
+            dprime.callback(9)
+        d = defer.Deferred(canceler)
+        loop = new_event_loop()
+        aFuture = d.asFuture(loop)
+        aFuture.cancel()
+        callAllSoonCalls(loop)
+        self.assertEqual(self.successResultOf(d), None)
+        self.assertRaises(CancelledError, aFuture.result)
+
+
     def test_fromFuture(self):
         """
         L{defer.Deferred.fromFuture} returns a L{defer.Deferred} that fires
@@ -3044,5 +3079,6 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         canceled = Future(loop=loop)
         d = defer.Deferred.fromFuture(canceled)
         canceled.cancel()
+        callAllSoonCalls(loop)
         self.assertRaises(CancelledError, canceled.result)
         self.failureResultOf(d).trap(CancelledError)

@@ -780,8 +780,17 @@ class Deferred:
             def createFuture():
                 return Future(loop=loop)
         future = createFuture()
-        self.addCallbacks(future.set_result,
-                          lambda failure: future.set_exception(failure.value))
+        def checkCancel(futureAgain):
+            if futureAgain.cancelled():
+                self.cancel()
+        def maybeFail(failure):
+            if not future.cancelled():
+                future.set_exception(failure.value)
+        def maybeSucceed(result):
+            if not future.cancelled():
+                future.set_result(result)
+        self.addCallbacks(maybeSucceed, maybeFail)
+        future.add_done_callback(checkCancel)
         return future
 
 
