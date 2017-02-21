@@ -773,8 +773,13 @@ class Deferred:
         @return: A Future which will fire when the Deferred fires.
         @rtype: L{asyncio.Future}
         """
-        from asyncio import Future
-        future = Future(loop=loop)
+        try:
+            createFuture = loop.create_future
+        except AttributeError:
+            from asyncio import Future
+            def createFuture():
+                return Future(loop=loop)
+        future = createFuture()
         self.addCallbacks(future.set_result,
                           lambda failure: future.set_exception(failure.value))
         return future
