@@ -2973,10 +2973,10 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         skip = "Cannot run on Pythons before 3.4."
 
 
-    def test_deferredToFuture(self):
+    def test_asFuture(self):
         """
-        L{defer.deferredToFuture} makes a L{asyncio.Future} fire when the given
-        L{defer.Deferred} does.
+        L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire when the
+        given L{defer.Deferred} does.
         """
         from asyncio import new_event_loop
 
@@ -2988,16 +2988,16 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         d.addErrback(errors.append)
 
         loop = new_event_loop()
-        loop.call_soon_threadsafe(d.callback, 1)
-        loop.run_until_complete(defer.deferredToFuture(loop, d))
+        loop.call_soon(d.callback, 1)
+        loop.run_until_complete(d.asFuture(loop))
 
         self.assertEqual(results, [1])
         self.assertEqual(errors, [])
 
 
-    def test_deferredToFutureFailure(self):
+    def test_asFutureFailure(self):
         """
-        L{defer.deferredToFuture} makes a L{asyncio.Future} fire with an
+        L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire with an
         exception when the given L{defer.Deferred} does.
         """
         from asyncio import new_event_loop
@@ -3012,16 +3012,16 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         theFailure = failure.Failure(ValueError(""))
 
         loop = new_event_loop()
-        loop.call_soon_threadsafe(d.errback, theFailure)
-        loop.run_until_complete(defer.deferredToFuture(loop, d))
+        loop.call_soon(d.errback, theFailure)
+        loop.run_until_complete(d.asFuture(loop))
 
         self.assertEqual(results, [])
         self.assertEqual(errors, [theFailure])
 
 
-    def test_futureToDeferredFutureCancelled(self):
+    def test_fromFutureFutureCancelled(self):
         """
-        L{defer.futureToDeferred} makes a L{defer.Deferred} fire with
+        L{defer.Deferred.fromFuture} makes a L{defer.Deferred} fire with
         an L{asyncio.CancelledError} when the given
         L{asyncio.Future} is cancelled.
         """
@@ -3030,7 +3030,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         loop = new_event_loop()
         canceled = Future(loop=loop)
 
-        d = defer.futureToDeferred(canceled)
+        d = defer.Deferred.fromFuture(canceled)
 
         canceled.cancel()
 

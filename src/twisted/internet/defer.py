@@ -26,7 +26,7 @@ from functools import wraps
 from incremental import Version
 
 # Twisted imports
-from twisted.python.compat import cmp, comparable, _PY34PLUS
+from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
@@ -751,6 +751,52 @@ class Deferred:
     # For PEP-492 support (async/await)
     __await__ = __iter__
     __next__ = send
+
+
+    def asFuture(self, loop):
+        """
+        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+
+        @since: Twisted NEXT
+
+        @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
+        @type loop: L{asyncio.AbstractEventLoop} or similar
+
+        @param deferred: The Deferred to adapt.
+        @type deferred: L{Deferred}
+
+        @return: A Future which will fire when the Deferred fires.
+        @rtype: L{asyncio.Future}
+        """
+        from asyncio import Future
+        future = Future(loop=loop)
+        self.addCallbacks(future.set_result,
+                          lambda failure: future.set_exception(failure.value))
+        return future
+
+
+    @classmethod
+    def fromFuture(cls, future):
+        """
+        Adapt an L{asyncio.Future} to a L{Deferred}.
+
+        @since: Twisted NEXT
+
+        @param future: The Future to adapt.
+        @type future: L{asyncio.Future}
+
+        @return: A Deferred which will fire when the Future fires.
+        @rtype: L{Deferred}
+        """
+        self = cls()
+        def adapt(result):
+            try:
+                extracted = result.result()
+            except:
+                extracted = failure.Failure()
+            self.callback(extracted)
+        future.add_done_callback(adapt)
+        return self
 
 
 
@@ -1827,58 +1873,6 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 
-if _PY34PLUS:
-
-    def futureToDeferred(future):
-        """
-        Adapt an L{asyncio.Future} to a L{Deferred}.
-
-        @since: Twisted NEXT
-
-        @param future: The Future to adapt.
-        @type future: L{asyncio.Future}
-
-        @return: A Deferred which will fire when the Future fires.
-        @rtype: L{Deferred}
-        """
-        import asyncio
-
-        d = Deferred()
-
-        def _adapt(result):
-            try:
-                d.callback(result.result())
-            except:
-                d.errback(failure.Failure())
-
-        asyncio.ensure_future(future).add_done_callback(_adapt)
-        return d
-
-
-    def deferredToFuture(loop, deferred):
-        """
-        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
-
-        @since: Twisted NEXT
-
-        @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
-        @type loop: L{asyncio.AbstractEventLoop} or similar
-
-        @param deferred: The Deferred to adapt.
-        @type deferred: L{Deferred}
-
-        @return: A Future which will fire when the Deferred fires.
-        @rtype: L{asyncio.Future}
-        """
-        import asyncio
-
-        f = asyncio.Future(loop=loop)
-        deferred.addCallback(f.set_result)
-        deferred.addErrback(lambda e: f.set_exception(e.value))
-        return f
-
-
-
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred", "ensureDeferred",
@@ -1888,5 +1882,3 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]
 
-if _PY34PLUS:
-    __all__.extend(["futureToDeferred", "deferredToFuture"])
