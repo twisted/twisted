@@ -11,8 +11,17 @@ import warnings
 import gc, traceback
 import re
 
-from twisted.python import failure, log
 from twisted.python.compat import _PY3, _PY34PLUS
+
+if _PY34PLUS:
+    from asyncio import new_event_loop, Future, CancelledError
+    asyncSkip = None
+else:
+    asyncSkip = "asyncio not available before python 3.4"
+
+
+
+from twisted.python import failure, log
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
 from twisted.trial import unittest
@@ -2967,32 +2976,47 @@ class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
 
 
 
+def callAllSoonCalls(loop):
+    """
+    Tickle an asyncio event loop to call all of the things scheduled with
+    call_soon, inasmuch as this can be done via the public API.
+    """
+    loop.call_soon(loop.stop)
+    loop.run_forever()
+
+
+
 class DeferredFutureAdapterTests(unittest.TestCase):
 
-    if not _PY34PLUS:
-        skip = "Cannot run on Pythons before 3.4."
-
+    skip = asyncSkip
 
     def test_asFuture(self):
         """
-        L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire when the
-        given L{defer.Deferred} does.
+        L{defer.Deferred.asFuture} returns a L{asyncio.Future} which fires when
+        the given L{defer.Deferred} does.
         """
-        from asyncio import new_event_loop
-
-        results = []
-        errors = []
-
         d = defer.Deferred()
-        d.addCallback(results.append)
-        d.addErrback(errors.append)
-
         loop = new_event_loop()
-        loop.call_soon(d.callback, 1)
-        loop.run_until_complete(d.asFuture(loop))
+        aFuture = d.asFuture(loop)
+        self.assertEqual(aFuture.done(), False)
+        d.callback(13)
+        callAllSoonCalls(loop)
+        self.assertEqual(self.successResultOf(d), None)
+        self.assertEqual(aFuture.result(), 13)
 
-        self.assertEqual(results, [1])
-        self.assertEqual(errors, [])
+
+    def test_fromFuture(self):
+        """
+        L{defer.Deferred.fromFuture} returns a L{defer.Deferred} that fires
+        when the given L{asyncio.Future} does.
+        """
+        loop = new_event_loop()
+        aFuture = Future(loop=loop)
+        d = defer.Deferred.fromFuture(aFuture)
+        self.assertNoResult(d)
+        aFuture.set_result(7)
+        callAllSoonCalls(loop)
+        self.assertEqual(self.successResultOf(d), 7)
 
 
     def test_asFutureFailure(self):
@@ -3000,23 +3024,14 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire with an
         exception when the given L{defer.Deferred} does.
         """
-        from asyncio import new_event_loop
-
-        results = []
-        errors = []
-
         d = defer.Deferred()
-        d.addCallback(results.append)
-        d.addErrback(errors.append)
-
-        theFailure = failure.Failure(ValueError(""))
-
+        theFailure = failure.Failure(ZeroDivisionError())
         loop = new_event_loop()
-        loop.call_soon(d.errback, theFailure)
-        loop.run_until_complete(d.asFuture(loop))
-
-        self.assertEqual(results, [])
-        self.assertEqual(errors, [theFailure])
+        future = d.asFuture(loop)
+        callAllSoonCalls(loop)
+        d.errback(theFailure)
+        callAllSoonCalls(loop)
+        self.assertRaises(ZeroDivisionError, future.result)
 
 
     def test_fromFutureFutureCancelled(self):
@@ -3025,17 +3040,9 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         an L{asyncio.CancelledError} when the given
         L{asyncio.Future} is cancelled.
         """
-        from asyncio import Future, new_event_loop, CancelledError
-
         loop = new_event_loop()
         canceled = Future(loop=loop)
-
         d = defer.Deferred.fromFuture(canceled)
-
         canceled.cancel()
-
-        # loop.run_until_complete directly calls Future.result(), so
-        # it raises whatever Future.result() raises
-        self.assertRaises(CancelledError, loop.run_until_complete, canceled)
-
+        self.assertRaises(CancelledError, canceled.result)
         self.failureResultOf(d).trap(CancelledError)
