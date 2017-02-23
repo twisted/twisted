@@ -1,0 +1,2 @@
+twisted.internet.posixbase.PosixReactorBase.adoptStreamPort now supports UNIX SOCK_STREAM socket types.
+twisted.internet.posixbase.PosixReactorBase.adoptStreamConnection now supports UNIX SOCK_STREAM socket types.
