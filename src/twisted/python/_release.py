@@ -49,6 +49,7 @@ def runCommand(args, **kwargs):
 
     @param args: arguments passed to L{subprocess.check_output}
     @param kwargs: keyword arguments passed to L{subprocess.check_output}
+    @return: command output
     @rtype: L{str}
     """
     kwargs['stderr'] = STDOUT
@@ -521,7 +522,7 @@ class NewsBuilder(object):
         for description in reverse:
             reverse[description].sort()
         reverse = list(reverse.items())
-        # result is a list of (descr, tickets)
+        # The result is a list of (descr, tickets).
         reverse.sort(key=lambda result: result[1][0])
 
         content = header + '\n' + '-' * len(header) + '\n'
