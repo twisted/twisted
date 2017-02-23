@@ -20,13 +20,14 @@ import tempfile
 import shutil
 
 from datetime import date
-from io import BytesIO as StringIO
+from io import BytesIO
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
-from twisted.python.procutils import which
 from twisted.python import release
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
 
 from incremental import Version
 
@@ -409,7 +410,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -471,7 +472,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
@@ -520,7 +521,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         """
         The templates and System for Twisted includes adding deprecations.
         """
-        stdout = StringIO()
+        stdout = NativeStringIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -776,7 +777,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         L{NewsBuilder._writeHeader} accepts a file-like object opened for
         writing and a header string and writes out a news file header to it.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeHeader(output, "Super Awesometastic 32.16")
         self.assertEqual(
             output.getvalue(),
@@ -792,7 +793,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges}) and writes out a section header and all
         of the given ticket information.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeSection(
             output, "Features",
             [(3, "Great stuff."),
@@ -816,7 +817,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges} and writes out a section header and all
         of the ticket numbers, but excludes any descriptions.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeMisc(
             output, "Other",
             [(x, "") for x in range(2, 50, 3)])
@@ -1282,7 +1283,7 @@ class SphinxBuilderTests(TestCase):
         Creates and builds a fake Sphinx project as if via the command line,
         failing if there are any warnings.
         """
-        output = StringIO()
+        output = NativeStringIO()
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
