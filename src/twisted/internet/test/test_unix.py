@@ -46,6 +46,7 @@ from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
+from twisted.python.filepath import _coerceToFilesystemEncoding
 
 if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
@@ -786,9 +787,10 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
         def connected(protocols):
             client, server, port = protocols
             try:
+                portPath = _coerceToFilesystemEncoding('', port.getHost().name)
                 self.assertEqual(
                     "<AccumulatingProtocol #%s on %s>" %
-                        (server.transport.sessionno, port.getHost().name),
+                        (server.transport.sessionno, portPath),
                     str(server.transport))
 
                 self.assertEqual(
