@@ -24,7 +24,7 @@ from zope.interface import implementer
 
 from twisted.internet import interfaces
 from twisted.internet.address import UNIXAddress
-from twisted.internet.defer import Deferred, fail
+from twisted.internet.defer import Deferred, fail, gatherResults
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
 from twisted.internet.interfaces import (IFileDescriptorReceiver, IReactorUNIX,
@@ -36,7 +36,7 @@ from twisted.internet.test.connectionmixins import EndpointCreator
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (StreamTransportTestsMixin,
-    WriteSequenceTestsMixin,)
+    WriteSequenceTestsMixin, MyClientFactory, MyServerFactory,)
 from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
@@ -718,12 +718,6 @@ class SocketUNIXMixin(object):
                 return reactor.adoptStreamPort(
                     portSock.fileno(), portSock.family, factory)
             finally:
-                pass
-                # The socket should still be open; fileno will raise if it is
-                # not.
-                portSock.fileno()
-                # Now clean it up, because the rest of the test does not need
-                # it.
                 portSock.close()
         else:
             raise SkipTest("Reactor does not provide IReactorSocket")
@@ -786,7 +780,7 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
 
     def test_ServerAddressUNIX(self):
         """
-        Helper method to test TCP server addresses on either IPv4 or IPv6.
+        Helper method to test UNIX server addresses.
         """
 
         def connected(protocols):
@@ -802,7 +796,7 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
                         (server.transport.sessionno),
                     server.transport.logstr)
 
-                [peerAddress] = server.factory.peerAddresses
+                peerAddress = server.factory.peerAddresses[0]
                 self.assertIsInstance(peerAddress, UNIXAddress)
             finally:
                 # Be certain to drop the connection so the test completes.
@@ -811,7 +805,6 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor, interface=None, addressFamily=None)
         d.addCallback(connected)
-        d.addErrback(err)
         self.runReactor(reactor)
 
 
@@ -822,8 +815,6 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
         particularity is that the server protocol has been obtained after doing
         a C{adoptStreamConnection} against the original server connection.
         """
-        from twisted.test.test_tcp import MyClientFactory, MyServerFactory
-        from twisted.internet.defer import gatherResults
         firstServer = MyServerFactory()
         firstServer.protocolConnectionMade = Deferred()
 

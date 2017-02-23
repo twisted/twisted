@@ -443,7 +443,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         if addressFamily == socket.AF_UNIX:
             assert unixEnabled, "UNIX support is not present"
-            from twisted.internet import unix
             p = unix.Port._fromListeningDescriptor(
                 self, fileDescriptor, factory)
         else:
@@ -462,7 +461,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         if addressFamily == socket.AF_UNIX:
             assert unixEnabled, "UNIX support is not present"
-            from twisted.internet import unix
             return unix.Server._fromConnectedSocket(
                 fileDescriptor, factory, self)
         else:
