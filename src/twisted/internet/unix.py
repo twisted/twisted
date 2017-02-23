@@ -274,6 +274,8 @@ class Server(_SendmsgMixin, tcp.Server):
         self = cls(skt, proto, skt.getpeername(), None, sessionno, reactor)
         self.repstr = "<%s #%s on %s>" % (
             self.protocol.__class__.__name__, self.sessionno, skt.getsockname())
+        self.logstr = "%s,%s,%s" % (
+            self.protocol.__class__.__name__, self.sessionno, skt.getsockname())
         proto.makeConnection(self)
         return self
 

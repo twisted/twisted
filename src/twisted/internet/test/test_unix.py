@@ -794,8 +794,8 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
                     str(server.transport))
 
                 self.assertEqual(
-                    "AccumulatingProtocol,%s," %
-                        (server.transport.sessionno),
+                    "AccumulatingProtocol,%s,%s" %
+                        (server.transport.sessionno, portPath),
                     server.transport.logstr)
 
                 peerAddress = server.factory.peerAddresses[0]
