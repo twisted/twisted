@@ -70,7 +70,8 @@ class FilePathStrContent(FilePath):
     a little easier.
     """
     def __init__(self, filePath, encoding='utf-8'):
-        super(FilePathStrContent, self).__init__(filePath.path, filePath.alwaysCreate)
+        super(FilePathStrContent, self).__init__(filePath.path,
+                                                 filePath.alwaysCreate)
         self.encoding = encoding
 
 
