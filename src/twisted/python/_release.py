@@ -45,6 +45,11 @@ def runCommand(args, **kwargs):
     This is a wrapper around L{subprocess.check_output}, so it takes
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
+
+    @param args: arguments passed to L{subprocess.check_output}
+    @param kwargs: keyword arguments passed to L{subprocess.check_output}
+    @return: command output
+    @rtype: L{bytes}
     """
     kwargs['stderr'] = STDOUT
     return check_output(args, **kwargs)
