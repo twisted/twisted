@@ -514,8 +514,8 @@ class NewsBuilder(object):
             reverse.setdefault(description, []).append(ticket)
         for description in reverse:
             reverse[description].sort()
-        reverse = reverse.items()
-        # result is a tuple of (descr, tickets)
+        reverse = list(reverse.items())
+        # result is a list of (descr, tickets)
         reverse.sort(key=lambda result: result[1][0])
 
         content = header + '\n' + '-' * len(header) + '\n'
