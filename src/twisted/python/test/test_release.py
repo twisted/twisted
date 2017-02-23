@@ -133,7 +133,7 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return "from incremental import Version\n__version__=%r".format(
+    return "from incremental import Version\n__version__={!r}".format(
         Version(*args, **kwargs))
 
 
