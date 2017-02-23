@@ -1399,6 +1399,9 @@ class HTTP11ClientProtocol(Protocol):
     @ivar _abortDeferreds: A list of C{Deferred} instances that will fire when
         the connection is lost.
     """
+    TransportProxyProducer = TransportProxyProducer
+    HTTPClientParser = HTTPClientParser
+
     _state = 'QUIESCENT'
     _parser = None
     _finishedRequest = None
@@ -1457,8 +1460,8 @@ class HTTP11ClientProtocol(Protocol):
         # on it.
         self._currentRequest = request
 
-        self._transportProxy = TransportProxyProducer(self.transport)
-        self._parser = HTTPClientParser(request, self._finishResponse)
+        self._transportProxy = self.TransportProxyProducer(self.transport)
+        self._parser = self.HTTPClientParser(request, self._finishResponse)
         self._parser.makeConnection(self._transportProxy)
         self._responseDeferred = self._parser._responseDeferred
 
