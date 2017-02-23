@@ -21,6 +21,7 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
+from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
@@ -582,7 +583,7 @@ class NewsBuilder(object):
         oldNews = output.getContent()
         with output.sibling('NEWS.new').open('w') as newNews:
             if oldNews.startswith(self._TICKET_HINT):
-                newNews.write(self._TICKET_HINT)
+                newNews.write(self._TICKET_HINT.encode("utf-8"))
                 oldNews = oldNews[len(self._TICKET_HINT):]
 
             self._writeHeader(newNews, header)
