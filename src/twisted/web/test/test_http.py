@@ -935,7 +935,8 @@ class IdentityTransferEncodingTests(TestCase):
         self.finish = []
         self.contentLength = 10
         self.decoder = _IdentityTransferDecoder(
-            self.contentLength, self.data.append, self.finish.append)
+            self.data.append, self.finish.append)
+        self.decoder.setContentLength(self.contentLength)
 
 
     def test_exactAmountReceived(self):
@@ -989,7 +990,8 @@ class IdentityTransferEncodingTests(TestCase):
                 decoder.dataReceived(b'foo')
             except:
                 failures.append(Failure())
-        decoder = _IdentityTransferDecoder(5, self.data.append, finish)
+        decoder = _IdentityTransferDecoder(self.data.append, finish)
+        decoder.setContentLength(5)
         decoder.dataReceived(b'x' * 4)
         self.assertEqual(failures, [])
         decoder.dataReceived(b'y')
@@ -1007,7 +1009,7 @@ class IdentityTransferEncodingTests(TestCase):
         """
         data = []
         finish = []
-        decoder = _IdentityTransferDecoder(None, data.append, finish.append)
+        decoder = _IdentityTransferDecoder(data.append, finish.append)
         decoder.dataReceived(b'x')
         self.assertEqual(data, [b'x'])
         decoder.dataReceived(b'y')
@@ -1043,7 +1045,7 @@ class IdentityTransferEncodingTests(TestCase):
         """
         body = []
         finished = []
-        decoder = _IdentityTransferDecoder(None, body.append, finished.append)
+        decoder = _IdentityTransferDecoder(body.append, finished.append)
         self.assertRaises(PotentialDataLoss, decoder.noMoreData)
         self.assertEqual(body, [])
         self.assertEqual(finished, [b''])

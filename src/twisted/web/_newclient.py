@@ -366,6 +366,7 @@ class HTTPClientParser(HTTPParser):
 
     _transferDecoders = {
         b'chunked': _ChunkedTransferDecoder,
+        b'identity': _IdentityTransferDecoder,
         }
 
     bodyDecoder = None
@@ -375,7 +376,6 @@ class HTTPClientParser(HTTPParser):
         self.finisher = finisher
         self._responseDeferred = Deferred()
         self._everReceivedData = False
-
 
     def dataReceived(self, data):
         """
@@ -477,43 +477,35 @@ class HTTPClientParser(HTTPParser):
             self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                b'transfer-encoding')
-            if transferEncodingHeaders:
+                b'transfer-encoding', [b'identity'])
 
-                # This could be a KeyError.  However, that would mean we do not
-                # know how to decode the response body, so failing the request
-                # is as good a behavior as any.  Perhaps someday we will want
-                # to normalize/document/test this specifically, but failing
-                # seems fine to me for now.
-                transferDecoder = self._transferDecoders[transferEncodingHeaders[0].lower()]
+            # This could be a KeyError.  However, that would mean we do not
+            # know how to decode the response body, so failing the request
+            # is as good a behavior as any.  Perhaps someday we will want
+            # to normalize/document/test this specifically, but failing
+            # seems fine to me for now.
+            transferDecoder = self._transferDecoders[transferEncodingHeaders[0].lower()]
 
-                # If anyone ever invents a transfer encoding other than
-                # chunked (yea right), and that transfer encoding can predict
-                # the length of the response body, it might be sensible to
-                # allow the transfer decoder to set the response object's
-                # length attribute.
+            # If anyone ever invents a transfer encoding other than
+            # chunked (yea right), and that transfer encoding can predict
+            # the length of the response body, it might be sensible to
+            # allow the transfer decoder to set the response object's
+            # length attribute.
+            contentLengthHeaders = self.connHeaders.getRawHeaders(
+                b'content-length')
+            if contentLengthHeaders is None:
+                contentLength = None
+            elif len(contentLengthHeaders) == 1:
+                contentLength = int(contentLengthHeaders[0])
+                self.response.length = contentLength
             else:
-                contentLengthHeaders = self.connHeaders.getRawHeaders(
-                    b'content-length')
-                if contentLengthHeaders is None:
-                    contentLength = None
-                elif len(contentLengthHeaders) == 1:
-                    contentLength = int(contentLengthHeaders[0])
-                    self.response.length = contentLength
-                else:
-                    # "HTTP Message Splitting" or "HTTP Response Smuggling"
-                    # potentially happening.  Or it's just a buggy server.
-                    raise ValueError(u"Too many Content-Length headers; "
-                                     u"response is invalid")
+                # "HTTP Message Splitting" or "HTTP Response Smuggling"
+                # potentially happening.  Or it's just a buggy server.
+                raise ValueError(u"Too many Content-Length headers; "
+                                 u"response is invalid")
 
-                if contentLength == 0:
-                    self._finished(self.clearLineBuffer())
-                    transferDecoder = None
-                else:
-                    transferDecoder = lambda x, y: _IdentityTransferDecoder(
-                        contentLength, x, y)
-
-            if transferDecoder is None:
+            if contentLength == 0:
+                self._finished(self.clearLineBuffer())
                 self.response._bodyDataFinished()
             else:
                 # Make sure as little data as possible from the response body
@@ -522,9 +514,13 @@ class HTTPClientParser(HTTPParser):
                 # (probably because an application gave it a way to interpret
                 # them).
                 self.transport.pauseProducing()
-                self.switchToBodyMode(transferDecoder(
-                        self.response._bodyDataReceived,
-                        self._finished))
+                bodyDecoder = transferDecoder(
+                    self.response._bodyDataReceived,
+                    self._finished,
+                )
+                if contentLength is not None:
+                    bodyDecoder.setContentLength(contentLength)
+                self.switchToBodyMode(bodyDecoder)
 
         # This must be last.  If it were first, then application code might
         # change some state (for example, registering a protocol to receive the

@@ -1534,6 +1534,7 @@ class _MalformedChunkedDataError(Exception):
 
 
 
+@implementer(interfaces.ITransferDecoder)
 class _IdentityTransferDecoder(object):
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
@@ -1550,10 +1551,14 @@ class _IdentityTransferDecoder(object):
         which were delivered to this protocol which came after the terminal
         chunk.
     """
-    def __init__(self, contentLength, dataCallback, finishCallback):
-        self.contentLength = contentLength
+    contentLength = None
+
+    def __init__(self, dataCallback, finishCallback):
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
+
+    def setContentLength(self, contentLength):
+        self.contentLength = contentLength
 
 
     def dataReceived(self, data):
@@ -1609,6 +1614,7 @@ class _IdentityTransferDecoder(object):
 
 
 
+@implementer(interfaces.ITransferDecoder)
 class _ChunkedTransferDecoder(object):
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
@@ -1648,12 +1654,16 @@ class _ChunkedTransferDecoder(object):
         input is valid.
     """
     state = 'CHUNK_LENGTH'
+    contentLength = None
 
     def __init__(self, dataCallback, finishCallback):
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
         self._buffer = b''
 
+    def setContentLength(self, contentLength):
+        # Chunked transfer does not use content-length.
+        pass
 
     def _dataReceived_CHUNK_LENGTH(self, data):
         if b'\r\n' in data:
@@ -2009,7 +2019,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.length = None
                 return False
             self._transferDecoder = _IdentityTransferDecoder(
-                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
+                self.requests[-1].handleContentChunk, self._finishRequestBody)
+            self._transferDecoder.setContentLength(self.length)
         elif header == b'transfer-encoding' and data.lower() == b'chunked':
             # XXX Rather poorly tested code block, apparently only exercised by
             # test_chunkedEncoding
