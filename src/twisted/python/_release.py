@@ -47,6 +47,8 @@ def runCommand(args, **kwargs):
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
 
+    @param args: arguments passed to L{subprocess.check_output}
+    @param kwargs: keyword arguments passed to L{subprocess.check_output}
     @rtype: L{str}
     """
     kwargs['stderr'] = STDOUT
@@ -76,6 +78,9 @@ class FilePathStrContent(FilePath):
         """
         Wrapper around L{FilePath.setContent} that always
         makes sure we are writing L{bytes}.
+
+        @param content: the content we are writing
+        @type content: L{str} or L{bytes}
         """
         if not isinstance(content, bytes):
             content = content.encode(self.encoding)
