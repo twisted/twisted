@@ -81,7 +81,8 @@ else:
 
 class ExternalTempdirTestCase(TestCase):
     """
-    A test case which has mkdir make directories outside of the usual spot, so
+    A test case which has mkdir make directories
+    outside of the usual spot, so
     that Git commands don't interfere with the Twisted checkout.
     """
     def mktemp(self):
@@ -131,7 +132,7 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return "from incremental import Version\n__version__=%r" % (
+    return "from incremental import Version\n__version__=%r".format(
         Version(*args, **kwargs))
 
 
@@ -239,7 +240,8 @@ class ProjectTests(ExternalTempdirTestCase):
                 directory.createDirectory()
             directory.child('__init__.py').setContent(b'')
         directory.child('topfiles').createDirectory()
-        FilePathStrContent(directory.child('_version.py')).setContent(genVersion(*version))
+        FilePathStrContent(directory.child('_version.py')).setContent(
+            genVersion(*version))
         return Project(directory)
 
 
@@ -1218,8 +1220,10 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        FilePathStrContent(self.sourceDir.child("conf.py")).setContent(self.confContent)
-        FilePathStrContent(self.sourceDir.child("index.rst")).setContent(self.indexContent)
+        confPy = FilePathStrContent(self.sourceDir.child("conf.py"))
+        indexRst = FilePathStrContent(self.sourceDir.child("index.rst"))
+        FilePathStrContent(self.sourceDir.child("index.rst")).setContent(
+                           self.indexContent)
 
 
     def verifyFileExists(self, fileDir, fileName):
