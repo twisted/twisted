@@ -1223,8 +1223,8 @@ class SphinxBuilderTests(TestCase):
         """
         confPy = FilePathStrContent(self.sourceDir.child("conf.py"))
         indexRst = FilePathStrContent(self.sourceDir.child("index.rst"))
-        FilePathStrContent(self.sourceDir.child("index.rst")).setContent(
-                           self.indexContent)
+        confPy.setContent(self.confContent)
+        indexRst.setContent(self.indexContent)
 
 
     def verifyFileExists(self, fileDir, fileName):
