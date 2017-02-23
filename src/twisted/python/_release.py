@@ -39,14 +39,24 @@ intersphinxURLs = [
 
 
 def runCommand(args, **kwargs):
-    """Execute a vector of arguments.
+    """
+    Execute a vector of arguments.
 
     This is a wrapper around L{subprocess.check_output}, so it takes
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
+
+    @rtype: L{str}
     """
     kwargs['stderr'] = STDOUT
-    return check_output(args, **kwargs)
+    output = check_output(args, **kwargs)
+
+    # The check_output() function always returns bytes
+    # on Python 2 and 3, but we want this function to always return
+    # str.
+    if not isinstance(output, str):
+        output = output.decode("utf-8")
+    return output
 
 
 
