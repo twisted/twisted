@@ -49,7 +49,6 @@ loop.  Shutdown functions that could be used in place of
 "foreignEventloopStop" would be the ExitMainLoop method of the wxApp instance
 with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
-from __future__ import generators
 
 from functools import partial
 from threading import Thread
