@@ -7,15 +7,15 @@ Tests for L{twisted.words.service}.
 
 import time
 
-from twisted.cred import portal, credentials, checkers
-from twisted.internet import address, defer, reactor
-from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
-from twisted.python.compat import unicode
-from twisted.spread import pb
-from twisted.test import proto_helpers
 from twisted.trial import unittest
+from twisted.test import proto_helpers
+
+from twisted.cred import portal, credentials, checkers
 from twisted.words import ewords, service
 from twisted.words.protocols import irc
+from twisted.spread import pb
+from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
+from twisted.internet import address, defer, reactor
 
 class RealmTests(unittest.TestCase):
     def _entityCreationTest(self, kind):
@@ -141,6 +141,31 @@ class RealmTests(unittest.TestCase):
         self.assertEqual(n, ["groupone", "grouptwo"])
 
 
+class TestGroup(object):
+    def __init__(self, name, size, topic):
+        self.name = name
+        self.size = lambda: size
+        self.meta = {'topic': topic}
+
+
+class TestUser(object):
+    def __init__(self, name, groups, signOn, lastMessage):
+        self.name = name
+        self.itergroups = lambda: iter([TestGroup(g, 3, 'Hello') for g in groups])
+        self.signOn = signOn
+        self.lastMessage = lastMessage
+
+
+class TestPortal(object):
+    def __init__(self):
+        self.logins = []
+
+
+    def login(self, credentials, mind, *interfaces):
+        d = Deferred()
+        self.logins.append((credentials, mind, interfaces, d))
+        return d
+
 
 class TestCaseUserAgg(object):
     def __init__(self, user, realm, factory, address=address.IPv4Address('TCP', '127.0.0.1', 54321)):
@@ -153,13 +178,15 @@ class TestCaseUserAgg(object):
 
 
     def write(self, stuff):
+        if isinstance(stuff, unicode):
+            stuff = stuff.encode('utf-8')
         self.protocol.dataReceived(stuff)
 
 
 class IRCProtocolTests(unittest.TestCase):
     STATIC_USERS = [
         u'useruser', u'otheruser', u'someguy', u'firstuser', u'username',
-        u'userone', u'usertwo', u'userthree', 'userfour', b'userfive', u'someuser']
+        u'userone', u'usertwo', u'userthree', u'someuser']
 
 
     def setUp(self):
@@ -170,10 +197,8 @@ class IRCProtocolTests(unittest.TestCase):
 
         c = []
         for nick in self.STATIC_USERS:
-            if isinstance(nick, bytes):
-                nick = nick.decode("utf-8")
             c.append(self.realm.createUser(nick))
-            self.checker.addUser(nick, nick + u"_password")
+            self.checker.addUser(nick.encode('ascii'), nick + "_password")
         return DeferredList(c)
 
 
@@ -181,7 +206,7 @@ class IRCProtocolTests(unittest.TestCase):
         """
         The user has been greeted with the four messages that are (usually)
         considered to start an IRC session.
-
+        
         Asserts that the required responses were received.
         """
         # Make sure we get 1-4 at least
@@ -197,8 +222,8 @@ class IRCProtocolTests(unittest.TestCase):
     def _login(self, user, nick, password=None):
         if password is None:
             password = nick + "_password"
-        user.write(u'PASS %s\r\n' % (password,))
-        user.write(u'NICK %s extrainfo\r\n' % (nick,))
+        user.write('PASS %s\r\n' % (password,))
+        user.write('NICK %s extrainfo\r\n' % (nick,))
 
 
     def _loggedInUser(self, name):
@@ -213,10 +238,7 @@ class IRCProtocolTests(unittest.TestCase):
         Extracts the user's response, and returns a list of parsed lines.
         If messageType is defined, only messages of that type will be returned.
         """
-        response = user.transport.value()
-        if bytes != str and isinstance(response, bytes):
-            response = response.decode("utf-8")
-        response = response.splitlines()
+        response = user.transport.value().splitlines()
         user.transport.clear()
         result = []
         for message in map(irc.parsemsg, response):
@@ -255,7 +277,7 @@ class IRCProtocolTests(unittest.TestCase):
         firstuser = self.successResultOf(self.realm.lookupUser(u'firstuser'))
 
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
-        self._login(user, u"firstuser", u"wrongpass")
+        self._login(user, "firstuser", "wrongpass")
         response = self._response(user, "PRIVMSG")
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0][2], ['firstuser', 'Login failed.  Goodbye.'])
@@ -389,22 +411,6 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertEqual(response[0][0], 'useruser!useruser@realmname')
         self.assertEqual(response[0][1], 'PART')
         self.assertEqual(response[0][2], ['#somechannel', 'goodbye stupidheads'])
-        self.assertEqual(response, event)
-
-        user.write(b'JOIN #somechannel\r\n')
-
-        user.transport.clear()
-        other.transport.clear()
-
-        user.write(b'PART #somechannel :goodbye stupidheads1\r\n')
-
-        response = self._response(user)
-        event = self._response(other)
-
-        self.assertEqual(len(response), 1)
-        self.assertEqual(response[0][0], 'useruser!useruser@realmname')
-        self.assertEqual(response[0][1], 'PART')
-        self.assertEqual(response[0][2], ['#somechannel', 'goodbye stupidheads1'])
         self.assertEqual(response, event)
 
 
@@ -806,11 +812,8 @@ class PBProtocolTests(unittest.TestCase):
 
 
     def _loggedInAvatar(self, name, password, mind):
-        nameBytes = name
-        if isinstance(name, unicode):
-            nameBytes = name.encode("ascii")
-        creds = credentials.UsernamePassword(nameBytes, password)
-        self.checker.addUser(nameBytes, password)
+        creds = credentials.UsernamePassword(name, password)
+        self.checker.addUser(name.encode('ascii'), password)
         d = self.realm.createUser(name)
         d.addCallback(lambda ign: self.clientFactory.login(creds, mind))
         return d
@@ -819,25 +822,17 @@ class PBProtocolTests(unittest.TestCase):
     @defer.inlineCallbacks
     def testGroups(self):
         mindone = TestMind()
-        one = yield self._loggedInAvatar(u"one", b"p1", mindone)
+        one = yield self._loggedInAvatar(u"one", "p1", mindone)
 
         mindtwo = TestMind()
-        two = yield self._loggedInAvatar(u"two", b"p2", mindtwo)
-
-        mindThree = TestMind()
-        three = yield self._loggedInAvatar(b"three", b"p3", mindThree)
+        two = yield self._loggedInAvatar(u"two", "p2", mindtwo)
 
         yield self.realm.createGroup(u"foobar")
-        yield self.realm.createGroup(b"barfoo")
 
         groupone = yield one.join(u"foobar")
-        grouptwo = yield two.join(b"barfoo")
 
         yield two.join(u"foobar")
-        yield two.join(b"barfoo")
-        yield three.join(u"foobar")
 
-        yield groupone.send({b"text": b"hello, monkeys"})
+        yield groupone.send({"text": "hello, monkeys"})
 
         yield groupone.leave()
-        yield grouptwo.leave()
