@@ -310,11 +310,14 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def removeAll(self):
         return self._removeAll(self.reads, self.writes)
 
+
     def getReaders(self):
-        return self.reads.keys()
+        return list(self.reads.keys())
+
 
     def getWriters(self):
-        return self.writes.keys()
+        return list(self.writes.keys())
+
 
     def stop(self):
         """
