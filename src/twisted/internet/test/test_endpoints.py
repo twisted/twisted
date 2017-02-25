@@ -1663,7 +1663,7 @@ def deterministicResolvingReactor(reactor, expectedAddresses=(),
     if hostMap is None:
         hostMap = {}
     hostMap = hostMap.copy()
-    @provider(IHostnameResolver)
+    @implementer(IHostnameResolver)
     class SimpleNameResolver(object):
         @staticmethod
         def resolveHostName(resolutionReceiver, hostName, portNumber=0,
@@ -1678,7 +1678,7 @@ def deterministicResolvingReactor(reactor, expectedAddresses=(),
             resolutionReceiver.resolutionComplete()
 
 
-    @provider(IReactorPluggableNameResolver)
+    @implementer(IReactorPluggableNameResolver)
     class WithResolver(proxyForInterface(
             InterfaceClass('*', tuple(providedBy(reactor)))
     )):
