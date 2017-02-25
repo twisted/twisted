@@ -30,7 +30,8 @@ from twisted.internet.address import (
 )
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver
+    IStreamClientEndpointStringParserWithReactor, IResolutionReceiver,
+    IReactorPluggableNameResolver
 )
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
@@ -672,6 +673,8 @@ class HostnameEndpoint(object):
         hostname that isn't valid IDNA, or non-ASCII bytes.
     @type _badHostname: L{bool}
     """
+    _getaddrinfo = staticmethod(socket.getaddrinfo)
+    _deferToThread = staticmethod(threads.deferToThread)
     _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
@@ -771,6 +774,13 @@ class HostnameEndpoint(object):
             return defer.fail(
                 ValueError("invalid hostname: {}".format(self._hostStr))
             )
+        if IReactorPluggableNameResolver.providedBy(self._reactor):
+            return self._connectWithPluggableNameResolver(protocolFactory)
+        else:
+            return self._connectWithoutPluggableNameResolver(protocolFactory)
+
+
+    def _connectWithPluggableNameResolver(self, protocolFactory):
         d = Deferred()
         addresses = []
         @provider(IResolutionReceiver)
@@ -886,6 +896,113 @@ class HostnameEndpoint(object):
             return winner
 
         return d
+
+
+    def _connectWithoutPluggableNameResolver(self, protocolFactory):
+        wf = protocolFactory
+        d = self._nameResolution(self._hostBytes, self._port)
+        d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
+            "Couldn't find the hostname '%s'" % (self._hostBytes,))))
+        @d.addCallback
+        def gaiResultToEndpoints(gaiResult):
+            """
+            This method matches the host address family with an endpoint for
+            every address returned by C{getaddrinfo}.
+            @param gaiResult: A list of 5-tuples as returned by GAI.
+            @type gaiResult: list
+            """
+            for family, socktype, proto, canonname, sockaddr in gaiResult:
+                if family in [socket.AF_INET6]:
+                    yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
+                            sockaddr[1], self._timeout, self._bindAddress)
+                elif family in [socket.AF_INET]:
+                    yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
+                            sockaddr[1], self._timeout, self._bindAddress)
+                    # Yields an endpoint for every address returned by GAI
+
+        def _canceller(d):
+            # This canceller must remain defined outside of
+            # `startConnectionAttempts`, because Deferred should not
+            # participate in cycles with their cancellers; that would create a
+            # potentially problematic circular reference and possibly
+            # gc.garbage.
+            d.errback(error.ConnectingCancelledError(
+                HostnameAddress(self._hostBytes, self._port)))
+
+        @d.addCallback
+        def startConnectionAttempts(endpoints):
+            """
+            Given a sequence of endpoints obtained via name resolution, start
+            connecting to a new one every C{self._attemptDelay} seconds until
+            one of the connections succeeds, all of them fail, or the attempt
+            is cancelled.
+            @param endpoints: an iterable of all the endpoints we might try to
+                connect to, as determined by name resolution.
+            @type endpoints: iterable of L{IStreamServerEndpoint}
+            @return: a Deferred that fires with the result of the
+                C{endpoint.connect} method that completes the fastest, or fails
+                with the first connection error it encountered if none of them
+                succeed.
+            @rtype: L{Deferred} failing with L{error.ConnectingCancelledError}
+                or firing with L{IProtocol}
+            """
+            pending = []
+            failures = []
+            winner = defer.Deferred(canceller=_canceller)
+
+            def checkDone():
+                if pending or checkDone.completed or checkDone.endpointsLeft:
+                    return
+                winner.errback(failures.pop())
+            checkDone.completed = False
+            checkDone.endpointsLeft = True
+
+            @LoopingCall
+            def iterateEndpoint():
+                endpoint = next(endpoints, None)
+                if endpoint is None:
+                    # The list of endpoints ends.
+                    checkDone.endpointsLeft = False
+                    checkDone()
+                    return
+
+                eachAttempt = endpoint.connect(wf)
+                pending.append(eachAttempt)
+                @eachAttempt.addBoth
+                def noLongerPending(result):
+                    pending.remove(eachAttempt)
+                    return result
+                @eachAttempt.addCallback
+                def succeeded(result):
+                    winner.callback(result)
+                @eachAttempt.addErrback
+                def failed(reason):
+                    failures.append(reason)
+                    checkDone()
+
+            iterateEndpoint.clock = self._reactor
+            iterateEndpoint.start(self._attemptDelay)
+
+            @winner.addBoth
+            def cancelRemainingPending(result):
+                checkDone.completed = True
+                for remaining in pending[:]:
+                    remaining.cancel()
+                if iterateEndpoint.running:
+                    iterateEndpoint.stop()
+                return result
+            return winner
+
+        return d
+
+
+    def _nameResolution(self, host, port):
+        """
+        Resolve the hostname string into a tuple containig the host
+        address.
+        """
+        return self._deferToThread(self._getaddrinfo, host, port, 0,
+                socket.SOCK_STREAM)
 
 
 
