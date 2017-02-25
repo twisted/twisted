@@ -370,8 +370,6 @@ notPortedModules = [
     "twisted.internet.test.process_connectionlost",
     "twisted.internet.test.process_gireactornocompat",
     "twisted.internet.tksupport",
-    "twisted.internet.wxreactor",
-    "twisted.internet.wxsupport",
     "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
