@@ -435,7 +435,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         lastline = lines[-1:]
         for line in lines[:-1]:
             self.sendLine(networkString('%3.3d-' % (code,)) + line)
-        self.sendLine(networkString('%3.3d ' % (cod,)) +
+        self.sendLine(networkString('%3.3d ' % (code,)) +
                                     (lastline and lastline[0] or b''))
 
 
