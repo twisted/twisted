@@ -951,7 +951,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     def timeoutConnection(self):
         self.sendError(
             SMTPTimeoutError(
-                -1, "Timeout waiting for SMTP server response",
+                -1, b"Timeout waiting for SMTP server response",
                  self.log.str()))
 
 

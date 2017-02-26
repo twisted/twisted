@@ -1471,7 +1471,7 @@ class SMTPClientErrorTests(unittest.TestCase):
         If the response code supplied to L{SMTPClientError} is negative, it
         is excluded from the string representation.
         """
-        err = smtp.SMTPClientError(-1, "foo bar")
+        err = smtp.SMTPClientError(-1, b"foo bar")
         self.assertEqual(str(err), "foo bar")
 
 
