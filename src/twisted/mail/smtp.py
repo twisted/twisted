@@ -287,7 +287,6 @@ class Address:
 
         return b''.join(res)
 
-
     if _PY3:
         def __str__(self):
             return nativeString(bytes(self))
@@ -342,6 +341,7 @@ class User:
 
     def __str__(self):
         return nativeString(bytes(self.dest))
+
 
     def __bytes__(self):
         return bytes(self.dest)
@@ -434,8 +434,9 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         lines = message.splitlines()
         lastline = lines[-1:]
         for line in lines[:-1]:
-            self.sendLine(networkString('%3.3d-' % (code,)) + line)
-        self.sendLine(networkString('%3.3d ' % (code,)) + (lastline and lastline[0] or b''))
+            self.sendLine(networkString('%3.3d-' % (code)) + line)
+        self.sendLine(networkString('%3.3d ' % (cod,)) +
+                                    (lastline and lastline[0] or b''))
 
 
     def lineReceived(self, line):
@@ -556,7 +557,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                             quoteaddr(failure.value.addr) + b': ' +
                             networkString(failure.value.resp)))
         elif failure.check(SMTPServerError):
-            self.sendCode(failure.value.code, networkString(failure.value.resp))
+            self.sendCode(failure.value.code,
+                          networkString(failure.value.resp))
         else:
             log.err(failure, "SMTP sender validation failure")
             self.sendCode(
@@ -597,7 +599,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _ebToValidate(self, failure):
         if failure.check(SMTPBadRcpt, SMTPServerError):
-            self.sendCode(failure.value.code, networkString(failure.value.resp))
+            self.sendCode(failure.value.code,
+                          networkString(failure.value.resp))
         else:
             log.err(failure)
             self.sendCode(
@@ -1537,7 +1540,8 @@ class ESMTPClient(SMTPClient):
         self._okresponse = self.smtpState_from
         self._failresponse = self.esmtpAUTHDeclined
         self._expected = [235]
-        challenge = base64.b64encode(self._authinfo.challengeResponse(self.secret, 2))
+        challenge = base64.b64encode(
+                        self._authinfo.challengeResponse(self.secret, 2))
         self.sendLine(b'AUTH PLAIN ' + challenge)
 
 
@@ -1757,7 +1761,8 @@ class ESMTP(SMTP):
             self.challenger, None,
             IMessageDeliveryFactory, IMessageDelivery)
         result.addCallback(self._cbAuthenticated)
-        result.addCallback(lambda ign: self.sendCode(235, b'Authentication successful.'))
+        result.addCallback(lambda ign: self.sendCode(235,
+                           b'Authentication successful.'))
         result.addErrback(self._ebAuthenticated)
 
 

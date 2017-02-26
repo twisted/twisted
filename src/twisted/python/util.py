@@ -468,6 +468,7 @@ class LineLog:
         def __str__(self):
             return self.__bytes__()
 
+
     def __bytes__(self):
         return b'\n'.join(filter(None, self.log))
 

@@ -136,7 +136,6 @@ class SMTPClientError(SMTPError):
         self.isFatal = isFatal
         self.retry = retry
 
-
     if _PY3:
         def __str__(self):
             return nativeString(bytes(self))

@@ -91,7 +91,8 @@ class DummyMessage(object):
 
     def lineReceived(self, line):
         # Throw away the generated Received: header
-        if not re.match(b'Received: From yyy.com \(\[.*\]\) by localhost;', line):
+        if not re.match(b'Received: From yyy.com \(\[.*\]\) by localhost;',
+                        line):
             self.buffer.append(line)
 
 
@@ -167,10 +168,14 @@ class MySMTPClient(MyClient, smtp.SMTPClient):
         smtp.SMTPClient.__init__(self, b'foo.baz')
         MyClient.__init__(self, messageInfo)
 
+
+
 class MyESMTPClient(MyClient, smtp.ESMTPClient):
     def __init__(self, secret = b'', contextFactory = None):
         smtp.ESMTPClient.__init__(self, secret, contextFactory, b'foo.baz')
         MyClient.__init__(self)
+
+
 
 class LoopbackMixin:
     def loopback(self, server, client):
@@ -190,6 +195,7 @@ class FakeSMTPServer(basic.LineReceiver):
         self.clientData = self.clientData[:]
         self.clientData.reverse()
         self.sendLine(self.clientData.pop())
+
 
     def lineReceived(self, line):
         self.buffer.append(line)
@@ -230,12 +236,12 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
             b"<<< 220 hello\n"
             b">>> HELO foo.baz\n")
 
-
     expected_output = [
         b'HELO foo.baz', b'MAIL FROM:<moshez@foo.bar>',
         b'RCPT TO:<moshez@foo.bar>', b'DATA',
         b'Subject: hello', b'', b'Goodbye', b'.', b'RSET'
     ]
+
 
     def test_messages(self):
         """
@@ -329,8 +335,10 @@ class DummySMTPMessage(object):
         self.users = users
         self.buffer = []
 
+
     def lineReceived(self, line):
         self.buffer.append(line)
+
 
     def eomReceived(self):
         message = b'\n'.join(self.buffer) + b'\n'
@@ -338,7 +346,8 @@ class DummySMTPMessage(object):
         recipients = []
         for user in self.users:
             recipients.append(bytes(user))
-        self.protocol.message[tuple(recipients)] = (helo, origin, recipients, message)
+        self.protocol.message[tuple(recipients)] = (helo, origin, recipients,
+                                                    message)
         return defer.succeed(b"saved")
 
 
@@ -368,8 +377,10 @@ class DummySMTP(DummyProto, smtp.SMTP):
     dummyMixinBase = smtp.SMTP
 
 
+
 class DummyESMTP(DummyProto, smtp.ESMTP):
     dummyMixinBase = smtp.ESMTP
+
 
 
 class AnotherTestCase:
@@ -1237,7 +1248,8 @@ class ESMTPAuthenticationTests(unittest.TestCase):
             self.transport.value().splitlines())
 
 
-    def assertServerAuthenticated(self, loginArgs, username=b"username", password=b"password"):
+    def assertServerAuthenticated(self, loginArgs, username=b"username",
+                                  password=b"password"):
         """
         Assert that a login attempt has been made, that the credentials and
         interfaces passed to it are correct, and that when the login request
