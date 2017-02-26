@@ -123,17 +123,57 @@ cdef extern from 'winsock_pointers.h':
     BOOL (*lpConnectEx)(SOCKET s, sockaddr *name, int namelen, void *buff, DWORD sendlen, DWORD *sentlen, OVERLAPPED *ov)
 #    BOOL (*lpTransmitFile)(SOCKET s, HANDLE hFile, DWORD size, DWORD buffer_size, OVERLAPPED *ov, TRANSMIT_FILE_BUFFERS *buff, DWORD flags)
 
-cdef struct myOVERLAPPED:
-    OVERLAPPED ov
-    PyObject *obj
 
-cdef myOVERLAPPED *makeOV() except NULL:
-    cdef myOVERLAPPED *res
-    res = <myOVERLAPPED *>PyMem_Malloc(sizeof(myOVERLAPPED))
+
+cdef struct myOVERLAPPED:
+    # myOVERLAPPED is the C-level structure that is fed into and read out of a
+    # L{CompletionPort}.
+
+    # It attaches some Python data (C{attached}) to the native Windows
+    # structure for putting things into and taking them out of an I/O
+    # Completion Port (C{OVERLAPPED}).
+
+    # The C{attached} attribute is a 2-tuple of C{(event, other)}, where
+    # C{event} is the object created by Python and passed to an iocpsupport
+    # operation, and C{other} is an opaque reference to any other Python
+    # objects necessary to remain alive.  For example, C{WSASend} takes a
+    # buffer to send, and that uses the Python buffer API to share the
+    # underlying pointer with a python data structure such as a memoryview.
+    # Therefore C{other} in that case would be whatever object (bytes,
+    # memoryview, etc) was passed into the WSASend wrapper, and that reference
+    # would be held until the completion status was posted to the completion
+    # port.
+
+    OVERLAPPED ov
+    PyObject* attached
+
+
+
+cdef myOVERLAPPED *makeOV(object evt, object other=None) except NULL:
+    """
+    Make a myOVERLAPPED structure for passing along to a low-level C object.
+    """
+    cdef myOVERLAPPED *res = <myOVERLAPPED *>PyMem_Malloc(sizeof(myOVERLAPPED))
     if not res:
         raise MemoryError
     memset(res, 0, sizeof(myOVERLAPPED))
+    tupl = (evt, other)
+    res.attached = <PyObject *>tupl
+    Py_XINCREF(tupl)
     return res
+
+
+
+cdef void unmakeOV(myOVERLAPPED* ov):
+    """
+    Clean up a myOVERLAPPED structure, decrefing the Python object and freeing
+    its memory.
+    """
+    Py_XDECREF(<object>ov.attached)
+    memset(ov, 0, sizeof(myOVERLAPPED))
+    PyMem_Free(ov)
+
+
 
 cdef void raise_error(int err, object message) except *:
     if not err:
@@ -148,6 +188,12 @@ class Event:
             setattr(self, k, v)
 
 cdef class CompletionPort:
+    # A wrapper around an I/O completion port created with
+    # C{CreateIoCompletionPort}.
+
+    # Note that all C{OVERLAPPED} structures posted to this port must be
+    # C{myOVERLAPPED} pointers, containing associated Python data.
+
     cdef HANDLE port
     def __init__(self):
         cdef HANDLE res
@@ -179,10 +225,8 @@ cdef class CompletionPort:
 
         obj = None
         if ov:
-            if ov.obj:
-                obj = <object>ov.obj
-                Py_DECREF(obj) # we are stealing a reference here
-            PyMem_Free(ov)
+            obj, ignored = <object>ov.attached
+            unmakeOV(ov)
 
         return (rc, bytes, key, obj)
 
@@ -191,17 +235,14 @@ cdef class CompletionPort:
         cdef unsigned long rc
 
         if obj is not None:
-            ov = makeOV()
-            Py_INCREF(obj) # give ov its own reference to obj
-            ov.obj = <PyObject *>obj
+            ov = makeOV(obj)
         else:
             ov = NULL
 
         rc = PostQueuedCompletionStatus(self.port, bytes, key, <OVERLAPPED *>ov)
         if not rc:
             if ov:
-                Py_DECREF(obj)
-                PyMem_Free(ov)
+                unmakeOV(ov)
             raise_error(0, 'PostQueuedCompletionStatus')
 
     def __del__(self):

@@ -840,6 +840,138 @@ class HTTPClientParserTests(TestCase):
             self.assertIsInstance, ResponseFailed)
 
 
+    def test_1XXResponseIsSwallowed(self):
+        """
+        If a response in the 1XX range is received it just gets swallowed and
+        the parser resets itself.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response)
+
+        # The response should have been erased
+        self.assertTrue(getattr(protocol, 'response', None) is None)
+        self.assertEqual(protocol.state, STATUS)
+        self.assertEqual(len(list(protocol.headers.getAllRawHeaders())), 0)
+        self.assertEqual(len(list(protocol.connHeaders.getAllRawHeaders())), 0)
+        self.assertTrue(protocol._everReceivedData)
+
+
+    def test_1XXFollowedByFinalResponseOnlyEmitsFinal(self):
+        """
+        When a 1XX response is swallowed, the final response that follows it is
+        the only one that gets sent to the application.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+        following200Response = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'Content-Length: 123\r\n'
+            b'\r\n'
+        )
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response + following200Response)
+
+        self.assertEqual(protocol.response.code, 200)
+        self.assertEqual(
+            protocol.response.headers,
+            Headers({}))
+        self.assertEqual(
+            protocol.connHeaders,
+            Headers({b'content-length': [b'123']}))
+        self.assertEqual(protocol.response.length, 123)
+
+
+    def test_multiple1XXResponsesAreIgnored(self):
+        """
+        It is acceptable for multiple 1XX responses to come through, all of
+        which get ignored.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+        following200Response = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'Content-Length: 123\r\n'
+            b'\r\n'
+        )
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(
+            sample103Response +
+            sample103Response +
+            sample103Response +
+            following200Response
+        )
+
+        self.assertEqual(protocol.response.code, 200)
+        self.assertEqual(
+            protocol.response.headers,
+            Headers({}))
+        self.assertEqual(
+            protocol.connHeaders,
+            Headers({b'content-length': [b'123']}))
+        self.assertEqual(protocol.response.length, 123)
+
+
+    def test_ignored1XXResponseCausesLog(self):
+        """
+        When a 1XX response is ignored, Twisted emits a log.
+        """
+        sample103Response = (
+            b'HTTP/1.1 103 Early Hints\r\n'
+            b'Server: socketserver/1.0.0\r\n'
+            b'Link: </other/styles.css>; rel=preload; as=style\r\n'
+            b'Link: </other/action.js>; rel=preload; as=script\r\n'
+            b'\r\n'
+        )
+
+        # Catch the logs.
+        logs = []
+        log.addObserver(logs.append)
+        self.addCleanup(log.removeObserver, logs.append)
+
+        protocol = HTTPClientParser(
+            Request(b'GET', b'/', _boringHeaders, None),
+            lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(sample103Response)
+
+        self.assertEqual(
+            logs[0]['message'][0], 'Ignoring unexpected 103 response'
+        )
+
+
 
 class SlowRequest:
     """
@@ -1372,7 +1504,10 @@ class HTTP11ClientProtocolTests(TestCase):
         method will be invoked with a L{ResponseFailed} failure containing a
         L{ConnectionAborted} exception.
         """
-        transport = StringTransport()
+        # We need to set StringTransport to lenient mode because we'll call
+        # resumeProducing on it after the connection is aborted. That's ok:
+        # for real transports nothing will happen.
+        transport = StringTransport(lenient=True)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
@@ -1905,6 +2040,45 @@ class RequestTests(TestCase):
         self.assertEqual(self.transport.value(), b"abc")
 
 
+    def _sendRequestEmptyBodyWithLength(self, method):
+        """
+        Verify that the message generated by a L{Request} initialized with
+        the given method and C{None} as the C{bodyProducer} includes
+        I{Content-Length: 0} in the header.
+
+        @param method: The HTTP method issue in the request.
+        @type method: L{bytes}
+        """
+        request = Request(method, b"/foo", _boringHeaders, None)
+        request.writeTo(self.transport)
+
+        self.assertEqual(
+            self.transport.value(),
+            method + b" /foo HTTP/1.1\r\n"
+            b"Connection: close\r\n"
+            b"Content-Length: 0\r\n"
+            b"Host: example.com\r\n"
+            b"\r\n")
+
+
+    def test_sendPUTRequestEmptyBody(self):
+        """
+        If I{PUT} L{Request} is created without a C{bodyProducer},
+        I{Content-Length: 0} is included in the header and chunked
+        encoding is not used.
+        """
+        self._sendRequestEmptyBodyWithLength(b"PUT")
+
+
+    def test_sendPOSTRequestEmptyBody(self):
+        """
+        If I{POST} L{Request} is created without a C{bodyProducer},
+        I{Content-Length: 0} is included in the header and chunked
+        encoding is not used.
+        """
+        self._sendRequestEmptyBodyWithLength(b"POST")
+
+
     def test_sendRequestBodyWithTooFewBytes(self):
         """
         If L{Request} is created with a C{bodyProducer} with a known length and
@@ -2015,10 +2189,10 @@ class RequestTests(TestCase):
     def test_sendRequestBodyErrorWithConsumerError(self):
         """
         Though there should be no way for the internal C{finishedConsuming}
-        L{Deferred} in L{Request._writeToContentLength} to fire a L{Failure}
-        after the C{finishedProducing} L{Deferred} has fired, in case this does
-        happen, the error should be logged with a message about how there's
-        probably a bug in L{Request}.
+        L{Deferred} in L{Request._writeToBodyProducerContentLength} to fire a
+        L{Failure} after the C{finishedProducing} L{Deferred} has fired, in
+        case this does happen, the error should be logged with a message about
+        how there's probably a bug in L{Request}.
 
         This is a whitebox test.
         """
@@ -2611,7 +2785,7 @@ class ResponseTests(TestCase):
     def test_transportResumed(self):
         """
         L{Response.deliverBody} resumes the HTTP connection's transport
-        before passing it to the consumer's C{makeConnection} method.
+        after passing it to the consumer's C{makeConnection} method.
         """
         transportState = []
         class ListConsumer(Protocol):
@@ -2624,7 +2798,8 @@ class ResponseTests(TestCase):
         response = justTransportResponse(transport)
         self.assertEqual(transport.producerState, u'paused')
         response.deliverBody(protocol)
-        self.assertEqual(transportState, [u'producing'])
+        self.assertEqual(transportState, [u'paused'])
+        self.assertEqual(transport.producerState, u'producing')
 
 
     def test_bodyDataFinishedBeforeStartProducing(self):

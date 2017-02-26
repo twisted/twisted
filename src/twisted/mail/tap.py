@@ -8,7 +8,6 @@ Support for creating mail servers with twistd.
 """
 
 import os
-import warnings
 
 from twisted.mail import mail
 from twisted.mail import maildir
@@ -63,16 +62,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     synopsis = "[options]"
 
     optParameters = [
-        ["pop3s", "S", 0,
-         "Port to start the POP3-over-SSL server on (0 to disable). "
-         "DEPRECATED: use "
-         "'--pop3 ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
-
-        ["certificate", "c", None,
-         "Certificate file to use for SSL connections. "
-         "DEPRECATED: use "
-         "'--pop3 ssl:port:privateKey=pkey.pem:certKey=cert.pem'"],
-
         ["relay", "R", None,
          "Relay messages according to their envelope 'To', using "
          "the given path as a queue directory."],
@@ -95,8 +84,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     }
 
     compData = usage.Completions(
-                   optActions={"hostname" : usage.CompleteHostnames(),
-                               "certificate" : usage.CompleteFiles("*.pem")}
+                   optActions={"hostname": usage.CompleteHostnames()}
                    )
 
     longdesc = """
@@ -136,7 +124,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             self[service] = []
 
 
-    def addEndpoint(self, service, description, certificate=None):
+    def addEndpoint(self, service, description):
         """
         Add an endpoint to a service.
 
@@ -146,12 +134,9 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         @type description: L{bytes}
         @param description: An endpoint description string or a TCP port
             number.
-
-        @type certificate: L{bytes} or L{None}
-        @param certificate: The name of a file containing an SSL certificate.
         """
-        self[service].append(
-            _toEndpoint(description, certificate=certificate))
+        from twisted.internet import reactor
+        self[service].append(endpoints.serverFromString(reactor, description))
 
 
     def opt_pop3(self, description):
@@ -159,9 +144,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add a POP3 port listener on the specified endpoint.
 
         You can listen on multiple ports by specifying multiple --pop3 options.
-        For backwards compatibility, a bare TCP port number can be specified,
-        but this is deprecated.  [SSL Example: ssl:8995:privateKey=mycert.pem]
-        [default: tcp:8110]
         """
         self.addEndpoint('pop3', description)
     opt_p = opt_pop3
@@ -172,9 +154,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add an SMTP port listener on the specified endpoint.
 
         You can listen on multiple ports by specifying multiple --smtp options.
-        For backwards compatibility, a bare TCP port number can be specified,
-        but this is deprecated.  [SSL Example: ssl:8465:privateKey=mycert.pem]
-        [default: tcp:8025]
         """
         self.addEndpoint('smtp', description)
     opt_s = opt_smtp
@@ -278,15 +257,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         @return: The endpoints for the specified service as configured by the
             command line parameters.
         """
-        if service == 'pop3' and self['pop3s'] and len(self[service]) == 1:
-            # The single endpoint here is the POP3S service we added in
-            # postOptions.  Include the default endpoint alongside it.
-            return self[service] + [
-                endpoints.TCP4ServerEndpoint(
-                    reactor, self._protoDefaults[service])]
-        elif self[service]:
-            # For any non-POP3S case, if there are any services set up, just
-            # return those.
+        if self[service]:
+            # If there are any services set up, just return those.
             return self[service]
         elif self['no-' + service]:
             # If there are no services, but the service was explicitly disabled,
@@ -307,17 +279,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         @raise UsageError: When the set of options is invalid.
         """
         from twisted.internet import reactor
-
-        if self['pop3s']:
-            if not self['certificate']:
-                raise usage.UsageError("Cannot specify --pop3s without "
-                                       "--certificate")
-            elif not os.path.exists(self['certificate']):
-                raise usage.UsageError("Certificate file %r does not exist."
-                                       % self['certificate'])
-            else:
-                self.addEndpoint(
-                    'pop3', self['pop3s'], certificate=self['certificate'])
 
         if self['esmtp'] and self['hostname'] is None:
             raise usage.UsageError("--esmtp requires --hostname")
@@ -370,40 +331,6 @@ class AliasUpdater:
         @param new: The name of an aliases(5) file.
         """
         self.domain.setAliasGroup(alias.loadAliasFile(self.domains, new))
-
-
-
-def _toEndpoint(description, certificate=None):
-    """
-    Create an endpoint based on a description.
-
-    @type description: L{bytes}
-    @param description: An endpoint description string or a TCP port
-        number.
-
-    @type certificate: L{bytes} or L{None}
-    @param certificate: The name of a file containing an SSL certificate.
-
-    @rtype: L{IStreamServerEndpoint
-        <twisted.internet.interfaces.IStreamServerEndpoint>} provider
-    @return: An endpoint.
-    """
-    from twisted.internet import reactor
-    try:
-        port = int(description)
-    except ValueError:
-        return endpoints.serverFromString(reactor, description)
-
-    warnings.warn(
-        "Specifying plain ports and/or a certificate is deprecated since "
-        "Twisted 11.0; use endpoint descriptions instead.",
-        category=DeprecationWarning, stacklevel=3)
-
-    if certificate:
-        from twisted.internet.ssl import DefaultOpenSSLContextFactory
-        ctx = DefaultOpenSSLContextFactory(certificate, certificate)
-        return endpoints.SSL4ServerEndpoint(reactor, port, ctx)
-    return endpoints.TCP4ServerEndpoint(reactor, port)
 
 
 

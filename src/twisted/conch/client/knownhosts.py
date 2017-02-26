@@ -18,14 +18,14 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.python.randbytes import secureRandom
-from twisted.internet import defer
-from twisted.python import log
-from twisted.python.util import FancyEqMixin
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.conch.ssh.keys import Key, BadKeyError
-from twisted.python.compat import nativeString
+from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
+from twisted.internet import defer
+from twisted.python import log
+from twisted.python.compat import nativeString, unicode
+from twisted.python.randbytes import secureRandom
+from twisted.python.util import FancyEqMixin
 
 
 def _b64encode(s):
@@ -122,6 +122,7 @@ class PlainEntry(_BaseEntry):
         super(PlainEntry, self).__init__(keyType, publicKey, comment)
 
 
+    @classmethod
     def fromString(cls, string):
         """
         Parse a plain-text entry in a known_hosts file, and return a
@@ -149,8 +150,6 @@ class PlainEntry(_BaseEntry):
         self = cls(hostnames.split(b","), keyType, key, comment)
         return self
 
-    fromString = classmethod(fromString)
-
 
     def matchesHost(self, hostname):
         """
@@ -164,6 +163,8 @@ class PlainEntry(_BaseEntry):
             C{False} otherwise.
         @rtype: L{bool}
         """
+        if isinstance(hostname, unicode):
+            hostname = hostname.encode("utf-8")
         return hostname in self._hostnames
 
 
@@ -240,6 +241,8 @@ def _hmacedString(key, string):
     @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
+    if isinstance(string, unicode):
+        string = string.encode("utf-8")
     hash.update(string)
     return hash.digest()
 
@@ -270,6 +273,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
         super(HashedEntry, self).__init__(keyType, publicKey, comment)
 
 
+    @classmethod
     def fromString(cls, string):
         """
         Load a hashed entry from a string representing a line in a known_hosts
@@ -300,8 +304,6 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
         self = cls(a2b_base64(hostSalt), a2b_base64(hostHash),
                    keyType, key, comment)
         return self
-
-    fromString = classmethod(fromString)
 
 
     def matchesHost(self, hostname):
@@ -429,7 +431,7 @@ class KnownHostsFile(object):
             does not match the given key.
         """
         for lineidx, entry in enumerate(self.iterentries(), -len(self._added)):
-            if entry.matchesHost(hostname):
+            if entry.matchesHost(hostname) and entry.keyType == key.sshType():
                 if entry.matchesKey(key):
                     return True
                 else:
@@ -484,13 +486,19 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
+
+                keytype = key.type()
+
+                if keytype is "EC":
+                    keytype = "ECDSA"
+
                 prompt = (
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
-                    "RSA key fingerprint is %s.\n"
+                    "%s key fingerprint is SHA256:%s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (nativeString(hostname), nativeString(ip),
-                     key.fingerprint()))
+                    (nativeString(hostname), nativeString(ip), keytype,
+                     key.fingerprint(format=FingerprintFormats.SHA256_BASE64)))
                 proceed = ui.prompt(prompt.encode(sys.getdefaultencoding()))
                 return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)
@@ -543,6 +551,7 @@ class KnownHostsFile(object):
         self._clobber = False
 
 
+    @classmethod
     def fromPath(cls, path):
         """
         Create a new L{KnownHostsFile}, potentially reading existing known
@@ -559,8 +568,6 @@ class KnownHostsFile(object):
         knownHosts = cls(path)
         knownHosts._clobber = False
         return knownHosts
-
-    fromPath = classmethod(fromPath)
 
 
 

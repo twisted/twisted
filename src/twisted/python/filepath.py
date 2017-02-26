@@ -13,8 +13,6 @@ import sys
 import errno
 import base64
 
-from hashlib import sha1
-
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname, join as joinpath
 from os import listdir, utime, stat
@@ -33,7 +31,7 @@ from zope.interface import Interface, Attribute, implementer
 from twisted.python.compat import comparable, cmp, unicode
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
-from twisted.python.versions import Version
+from incremental import Version
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
@@ -271,7 +269,7 @@ def _secureEnoughString(path):
     @return: A pseudorandom, 16 byte string for use in secure filenames.
     @rtype: the type of C{path}
     """
-    secureishString = armor(sha1(randomBytes(64)).digest())[:16]
+    secureishString = armor(randomBytes(16))[:16]
     return _coerceToFilesystemEncoding(path, secureishString)
 
 
@@ -331,16 +329,27 @@ class AbstractFilePath(object):
         try:
             subnames = self.listdir()
         except WindowsError as winErrObj:
-            # WindowsError is an OSError subclass, so if not for this clause
-            # the OSError clause below would be handling these.  Windows error
-            # codes aren't the same as POSIX error codes, so we need to handle
-            # them differently.
+            # Under Python 3.3 and higher on Windows, WindowsError is an
+            # alias for OSError.  OSError has a winerror attribute and an
+            # errno attribute.
 
-            # Under Python 2.5 on Windows, WindowsError has a winerror
-            # attribute and an errno attribute.  The winerror attribute is
-            # bound to the Windows error code while the errno attribute is
-            # bound to a translation of that code to a perhaps equivalent POSIX
-            # error number.
+            # Under Python 2, WindowsError is an OSError subclass.
+
+            # Under Python 2.5 and higher on Windows, WindowsError has a
+            # winerror attribute and an errno attribute.
+
+            # The winerror attribute is bound to the Windows error code while
+            # the errno attribute is bound to a translation of that code to a
+            # perhaps equivalent POSIX error number.
+            #
+            # For further details, refer to:
+            # https://docs.python.org/3/library/exceptions.html#OSError
+
+            # If not for this clause OSError would be handling all of these
+            # errors on Windows.  The errno attribute contains a POSIX error
+            # code while the winerror attribute contains a Windows error code.
+            # Windows error codes aren't the same as POSIX error codes,
+            # so we need to handle them differently.
 
             # Under Python 2.4 on Windows, WindowsError only has an errno
             # attribute.  It is bound to the Windows error code.

@@ -27,9 +27,9 @@ import inspect
 import os
 import platform
 import socket
-import string
 import struct
 import sys
+import tokenize
 from types import MethodType as _MethodType
 
 from io import TextIOBase, IOBase
@@ -44,6 +44,25 @@ if platform.python_implementation() == 'PyPy':
     _PYPY = True
 else:
     _PYPY = False
+
+def _shouldEnableNewStyle():
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 def _shouldEnableNewStyle():
     """
@@ -85,12 +104,27 @@ def currentframe(n=0):
 
 
 def inet_pton(af, addr):
+    """
+    Emulator of L{socket.inet_pton}.
+
+    @param af: An address family to parse; C{socket.AF_INET} or
+        C{socket.AF_INET6}.
+    @type af: L{int}
+
+    @param addr: An address.
+    @type addr: native L{str}
+
+    @return: The binary packed version of the passed address.
+    @rtype: L{bytes}
+    """
+    if not addr:
+        raise ValueError("illegal IP address string passed to inet_pton")
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
     elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        if [x for x in addr if x not in string.hexdigits + ':.']:
-            raise ValueError("Illegal characters: %r" % (''.join(x),))
-
+        if '%' in addr and (addr.count('%') > 1 or addr.index("%") == 0):
+            raise ValueError("illegal IP address string passed to inet_pton")
+        addr = addr.split('%')[0]
         parts = addr.split(':')
         elided = parts.count('')
         ipv4Component = '.' in parts[-1]
@@ -211,7 +245,7 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    with open(filename, "rbU") as fin:
+    with open(filename, "rb") as fin:
         source = fin.read()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
@@ -690,7 +724,7 @@ def _constructMethod(cls, name, self):
 
 
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 from collections import OrderedDict
@@ -759,28 +793,6 @@ def _coercedUnicode(s):
 
 
 
-def _maybeMBCS(s):
-    """
-    Convert the string C{s} to a L{unicode} string, if required.
-
-    @param s: The string to convert.
-    @type s: L{bytes} or L{unicode}
-
-    @return: The string, decoded using MBCS if needed.
-    @rtype: L{unicode}
-
-    @raises UnicodeDecodeError: If passed a byte string that cannot be decoded
-        using MBCS.
-    """
-    assert sys.platform == "win32", "only reasonable on Windows"
-    assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
-
-    if isinstance(s, bytes):
-        return s.decode('mbcs')
-    return s
-
-
-
 if _PY3:
     unichr = chr
     raw_input = input
@@ -810,6 +822,12 @@ def _bytesRepr(bytestring):
         return repr(bytestring)
     else:
         return 'b' + repr(bytestring)
+
+
+if _PY3:
+    _tokenize = tokenize.tokenize
+else:
+    _tokenize = tokenize.generate_tokens
 
 
 
@@ -851,5 +869,5 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_maybeMBCS",
+    "_tokenize"
 ]

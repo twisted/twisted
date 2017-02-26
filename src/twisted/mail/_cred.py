@@ -22,8 +22,10 @@ class CramMD5ClientAuthenticator:
     def __init__(self, user):
         self.user = user
 
+
     def getName(self):
         return b"CRAM-MD5"
+
 
     def challengeResponse(self, secret, chal):
         response = hmac.HMAC(secret, chal).hexdigest().encode('ascii')
@@ -37,13 +39,16 @@ class LOGINAuthenticator:
         self.user = user
         self.challengeResponse = self.challengeUsername
 
+
     def getName(self):
         return b"LOGIN"
+
 
     def challengeUsername(self, secret, chal):
         # Respond to something like "Username:"
         self.challengeResponse = self.challengeSecret
         return self.user
+
 
     def challengeSecret(self, secret, chal):
         # Respond to something like "Password:"
@@ -56,8 +61,10 @@ class PLAINAuthenticator:
     def __init__(self, user):
         self.user = user
 
+
     def getName(self):
         return b"PLAIN"
+
 
     def challengeResponse(self, secret, chal):
         return b'\0' + self.user + b'\0' + secret
@@ -70,11 +77,14 @@ class LOGINCredentials(credentials.UsernamePassword):
         self.responses = [b'password', b'username']
         credentials.UsernamePassword.__init__(self, None, None)
 
+
     def getChallenge(self):
         return self.challenges.pop()
 
+
     def setResponse(self, response):
         setattr(self, nativeString(self.responses.pop()), response)
+
 
     def moreChallenges(self):
         return bool(self.challenges)
@@ -85,14 +95,18 @@ class PLAINCredentials(credentials.UsernamePassword):
     def __init__(self):
         credentials.UsernamePassword.__init__(self, None, None)
 
+
     def getChallenge(self):
         return b''
+
 
     def setResponse(self, response):
         parts = response.split(b'\0')
         if len(parts) != 3:
-            raise IllegalClientResponse("Malformed Response - wrong number of parts")
+            raise IllegalClientResponse(
+                "Malformed Response - wrong number of parts")
         useless, self.username, self.password = parts
+
 
     def moreChallenges(self):
         return False

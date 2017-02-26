@@ -30,6 +30,7 @@ else:
         sys.getfilesystemencoding())
 
 
+
 class ArrowsTests(unittest.TestCase):
     def setUp(self):
         self.underlyingTransport = StringTransport()
@@ -38,7 +39,6 @@ class ArrowsTests(unittest.TestCase):
         self.pt.protocolFactory = lambda: self.p
         self.pt.factory = self
         self.pt.makeConnection(self.underlyingTransport)
-        # self.p.makeConnection(self.pt)
 
 
     def test_printableCharacters(self):
@@ -393,7 +393,6 @@ else:
 
     class TestTransport(transport.SSHClientTransport):
         def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
-            # transport.SSHClientTransport.__init__(self, *a, **kw)
             self.protocolFactory = protocolFactory
             self.protocolArgs = protocolArgs
             self.protocolKwArgs = protocolKwArgs
@@ -430,6 +429,7 @@ else:
         pass
 
     components.registerAdapter(TestSession, TestUser, session.ISession)
+
 
 
 class NotifyingExpectableBuffer(helper.ExpectableBuffer):
@@ -747,6 +747,27 @@ class HistoricRecvlineLoopbackMixin:
              b">>> done"])
 
 
+    def test_DownArrowToPartialLineInHistory(self):
+        """
+        Pressing down arrow to visit an entry that was added to the
+        history by pressing the up arrow instead of return does not
+        raise a L{TypeError}.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9031}
+
+        @return: A L{defer.Deferred} that fires when C{b"done"} is
+            echoed back.
+        """
+
+        return self._trivialTest(
+            b"first line\n" + b"partial line" + up + down + b"\ndone",
+            [b">>> first line",
+             b"first line",
+             b">>> partial line",
+             b"partial line",
+             b">>> done"])
+
+
     def testDownArrow(self):
         return self._trivialTest(
             b"first line\nsecond line\n" + up * 2 + down + b"\ndone",
@@ -773,3 +794,17 @@ class HistoricRecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, HistoricRec
 class HistoricRecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
+
+
+
+class TransportSequenceTests(unittest.TestCase):
+    """
+    L{twisted.conch.recvline.TransportSequence}
+    """
+
+    def test_invalidSequence(self):
+        """
+        Initializing a L{recvline.TransportSequence} with no args
+        raises an assertion.
+        """
+        self.assertRaises(AssertionError, recvline.TransportSequence)

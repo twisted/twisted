@@ -14,11 +14,10 @@ try:
 except ImportError:
     setgroups = getgroups = None
 
-from functools import wraps
-
 from twisted.python.compat import _PY3, unicode
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python._oldstyle import _oldStyle, _replaceIf
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
@@ -31,8 +30,10 @@ deprecatedModuleAttribute(
 
 
 
+@_oldStyle
 class InsensitiveDict:
-    """Dictionary, that has case-insensitive keys.
+    """
+    Dictionary, that has case-insensitive keys.
 
     Normally keys are retained in their original form when queried with
     .keys() or .items().  If initialized with preserveCase=0, keys are both
@@ -45,15 +46,19 @@ class InsensitiveDict:
     """
 
     def __init__(self, dict=None, preserve=1):
-        """Create an empty dictionary, or update from 'dict'."""
+        """
+        Create an empty dictionary, or update from 'dict'.
+        """
         self.data = {}
         self.preserve=preserve
         if dict:
             self.update(dict)
 
+
     def __delitem__(self, key):
         k=self._lowerOrReturn(key)
         del self.data[k]
+
 
     def _lowerOrReturn(self, key):
         if isinstance(key, bytes) or isinstance(key, unicode):
@@ -61,23 +66,33 @@ class InsensitiveDict:
         else:
             return key
 
+
     def __getitem__(self, key):
-        """Retrieve the value associated with 'key' (in any case)."""
+        """
+        Retrieve the value associated with 'key' (in any case).
+        """
         k = self._lowerOrReturn(key)
         return self.data[k][1]
 
+
     def __setitem__(self, key, value):
-        """Associate 'value' with 'key'. If 'key' already exists, but
-        in different case, it will be replaced."""
+        """
+        Associate 'value' with 'key'. If 'key' already exists, but
+        in different case, it will be replaced.
+        """
         k = self._lowerOrReturn(key)
         self.data[k] = (key, value)
 
+
     def has_key(self, key):
-        """Case insensitive test whether 'key' exists."""
+        """
+        Case insensitive test whether 'key' exists.
+        """
         k = self._lowerOrReturn(key)
         return k in self.data
 
     __contains__ = has_key
+
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, bytes)
@@ -86,69 +101,98 @@ class InsensitiveDict:
         else:
             return key
 
+
     def keys(self):
-        """List of keys in their original case."""
+        """
+        List of keys in their original case.
+        """
         return list(self.iterkeys())
 
+
     def values(self):
-        """List of values."""
+        """
+        List of values.
+        """
         return list(self.itervalues())
 
+
     def items(self):
-        """List of (key,value) pairs."""
+        """
+        List of (key,value) pairs.
+        """
         return list(self.iteritems())
 
+
     def get(self, key, default=None):
-        """Retrieve value associated with 'key' or return default value
-        if 'key' doesn't exist."""
+        """
+        Retrieve value associated with 'key' or return default value
+        if 'key' doesn't exist.
+        """
         try:
             return self[key]
         except KeyError:
             return default
 
+
     def setdefault(self, key, default):
-        """If 'key' doesn't exist, associate it with the 'default' value.
-        Return value associated with 'key'."""
+        """
+        If 'key' doesn't exist, associate it with the 'default' value.
+        Return value associated with 'key'.
+        """
         if not self.has_key(key):
             self[key] = default
         return self[key]
 
+
     def update(self, dict):
-        """Copy (key,value) pairs from 'dict'."""
+        """
+        Copy (key,value) pairs from 'dict'.
+        """
         for k,v in dict.items():
             self[k] = v
 
+
     def __repr__(self):
-        """String representation of the dictionary."""
+        """
+        String representation of the dictionary.
+        """
         items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
         return "InsensitiveDict({%s})" % items
+
 
     def iterkeys(self):
         for v in self.data.values():
             yield self._doPreserve(v[0])
 
+
     def itervalues(self):
         for v in self.data.values():
             yield v[1]
 
+
     def iteritems(self):
         for (k, v) in self.data.values():
             yield self._doPreserve(k), v
+
 
     def popitem(self):
         i=self.items()[0]
         del self[i[0]]
         return i
 
+
     def clear(self):
         for k in self.keys():
             del self[k]
 
+
     def copy(self):
         return InsensitiveDict(self, self.preserve)
 
+
     def __len__(self):
         return len(self.data)
+
 
     def __eq__(self, other):
         for k,v in self.items():
@@ -159,7 +203,8 @@ class InsensitiveDict:
 
 
 def uniquify(lst):
-    """Make the elements of a list unique by inserting them into a dictionary.
+    """
+    Make the elements of a list unique by inserting them into a dictionary.
     This must not change the order of the input lst.
     """
     dct = {}
@@ -169,6 +214,8 @@ def uniquify(lst):
             result.append(k)
         dct[k] = 1
     return result
+
+
 
 def padTo(n, seq, default=None):
     """
@@ -193,6 +240,7 @@ def padTo(n, seq, default=None):
     return blank
 
 
+
 def getPluginDirs():
     warnings.warn(
         "twisted.python.util.getPluginDirs is deprecated since Twisted 12.2.",
@@ -206,11 +254,13 @@ def getPluginDirs():
     return allPlugins
 
 
+
 def addPluginDir():
     warnings.warn(
         "twisted.python.util.addPluginDir is deprecated since Twisted 12.2.",
         DeprecationWarning, stacklevel=2)
     sys.path.extend(getPluginDirs())
+
 
 
 def sibpath(path, sibling):
@@ -222,6 +272,7 @@ def sibpath(path, sibling):
     resource files.
     """
     return os.path.join(os.path.dirname(os.path.abspath(path)), sibling)
+
 
 
 def _getpass(prompt):
@@ -238,10 +289,13 @@ def _getpass(prompt):
     except EOFError:
         raise KeyboardInterrupt
 
+
+
 def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
                 confirmPrompt = 'Confirm password: ',
                 mismatchMessage = "Passwords don't match."):
-    """Obtain a password by prompting or from stdin.
+    """
+    Obtain a password by prompting or from stdin.
 
     If stdin is a terminal, prompt for a new password, and confirm (if
     C{confirm} is true) by asking again to make sure the user typed the same
@@ -286,6 +340,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
             sys.stdin, sys.stdout = old
 
 
+
 def println(*a):
     sys.stdout.write(' '.join(map(str, a))+'\n')
 
@@ -293,8 +348,11 @@ def println(*a):
 # This does not belong here
 # But where does it belong?
 
+
+
 def str_xor(s, b):
     return ''.join([chr(ord(c) ^ b) for c in s])
+
 
 
 def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentChar = '>'):
@@ -325,6 +383,7 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
     return statBar
 
 
+
 def spewer(frame, s, ignored):
     """
     A trace function for sys.settrace that prints every function or method call.
@@ -343,6 +402,7 @@ def spewer(frame, s, ignored):
                 frame.f_code.co_name,
                 frame.f_code.co_filename,
                 frame.f_lineno))
+
 
 
 def searchupwards(start, files=[], dirs=[]):
@@ -373,6 +433,8 @@ def searchupwards(start, files=[], dirs=[]):
     return None
 
 
+
+@_oldStyle
 class LineLog:
     """
     A limited-size line-based log, useful for logging line-based
@@ -390,12 +452,14 @@ class LineLog:
         self.log = [None] * size
         self.size = size
 
-    def append(self, line):
+
+    def append(self,line):
         if self.size:
             self.log[:-1] = self.log[1:]
             self.log[-1] = line
         else:
             self.log.append(line)
+
 
     def str(self):
         return bytes(self)
@@ -407,14 +471,17 @@ class LineLog:
     def __bytes__(self):
         return b'\n'.join(filter(None, self.log))
 
+
     def __getitem__(self, item):
         return filter(None, self.log)[item]
+
 
     def clear(self):
         """
         Empty the log.
         """
         self.log = [None] * self.size
+
 
 
 def raises(exception, f, *args, **kwargs):
@@ -426,6 +493,7 @@ def raises(exception, f, *args, **kwargs):
     except exception:
         return 1
     return 0
+
 
 
 class IntervalDifferential(object):
@@ -459,8 +527,10 @@ class IntervalDifferential(object):
         self.intervals = intervals[:]
         self.default = default
 
+
     def __iter__(self):
         return _IntervalDifferentialIterator(self.intervals, self.default)
+
 
 
 class _IntervalDifferentialIterator(object):
@@ -469,6 +539,7 @@ class _IntervalDifferentialIterator(object):
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
+
 
     def __next__(self):
         if not self.intervals:
@@ -483,6 +554,7 @@ class _IntervalDifferentialIterator(object):
     # Iterators on Python 2 use next(), not __next__()
     next = __next__
 
+
     def addInterval(self, i):
         if self.intervals:
             delay = self.intervals[0][0] - self.intervals[0][1]
@@ -490,6 +562,7 @@ class _IntervalDifferentialIterator(object):
             self.intervals.sort()
         else:
             self.intervals.append([i, i, 0])
+
 
     def removeInterval(self, interval):
         for i in range(len(self.intervals)):
@@ -504,6 +577,7 @@ class _IntervalDifferentialIterator(object):
 
 
 
+@_oldStyle
 class FancyStrMixin:
     """
     Mixin providing a flexible implementation of C{__str__}.
@@ -542,6 +616,7 @@ class FancyStrMixin:
 
 
 
+@_oldStyle
 class FancyEqMixin:
     """
     Mixin that implements C{__eq__} and C{__ne__}.
@@ -650,6 +725,7 @@ def switchUID(uid, gid, euid=False):
             setuid(uid)
 
 
+
 class SubclassableCStringIO(object):
     """
     A wrapper around cStringIO to allow for subclassing.
@@ -660,44 +736,58 @@ class SubclassableCStringIO(object):
         from cStringIO import StringIO
         self.__csio = StringIO(*a, **kw)
 
+
     def __iter__(self):
         return self.__csio.__iter__()
+
 
     def next(self):
         return self.__csio.next()
 
+
     def close(self):
         return self.__csio.close()
+
 
     def isatty(self):
         return self.__csio.isatty()
 
+
     def seek(self, pos, mode=0):
         return self.__csio.seek(pos, mode)
+
 
     def tell(self):
         return self.__csio.tell()
 
+
     def read(self, n=-1):
         return self.__csio.read(n)
+
 
     def readline(self, length=None):
         return self.__csio.readline(length)
 
+
     def readlines(self, sizehint=0):
         return self.__csio.readlines(sizehint)
+
 
     def truncate(self, size=None):
         return self.__csio.truncate(size)
 
+
     def write(self, s):
         return self.__csio.write(s)
+
 
     def writelines(self, list):
         return self.__csio.writelines(list)
 
+
     def flush(self):
         return self.__csio.flush()
+
 
     def getvalue(self):
         return self.__csio.getvalue()
@@ -916,37 +1006,6 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
 
 
 
-def _replaceIf(condition, alternative):
-    """
-    If C{condition}, replace this function with C{alternative}.
-
-    @param condition: A L{bool} which says whether this should be replaced.
-
-    @param alternative: An alternative function that will be swapped in instead
-        of the original, if C{condition} is truthy.
-
-    @return: A decorator.
-    """
-    def decorator(func):
-
-        if condition is True:
-            call = alternative
-        elif condition is False:
-            call = func
-        else:
-            raise ValueError(("condition argument to _replaceIf requires a "
-                              "bool, not {}").format(repr(condition)))
-
-        @wraps(func)
-        def wrapped(*args, **kwargs):
-            return call(*args, **kwargs)
-
-        return wrapped
-
-    return decorator
-
-
-
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "println", "makeStatBar", "OrderedDict",
@@ -954,7 +1013,7 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes", "runWithWarningsSuppressed",
+    "untilConcludes", "runWithWarningsSuppressed", "_replaceIf",
 ]
 
 

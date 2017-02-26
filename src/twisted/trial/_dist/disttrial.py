@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-This module containts the trial distributed runner, the management class
+This module contains the trial distributed runner, the management class
 responsible for coordinating all of trial's behavior at the highest level.
 
 @since: 12.3
@@ -195,7 +195,7 @@ class DistTrialRunner(object):
         testDir, testDirLock = _unusedTestDirectory(
             FilePath(self._workingDirectory))
         workerNumber = min(count, self._workerNumber)
-        ampWorkers = [LocalWorkerAMP() for x in xrange(workerNumber)]
+        ampWorkers = [LocalWorkerAMP() for x in range(workerNumber)]
         workers = self.createLocalWorkers(ampWorkers, testDir.path)
         processEndDeferreds = [worker.endDeferred for worker in workers]
         self.launchWorkerProcesses(reactor.spawnProcess, workers,

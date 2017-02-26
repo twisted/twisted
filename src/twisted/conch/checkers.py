@@ -26,6 +26,8 @@ except ImportError:
 
 from zope.interface import providedBy, implementer, Interface
 
+from incremental import Version
+
 from twisted.conch import error
 from twisted.conch.ssh import keys
 from twisted.cred.checkers import ICredentialsChecker
@@ -37,7 +39,7 @@ from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
-from twisted.python.versions import Version
+
 
 
 
@@ -150,6 +152,7 @@ class SSHPublicKeyDatabase:
         d.addErrback(self._ebRequestAvatarId)
         return d
 
+
     def _cbRequestAvatarId(self, validKey, credentials):
         """
         Check whether the credentials themselves are valid, now that we know
@@ -236,6 +239,7 @@ class SSHPublicKeyDatabase:
                         continue
         return False
 
+
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
             log.msg(f)
@@ -261,6 +265,7 @@ class SSHProtocolChecker:
         self.checkers = {}
         self.successfulCredentials = {}
 
+
     def get_credentialInterfaces(self):
         return _keys(self.checkers)
 
@@ -271,6 +276,7 @@ class SSHProtocolChecker:
             credentialInterfaces = checker.credentialInterfaces
         for credentialInterface in credentialInterfaces:
             self.checkers[credentialInterface] = checker
+
 
     def requestAvatarId(self, credentials):
         """
@@ -293,6 +299,7 @@ class SSHProtocolChecker:
         return defer.fail(UnhandledCredentials("No checker for %s" % \
             ', '.join(map(reflect.qual, ifac))))
 
+
     def _cbGoodAuthentication(self, avatarId, credentials):
         """
         Called if a checker has verified the credentials.  We call our
@@ -308,6 +315,7 @@ class SSHProtocolChecker:
             return avatarId
         else:
             raise error.NotEnoughAuthentication()
+
 
     def areDone(self, avatarId):
         """
@@ -577,7 +585,7 @@ class SSHPublicKeyChecker(object):
         try:
             if pubKey.verify(credentials.signature, credentials.sigData):
                 return credentials.username
-        except:  # any error should be treated as a failed login
+        except:  # Any error should be treated as a failed login
             log.err()
             raise UnauthorizedLogin('Error while verifying key')
 

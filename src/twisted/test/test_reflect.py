@@ -630,6 +630,20 @@ class SafeStrTests(TestCase):
         self.assertIn("RuntimeError: str!", xStr)
 
 
+    def test_unicode(self):
+        """
+        A unicode string is encoded to ``ascii`` with
+        ``backslashreplace`` error handling on Python 2.
+        """
+        unicodeString = u'\N{DOUBLE EXCLAMATION MARK} !!'
+        safe = reflect.safe_str(unicodeString)
+        self.assertEqual(safe, b'\u203c !!')
+
+    if _PY3:
+        test_unicode.skip = (
+            "Skip Python 2 specific test for unicode encoding")
+
+
 
 class FilenameToModuleTests(TestCase):
     """
@@ -757,7 +771,7 @@ class ObjectGrepTests(unittest.TestCase):
 
     def test_dictionary(self):
         """
-        Test references search through a dictionnary, as a key or as a value.
+        Test references search through a dictionary, as a key or as a value.
         """
         o = object()
         d1 = {None: o}

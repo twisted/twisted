@@ -15,7 +15,8 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, intToBytes
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
     IReactorCore, IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket,
@@ -24,7 +25,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
-from twisted.internet import protocol, error, address
+from twisted.internet import protocol, error, address, task
 
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
@@ -121,6 +122,9 @@ class StringTransport:
     @ivar disconnecting: A C{bool} which is C{False} until L{loseConnection} is
         called, then C{True}.
 
+    @ivar disconnected: A C{bool} which is C{False} until L{abortConnection} is
+        called, then C{True}.
+
     @ivar producer: If a producer is currently registered, C{producer} is a
         reference to it.  Otherwise, L{None}.
 
@@ -142,9 +146,23 @@ class StringTransport:
     @ivar io: A L{io.BytesIO} which holds the data which has been written to
         this transport since the last call to L{clear}.  Use L{value} instead
         of accessing this directly.
+
+    @ivar _lenient: By default L{StringTransport} enforces that
+        L{resumeProducing} is not called after the connection is lost. This is
+        to ensure that any code that does call L{resumeProducing} after the
+        connection is lost is not blindly expecting L{resumeProducing} to have
+        any impact.
+
+        However, if your test case is calling L{resumeProducing} after
+        connection close on purpose, and you know it won't block expecting
+        further data to show up, this flag may safely be set to L{True}.
+
+        Defaults to L{False}.
+    @type lenient: L{bool}
     """
 
     disconnecting = False
+    disconnected = False
 
     producer = None
     streaming = None
@@ -154,13 +172,14 @@ class StringTransport:
 
     producerState = 'producing'
 
-    def __init__(self, hostAddress=None, peerAddress=None):
+    def __init__(self, hostAddress=None, peerAddress=None, lenient=False):
         self.clear()
         if hostAddress is not None:
             self.hostAddr = hostAddress
         if peerAddress is not None:
             self.peerAddr = peerAddress
         self.connected = True
+        self._lenient = lenient
 
     def clear(self):
         """
@@ -207,8 +226,10 @@ class StringTransport:
 
     def abortConnection(self):
         """
-        Abort the connection. Same as C{loseConnection}.
+        Abort the connection. Same as C{loseConnection}, but also toggles the
+        C{aborted} instance variable to C{True}.
         """
+        self.disconnected = True
         self.loseConnection()
 
 
@@ -242,7 +263,7 @@ class StringTransport:
 
     # IPushProducer
     def _checkState(self):
-        if self.disconnecting:
+        if self.disconnecting and not self._lenient:
             raise RuntimeError(
                 "Cannot resume producing after loseConnection")
         if self.producerState == 'stopped':
@@ -820,3 +841,87 @@ class RaisingMemoryReactor(object):
         Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
         """
         raise self._connectException
+
+
+
+class NonStreamingProducer(object):
+    """
+    A pull producer which writes 10 times only.
+    """
+
+    counter = 0
+    stopped = False
+
+    def __init__(self, consumer):
+        self.consumer = consumer
+        self.result = Deferred()
+
+
+    def resumeProducing(self):
+        """
+        Write the counter value once.
+        """
+        if self.consumer is None or self.counter >= 10:
+            raise RuntimeError("BUG: resume after unregister/stop.")
+        else:
+            self.consumer.write(intToBytes(self.counter))
+            self.counter += 1
+            if self.counter == 10:
+                self.consumer.unregisterProducer()
+                self._done()
+
+
+    def pauseProducing(self):
+        """
+        An implementation of C{IPushProducer.pauseProducing}. This should never
+        be called on a pull producer, so this just raises an error.
+        """
+        raise RuntimeError("BUG: pause should never be called.")
+
+
+    def _done(self):
+        """
+        Fire a L{Deferred} so that users can wait for this to complete.
+        """
+        self.consumer = None
+        d = self.result
+        del self.result
+        d.callback(None)
+
+
+    def stopProducing(self):
+        """
+        Stop all production.
+        """
+        self.stopped = True
+        self._done()
+
+
+
+def waitUntilAllDisconnected(reactor, protocols):
+    """
+    Take a list of disconnecting protocols, callback a L{Deferred} when they're
+    all done.
+
+    This is a hack to make some older tests less flaky, as
+    L{ITransport.loseConnection} is not atomic on all reactors (for example,
+    the CoreFoundation, which sometimes takes a reactor turn for CFSocket to
+    realise). New tests should either not use real sockets in testing, or take
+    the advice in
+    I{https://jml.io/pages/how-to-disconnect-in-twisted-really.html} to heart.
+
+    @param reactor: The reactor to schedule the checks on.
+    @type reactor: L{IReactorTime}
+
+    @param protocols: The protocols to wait for disconnecting.
+    @type protocols: A L{list} of L{IProtocol}s.
+    """
+    lc = None
+
+    def _check():
+        if not True in [x.transport.connected for x in protocols]:
+            lc.stop()
+
+    lc = task.LoopingCall(_check)
+    lc.clock = reactor
+    return lc.start(0.01, now=True)

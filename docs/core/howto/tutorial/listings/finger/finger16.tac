@@ -12,11 +12,11 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return 'Internal error in server'
+            return b'Internal error in server'
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
@@ -29,14 +29,15 @@ class IRCReplyBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         user = user.split('!')[0]
         if self.nickname.lower() == channel.lower():
-            d = self.factory.getUser(msg)
+            d = self.factory.getUser(msg.encode("ascii"))
 
             def onError(err):
-                return 'Internal error in server'
+                return b'Internal error in server'
             d.addErrback(onError)
 
             def writeResponse(message):
-                irc.IRCClient.msg(self, user, msg+': '+message)
+                message = message.decode("ascii")
+                irc.IRCClient.msg(self, user, msg + ': ' + message)
             d.addCallback(writeResponse)
 
 
@@ -47,16 +48,16 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getFingerFactory(self):
         f = protocol.ServerFactory()
@@ -65,13 +66,16 @@ class FingerService(service.Service):
         return f
 
     def getResource(self):
+        def getData(path, request):
+            user = self.users.get(path, b"No such users <p/> usage: site/user")
+            path = path.decode("ascii")
+            user = user.decode("ascii")
+            text = '<h1>{}</h1><p>{}</p>'.format(path, user)
+            text = text.encode("ascii")
+            return static.Data(text, 'text/html')
+
         r = resource.Resource()
-        r.getChild = (lambda path, request:
-                      static.Data('<h1>%s</h1><p>%s</p>' %
-                      tuple(map(cgi.escape,
-                      [path,self.users.get(path,
-                      "No such user <p/> usage: site/user")])),
-                      'text/html'))
+        r.getChild = getData
         return r
 
     def getIRCBot(self, nickname):

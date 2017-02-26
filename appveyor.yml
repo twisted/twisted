@@ -37,11 +37,25 @@ environment:
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
-      TOXENV: py27-coverage-windows,codecov-publish
+      TOXENV: py27-alldeps-withcov-windows,codecov-publish
+      TWISTED_REACTOR: "select"
+    - PYTHON_HOME: C:\\Python27-x64
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      TOXENV: py27-alldeps-withcov-windows,codecov-publish
+      TWISTED_REACTOR: "iocp"
+    - PYTHON_HOME: C:\\PYTHON34-x64
+      PYTHON_VERSION: "3.4"
+      PYTHON_ARCH: "64"
+      TOXENV: py34-alldeps-withcov-windows,codecov-publish
+      # The --reactor flag to trial doesn't work on Windows Python 3
+      # so we can only choose the default reactor here:
+      # https://twistedmatrix.com/trac/ticket/8745
+      TWISTED_REACTOR: "default"
     - PYTHON_HOME: C:\\PYTHON35-x64
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
-      TOXENV: py35-coverage-windows,codecov-publish
+      TOXENV: py35-alldeps-withcov-windows,codecov-publish
       # The --reactor flag to trial doesn't work on Windows Python 3
       # so we can only choose the default reactor here:
       # https://twistedmatrix.com/trac/ticket/8745
@@ -49,9 +63,9 @@ environment:
 
 matrix:
   allow_failures:
-    # Some tests are still failing on Python 3.
-    # These tests will be fixed in separate tickets.
-    - PYTHON_VERSION: "3.5"
+    # Some IOCP tests are failing on Appveyor:
+    # https://twistedmatrix.com/trac/ticket/8679
+    - TWISTED_REACTOR: "iocp"
 
 install:
   # Install OpenSSH through chocolatey

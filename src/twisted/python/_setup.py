@@ -2,11 +2,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=I0011,C0103,C9302,W9401,W9402
+
 """
 Setuptools convenience functionality.
 
-Since Twisted is not yet fully ported to Python3, it uses
-L{twisted.python.dist3} to know what to install on Python3.
+This file must not import anything from Twisted, as it is loaded by C{exec} in
+C{setup.py}. If you need compatibility functions for this code, duplicate them
+here.
 
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
@@ -26,6 +29,8 @@ L{twisted.python.dist3} to know what to install on Python3.
 
 @var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
     process.
+
+@var notPortedModules: Modules that are not yet ported to Python 3.
 """
 
 import os
@@ -37,13 +42,15 @@ from distutils.errors import CompileError
 from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
 
-from twisted import copyright
-from twisted.python import dist3
-from twisted.python.compat import _PY3
+# Do not replace this with t.p.compat imports, this file must not import
+# from Twisted. See the docstring.
+if sys.version_info < (3, 0):
+    _PY3 = False
+else:
+    _PY3 = True
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
-    version=copyright.version,
     description="An asynchronous networking framework written in Python",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
@@ -81,19 +88,22 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    tls=['pyopenssl >= 16.0.0',
-         'service_identity',
-         'idna >= 0.6'],
-    conch=['gmpy',
-           'pyasn1',
-           'cryptography >= 0.9.1',
-           'appdirs >= 1.4.0',
-           ],
+    tls=[
+        'pyopenssl >= 16.0.0',
+        'service_identity',
+        'idna >= 0.6'],
+    conch=[
+        'pyasn1',
+        'cryptography >= 0.9.1',
+        'appdirs >= 1.4.0',
+    ],
     soap=['soappy'],
     serial=['pyserial'],
-    osx=['pyobjc'],
+    osx=['pyobjc-core',
+         'pyobjc-framework-CFNetwork',
+         'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.3.0, < 3.0',
+    http2=['h2 >= 2.5.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
@@ -123,17 +133,18 @@ _EXTRAS_REQUIRE = {
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
+    "ckeygen = twisted.conch.scripts.ckeygen:run",
+    "cftp = twisted.conch.scripts.cftp:run",
+    "conch = twisted.conch.scripts.conch:run",
+    "pyhtmlizer = twisted.scripts.htmlizer:run",
+    "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
+    "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [
-    "cftp = twisted.conch.scripts.cftp:run",
-    "ckeygen = twisted.conch.scripts.ckeygen:run",
-    "conch = twisted.conch.scripts.conch:run",
     "mailmail = twisted.mail.scripts.mailmail:run",
-    "pyhtmlizer = twisted.scripts.htmlizer:run",
-    "tkconch = twisted.conch.scripts.tkconch:run",
     ]
 
 if not _PY3:
@@ -141,7 +152,7 @@ if not _PY3:
 
 
 
-class ConditionalExtension(Extension):
+class ConditionalExtension(Extension, object):
     """
     An extension module that will only be compiled if certain conditions are
     met.
@@ -208,7 +219,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
         conditionalExtensions = extensions
     command_classes = {
         'build_ext': my_build_ext,
-        }
+    }
 
     if sys.version_info[0] >= 3:
         requirements = ["zope.interface >= 4.0.2"]
@@ -217,12 +228,16 @@ def getSetupArgs(extensions=_EXTENSIONS):
         requirements = ["zope.interface >= 3.6.0"]
 
     requirements.append("constantly >= 15.1")
+    requirements.append("incremental >= 16.10.1")
+    requirements.append("Automat >= 0.3.0")
 
     arguments.update(dict(
         packages=find_packages("src"),
+        use_incremental=True,
+        setup_requires=["incremental >= 16.10.1"],
         install_requires=requirements,
         entry_points={
-            'console_scripts':  _CONSOLE_SCRIPTS
+            'console_scripts': _CONSOLE_SCRIPTS
         },
         cmdclass=command_classes,
         include_package_data=True,
@@ -235,7 +250,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
 
 
 
-class BuildPy3(build_py):
+class BuildPy3(build_py, object):
     """
     A version of build_py that doesn't install the modules that aren't yet
     ported to Python 3.
@@ -244,8 +259,7 @@ class BuildPy3(build_py):
         modules = [
             module for module
             in build_py.find_package_modules(self, package, package_dir)
-            if ".".join([module[0], module[1]]) in dist3.modulesToInstall or
-               ".".join([module[0], module[1]]) in dist3.testDataFiles]
+            if ".".join([module[0], module[1]]) not in notPortedModules]
         return modules
 
 
@@ -253,7 +267,7 @@ class BuildPy3(build_py):
 ## Helpers and distutil tweaks
 
 
-class build_ext_twisted(build_ext.build_ext):
+class build_ext_twisted(build_ext.build_ext, object):
     """
     Allow subclasses to easily detect and customize Extensions to
     build at install-time.
@@ -348,3 +362,102 @@ def _checkCPython(sys=sys, platform=platform):
 
 
 _isCPython = _checkCPython()
+
+notPortedModules = [
+    "twisted.internet.glib2reactor",
+    "twisted.internet.gtk2reactor",
+    "twisted.internet.pyuisupport",
+    "twisted.internet.test.process_connectionlost",
+    "twisted.internet.test.process_gireactornocompat",
+    "twisted.internet.tksupport",
+    "twisted.mail.__init__",
+    "twisted.mail.alias",
+    "twisted.mail.bounce",
+    "twisted.mail.imap4",
+    "twisted.mail.mail",
+    "twisted.mail.maildir",
+    "twisted.mail.pb",
+    "twisted.mail.pop3",
+    "twisted.mail.pop3client",
+    "twisted.mail.protocols",
+    "twisted.mail.relay",
+    "twisted.mail.relaymanager",
+    "twisted.mail.scripts.__init__",
+    "twisted.mail.scripts.mailmail",
+    "twisted.mail.smtp",
+    "twisted.mail.tap",
+    "twisted.mail.test.__init__",
+    "twisted.mail.test.pop3testserver",
+    "twisted.mail.test.test_bounce",
+    "twisted.mail.test.test_imap",
+    "twisted.mail.test.test_mail",
+    "twisted.mail.test.test_mailmail",
+    "twisted.mail.test.test_options",
+    "twisted.mail.test.test_pop3",
+    "twisted.mail.test.test_pop3client",
+    "twisted.mail.test.test_scripts",
+    "twisted.mail.test.test_smtp",
+    "twisted.news.__init__",
+    "twisted.news.database",
+    "twisted.news.news",
+    "twisted.news.nntp",
+    "twisted.news.tap",
+    "twisted.news.test.__init__",
+    "twisted.news.test.test_database",
+    "twisted.news.test.test_news",
+    "twisted.news.test.test_nntp",
+    "twisted.plugins.twisted_inet",
+    "twisted.plugins.twisted_mail",
+    "twisted.plugins.twisted_names",
+    "twisted.plugins.twisted_news",
+    "twisted.plugins.twisted_portforward",
+    "twisted.plugins.twisted_runner",
+    "twisted.plugins.twisted_socks",
+    "twisted.plugins.twisted_words",
+    "twisted.protocols.ident",
+    "twisted.protocols.mice.__init__",
+    "twisted.protocols.mice.mouseman",
+    "twisted.protocols.shoutcast",
+    "twisted.python._pydoctor",
+    "twisted.python._release",
+    "twisted.python.finalize",
+    "twisted.python.formmethod",
+    "twisted.python.hook",
+    "twisted.python.rebuild",
+    "twisted.python.release",
+    "twisted.python.shortcut",
+    "twisted.python.test.cmodulepullpipe",
+    "twisted.python.test.test_fakepwd",
+    "twisted.python.test.test_pydoctor",
+    "twisted.python.test.test_release",
+    "twisted.python.test.test_win32",
+    "twisted.tap.__init__",
+    "twisted.tap.portforward",
+    "twisted.tap.socks",
+    "twisted.test.crash_test_dummy",
+    "twisted.test.myrebuilder1",
+    "twisted.test.myrebuilder2",
+    "twisted.test.test_formmethod",
+    "twisted.test.test_hook",
+    "twisted.test.test_ident",
+    "twisted.test.test_rebuild",
+    "twisted.test.test_shortcut",
+    "twisted.test.test_strerror",
+    "twisted.web.distrib",
+    "twisted.web.domhelpers",
+    "twisted.web.microdom",
+    "twisted.web.rewrite",
+    "twisted.web.soap",
+    "twisted.web.sux",
+    "twisted.web.test.test_cgi",
+    "twisted.web.test.test_distrib",
+    "twisted.web.test.test_domhelpers",
+    "twisted.web.test.test_html",
+    "twisted.web.test.test_soap",
+    "twisted.web.test.test_xml",
+    "twisted.web.twcgi",
+    "twisted.words.protocols.oscar",
+    "twisted.words.tap",
+    "twisted.words.test.test_oscar",
+    "twisted.words.test.test_tap",
+]

@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_pb -*-
+# -*- test-case-name: twisted.spread.test.test_pb -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -16,22 +16,24 @@ but may have a small impact on users who subclass and override methods.
 @author: Glyph Lefkowitz
 """
 
+from __future__ import absolute_import, division
+
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
 # be serialized by Jelly, but they ought to be accessible through other
 # mechanisms (like XMLRPC)
 
-# system imports
 import sys
+
 from zope.interface import implementer, Interface
 
-# twisted imports
 from twisted.python import log, reflect
-
-# sibling imports
-from .jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from .jelly import Jellyable, Unjellyable, _newDummyLike
-from .jelly import setInstanceState, getInstanceState
+from twisted.python.compat import _PY3, unicode, comparable, cmp
+from .jelly import (
+    setUnjellyableForClass, setUnjellyableForClassTree,
+    setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
+    setInstanceState, getInstanceState, _createBlank
+)
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
@@ -39,10 +41,10 @@ setCopierForClassTree = setUnjellyableForClassTree
 setFactoryForClass = setUnjellyableFactoryForClass
 copyTags = unjellyableRegistry
 
-copy_atom = "copy"
-cache_atom = "cache"
-cached_atom = "cached"
-remote_atom = "remote"
+copy_atom = b"copy"
+cache_atom = b"cache"
+cached_atom = b"cached"
+remote_atom = b"remote"
 
 
 class NoSuchMethod(AttributeError):
@@ -107,6 +109,10 @@ class Referenceable(Serializable):
         """
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
+
+        if not isinstance(message, str):
+            message = message.decode('utf8')
+
         method = getattr(self, "remote_%s" % message, None)
         if method is None:
             raise NoSuchMethod("No such method: remote_%s" % (message,))
@@ -124,7 +130,7 @@ class Referenceable(Serializable):
         serialize this to a peer.
         """
 
-        return ["remote", jellier.invoker.registerReference(self)]
+        return [b"remote", jellier.invoker.registerReference(self)]
 
 
 @implementer(IPBRoot)
@@ -208,6 +214,10 @@ class ViewPoint(Referenceable):
         """
         args = broker.unserialize(args, self.perspective)
         kw = broker.unserialize(kw, self.perspective)
+
+        if not isinstance(message, str):
+            message = message.decode('utf8')
+
         method = getattr(self.object, "view_%s" % message)
         try:
             state = method(*(self.perspective,)+args, **kw)
@@ -274,7 +284,7 @@ class Copyable(Serializable):
         you may override this to change it.
         """
 
-        return reflect.qual(self.__class__)
+        return reflect.qual(self.__class__).encode('utf-8')
 
     def getTypeToCopyFor(self, perspective):
         """Determine what type tag to send for me.
@@ -382,7 +392,9 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
-
+        if _PY3:
+            state = {x.decode('utf8') if isinstance(x, bytes)
+                     else x:y for x,y in state.items()}
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
@@ -412,6 +424,8 @@ class RemoteCache(RemoteCopy, Serializable):
         The default implementation is to dispatch to a method called
         'C{observe_messagename}' and call it on my  with the same arguments.
         """
+        if not isinstance(message, str):
+            message = message.decode('utf8')
 
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
@@ -429,7 +443,7 @@ class RemoteCache(RemoteCopy, Serializable):
         if jellier.invoker is None:
             return getInstanceState(self, jellier)
         assert jellier.invoker is self.broker, "You cannot exchange cached proxies between brokers."
-        return 'lcache', self.luid
+        return b'lcache', self.luid
 
 
     def unjellyFor(self, unjellier, jellyList):
@@ -437,21 +451,21 @@ class RemoteCache(RemoteCopy, Serializable):
             return setInstanceState(self, unjellier, jellyList)
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
-        cProxy = _newDummyLike(self)
+        borgCopy = self._borgify()
         # XXX questionable whether this was a good design idea...
-        init = getattr(cProxy, "__init__", None)
+        init = getattr(borgCopy, "__init__", None)
         if init:
             init()
         unjellier.invoker.cacheLocally(jellyList[1], self)
-        cProxy.setCopyableState(unjellier.unjelly(jellyList[2]))
+        borgCopy.setCopyableState(unjellier.unjelly(jellyList[2]))
         # Might have changed due to setCopyableState method; we'll assume that
         # it's bad form to do so afterwards.
-        self.__dict__ = cProxy.__dict__
+        self.__dict__ = borgCopy.__dict__
         # chomp, chomp -- some existing code uses "self.__dict__ =", some uses
         # "__dict__.update".  This is here in order to handle both cases.
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
-        return cProxy
+        return borgCopy
 
 ##     def __really_del__(self):
 ##         """Final finalization call, made after all remote references have been lost.
@@ -483,11 +497,37 @@ class RemoteCache(RemoteCopy, Serializable):
         except:
             log.deferr()
 
+
+    def _borgify(self):
+        """
+        Create a new object that shares its state (i.e. its C{__dict__}) and
+        type with this object, but does not share its identity.
+
+        This is an instance of U{the Borg design pattern
+        <https://code.activestate.com/recipes/66531/>} originally described by
+        Alex Martelli, but unlike the example given there, this is not a
+        replacement for a Singleton.  Instead, it is for lifecycle tracking
+        (and distributed garbage collection).  The purpose of these separate
+        objects is to have a separate object tracking each application-level
+        reference to the root L{RemoteCache} object being tracked by the
+        broker, and to have their C{__del__} methods be invoked.
+
+        This may be achievable via a weak value dictionary to track the root
+        L{RemoteCache} instances instead, but this implementation strategy
+        predates the availability of weak references in Python.
+
+        @return: The new instance.
+        @rtype: C{self.__class__}
+        """
+        blank = _createBlank(self.__class__)
+        blank.__dict__ = self.__dict__
+        return blank
+
+
+
 def unjellyCached(unjellier, unjellyList):
     luid = unjellyList[1]
-    cNotProxy = unjellier.invoker.cachedLocallyAs(luid)
-    cProxy = _newDummyLike(cNotProxy)
-    return cProxy
+    return unjellier.invoker.cachedLocallyAs(luid)._borgify()
 
 setUnjellyableForClass("cached", unjellyCached)
 
@@ -504,6 +544,7 @@ def unjellyLocal(unjellier, unjellyList):
 
 setUnjellyableForClass("local", unjellyLocal)
 
+@comparable
 class RemoteCacheMethod:
     """A method on a reference to a L{RemoteCache}.
     """
@@ -529,8 +570,12 @@ class RemoteCacheMethod:
         if cacheID is None:
             from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
-        return self.broker._sendMessage('cache', self.perspective, cacheID, self.name, args, kw)
+        return self.broker._sendMessage(b'cache', self.perspective, cacheID,
+                                        self.name, args, kw)
 
+
+
+@comparable
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's L{RemoteCache}.
 
@@ -577,11 +622,13 @@ class RemoteCacheObserver:
         """(internal) action method.
         """
         cacheID = self.broker.cachedRemotelyAs(self.cached)
+        if isinstance(_name, unicode):
+            _name = _name.encode("utf-8")
         if cacheID is None:
             from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the "
                                 "object hasn't been given to the peer yet.")
-        return self.broker._sendMessage('cache', self.perspective, cacheID,
+        return self.broker._sendMessage(b'cache', self.perspective, cacheID,
                                         _name, args, kw)
 
     def remoteMethod(self, key):

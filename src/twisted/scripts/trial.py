@@ -398,7 +398,7 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     @type _workerFlags: C{list}
 
     @ivar _workerParameters: List of parameter which are accepted by trial
-        distrubuted workers. This is used by C{_getWorkerArguments} to build
+        distributed workers. This is used by C{_getWorkerArguments} to build
         the command line arguments.
     @type _workerParameters: C{list}
     """

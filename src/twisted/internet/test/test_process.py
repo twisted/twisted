@@ -356,10 +356,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                if platform.isWindows():
-                    exe = pyExe.decode('mbcs')
-                else:
-                    exe = pyExe.decode('ascii')
+                exe = pyExe.decode(sys.getfilesystemencoding())
 
                 subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
                 f2 = subprocess.Popen([exe, "-c",
@@ -862,6 +859,8 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
     if platform.isWindows():
         skip = "PTYs are not supported on Windows."
     elif platform.isMacOSX():
+        skip = "PTYs are flaky from a Darwin bug. See #8840."
+
         skippedReactors = {
             "twisted.internet.pollreactor.PollReactor":
                 "OS X's poll() does not support PTYs"}

@@ -82,7 +82,7 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
         """
         Return 'foo' as the answer to two questions.
         """
-        return defer.succeed((b'foo', b'foo'))
+        return defer.succeed(('foo', 'foo'))
 
 
 
@@ -700,6 +700,20 @@ class SSHUserAuthClientTests(unittest.TestCase):
         """
         self.authClient.getPassword = lambda: None
         self.assertFalse(self.authClient.tryAuth(b'password'))
+
+
+    def test_keyboardInteractive(self):
+        """
+        Make sure that the client can authenticate with the keyboard
+        interactive method.
+        """
+        self.authClient.ssh_USERAUTH_PK_OK_keyboard_interactive(
+            NS(b'') + NS(b'') + NS(b'') + b'\x00\x00\x00\x01' +
+            NS(b'Password: ') + b'\x00')
+        self.assertEqual(
+            self.authClient.transport.packets[-1],
+            (userauth.MSG_USERAUTH_INFO_RESPONSE,
+             b'\x00\x00\x00\x02' + NS(b'foo') + NS(b'foo')))
 
 
     def test_USERAUTH_PK_OK_unknown_method(self):

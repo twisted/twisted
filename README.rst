@@ -1,4 +1,4 @@
-Twisted 16.3.0
+Twisted 17.1.0
 ==============
 
 |pypi|
@@ -8,13 +8,9 @@ Twisted 16.3.0
 
 .. code::
 
-    <tomprince> [...] that made me think of (infinity,1)-groupoids and motivic and crystalline cohomology. :)
-    <@glyph> tomprince: NO IDEA IF THOSE ARE REAL WORDS
-    <tomprince> They are.
-    <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
+    <hawkowl> we have always been at war with 16.7
 
-
-For information on what's new in Twisted 16.3.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.1.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -81,7 +77,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2016 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2017 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.

@@ -37,6 +37,7 @@ from zope.interface.adapter import AdapterRegistry
 # twisted imports
 from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
+from twisted.python._oldstyle import _oldStyle
 
 
 
@@ -45,25 +46,6 @@ globalRegistry = AdapterRegistry()
 
 # Attribute that registerAdapter looks at. Is this supposed to be public?
 ALLOW_DUPLICATES = 0
-
-# Define a function to find the registered adapter factory, using either a
-# version of Zope Interface which has the `registered' method or an older
-# version which does not.
-if getattr(AdapterRegistry, 'registered', None) is None:
-    def _registered(registry, required, provided):
-        """
-        Return the adapter factory for the given parameters in the given
-        registry, or None if there is not one.
-        """
-        return registry.get(required).selfImplied.get(provided, {}).get('')
-else:
-    def _registered(registry, required, provided):
-        """
-        Return the adapter factory for the given parameters in the given
-        registry, or None if there is not one.
-        """
-        return registry.registered([required], provided)
-
 
 def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """Register an adapter class.
@@ -82,7 +64,7 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
         origInterface = declarations.implementedBy(origInterface)
 
     for interfaceClass in interfaceClasses:
-        factory = _registered(self, origInterface, interfaceClass)
+        factory = self.registered([origInterface], interfaceClass)
         if factory is not None and not ALLOW_DUPLICATES:
             raise ValueError("an adapter (%s) was already registered." % (factory, ))
     for interfaceClass in interfaceClasses:
@@ -146,6 +128,7 @@ def getRegistry():
 # FIXME: deprecate attribute somehow?
 CannotAdapt = TypeError
 
+@_oldStyle
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
 
@@ -189,6 +172,7 @@ class Adapter:
         return self.original.isuper(iface, adapter)
 
 
+@_oldStyle
 class Componentized:
     """I am a mixin to allow you to be adapted in various ways persistently.
 

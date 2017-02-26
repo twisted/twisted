@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_jelly -*-
+# -*- test-case-name: twisted.spread.test.test_jelly -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -62,7 +62,6 @@ The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 """
 
 # System Imports
-import pickle
 import types
 import warnings
 import decimal
@@ -80,6 +79,9 @@ except ImportError:
     _OldStyleClass = ()
     _OldStyleInstance = ()
 
+_SetTypes = [set]
+_ImmutableSetTypes = [frozenset]
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
     try:
@@ -88,12 +90,15 @@ with warnings.catch_warnings():
         # sets module is deprecated in Python 2.6, and gone in
         # Python 3
         _sets = None
+    else:
+        _SetTypes.append(_sets.Set)
+        _ImmutableSetTypes.append(_sets.ImmutableSet)
 
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode
-from twisted.python.reflect import namedObject, qual
+from twisted.python.compat import unicode, long, nativeString
+from twisted.python.reflect import namedObject, qual, namedAny
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
 from twisted.persisted.crefutil import _Container
@@ -102,31 +107,31 @@ from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from incremental import Version
 
 DictTypes = (dict,)
 
-None_atom = "None"                  # N
+None_atom = b"None"                  # N
 # code
-class_atom = "class"                # c
-module_atom = "module"              # m
-function_atom = "function"          # f
+class_atom = b"class"                # c
+module_atom = b"module"              # m
+function_atom = b"function"          # f
 
 # references
-dereference_atom = 'dereference'    # D
-persistent_atom = 'persistent'      # p
-reference_atom = 'reference'        # r
+dereference_atom = b'dereference'    # D
+persistent_atom = b'persistent'      # p
+reference_atom = b'reference'        # r
 
 # mutable collections
-dictionary_atom = "dictionary"      # d
-list_atom = 'list'                  # l
-set_atom = 'set'
+dictionary_atom = b"dictionary"      # d
+list_atom = b'list'                  # l
+set_atom = b'set'
 
 # immutable collections
 #   (assignment to __dict__ and __class__ still might go away!)
-tuple_atom = "tuple"                # t
-instance_atom = 'instance'          # i
-frozenset_atom = 'frozenset'
+tuple_atom = b"tuple"                # t
+instance_atom = b'instance'          # i
+frozenset_atom = b'frozenset'
 
 
 deprecatedModuleAttribute(
@@ -135,46 +140,59 @@ deprecatedModuleAttribute(
     "twisted.spread.jelly", "instance_atom")
 
 # errors
-unpersistable_atom = "unpersistable"# u
+unpersistable_atom = b"unpersistable"# u
 unjellyableRegistry = {}
 unjellyableFactoryRegistry = {}
 
-_NO_STATE = object()
 
-def _newInstance(cls, state=_NO_STATE):
+
+def _createBlank(cls):
+    """
+    Given an object, if that object is a type (or a legacy old-style class),
+    return a new, blank instance of that type which has not had C{__init__}
+    called on it.  If the object is not a type, return C{None}.
+
+    @param cls: The type (or class) to create an instance of.
+    @type cls: L{_OldStyleClass}, L{type}, or something else that cannot be
+        instantiated.
+
+    @return: a new blank instance or L{None} if C{cls} is not a class or type.
+    """
+    if isinstance(cls, type):
+        return cls.__new__(cls)
+    if not _PY3 and isinstance(cls, _OldStyleClass):
+        return _OldStyleInstance(cls)
+
+
+
+def _newInstance(cls, state):
     """
     Make a new instance of a class without calling its __init__ method.
     Supports both new- and old-style classes.
 
-    @param state: A C{dict} used to update C{inst.__dict__} or C{_NO_STATE}
-        to skip this part of initialization.
+    @param state: A C{dict} used to update C{inst.__dict__} either directly or
+        via C{__setstate__}, if available.
 
     @return: A new instance of C{cls}.
     """
-    if not isinstance(cls, _OldStyleClass):
-        # new-style
-        inst = cls.__new__(cls)
-
-        if state is not _NO_STATE:
-            inst.__dict__.update(state) # Copy 'instance' behaviour
-    else:
-        if state is not _NO_STATE:
-            inst = _OldStyleInstance(cls, state)
-        else:
-            inst = _OldStyleInstance(cls)
-    return inst
+    instance = _createBlank(cls)
+    def defaultSetter(state):
+        instance.__dict__ = state
+    setter = getattr(instance, "__setstate__", defaultSetter)
+    setter(state)
+    return instance
 
 
 
 def _maybeClass(classnamep):
-    try:
-        object
-    except NameError:
-        isObject = 0
-    else:
-        isObject = isinstance(classnamep, type)
-    if isinstance(classnamep, _OldStyleClass) or isObject:
-        return qual(classnamep)
+    isObject = isinstance(classnamep, type)
+
+    if isObject or ((not _PY3) and isinstance(classnamep, _OldStyleClass)):
+        classnamep = qual(classnamep)
+
+    if not isinstance(classnamep, bytes):
+        classnamep = classnamep.encode('utf-8')
+
     return classnamep
 
 
@@ -256,11 +274,15 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     if prefix:
         prefix = "%s." % prefix
 
-    for i in dir(module):
-        i_ = getattr(module, i)
-        if type(i_) == _OldStyleClass:
-            if issubclass(i_, baseClass):
-                setUnjellyableForClass('%s%s' % (prefix, i), i_)
+    for name in dir(module):
+        loaded = getattr(module, name)
+        try:
+            yes = issubclass(loaded, baseClass)
+        except TypeError:
+            "It's not a class."
+        else:
+            if yes:
+                setUnjellyableForClass('%s%s' % (prefix, name), loaded)
 
 
 
@@ -273,7 +295,7 @@ def getInstanceState(inst, jellier):
     else:
         state = inst.__dict__
     sxp = jellier.prepare(inst)
-    sxp.extend([qual(inst.__class__), jellier.jelly(state)])
+    sxp.extend([qual(inst.__class__).encode('utf-8'), jellier.jelly(state)])
     return jellier.preserve(inst, sxp)
 
 
@@ -326,7 +348,7 @@ class Jellyable:
         """
         sxp = jellier.prepare(self)
         sxp.extend([
-            qual(self.__class__),
+            qual(self.__class__).encode('utf-8'),
             jellier.jelly(self.getStateFor(jellier))])
         return jellier.preserve(self, sxp)
 
@@ -446,11 +468,7 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
-    constantTypes = {str : 1, int : 1,
-                     float : 1 }
-
-    if not _PY3:
-        constantTypes[long] = 1
+    constantTypes = {bytes: 1, unicode: 1, int: 1, float: 1, long: 1}
 
 
     def _checkMutable(self,obj):
@@ -469,53 +487,51 @@ class _Jellier:
                 return preRef
             return obj.jellyFor(self)
         objType = type(obj)
-        if self.taster.isTypeAllowed(qual(objType)):
+        if self.taster.isTypeAllowed(qual(objType).encode('utf-8')):
             # "Immutable" Types
-            if ((objType is str) or
+            if ((objType is bytes) or
                 (objType is int) or
+                (objType is long) or
                 (objType is float)):
                 return obj
-            elif not _PY3 and (objType is long):
-                return obj
             elif objType is types.MethodType:
-                return ["method",
-                        obj.im_func.__name__,
-                        self.jelly(obj.im_self),
-                        self.jelly(obj.im_class)]
-
-            elif not _PY3 and objType is unicode:
-                return ['unicode', obj.encode('UTF-8')]
+                aSelf = obj.__self__ if _PY3 else obj.im_self
+                aFunc = obj.__func__ if _PY3 else obj.im_func
+                aClass = aSelf.__class__ if _PY3 else obj.im_class
+                return [b"method", aFunc.__name__, self.jelly(aSelf),
+                        self.jelly(aClass)]
+            elif objType is unicode:
+                return [b'unicode', obj.encode('UTF-8')]
             elif objType is type(None):
-                return ['None']
+                return [b'None']
             elif objType is types.FunctionType:
-                name = obj.__name__
-                return ['function', str(pickle.whichmodule(obj, obj.__name__))
-                        + '.' +
-                        name]
+                return [b'function', obj.__module__ + '.' +
+                        (obj.__qualname__ if _PY3 else obj.__name__)]
             elif objType is types.ModuleType:
-                return ['module', obj.__name__]
+                return [b'module', obj.__name__]
             elif objType is bool:
-                return ['boolean', obj and 'true' or 'false']
+                return [b'boolean', obj and b'true' or b'false']
             elif objType is datetime.datetime:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return ['datetime', '%s %s %s %s %s %s %s' % (
+                return [b'datetime', ' '.join([unicode(x) for x in (
                     obj.year, obj.month, obj.day, obj.hour,
                     obj.minute, obj.second, obj.microsecond)]
+                ).encode('utf-8')]
             elif objType is datetime.time:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return ['time', '%s %s %s %s' % (obj.hour, obj.minute,
+                return [b'time', '%s %s %s %s' % (obj.hour, obj.minute,
                                                  obj.second, obj.microsecond)]
             elif objType is datetime.date:
-                return ['date', '%s %s %s' % (obj.year, obj.month, obj.day)]
+                return [b'date', '%s %s %s' % (obj.year, obj.month, obj.day)]
             elif objType is datetime.timedelta:
-                return ['timedelta', '%s %s %s' % (obj.days, obj.seconds,
+                return [b'timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif objType is _OldStyleClass or issubclass(objType, type):
-                return ['class', qual(obj)]
+            elif issubclass(objType, (type, _OldStyleClass)):
+                return [b'class', qual(obj).encode('utf-8')]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
             else:
@@ -532,13 +548,12 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or (_sets and objType is _sets.Set):
+                elif objType in _SetTypes:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or \
-                     (_sets and objType is _sets.ImmutableSet):
+                elif objType in _ImmutableSetTypes:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
-                    className = qual(obj.__class__)
+                    className = qual(obj.__class__).encode('utf-8')
                     persistent = None
                     if self.persistentStore:
                         persistent = self.persistentStore(obj, self)
@@ -597,7 +612,7 @@ class _Jellier:
         value = reduce(lambda left, right: left * 10 + right, guts)
         if sign:
             value = -value
-        return ['decimal', value, exponent]
+        return [b'decimal', value, exponent]
 
 
     def unpersistable(self, reason, sxp=None):
@@ -630,57 +645,66 @@ class _Unjellier:
         return o
 
 
+    def _maybePostUnjelly(self, unjellied):
+        """
+        If the given object has support for the C{postUnjelly} hook, set it up
+        to be called at the end of deserialization.
+
+        @param unjellied: an object that has already been unjellied.
+
+        @return: C{unjellied}
+        """
+        if hasattr(unjellied, 'postUnjelly'):
+            self.postCallbacks.append(unjellied.postUnjelly)
+        return unjellied
+
+
     def unjelly(self, obj):
         if type(obj) is not list:
             return obj
-        jelType = obj[0]
-        if not self.taster.isTypeAllowed(jelType):
-            raise InsecureJelly(jelType)
-        regClass = unjellyableRegistry.get(jelType)
+        jelTypeBytes = obj[0]
+        if not self.taster.isTypeAllowed(jelTypeBytes):
+            raise InsecureJelly(jelTypeBytes)
+        regClass = unjellyableRegistry.get(jelTypeBytes)
         if regClass is not None:
-            if isinstance(regClass, _OldStyleClass):
-                inst = _Dummy() # XXX chomp, chomp
-                inst.__class__ = regClass
-                method = inst.unjellyFor
-            elif isinstance(regClass, type):
-                # regClass.__new__ does not call regClass.__init__
-                inst = regClass.__new__(regClass)
-                method = inst.unjellyFor
-            else:
-                method = regClass # this is how it ought to be done
-            val = method(self, obj)
-            if hasattr(val, 'postUnjelly'):
-                self.postCallbacks.append(inst.postUnjelly)
-            return val
-        regFactory = unjellyableFactoryRegistry.get(jelType)
+            method = getattr(_createBlank(regClass), "unjellyFor", regClass)
+            return self._maybePostUnjelly(method(self, obj))
+        regFactory = unjellyableFactoryRegistry.get(jelTypeBytes)
         if regFactory is not None:
-            state = self.unjelly(obj[1])
-            inst = regFactory(state)
-            if hasattr(inst, 'postUnjelly'):
-                self.postCallbacks.append(inst.postUnjelly)
-            return inst
-        thunk = getattr(self, '_unjelly_%s'%jelType, None)
+            return self._maybePostUnjelly(regFactory(self.unjelly(obj[1])))
+
+        jelTypeText = nativeString(jelTypeBytes)
+        thunk = getattr(self, '_unjelly_%s' % jelTypeText, None)
         if thunk is not None:
-            ret = thunk(obj[1:])
+            return thunk(obj[1:])
         else:
-            nameSplit = jelType.split('.')
+            nameSplit = jelTypeText.split('.')
             modName = '.'.join(nameSplit[:-1])
             if not self.taster.isModuleAllowed(modName):
                 raise InsecureJelly(
-                    "Module %s not allowed (in type %s)." % (modName, jelType))
-            clz = namedObject(jelType)
+                    "Module %s not allowed (in type %s)." % (modName, jelTypeText))
+            clz = namedObject(jelTypeText)
             if not self.taster.isClassAllowed(clz):
-                raise InsecureJelly("Class %s not allowed." % jelType)
-            if hasattr(clz, "__setstate__"):
-                ret = _newInstance(clz)
-                state = self.unjelly(obj[1])
-                ret.__setstate__(state)
-            else:
-                state = self.unjelly(obj[1])
-                ret = _newInstance(clz, state)
-            if hasattr(clz, 'postUnjelly'):
-                self.postCallbacks.append(ret.postUnjelly)
-        return ret
+                raise InsecureJelly("Class %s not allowed." % jelTypeText)
+            return self._genericUnjelly(clz, obj[1])
+
+
+    def _genericUnjelly(self, cls, state):
+        """
+        Unjelly a type for which no specific unjellier is registered, but which
+        is nonetheless allowed.
+
+        @param cls: the class of the instance we are unjellying.
+        @type cls: L{_OldStyleClass} or L{type}
+
+        @param state: The jellied representation of the object's state; its
+            C{__dict__} unless it has a C{__setstate__} that takes something
+            else.
+        @type state: L{list}
+
+        @return: the new, unjellied instance.
+        """
+        return self._maybePostUnjelly(_newInstance(cls, self.unjelly(state)))
 
 
     def _unjelly_None(self, exp):
@@ -707,8 +731,8 @@ class _Unjellier:
 
     def _unjelly_boolean(self, exp):
         if bool:
-            assert exp[0] in ('true', 'false')
-            return exp[0] == 'true'
+            assert exp[0] in (b'true', b'false')
+            return exp[0] == b'true'
         else:
             return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
 
@@ -828,8 +852,8 @@ class _Unjellier:
 
 
     def _unjelly_module(self, rest):
-        moduleName = rest[0]
-        if type(moduleName) != types.StringType:
+        moduleName = nativeString(rest[0])
+        if type(moduleName) != str:
             raise InsecureJelly(
                 "Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):
@@ -840,28 +864,30 @@ class _Unjellier:
 
 
     def _unjelly_class(self, rest):
-        clist = rest[0].split('.')
-        modName = '.'.join(clist[:-1])
+        cname = nativeString(rest[0])
+        clist = cname.split(nativeString('.'))
+        modName = nativeString('.').join(clist[:-1])
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("module %s not allowed" % modName)
-        klaus = namedObject(rest[0])
+        klaus = namedObject(cname)
         objType = type(klaus)
         if objType not in (_OldStyleClass, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
-                    rest[0], klaus))
+                    cname, klaus))
         if not self.taster.isClassAllowed(klaus):
             raise InsecureJelly("class not allowed: %s" % qual(klaus))
         return klaus
 
 
     def _unjelly_function(self, rest):
-        modSplit = rest[0].split('.')
-        modName = '.'.join(modSplit[:-1])
+        fname = nativeString(rest[0])
+        modSplit = fname.split(nativeString('.'))
+        modName = nativeString('.').join(modSplit[:-1])
         if not self.taster.isModuleAllowed(modName):
-            raise InsecureJelly("Module not allowed: %s"% modName)
+            raise InsecureJelly("Module not allowed: %s" % modName)
         # XXX do I need an isFunctionAllowed?
-        function = namedObject(rest[0])
+        function = namedAny(fname)
         return function
 
 
@@ -889,18 +915,9 @@ class _Unjellier:
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
-        if type(clz) is not _OldStyleClass:
-            raise InsecureJelly("Instance found with non-class class.")
-        if hasattr(clz, "__setstate__"):
-            inst = _newInstance(clz, {})
-            state = self.unjelly(rest[1])
-            inst.__setstate__(state)
-        else:
-            state = self.unjelly(rest[1])
-            inst = _newInstance(clz, state)
-        if hasattr(clz, 'postUnjelly'):
-            self.postCallbacks.append(inst.postUnjelly)
-        return inst
+        if not _PY3 and type(clz) is not _OldStyleClass:
+            raise InsecureJelly("Legacy 'instance' found with new-style class")
+        return self._genericUnjelly(clz, rest[1])
 
 
     def _unjelly_unpersistable(self, rest):
@@ -914,7 +931,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not _OldStyleClass:
+        if not isinstance(im_class, (type, _OldStyleClass)):
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
@@ -922,45 +939,12 @@ class _Unjellier:
             elif isinstance(im_self, NotKnown):
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
-                im = types.MethodType(im_class.__dict__[im_name], im_self, im_class)
+                im = types.MethodType(im_class.__dict__[im_name], im_self,
+                                      *([im_class] * (not _PY3)))
         else:
             raise TypeError('instance method changed')
         return im
 
-
-
-class _Dummy:
-    """
-    (Internal) Dummy class, used for unserializing instances.
-    """
-
-
-
-class _DummyNewStyle(object):
-    """
-    (Internal) Dummy class, used for unserializing instances of new-style
-    classes.
-    """
-
-
-def _newDummyLike(instance):
-    """
-    Create a new instance like C{instance}.
-
-    The new instance has the same class and instance dictionary as the given
-    instance.
-
-    @return: The new instance.
-    """
-    if isinstance(instance.__class__, type):
-        # New-style class
-        dummy = _DummyNewStyle()
-    else:
-        # Classic class
-        dummy = _Dummy()
-    dummy.__class__ = instance.__class__
-    dummy.__dict__ = instance.__dict__
-    return dummy
 
 
 #### Published Interface.
@@ -1021,22 +1005,12 @@ class SecurityOptions:
         """
         # I don't believe any of these types can ever pose a security hazard,
         # except perhaps "reference"...
-        self.allowedTypes = {"None": 1,
-                             "bool": 1,
-                             "boolean": 1,
-                             "string": 1,
-                             "str": 1,
-                             "int": 1,
-                             "float": 1,
-                             "datetime": 1,
-                             "time": 1,
-                             "date": 1,
-                             "timedelta": 1,
-                             "NoneType": 1}
-        self.allowedTypes['unicode'] = 1
-        self.allowedTypes['decimal'] = 1
-        self.allowedTypes['set'] = 1
-        self.allowedTypes['frozenset'] = 1
+        self.allowedTypes = {
+            b"None": 1, b"bool": 1, b"boolean": 1, b"string": 1, b"str": 1,
+            b"int": 1, b"float": 1, b"datetime": 1, b"time": 1, b"date": 1,
+            b"timedelta": 1, b"NoneType": 1, b'unicode': 1, b'decimal': 1,
+            b'set': 1, b'frozenset': 1,
+        }
         self.allowedModules = {}
         self.allowedClasses = {}
 
@@ -1055,7 +1029,9 @@ class SecurityOptions:
         name.
         """
         for typ in types:
-            if not isinstance(typ, str):
+            if isinstance(typ, unicode):
+                typ = typ.encode('utf-8')
+            if not isinstance(typ, bytes):
                 typ = qual(typ)
             self.allowedTypes[typ] = 1
 
@@ -1084,6 +1060,10 @@ class SecurityOptions:
         for module in modules:
             if type(module) == types.ModuleType:
                 module = module.__name__
+
+            if not isinstance(module, bytes):
+                module = module.encode('utf-8')
+
             self.allowedModules[module] = 1
 
 
@@ -1092,6 +1072,9 @@ class SecurityOptions:
         SecurityOptions.isModuleAllowed(moduleName) -> boolean
         returns 1 if a module by that name is allowed, 0 otherwise
         """
+        if not isinstance(moduleName, bytes):
+            moduleName = moduleName.encode('utf-8')
+
         return moduleName in self.allowedModules
 
 
@@ -1109,7 +1092,10 @@ class SecurityOptions:
         SecurityOptions.isTypeAllowed(typeName) -> boolean
         Returns 1 if the given type is allowed, 0 otherwise.
         """
-        return (typeName in self.allowedTypes or '.' in typeName)
+        if not isinstance(typeName, bytes):
+            typeName = typeName.encode('utf-8')
+
+        return (typeName in self.allowedTypes or b'.' in typeName)
 
 
 globalSecurity = SecurityOptions()

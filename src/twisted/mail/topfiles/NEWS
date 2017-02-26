@@ -1,6 +1,56 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 17.1.0 (2017-02-04)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.tap (the twist plugin for mail) no longer accepts the
+   --pop3s option or implicit port numbers to --pop3 and --smtp. This
+   functionality has been deprecated since 11.0. (#8920)
+
+
+Twisted Mail 16.6.0 (2016-11-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 16.5.0 (2016-10-28)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.protocols.DomainSMTP and DomainESMTP, deprecated since
+   2003, have been removed. (#8772)
+
+Other
+-----
+ - #6289, #8525, #8786, #8830
+
+
+Twisted Mail 16.4.1 (2016-09-07)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 16.4.0 (2016-08-25)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.mail.mail.DomainWithDefaultDict.has_key is now deprecated
+   in favor of the `in` keyword. (#8361)
+ - twisted.mail.protocols.SSLContextFactory, deprecated since Twisted
+   12.0, has been removed. (#8591)
+
+Other
+-----
+ - #8525
+
+
 Twisted Mail 16.3.0 (2016-07-05)
 ================================
 
@@ -466,7 +516,7 @@ Fixes
 -----
   - Quote usernames and passwords automatically in the IMAP client (#1411).
   - Improved parsing of literals in IMAP4 client and server (#1417).
-  - Recognize unsolicted FLAGS response in IMAP4 client (#1105).
+  - Recognize unsolicited FLAGS response in IMAP4 client (#1105).
   - Parse and respond to requests with multiple BODY arguments in IMAP4
     server (#1307).
   - Misc: #1356, #1290, #1602

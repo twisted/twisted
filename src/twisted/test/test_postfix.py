@@ -31,7 +31,7 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
             for q in quoted:
                 self.assertEqual(postfix.unquote(q), raw)
 
-class PostfixTCPMapServerTestCase:
+class PostfixTCPMapServerTestCase(object):
     data = {
         # 'key': 'value',
         }

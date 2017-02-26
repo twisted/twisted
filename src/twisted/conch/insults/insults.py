@@ -11,7 +11,7 @@ VT102 and VT220 terminal manipulation.
 from zope.interface import implementer, Interface
 
 from twisted.internet import protocol, defer, interfaces as iinternet
-from twisted.python.compat import intToBytes, iterbytes
+from twisted.python.compat import intToBytes, iterbytes, networkString
 
 
 
@@ -693,7 +693,7 @@ class ServerProtocol(protocol.Protocol):
     controlSequenceParser = ControlSequenceParser()
 
 
-    # ITerminalTransport
+ # ITerminalTransport
     def cursorUp(self, n=1):
         assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
@@ -721,7 +721,7 @@ class ServerProtocol(protocol.Protocol):
     def cursorPosition(self, column, line):
         self.write(b'\x1b[' +
                    intToBytes(line + 1)  +
-                   b'; '+
+                   b';' +
                    intToBytes(column + 1) +
                    b'H')
 
@@ -732,6 +732,7 @@ class ServerProtocol(protocol.Protocol):
 
 
     def index(self):
+        # ECMA48 5th Edition removes this
         self.cursorPos.y = min(self.cursorPos.y + 1, self.termSize.y - 1)
         self.write(b'\x1bD')
 
@@ -828,10 +829,13 @@ class ServerProtocol(protocol.Protocol):
 
 
     def selectGraphicRendition(self, *attributes):
+        # each member of attributes must be a native string
         attrs = []
         for a in attributes:
-            attrs.append(a)
-        self.write(b'\x1b[%sm' % (b';'.join(attrs),))
+            attrs.append(networkString(a))
+        self.write(b'\x1b[' +
+                   b';'.join(attrs) +
+                   b'm')
 
 
     def horizontalTabulationSet(self):
@@ -899,13 +903,13 @@ class ServerProtocol(protocol.Protocol):
 
     def setScrollRegion(self, first=None, last=None):
         if first is not None:
-            first = '%d' % (first,)
+            first = intToBytes(first)
         else:
-            first = ''
+            first = b''
         if last is not None:
-            last = '%d' % (last,)
+            last = intToBytes(last)
         else:
-            last = ''
+            last = b''
         self.write(b'\x1b[' + first + b';' + last + b'r')
 
 
@@ -932,6 +936,8 @@ class ServerProtocol(protocol.Protocol):
     # ITransport
     def write(self, data):
         if data:
+            if not isinstance(data, bytes):
+                data = data.encode("utf-8")
             self.lastWrite = data
             self.transport.write(b'\r\n'.join(data.split(b'\n')))
 

@@ -455,6 +455,19 @@ class HTTPClientParser(HTTPParser):
         Figure out how long the response body is going to be by examining
         headers and stuff.
         """
+        if 100 <= self.response.code < 200:
+            # RFC 7231 Section 6.2 says that if we receive a 1XX status code
+            # and aren't expecting it, we MAY ignore it. That's what we're
+            # going to do. We reset the parser here, but we leave
+            # _everReceivedData in its True state because we have, in fact,
+            # received data.
+            log.msg(
+                "Ignoring unexpected {} response".format(self.response.code)
+            )
+            self.connectionMade()
+            del self.response
+            return
+
         if (self.response.code in self.NO_BODY_CODES
             or self.request.method == b'HEAD'):
             self.response.length = 0
@@ -647,10 +660,13 @@ class Request:
         transport.writeSequence(requestLines)
 
 
-    def _writeToChunked(self, transport):
+    def _writeToBodyProducerChunked(self, transport):
         """
         Write this request to the given transport using chunked
         transfer-encoding to frame the body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(transport, b'Transfer-Encoding: chunked\r\n')
         encoder = ChunkedEncoder(transport)
@@ -671,10 +687,13 @@ class Request:
         return d
 
 
-    def _writeToContentLength(self, transport):
+    def _writeToBodyProducerContentLength(self, transport):
         """
         Write this request to the given transport using content-length to frame
         the body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(
             transport,
@@ -784,24 +803,43 @@ class Request:
         return d
 
 
+    def _writeToEmptyBodyContentLength(self, transport):
+        """
+        Write this request to the given transport using content-length to frame
+        the (empty) body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
+        """
+        self._writeHeaders(transport, b"Content-Length: 0\r\n")
+        return succeed(None)
+
+
     def writeTo(self, transport):
         """
         Format this L{Request} as an HTTP/1.1 request and write it to the given
         transport.  If bodyProducer is not None, it will be associated with an
         L{IConsumer}.
 
+        @param transport: The transport to which to write.
+        @type transport: L{twisted.internet.interfaces.ITransport} provider
+
         @return: A L{Deferred} which fires with L{None} when the request has
             been completely written to the transport or with a L{Failure} if
             there is any problem generating the request bytes.
         """
-        if self.bodyProducer is not None:
-            if self.bodyProducer.length is UNKNOWN_LENGTH:
-                return self._writeToChunked(transport)
+        if self.bodyProducer is None:
+            # If the method semantics anticipate a body, include a
+            # Content-Length even if it is 0.
+            # https://tools.ietf.org/html/rfc7230#section-3.3.2
+            if self.method in (b"PUT", b"POST"):
+                self._writeToEmptyBodyContentLength(transport)
             else:
-                return self._writeToContentLength(transport)
+                self._writeHeaders(transport, None)
+        elif self.bodyProducer.length is UNKNOWN_LENGTH:
+            return self._writeToBodyProducerChunked(transport)
         else:
-            self._writeHeaders(transport, None)
-            return succeed(None)
+            return self._writeToBodyProducerContentLength(transport)
 
 
     def stopWriting(self):
@@ -1041,17 +1079,20 @@ class Response:
         Deliver any buffered data to C{protocol} and prepare to deliver any
         future data to it.  Move to the C{'CONNECTED'} state.
         """
-        # Now that there's a protocol to consume the body, resume the
-        # transport.  It was previously paused by HTTPClientParser to avoid
-        # reading too much data before it could be handled.
-        self._transport.resumeProducing()
-
         protocol.makeConnection(self._transport)
         self._bodyProtocol = protocol
         for data in self._bodyBuffer:
             self._bodyProtocol.dataReceived(data)
         self._bodyBuffer = None
+
         self._state = 'CONNECTED'
+
+        # Now that there's a protocol to consume the body, resume the
+        # transport.  It was previously paused by HTTPClientParser to avoid
+        # reading too much data before it could be handled. We need to do this
+        # after we transition our state as it may recursively lead to more data
+        # being delivered, or even the body completing.
+        self._transport.resumeProducing()
 
 
     def _deliverBody_CONNECTED(self, protocol):

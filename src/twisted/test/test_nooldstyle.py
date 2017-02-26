@@ -24,6 +24,21 @@ elif not _shouldEnableNewStyle():
     _skip = "Not running with TWISTED_NEWSTYLE=1"
 
 
+forbiddenModules = [
+    "twisted._threads",
+    "twisted.application",
+    "twisted.internet",
+    "twisted.logger",
+    "twisted.plugins",
+    "twisted.positioning",
+    "twisted.protocols.haproxy",
+    "twisted.python",
+    "twisted.script",
+    "twisted.tap",
+    "twisted.trial",
+]
+
+
 
 class SomeOldStyleClass:
     """
@@ -145,7 +160,13 @@ class NewStyleOnly(object):
                     oldStyleClasses.append(fullyQualifiedName(val))
 
         if oldStyleClasses:
+
             self.todo = "Not all classes are made new-style yet. See #8243."
+
+            for x in forbiddenModules:
+                if self.module.startswith(x):
+                    delattr(self, "todo")
+
             raise unittest.FailTest(
                 "Old-style classes in {module}: {val}".format(
                     module=self.module,
