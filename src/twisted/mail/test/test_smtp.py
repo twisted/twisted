@@ -1257,6 +1257,8 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         instance.
 
         @param loginArgs: A C{list} previously passed to L{portalFactory}.
+        @param username: The login user.
+        @param password: The login password.
         """
         d, credentials, mind, interfaces = loginArgs.pop()
         self.assertEqual(loginArgs, [])

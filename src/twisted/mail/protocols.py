@@ -79,13 +79,14 @@ class DomainDeliveryBase:
             authStr = b" auth=" + self.user.encode('xtext')
         if helo[0]:
             heloStr = b" helo=" + helo[0]
-        from_ = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
+        fromUser = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
                  heloStr + authStr)
         by = (b"by " + self.host + b" with " + self.protocolName +
               b" (" + networkString(longversion) + b")")
-        for_ = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
+        forUser = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
                 smtp.rfc822date())
-        return b"Received: " + from_ + b"\n\t" + by + b"\n\t" + for_
+        return (b"Received: " + fromUser + b"\n\t" + by +
+                b"\n\t" + forUser)
 
 
     def validateTo(self, user):
@@ -132,9 +133,11 @@ class DomainDeliveryBase:
             origination address.
         """
         if not helo:
-            raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
+            raise smtp.SMTPBadSender(origin, 503,
+                                     "Who are you?  Say HELO first.")
         if origin.local != b'' and origin.domain == b'':
-            raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
+            raise smtp.SMTPBadSender(origin, 501,
+                                     "Sender address must contain domain.")
         return origin
 
 

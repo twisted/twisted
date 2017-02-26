@@ -1,6 +1,8 @@
 # -*- test-case-name: twisted.mail.test.test_smtp -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+#
+# pylint: disable=I0011,C0103,C9302
 
 """
 Simple Mail Transfer Protocol implementation.
@@ -87,7 +89,7 @@ else:
 DNSNAME = DNSNAME.encode('ascii')
 
 # Used for fast success code lookup
-SUCCESS = dict.fromkeys(xrange(200,300))
+SUCCESS = dict.fromkeys(xrange(200, 300))
 
 
 
@@ -120,7 +122,7 @@ def rfc822date(timeinfo=None, local=1):
             tzhr *= int(abs(tz)//tz)
         (tzmin, tzsec) = divmod(tzmin, 60)
     else:
-        (tzhr, tzmin) = (0,0)
+        (tzhr, tzmin) = (0, 0)
 
     return networkString("%s, %02d %s %04d %02d:%02d:%02d %+03d%02d" % (
         ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][timeinfo[6]],
@@ -339,15 +341,13 @@ class User:
                  'protocol' : None,
                  'orig' : self.orig }
 
+
     def __str__(self):
         return nativeString(bytes(self.dest))
 
 
     def __bytes__(self):
         return bytes(self.dest)
-
-
-
 
 
 
@@ -434,7 +434,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         lines = message.splitlines()
         lastline = lines[-1:]
         for line in lines[:-1]:
-            self.sendLine(networkString('%3.3d-' % (code)) + line)
+            self.sendLine(networkString('%3.3d-' % (code,)) + line)
         self.sendLine(networkString('%3.3d ' % (cod,)) +
                                     (lastline and lastline[0] or b''))
 
@@ -467,8 +467,10 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def lookupMethod(self, command):
         """
+
         @param command: The command to get from this class.
         @type command: L{str}
+        @return: The function which executes this command.
         """
         if not isinstance(command, str):
             command = nativeString(command)
@@ -518,7 +520,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                           |<''' + qstring + br'''> # <addr>
                           |''' + qstring + br''' # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-                          $''',re.I|re.X)
+                          $''', re.I|re.X)
     rcpt_re = re.compile(br'\s*TO:\s*(?P<path><' + qstring + br'''> # <addr>
                           |''' + qstring + br''' # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
@@ -545,8 +547,9 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         validated.addCallbacks(self._cbFromValidate, self._ebFromValidate)
 
 
-    def _cbFromValidate(self, from_, code=250, msg=b'Sender address accepted'):
-        self._from = from_
+    def _cbFromValidate(self, fromEmail, code=250,
+                        msg=b'Sender address accepted'):
+        self._from = fromEmail
         self.sendCode(code, msg)
 
 
@@ -740,9 +743,10 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 log.err(result)
         if failures:
             msg = 'Could not send e-mail'
-            L = len(resultList)
-            if L > 1:
-                msg += ' (%d failures out of %d recipients)' % (failures, L)
+            resultLen = len(resultList)
+            if resultLen > 1:
+                msg += ' (%d failures out of %d recipients)'.format(
+                    failures, resultLen)
             self.sendCode(550, networkString(msg))
         else:
             self.sendCode(250, b'Delivery in progress')
@@ -970,8 +974,11 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self.code = int(line[:3])
         except ValueError:
-            # This is a fatal error and will disconnect the transport lineReceived will not be called again
-            self.sendError(SMTPProtocolError(-1, "Invalid response from SMTP server: %s" % line, self.log.str()))
+            # This is a fatal error and will disconnect the transport
+            # lineReceived will not be called again.
+            self.sendError(SMTPProtocolError(-1,
+                "Invalid response from SMTP server: {}".format(line),
+                self.log.str()))
             return
 
         if line[0:1] == b'0':
@@ -981,7 +988,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.resp.append(line[4:])
 
         if line[3:4] == b'-':
-            # continuation
+            # Continuation
             return
 
         if self.code in self._expected:
@@ -1609,6 +1616,9 @@ class ESMTP(SMTP):
 
     def extensions(self):
         """
+        SMTP service extensions
+
+        @return: the SMTP service extensions that are supported.
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
@@ -1704,6 +1714,8 @@ class ESMTP(SMTP):
         Handle cred login errors by translating them to the SMTP authenticate
         failed.  Translate all other errors into a generic SMTP error code and
         log the failure for inspection.  Stop all errors from propagating.
+
+        @param reason: Reason for failure.
         """
         self.challenge = None
         if reason.check(cred.error.UnauthorizedLogin):
@@ -1969,6 +1981,7 @@ class LOGINCredentials(_lcredentials):
         self.challenges = [b'Password:', b'Username:']
 
 
+
 @implementer(IClientAuthentication)
 class PLAINAuthenticator:
     def __init__(self, user):
@@ -2172,9 +2185,6 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
 
 
 
-##
-## Yerg.  Codecs!
-##
 import codecs
 def xtext_encode(s, errors=None):
     r = []
@@ -2191,6 +2201,10 @@ def xtext_encode(s, errors=None):
 def xtext_decode(s, errors=None):
     """
     Decode the xtext-encoded string C{s}.
+
+    @param s: String to decode.
+    @param errors: codec error handling scheme.
+    @return: The decoded string.
     """
     r = []
     i = 0
