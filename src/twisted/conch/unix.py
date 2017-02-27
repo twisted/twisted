@@ -371,7 +371,7 @@ class SFTPServerForUnixConchUser:
 
     def _absPath(self, path):
         home = self.avatar.getHomeDir()
-        return os.path.join(nativeString(home.path), nativeString(path))
+        return os.path.join(nativeString(home), nativeString(path))
 
 
     def gotVersion(self, otherVersion, extData):
