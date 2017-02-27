@@ -536,13 +536,13 @@ class NewStyleTests(unittest.SynchronousTestCase):
         d = self.ref.callRemote("echo", orig)
         self.pump.flush()
         def cb(res):
-            # receiving the response creates a third one on the way back
+            # Receiving the response creates a third one on the way back
             self.assertIsInstance(res, NewStyleCopy2)
             self.assertEqual(res.value, 2)
             self.assertEqual(NewStyleCopy2.allocated, 3)
             self.assertEqual(NewStyleCopy2.initialized, 1)
-            self.assertIsNot(res, orig) # no cheating :)
-        # sending the object creates a second one on the far side
+            self.assertIsNot(res, orig) # No cheating :)
+        # Sending the object creates a second one on the far side
         d.addCallback(cb)
         return d
 
