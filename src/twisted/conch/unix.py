@@ -372,7 +372,11 @@ class SFTPServerForUnixConchUser:
 
     def _absPath(self, path):
         home = FilePath(self.avatar.getHomeDir())
-        return os.path.join(nativeString(home.path), nativeString(path))
+        if isinstance(home, str):
+            return os.path.join(nativeString(home), nativeString(path))
+        elif isinstance(home, FilePath):
+            return os.path.join(nativeString(home.path), nativeString(path))
+
 
 
     def gotVersion(self, otherVersion, extData):
