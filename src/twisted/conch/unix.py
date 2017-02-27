@@ -16,7 +16,6 @@ import time
 import tty
 
 from zope.interface import implementer
-from types import StringTypes
 
 from twisted.conch import ttymodes
 from twisted.conch.avatar import ConchUser
@@ -77,7 +76,7 @@ class UnixConchUser(ConchUser):
 
 
     def getHomeDir(self):
-        return self.pwdData[5]
+        return FilePath(self.pwdData[5])
 
 
     def getShell(self):
@@ -372,11 +371,8 @@ class SFTPServerForUnixConchUser:
 
 
     def _absPath(self, path):
-        home = FilePath(self.avatar.getHomeDir())
-        if isinstance(home, StringTypes):
-            return os.path.join(nativeString(home), nativeString(path))
-        else:
-            return os.path.join(nativeString(home.path), nativeString(path))
+        home = self.avatar.getHomeDir()
+        return os.path.join(nativeString(home.path), nativeString(path))
 
 
 
