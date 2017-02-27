@@ -363,7 +363,6 @@ class Failure:
                 return error
         return None
 
-
     # It would be nice to use twisted.python.compat.reraise, but that breaks
     # the stack exploration in _findFailure; possibly this can be fixed in
     # #5931.
