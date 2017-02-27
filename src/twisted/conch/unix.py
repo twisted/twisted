@@ -30,6 +30,7 @@ from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import components, log
 from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 try:
     import utmp
@@ -370,8 +371,8 @@ class SFTPServerForUnixConchUser:
 
 
     def _absPath(self, path):
-        home = self.avatar.getHomeDir()
-        return os.path.join(nativeString(home), nativeString(path))
+        home = FilePath(self.avatar.getHomeDir())
+        return os.path.join(nativeString(home.path), nativeString(path))
 
 
     def gotVersion(self, otherVersion, extData):
