@@ -2350,8 +2350,25 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
     def test_flags(self):
         """
         Verify that the flags passed to win32process.CreateProcess() prevent a
-        new console window from being created. See http://tm.tl/5726
-        for a script to test this interactively.
+        new console window from being created. Use the following script
+        to test this interactively::
+
+            # Add the following lines to a script named
+            #   should_not_open_console.pyw
+            from twisted.internet import reactor, utils
+
+            def write_result(result):
+            open("output.log", "w").write(repr(result))
+            reactor.stop()
+
+            PING_EXE = r"c:\windows\system32\ping.exe"
+            d = utils.getProcessOutput(PING_EXE, ["slashdot.org"])
+            d.addCallbacks(write_result)
+            reactor.run()
+
+        To test this, run::
+
+            pythonw.exe should_not_open_console.pyw
         """
         from twisted.internet import _dumbwin32proc
         flags = []
