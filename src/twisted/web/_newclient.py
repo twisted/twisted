@@ -507,7 +507,7 @@ class HTTPClientParser(HTTPParser):
                     b'content-length')
                 if contentLengthHeaders is None:
                     contentLength = None
-                elif len(contentLengthHeaders) == 1:
+                elif len(set(contentLengthHeaders)) == 1:
                     contentLength = int(contentLengthHeaders[0])
                     self.response.length = contentLength
                 else:
