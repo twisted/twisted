@@ -671,7 +671,11 @@ class _SimpleHostnameResolver(object):
         self._nameResolution = nameResolution
 
 
-    def resolveHostName(self, resolutionReceiver, hostName, portNumber=0, addressTypes=None, transportSemantics='TCP'):
+    def resolveHostName(self, resolutionReceiver,
+                        hostName,
+                        portNumber=0,
+                        addressTypes=None,
+                        transportSemantics='TCP'):
         resolutionReceiver.resolutionBegan(None)
         d = self._nameResolution(hostName, portNumber)
         d.addCallback(partial(self._deliver, resolutionReceiver))
