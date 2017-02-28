@@ -39,6 +39,7 @@ from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
+from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
 from twisted.python.compat import nativeString, unicode, _matchingString
@@ -663,6 +664,8 @@ class _PluggableReactorAdapter(object):
 
 @implementer(IHostnameResolver)
 class _SimpleHostnameResolver(object):
+    _log = Logger()
+
     def __init__(self, reactor, nameResolution):
         self._reactor = reactor
         self._nameResolution = nameResolution
@@ -672,8 +675,14 @@ class _SimpleHostnameResolver(object):
         resolutionReceiver.resolutionBegan(None)
         d = self._nameResolution(hostName, portNumber)
         d.addCallback(partial(self._deliver, resolutionReceiver))
-        d.addErrback(log.err)
-        d.addBoth(lambda ignored: resolutionReceiver.resolutionComplete())
+
+        def _ebLog(error):
+            self._log.failure("while looking up {name} with {callable}",
+                              error, name=hostName,
+                              callable=self._nameResolution)
+
+        d.addErrback(_ebLog)
+        d.addCallback(lambda ignored: resolutionReceiver.resolutionComplete())
         return resolutionReceiver
 
 
