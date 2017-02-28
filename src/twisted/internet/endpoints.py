@@ -18,6 +18,7 @@ import os
 import re
 import socket
 from unicodedata import normalize
+from functools import partial
 
 from constantly import NamedConstant, Names
 
@@ -31,7 +32,8 @@ from twisted.internet.address import (
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor, IResolutionReceiver,
-    IReactorPluggableNameResolver
+    IReactorPluggableNameResolver,
+    IHostnameResolver,
 )
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
@@ -645,6 +647,45 @@ class TCP6ClientEndpoint(object):
 
 
 
+@implementer(IReactorPluggableNameResolver)
+class _PluggableReactorAdapter(object):
+    """
+    Adapt a reactor to ``IReactorPluggableNameResolver``.
+    """
+    def __init__(self, reactor, nameResolution):
+        self.installNameResolver(_SimpleHostnameResolver(reactor, nameResolution))
+
+
+    def installNameResolver(self, resolver):
+        self.nameResolution = resolver
+
+
+
+@implementer(IHostnameResolver)
+class _SimpleHostnameResolver(object):
+    def __init__(self, reactor, nameResolution):
+        self._reactor = reactor
+        self._nameResolution = nameResolution
+
+
+    def resolveHostName(self, resolutionReceiver, hostName, portNumber=0, addressTypes=None, transportSemantics='TCP'):
+        resolutionReceiver.resolutionBegan(None)
+        d = self._nameResolution(hostName, portNumber)
+        d.addCallback(partial(self._deliver, resolutionReceiver))
+        d.addErrback(log.err)
+        d.addBoth(lambda ignored: resolutionReceiver.resolutionComplete())
+        return resolutionReceiver
+
+
+    def _deliver(self, receiver, gairesult):
+        for family, socktype, proto, canonname, sockaddr in gairesult:
+            if family == socket.AF_INET6:
+                receiver.addressResolved(IPv6Address(sockaddr))
+            elif family == socket.AF_INET:
+                receiver.addressResolved(IPv4Address(sockaddr))
+
+
+
 @implementer(interfaces.IStreamClientEndpoint)
 class HostnameEndpoint(object):
     """
@@ -774,13 +815,17 @@ class HostnameEndpoint(object):
             return defer.fail(
                 ValueError("invalid hostname: {}".format(self._hostStr))
             )
-        if IReactorPluggableNameResolver.providedBy(self._reactor):
-            return self._connectWithPluggableNameResolver(protocolFactory)
-        else:
-            return self._connectWithoutPluggableNameResolver(protocolFactory)
+
+        nameResolver = IReactorPluggableNameResolver(
+            self._reactor,
+            _PluggableReactorAdapter(self._reactor, self._nameResolution),
+        ).nameResolver
+        return self._connectWithNameResolver(
+            nameResolver, protocolFactory,
+        )
 
 
-    def _connectWithPluggableNameResolver(self, protocolFactory):
+    def _connectWithNameResolver(self, nameResolver, protocolFactory):
         d = Deferred()
         addresses = []
         @provider(IResolutionReceiver)
@@ -794,7 +839,7 @@ class HostnameEndpoint(object):
             @staticmethod
             def resolutionComplete():
                 d.callback(addresses)
-        self._reactor.nameResolver.resolveHostName(
+        nameResolver.resolveHostName(
             EndpointReceiver, self._hostText, portNumber=self._port
         )
         d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
@@ -869,104 +914,6 @@ class HostnameEndpoint(object):
                     return
 
                 eachAttempt = endpoint.connect(protocolFactory)
-                pending.append(eachAttempt)
-                @eachAttempt.addBoth
-                def noLongerPending(result):
-                    pending.remove(eachAttempt)
-                    return result
-                @eachAttempt.addCallback
-                def succeeded(result):
-                    winner.callback(result)
-                @eachAttempt.addErrback
-                def failed(reason):
-                    failures.append(reason)
-                    checkDone()
-
-            iterateEndpoint.clock = self._reactor
-            iterateEndpoint.start(self._attemptDelay)
-
-            @winner.addBoth
-            def cancelRemainingPending(result):
-                checkDone.completed = True
-                for remaining in pending[:]:
-                    remaining.cancel()
-                if iterateEndpoint.running:
-                    iterateEndpoint.stop()
-                return result
-            return winner
-
-        return d
-
-
-    def _connectWithoutPluggableNameResolver(self, protocolFactory):
-        wf = protocolFactory
-        d = self._nameResolution(self._hostBytes, self._port)
-        d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
-            "Couldn't find the hostname '%s'" % (self._hostBytes,))))
-        @d.addCallback
-        def gaiResultToEndpoints(gaiResult):
-            """
-            This method matches the host address family with an endpoint for
-            every address returned by C{getaddrinfo}.
-            @param gaiResult: A list of 5-tuples as returned by GAI.
-            @type gaiResult: list
-            """
-            for family, socktype, proto, canonname, sockaddr in gaiResult:
-                if family in [socket.AF_INET6]:
-                    yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
-                elif family in [socket.AF_INET]:
-                    yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
-                            sockaddr[1], self._timeout, self._bindAddress)
-                    # Yields an endpoint for every address returned by GAI
-
-        def _canceller(d):
-            # This canceller must remain defined outside of
-            # `startConnectionAttempts`, because Deferred should not
-            # participate in cycles with their cancellers; that would create a
-            # potentially problematic circular reference and possibly
-            # gc.garbage.
-            d.errback(error.ConnectingCancelledError(
-                HostnameAddress(self._hostBytes, self._port)))
-
-        @d.addCallback
-        def startConnectionAttempts(endpoints):
-            """
-            Given a sequence of endpoints obtained via name resolution, start
-            connecting to a new one every C{self._attemptDelay} seconds until
-            one of the connections succeeds, all of them fail, or the attempt
-            is cancelled.
-            @param endpoints: an iterable of all the endpoints we might try to
-                connect to, as determined by name resolution.
-            @type endpoints: iterable of L{IStreamServerEndpoint}
-            @return: a Deferred that fires with the result of the
-                C{endpoint.connect} method that completes the fastest, or fails
-                with the first connection error it encountered if none of them
-                succeed.
-            @rtype: L{Deferred} failing with L{error.ConnectingCancelledError}
-                or firing with L{IProtocol}
-            """
-            pending = []
-            failures = []
-            winner = defer.Deferred(canceller=_canceller)
-
-            def checkDone():
-                if pending or checkDone.completed or checkDone.endpointsLeft:
-                    return
-                winner.errback(failures.pop())
-            checkDone.completed = False
-            checkDone.endpointsLeft = True
-
-            @LoopingCall
-            def iterateEndpoint():
-                endpoint = next(endpoints, None)
-                if endpoint is None:
-                    # The list of endpoints ends.
-                    checkDone.endpointsLeft = False
-                    checkDone()
-                    return
-
-                eachAttempt = endpoint.connect(wf)
                 pending.append(eachAttempt)
                 @eachAttempt.addBoth
                 def noLongerPending(result):

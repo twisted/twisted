@@ -13,7 +13,7 @@ from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
 from unicodedata import normalize
 from types import FunctionType
 
-from zope.interface import implementer, provider, providedBy
+from zope.interface import implementer, providedBy
 from zope.interface.interface import InterfaceClass
 from zope.interface.verify import verifyObject, verifyClass
 
