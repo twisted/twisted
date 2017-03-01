@@ -437,13 +437,6 @@ def safe_str(o):
             return o.decode('utf-8')
         except:
             pass
-    if not _PY3:
-        # On Python 2, attempt to encode a unicode representation
-        # first.
-        try:
-            return unicode(o).encode('ascii', 'backslashreplace')
-        except:
-            pass
     try:
         return str(o)
     except:
