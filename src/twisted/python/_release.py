@@ -76,19 +76,6 @@ class FilePathStrContent(FilePath):
         self.encoding = encoding
 
 
-    def write(self, content):
-        """
-        Wrapper around L{FilePath.setContent} that always
-        makes sure we are writing L{bytes}.
-
-        @param content: the content we are writing
-        @type content: L{str} or L{bytes}
-        """
-        if not isinstance(content, bytes):
-            content = content.encode(self.encoding)
-        super(FilePathStrContent, self).write(content)
-
-
     def getContent(self):
         """
         Wrapper around L{FilePath.setContent} that always
