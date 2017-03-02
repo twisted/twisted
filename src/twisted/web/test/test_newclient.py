@@ -394,6 +394,21 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(protocol.response.phrase, b'OK')
 
 
+    def test_responseStatusWithoutPhrase(self):
+        """
+        L{HTTPClientParser.statusReceived} can parse a status line without a
+        phrase (though such lines are a violation of RFC 7230, section 3.1.2;
+        nevertheless some broken servers omit the phrase).
+        """
+        request = Request(b'GET', b'/', _boringHeaders, None)
+        protocol = HTTPClientParser(request, None)
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(b'HTTP/1.1 200\r\n')
+        self.assertEqual(protocol.response.version, (b'HTTP', 1, 1))
+        self.assertEqual(protocol.response.code, 200)
+        self.assertEqual(protocol.response.phrase, b'')
+
+
     def test_badResponseStatus(self):
         """
         L{HTTPClientParser.statusReceived} raises L{ParseError} if it is called
@@ -405,10 +420,9 @@ class HTTPClientParserTests(TestCase):
             exc = self.assertRaises(ParseError, protocol.statusReceived, s)
             self.assertEqual(exc.data, s)
 
-        # If there are fewer than three whitespace-delimited parts to the
-        # status line, it is not valid and cannot be parsed.
+        # If there are fewer than two whitespace-delimited parts to the status
+        # line, it is not valid and cannot be parsed.
         checkParsing(b'foo')
-        checkParsing(b'HTTP/1.1 200')
 
         # If the response code is not an integer, the status line is not valid
         # and cannot be parsed.

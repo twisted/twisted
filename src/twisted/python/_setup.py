@@ -91,7 +91,11 @@ _EXTRA_OPTIONS = dict(
     tls=[
         'pyopenssl >= 16.0.0',
         'service_identity',
-        'idna >= 0.6'],
+        # idna 2.3 introduced some changes that break a few things.  Avoid it
+        # for the time being.  I expect we'll work around those changes and
+        # lift the < 2.3 restriction here shortly.
+        'idna >= 0.6, < 2.3',
+    ],
     conch=[
         'pyasn1',
         'cryptography >= 0.9.1',
@@ -364,15 +368,12 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.internet._threadedselect",
     "twisted.internet.glib2reactor",
     "twisted.internet.gtk2reactor",
     "twisted.internet.pyuisupport",
     "twisted.internet.test.process_connectionlost",
     "twisted.internet.test.process_gireactornocompat",
     "twisted.internet.tksupport",
-    "twisted.internet.wxreactor",
-    "twisted.internet.wxsupport",
     "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
@@ -387,9 +388,7 @@ notPortedModules = [
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
     "twisted.mail.scripts.mailmail",
-    "twisted.mail.smtp",
     "twisted.mail.tap",
-    "twisted.mail.test.__init__",
     "twisted.mail.test.pop3testserver",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_imap",
@@ -399,7 +398,6 @@ notPortedModules = [
     "twisted.mail.test.test_pop3",
     "twisted.mail.test.test_pop3client",
     "twisted.mail.test.test_scripts",
-    "twisted.mail.test.test_smtp",
     "twisted.news.__init__",
     "twisted.news.database",
     "twisted.news.news",

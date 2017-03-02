@@ -13,8 +13,6 @@ import sys
 import errno
 import base64
 
-from hashlib import sha1
-
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname, join as joinpath
 from os import listdir, utime, stat
@@ -271,7 +269,7 @@ def _secureEnoughString(path):
     @return: A pseudorandom, 16 byte string for use in secure filenames.
     @rtype: the type of C{path}
     """
-    secureishString = armor(sha1(randomBytes(64)).digest())[:16]
+    secureishString = armor(randomBytes(16))[:16]
     return _coerceToFilesystemEncoding(path, secureishString)
 
 
