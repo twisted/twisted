@@ -24,6 +24,7 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, pathname)
 
+
     def getChild(self, path, request):
         fnp = self.child(path)
         if not fnp.exists():
@@ -33,6 +34,7 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         else:
             return CGIScript(fnp.path)
         return resource.NoResource()
+
 
     def render(self, request):
         notFound = resource.NoResource(
@@ -73,7 +75,7 @@ class CGIScript(resource.Resource):
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
         """
-        script_name = b"/" + b"/".join(request.prepath)
+        scriptName = b"/" + b"/".join(request.prepath)
         serverName = request.getRequestHostname().split(b':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
@@ -81,7 +83,7 @@ class CGIScript(resource.Resource):
                "SERVER_PROTOCOL":   request.clientproto,
                "SERVER_PORT":       str(request.getHost().port),
                "REQUEST_METHOD":    request.method,
-               "SCRIPT_NAME":       script_name, # XXX
+               "SCRIPT_NAME":       scriptName,
                "SCRIPT_FILENAME":   self.filename,
                "REQUEST_URI":       request.uri,
         }
@@ -94,7 +96,7 @@ class CGIScript(resource.Resource):
             env["PATH_INFO"] = "/" + "/".join(pp)
 
         if hasattr(request, "content"):
-            # request.content is either a StringIO or a TemporaryFile, and
+            # 'request.content' is either a StringIO or a TemporaryFile, and
             # the file pointer is sitting at the beginning (seek(0,0))
             request.content.seek(0,2)
             length = request.content.tell()
@@ -135,8 +137,8 @@ class CGIScript(resource.Resource):
         @type env: A C{dict} of C{str}, or L{None}
         @param env: The environment variables to pass to the process that will
             get spawned. See
-            L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
-            information about environments and process creation.
+            L{twisted.internet.interfaces.IReactorProcess.spawnProcess}
+            for more information about environments and process creation.
 
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
@@ -155,10 +157,10 @@ class FilteredScript(CGIScript):
     """
     I am a special version of a CGI script, that uses a specific executable.
 
-    This is useful for interfacing with other scripting languages that adhere to
-    the CGI standard. My C{filter} attribute specifies what executable to run,
-    and my C{filename} init parameter describes which script to pass to the
-    first argument of that script.
+    This is useful for interfacing with other scripting languages that adheres
+    to the CGI standard. My C{filter} attribute specifies what executable
+    to run, and my C{filename} init parameter describes which script to
+    pass to the first argument of that script.
 
     To customize me for a particular location of a CGI interpreter, override
     C{filter}.
@@ -177,8 +179,8 @@ class FilteredScript(CGIScript):
         @type env: A C{dict} of C{str}, or L{None}
         @param env: The environment variables to pass to the process that will
             get spawned. See
-            L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
-            information about environments and process creation.
+            L{twisted.internet.interfaces.IReactorProcess.spawnProcess}
+            for more information about environments and process creation.
 
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
@@ -205,23 +207,30 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     def view_resumeProducing(self, issuer):
         self.resumeProducing()
 
+
     def view_pauseProducing(self, issuer):
         self.pauseProducing()
+
 
     def view_stopProducing(self, issuer):
         self.stopProducing()
 
+
     def resumeProducing(self):
         self.transport.resumeProducing()
+
 
     def pauseProducing(self):
         self.transport.pauseProducing()
 
+
     def stopProducing(self):
         self.transport.loseConnection()
 
+
     def __init__(self, request):
         self.request = request
+
 
     def connectionMade(self):
         self.request.registerProducer(self, 1)
@@ -231,8 +240,10 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
             self.transport.write(content)
         self.transport.closeStdin()
 
+
     def errReceived(self, error):
         self.errortext = self.errortext + error
+
 
     def outReceived(self, output):
         """
@@ -248,8 +259,8 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 if headerend != -1:
                     headerEnds.append((headerend, delimiter))
             if headerEnds:
-                # The script is entirely in control of response headers; disable the
-                # default Content-Type value normally provided by
+                # The script is entirely in control of response headers;
+                # disable the default Content-Type value normally provided by
                 # twisted.web.server.Request.
                 self.request.defaultContentType = None
 
@@ -272,15 +283,18 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                             self.request.setResponseCode(http.FOUND)
                         if headerName == b'status':
                             try:
-                                statusNum = int(headerText[:3]) #"XXX <description>" sometimes happens.
+                                # "XXX <description>" sometimes happens.
+                                statusNum = int(headerText[:3])
                             except:
                                 log.msg("malformed status header")
                             else:
                                 self.request.setResponseCode(statusNum)
                         else:
-                            # Don't allow the application to control these required headers.
+                            # Don't allow the application to control
+                            # these required headers.
                             if headerName.lower() not in (b'server', b'date'):
-                                self.request.responseHeaders.addRawHeader(headerName, headerText)
+                                self.request.responseHeaders.addRawHeader(
+                                    headerName, headerText)
                 output = text[headerend+len(delimiter):]
                 self.handling_headers = 0
             if self.handling_headers:
@@ -288,17 +302,20 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if not self.handling_headers:
             self.request.write(output)
 
+
     def processEnded(self, reason):
         if reason.value.exitCode != 0:
-            log.msg("CGI %s exited with exit code %s" %
-                    (self.request.uri, reason.value.exitCode))
+            log.msg("CGI {} exited with exit code {}".format(
+                    self.request.uri, reason.value.exitCode))
         if self.errortext:
-            log.msg("Errors from CGI %s: %s" % (self.request.uri, self.errortext))
+            log.msg("Errors from CGI {}: {}".format(
+                self.request.uri, self.errortext))
         if self.handling_headers:
-            log.msg("Premature end of headers in %s: %s" % (self.request.uri, self.headertext))
+            log.msg("Premature end of headers in {}: {}".format(
+                self.request.uri, self.headertext))
             self.request.write(
                 resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                                   "CGI Script Error",
-                                   "Premature end of script headers.").render(self.request))
+                    "CGI Script Error",
+                    "Premature end of script headers.").render(self.request))
         self.request.unregisterProducer()
         self.request.finish()
