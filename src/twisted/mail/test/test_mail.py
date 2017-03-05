@@ -20,42 +20,34 @@ from hashlib import md5
 from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
 
-from twisted.trial import unittest
-from twisted.mail import smtp
-from twisted.mail import pop3
-from twisted.names import dns
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.internet.defer import Deferred
-from twisted.internet import reactor
-from twisted.internet import interfaces
-from twisted.internet import task
-from twisted.internet.error import DNSLookupError, CannotListenError
-from twisted.internet.error import ProcessDone, ProcessTerminated
-from twisted.internet import address
-from twisted.python import failure
-from twisted.python.filepath import FilePath
-from twisted.python import log
-from twisted.mail.relaymanager import _AttemptManager
-from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
-
-from twisted import mail
+import twisted.cred.checkers
+import twisted.cred.credentials
+import twisted.cred.portal
+import twisted.mail.alias
 import twisted.mail.mail
 import twisted.mail.maildir
+import twisted.mail.protocols
 import twisted.mail.relay
 import twisted.mail.relaymanager
-import twisted.mail.protocols
-import twisted.mail.alias
 
-from twisted.names.error import DNSNameError
+from twisted import cred, mail
+from twisted.internet import (address, defer, interfaces, protocol,
+                              reactor, task)
+from twisted.internet.defer import Deferred
+from twisted.internet.error import (DNSLookupError, CannotListenError,
+                                    ProcessDone, ProcessTerminated)
+from twisted.mail import pop3, smtp
+from twisted.mail.relaymanager import _AttemptManager
+from twisted.names import dns
 from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
+from twisted.names.error import DNSNameError
+from twisted.python import failure, log
+from twisted.python.filepath import FilePath
+from twisted.test.proto_helpers import (LineSendingProtocol,
+                                        MemoryReactorClock, StringTransport)
+from twisted.trial import unittest
 
-from twisted import cred
-import twisted.cred.credentials
-import twisted.cred.checkers
-import twisted.cred.portal
 
-from twisted.test.proto_helpers import LineSendingProtocol
 
 class DomainWithDefaultsTests(unittest.TestCase):
     def testMethods(self):
