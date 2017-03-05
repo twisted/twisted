@@ -855,6 +855,7 @@ __all__ = [
     "items",
     "iteritems",
     "itervalues",
+    "range",
     "xrange",
     "urllib_parse",
     "bytesEnviron",
