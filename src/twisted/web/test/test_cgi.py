@@ -120,8 +120,9 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(DUMMY_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.Agent(reactor).request(
-            "GET", 'http://localhost:%d/cgi' % (portnum,))
+        url = 'http://localhost:%d/cgi' % (portnum,)
+        url = url.encode("ascii")
+        d = client.Agent(reactor).request(b"GET", url)
         d.addCallback(client.readBody)
         d.addCallback(self._testCGI_1)
         return d
@@ -140,6 +141,7 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
@@ -161,6 +163,7 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
@@ -181,11 +184,12 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
 
         agent = client.Agent(reactor)
 
-        headers = http_headers.Headers({"Proxy": ["foo"],
-                                        "X-Innocent-Header": ["bar"]})
+        headers = http_headers.Headers({b"Proxy": [b"foo"],
+                                        b"X-Innocent-Header": [b"bar"]})
         d = agent.request(b"GET", url, headers=headers)
 
         def checkResponse(response):
@@ -208,6 +212,7 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
@@ -226,6 +231,7 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(discardBody)
@@ -252,7 +258,9 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         agent = client.Agent(reactor)
-        d = agent.request(b"GET", "http://localhost:%d/cgi" % (portnum,))
+        url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
+        d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
         d.addCallback(self._testReadEmptyInput_1)
         return d
@@ -267,8 +275,10 @@ class CGITests(unittest.TestCase):
 
         portnum = self.startServer(cgiFilename)
         agent = client.Agent(reactor)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
         d = agent.request(
-            uri="http://localhost:%d/cgi" % (portnum,),
+            uri=url,
             method=b"POST",
             bodyProducer=client.FileBodyProducer(
                 BytesIO(b"Here is your stdin")),
@@ -287,8 +297,10 @@ class CGITests(unittest.TestCase):
             cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        url = url.encode("ascii")
         d = client.Agent(reactor).request(
-            uri="http://localhost:%d/cgi" % (portnum,),
+            uri=url,
             method=b"POST",
             bodyProducer=client.FileBodyProducer(
                 BytesIO(b"Here is your stdin")),
