@@ -73,8 +73,8 @@ class CGIScript(resource.Resource):
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
         """
-        script_name = "/" + "/".join(request.prepath)
-        serverName = request.getRequestHostname().split(':')[0]
+        script_name = b"/" + b"/".join(request.prepath)
+        serverName = request.getRequestHostname().split(b':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
                "GATEWAY_INTERFACE": "CGI/1.1",
@@ -102,7 +102,7 @@ class CGIScript(resource.Resource):
             env['CONTENT_LENGTH'] = str(length)
 
         try:
-            qindex = request.uri.index('?')
+            qindex = request.uri.index(b'?')
         except ValueError:
             env['QUERY_STRING'] = ''
             qargs = []
@@ -115,9 +115,9 @@ class CGIScript(resource.Resource):
 
         # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
-            envname = title.replace('-', '_').upper()
-            if title not in ('content-type', 'content-length', 'proxy'):
-                envname = "HTTP_" + envname
+            envname = title.replace(b'-', b'_').upper()
+            if title not in (b'content-type', b'content-length', b'proxy'):
+                envname = b"HTTP_" + envname
             env[envname] = header
         # Propagate our environment
         for key, value in os.environ.items():
@@ -197,8 +197,8 @@ class FilteredScript(CGIScript):
 class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     handling_headers = 1
     headers_written = 0
-    headertext = ''
-    errortext = ''
+    headertext = b''
+    errortext = b''
 
     # Remotely relay producer interface.
 
@@ -243,7 +243,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if self.handling_headers:
             text = self.headertext + output
             headerEnds = []
-            for delimiter in '\n\n','\r\n\r\n','\r\r', '\n\r\n':
+            for delimiter in b'\n\n', b'\r\n\r\n', b'\r\r', b'\n\r\n':
                 headerend = text.find(delimiter)
                 if headerend != -1:
                     headerEnds.append((headerend, delimiter))
@@ -260,7 +260,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 linebreak = delimiter[:len(delimiter)//2]
                 headers = self.headertext.split(linebreak)
                 for header in headers:
-                    br = header.find(': ')
+                    br = header.find(b': ')
                     if br == -1:
                         log.msg(
                             format='ignoring malformed CGI header: %(header)r',
@@ -268,18 +268,18 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                     else:
                         headerName = header[:br].lower()
                         headerText = header[br+2:]
-                        if headerName == 'location':
+                        if headerName == b'location':
                             self.request.setResponseCode(http.FOUND)
-                        if headerName == 'status':
+                        if headerName == b'status':
                             try:
                                 statusNum = int(headerText[:3]) #"XXX <description>" sometimes happens.
                             except:
-                                log.msg( "malformed status header" )
+                                log.msg("malformed status header")
                             else:
                                 self.request.setResponseCode(statusNum)
                         else:
                             # Don't allow the application to control these required headers.
-                            if headerName.lower() not in ('server', 'date'):
+                            if headerName.lower() not in (b'server', b'date'):
                                 self.request.responseHeaders.addRawHeader(headerName, headerText)
                 output = text[headerend+len(delimiter):]
                 self.handling_headers = 0
