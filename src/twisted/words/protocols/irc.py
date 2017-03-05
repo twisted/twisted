@@ -1859,7 +1859,7 @@ class IRCClient(basic.LineReceiver):
             self._pings = {}
 
         if text is None:
-            chars = string.letters + string.digits + string.punctuation
+            chars = string.ascii_letters + string.digits + string.punctuation
             key = ''.join([random.choice(chars) for i in range(12)])
         else:
             key = str(text)
