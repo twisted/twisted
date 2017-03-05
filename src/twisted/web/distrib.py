@@ -10,11 +10,12 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
 # System Imports
-import os, copy, cStringIO
+import os, copy
 try:
     import pwd
 except ImportError:
     pwd = None
+from io import BytesIO
 
 from xml.dom.minidom import Element, Text
 
@@ -62,7 +63,7 @@ class Request(pb.RemoteCopy, server.Request):
         state['requestHeaders'] = Headers(dict(state['requestHeaders']))
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
-        self.content = cStringIO.StringIO(self.content_data)
+        self.content = BytesIO(self.content_data)
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
         self.addCookie        = self.remote.remoteMethod('addCookie')
