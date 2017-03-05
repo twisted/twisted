@@ -10,25 +10,22 @@ from __future__ import absolute_import, division
 import os
 import stat
 
-from twisted.python.reflect import requireModule
-from twisted.python.usage import UsageError
-from twisted.python.filepath import FilePath
-from twisted.internet.interfaces import IReactorUNIX
 from twisted.internet import reactor, endpoints
+from twisted.internet.interfaces import IReactorUNIX
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.python.threadpool import ThreadPool
+from twisted.python.usage import UsageError
+from twisted.spread.pb import PBServerFactory
 from twisted.trial.unittest import TestCase
-
+from twisted.web.distrib import ResourcePublisher, UserDirectory
+from twisted.web.script import PythonScript
 from twisted.web.server import Site
 from twisted.web.static import Data, File
 from twisted.web.tap import Options, makeService
-from twisted.web.script import PythonScript
-from twisted.web.wsgi import WSGIResource
-
-from twisted.web.twcgi import CGIScript
-
-from twisted.web.distrib import ResourcePublisher, UserDirectory
-from twisted.spread.pb import PBServerFactory
 from twisted.web.tap import makePersonalServerFactory
+from twisted.web.twcgi import CGIScript
+from twisted.web.wsgi import WSGIResource
 
 
 application = object()
