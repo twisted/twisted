@@ -1,5 +1,5 @@
 # But let's try and fix setting away messages, shall we?
-from twisted.application import internet, service
+from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -8,23 +8,23 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return 'Internal error in server'
+            return b'Internal error in server'
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
 class FingerFactory(protocol.ServerFactory):
     protocol = FingerProtocol
 
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
-    
+        return defer.succeed(self.users.get(user, b"No such user"))
+
 class FingerSetterProtocol(basic.LineReceiver):
     def connectionMade(self):
         self.lines = []
@@ -36,7 +36,7 @@ class FingerSetterProtocol(basic.LineReceiver):
         user = self.lines[0]
         status = self.lines[1]
         self.factory.setUser(user, status)
-        
+
 class FingerSetterFactory(protocol.ServerFactory):
     protocol = FingerSetterProtocol
 
@@ -46,10 +46,10 @@ class FingerSetterFactory(protocol.ServerFactory):
     def setUser(self, user, status):
         self.fingerFactory.users[user] = status
 
-ff = FingerFactory(moshez='Happy and well')
+ff = FingerFactory({b'moshez': b'Happy and well'})
 fsf = FingerSetterFactory(ff)
 
 application = service.Application('finger', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79,ff).setServiceParent(serviceCollection)
-internet.TCPServer(1079,fsf).setServiceParent(serviceCollection)
+strports.service("tcp:79", ff).setServiceParent(serviceCollection)
+strports.service("tcp:1079", fsf).setServiceParent(serviceCollection)

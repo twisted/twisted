@@ -34,7 +34,7 @@ class TutorialESMTP(smtp.ESMTP):
     def validateTo(self, user):
         fileName = 'tutorial-smtp.' + str(self.counter)
         self.counter += 1
-        return lambda: FileMessage(file(fileName, 'w'))
+        return lambda: FileMessage(open(fileName, 'w'))
 
     def validateFrom(self, helo, origin):
         return origin

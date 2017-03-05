@@ -19,7 +19,7 @@ For example: a web server might emit an event after handling each request that i
 All of that information might be contained in a pair of objects representing the request and response, so logging this event could be as simple as:
 
 .. code-block:: python
-    
+
     log.info(request=request, response=response)
 
 The above API would seem confusing to users of many logging systems, which are built around the idea of emitting strings to a file.
@@ -27,7 +27,7 @@ There is, after all, no string in the above call.
 In such systems, one might expect the API to look like this instead:
 
 .. code-block:: python
-    
+
     log.info(
         "{uri}: status={status}, bytes={size}, etc..."
         .format(uri=request.uri, status=response.code, size=response.size)
@@ -51,7 +51,7 @@ Events-as-strings do have the advantage that it's obvious what an observer that 
 We can solve this more flexibly by providing an optional format string in events that can be used for this purpose:
 
 .. code-block:: python
-    
+
     log.info(
         "{request.uri}: status={response.status}, bytes={response.size}, etc...",
         request=request, response=response
@@ -69,22 +69,22 @@ The first thing that an application that emits logging events needs to do is to 
 A :api:`twisted.logger.Logger <Logger>` may be created globally for a module:
 
 .. code-block:: python
-    
+
     from twisted.logger import Logger
     log = Logger()
-    
+
     def handleData(data):
         log.debug("Got data: {data!r}.", data=data)
 
 A :api:`twisted.logger.Logger <Logger>` can also be associated with a class:
 
 .. code-block:: python
-    
+
     from twisted.logger import Logger
-    
+
     class Foo(object):
         log = Logger()
-    
+
         def oops(self, data):
             self.log.error(
                 "Oops! Invalid data from server: {data!r}",
@@ -150,28 +150,28 @@ Log levels
 These methods all have the same signature, but each will attach a specific ``log_level`` key to events.
 Log levels are defined by the :api:`twisted.logger.LogLevel <LogLevel>` constants container.
 These are:
-        
-:api:`twisted.logger.LogLevel.debug <debug>` 
-  
+
+:api:`twisted.logger.LogLevel.debug <debug>`
+
   Debugging events: Information of use to a developer of the software, not generally of interest to someone running the software unless they are attempting to diagnose a software issue.
 
-:api:`twisted.logger.LogLevel.info <info>` 
-  
+:api:`twisted.logger.LogLevel.info <info>`
+
   Informational events: Routine information about the status of an application, such as incoming connections, startup of a subsystem, etc.
 
-:api:`twisted.logger.LogLevel.warn <warn>` 
-  
+:api:`twisted.logger.LogLevel.warn <warn>`
+
   Warning events: Events that may require greater attention than informational events but are not a systemic failure condition, such as authorization failures, bad data from a network client, etc.
   Such events are of potential interest to system administrators, and should ideally be phrased in such a way, or documented, so as to indicate an action that an administrator might take to mitigate the warning.
 
-:api:`twisted.logger.LogLevel.error <error>` 
-  
+:api:`twisted.logger.LogLevel.error <error>`
+
   Error conditions: Events indicating a systemic failure.
   For example, resource exhaustion, or the loss of connectivity to an external system, such as a database or API endpoint, without which no useful work can proceed.
   Similar to warnings, errors related to operational parameters may be actionable to system administrators and should provide references to resources which an administrator might use to resolve them.
 
-:api:`twisted.logger.LogLevel.critical <critical>` 
-  
+:api:`twisted.logger.LogLevel.critical <critical>`
+
   Critical failures: Errors indicating systemic failure (ie. service outage), data corruption, imminent data loss, etc. which must be handled immediately.
   This includes errors unanticipated by the software, such as unhandled exceptions, wherein the cause and consequences are unknown.
 
@@ -207,28 +207,28 @@ When writing a format string, take care to present it in a manner which would ma
 Particularly, format strings need not be written with an eye towards parseability or machine-readability.
 If you want to save your log events along with their structure and then analyze them later, see the next section, on :ref:`"saving events for later" <core-howto-logger-saving-events-for-later>` .
 
-Format strings should be 
+Format strings should be
 
 ``unicode`` , and use `PEP 3101 <http://www.python.org/dev/peps/pep-3101/>`_ syntax to describe how the event should be rendered as human-readable text.
 For legacy support and convenience in python 2, UTF-8-encoded ``bytes`` are also accepted for format strings, but unicode is preferred.
 There are two variations from PEP 3101 in the format strings used by this module:
 
-#. 
+#.
    Positional (numerical) field names (eg. ``{0}`` ) are not permitted.
    Event keys are not ordered, which means positional field names do not make sense in this context.
    However, this is not an accidental limitation, but an intentional design decision.
    As software evolves, log messages often grow to include additional information, while still logging the same conceptual event.
    By using meaningful names rather than opaque indexes for event keys, these identifiers are more robust against future changes in the format of messages and the information provided.
-#. 
+#.
    Field names ending in parentheses (eg. ``{foo()}`` ) will call the referenced object with no arguments, then call ``str`` on the result, rather than calling ``str`` on the referenced object directly.
    This extension to PEP 3101 format syntax is provided to make it as easy as possible to defer potentially expensive work until a log message must be emitted.
    For example, let's say that we wanted to log a message with some useful, but potentially expensive information from the 'request' object:
-   
+
    .. code-block:: python
-   
+
        log.info("{request.uri} useful, but expensive: {request.usefulButExpensive()}",
                 request=request)
-   
+
    In the case where this log message is filtered out as uninteresting and not saved, no formatting work is done *at all* ; and since we can use PEP3101 attribute-access syntax in conjunction with this parenthesis extension, the caller does not even need to build a function or bound method object to pass as a separate key.
    There is no support for specifying arguments in the format string; the goal is to make it idiomatic to express that work be done later, not to implement a full Python expression evaluator.
 
@@ -241,36 +241,36 @@ All event keys that are inserted by the logging system with have a ``log_`` pref
 Applications should therefore not insert event keys using the ``log_`` prefix, as that prefix is reserved for the logging system.
 System-provided event keys include:
 
-``log_logger`` 
-        
+``log_logger``
+
   :api:`twisted.logger.Logger <Logger>` object that the event was emitted to.
 
-``log_source`` 
-  
+``log_source``
+
   The source object that emitted the event.
   When a :api:`twisted.logger.Logger <Logger>` is accessed as an attribute of a class, the class is the source.
   When accessed as an attribute of an instance, the instance is the source.
   In other cases, the source is ``None`` .
 
-``log_level`` 
-  
+``log_level``
+
   The :api:`twisted.logger.LogLevel <LogLevel>` associated with the event.
 
-``log_namespace`` 
-  
+``log_namespace``
+
   The namespace associated with the event.
 
-``log_format`` 
-  
+``log_format``
+
   The format string provided for use by observers that wish to render the event as text.
   This may be ``None`` , if no format string was provided.
 
-``log_time`` 
-  
+``log_time``
+
   The time that the event was emitted, as returned by :api:`time.time <time>` .
 
-``log_failure`` 
-  
+``log_failure``
+
   A :api:`twisted.python.failure.Failure <Failure>` object captured when the event was emitted.
 
 
@@ -309,7 +309,7 @@ You can also, of course, feel free to access any of the keys in the ``event`` ob
 
 .. literalinclude:: listings/logger/loader-math.py
 
-..  TODO: command-line option for twistd to do this 
+..  TODO: command-line option for twistd to do this
 
 
 Implementing an observer
@@ -319,10 +319,10 @@ An observer must provide the :api:`twisted.logger.ILogObserver <ILogObserver>` i
 That interface simply describes a 1-argument callable that takes a ``dict`` , so a simple implementation may simply use the handy :api:`zope.interface.provider <provider>` decorator on a function that takes one argument:
 
 .. code-block:: python
-    
+
     from zope.interface import provider
     from twisted.logger import ILogObserver, formatEvent
-    
+
     @provider(ILogObserver)
     def simpleObserver(event):
         print(formatEvent(event))
@@ -339,10 +339,10 @@ Specifically, a log observer:
 
 - must be prepared to be called from threads other than the main thread (or I/O thread, or reactor thread)
 - must be prepared to be called from multiple threads concurrently
-- must not interact with other Twisted APIs that are not explicitly thread-safe without first taking precautions like using :api:`twisted.internet.interfaces.IReactorThreads.callFromThread <callFromThread>` 
+- must not interact with other Twisted APIs that are not explicitly thread-safe without first taking precautions like using :api:`twisted.internet.interfaces.IReactorFromThreads.callFromThread <callFromThread>`
 
 Keep in mind that this is true even if you elect not to explicitly interact with any threads from your program.
-Twisted itself may log messages from threads, and Twisted may internally use APIs like :api:`twisted.internet.interfaces.IReactorThreads.callInThread <callInThread>` ; for example, Twisted uses threads to look up hostnames when making an outgoing connection.
+Twisted itself may log messages from threads, and Twisted may internally use APIs like :api:`twisted.internet.interfaces.IReactorInThreads.callInThread <callInThread>` ; for example, Twisted uses threads to look up hostnames when making an outgoing connection.
 
 Given this extra wrinkle, it's usually best to see if you can find an existing log observer implementation that does what you need before implementing your own; thread safety can be tricky to implement.
 Luckily, :api:`twisted.logger <twisted.logger>` comes with several useful observers, which are documented below.
@@ -417,7 +417,7 @@ Log messages are therefore a stream-of-consciousness commentary on what is going
 ``extractField`` lets you acknowledge the messy reality of how log messages are written, but still take advantage of structured analysis later on.
 Just always be sure to use event format fields, not string concatenation, to reference information about a particular event, and you'll be able to easily pull apart hastily-written ad-hoc messages from multiple versions of a system, either as it's running or once you've saved a log file.
 
-..  TODO: explain filtering 
+..  TODO: explain filtering
 
 
 Registering an observer
@@ -426,12 +426,12 @@ Registering an observer
 One way to register an observer is to construct a :api:`twisted.logger.Logger <Logger>` object with it:
 
 .. code-block:: python
-    
+
     from twisted.logger import Logger
     from myobservers import PrintingObserver
-    
+
     log = Logger(observer=PrintingObserver())
-    
+
     log.info("Hello")
 
 This will cause all of a logger's events to be sent to the given observer.
@@ -453,14 +453,14 @@ What this means is that the global log publisher accepts events like any other o
 Observers can be registered to be forwarded events by calling the :api:`twisted.logger.LogPublisher <LogPublisher>` method :api:`twisted.logger.LogPublisher.addObserver <addObserver>` , and unregister by calling :api:`twisted.logger.LogPublisher.removeObserver <removeObserver>` :
 
 .. code-block:: python
-    
+
     from twisted.logger import globalLogPublisher
     from myobservers import PrintingObserver
-    
+
     log = Logger()
-    
+
     globalLogPublisher.addObserver(PrintingObserver())
-    
+
     log.info("Hello")
 
 The result here is the same as the previous example, except that additional observers can be (and may already have been) registered.
@@ -484,46 +484,55 @@ When the global log publisher is created, it uses a :api:`twisted.logger.Limited
 Logging is started by registering the first set of observers with the global log publisher by calling :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` :
 
 .. code-block:: python
-    
+
     from twisted.logger import globalLogBeginner
     from myobservers import PrintingObserver
-    
+
     log = Logger()
-    
+
     log.info("Hello")
-    
+
     observers = [PrintingObserver()]
-    
+
     globalLogBeginner.beginLoggingTo(observers)
-    
+
     log.info("Hello, again")
 
-What this does is add the given observers (in this example, the ``PrintingObserver`` ) with the global log observer, then forwards all of the events that were stored in memory prior to calling :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` to these observers, and gets rid of the :api:`twisted.logger.LimitedHistoryLogObserver <LimitedHistoryLogObserver>` , as it is no longer needed.
+This:
+
+* Adds the given observers (in this example, the ``PrintingObserver`` ) to the global log observer
+* Forwards all of the events that were stored in memory prior to calling :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` to these observers
+* Gets rid of the :api:`twisted.logger.LimitedHistoryLogObserver <LimitedHistoryLogObserver>` , as it is no longer needed.
+
 It is an error to call :api:`twisted.logger.LogBeginner.beginLoggingTo <beginLoggingTo>` more than once.
+
+.. note:: If the global log publisher is never started, the in-memory event buffer holds (a bounded number of) log events indefinitely.
+	  This may unexpectedly increase application memory or CPU usage.
+	  It is highly recommended that the global log publisher be started as early as feasible.
 
 
 Provided log observers
 ----------------------
 
 This module provides a number of pre-built observers for applications to use:
-        
-:api:`twisted.logger.LogPublisher <LogPublisher>` 
-        
+
+:api:`twisted.logger.LogPublisher <LogPublisher>`
+
   Forwards events to other publishers.
   This allows one to create a graph of observers.
 
-:api:`twisted.logger.LimitedHistoryLogObserver <LimitedHistoryLogObserver>` 
-  
+:api:`twisted.logger.LimitedHistoryLogObserver <LimitedHistoryLogObserver>`
+
   Stores a limited number of received events, and can re-play those stored events to another observer later.
   This is useful for keeping recent logging history in memory for inspection when other log outputs are not available.
 
-:api:`twisted.logger.FileLogObserver <FileLogObserver>` 
-  
+:api:`twisted.logger.FileLogObserver <FileLogObserver>`
+
   Formats events as text, prefixed with a time stamp and a "system identifier", and writes them to a file.
   The system identifier defaults to a combination of the event's namespace and level.
 
-:api:`twisted.logger.FilteringLogObserver <FilteringLogObserver>` 
-  
+:api:`twisted.logger.FilteringLogObserver <FilteringLogObserver>`
+
   Forwards events to another observer after applying a set of filter predicates (providers of :api:`twisted.logger.ILogFilterPredicate <ILogFilterPredicate>` ).
   :api:`twisted.logger.LogLevelFilterPredicate <LogLevelFilterPredicate>` is a predicate that be configured to keep track of which log levels to filter for different namespaces, and will filter out events that are not at the appropriate level or higher.
 

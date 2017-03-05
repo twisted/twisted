@@ -1,0 +1,1 @@
+History-aware terminal protocols like twisted.conch.manhole.Manhole no longer raise a TypeError when a user visits a partial line they added to the command line history by pressing up arrow before return.

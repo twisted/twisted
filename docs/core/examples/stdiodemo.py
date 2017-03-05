@@ -59,7 +59,8 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
         
     def do_check(self, url):
         """check <url>: Attempt to download the given web page"""
-        client.getPage(url).addCallback(
+        client.Agent(reactor).request('GET', url).addCallback(
+            client.readBody).addCallback(
             self.__checkSuccess).addErrback(
             self.__checkFailure)
 

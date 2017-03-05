@@ -1,16 +1,16 @@
-Twisted 16.2.0
+Twisted 17.1.0
 ==============
 
 |pypi|
 |coverage|
 |travis|
+|appveyor|
 
 .. code::
 
-    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
+    <hawkowl> we have always been at war with 16.7
 
-
-For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.1.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -23,7 +23,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.conch``: SSHv2 and Telnet clients and servers and terminal emulators
 - ``twisted.words``: Clients and servers for IRC, XMPP, and other IM protocols
 - ``twisted.mail``: IMAPv4, POP3, SMTP clients and servers
-- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS recievers
+- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS receivers
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
@@ -77,7 +77,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2016 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2017 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -107,3 +107,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis https://travis-ci.org/twisted/twisted
+
+.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
+.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted

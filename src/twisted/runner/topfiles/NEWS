@@ -1,0 +1,271 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Runner 17.1.0 (2017-02-04)
+==================================
+
+Bugfixes
+--------
+ - On Python 3, procmon now handles process output without exceptions
+   (#8919)
+
+
+Twisted Runner 16.6.0 (2016-11-17)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.5.0 (2016-10-28)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.4.1 (2016-09-07)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.4.0 (2016-08-25)
+==================================
+
+Features
+--------
+ - twisted.runner has been ported to Python 3. (#8739)
+
+
+Twisted Runner 16.3.0 (2016-07-05)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.2.0 (2016-05-18)
+==================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.runner.inetdtap and twisted.runner.inetdconf RPC support
+   was deprecated as it was broken for a long time. (#8123)
+
+
+Twisted Runner 16.1.1 (2016-04-08)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.1.0 (2016-04-04)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.0.0 (2016-03-10)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.5.0 (2015-11-28)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.4.0 (2015-09-04)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.3.0 (2015-08-04)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.2.1 (2015-05-23)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.2.0 (2015-05-18)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.1.0 (2015-04-02)
+==================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7726
+
+
+Twisted Runner 15.0.0 (2015-01-24)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.2 (2014-09-18)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.1 (2014-09-17)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.0 (2014-05-08)
+==================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #6992
+
+
+Twisted Runner 13.2.0 (2013-10-29)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 13.1.0 (2013-06-23)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 13.0.0 (2013-03-19)
+==================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #5740
+
+
+Twisted Runner 12.3.0 (2012-12-20)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.2.0 (2012-08-26)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.1.0 (2012-06-02)
+==================================
+
+Deprecations and Removals
+-------------------------
+ - ProcessMonitor.active, consistencyDelay, and consistency in
+   twisted.runner.procmon were deprecated since 10.1 have been
+   removed. (#5517)
+
+
+Twisted Runner 12.0.0 (2012-02-10)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 11.1.0 (2011-11-15)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 11.0.0 (2011-04-01)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 10.2.0 (2010-11-29)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 10.1.0 (2010-06-27)
+==================================
+
+Features
+--------
+ - twistd now has a procmon subcommand plugin - a convenient way to
+   monitor and automatically restart another process. (#4356)
+
+Deprecations and Removals
+-------------------------
+ - twisted.runner.procmon.ProcessMonitor's active, consistency, and
+   consistencyDelay attributes are now deprecated. (#1763)
+
+Other
+-----
+ - #3775
+
+
+Twisted Runner 10.0.0 (2010-03-01)
+==================================
+
+Other
+-----
+ - #3961
+
+
+Twisted Runner 9.0.0 (2009-11-24)
+=================================
+
+Features
+--------
+ - procmon.ProcessMonitor.addProcess now accepts an 'env' parameter which allows
+   users to specify the environment in which a process will be run (#3691)
+
+Other
+-----
+ - #3540
+
+
+Runner 8.2.0 (2008-12-16)
+=========================
+
+No interesting changes since Twisted 8.0.
+
+8.0.0 (2008-03-17)
+==================
+
+Misc
+----
+ - Remove all "API Stability" markers (#2847)
+
+
+0.2.0 (2006-05-24)
+==================
+
+Fixes
+-----
+ - Fix a bug that broke inetdtap.RPCServer.
+ - Misc: #1142
+
+
+0.1.0
+=====
+ - Pass *blocking* sockets to subprocesses run by inetd

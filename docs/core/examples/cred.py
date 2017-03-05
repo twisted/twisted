@@ -6,7 +6,7 @@
 from __future__ import print_function
 
 import sys
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.protocols import basic
 from twisted.internet import protocol
@@ -24,27 +24,24 @@ class IProtocolUser(Interface):
     def logout():
         """Cleanup per-login resources allocated to this avatar"""
 
+@implementer(IProtocolUser)
 class AnonymousUser:
-    implements(IProtocolUser)
-    
     def getPrivileges(self):
         return [1, 2, 3]
 
     def logout(self):
         print("Cleaning up anonymous user resources")
 
+@implementer(IProtocolUser)
 class RegularUser:
-    implements(IProtocolUser)
-    
     def getPrivileges(self):
         return [1, 2, 3, 5, 6]
 
     def logout(self):
         print("Cleaning up regular user resources")
 
+@implementer(IProtocolUser)
 class Administrator:
-    implements(IProtocolUser)
-    
     def getPrivileges(self):
         return range(50)
 
@@ -129,9 +126,8 @@ class ServerFactory(protocol.ServerFactory):
         p.portal = self.portal
         return p
 
+@implementer(portal.IRealm)
 class Realm:
-    implements(portal.IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IProtocolUser in interfaces:
             if avatarId == checkers.ANONYMOUS:

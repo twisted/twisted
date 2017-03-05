@@ -148,7 +148,7 @@ The ``agentEndpoint`` argument gives the ``SSHCommandClientEndpoint`` an opportu
 The agent may already be loaded with keys, or may have some other way to authenticate a connection.
 Using the agent can mean the process actually establishing the SSH connection doesn't need to load any authentication material (passwords or keys) itself (often convenient in case keys are encrypted and potentially more secure, since only the agent process ever actually holds the secrets).
 The value for this argument is another ``IStreamClientEndpoint`` .
-Often in a typical *NIX desktop environment, the *SSH_AUTH_SOCK* environment variable will give the location of a AF_UNIX socket.
+Often in a typical *NIX desktop environment, the *SSH_AUTH_SOCK* environment variable will give the location of an AF_UNIX socket.
 This explains the value ``echoclient_ssh.py`` assigns this parameter when *--no-agent* is not given.
 
 
@@ -181,7 +181,9 @@ For use of ``SSHCommandClientEndpoint`` that is intended to be completely autono
 
 It is also possible to run commands (one or more) over an
 already-established connection.  This is done using the alternate
-constructor ``SSHCommandClientEndpoint.existingConnection`` .
+constructor ``SSHCommandClientEndpoint.existingConnection`` .  The
+``connection`` argument to that function can be obtained by accessing
+``transport.conn`` on an already connected protocol.
 
 
     

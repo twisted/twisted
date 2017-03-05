@@ -7,7 +7,7 @@ if __name__ == '__main__':
     from pbecho import main
     raise SystemExit(main())
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.spread import pb
 from twisted.cred.portal import IRealm
@@ -29,9 +29,8 @@ class SimplePerspective(pb.Avatar):
         print(self, "logged out")
 
 
+@implementer(IRealm)
 class SimpleRealm:
-    implements(IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:
             avatar = SimplePerspective()

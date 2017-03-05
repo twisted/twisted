@@ -7,12 +7,12 @@
 # It is only for use in making upstream Twisted releases.
 
 import sys, os
-extra = os.path.dirname(os.path.dirname(sys.argv[0]))
+extra = os.path.join(os.path.dirname(os.path.dirname(sys.argv[0])), "src")
 sys.path.insert(0, extra)
 try:
     import _preamble
 except ImportError:
-    sys.exc_clear()
+    pass
 sys.path.remove(extra)
 
 from twisted.python._release import BuildAPIDocsScript

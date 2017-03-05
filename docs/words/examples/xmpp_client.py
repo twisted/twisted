@@ -36,11 +36,11 @@ class Client(object):
 
 
     def rawDataIn(self, buf):
-        print("RECV: %s" % unicode(buf, 'utf-8').encode('ascii', 'replace'))
+        print("RECV: %r" % buf)
 
 
     def rawDataOut(self, buf):
-        print("SEND: %s" % unicode(buf, 'utf-8').encode('ascii', 'replace'))
+        print("SEND: %r" % buf)
 
 
     def connected(self, xs):
