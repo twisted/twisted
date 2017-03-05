@@ -19,29 +19,29 @@ from twisted.web.test._util import _render
 from twisted.web.test.test_web import DummyRequest
 
 DUMMY_CGI = '''\
-print "Header: OK"
-print
-print "cgi output"
+print("Header: OK")
+print("")
+print("cgi output")
 '''
 
 DUAL_HEADER_CGI = '''\
-print "Header: spam"
-print "Header: eggs"
-print
-print "cgi output"
+print("Header: spam")
+print("Header: eggs")
+print("")
+print("cgi output")
 '''
 
 BROKEN_HEADER_CGI = '''\
-print "XYZ"
-print
-print "cgi output"
+print("XYZ")
+print("")
+print("cgi output")
 '''
 
 SPECIAL_HEADER_CGI = '''\
-print "Server: monkeys"
-print "Date: last year"
-print
-print "cgi output"
+print("Server: monkeys")
+print("Date: last year")
+print("")
+print("cgi output")
 '''
 
 READINPUT_CGI = '''\
@@ -52,9 +52,9 @@ import os, sys
 
 body_length = int(os.environ.get('CONTENT_LENGTH',0))
 indata = sys.stdin.read(body_length)
-print "Header: OK"
-print
-print "readinput ok"
+print("Header: OK")
+print("")
+print("readinput ok")
 '''
 
 READALLINPUT_CGI = '''\
@@ -65,15 +65,15 @@ READALLINPUT_CGI = '''\
 import sys
 
 indata = sys.stdin.read()
-print "Header: OK"
-print
-print "readallinput ok"
+print("Header: OK")
+print("")
+print("readallinput ok")
 '''
 
 NO_DUPLICATE_CONTENT_TYPE_HEADER_CGI = '''\
-print "content-type: text/cgi-duplicate-test"
-print
-print "cgi output"
+print("content-type: text/cgi-duplicate-test")
+print("")
+print("cgi output")
 '''
 
 HEADER_OUTPUT_CGI = '''\
