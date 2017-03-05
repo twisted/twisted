@@ -281,7 +281,8 @@ class FDDetectorTests(TestCase):
         L{resource} module is not importable.
         """
         self.hideResourceModule()
-        self.assertEqual(list(range(1024)), list(self.detector._fallbackFDImplementation()))
+        self.assertEqual(list(range(1024)),
+                         list(self.detector._fallbackFDImplementation()))
 
 
 
