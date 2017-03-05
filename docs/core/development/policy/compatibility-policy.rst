@@ -457,18 +457,12 @@ While the Trial bug is not fixed, to trigger test failures on unhandled deprecat
 
 There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
-There are helper methods available for handling deprecated callables
-(:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`)
-and deprecated classes or module attributes
-(:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute`).
+There are helper methods available for handling deprecated callables (:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`) and deprecated classes or module attributes (:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute`).
 
-If the deprecation warning has a customized message or cannot be caught using these helpers,
-you can use :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>`
-to specify the exact warning you expect.
+If the deprecation warning has a customized message or cannot be caught using these helpers, you can use :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>` to specify the exact warning you expect.
 
-Lastly, you can use :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>`
-after performing any deprecated activity. This is the most precise, but also the most verbose,
-way to assert that you've raised a DeprecationWarning.
+Lastly, you can use :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>` after performing any deprecated activity.
+This is the most precise, but also the most verbose, way to assert that you've raised a ``DeprecationWarning``.
 
 
 .. code-block:: python
@@ -548,8 +542,7 @@ Making calls to the deprecated code without raising these warnings can be done u
             self.assertEqual('some-value', user.homePath)
 
 
-Tests which need to use deprecated classes should use the
-:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>` helper.
+Tests which need to use deprecated classes should use the :api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 
@@ -570,5 +563,3 @@ Tests which need to use deprecated classes should use the
             creds = UsernameHashedPassword(b"foo", b"bar")
             self.assertEqual(creds.username, b"foo")
             self.assertEqual(creds.hashed, b"bar")
-
-
