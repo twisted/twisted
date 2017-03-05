@@ -474,9 +474,26 @@ This is the most precise, but also the most verbose, way to assert that you've r
         """
         Tests for deprecated code.
         """
+        def test_deprecationUsingFlushWarnings(self):
+            """
+            flushWarnings() is the recommended way of checking for deprecations.
+            Make sure you only flushWarning from the targeted code, and not all
+            warnings.
+            """
+            db.getUser('some-user')
+
+            message = (
+                'twisted.Identity.getUser was deprecated in Twisted 15.0.0: '
+                'Use twisted.get_user instead.'
+                )
+            warnings = self.flushWarnings(
+                [self.test_deprecationUsingFlushWarnings])
+            self.assertEqual(1, len(warnings))
+            self.assertEqual(DeprecationWarning, warnings[0]['category'])
+            self.assertEqual(message, warnings[0]['message'])
 
 
-        def test_deprecationUsingCallDeprecated(self):
+	def test_deprecationUsingCallDeprecated(self):
             """
             callDeprecated() assumes that the DeprecationWarning message
             follows Twisted's standard format.
@@ -497,24 +514,6 @@ This is the most precise, but also the most verbose, way to assert that you've r
                 __file__,
                 db.getUser, 'some-user')
 
-
-        def test_deprecationUsingFlushWarnings(self):
-            """
-            flushWarnings() is the recommended way of checking for deprecations.
-            Make sure you only flushWarning from the targeted code, and not all
-            warnings.
-            """
-            db.getUser('some-user')
-
-            message = (
-                'twisted.Identity.getUser was deprecated in Twisted 15.0.0: '
-                'Use twisted.get_user instead.'
-                )
-            warnings = self.flushWarnings(
-                [self.test_deprecationUsingFlushWarnings])
-            self.assertEqual(1, len(warnings))
-            self.assertEqual(DeprecationWarning, warnings[0]['category'])
-            self.assertEqual(message, warnings[0]['message'])
 
 
 When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
