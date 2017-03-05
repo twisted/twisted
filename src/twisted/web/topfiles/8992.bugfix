@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel is less likely to leak file descriptors when timing out clients using HTTPS connections. In some cases it is still possible to leak a file descriptor when timing out HTTP clients: further patches will address this issue.

@@ -154,8 +154,9 @@ class _SendmsgMixin(object):
 
     def doRead(self):
         """
-        Calls L{IFileDescriptorReceiver.fileDescriptorReceived} and
-        L{IProtocol.dataReceived} with all available data.
+        Calls {IProtocol.dataReceived} with all available data and
+        L{IFileDescriptorReceiver.fileDescriptorReceived} once for each
+        received file descriptor in ancillary data.
 
         This reads up to C{self.bufferSize} bytes of data from its socket, then
         dispatches the data to protocol callbacks to be handled.  If the
@@ -171,27 +172,54 @@ class _SendmsgMixin(object):
             else:
                 return main.CONNECTION_LOST
 
-        if ancillary:
-            ancillaryData = ancillary[0][2]
-            fdCount = len(ancillaryData) // 4
-            fds = struct.unpack('i'*fdCount, ancillaryData)
-            if interfaces.IFileDescriptorReceiver.providedBy(self.protocol):
-                for fd in fds:
-                    self.protocol.fileDescriptorReceived(fd)
+        for cmsgLevel, cmsgType, cmsgData in ancillary:
+            if (cmsgLevel == socket.SOL_SOCKET and
+                cmsgType == sendmsg.SCM_RIGHTS):
+                self._ancillaryLevelSOLSOCKETTypeSCMRIGHTS(cmsgData)
             else:
                 log.msg(
                     format=(
-                        "%(protocolName)s (on %(hostAddress)r) does not "
-                        "provide IFileDescriptorReceiver; closing file "
-                        "descriptor received (from %(peerAddress)r)."),
+                        "%(protocolName)s (on %(hostAddress)r) "
+                        "received unsupported ancillary data "
+                        "(level=%(cmsgLevel)r, type=%(cmsgType)r) "
+                        "from %(peerAddress)r."),
                     hostAddress=self.getHost(), peerAddress=self.getPeer(),
                     protocolName=self._getLogPrefix(self.protocol),
-                    )
-                for fd in fds:
-                    os.close(fd)
+                    cmsgLevel=cmsgLevel, cmsgType=cmsgType,
+                )
 
         return self._dataReceived(data)
 
+
+    def _ancillaryLevelSOLSOCKETTypeSCMRIGHTS(self, cmsgData):
+        """
+        Processes ancillary data with level SOL_SOCKET and type SCM_RIGHTS,
+        indicating that the ancillary data payload holds file descriptors.
+
+        Calls L{IFileDescriptorReceiver.fileDescriptorReceived} once for each
+        received file descriptor or logs a message if the protocol does not
+        implement L{IFileDescriptorReceiver}.
+
+        @param cmsgData: Ancillary data payload.
+        @type cmsgData: L{bytes}
+        """
+
+        fdCount = len(cmsgData) // 4
+        fds = struct.unpack('i'*fdCount, cmsgData)
+        if interfaces.IFileDescriptorReceiver.providedBy(self.protocol):
+            for fd in fds:
+                self.protocol.fileDescriptorReceived(fd)
+        else:
+            log.msg(
+                format=(
+                    "%(protocolName)s (on %(hostAddress)r) does not "
+                    "provide IFileDescriptorReceiver; closing file "
+                    "descriptor received (from %(peerAddress)r)."),
+                hostAddress=self.getHost(), peerAddress=self.getPeer(),
+                protocolName=self._getLogPrefix(self.protocol),
+            )
+            for fd in fds:
+                os.close(fd)
 
 
 class _UnsupportedSendmsgMixin(object):

@@ -101,7 +101,7 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = bytes(self)
+                self._str = str(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):

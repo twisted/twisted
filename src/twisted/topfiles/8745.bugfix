@@ -1,1 +1,0 @@
-trial --help-reactors will now display iocp and win32er reactors with Python 3.

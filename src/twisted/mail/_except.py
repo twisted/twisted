@@ -7,6 +7,8 @@ Exceptions in L{twisted.mail}.
 
 from __future__ import absolute_import, division
 
+from twisted.python.compat import _PY3, nativeString, networkString
+
 
 class IMAP4Exception(Exception):
     pass
@@ -134,16 +136,23 @@ class SMTPClientError(SMTPError):
         self.isFatal = isFatal
         self.retry = retry
 
+    if _PY3:
+        def __str__(self):
+            return nativeString(bytes(self))
+    else:
+        def __str__(self):
+            return self.__bytes__()
 
-    def __str__(self):
+
+    def __bytes__(self):
         if self.code > 0:
-            res = ["%.3d %s" % (self.code, self.resp)]
+            res = [networkString("%.3d %s" % (self.code, self.resp))]
         else:
             res = [self.resp]
         if self.log:
             res.append(self.log)
-            res.append('')
-        return '\n'.join(res)
+            res.append(b'')
+        return b'\n'.join(res)
 
 
 
