@@ -99,7 +99,7 @@ class CGITests(unittest.TestCase):
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
-        root.putChild("cgi", PythonScript(cgipath))
+        root.putChild(b"cgi", PythonScript(cgipath))
         site = server.Site(root)
         self.p = reactor.listenTCP(0, site)
         return self.p.getHost().port
@@ -129,7 +129,7 @@ class CGITests(unittest.TestCase):
 
 
     def _testCGI_1(self, res):
-        self.assertEqual(res, "cgi output" + os.linesep)
+        self.assertEqual(res, b"cgi output" + os.linesep.encode("ascii"))
 
 
     def test_protectedServerAndDate(self):
@@ -244,7 +244,7 @@ class CGITests(unittest.TestCase):
         self.addCleanup(log.removeObserver, addMessage)
 
         def checkResponse(ignored):
-            self.assertIn("ignoring malformed CGI header: 'XYZ'",
+            self.assertIn("ignoring malformed CGI header: " + repr(b'XYZ'),
                           loggedMessages)
 
         d.addCallback(checkResponse)
@@ -266,7 +266,9 @@ class CGITests(unittest.TestCase):
         return d
     testReadEmptyInput.timeout = 5
     def _testReadEmptyInput_1(self, res):
-        self.assertEqual(res, "readinput ok%s" % os.linesep)
+        expected = "readinput ok{}".format(os.linesep)
+        expected = expected.encode("ascii")
+        self.assertEqual(res, expected)
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -288,7 +290,9 @@ class CGITests(unittest.TestCase):
         return d
     testReadInput.timeout = 5
     def _testReadInput_1(self, res):
-        self.assertEqual(res, "readinput ok%s" % os.linesep)
+        expected = "readinput ok{}".format(os.linesep)
+        expected = expected.encode("ascii")
+        self.assertEqual(res, expected)
 
 
     def testReadAllInput(self):
@@ -310,7 +314,9 @@ class CGITests(unittest.TestCase):
         return d
     testReadAllInput.timeout = 5
     def _testReadAllInput_1(self, res):
-        self.assertEqual(res, "readallinput ok%s" % os.linesep)
+        expected = "readallinput ok{}".format(os.linesep)
+        expected = expected.encode("ascii")
+        self.assertEqual(res, expected)
 
 
     def test_useReactorArgument(self):
