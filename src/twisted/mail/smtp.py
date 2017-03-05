@@ -1039,7 +1039,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.toAddressesResult = []
         self.successAddresses = []
         self._okresponse = self.smtpState_toOrData
-        self._expected = range(0,1000)
+        self._expected = range(0, 1000)
         self.lastAddress = None
         return self.smtpState_toOrData(0, b'')
 
