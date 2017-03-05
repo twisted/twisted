@@ -120,7 +120,7 @@ class CGITests(unittest.TestCase):
         return cgiFilename
 
 
-    def testCGI(self):
+    def test_CGI(self):
         cgiFilename = self.writeCGI(DUMMY_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -255,7 +255,7 @@ class CGITests(unittest.TestCase):
         return d
 
 
-    def testReadEmptyInput(self):
+    def test_ReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
         with open(cgiFilename, 'wt') as cgiFile:
             cgiFile.write(READINPUT_CGI)
@@ -266,18 +266,18 @@ class CGITests(unittest.TestCase):
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
-        d.addCallback(self._testReadEmptyInput_1)
+        d.addCallback(self._test_ReadEmptyInput_1)
         return d
-    testReadEmptyInput.timeout = 5
+    test_ReadEmptyInput.timeout = 5
 
 
-    def _testReadEmptyInput_1(self, res):
+    def _test_ReadEmptyInput_1(self, res):
         expected = "readinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
 
-    def testReadInput(self):
+    def test_ReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
         with open(cgiFilename, 'wt') as cgiFile:
             cgiFile.write(READINPUT_CGI)
@@ -293,18 +293,18 @@ class CGITests(unittest.TestCase):
                 BytesIO(b"Here is your stdin")),
         )
         d.addCallback(client.readBody)
-        d.addCallback(self._testReadInput_1)
+        d.addCallback(self._test_ReadInput_1)
         return d
-    testReadInput.timeout = 5
+    test_ReadInput.timeout = 5
 
 
-    def _testReadInput_1(self, res):
+    def _test_ReadInput_1(self, res):
         expected = "readinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
 
-    def testReadAllInput(self):
+    def test_ReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
         with open(cgiFilename, 'wt') as cgiFile:
             cgiFile.write(READALLINPUT_CGI)
@@ -319,12 +319,12 @@ class CGITests(unittest.TestCase):
                 BytesIO(b"Here is your stdin")),
         )
         d.addCallback(client.readBody)
-        d.addCallback(self._testReadAllInput_1)
+        d.addCallback(self._test_ReadAllInput_1)
         return d
-    testReadAllInput.timeout = 5
+    test_ReadAllInput.timeout = 5
 
 
-    def _testReadAllInput_1(self, res):
+    def _test_ReadAllInput_1(self, res):
         expected = "readallinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
