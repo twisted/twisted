@@ -23,7 +23,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import (networkString, _PY3, xrange, items,
+from twisted.python.compat import (networkString, _PY3, range, items,
                                    bytesEnviron)
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
@@ -818,9 +818,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         if _PY3:
-            args.append("".join(map(chr, xrange(1,255))).encode("utf8"))
+            args.append("".join(map(chr, range(1,255))).encode("utf8"))
         else:
-            args.append("".join(map(chr, xrange(1,255))))
+            args.append("".join(map(chr, range(1,255))))
 
         reactor = self.buildReactor()
 

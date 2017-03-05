@@ -46,7 +46,7 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
-from twisted.python.compat import unicode, xrange
+from twisted.python.compat import unicode, range
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -867,7 +867,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         if prefix[0] != '(' and ')' not in prefix:
             raise ValueError('Malformed PREFIX parameter')
         modes, symbols = prefix.split(')', 1)
-        symbols = zip(symbols, xrange(len(symbols)))
+        symbols = zip(symbols, range(len(symbols)))
         modes = modes[1:]
         return dict(zip(modes, symbols))
 
@@ -1871,7 +1871,7 @@ class IRCClient(basic.LineReceiver):
             byValue = [(v, k) for (k, v) in self._pings.items()]
             byValue.sort()
             excess = self._MAX_PINGRING - len(self._pings)
-            for i in xrange(excess):
+            for i in range(excess):
                 del self._pings[byValue[i][1]]
 
 
@@ -3676,7 +3676,7 @@ def ctcpExtract(message):
     normal_messages[:] = filter(None, normal_messages)
 
     extended_messages[:] = map(ctcpDequote, extended_messages)
-    for i in xrange(len(extended_messages)):
+    for i in range(len(extended_messages)):
         m = extended_messages[i].split(SPC, 1)
         tag = m[0]
         if len(m) > 1:

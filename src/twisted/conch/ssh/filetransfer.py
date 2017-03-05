@@ -15,7 +15,7 @@ from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
 from twisted.python.compat import (
-    _PY3, xrange, itervalues, networkString, nativeString)
+    _PY3, range, itervalues, networkString, nativeString)
 
 
 
@@ -84,7 +84,7 @@ class FileTransferBase(protocol.Protocol):
         if flags & FILEXFER_ATTR_EXTENDED == FILEXFER_ATTR_EXTENDED:
             extended_count ,= struct.unpack('!L', data[:4])
             data = data[4:]
-            for i in xrange(extended_count):
+            for i in range(extended_count):
                 extended_type, data = getNS(data)
                 extended_data, data = getNS(data)
                 attrs['ext_%s' % nativeString(extended_type)] = extended_data
