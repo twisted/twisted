@@ -25,6 +25,11 @@ except ImportError:
 
 
 
+# The Twisted version in which UsernameHashedPassword is first deprecated.
+_uhpVersion = Version('Twisted', 17, 1, 0)
+
+
+
 class ITestable(Interface):
     """
     An interface for a theoretical protocol.
@@ -242,13 +247,12 @@ class OnDiskDatabaseTests(unittest.TestCase):
     def testRequestAvatarId_hashed(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
         creds = [UsernameHashedPassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
-
 
 
 class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
@@ -302,7 +306,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def testHashedCredentials(self):
         UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
         hashedCreds = [UsernameHashedPassword(
             u, self.hash(None, p, u[:2])) for u, p in self.users]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
@@ -459,5 +463,5 @@ class UsernameHashedPasswordTests(unittest.TestCase):
         self.getDeprecatedModuleAttribute(
             'twisted.cred.credentials',
             'UsernameHashedPassword',
-            Version('Twisted', 16, 3, 0),
+            _uhpVersion,
             'Use twisted.cred.credentials.UsernamePassword instead.')

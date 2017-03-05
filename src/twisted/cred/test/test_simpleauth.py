@@ -53,6 +53,10 @@ class UsernamePasswordTests(TestCase):
 
 
 
+_uhpVersion = Version('Twisted', 16, 3, 0)
+
+
+
 class UsernameHashedPasswordTests(TestCase):
     """
     Tests for L{UsernameHashedPassword}.
@@ -63,7 +67,7 @@ class UsernameHashedPasswordTests(TestCase):
         and C{hashed} on it.
         """
         UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
         creds = UsernameHashedPassword(b"foo", b"bar")
         self.assertEqual(creds.username, b"foo")
         self.assertEqual(creds.hashed, b"bar")
@@ -75,7 +79,7 @@ class UsernameHashedPasswordTests(TestCase):
         L{True} when the password given is the password on the object.
         """
         UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertTrue(creds.checkPassword(b"pass"))
 
@@ -86,7 +90,7 @@ class UsernameHashedPasswordTests(TestCase):
         L{False} when the password given is NOT the password on the object.
         """
         UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertFalse(creds.checkPassword(b"someotherpass"))
 
@@ -96,6 +100,6 @@ class UsernameHashedPasswordTests(TestCase):
         L{UsernameHashedPassword} implements L{IUsernameHashedPassword}.
         """
         UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            'twisted.cred.credentials', 'UsernameHashedPassword', _uhpVersion)
         self.assertTrue(
             IUsernameHashedPassword.implementedBy(UsernameHashedPassword))

@@ -450,7 +450,7 @@ class CramMD5Credentials(object):
 class UsernameHashedPassword:
 
     deprecatedModuleAttribute(
-        Version("Twisted", 16, 3, 0),
+        Version("Twisted", 17, 1, 0),
         "Use twisted.cred.credentials.UsernamePassword instead.",
         "twisted.cred.credentials", "UsernameHashedPassword")
 
