@@ -91,10 +91,9 @@ _EXTRA_OPTIONS = dict(
     tls=[
         'pyopenssl >= 16.0.0',
         'service_identity',
-        # idna 2.3 introduced some changes that break a few things.  Avoid it
-        # for the time being.  I expect we'll work around those changes and
-        # lift the < 2.3 restriction here shortly.
-        'idna >= 0.6, < 2.3',
+        # idna 2.3 introduced some changes that break a few things.  Avoid it.
+        # The problems were fixed in 2.4.
+        'idna >= 0.6, != 2.3',
     ],
     conch=[
         'pyasn1',
