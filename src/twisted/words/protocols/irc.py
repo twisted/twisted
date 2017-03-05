@@ -1870,7 +1870,7 @@ class IRCClient(basic.LineReceiver):
             # Remove some of the oldest entries.
             byValue = [(v, k) for (k, v) in self._pings.items()]
             byValue.sort()
-            excess = self._MAX_PINGRING - len(self._pings)
+            excess = len(self._pings) - self._MAX_PINGRING
             for i in range(excess):
                 del self._pings[byValue[i][1]]
 
