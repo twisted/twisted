@@ -45,7 +45,7 @@ print("cgi output")
 '''
 
 READINPUT_CGI = '''\
-# this is an example of a correctly-written CGI script which reads a body
+# This is an example of a correctly-written CGI script which reads a body
 # from stdin, which only reads env['CONTENT_LENGTH'] bytes.
 
 import os, sys
@@ -58,7 +58,7 @@ print("readinput ok")
 '''
 
 READALLINPUT_CGI = '''\
-# this is an example of the typical (incorrect) CGI script which expects
+# This is an example of the typical (incorrect) CGI script which expects
 # the server to close stdin when the body of the request is complete.
 # A correct CGI should only read env['CONTENT_LENGTH'] bytes.
 
@@ -88,6 +88,8 @@ print(json.dumps(vals))
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
 
+
+
 class CGITests(unittest.TestCase):
     """
     Tests for L{twcgi.FilteredScript}.
@@ -96,6 +98,7 @@ class CGITests(unittest.TestCase):
     if not interfaces.IReactorProcess.providedBy(reactor):
         skip = "CGI tests require a functional reactor.spawnProcess()"
 
+
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
@@ -103,6 +106,7 @@ class CGITests(unittest.TestCase):
         site = server.Site(root)
         self.p = reactor.listenTCP(0, site)
         return self.p.getHost().port
+
 
     def tearDown(self):
         if getattr(self, 'p', None):
@@ -205,8 +209,8 @@ class CGITests(unittest.TestCase):
 
     def test_duplicateHeaderCGI(self):
         """
-        If a CGI script emits two instances of the same header, both are sent in
-        the response.
+        If a CGI script emits two instances of the same header, both
+        are sent in the response.
         """
         cgiFilename = self.writeCGI(DUAL_HEADER_CGI)
 
@@ -265,10 +269,13 @@ class CGITests(unittest.TestCase):
         d.addCallback(self._testReadEmptyInput_1)
         return d
     testReadEmptyInput.timeout = 5
+
+
     def _testReadEmptyInput_1(self, res):
         expected = "readinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
+
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
@@ -289,6 +296,8 @@ class CGITests(unittest.TestCase):
         d.addCallback(self._testReadInput_1)
         return d
     testReadInput.timeout = 5
+
+
     def _testReadInput_1(self, res):
         expected = "readinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
@@ -313,6 +322,8 @@ class CGITests(unittest.TestCase):
         d.addCallback(self._testReadAllInput_1)
         return d
     testReadAllInput.timeout = 5
+
+
     def _testReadAllInput_1(self, res):
         expected = "readallinput ok{}".format(os.linesep)
         expected = expected.encode("ascii")
@@ -354,8 +365,8 @@ class CGIScriptTests(unittest.TestCase):
 
     def test_pathInfo(self):
         """
-        L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
-        the request path.
+        L{twcgi.CGIScript.render} sets the process environment
+        I{PATH_INFO} from the request path.
         """
         class FakeReactor:
             """
