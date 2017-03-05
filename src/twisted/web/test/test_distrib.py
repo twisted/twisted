@@ -89,8 +89,10 @@ class DistribTests(unittest.TestCase):
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        d = agent.request(b"GET", "http://127.0.0.1:%d/here/there" % \
-                          (self.port2.getHost().port,))
+        url = "http://127.0.0.1:{}/here/there".format(
+            self.port2.getHost().port)
+        url = url.encode("ascii")
+        d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
         d.addCallback(self.assertEqual, 'root')
         return d
@@ -139,6 +141,7 @@ class DistribTests(unittest.TestCase):
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
         url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        url = url.encode("ascii")
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)
         return d
@@ -159,8 +162,9 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        d = client.Agent(reactor).request(b"GET", "http://%s:%s/child" % (
-            mainAddr.host, mainAddr.port), **kwargs)
+        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = url.encode("ascii")
+        d = client.Agent(reactor).request(b"GET", url, **kwargs)
 
         def cbCollectBody(response):
             protocol = proto_helpers.AccumulatingProtocol()
@@ -428,7 +432,7 @@ class UserDirectoryTests(unittest.TestCase):
         # This really only works if it's a unix socket, but the implementation
         # doesn't currently check for that.  It probably should someday, and
         # then skip users with non-sockets.
-        web.child('.twistd-web-pb').setContent("")
+        web.child('.twistd-web-pb').setContent(b"")
 
         request = DummyRequest([''])
         result = _render(self.directory, request)
