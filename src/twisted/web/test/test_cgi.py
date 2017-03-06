@@ -197,7 +197,7 @@ class CGITests(unittest.TestCase):
         d = agent.request(b"GET", url, headers=headers)
 
         def checkResponse(response):
-            headers = json.loads(response)
+            headers = json.loads(response.decode("ascii"))
             self.assertEqual(
                 set(headers.keys()),
                 {"HTTP_HOST", "HTTP_CONNECTION", "HTTP_X_INNOCENT_HEADER"})
