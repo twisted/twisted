@@ -187,7 +187,7 @@ class DistribTests(unittest.TestCase):
             def render(self, request):
                 requestHeaders.update(dict(
                     request.requestHeaders.getAllRawHeaders()))
-                return ""
+                return b""
 
         request = self._requestTest(
             ReportRequestHeaders(), headers=Headers({'foo': ['bar']}))
@@ -278,7 +278,7 @@ class DistribTests(unittest.TestCase):
 
         self.sub = subscription = distrib.ResourceSubscription(
             "127.0.0.1", serverPort.getHost().port)
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         d = _render(subscription, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, 500)
