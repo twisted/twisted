@@ -192,7 +192,7 @@ class DistribTests(unittest.TestCase):
         request = self._requestTest(
             ReportRequestHeaders(), headers=Headers({'foo': ['bar']}))
         def cbRequested(result):
-            self.assertEqual(requestHeaders['Foo'], ['bar'])
+            self.assertEqual(requestHeaders[b'Foo'], [b'bar'])
         request.addCallback(cbRequested)
         return request
 
