@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.mail.test.test_mailmail -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -226,4 +227,3 @@ class OptionsTests(TestCase):
 
     if platformType == "win32":
         test_readConfig.skip = "win32 lacks support for getuid()"
-
