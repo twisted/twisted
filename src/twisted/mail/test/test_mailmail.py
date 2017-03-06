@@ -8,15 +8,15 @@ command line program I{mailmail}.
 
 import os
 import sys
-from StringIO import StringIO
 
 from twisted.copyright import version
-from twisted.trial.unittest import TestCase
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
+from twisted.python.compat import NativeStringIO
 from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial.unittest import TestCase
 
 
 class OptionsTests(TestCase):
@@ -25,7 +25,7 @@ class OptionsTests(TestCase):
     message text from stdin to produce an L{Options} instance which can be
     used to send a message.
     """
-    out = StringIO()
+    out = NativeStringIO()
     memoryReactor = MemoryReactor()
 
     def setUp(self):
@@ -52,11 +52,10 @@ class OptionsTests(TestCase):
         recipient header in the message text, L{parseOptions} raises
         L{SystemExit} with a string describing the problem.
         """
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
-        sys.stdin = StringIO(
+        self.patch(sys, 'stdin', NativeStringIO(
             'Subject: foo\n'
             '\n'
-            'Hello, goodbye.\n')
+            'Hello, goodbye.\n'))
         exc = self.assertRaises(SystemExit, parseOptions, [])
         self.assertEqual(exc.args, ('No recipients specified.',))
 
@@ -107,7 +106,7 @@ class OptionsTests(TestCase):
         The I{--version} option displays the version and raises
         L{SystemExit}.
         """
-        out = StringIO()
+        out = NativeStringIO()
         self.patch(sys, 'stdout', out)
         self.assertRaises(SystemExit, parseOptions, '--version')
         data = out.getvalue()
@@ -118,7 +117,7 @@ class OptionsTests(TestCase):
         """
         The I{-odb} flag specifies background delivery.
         """
-        stdin = StringIO('\n')
+        stdin = NativeStringIO('\n')
         self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odb")
         self.assertTrue(o.background)
@@ -128,7 +127,7 @@ class OptionsTests(TestCase):
         """
         The I{-odf} flags specifies foreground delivery.
         """
-        stdin = StringIO('\n')
+        stdin = NativeStringIO('\n')
         self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odf")
         self.assertFalse(o.background)
@@ -139,7 +138,7 @@ class OptionsTests(TestCase):
         The I{-t} flags specifies that recipients should be obtained
         from headers.
         """
-        stdin = StringIO(
+        stdin = NativeStringIO(
             'To: Curly <invaliduser2@example.com>\n'
             'Cc: Larry <invaliduser1@example.com>\n'
             'Bcc: Moe <invaliduser3@example.com>\n'
@@ -155,14 +154,14 @@ class OptionsTests(TestCase):
         The I{-F} flags specifies the From: value.
         """
         self.patch(sys, 'stderr', self.out)
-        stdin = StringIO(
+        stdin = NativeStringIO(
             'To: invaliduser2@example.com\n'
             'Subject: A wise guy?\n\n')
         self.patch(sys, 'stdin', stdin)
         o = parseOptions(["-F", "Larry <invaliduser1@example.com>", "-t"])
         self.assertEqual(o.sender, "Larry <invaliduser1@example.com>")
         # Test that -F flag is overridden by From: value in header
-        sys.stdin = StringIO(
+        sys.stdin = NativeStringIO(
             'To: Curly <invaliduser4@example.com>\n'
             'From: Shemp <invaliduser4@example.com>\n')
         o = parseOptions(["-F", "Groucho <invaliduser5@example.com>", "-t"])
@@ -177,7 +176,7 @@ class OptionsTests(TestCase):
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
         self.patch(sys, 'stderr', self.out)
         sys.argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
-        sys.stdin = StringIO('\n')
+        sys.stdin = NativeStringIO('\n')
         mailmail.run()
 
     if platformType == "win32":
@@ -212,7 +211,7 @@ class OptionsTests(TestCase):
 
         # Override LOCAL_CFG with the file we just created
         self.patch(mailmail, "LOCAL_CFG", filename)
-        stdin = StringIO('\n')
+        stdin = NativeStringIO('\n')
         self.patch(sys, 'stdin', stdin)
 
         argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
