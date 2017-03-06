@@ -78,7 +78,7 @@ class DistribTests(unittest.TestCase):
     def testDistrib(self):
         # site1 is the publisher
         r1 = resource.Resource()
-        r1.putChild(b"there", static.Data("root", "text/plain"))
+        r1.putChild(b"there", static.Data(b"root", "text/plain"))
         site1 = server.Site(r1)
         self.f1 = PBServerFactory(distrib.ResourcePublisher(site1))
         self.port1 = reactor.listenTCP(0, self.f1)
@@ -94,7 +94,7 @@ class DistribTests(unittest.TestCase):
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
-        d.addCallback(self.assertEqual, 'root')
+        d.addCallback(self.assertEqual, b'root')
         return d
 
 
@@ -243,12 +243,12 @@ class DistribTests(unittest.TestCase):
         """
         class LargeWrite(resource.Resource):
             def render(self, request):
-                request.write('x' * SIZE_LIMIT + 'y')
+                request.write(b'x' * SIZE_LIMIT + b'y')
                 request.finish()
                 return server.NOT_DONE_YET
 
         request = self._requestTest(LargeWrite())
-        request.addCallback(self.assertEqual, 'x' * SIZE_LIMIT + 'y')
+        request.addCallback(self.assertEqual, b'x' * SIZE_LIMIT + b'y')
         return request
 
 
@@ -259,10 +259,10 @@ class DistribTests(unittest.TestCase):
         """
         class LargeReturn(resource.Resource):
             def render(self, request):
-                return 'x' * SIZE_LIMIT + 'y'
+                return b'x' * SIZE_LIMIT + b'y'
 
         request = self._requestTest(LargeReturn())
-        request.addCallback(self.assertEqual, 'x' * SIZE_LIMIT + 'y')
+        request.addCallback(self.assertEqual, b'x' * SIZE_LIMIT + b'y')
         return request
 
 
