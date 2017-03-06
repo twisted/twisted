@@ -47,6 +47,7 @@ log = Logger(observer=logObserver)
 
 class Options:
     """
+
     @type to: C{list} of C{str}
     @ivar to: The addresses to which to deliver this message.
 
@@ -127,8 +128,9 @@ def parseOptions(argv):
     if '-om' in argv:
         raise _unsupportedOption
 
-    # -t causes us to pick the recipients of the message from the To, Cc, and Bcc
-    # headers, and to remove the Bcc header if present.
+    # -t causes us to pick the recipients of the message from
+    # the To, Cc, and Bcc headers, and to remove the Bcc header
+    # if present.
     if '-t' in argv:
         o.recipientsFromHeaders = True
         o.excludeAddresses = o.to
@@ -196,6 +198,7 @@ def parseOptions(argv):
 
 class Configuration:
     """
+
     @ivar allowUIDs: A list of UIDs which are allowed to send mail.
     @ivar allowGIDs: A list of GIDs which are allowed to send mail.
     @ivar denyUIDs: A list of UIDs which are not allowed to send mail.
@@ -226,7 +229,7 @@ class Configuration:
         self.allowGIDs = []
         self.denyGIDs = []
         self.useraccess = 'deny'
-        self.groupaccess= 'deny'
+        self.groupaccess = 'deny'
 
         self.identities = {}
         self.smarthost = None
@@ -329,7 +332,8 @@ def sendmail(host, options, ident):
 
 def senderror(failure, options):
     recipient = [options.sender]
-    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (sys.argv[0], smtp.DNSNAME)
+    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (
+             sys.argv[0], smtp.DNSNAME)
     error = NativeStringIO()
     failure.printTraceback(file=error)
     body = NativeStringIO(ERROR_FMT % error.getvalue())
