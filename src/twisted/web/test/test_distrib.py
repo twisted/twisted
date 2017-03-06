@@ -437,7 +437,7 @@ class UserDirectoryTests(unittest.TestCase):
         request = DummyRequest([''])
         result = _render(self.directory, request)
         def cbRendered(ignored):
-            document = parseString(''.join(request.written))
+            document = parseString(b''.join(request.written))
 
             # Each user should have an li with a link to their page.
             [alice, bob] = document.getElementsByTagName('li')
