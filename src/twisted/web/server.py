@@ -579,9 +579,9 @@ class _GzipEncoder(object):
 
 class _RemoteProducerWrapper:
     def __init__(self, remote):
-        self.resumeProducing = remote.remoteMethod("resumeProducing")
-        self.pauseProducing = remote.remoteMethod("pauseProducing")
-        self.stopProducing = remote.remoteMethod("stopProducing")
+        self.resumeProducing = remote.remoteMethod(b"resumeProducing")
+        self.pauseProducing = remote.remoteMethod(b"pauseProducing")
+        self.stopProducing = remote.remoteMethod(b"stopProducing")
 
 
 
