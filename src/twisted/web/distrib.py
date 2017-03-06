@@ -17,7 +17,7 @@ except ImportError:
     pwd = None
 from io import BytesIO
 
-from xml.dom.minidom import Element, Text
+from xml.dom.minidom import getDOMImplementation
 
 # Twisted Imports
 from twisted.spread import pb
@@ -331,17 +331,21 @@ class UserDirectory(resource.Resource):
         Render as HTML a listing of all known users with links to their
         personal resources.
         """
-        listing = Element('ul')
+
+        domImpl = getDOMImplementation()
+        newDoc = domImpl.createDocument(None, "ul", None)
+        listing = newDoc.documentElement
         for link, text in self._users():
-            linkElement = Element('a')
+            linkElement = newDoc.createElement('a')
             linkElement.setAttribute('href', link + '/')
-            textNode = Text()
-            textNode.data = text
+            textNode = newDoc.createTextNode(text)
             linkElement.appendChild(textNode)
-            item = Element('li')
+            item = newDoc.createElement('li')
             item.appendChild(linkElement)
             listing.appendChild(item)
-        return self.template % {'users': listing.toxml()}
+
+        htmlDoc = self.template % ({'users': listing.toxml()})
+        return htmlDoc.encode("utf-8")
 
 
     def getChild(self, name, request):
