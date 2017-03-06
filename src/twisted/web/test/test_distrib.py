@@ -78,14 +78,14 @@ class DistribTests(unittest.TestCase):
     def testDistrib(self):
         # site1 is the publisher
         r1 = resource.Resource()
-        r1.putChild("there", static.Data("root", "text/plain"))
+        r1.putChild(b"there", static.Data("root", "text/plain"))
         site1 = server.Site(r1)
         self.f1 = PBServerFactory(distrib.ResourcePublisher(site1))
         self.port1 = reactor.listenTCP(0, self.f1)
         self.sub = distrib.ResourceSubscription("127.0.0.1",
                                                 self.port1.getHost().port)
         r2 = resource.Resource()
-        r2.putChild("here", self.sub)
+        r2.putChild(b"here", self.sub)
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
@@ -108,7 +108,7 @@ class DistribTests(unittest.TestCase):
             the created site.
         """
         distribRoot = resource.Resource()
-        distribRoot.putChild("child", child)
+        distribRoot.putChild(b"child", child)
         distribSite = server.Site(distribRoot)
         self.f1 = distribFactory = PBServerFactory(
             distrib.ResourcePublisher(distribSite))
@@ -209,9 +209,9 @@ class DistribTests(unittest.TestCase):
 
         request = self._requestAgentTest(SetResponseCode())
         def cbRequested(result):
-            self.assertEqual(result[0].data, "")
+            self.assertEqual(result[0].data, b"")
             self.assertEqual(result[1].code, 200)
-            self.assertEqual(result[1].phrase, "OK")
+            self.assertEqual(result[1].phrase, b"OK")
         request.addCallback(cbRequested)
         return request
 
@@ -223,14 +223,14 @@ class DistribTests(unittest.TestCase):
         """
         class SetResponseCode(resource.Resource):
             def render(self, request):
-                request.setResponseCode(200, "some-message")
+                request.setResponseCode(200, b"some-message")
                 return ""
 
         request = self._requestAgentTest(SetResponseCode())
         def cbRequested(result):
-            self.assertEqual(result[0].data, "")
+            self.assertEqual(result[0].data, b"")
             self.assertEqual(result[1].code, 200)
-            self.assertEqual(result[1].phrase, "some-message")
+            self.assertEqual(result[1].phrase, b"some-message")
         request.addCallback(cbRequested)
         return request
 
