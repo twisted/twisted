@@ -280,7 +280,9 @@ def loadConfig(path):
                         else:
                             L.append(sectionID)
             order = p.get(section, 'order')
-            order = map(str.split, map(str.lower, order.split(',')))
+            order = [s.split()
+                     for s in [s.lower()
+                               for s in order.split(',')]]
             if order[0] == 'allow':
                 setattr(c, section, 'allow')
             else:
