@@ -288,22 +288,22 @@ class DistribTests(unittest.TestCase):
             self.assertEqual(len(errors), 1)
             # The error page is rendered as HTML.
             expected = [
-                '',
-                '<html>',
-                '  <head><title>500 - Server Connection Lost</title></head>',
-                '  <body>',
-                '    <h1>Server Connection Lost</h1>',
-                '    <p>Connection to distributed server lost:'
-                    '<pre>'
-                    '[Failure instance: Traceback from remote host -- '
-                'twisted.spread.flavors.NoSuchMethod: '
-                    'No such method: remote_request',
-                ']</pre></p>',
-                '  </body>',
-                '</html>',
-                ''
+                b'',
+                b'<html>',
+                b'  <head><title>500 - Server Connection Lost</title></head>',
+                b'  <body>',
+                b'    <h1>Server Connection Lost</h1>',
+                b'    <p>Connection to distributed server lost:'
+                    b'<pre>'
+                    b'[Failure instance: Traceback from remote host -- '
+                b'twisted.spread.flavors.NoSuchMethod: '
+                    b'No such method: remote_request',
+                b']</pre></p>',
+                b'  </body>',
+                b'</html>',
+                b''
                 ]
-            self.assertEqual(['\n'.join(expected)], request.written)
+            self.assertEqual([b'\n'.join(expected)], request.written)
 
         d.addCallback(cbRendered)
         return d
