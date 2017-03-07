@@ -16,6 +16,7 @@ import logging
 import warnings
 import calendar
 from io import IOBase
+from imp import reload
 
 from twisted.trial import unittest
 
