@@ -71,12 +71,9 @@ class Persistent:
             finalname = "%s.%s" % (self.name, ext)
         return finalname, filename
 
-    def _saveTemp(self, filename, passphrase, dumpFunc):
+    def _saveTemp(self, filename, dumpFunc):
         with open(filename, 'wb') as f:
-            if passphrase is None:
-                dumpFunc(self.original, f)
-            else:
-                raise TypeError("passphrase must be None")
+            dumpFunc(self.original, f)
 
     def _getStyle(self):
         if self.style == "source":
@@ -96,11 +93,12 @@ class Persistent:
         @type passphrase: string
         """
         ext, dumpFunc = self._getStyle()
-        if passphrase:
+        if passphrase is not None:
+            raise TypeError("passphrase must be None")
             ext = 'e' + ext
         finalname, filename = self._getFilename(filename, ext, tag)
         log.msg("Saving "+self.name+" application to "+finalname+"...")
-        self._saveTemp(filename, passphrase, dumpFunc)
+        self._saveTemp(filename, dumpFunc)
         if runtime.platformType == "win32" and os.path.isfile(finalname):
             os.remove(finalname)
         os.rename(filename, finalname)
@@ -177,15 +175,13 @@ def loadValueFromFile(filename, variable, passphrase=None):
     @param variable: string
     @param passphrase: string
     """
-    if passphrase:
-        mode = 'rb'
+    if passphrase is not None:
+        raise TypeError("passphrase must be None")
     else:
         mode = 'r'
     with open(filename, mode) as fileObj:
         data = fileObj.read()
     d = {'__file__': filename}
-    if passphrase:
-        raise TypeError("passphrase must be None")
     codeObj = compile(data, filename, "exec")
     eval(codeObj, d, d)
     value = d[variable]
