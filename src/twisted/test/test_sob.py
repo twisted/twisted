@@ -11,8 +11,6 @@ from textwrap import dedent
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
-from twisted.python.filepath import FilePath
-from twisted.python.reflect import namedAny, ObjectNotFound
 from twisted.persisted.styles import Ephemeral
 
 
