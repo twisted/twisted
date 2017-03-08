@@ -51,6 +51,15 @@ class PersistTests(unittest.TestCase):
             self.assertEqual(sob.IPersistable(o1).style, style)
 
 
+    def testPassphraseError(self):
+        """
+        Calling save() with a passphrase is an error.
+        """
+        p = sob.Persistant(None, 'object')
+        self.assertRaises(
+            TypeError, p.save, 'filename.pickle', passphrase='abc')
+
+
     def testNames(self):
         o = [1,2,3]
         p = sob.Persistent(o, 'object')
