@@ -128,24 +128,21 @@ class _EverythingEphemeral(styles.Ephemeral):
                 return styles.Ephemeral()
 
 
-def load(filename, style, passphrase=None):
+def load(filename, style):
     """Load an object from a file.
 
     Deserialize an object from a file. The file can be encrypted.
 
     @param filename: string
     @param style: string (one of 'pickle' or 'source')
-    @param passphrase: string
     """
     mode = 'r'
     if style=='source':
         from twisted.persisted.aot import unjellyFromSource as _load
     else:
         _load, mode = pickle.load, 'rb'
-    if passphrase:
-        raise TypeError("passphrase must be None")
-    else:
-        fp = open(filename, mode)
+
+    fp = open(filename, mode)
     ee = _EverythingEphemeral(sys.modules['__main__'])
     sys.modules['__main__'] = ee
     ee.initRun = 1
@@ -164,22 +161,16 @@ def load(filename, style, passphrase=None):
     return value
 
 
-def loadValueFromFile(filename, variable, passphrase=None):
+def loadValueFromFile(filename, variable):
     """Load the value of a variable in a Python file.
 
-    Run the contents of the file, after decrypting if C{passphrase} is
-    given, in a namespace and return the result of the variable
-    named C{variable}.
+    Run the contents of the file in a namespace and return the result of the
+    variable named C{variable}.
 
     @param filename: string
     @param variable: string
-    @param passphrase: string
     """
-    if passphrase is not None:
-        raise TypeError("passphrase must be None")
-    else:
-        mode = 'r'
-    with open(filename, mode) as fileObj:
+    with open(filename, 'r') as fileObj:
         data = fileObj.read()
     d = {'__file__': filename}
     codeObj = compile(data, filename, "exec")
