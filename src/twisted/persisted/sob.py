@@ -25,33 +25,6 @@ from twisted.python import log, runtime
 from twisted.persisted import styles
 from zope.interface import implementer, Interface
 
-# Note:
-# These encrypt/decrypt functions only work for data formats
-# which are immune to having spaces tucked at the end.
-# All data formats which persist saves hold that condition.
-def _encrypt(passphrase, data):
-    from Crypto.Cipher import AES as cipher
-
-    warnings.warn(
-        'Saving encrypted persisted data is deprecated since Twisted 15.5.0',
-        DeprecationWarning, stacklevel=2)
-
-    leftover = len(data) % cipher.block_size
-    if leftover:
-        data += b' ' * (cipher.block_size - leftover)
-    return cipher.new(md5(passphrase).digest()[:16]).encrypt(data)
-
-
-
-def _decrypt(passphrase, data):
-    from Crypto.Cipher import AES
-
-    warnings.warn(
-        'Loading encrypted persisted data is deprecated since Twisted 15.5.0',
-        DeprecationWarning, stacklevel=2)
-
-    return AES.new(md5(passphrase).digest()[:16]).decrypt(data)
-
 
 
 class IPersistable(Interface):
@@ -106,9 +79,7 @@ class Persistent:
             if passphrase is None:
                 dumpFunc(self.original, f)
             else:
-                s = BytesIO()
-                dumpFunc(self.original, s)
-                f.write(_encrypt(passphrase, s.getvalue()))
+                raise TypeError("passphrase must be None")
 
     def _getStyle(self):
         if self.style == "source":
@@ -177,8 +148,7 @@ def load(filename, style, passphrase=None):
     else:
         _load, mode = pickle.load, 'rb'
     if passphrase:
-        with open(filename, 'rb') as loadedFile:
-            fp = BytesIO(_decrypt(passphrase, loadedFile.read()))
+        raise TypeError("passphrase must be None")
     else:
         fp = open(filename, mode)
     ee = _EverythingEphemeral(sys.modules['__main__'])
@@ -218,7 +188,7 @@ def loadValueFromFile(filename, variable, passphrase=None):
         data = fileObj.read()
     d = {'__file__': filename}
     if passphrase:
-        data = _decrypt(passphrase, data)
+        raise TypeError("passphrase must be None")
     codeObj = compile(data, filename, "exec")
     eval(codeObj, d, d)
     value = d[variable]
