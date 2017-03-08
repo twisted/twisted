@@ -20,7 +20,6 @@ try:
 except ImportError:
     import pickle
 from io import BytesIO
-from hashlib import md5
 from twisted.python import log, runtime
 from twisted.persisted import styles
 from zope.interface import implementer, Interface
