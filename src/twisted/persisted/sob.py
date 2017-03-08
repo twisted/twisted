@@ -13,13 +13,11 @@ from __future__ import division, absolute_import
 
 import os
 import sys
-import warnings
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
-from io import BytesIO
 from twisted.python import log, runtime
 from twisted.persisted import styles
 from zope.interface import implementer, Interface
