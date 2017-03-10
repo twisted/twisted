@@ -338,7 +338,7 @@ class HistoricRecvLine(RecvLine):
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
-            self.historyLines.append(self.lineBuffer)
+            self.historyLines.append(b''.join(self.lineBuffer))
         if self.historyPosition > 0:
             self.handle_HOME()
             self.terminal.eraseToLineEnd()

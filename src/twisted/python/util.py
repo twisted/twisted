@@ -449,7 +449,7 @@ class LineLog:
         """
         if size < 0:
             size = 0
-        self.log = [None]*size
+        self.log = [None] * size
         self.size = size
 
 
@@ -462,18 +462,26 @@ class LineLog:
 
 
     def str(self):
-        return '\n'.join(filter(None,self.log))
+        return bytes(self)
+
+    if not _PY3:
+        def __str__(self):
+            return self.__bytes__()
+
+
+    def __bytes__(self):
+        return b'\n'.join(filter(None, self.log))
 
 
     def __getitem__(self, item):
-        return filter(None,self.log)[item]
+        return filter(None, self.log)[item]
 
 
     def clear(self):
         """
-        Empty the log
+        Empty the log.
         """
-        self.log = [None]*self.size
+        self.log = [None] * self.size
 
 
 

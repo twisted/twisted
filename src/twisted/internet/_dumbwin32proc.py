@@ -209,8 +209,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
+            flags = win32con.CREATE_NO_WINDOW
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
-                command, cmdline, None, None, 1, 0, env, path, StartupInfo)
+                command, cmdline, None, None, 1, flags, env, path, StartupInfo)
         try:
             try:
                 doCreate()

@@ -32,7 +32,7 @@ This means that if you start a thread and call a Twisted method, you might get c
 So don't do it.
 
 The right way to call methods on the reactor from another thread, and therefore any objects which might call methods on the reactor, is to give a function to the reactor to execute within its own thread.
-This can be done using the function :api:`twisted.internet.interfaces.IReactorThreads.callFromThread <callFromThread>`::
+This can be done using the function :api:`twisted.internet.interfaces.IReactorFromThreads.callFromThread <callFromThread>`::
 
     from twisted.internet import reactor
     def notThreadSafe(someProtocol, message):
@@ -53,7 +53,7 @@ Running Code In Threads
 -----------------------
 
 Sometimes we may want to run code in a non-reactor thread, to avoid blocking the reactor.
-Twisted provides an API for doing so, the :api:`twisted.internet.interfaces.IReactorThreads.callInThread <callInThread>` method on the reactor.
+Twisted provides an API for doing so, the :api:`twisted.internet.interfaces.IReactorInThreads.callInThread <callInThread>` method on the reactor.
 
 For example, to run a method in a non-reactor thread we can do::
 

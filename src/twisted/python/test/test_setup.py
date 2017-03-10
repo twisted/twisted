@@ -128,7 +128,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6', deps)
+        self.assertIn('idna >= 0.6, != 2.3', deps)
 
 
     def test_extrasRequiresConchDeps(self):
@@ -184,7 +184,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6', deps)
+        self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -203,7 +203,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['osx_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6', deps)
+        self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
@@ -222,7 +222,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
-        self.assertIn('idna >= 0.6', deps)
+        self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
