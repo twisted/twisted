@@ -655,7 +655,7 @@ class _SimpleHostnameResolver(object):
     An L{IHostnameResolver} provider that invokes a provided callable
     to resolve hostnames.
 
-    @ivar _nameResolution: the callable L{resolvedHost} invokes to
+    @ivar _nameResolution: the callable L{resolveHostName} invokes to
         resolve hostnames.
     @type _nameResolution: A L{callable} with the same signature as
     """
