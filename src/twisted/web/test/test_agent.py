@@ -906,7 +906,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         reactor = MemoryReactorClock()
         self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
 
-        client.Agent(reactor).request("GET", "http://example.com")
+        client.Agent(reactor).request(b"GET", b"http://example.com")
 
         assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
 
@@ -926,11 +926,11 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         reactor = MemoryReactorClock()
         self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
 
-        assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
-
         self.assertFailure(
-            client.Agent(reactor).request("GET", "unsupported://example.com"),
+            client.Agent(reactor).request(b"GET", b"mailto:alice@example.com"),
             SchemeNotSupported)
+
+        assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
 
 
     def test_defaultPool(self):
@@ -1374,7 +1374,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         reactor = MemoryReactorClock()
         self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
 
-        client.Agent(reactor).request("GET", "https://example.com")
+        client.Agent(reactor).request(b"GET", u"https://example.com")
 
         assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
 
