@@ -22,7 +22,7 @@ except ImportError:
 
 from zope.interface import implementer
 
-from twisted.internet import interfaces, abstract, base
+from twisted.internet import interfaces, base
 from twisted.internet.address import UNIXAddress
 from twisted.internet.defer import Deferred, fail, gatherResults
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
@@ -248,11 +248,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         L{IReactorUNIX.listenUNIX} raises L{CannotListenError} if the
         underlying port's createInternetSocket raises a socket error.
         """
-        class FakeBasePort(abstract.FileDescriptor):
-            def createInternetSocket(self):
-                raise error('FakeBasePort forced socket.error')
+        def raiseSocketError(self):
+            raise error('FakeBasePort forced socket.error')
 
-        self.patch(base, "BasePort", FakeBasePort)
+        self.patch(base.BasePort, "createInternetSocket", raiseSocketError)
         reactor = self.buildReactor()
         with self.assertRaises(CannotListenError):
             reactor.listenUNIX('not-used', ServerFactory())
