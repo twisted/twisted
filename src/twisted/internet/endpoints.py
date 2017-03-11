@@ -897,12 +897,6 @@ class HostnameEndpoint(object):
                 ValueError("invalid hostname: {}".format(self._hostStr))
             )
 
-        return self._connectWithNameResolver(
-            self._nameResolver, protocolFactory,
-        )
-
-
-    def _connectWithNameResolver(self, nameResolver, protocolFactory):
         d = Deferred()
         addresses = []
         @provider(IResolutionReceiver)
@@ -916,7 +910,8 @@ class HostnameEndpoint(object):
             @staticmethod
             def resolutionComplete():
                 d.callback(addresses)
-        nameResolver.resolveHostName(
+
+        self._nameResolver.resolveHostName(
             EndpointReceiver, self._hostText, portNumber=self._port
         )
 
@@ -1023,8 +1018,15 @@ class HostnameEndpoint(object):
 
     def _nameResolution(self, host, port):
         """
-        Resolve the hostname string into a tuple containig the host
+        Resolve the hostname string into a tuple containing the host
         address.
+
+        @param host: A unicode hostname to resolve.
+
+        @param port: The port to include in the resolution.
+
+        @return: A L{Deferred} that fires with L{_getaddrinfo}'s
+            return value.
         """
         return self._deferToThread(self._getaddrinfo, host, port, 0,
                 socket.SOCK_STREAM)
