@@ -1374,7 +1374,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         reactor = MemoryReactorClock()
         self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
 
-        client.Agent(reactor).request(b"GET", u"https://example.com")
+        client.Agent(reactor).request(b"GET", b"https://example.com")
 
         assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
 
