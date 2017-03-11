@@ -15,9 +15,11 @@ except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
 from zope.interface import provider
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
                                    intToBytes, NativeStringIO)
+from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -30,6 +32,41 @@ from twisted.protocols import loopback
 from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
 from twisted.test.test_internet import DummyProducer
 from twisted.web.test.requesthelper import DummyChannel
+
+from zope.interface import directlyProvides, providedBy
+
+
+
+class _IDeprecatedHTTPChannelToRequestInterfaceProxy(proxyForInterface(
+        http._IDeprecatedHTTPChannelToRequestInterface)):
+    """
+    Proxy L{_IDeprecatedHTTPChannelToRequestInterface}.  Used to
+    assert that the interface matches what L{HTTPChannel} expects.
+    """
+
+
+
+def _makeRequestProxyFactory(clsToWrap):
+    """
+    Return a callable that proxies instances of C{clsToWrap} via
+        L{_IDeprecatedHTTPChannelToRequestInterface}.
+
+    @param clsToWrap: The class whose instances will be proxied.
+    @type cls: L{_IDeprecatedHTTPChannelToRequestInterface}
+        implementer.
+
+    @return: A factory that returns
+        L{_IDeprecatedHTTPChannelToRequestInterface} proxies.
+    @rtype: L{callable} whose interface matches C{clsToWrap}'s constructor.
+    """
+
+    def _makeRequestProxy(*args, **kwargs):
+        instance = clsToWrap(*args, **kwargs)
+        return _IDeprecatedHTTPChannelToRequestInterfaceProxy(instance)
+
+    # For INonQueuedRequestFactory
+    directlyProvides(_makeRequestProxy, providedBy(clsToWrap))
+    return _makeRequestProxy
 
 
 
@@ -44,6 +81,10 @@ class DummyPullProducerHandler(http.Request):
         self._actualProducer = NonStreamingProducer(self)
         self.setResponseCode(200)
         self.registerProducer(self._actualProducer, False)
+
+
+DummyPullProducerHandlerProxy = _makeRequestProxyFactory(
+    DummyPullProducerHandler)
 
 
 
@@ -77,6 +118,7 @@ class DateTimeTests(unittest.TestCase):
             calendar.timegm((2016, 9, 29, 17, 15, 29, 3, 273, 0)))
 
 
+
 class DummyHTTPHandler(http.Request):
 
     def process(self):
@@ -95,6 +137,8 @@ class DummyHTTPHandler(http.Request):
         self.finish()
 
 
+DummyHTTPHandlerProxy = _makeRequestProxyFactory(DummyHTTPHandler)
+
 
 @provider(iweb.INonQueuedRequestFactory)
 class DummyNewHTTPHandler(DummyHTTPHandler):
@@ -106,6 +150,8 @@ class DummyNewHTTPHandler(DummyHTTPHandler):
     def __init__(self, channel):
         DummyHTTPHandler.__init__(self, channel)
 
+
+DummyNewHTTPHandlerProxy = _makeRequestProxyFactory(DummyNewHTTPHandler)
 
 
 class DelayedHTTPHandler(DummyHTTPHandler):
@@ -119,6 +165,8 @@ class DelayedHTTPHandler(DummyHTTPHandler):
     def delayedProcess(self):
         DummyHTTPHandler.process(self)
 
+
+DelayedHTTPHandlerProxy = _makeRequestProxyFactory(DelayedHTTPHandler)
 
 
 class LoopbackHTTPClient(http.HTTPClient):
@@ -212,7 +260,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         """
         b = StringTransport()
         a = http.HTTPChannel()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
         a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
@@ -353,7 +401,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         """
         b = StringTransport()
         a = http.HTTPChannel()
-        a.requestFactory = DummyNewHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
         a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
@@ -369,7 +417,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         """
         b = StringTransport()
         a = http.HTTPChannel()
-        a.requestFactory = DelayedHTTPHandler
+        a.requestFactory = DelayedHTTPHandlerProxy
         a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
@@ -383,7 +431,8 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         # Now, process each request one at a time.
         while a.requests:
             self.assertEqual(1, len(a.requests))
-            a.requests[0].delayedProcess()
+            request = a.requests[0].original
+            request.delayedProcess()
 
         value = b.value()
         self.assertResponseEquals(value, self.expected_response)
@@ -506,7 +555,7 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         """
         b = StringTransport()
         a = http.HTTPChannel()
-        a.requestFactory = DelayedHTTPHandler
+        a.requestFactory = DelayedHTTPHandlerProxy
         a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
@@ -520,7 +569,8 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         # Now, process each request one at a time.
         while a.requests:
             self.assertEqual(1, len(a.requests))
-            a.requests[0].delayedProcess()
+            request = a.requests[0].original
+            request.delayedProcess()
 
         value = b.value()
         self.assertResponseEquals(value, self.expectedResponses)
@@ -531,6 +581,7 @@ class ShutdownTests(unittest.TestCase):
     """
     Tests that connections can be shut down by L{http.Request} objects.
     """
+
     class ShutdownHTTPHandler(http.Request):
         """
         A HTTP handler that just immediately calls loseConnection.
@@ -554,7 +605,7 @@ class ShutdownTests(unittest.TestCase):
         """
         b = StringTransport()
         a = http.HTTPChannel()
-        a.requestFactory = self.ShutdownHTTPHandler
+        a.requestFactory = _makeRequestProxyFactory(self.ShutdownHTTPHandler)
         a.makeConnection(b)
         a.dataReceived(self.request)
 
@@ -633,7 +684,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         negotiated protocol string.
         """
         a = http._genericHTTPChannelProtocolFactory(b'')
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
         a.makeConnection(t)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
@@ -735,7 +786,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         transport.negotiatedProtocol = b'h2'
 
         genericProtocol = http._genericHTTPChannelProtocolFactory(b'')
-        genericProtocol.requestFactory = DummyHTTPHandler
+        genericProtocol.requestFactory = DummyHTTPHandlerProxy
         genericProtocol.makeConnection(transport)
 
         # We expect the transport has a underlying channel registered as
@@ -782,7 +833,7 @@ class HTTPLoopbackTests(unittest.TestCase):
 
     def testLoopback(self):
         server = http.HTTPChannel()
-        server.requestFactory = DummyHTTPHandler
+        server.requestFactory = DummyHTTPHandlerProxy
         client = LoopbackHTTPClient()
         client.handleResponse = self._handleResponse
         client.handleHeader = self._handleHeader
@@ -1224,7 +1275,7 @@ class ParsingTests(unittest.TestCase):
             channel = http.HTTPChannel()
 
         if requestFactory:
-            channel.requestFactory = requestFactory
+            channel.requestFactory = _makeRequestProxyFactory(requestFactory)
 
         httpRequest = httpRequest.replace(b"\n", b"\r\n")
         transport = StringTransport()
@@ -2819,6 +2870,72 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(trans.producerState, 'producing')
 
 
+    def test_provides_IDeprecatedHTTPChannelToRequestInterface(self):
+        """
+        L{http.Request} provides
+        L{http._IDeprecatedHTTPChannelToRequestInterface}, which
+        defines the interface used by L{http.HTTPChannel}.
+        """
+        req = http.Request(DummyChannel(), False)
+        verifyObject(http._IDeprecatedHTTPChannelToRequestInterface, req)
+
+
+    def test_eq(self):
+        """
+        A L{http.Request} is equal to itself.
+        """
+        req = http.Request(DummyChannel(), False)
+        self.assertEqual(req, req)
+
+
+    def test_ne(self):
+        """
+        A L{http.Request} is not equal to another object.
+        """
+        req = http.Request(DummyChannel(), False)
+        self.assertNotEqual(req, http.Request(DummyChannel(), False))
+
+
+    def test_eqWithNonRequest(self):
+        """
+        A L{http.Request} on the left hand side of an equality
+        comparison to an instance that is not a L{http.Request} hands
+        the comparison off to that object's C{__eq__} implementation.
+        """
+        eqCalls = []
+
+        class _NotARequest(object):
+
+            def __eq__(self, other):
+                eqCalls.append(other)
+                return True
+
+        req = http.Request(DummyChannel(), False)
+
+        self.assertEqual(req, _NotARequest())
+        self.assertEqual(eqCalls, [req])
+
+
+    def test_neWithNonRequest(self):
+        """
+        A L{http.Request} on the left hand side of an inequality
+        comparison to an instance that is not a L{http.Request} hands
+        the comparison off to that object's C{__ne__} implementation.
+        """
+        eqCalls = []
+
+        class _NotARequest(object):
+
+            def __ne__(self, other):
+                eqCalls.append(other)
+                return True
+
+        req = http.Request(DummyChannel(), False)
+
+        self.assertNotEqual(req, _NotARequest())
+        self.assertEqual(eqCalls, [req])
+
+
 
 class MultilineHeadersTests(unittest.TestCase):
     """
@@ -2949,7 +3066,7 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
         """
         transport = StringTransport()
         channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
+        channel.requestFactory = DummyHTTPHandlerProxy
         channel.makeConnection(transport)
         channel.dataReceived(b"GET / HTTP/1.0\r\n")
         channel.dataReceived(b"Host: www.example.com\r\n")
@@ -2977,7 +3094,7 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
         """
         transport = StringTransport()
         channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
+        channel.requestFactory = DummyHTTPHandlerProxy
         channel.makeConnection(transport)
         channel.dataReceived(b"GET / HTTP/1.1\r\n")
         channel.dataReceived(b"Host: www.example.com\r\n")
@@ -3094,7 +3211,7 @@ class ChannelProductionTests(unittest.TestCase):
         """
         transport = transport
         channel = http.HTTPChannel()
-        channel.requestFactory = requestFactory
+        channel.requestFactory = _makeRequestProxyFactory(requestFactory)
         channel.makeConnection(transport)
 
         return channel, transport
@@ -3178,7 +3295,7 @@ class ChannelProductionTests(unittest.TestCase):
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
-        request = channel.requests[0]
+        request = channel.requests[0].original
 
         # Register a dummy producer.
         producer = DummyProducer()
@@ -3226,7 +3343,7 @@ class ChannelProductionTests(unittest.TestCase):
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
-        request = channel.requests[0]
+        request = channel.requests[0].original
 
         # Register a dummy producer.
         producer = DummyProducer()
@@ -3267,7 +3384,7 @@ class ChannelProductionTests(unittest.TestCase):
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
-        request = channel.requests[0]
+        request = channel.requests[0].original
 
         # Register a dummy producer.
         producer = DummyProducer()
@@ -3349,11 +3466,12 @@ class ChannelProductionTests(unittest.TestCase):
         )
         transport = StringTransport()
         channel = http.HTTPChannel()
-        channel.requestFactory = DummyPullProducerHandler
+        channel.requestFactory = DummyPullProducerHandlerProxy
         channel.makeConnection(transport)
 
         channel.dataReceived(self.request)
-        responseComplete = channel.requests[0]._actualProducer.result
+        request = channel.requests[0].original
+        responseComplete = request._actualProducer.result
 
         def validate(ign):
             responseBody = transport.value().split(b'\r\n\r\n', 1)[1]

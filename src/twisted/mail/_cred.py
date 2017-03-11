@@ -112,7 +112,6 @@ class PLAINCredentials(credentials.UsernamePassword):
         return False
 
 
-
 __all__ = [
     "CramMD5ClientAuthenticator",
     "LOGINCredentials", "LOGINAuthenticator",

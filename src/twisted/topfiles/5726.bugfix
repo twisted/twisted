@@ -1,0 +1,1 @@
+spawnProcess no longer opens an unwanted console on Windows

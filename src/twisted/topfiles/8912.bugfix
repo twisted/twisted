@@ -1,0 +1,1 @@
+UNIX socket endpoints now process all messages from recvmsg's ancillary data via twisted.internet.unix.Server.doRead/twisted.internet.unix.Client.doRead, while discarding and logging ones that don't contain file descriptors.
