@@ -1510,7 +1510,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         WebClientContextFactory} to do it.
         """
         def warnMe():
-            client.Agent(MemoryReactorClock(),
+            client.Agent(deterministicResolvingReactor(MemoryReactorClock()),
                          "does-not-provide-IPolicyForHTTPS")
         warnMe()
         warnings = self.flushWarnings([warnMe])
