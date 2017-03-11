@@ -3122,6 +3122,34 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
               b"'''\n3\nabc'''\n")])
 
 
+class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
+    """
+    Test correct RFC 7231 handling for CONNECT requests. Responses to these
+    tests must not contain Transfer-Encoding or Content-Length headers
+    """
+
+    def test_headers(self):
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = DummyHTTPHandlerProxy
+        channel.makeConnection(transport)
+        channel.dataReceived(b"CONNECT example.org:443 HTTP/1.1\r\n")
+        channel.dataReceived(b"Host: example.org:443\r\n")
+
+        self.assertEqual(transport.value(), b"")
+        channel.dataReceived(b"\r\n")
+
+        self.assertTrue(
+            transport.value().startswith(b"HTTP/1.1 200 OK\r\n"))
+
+        self.assertResponseEquals(
+            transport.value(),
+            [(b"HTTP/1.1 200 OK",
+              b"Version: HTTP/1.1",
+              b"Request: example.org:443",
+              b"Command: CONNECT",
+              b"'''\nNone\n'''")])
+
 
 def sub(keys, d):
     """
