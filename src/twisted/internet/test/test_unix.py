@@ -780,6 +780,29 @@ class UNIXFDPortTestsBuilder(ReactorBuilder, UNIXPortTestsMixin,
 class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuilder):
     requiredInterfaces = (IReactorFDSet, IReactorSocket)
 
+    def test_buildProtocolReturnsNone(self):
+        """
+        {IReactorSocket.adoptStreamConnection} returns None if the given
+        factory's buildProtocol returns None.
+        """
+        from socket import socketpair
+
+        class NoneFactory(ServerFactory):
+            def buildProtocol(self, address):
+                return None
+
+        s1, s2 = socketpair(AF_UNIX, SOCK_STREAM)
+        s1.setblocking(False)
+        self.addCleanup(s1.close)
+        self.addCleanup(s2.close)
+
+        reactor = self.buildReactor()
+        s1FD = s1.fileno()
+        factory = NoneFactory()
+        result = reactor.adoptStreamConnection(s1FD, AF_UNIX, factory)
+        self.assertIsNone(result)
+
+
     def test_ServerAddressUNIX(self):
         """
         Helper method to test UNIX server addresses.
