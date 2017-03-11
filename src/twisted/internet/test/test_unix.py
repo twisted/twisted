@@ -47,6 +47,7 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
 from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.trial.unittest import SkipTest
 
 if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
