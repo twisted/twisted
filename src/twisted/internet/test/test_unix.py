@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 from stat import S_IMODE
 from os import stat, close, urandom, unlink, fstat
 from tempfile import mktemp, mkstemp
-from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
 from pprint import pformat
 from hashlib import md5
 from struct import pack
@@ -22,11 +22,12 @@ except ImportError:
 
 from zope.interface import implementer
 
-from twisted.internet import interfaces
+from twisted.internet import interfaces, abstract, base
 from twisted.internet.address import UNIXAddress
 from twisted.internet.defer import Deferred, fail, gatherResults
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
-from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
+from twisted.internet.error import (ConnectionClosed, FileDescriptorOverrun,
+    CannotListenError)
 from twisted.internet.interfaces import (IFileDescriptorReceiver, IReactorUNIX,
     IReactorSocket, IReactorFDSet)
 from twisted.internet.protocol import DatagramProtocol
@@ -240,6 +241,21 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
     if not platform.isLinux():
         test_listenOnLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
+
+
+    def test_listenFailure(self):
+        """
+        L{IReactorUNIX.listenUNIX} raises L{CannotListenError} if the
+        underlying port's createInternetSocket raises a socket error.
+        """
+        class FakeBasePort(abstract.FileDescriptor):
+            def createInternetSocket(self):
+                raise error('FakeBasePort forced socket.error')
+
+        self.patch(base, "BasePort", FakeBasePort)
+        reactor = self.buildReactor()
+        with self.assertRaises(CannotListenError):
+            reactor.listenUNIX('not-used', ServerFactory())
 
 
     def test_connectToLinuxAbstractNamespace(self):
