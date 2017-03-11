@@ -20,6 +20,7 @@ from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.compat import cookielib, intToBytes
 from twisted.python.components import proxyForInterface
+from twisted.python.reflect import fullyQualifiedName
 from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
@@ -38,7 +39,8 @@ from twisted.web.iweb import (
 from twisted.web.http_headers import Headers
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
+from twisted.internet.interfaces import (IOpenSSLClientConnectionCreator,
+                                         IReactorPluggableNameResolver)
 from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
@@ -848,6 +850,32 @@ class StubEndpointFactory(object):
 
 
 
+def assertReactorWithoutPluggableNameResolveDeprecated(testCase, reactor):
+    """
+    Assert that passing a L{Agent} a reactor that does not provide
+    L{IReactorPluggableNameResolver} results in a
+    L{DeprecationWarning}.
+
+    @param testCase: An L{Agent} test case.
+    @type testCase: L{TestCase}
+
+    @param reactor: A reactor that does not provide
+        L{IReactorPluggableNameResolver}
+    """
+    warnings = testCase.flushWarnings()
+    testCase.assertEqual(1, len(warnings))
+    testCase.assertIs(DeprecationWarning, warnings[0]['category'])
+
+    testCase.assertTrue(warnings[0]['message'].startswith(
+        'Passing Agent ' +
+        fullyQualifiedName(reactor.__class__) +
+        ' was deprecated in Twisted'))
+    testCase.assertTrue(warnings[0]['message'].endswith(
+        '; please use a reactor that provides'
+        ' IReactorPluggableNameResolver instead'))
+
+
+
 class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
                  IntegrationTestingMixin):
     """
@@ -866,6 +894,43 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin,
         """
         self.reactor = self.createReactor()
         self.agent = self.makeAgent()
+
+
+    def test_memoryReactorTCP4ClientEndpointFallback(self):
+        """
+        Reactors that do not provide L{IReactorPluggableNameResolver}
+        establish HTTP connections with L{TCP4ClientEndpoint}.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9032#comment:8}
+        """
+        reactor = MemoryReactorClock()
+        self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
+
+        client.Agent(reactor).request("GET", "http://example.com")
+
+        assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
+
+        self.assertEqual(1, len(reactor.tcpClients))
+        host, port = reactor.tcpClients[0][:2]
+        self.assertEqual(host, "example.com")
+        self.assertEqual(port, 80)
+
+
+    def test_memoryReactorUnsupportedScheme(self):
+        """
+        Reactors that do not provide L{IReactorPluggableNameResolver}
+        establish HTTP connections with L{TCP4ClientEndpoint}.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9032#comment:8}
+        """
+        reactor = MemoryReactorClock()
+        self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
+
+        assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
+
+        self.assertFailure(
+            client.Agent(reactor).request("GET", "unsupported://example.com"),
+            SchemeNotSupported)
 
 
     def test_defaultPool(self):
@@ -1297,6 +1362,26 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         return client.Agent(self.createReactor())._getEndpoint(
             URI.fromBytes(b'https://' + host + b":" + intToBytes(port) + b"/"))
+
+
+    def test_memoryReactorSSL4ClientEndpointFallback(self):
+        """
+        Reactors that do not provide L{IReactorPluggableNameResolver}
+        establish HTTPS connections with L{SSL4ClientEndpoint}.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9032#comment:8}
+        """
+        reactor = MemoryReactorClock()
+        self.assertFalse(IReactorPluggableNameResolver.providedBy(reactor))
+
+        client.Agent(reactor).request("GET", "https://example.com")
+
+        assertReactorWithoutPluggableNameResolveDeprecated(self, reactor)
+
+        self.assertEqual(1, len(reactor.sslClients))
+        host, port = reactor.sslClients[0][:2]
+        self.assertEqual(host, "example.com")
+        self.assertEqual(port, 443)
 
 
     def test_endpointType(self):
