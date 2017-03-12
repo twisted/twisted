@@ -427,7 +427,16 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         return p
 
 
-    # IReactorSocket (but not on Windows)
+    # IReactorSocket (no AF_UNIX on Windows)
+
+    if unixEnabled:
+        _supportedAddressFamilies = (
+            socket.AF_INET, socket.AF_INET6, socket.AF_UNIX,
+        )
+    else:
+        _supportedAddressFamilies = (
+            socket.AF_INET, socket.AF_INET6,
+        )
 
     def adoptStreamPort(self, fileDescriptor, addressFamily, factory):
         """
@@ -438,7 +447,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamPort}
         """
-        if addressFamily not in (socket.AF_INET, socket.AF_INET6, socket.AF_UNIX):
+        if addressFamily not in self._supportedAddressFamilies:
             raise error.UnsupportedAddressFamily(addressFamily)
 
         if addressFamily == socket.AF_UNIX:
@@ -456,7 +465,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         @see:
             L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
         """
-        if addressFamily not in (socket.AF_INET, socket.AF_INET6, socket.AF_UNIX):
+        if addressFamily not in self._supportedAddressFamilies:
             raise error.UnsupportedAddressFamily(addressFamily)
 
         if addressFamily == socket.AF_UNIX:
