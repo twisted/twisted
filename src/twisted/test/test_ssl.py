@@ -22,12 +22,16 @@ try:
     from OpenSSL import SSL, crypto
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
+    # Numeric release format: MNNFFPPS: major minor fix patch status
+    # See: https://wiki.openssl.org/index.php/Manual:OPENSSL_VERSION_NUMBER(3)
+    OPENSSL_1_1 = SSL.OPENSSL_VERSION_NUMBER >= 0x10100000
 except ImportError:
     def _noSSL():
         # ugh, make pyflakes happy.
         global SSL
         global ssl
-        SSL = ssl = None
+        global OPENSSL_1_1
+        SSL = ssl = OPENSSL_1_1 = None
     _noSSL()
 
 try:
@@ -667,8 +671,10 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
         # SSLv23_METHOD allows SSLv2, SSLv3, or TLSv1
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
 
-        # And OP_NO_SSLv2 disables the SSLv2 support.
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        # OpenSSL >= 1.1.0 no longer provides SSLv2
+        if not OPENSSL_1_1:
+            # And OP_NO_SSLv2 disables the SSLv2 support.
+            self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
 
         # Make sure SSLv3 and TLSv1 aren't disabled though.
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
@@ -714,7 +720,8 @@ class ClientContextFactoryTests(unittest.TestCase):
         SSLv3 or TLSv1 but not SSLv2.
         """
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        if not OPENSSL_1_1:
+            self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
 
