@@ -793,7 +793,7 @@ class UNIXFDPortTestsBuilder(ReactorBuilder, UNIXPortTestsMixin,
 
 
 class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuilder):
-    requiredInterfaces = (IReactorFDSet, IReactorSocket)
+    requiredInterfaces = (IReactorFDSet, IReactorSocket, IReactorUNIX,)
 
     def test_buildProtocolReturnsNone(self):
         """
