@@ -48,7 +48,6 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.trial.unittest import SkipTest
 
 if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
@@ -719,25 +718,24 @@ class SocketUNIXMixin(object):
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening
     UNIX ports.
     """
+    requiredInterfaces = (IReactorUNIX, IReactorSocket,)
+
     def getListeningPort(self, reactor, factory):
         """
         Get a UNIX port from a reactor, wrapping an already-initialized file
         descriptor.
         """
-        if IReactorSocket.providedBy(reactor):
-            portSock = socket(AF_UNIX)
-            # self.mktemp() often returns a path which is too long to be used.
-            path = mktemp(suffix='.sock', dir='.')
-            portSock.bind(path)
-            portSock.listen(3)
-            portSock.setblocking(False)
-            try:
-                return reactor.adoptStreamPort(
-                    portSock.fileno(), portSock.family, factory)
-            finally:
-                portSock.close()
-        else:
-            raise SkipTest("Reactor does not provide IReactorSocket")
+        portSock = socket(AF_UNIX)
+        # self.mktemp() often returns a path which is too long to be used.
+        path = mktemp(suffix='.sock', dir='.')
+        portSock.bind(path)
+        portSock.listen(3)
+        portSock.setblocking(False)
+        try:
+            return reactor.adoptStreamPort(
+                portSock.fileno(), portSock.family, factory)
+        finally:
+            portSock.close()
 
 
 
