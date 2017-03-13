@@ -757,7 +757,7 @@ class ListenUNIXMixin(object):
 
 
 class UNIXPortTestsMixin(object):
-    requiredInterfaces = (interfaces.IReactorUNIX,)
+    requiredInterfaces = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -775,18 +775,17 @@ class UNIXPortTestsMixin(object):
 
 
 
-class UNIXPortTestsBuilder(ReactorBuilder, UNIXPortTestsMixin,
+class UNIXPortTestsBuilder(ReactorBuilder, ListenUNIXMixin, UNIXPortTestsMixin,
                            ObjectModelIntegrationMixin,
-                           StreamTransportTestsMixin, ListenUNIXMixin):
+                           StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
 
 
-class UNIXFDPortTestsBuilder(ReactorBuilder, UNIXPortTestsMixin,
-                             ObjectModelIntegrationMixin,
-                             StreamTransportTestsMixin,
-                             SocketUNIXMixin):
+class UNIXFDPortTestsBuilder(ReactorBuilder, SocketUNIXMixin,
+                             UNIXPortTestsMixin, ObjectModelIntegrationMixin,
+                             StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.adoptStreamPort}
     """
