@@ -775,16 +775,16 @@ class UNIXPortTestsMixin(object):
 
 
 
-class UNIXPortTestsBuilder(ReactorBuilder, ListenUNIXMixin, UNIXPortTestsMixin,
-                           ObjectModelIntegrationMixin,
+class UNIXPortTestsBuilder(ListenUNIXMixin, UNIXPortTestsMixin,
+                           ReactorBuilder, ObjectModelIntegrationMixin,
                            StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
 
 
-class UNIXFDPortTestsBuilder(ReactorBuilder, SocketUNIXMixin,
-                             UNIXPortTestsMixin, ObjectModelIntegrationMixin,
+class UNIXFDPortTestsBuilder(SocketUNIXMixin, UNIXPortTestsMixin,
+                             ReactorBuilder, ObjectModelIntegrationMixin,
                              StreamTransportTestsMixin):
     """
     Tests for L{IReactorUNIX.adoptStreamPort}
