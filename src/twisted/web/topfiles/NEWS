@@ -229,7 +229,7 @@ Bugfixes
 
 Deprecations and Removals
 -------------------------
- - twisted.web.http.Request's headers and request_headers attributes,
+ - twisted.web.http.Request's headers and received_headers attributes,
    deprecated since Twisted 13.2, have been removed. (#8136)
  - twisted.web.static.addSlash is deprecated. (#8169)
 
