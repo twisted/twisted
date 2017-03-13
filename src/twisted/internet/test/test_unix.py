@@ -800,6 +800,13 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
         {IReactorSocket.adoptStreamConnection} returns None if the given
         factory's buildProtocol returns None.
         """
+
+        # Build reactor before anything else: allow self.buildReactor()
+        # to skip the test if any of the self.requiredInterfaces isn't
+        # provided by the reactor (example: Windows), preventing later
+        # failures unrelated to the test itself.
+        reactor = self.buildReactor()
+
         from socket import socketpair
 
         class NoneFactory(ServerFactory):
@@ -811,7 +818,6 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
         self.addCleanup(s1.close)
         self.addCleanup(s2.close)
 
-        reactor = self.buildReactor()
         s1FD = s1.fileno()
         factory = NoneFactory()
         result = reactor.adoptStreamConnection(s1FD, AF_UNIX, factory)
