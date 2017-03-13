@@ -450,8 +450,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         if addressFamily not in self._supportedAddressFamilies:
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        if addressFamily == socket.AF_UNIX:
-            assert unixEnabled, "UNIX support is not present"
+        if unixEnabled and addressFamily == socket.AF_UNIX:
             p = unix.Port._fromListeningDescriptor(
                 self, fileDescriptor, factory)
         else:
@@ -468,8 +467,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         if addressFamily not in self._supportedAddressFamilies:
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        if addressFamily == socket.AF_UNIX:
-            assert unixEnabled, "UNIX support is not present"
+        if unixEnabled and addressFamily == socket.AF_UNIX:
             return unix.Server._fromConnectedSocket(
                 fileDescriptor, factory, self)
         else:
