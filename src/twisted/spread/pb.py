@@ -157,7 +157,7 @@ class RemoteMethod:
         Asynchronously invoke a remote method.
         """
         return self.obj.broker._sendMessage(b'', self.obj.perspective,
-            self.obj.luid, self.name, args, kw)
+            self.obj.luid, self.name.encode("utf-8"), args, kw)
 
 
 
