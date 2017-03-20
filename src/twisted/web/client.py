@@ -1456,84 +1456,9 @@ class _StandardEndpointFactory(object):
         @type bindAddress: L{bytes} or L{None}
         """
         self._reactor = reactor
-        if IReactorPluggableNameResolver.providedBy(self._reactor):
-            self._createEndpoint = self._createHostnameEndpoint
-        else:
-            warningString = getDeprecationWarningString(
-                reactor.__class__,
-                Version("Twisted", "NEXT", 0, 0),
-                format=("Passing Agent %(fqpn)s"
-                        " was deprecated in %(version)s"),
-                replacement=("a reactor that provides"
-                             " IReactorPluggableNameResolver"),
-            )
-            warnings.warn(warningString, DeprecationWarning, stacklevel=3)
-            self._createEndpoint = self._createClientEndpoint
-
         self._policyForHTTPS = contextFactory
         self._connectTimeout = connectTimeout
         self._bindAddress = bindAddress
-
-
-    def _createHostnameEndpoint(self, host, uri, kwargs):
-        """
-        Connect via L{HostnameEndpoint} for C{b'http'} and with
-        L{wrapClientTLS} when C{b'https'}.  Used when C{self._reactor}
-        provides L{IReactorPluggableNameResolver}.
-
-        @see: U{http://twistedmatrix.com/trac/ticket/9032#comment:8}
-
-        @param uri: L{URI} to connect to.
-
-        @param host: The C{uri}'s host as a native string.
-
-        @param kwargs: Additional keyword arguments for the endpoint.
-
-        @return: Endpoint to connect to.
-        @rtype: L{IStreamClientEndpoint}
-        """
-        endpoint = HostnameEndpoint(
-            self._reactor, host, uri.port, **kwargs)
-        if uri.scheme == b'http':
-            return endpoint
-        elif uri.scheme == b'https':
-            connectionCreator = self._policyForHTTPS.creatorForNetloc(
-                uri.host, uri.port)
-            return wrapClientTLS(connectionCreator, endpoint)
-        else:
-            raise SchemeNotSupported("Unsupported scheme: %r" % (
-                uri.scheme,))
-
-
-    def _createClientEndpoint(self, host, uri, kwargs):
-        """
-        Connect via L{TCP4ClientEndpoint} for C{b'http'} and
-        L{SSL4ClientEndpoint} when C{b'https'}.  Used when
-        C{self._reactor} does not provide
-        L{IReactorPluggableNameResolver}.
-
-        @see: U{http://twistedmatrix.com/trac/ticket/9032#comment:8}
-
-        @param uri: L{URI} to connect to.
-
-        @param host: The C{uri}'s host as a native string.
-
-        @param kwargs: Additional keyword arguments for the endpoint.
-
-        @return: Endpoint to connect to.
-        @rtype: L{IStreamClientEndpoint}
-        """
-        if uri.scheme == b'http':
-            return TCP4ClientEndpoint(
-                self._reactor, host, uri.port, **kwargs)
-        elif uri.scheme == b'https':
-            tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host,
-                                                              uri.port)
-            return SSL4ClientEndpoint(
-                self._reactor, host, uri.port, tlsPolicy, **kwargs)
-        else:
-            raise SchemeNotSupported("Unsupported scheme: %r" % (
-                uri.scheme,))
 
 
     def endpointForURI(self, uri):
@@ -1558,7 +1483,30 @@ class _StandardEndpointFactory(object):
                               "contains non-ASCII octets, it should be ASCII "
                               "decodable.").format(uri=uri))
 
-        return self._createEndpoint(host, uri, kwargs)
+        if IReactorPluggableNameResolver.providedBy(self._reactor):
+            endpoint = HostnameEndpoint(
+                self._reactor, host, uri.port, **kwargs)
+            if uri.scheme == b'http':
+                return endpoint
+            elif uri.scheme == b'https':
+                connectionCreator = self._policyForHTTPS.creatorForNetloc(
+                    uri.host, uri.port)
+                return wrapClientTLS(connectionCreator, endpoint)
+            else:
+                raise SchemeNotSupported("Unsupported scheme: %r" % (
+                    uri.scheme,))
+        else:
+            if uri.scheme == b'http':
+                return TCP4ClientEndpoint(
+                    self._reactor, host, uri.port, **kwargs)
+            elif uri.scheme == b'https':
+                tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host,
+                                                                  uri.port)
+                return SSL4ClientEndpoint(
+                    self._reactor, host, uri.port, tlsPolicy, **kwargs)
+            else:
+                raise SchemeNotSupported("Unsupported scheme: %r" % (
+                    uri.scheme,))
 
 
 
