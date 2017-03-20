@@ -12,11 +12,11 @@ import os
 import urllib
 
 # Twisted Imports
-from twisted.web import http
 from twisted.internet import protocol
+from twisted.logger import Logger
+from twisted.python import filepath
 from twisted.spread import pb
-from twisted.python import log, filepath
-from twisted.web import resource, server, static
+from twisted.web import http, resource, server, static
 
 
 class CGIDirectory(resource.Resource, filepath.FilePath):
@@ -201,6 +201,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     headers_written = 0
     headertext = b''
     errortext = b''
+    _log = Logger()
 
     # Remotely relay producer interface.
 
@@ -273,8 +274,8 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 for header in headers:
                     br = header.find(b': ')
                     if br == -1:
-                        log.msg(
-                            format='ignoring malformed CGI header: %(header)r',
+                        self._log.error(
+                            'ignoring malformed CGI header: {header!r}',
                             header=header)
                     else:
                         headerName = header[:br].lower()
@@ -286,7 +287,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                                 # "XXX <description>" sometimes happens.
                                 statusNum = int(headerText[:3])
                             except:
-                                log.msg("malformed status header")
+                                self._log.error("malformed status header")
                             else:
                                 self.request.setResponseCode(statusNum)
                         else:
@@ -305,14 +306,14 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
 
     def processEnded(self, reason):
         if reason.value.exitCode != 0:
-            log.msg("CGI {} exited with exit code {}".format(
-                    self.request.uri, reason.value.exitCode))
+            self._log.error("CGI {uri} exited with exit code {exitCode}",
+                    uri=self.request.uri, exitCode=reason.value.exitCode)
         if self.errortext:
-            log.msg("Errors from CGI {}: {}".format(
-                self.request.uri, self.errortext))
+            self._log.error("Errors from CGI {uri}: {errorText}",
+                uri=self.request.uri, errorText=self.errortext)
         if self.handling_headers:
-            log.msg("Premature end of headers in {}: {}".format(
-                self.request.uri, self.headertext))
+            self._log.error("Premature end of headers in {uri}: {headerText}",
+                uri=self.request.uri, headerText=self.headertext)
             self.request.write(
                 resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
                     "CGI Script Error",
