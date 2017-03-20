@@ -398,7 +398,7 @@ def flattenString(request, root):
     """
     Collate a string representation of C{root} into a single string.
 
-    This is basically gluing L{flatten} to a L{NativeStringIO} and returning
+    This is basically gluing L{flatten} to an L{io.BytesIO} and returning
     the results. See L{flatten} for the exact meanings of C{request} and
     C{root}.
 
