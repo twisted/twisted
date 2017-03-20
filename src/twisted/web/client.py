@@ -38,13 +38,8 @@ from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
-from twisted.internet.interfaces import (IProtocol,
-                                         IOpenSSLContextFactory,
-                                         IReactorPluggableNameResolver)
-from twisted.internet.endpoints import (HostnameEndpoint,
-                                        wrapClientTLS,
-                                        TCP4ClientEndpoint,
-                                        SSL4ClientEndpoint)
+from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
+from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
@@ -1483,30 +1478,15 @@ class _StandardEndpointFactory(object):
                               "contains non-ASCII octets, it should be ASCII "
                               "decodable.").format(uri=uri))
 
-        if IReactorPluggableNameResolver.providedBy(self._reactor):
-            endpoint = HostnameEndpoint(
-                self._reactor, host, uri.port, **kwargs)
-            if uri.scheme == b'http':
-                return endpoint
-            elif uri.scheme == b'https':
-                connectionCreator = self._policyForHTTPS.creatorForNetloc(
-                    uri.host, uri.port)
-                return wrapClientTLS(connectionCreator, endpoint)
-            else:
-                raise SchemeNotSupported("Unsupported scheme: %r" % (
-                    uri.scheme,))
+        endpoint = HostnameEndpoint(self._reactor, host, uri.port, **kwargs)
+        if uri.scheme == b'http':
+            return endpoint
+        elif uri.scheme == b'https':
+            connectionCreator = self._policyForHTTPS.creatorForNetloc(uri.host,
+                                                                      uri.port)
+            return wrapClientTLS(connectionCreator, endpoint)
         else:
-            if uri.scheme == b'http':
-                return TCP4ClientEndpoint(
-                    self._reactor, host, uri.port, **kwargs)
-            elif uri.scheme == b'https':
-                tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host,
-                                                                  uri.port)
-                return SSL4ClientEndpoint(
-                    self._reactor, host, uri.port, tlsPolicy, **kwargs)
-            else:
-                raise SchemeNotSupported("Unsupported scheme: %r" % (
-                    uri.scheme,))
+            raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
 
 
 
