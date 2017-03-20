@@ -64,16 +64,16 @@ class Request(pb.RemoteCopy, server.Request):
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
         self.content = BytesIO(self.content_data)
-        self.finish           = self.remote.remoteMethod(b'finish')
-        self.setHeader        = self.remote.remoteMethod(b'setHeader')
-        self.addCookie        = self.remote.remoteMethod(b'addCookie')
-        self.setETag          = self.remote.remoteMethod(b'setETag')
-        self.setResponseCode  = self.remote.remoteMethod(b'setResponseCode')
-        self.setLastModified  = self.remote.remoteMethod(b'setLastModified')
+        self.finish           = self.remote.remoteMethod('finish')
+        self.setHeader        = self.remote.remoteMethod('setHeader')
+        self.addCookie        = self.remote.remoteMethod('addCookie')
+        self.setETag          = self.remote.remoteMethod('setETag')
+        self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
+        self.setLastModified  = self.remote.remoteMethod('setLastModified')
 
         # To avoid failing if a resource tries to write a very long string
         # all at once, this one will be handled slightly differently.
-        self._write = self.remote.remoteMethod(b'write')
+        self._write = self.remote.remoteMethod('write')
 
 
     def write(self, bytes):
