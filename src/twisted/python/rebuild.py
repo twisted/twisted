@@ -13,6 +13,8 @@ import types
 import time
 import linecache
 
+from imp import reload
+
 # Sibling Imports
 from twisted.python import log, reflect
 from twisted.python._oldstyle import _oldStyle

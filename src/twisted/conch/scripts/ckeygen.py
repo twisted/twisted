@@ -10,6 +10,8 @@ from __future__ import print_function
 
 import sys, os, getpass, socket
 from functools import wraps
+from imp import reload
+
 if getpass.getpass == getpass.unix_getpass:
     try:
         import termios # hack around broken termios
