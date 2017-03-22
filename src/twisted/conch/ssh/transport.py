@@ -1997,7 +1997,7 @@ class _DummyCipher(object):
 
 
 DH_GENERATOR, DH_PRIME = _kex.getDHGeneratorAndPrime(
-    b'diffie-hellman-group1-sha1')
+    b'diffie-hellman-group14-sha1')
 
 
 MSG_DISCONNECT = 1
