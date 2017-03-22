@@ -157,14 +157,6 @@ _kexAlgorithms = {
     b"ecdh-sha2-nistp256": _ECDH256(),
     b"ecdh-sha2-nistp384": _ECDH384(),
     b"ecdh-sha2-nistp521": _ECDH512(),
-    b"ecdh-sha2-nistk163": _ECDH256(),
-    b"ecdh-sha2-nistp224": _ECDH256(),
-    b"ecdh-sha2-nistk233": _ECDH256(),
-    b"ecdh-sha2-nistb233": _ECDH256(),
-    b"ecdh-sha2-nistk283": _ECDH384(),
-    b"ecdh-sha2-nistk409": _ECDH384(),
-    b"ecdh-sha2-nistb409": _ECDH384(),
-    b"ecdh-sha2-nistt571": _ECDH512()
     }
 
 
