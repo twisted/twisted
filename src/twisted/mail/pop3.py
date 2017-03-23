@@ -321,7 +321,8 @@ def formatListLines(msgs):
     i = 0
     for size in msgs:
         i += 1
-        yield '%d %d\r\n' % (i, size)
+        if size > 0:
+            yield '%d %d\r\n' % (i, size)
 
 
 
@@ -358,7 +359,7 @@ def formatUIDListLines(msgs, getUidl):
         and its unique id.
     """
     for i, m in enumerate(msgs):
-        if m is not None:
+        if m is not None and m > 0:
             uid = getUidl(i)
             yield '%d %s\r\n' % (i + 1, uid)
 
