@@ -220,9 +220,9 @@ class H2Connection(Protocol, TimeoutMixin):
         # NO_ERROR.
         if (self.conn.open_outbound_streams > 0 or
                 self.conn.open_inbound_streams > 0):
-            error_code = h2.errors.PROTOCOL_ERROR
+            error_code = h2.errors.ErrorCodes.PROTOCOL_ERROR
         else:
-            error_code = h2.errors.NO_ERROR
+            error_code = h2.errors.ErrorCodes.NO_ERROR
 
         self.conn.close_connection(error_code=error_code)
         self.transport.write(self.conn.data_to_send())

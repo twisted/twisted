@@ -1265,7 +1265,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1429,7 +1429,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1477,7 +1477,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1575,7 +1575,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1649,7 +1649,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1835,7 +1835,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
