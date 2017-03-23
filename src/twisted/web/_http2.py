@@ -25,6 +25,7 @@ from collections import deque
 from zope.interface import implementer
 
 import priority
+import h2.config
 import h2.connection
 import h2.errors
 import h2.events
@@ -122,9 +123,10 @@ class H2Connection(Protocol, TimeoutMixin):
     _abortingCall = None
 
     def __init__(self, reactor=None):
-        self.conn = h2.connection.H2Connection(
+        config = h2.config.H2Configuration(
             client_side=False, header_encoding=None
         )
+        self.conn = h2.connection.H2Connection(config=config)
         self.streams = {}
 
         self.priority = priority.PriorityTree()
