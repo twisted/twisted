@@ -409,10 +409,9 @@ def loadApplication(filename, kind, passphrase=None):
     @type passphrase: C{str}
     """
     if kind == 'python':
-        application = sob.loadValueFromFile(filename, 'application',
-                                            passphrase)
+        application = sob.loadValueFromFile(filename, 'application')
     else:
-        application = sob.load(filename, kind, passphrase)
+        application = sob.load(filename, kind)
     return application
 
 
