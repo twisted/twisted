@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb -*-
+# -*- test-case-name: twisted.test.test_defer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -751,6 +751,91 @@ class Deferred:
     # For PEP-492 support (async/await)
     __await__ = __iter__
     __next__ = send
+
+
+    def asFuture(self, loop):
+        """
+        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+
+        @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
+            its result and its errors, so this method implicitly converts
+            C{self} into a L{Deferred} firing with L{None}, regardless of what
+            its result previously would have been.
+
+        @since: Twisted NEXT
+
+        @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
+        @type loop: L{asyncio.AbstractEventLoop} or similar
+
+        @param deferred: The Deferred to adapt.
+        @type deferred: L{Deferred}
+
+        @return: A Future which will fire when the Deferred fires.
+        @rtype: L{asyncio.Future}
+        """
+        try:
+            createFuture = loop.create_future
+        except AttributeError:
+            from asyncio import Future
+            def createFuture():
+                return Future(loop=loop)
+        future = createFuture()
+        def checkCancel(futureAgain):
+            if futureAgain.cancelled():
+                self.cancel()
+        def maybeFail(failure):
+            if not future.cancelled():
+                future.set_exception(failure.value)
+        def maybeSucceed(result):
+            if not future.cancelled():
+                future.set_result(result)
+        self.addCallbacks(maybeSucceed, maybeFail)
+        future.add_done_callback(checkCancel)
+        return future
+
+
+    @classmethod
+    def fromFuture(cls, future):
+        """
+        Adapt an L{asyncio.Future} to a L{Deferred}.
+
+        @note: This creates a L{Deferred} from a L{asyncio.Future}, I{not} from
+            a C{coroutine}; in other words, you will need to call
+            L{asyncio.async}, L{asyncio.ensure_future},
+            L{asyncio.AbstractEventLoop.create_task} or create an
+            L{asyncio.Task} yourself to get from a C{coroutine} to a
+            L{asyncio.Future} if what you have is an awaitable coroutine and
+            not a L{asyncio.Future}.  (The length of this list of techniques is
+            exactly why we have left it to the caller!)
+
+        @since: Twisted NEXT
+
+        @param future: The Future to adapt.
+        @type future: L{asyncio.Future}
+
+        @return: A Deferred which will fire when the Future fires.
+        @rtype: L{Deferred}
+        """
+        def adapt(result):
+            try:
+                extracted = result.result()
+            except:
+                extracted = failure.Failure()
+            adapt.actual.callback(extracted)
+        futureCancel = object()
+        def cancel(reself):
+            future.cancel()
+            reself.callback(futureCancel)
+        self = cls(cancel)
+        adapt.actual = self
+        def uncancel(result):
+            if result is futureCancel:
+                adapt.actual = Deferred()
+                return adapt.actual
+            return result
+        self.addCallback(uncancel)
+        future.add_done_callback(adapt)
+        return self
 
 
 
@@ -1826,6 +1911,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         return d
 
 
+
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred", "ensureDeferred",
@@ -1834,3 +1920,4 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]
+
