@@ -25,8 +25,9 @@ from cStringIO import StringIO
 from types import StringTypes, UnicodeType
 
 # Twisted Imports
-from twisted.web.sux import XMLParser, ParseError
+from twisted.python.compat import range
 from twisted.python.util import InsensitiveDict
+from twisted.web.sux import XMLParser, ParseError
 
 
 def getElementsByTagName(iNode, name):
@@ -744,7 +745,7 @@ class MicroDOMParser(XMLParser):
         # self.indentlevel = 0
 
     def shouldPreserveSpace(self):
-        for edx in xrange(len(self.elementstack)):
+        for edx in range(len(self.elementstack)):
             el = self.elementstack[-edx]
             if el.tagName == 'pre' or el.getAttribute("xml:space", '') == 'preserve':
                 return 1
@@ -901,7 +902,7 @@ class MicroDOMParser(XMLParser):
             if self.beExtremelyLenient:
                 if self.elementstack:
                     lastEl = self.elementstack[0]
-                    for idx in xrange(len(self.elementstack)):
+                    for idx in range(len(self.elementstack)):
                         if self.elementstack[-(idx+1)].tagName == cname:
                             self.elementstack[-(idx+1)].endTag(name)
                             break

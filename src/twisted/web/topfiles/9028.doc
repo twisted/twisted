@@ -1,0 +1,1 @@
+twisted.web.template.flattenString docstring now correctly references io.BytesIO (rather than NativeStringIO).

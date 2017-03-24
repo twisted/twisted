@@ -54,30 +54,12 @@ _curveTable = {
     b'ecdsa-sha2-nistp256': ec.SECP256R1(),
     b'ecdsa-sha2-nistp384': ec.SECP384R1(),
     b'ecdsa-sha2-nistp521': ec.SECP521R1(),
-    b'ecdsa-sha2-nistk163': ec.SECT163K1(),
-    b'ecdsa-sha2-nistp192': ec.SECP192R1(),
-    b'ecdsa-sha2-nistp224': ec.SECP224R1(),
-    b'ecdsa-sha2-nistk233': ec.SECT233K1(),
-    b'ecdsa-sha2-nistb233': ec.SECT233R1(),
-    b'ecdsa-sha2-nistk283': ec.SECT283K1(),
-    b'ecdsa-sha2-nistk409': ec.SECT409K1(),
-    b'ecdsa-sha2-nistb409': ec.SECT409R1(),
-    b'ecdsa-sha2-nistt571': ec.SECT571K1()
 }
 
 _secToNist = {
     b'secp256r1' : b'nistp256',
     b'secp384r1' : b'nistp384',
     b'secp521r1' : b'nistp521',
-    b'sect163k1' : b'nistk163',
-    b'secp192r1' : b'nistp192',
-    b'secp224r1' : b'nistp224',
-    b'sect233k1' : b'nistk233',
-    b'sect233r1' : b'nistb233',
-    b'sect283k1' : b'nistk283',
-    b'sect409k1' : b'nistk409',
-    b'sect409r1' : b'nistb409',
-    b'sect571k1' : b'nistt571'
 }
 
 
