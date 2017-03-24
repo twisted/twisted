@@ -33,7 +33,7 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, xrange, long, unicode, networkString,
+from twisted.python.compat import (_PY3, range, long, unicode, networkString,
                                    nativeString, iteritems, _keys, _bytesChr,
                                    iterbytes)
 from twisted.python.runtime import platform
@@ -89,7 +89,7 @@ else:
 DNSNAME = DNSNAME.encode('ascii')
 
 # Used for fast success code lookup
-SUCCESS = dict.fromkeys(xrange(200, 300))
+SUCCESS = dict.fromkeys(range(200, 300))
 
 
 
@@ -1039,7 +1039,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.toAddressesResult = []
         self.successAddresses = []
         self._okresponse = self.smtpState_toOrData
-        self._expected = xrange(0,1000)
+        self._expected = range(0, 1000)
         self.lastAddress = None
         return self.smtpState_toOrData(0, b'')
 
@@ -1169,7 +1169,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _disconnectFromServer(self):
-        self._expected = xrange(0, 1000)
+        self._expected = range(0, 1000)
         self._okresponse = self.smtpState_disconnect
         self.sendLine(b'QUIT')
 

@@ -26,7 +26,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
-from twisted.python.compat import iterbytes, xrange, _PY3
+from twisted.python.compat import iterbytes, range, _PY3
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 
@@ -705,7 +705,7 @@ class BrokerTests(unittest.TestCase):
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
-        for igno in xrange(pb.MAX_BROKER_REFS + 10):
+        for igno in range(pb.MAX_BROKER_REFS + 10):
             if s.transport.closed or c.transport.closed:
                 break
             x.callRemote("getSimple").addCallbacks(l.append, e.append)

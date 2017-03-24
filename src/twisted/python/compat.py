@@ -639,6 +639,7 @@ if _PY3:
     def items(d):
         return list(d.items())
 
+    range = range
     xrange = range
     izip = zip
 else:
@@ -651,6 +652,7 @@ else:
     def items(d):
         return d.items()
 
+    range = xrange
     xrange = xrange
     from itertools import izip
     izip # shh pyflakes
@@ -863,6 +865,7 @@ __all__ = [
     "items",
     "iteritems",
     "itervalues",
+    "range",
     "xrange",
     "urllib_parse",
     "bytesEnviron",
