@@ -102,7 +102,7 @@ class _WrapperException(Exception):
 
 
 
-class g(_WrapperException):
+class RequestGenerationFailed(_WrapperException):
     """
     There was an error while creating the bytes which make up a request.
 
