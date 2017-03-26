@@ -44,7 +44,7 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import runtime, procutils
-from twisted.python.compat import _PY3, networkString, xrange, bytesEnviron
+from twisted.python.compat import _PY3, networkString, range, bytesEnviron
 from twisted.python.filepath import FilePath
 
 
@@ -590,7 +590,7 @@ class ProcessTests(unittest.TestCase):
         protocols = []
         deferreds = []
 
-        for i in xrange(CONCURRENT_PROCESS_TEST_COUNT):
+        for i in range(CONCURRENT_PROCESS_TEST_COUNT):
             p = TestManyProcessProtocol()
             protocols.append(p)
             reactor.spawnProcess(p, pyExe, args, env=properEnv)
