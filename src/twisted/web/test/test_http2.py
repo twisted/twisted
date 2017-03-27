@@ -1265,7 +1265,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1429,7 +1429,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1477,7 +1477,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1575,7 +1575,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1649,7 +1649,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1835,7 +1835,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -2060,7 +2060,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         del frames[-1]
         frames.append(
             frameFactory.buildRstStreamFrame(
-                streamID=1, errorCode=h2.errors.INTERNAL_ERROR
+                streamID=1, errorCode=h2.errors.ErrorCodes.INTERNAL_ERROR
             )
         )
 
@@ -2394,7 +2394,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
+            errorCode=h2.errors.ErrorCodes.NO_ERROR,
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
@@ -2431,7 +2431,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
+            errorCode=h2.errors.ErrorCodes.NO_ERROR,
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
@@ -2465,7 +2465,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
+            errorCode=h2.errors.ErrorCodes.NO_ERROR,
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
@@ -2474,7 +2474,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
     def test_timeoutWithProtocolErrorIfStreamsOpen(self):
         """
         When a L{H2Connection} times out with active streams, the error code
-        returned is L{h2.errors.PROTOCOL_ERROR}.
+        returned is L{h2.errors.ErrorCodes.PROTOCOL_ERROR}.
         """
         frameFactory = FrameFactory()
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
@@ -2491,7 +2491,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.PROTOCOL_ERROR,
+            errorCode=h2.errors.ErrorCodes.PROTOCOL_ERROR,
             lastStreamID=1
         )
         self.assertTrue(transport.disconnecting)

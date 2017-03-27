@@ -171,7 +171,7 @@ class OptionalDependenciesTests(TestCase):
         for the packages required to make Twisted HTTP/2 support work.
         """
         deps = _EXTRAS_REQUIRE['http2']
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('h2 >= 2.6.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
@@ -190,7 +190,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('h2 >= 2.6.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
@@ -208,7 +208,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('h2 >= 2.6.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
 
@@ -227,7 +227,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
-        self.assertIn('h2 >= 2.5.0, < 3.0', deps)
+        self.assertIn('h2 >= 2.6.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
 

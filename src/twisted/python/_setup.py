@@ -106,7 +106,7 @@ _EXTRA_OPTIONS = dict(
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.5.0, < 3.0',
+    http2=['h2 >= 2.6.0, < 3.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
