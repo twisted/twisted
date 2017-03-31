@@ -466,7 +466,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
     (clientHost, clientPort, clientFactory, clientTimeout,
      clientBindAddress) = clientInfo
     (serverPort, serverFactory, serverBacklog,
-     serverInterface) = serverInfo
+     serverInterface, listenMultiple) = serverInfo
     if serverPort == clientPort:
         return clientFactory, serverFactory
     else:

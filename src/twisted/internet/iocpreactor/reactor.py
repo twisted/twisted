@@ -149,11 +149,12 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
         return skt
 
 
-    def listenTCP(self, port, factory, backlog=50, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface='',
+            multiListen=False):
         """
         @see: twisted.internet.interfaces.IReactorTCP.listenTCP
         """
-        p = tcp.Port(port, factory, backlog, interface, self)
+        p = tcp.Port(port, factory, backlog, interface, self, multiListen)
         p.startListening()
         return p
 
