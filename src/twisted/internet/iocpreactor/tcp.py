@@ -411,6 +411,7 @@ class Port(_SocketCloser, _LogOwner):
     socketType = socket.SOCK_STREAM
     _addressType = address.IPv4Address
     sessionno = 0
+    listenMultiple = False
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
@@ -422,12 +423,14 @@ class Port(_SocketCloser, _LogOwner):
     # Only used for logging.
     _type = 'TCP'
 
-    def __init__(self, port, factory, backlog=50, interface='', reactor=None):
+    def __init__(self, port, factory, backlog=50, interface='', reactor=None,
+            listenMultiple=False):
         self.port = port
         self.factory = factory
         self.backlog = backlog
         self.interface = interface
         self.reactor = reactor
+        self.listenMultiple = listenMultiple
         if isIPv6Address(interface):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
@@ -447,6 +450,8 @@ class Port(_SocketCloser, _LogOwner):
         try:
             skt = self.reactor.createSocket(self.addressFamily,
                                             self.socketType)
+            if self.listenMultiple and hasattr(socket, "SO_REUSEPORT"):
+                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             # TODO: resolve self.interface if necessary
             if self.addressFamily == socket.AF_INET6:
                 addr = socket.getaddrinfo(self.interface, self.port)[0][4]

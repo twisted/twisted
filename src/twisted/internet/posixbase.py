@@ -473,8 +473,9 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     # IReactorTCP
 
-    def listenTCP(self, port, factory, backlog=50, interface=''):
-        p = tcp.Port(port, factory, backlog, interface, self)
+    def listenTCP(self, port, factory, backlog=50, interface='',
+            listenMultiple=False):
+        p = tcp.Port(port, factory, backlog, interface, self, listenMultiple)
         p.startListening()
         return p
 

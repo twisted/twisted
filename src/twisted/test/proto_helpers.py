@@ -626,12 +626,14 @@ class MemoryReactor(object):
         return _FakePort(addr)
 
 
-    def listenTCP(self, port, factory, backlog=50, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface='',
+            listenMultiple=False):
         """
         Fake L{IReactorTCP.listenTCP}, that logs the call and
         returns an L{IListeningPort}.
         """
-        self.tcpServers.append((port, factory, backlog, interface))
+        self.tcpServers.append((port, factory, backlog, interface,
+            listenMultiple))
         if isIPv6Address(interface):
             address = IPv6Address('TCP', interface, port)
         else:
@@ -798,7 +800,8 @@ class RaisingMemoryReactor(object):
         raise self._listenException
 
 
-    def listenTCP(self, port, factory, backlog=50, interface=''):
+    def listenTCP(self, port, factory, backlog=50, interface='',
+            listenMultiple=False):
         """
         Fake L{IReactorTCP.listenTCP}, that raises L{_listenException}.
         """
