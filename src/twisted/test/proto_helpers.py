@@ -659,13 +659,13 @@ class MemoryReactor(object):
 
 
     def listenSSL(self, port, factory, contextFactory,
-                  backlog=50, interface=''):
+                  backlog=50, interface='', listenMultiple=False):
         """
         Fake L{IReactorSSL.listenSSL}, that logs the call and
         returns an L{IListeningPort}.
         """
         self.sslServers.append((port, factory, contextFactory,
-                                backlog, interface))
+                                backlog, interface, listenMultiple))
         return _FakePort(IPv4Address('TCP', '0.0.0.0', port))
 
 
@@ -818,7 +818,7 @@ class RaisingMemoryReactor(object):
 
 
     def listenSSL(self, port, factory, contextFactory,
-                  backlog=50, interface=''):
+                  backlog=50, interface='', listenMultiple=False):
         """
         Fake L{IReactorSSL.listenSSL}, that raises L{_listenException}.
         """

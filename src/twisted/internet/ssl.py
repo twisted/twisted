@@ -198,8 +198,10 @@ class Port(tcp.Port):
 
     _type = 'TLS'
 
-    def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None):
-        tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
+    def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None,
+            listenMultiple=False):
+        tcp.Port.__init__(self, port, factory, backlog, interface, reactor,
+                listenMultiple)
         self.ctxFactory = ctxFactory
 
 

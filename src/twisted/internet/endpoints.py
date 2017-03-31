@@ -1064,7 +1064,7 @@ class SSL4ServerEndpoint(object):
     """
 
     def __init__(self, reactor, port, sslContextFactory,
-                 backlog=50, interface=''):
+                 backlog=50, interface='', listenMultiple=False):
         """
         @param reactor: An L{IReactorSSL} provider.
 
@@ -1085,6 +1085,7 @@ class SSL4ServerEndpoint(object):
         self._sslContextFactory = sslContextFactory
         self._backlog = backlog
         self._interface = interface
+        self._listenMultiple = listenMultiple
 
 
     def listen(self, protocolFactory):
@@ -1096,7 +1097,8 @@ class SSL4ServerEndpoint(object):
                              protocolFactory,
                              contextFactory=self._sslContextFactory,
                              backlog=self._backlog,
-                             interface=self._interface)
+                             interface=self._interface,
+                             listenMultiple=self._listenMultiple)
 
 
 
