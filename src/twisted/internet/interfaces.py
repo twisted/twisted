@@ -800,7 +800,8 @@ class IReactorSSL(Interface):
         @return: An object which provides L{IConnector}.
         """
 
-    def listenSSL(port, factory, contextFactory, backlog=50, interface=''):
+    def listenSSL(port, factory, contextFactory, backlog=50, interface='',
+            listenMultiple=False):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -815,6 +816,8 @@ class IReactorSSL(Interface):
         @param backlog: size of the listen queue
 
         @param interface: the hostname to bind to, defaults to '' (all)
+
+        @param listenMultiple: listen to the same port with different processes
         """
 
 
