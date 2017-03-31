@@ -2315,7 +2315,8 @@ class SSL4EndpointsTests(EndpointTestCaseMixin,
                                              **listenArgs),
                 (address.port, factory, self.serverSSLContext,
                  listenArgs.get('backlog', 50),
-                 listenArgs.get('interface', '')),
+                 listenArgs.get('interface', ''),
+                 listenArgs.get('listenMultiple', False)),
                 address)
 
 

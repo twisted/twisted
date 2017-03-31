@@ -500,15 +500,18 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
 
 
-    def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
+    def listenSSL(self, port, factory, contextFactory, backlog=50, interface='',
+            listenMultiple=False):
         if tls is not None:
             tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, False, factory)
-            port = self.listenTCP(port, tlsFactory, backlog, interface)
+            port = self.listenTCP(port, tlsFactory, backlog, interface,
+                    listenMultiple)
             port._type = 'TLS'
             return port
         elif ssl is not None:
             p = ssl.Port(
-                port, factory, contextFactory, backlog, interface, self)
+                port, factory, contextFactory, backlog, interface, self,
+                listenMultiple)
             p.startListening()
             return p
         else:
