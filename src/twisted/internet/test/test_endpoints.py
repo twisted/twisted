@@ -1940,11 +1940,11 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         self.assertIs(DeprecationWarning, warnings[0]['category'])
 
         self.assertTrue(warnings[0]['message'].startswith(
-            'Passing HostnameEndpoint'
-            ' twisted.test.proto_helpers.MemoryReactorClock'
-            ' was deprecated in Twisted'))
-        self.assertTrue(warnings[0]['message'].endswith(
-            '; please use a reactor that provides'
+            'Passing HostnameEndpoint a reactor that does not provide'
+            ' IReactorPluggableNameResolver'
+            ' (twisted.test.proto_helpers.MemoryReactorClock)'
+            ' was deprecated in Twisted NEXT;'
+            ' please use a reactor that provides'
             ' IReactorPluggableNameResolver instead'))
 
 
