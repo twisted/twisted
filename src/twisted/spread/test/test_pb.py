@@ -476,6 +476,10 @@ class Echoer(pb.Root):
         return st
 
 
+    def remote_echoWithKeywords(self, st, **kw):
+        return (st, kw)
+
+
 class CachedReturner(pb.Root):
     def __init__(self, cache):
         self.cache = cache
@@ -532,13 +536,33 @@ class NewStyleTests(unittest.SynchronousTestCase):
         d = self.ref.callRemote("echo", orig)
         self.pump.flush()
         def cb(res):
-            # receiving the response creates a third one on the way back
+            # Receiving the response creates a third one on the way back
             self.assertIsInstance(res, NewStyleCopy2)
             self.assertEqual(res.value, 2)
             self.assertEqual(NewStyleCopy2.allocated, 3)
             self.assertEqual(NewStyleCopy2.initialized, 1)
-            self.assertFalse(res is orig) # no cheating :)
-        # sending the object creates a second one on the far side
+            self.assertIsNot(res, orig) # No cheating :)
+        # Sending the object creates a second one on the far side
+        d.addCallback(cb)
+        return d
+
+
+    def test_newStyleWithKeywords(self):
+        """
+        Create a new style object with keywords,
+        send it over the wire, and check the result.
+        """
+        orig = NewStyleCopy("value1")
+        d = self.ref.callRemote("echoWithKeywords", orig,
+                                keyword1="one", keyword2="two")
+        self.pump.flush()
+        def cb(res):
+            self.assertIsInstance(res, tuple)
+            self.assertIsInstance(res[0], NewStyleCopy)
+            self.assertIsInstance(res[1], dict)
+            self.assertEqual(res[0].s, "value1")
+            self.assertIsNot(res[0], orig)
+            self.assertEqual(res[1], {"keyword1": "one", "keyword2": "two"})
         d.addCallback(cb)
         return d
 

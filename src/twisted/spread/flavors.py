@@ -109,6 +109,11 @@ class Referenceable(Serializable):
         """
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
+        # Need this to interoperate with Python 2 clients
+        # which may try to send use keywords where keys are of type
+        # bytes.
+        if [key for key in kw.keys() if isinstance(key, bytes)]:
+            kw = dict((k.decode('utf8'), v) for k, v in kw.items())
 
         if not isinstance(message, str):
             message = message.decode('utf8')
