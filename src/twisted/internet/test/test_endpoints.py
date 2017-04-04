@@ -1846,7 +1846,7 @@ class HostnameEndpointFallbackNameResolutionTests(unittest.TestCase):
                                         host='ignored',
                                         port=0)
 
-        host = b"1.2.3.4"
+        host = "1.2.3.4"
         port = 1
 
         resolutionDeferred = ep._fallbackNameResolution(host, port)
