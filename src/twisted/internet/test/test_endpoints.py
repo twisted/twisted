@@ -1830,6 +1830,33 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
 
 
 
+class HostnameEndpointFallbackNameResolutionTests(unittest.TestCase):
+    """
+    Verify that L{HostnameEndpoint._fallbackNameResolution} defers a
+    name resolution call to a thread.
+    """
+
+    def test_fallbackNameResolution(self):
+        """
+        A L{Deferred} is returned that fires with the resoution of the
+        the host and request port.
+        """
+        from twisted.internet import reactor
+        ep = endpoints.HostnameEndpoint(reactor,
+                                        host='ignored',
+                                        port=0)
+
+        host = b"1.2.3.4"
+        port = 1
+
+        resolutionDeferred = ep._fallbackNameResolution(host, port)
+        resolutionDeferred.addCallback(
+            self.assertEqual,
+            [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', (host, port))])
+        return resolutionDeferred
+
+
+
 class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
     """
     Common methods for testing L{HostnameEndpoint} against
