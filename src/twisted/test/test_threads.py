@@ -12,12 +12,10 @@ import sys, os, time
 
 from twisted.trial import unittest
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import range
 from twisted.internet import reactor, defer, interfaces, threads, protocol, error
 from twisted.python import failure, threadable, log, threadpool
 
-if _PY3:
-    xrange = range
 
 
 class ReactorThreadsTests(unittest.TestCase):
@@ -96,7 +94,7 @@ class ReactorThreadsTests(unittest.TestCase):
             def threadedFunction():
                 # Hopefully a hundred thousand queued calls is enough to
                 # trigger the error condition
-                for i in xrange(100000):
+                for i in range(100000):
                     try:
                         reactor.callFromThread(lambda: None)
                     except:
@@ -238,7 +236,7 @@ class DeferredResultTests(unittest.TestCase):
             d.callback(None)
 
         threads.callMultipleInThread([
-            (L.append, (i,), {}) for i in xrange(N)
+            (L.append, (i,), {}) for i in range(N)
             ] + [(reactor.callFromThread, (finished,), {})])
         return d
 
