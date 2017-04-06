@@ -91,7 +91,10 @@ _EXTRA_OPTIONS = dict(
     tls=[
         'pyopenssl >= 16.0.0',
         'service_identity',
-        'idna >= 0.6'],
+        # idna 2.3 introduced some changes that break a few things.  Avoid it.
+        # The problems were fixed in 2.4.
+        'idna >= 0.6, != 2.3',
+    ],
     conch=[
         'pyasn1',
         'cryptography >= 0.9.1',
@@ -104,7 +107,7 @@ _EXTRA_OPTIONS = dict(
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.5.0, < 3.0',
+    http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
@@ -365,15 +368,12 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.internet._threadedselect",
     "twisted.internet.glib2reactor",
     "twisted.internet.gtk2reactor",
     "twisted.internet.pyuisupport",
     "twisted.internet.test.process_connectionlost",
     "twisted.internet.test.process_gireactornocompat",
     "twisted.internet.tksupport",
-    "twisted.internet.wxreactor",
-    "twisted.internet.wxsupport",
     "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
@@ -388,9 +388,7 @@ notPortedModules = [
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
     "twisted.mail.scripts.mailmail",
-    "twisted.mail.smtp",
     "twisted.mail.tap",
-    "twisted.mail.test.__init__",
     "twisted.mail.test.pop3testserver",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_imap",
@@ -400,7 +398,6 @@ notPortedModules = [
     "twisted.mail.test.test_pop3",
     "twisted.mail.test.test_pop3client",
     "twisted.mail.test.test_scripts",
-    "twisted.mail.test.test_smtp",
     "twisted.news.__init__",
     "twisted.news.database",
     "twisted.news.news",
@@ -418,7 +415,6 @@ notPortedModules = [
     "twisted.plugins.twisted_runner",
     "twisted.plugins.twisted_socks",
     "twisted.plugins.twisted_words",
-    "twisted.protocols.finger",
     "twisted.protocols.ident",
     "twisted.protocols.mice.__init__",
     "twisted.protocols.mice.mouseman",
@@ -442,7 +438,6 @@ notPortedModules = [
     "twisted.test.crash_test_dummy",
     "twisted.test.myrebuilder1",
     "twisted.test.myrebuilder2",
-    "twisted.test.test_finger",
     "twisted.test.test_formmethod",
     "twisted.test.test_hook",
     "twisted.test.test_ident",

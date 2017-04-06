@@ -86,7 +86,7 @@ except ImportError:
         return (key, pdict)
 
 
-from zope.interface import implementer, provider
+from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
@@ -112,6 +112,7 @@ except ImportError:
     H2Connection = None
     H2_ENABLED = False
 
+
 from twisted.web._responses import (
     SWITCHING,
 
@@ -132,6 +133,7 @@ from twisted.web._responses import (
     NOT_EXTENDED,
 
     RESPONSES)
+
 
 if _PY3:
     _intTypes = int
@@ -377,6 +379,101 @@ def parseContentRange(header):
 
 
 
+class _IDeprecatedHTTPChannelToRequestInterface(Interface):
+    """
+    The interface L{HTTPChannel} expects of L{Request}.
+    """
+
+    requestHeaders = Attribute(
+        "A L{http_headers.Headers} instance giving all received HTTP request "
+        "headers.")
+
+    responseHeaders = Attribute(
+        "A L{http_headers.Headers} instance holding all HTTP response "
+        "headers to be sent.")
+
+
+    def connectionLost(reason):
+        """
+        The underlying connection has been lost.
+
+        @param reason: A failure instance indicating the reason why
+            the connection was lost.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+
+    def gotLength(length):
+        """
+        Called when L{HTTPChannel} has determined the length, if any,
+        of the incoming request's body.
+
+        @param length: The length of the request's body.
+        @type length: L{int} if the request declares its body's length
+            and L{None} if it does not.
+        """
+
+
+    def handleContentChunk(data):
+        """
+        Deliver a received chunk of body data to the request.  Note
+        this does not imply chunked transfer encoding.
+
+        @param data: The received chunk.
+        @type data: L{bytes}
+        """
+
+
+    def parseCookies():
+        """
+        Parse the request's cookies out of received headers.
+        """
+
+
+    def requestReceived(command, path, version):
+        """
+        Called when the entire request, including its body, has been
+        received.
+
+        @param command: The request's HTTP command.
+        @type command: L{bytes}
+
+        @param path: The request's path.  Note: this is actually what
+            RFC7320 calls the URI.
+        @type path: L{bytes}
+
+        @param version: The request's HTTP version.
+        @type version: L{bytes}
+        """
+
+
+    def __eq__(other):
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        @rtype: L{bool}
+        """
+
+
+    def __ne__(other):
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        @rtype: L{bool}
+        """
+
+
+
 class StringTransport:
     """
     I am a StringIO wrapper that conforms for the transport API. I support
@@ -549,7 +646,8 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
-@implementer(interfaces.IConsumer)
+@implementer(interfaces.IConsumer,
+             _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
     """
     A HTTP request.
@@ -1350,6 +1448,49 @@ class Request:
         self.channel.loseConnection()
 
 
+    def __eq__(self, other):
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        @rtype: L{bool}
+        """
+        # When other is not an instance of request, return
+        # NotImplemented so that Python uses other.__eq__ to perform
+        # the comparison.  This ensures that a Request proxy generated
+        # by proxyForInterface compares equal to an actual Request
+        # instanceby turning request != proxy into proxy != request.
+        if isinstance(other, Request):
+            return self is other
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        @rtype: L{bool}
+        """
+        # When other is not an instance of request, return
+        # NotImplemented so that Python uses other.__ne__ to perform
+        # the comparison.  This ensures that a Request proxy generated
+        # by proxyForInterface can compare equal to an actual Request
+        # instance by turning request != proxy into proxy != request.
+        if isinstance(other, Request):
+            return self is not other
+        return NotImplemented
+
+
+
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
@@ -1705,10 +1846,21 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
     @type _waitingForTransport: L{bool}
+
+    @ivar abortTimeout: The number of seconds to wait after we attempt to shut
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
+    @type abortTimeout: L{int}
+
+    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
+        used to forcibly close the transport if it doesn't close cleanly.
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
 
     maxHeaders = 500
     totalHeadersSize = 16384
+    abortTimeout = 15
 
     length = 0
     persistent = 1
@@ -1725,6 +1877,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducer = None
     _requestProducerStreaming = None
     _waitingForTransport = False
+    _abortingCall = None
 
     def __init__(self):
         # the request queue
@@ -2006,13 +2159,36 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        if self.abortTimeout is not None:
+            # We use self.callLater because that's what TimeoutMixin does.
+            self._abortingCall = self.callLater(
+                self.abortTimeout, self.forceAbortClient
+            )
         self.loseConnection()
+
+
+    def forceAbortClient(self):
+        """
+        Called if C{abortTimeout} seconds have passed since the timeout fired,
+        and the connection still hasn't gone away. This can really only happen
+        on extremely bad connections or when clients are maliciously attempting
+        to keep connections open.
+        """
+        log.msg(
+            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
+        )
+        self.transport.abortConnection()
 
 
     def connectionLost(self, reason):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+        # If we were going to force-close the transport, we don't have to now.
+        if self._abortingCall is not None:
+            self._abortingCall.cancel()
+            self._abortingCall = None
 
 
     def isSecure(self):
