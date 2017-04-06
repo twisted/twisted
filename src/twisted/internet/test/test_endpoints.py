@@ -1846,14 +1846,18 @@ class HostnameEndpointFallbackNameResolutionTests(unittest.TestCase):
                                         host='ignored',
                                         port=0)
 
-        host = "1.2.3.4"
-        port = 1
+        host, port = ("1.2.3.4", 1)
 
         resolutionDeferred = ep._fallbackNameResolution(host, port)
-        resolutionDeferred.addCallback(
-            self.assertEqual,
-            [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', (host, port))])
-        return resolutionDeferred
+
+        def assertHostPortFamilySockType(result):
+            self.assertEqual(len(result), 1)
+            [(family, socktype, _, _, sockaddr)] = result
+            self.assertEqual(family, AF_INET)
+            self.assertEqual(socktype, SOCK_STREAM)
+            self.assertEqual(sockaddr, (host, port))
+
+        return resolutionDeferred.addCallback(assertHostPortFamilySockType)
 
 
 
