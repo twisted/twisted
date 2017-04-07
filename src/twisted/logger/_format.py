@@ -284,6 +284,4 @@ def formatWithCall(formatString, mapping):
     @return: The string with formatted values interpolated.
     @rtype: L{unicode}
     """
-    return unicode(
-        aFormatter.vformat(formatString, (), CallMapping(mapping))
-    )
+    return aFormatter.vformat(formatString, (), CallMapping(mapping)).decode('utf8')
