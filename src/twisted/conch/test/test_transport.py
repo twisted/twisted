@@ -1315,7 +1315,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
         # client preference is used, after skipping diffie-hellman-group1-sha1
         self.assertEqual(self.proto.kexAlg,
-                         b'diffie-hellman-group1-sha1')
+                         b'diffie-hellman-group-exchange-sha1')
         self.assertEqual(self.proto.keyAlg,
                          b'ssh-dss')
         self.assertEqual(self.proto.outgoingCompressionType,
