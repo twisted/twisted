@@ -30,11 +30,12 @@ except ImportError:
 
 try:
     import nacl.signing
+    skipNacl = None
 except ImportError:
     nacl = None
     skipNacl = 'Cannot run without pynacl.'
 
-if cryptography and pyasn1 and nacl:
+if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
 
 import base64
@@ -157,8 +158,6 @@ class KeyTests(unittest.TestCase):
         skip = skipCryptography
     if pyasn1 is None:
         skip = "Cannot run without PyASN1"
-    if nacl is None:
-        skip = skipNacl
 
     def setUp(self):
         self.rsaObj = keys.Key._fromRSAComponents(
@@ -194,14 +193,6 @@ class KeyTests(unittest.TestCase):
             privateValue=keydata.ECDatanistp521['privateValue'],
             curve=keydata.ECDatanistp521['curve']
         )._keyObject
-        self.ed25519Obj = keys.Key._fromED25519Components(
-            seed=keydata.ED25519Data['signing'][:32],
-            isPrivate=True
-        )._keyObject
-        self.ed25519publicObj = keys.Key._fromED25519Components(
-            seed=keydata.ED25519Data['verify'],
-            isPrivate=False
-        )._keyObject
         self.rsaSignature = (b'\x00\x00\x00\x07ssh-rsa\x00'
             b'\x00\x00`N\xac\xb4@qK\xa0(\xc3\xf2h \xd3\xdd\xee6Np\x9d_'
             b'\xb0>\xe3\x0c(L\x9d{\txUd|!\xf6m\x9c\xd3\x93\x842\x7fU'
@@ -214,6 +205,17 @@ class KeyTests(unittest.TestCase):
             b'\xdf\x0c\xc4E@4,d\xbc\t\xd9\xae\xdd[\xed-\x82nQ\x8cf\x9b\xe8\xe1'
             b'jrg\x84p<'
         )
+
+        if not skipNacl:
+            self.ed25519Obj = keys.Key._fromED25519Components(
+                seed=keydata.ED25519Data['signing'][:32],
+                isPrivate=True
+            )._keyObject
+            self.ed25519publicObj = keys.Key._fromED25519Components(
+                seed=keydata.ED25519Data['verify'],
+                isPrivate=False
+            )._keyObject
+
         self.patch(randbytes, 'secureRandom', lambda x: b'\xff' * x)
         self.keyFile = self.mktemp()
         with open(self.keyFile, 'wb') as f:
@@ -232,7 +234,9 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj).size(), 256)
         self.assertEqual(keys.Key(self.ecObj384).size(), 384)
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
-        self.assertEqual(keys.Key(self.ed25519Obj).size(), 32)
+
+        if not skipNacl:
+            self.assertEqual(keys.Key(self.ed25519Obj).size(), 32)
 
 
     def test__guessStringType(self):
@@ -247,9 +251,12 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicECDSA_openssh),
             'public_openssh')
-        self.assertEqual(
-            keys.Key._guessStringType(keydata.publicED25519openssh),
-            'public_openssh')
+
+        if not skipNacl:
+            self.assertEqual(
+                keys.Key._guessStringType(keydata.publicED25519openssh),
+                'public_openssh')
+
         self.assertEqual(keys.Key._guessStringType(
             keydata.privateRSA_openssh), 'private_openssh')
         self.assertEqual(keys.Key._guessStringType(
@@ -274,8 +281,10 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key._guessStringType(
             b'\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x01'),
             'blob')
-        self.assertEqual(keys.Key._guessStringType(
-            b'\x00\x00\x00\x0bssh-ed25519'), 'blob')
+
+        if not skipNacl:
+            self.assertEqual(keys.Key._guessStringType(
+                b'\x00\x00\x00\x0bssh-ed25519'), 'blob')
         self.assertEqual(keys.Key._guessStringType(b'not a key'),
                 None)
 
@@ -322,8 +331,10 @@ class KeyTests(unittest.TestCase):
         """
         Test that keys are correctly generated from OpenSSH strings.
         """
-        self._testPublicPrivateFromString(keydata.publicED25519openssh,
-                keydata.privateED25519openssh, 'ED25519', keydata.ED25519Data)
+        if not skipNacl:
+            self._testPublicPrivateFromString(keydata.publicED25519openssh,
+                    keydata.privateED25519openssh, 'ED25519', keydata.ED25519Data)
+
         self._testPublicPrivateFromString(keydata.publicECDSA_openssh,
                 keydata.privateECDSA_openssh, 'EC', keydata.ECDatanistp256)
         self._testPublicPrivateFromString(keydata.publicRSA_openssh,
@@ -926,15 +937,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         A private ED25519 key is correctly generated from a private key blob.
         """
-        edblob = (
-            common.NS(b'ssh-ed25519') +
-            common.NS(keydata.ED25519Data['signing'][:32])
-        )
+        if not skipNacl:
+            edblob = (
+                common.NS(b'ssh-ed25519') +
+                common.NS(keydata.ED25519Data['signing'][:32])
+            )
 
-        edkey = keys.Key._fromString_PRIVATE_BLOB(edblob)
+            edkey = keys.Key._fromString_PRIVATE_BLOB(edblob)
 
-        self.assertFalse(edkey.isPublic())
-        self.assertEqual(keydata.ED25519Data, edkey.data())
+            self.assertFalse(edkey.isPublic())
+            self.assertEqual(keydata.ED25519Data, edkey.data())
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
 
     def test_blobRSA(self):
@@ -986,11 +1000,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Return the over-the-wire SSH format of the ED25519 public key.
         """
-        self.assertEqual(
-            keys.Key(self.ed25519publicObj).blob(),
-            common.NS(b'ssh-ed25519') +
-            common.NS(self.ed25519Obj.verify_key._key)
-        )
+        if not skipNacl:
+            self.assertEqual(
+                keys.Key(self.ed25519publicObj).blob(),
+                common.NS(b'ssh-ed25519') +
+                common.NS(self.ed25519Obj.verify_key._key)
+            )
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
 
     def test_blobNoKey(self):
@@ -1060,12 +1077,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.privateBlob} returns the SSH protocol-level format of
         ED25519 signing key.
         """
-        self.assertEqual(
-            keys.Key(self.ed25519Obj).privateBlob(),
-            common.NS(b'ssh-ed25519') +
-            common.NS(self.ed25519Obj._signing_key)
-        )
-
+        if not skipNacl:
+            self.assertEqual(
+                keys.Key(self.ed25519Obj).privateBlob(),
+                common.NS(b'ssh-ed25519') +
+                common.NS(self.ed25519Obj._signing_key)
+            )
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
     def test_privateBlobNoKeyObject(self):
         """
@@ -1117,22 +1136,25 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         L{keys.Key.toString} serializes a ED25519 key in OpenSSH format.
         """
-        key = keys.Key.fromString(keydata.privateED25519openssh)
-        self.assertEqual(key.public().toString('openssh', b'comment'),
-                         keydata.publicED25519openssh)
+        if not skipNacl:
+            key = keys.Key.fromString(keydata.privateED25519openssh)
+            self.assertEqual(key.public().toString('openssh', b'comment'),
+                             keydata.publicED25519openssh)
 
-        # We need to patch the comparison value because SecureRandom
-        # gets patched when run as a unit test.
-        self.assertEqual(key.toString('openssh', b'comment'),
-                         keydata.privateED25519openssh[:167]
-                         + b'D/////////\n/w'
-                         + keydata.privateED25519openssh[180:])
+            # We need to patch the comparison value because SecureRandom
+            # gets patched when run as a unit test.
+            self.assertEqual(key.toString('openssh', b'comment'),
+                             keydata.privateED25519openssh[:167]
+                             + b'D/////////\n/w'
+                             + keydata.privateED25519openssh[180:])
 
-        self.assertEqual(key.toString('openssh'),
-                         keydata.privateED25519openssh[:166]
-                         + b'ID/////////\n/w'
-                         + keydata.privateED25519openssh[180:-57]
-                         + b'Q==\n-----END OPENSSH PRIVATE KEY-----')
+            self.assertEqual(key.toString('openssh'),
+                             keydata.privateED25519openssh[:166]
+                             + b'ID/////////\n/w'
+                             + keydata.privateED25519openssh[180:-57]
+                             + b'Q==\n-----END OPENSSH PRIVATE KEY-----')
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
 
     def test_toLSHRSA(self):
@@ -1228,16 +1250,18 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Signed data can be verified using ED25519.
         """
-        data = b'some-data'
-        key = keys.Key.fromString(keydata.privateED25519openssh)
-        signature = key.sign(data)
+        if not skipNacl:
+            data = b'some-data'
+            key = keys.Key.fromString(keydata.privateED25519openssh)
+            signature = key.sign(data)
 
-        self.assertTrue(key.public().verify(signature, data))
-        self.assertTrue(key.verify(signature, data))
+            self.assertTrue(key.public().verify(signature, data))
+            self.assertTrue(key.verify(signature, data))
 
-        badsignature = signature[:15] + common.NS(b'bad-sig')
-        self.assertFalse(key.verify(badsignature, data))
-
+            badsignature = signature[:15] + common.NS(b'bad-sig')
+            self.assertFalse(key.verify(badsignature, data))
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
     def test_verifyRSA(self):
         """
@@ -1368,23 +1392,28 @@ y:""" +
         The repr of a L{keys.Key} contains all the OpenSSH format for ED25519
         public keys.
         """
-        teststr = '<ed25519 Verification Key\nkey: %s>' % \
-        (b'5efddfee48d4249b3e902996d37509835bd7a5912cf89778f1d2857f33d96123',)
+        if not skipNacl:
+            teststr = '<ed25519 Verification Key\nkey: %s>' % \
+            (b'5efddfee48d4249b3e902996d37509835bd7a5912cf89778f1d2857f33d96123',)
 
-        self.assertEqual(repr(keys.Key(self.ed25519Obj).public()), teststr)
-
+            self.assertEqual(repr(keys.Key(self.ed25519Obj).public()), teststr)
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
     def test_reprPrivateED25519(self):
         """
         The repr of a L{keys.Key} contains all the OpenSSH format for ED25519
         private keys.
         """
-        teststr = '<ed25519 Signing Key\nkey: %s>' % \
-                  (b'47f0d30544cea87b5db741fe2ed8d90c1aa3802a6a3d70f580df344'
-                    b'b3c2efabe5efddfee48d4249b3e902996d37509835bd7a5912cf89'
-                    b'778f1d2857f33d96123',)
+        if not skipNacl:
+            teststr = '<ed25519 Signing Key\nkey: %s>' % \
+                      (b'47f0d30544cea87b5db741fe2ed8d90c1aa3802a6a3d70f580df344'
+                        b'b3c2efabe5efddfee48d4249b3e902996d37509835bd7a5912cf89'
+                        b'778f1d2857f33d96123',)
 
-        self.assertEqual(repr(keys.Key(self.ed25519Obj)), teststr)
+            self.assertEqual(repr(keys.Key(self.ed25519Obj)), teststr)
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
 
 class KeyKeyObjectTests(unittest.TestCase):

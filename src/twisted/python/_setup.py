@@ -99,7 +99,6 @@ _EXTRA_OPTIONS = dict(
         'pyasn1',
         'cryptography >= 0.9.1',
         'appdirs >= 1.4.0',
-        'pynacl >= 1.0.1',
     ],
     soap=['soappy'],
     serial=['pyserial'],

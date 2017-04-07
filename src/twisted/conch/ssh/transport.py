@@ -19,9 +19,12 @@ import zlib
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
-import nacl.public
-# Use crypto_scalarmult instead of Box for shared secret.
-from nacl.bindings.crypto_scalarmult import crypto_scalarmult
+try:
+    import nacl.public
+    # Use crypto_scalarmult instead of Box for shared secret.
+    from nacl.bindings.crypto_scalarmult import crypto_scalarmult
+except ImportError:
+    pass
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend

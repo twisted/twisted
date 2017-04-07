@@ -44,6 +44,12 @@ else:
         class SSHFactory:
             pass
 
+try:
+    import nacl
+    skipNacl = None
+except ImportError:
+    skipNacl = 'Cannot run without pynacl.'
+
 from hashlib import md5, sha1, sha256, sha384, sha512
 
 from twisted.trial import unittest
@@ -1309,7 +1315,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
         # client preference is used, after skipping diffie-hellman-group1-sha1
         self.assertEqual(self.proto.kexAlg,
-                         b'diffie-hellman-group-exchange-sha1')
+                         b'diffie-hellman-group1-sha1')
         self.assertEqual(self.proto.keyAlg,
                          b'ssh-dss')
         self.assertEqual(self.proto.outgoingCompressionType,
@@ -1451,10 +1457,13 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         Test that if the server receives an ed25519 key that is smaller
         than 32 bits, we raise a ValueError.
         """
-        self.proto.kexAlg = b"curve25519-sha256@libssh.org"
-        self.proto.keyAlg = b'ssh-rsa'
-        self.assertRaises(ValueError, self.proto._ssh_KEX_ECDH_INIT,
-                          common.NS(keydata.publicED25519openssh[12:20]))
+        if not skipNacl:
+            self.proto.kexAlg = b"curve25519-sha256@libssh.org"
+            self.proto.keyAlg = b'ssh-rsa'
+            self.assertRaises(ValueError, self.proto._ssh_KEX_ECDH_INIT,
+                              common.NS(keydata.publicED25519openssh[12:20]))
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
 
     def test_checkBad_KEX_INIT_CurveName(self):
@@ -2000,35 +2009,37 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that KEX_ECDH_REPLY disconnects if the ed25519 keysize is bad.
         """
-        kexmsg = (
-            b"\xAA" * 16 +
-            common.NS(b"curve25519-sha256@libssh.org") +
-            common.NS(b'ssh-rsa') +
-            common.NS(b'aes256-ctr') +
-            common.NS(b'aes256-ctr') +
-            common.NS(b'hmac-sha1') +
-            common.NS(b'hmac-sha1') +
-            common.NS(b'none') +
-            common.NS(b'none') +
-            common.NS(b'') +
-            common.NS(b'') +
-            b'\x00' + b'\x00\x00\x00\x00')
+        if not skipNacl:
+            kexmsg = (
+                b"\xAA" * 16 +
+                common.NS(b"curve25519-sha256@libssh.org") +
+                common.NS(b'ssh-rsa') +
+                common.NS(b'aes256-ctr') +
+                common.NS(b'aes256-ctr') +
+                common.NS(b'hmac-sha1') +
+                common.NS(b'hmac-sha1') +
+                common.NS(b'none') +
+                common.NS(b'none') +
+                common.NS(b'') +
+                common.NS(b'') +
+                b'\x00' + b'\x00\x00\x00\x00')
 
-        self.proto.ssh_KEXINIT(kexmsg)
+            self.proto.ssh_KEXINIT(kexmsg)
 
-        self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
+            self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
-                                                    default_backend())
-        self.proto.ecPub = self.proto.ecPriv.public_key()
+            self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
+                                                        default_backend())
+            self.proto.ecPub = self.proto.ecPriv.public_key()
 
-        self.proto.kexAlg = b"curve25519-sha256@libssh.org"
-        self.proto._ssh_KEX_ECDH_REPLY(
-            common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
-            common.NS(keydata.publicED25519openssh[12:20])
-            + common.NS(b'bad-signature'))
-        self.checkDisconnected(transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE)
-
+            self.proto.kexAlg = b"curve25519-sha256@libssh.org"
+            self.proto._ssh_KEX_ECDH_REPLY(
+                common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+                common.NS(keydata.publicED25519openssh[12:20])
+                + common.NS(b'bad-signature'))
+            self.checkDisconnected(transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE)
+        else:
+            unittest.TestCase.skipTest(self, skipNacl)
 
     def test_disconnectNEWKEYSData(self):
         """
