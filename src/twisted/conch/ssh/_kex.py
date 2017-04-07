@@ -14,6 +14,7 @@ from zope.interface import Attribute, implementer, Interface
 
 from twisted.conch import error
 from twisted.python.compat import long
+from twisted.python.reflect import requireModule
 
 
 class _IKexAlgorithm(Interface):
@@ -188,11 +189,8 @@ _kexAlgorithms = {
     }
 
 # Add curve25519 if it's supported.
-try:
-    import nacl.public
+if requireModule('nacl'):
     _kexAlgorithms[b"curve25519-sha256@libssh.org"] = _ECDH256()
-except ImportError:
-    pass
 
 
 def getKex(kexAlgorithm):

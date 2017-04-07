@@ -19,12 +19,7 @@ import zlib
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
-try:
-    import nacl.public
-    # Use crypto_scalarmult instead of Box for shared secret.
-    from nacl.bindings.crypto_scalarmult import crypto_scalarmult
-except ImportError:
-    pass
+
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -34,6 +29,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
 from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
+from twisted.python.reflect import requireModule
 
 # This import is needed if SHA256 hashing is used.
 #from twisted.python.compat import nativeString
@@ -43,6 +39,10 @@ from twisted.conch.ssh.common import (
     NS, getNS, MP, getMP, _MPpow, ffs, int_from_bytes
 )
 
+if requireModule('nacl'):
+    import nacl.public
+    # Use crypto_scalarmult instead of Box for shared secret.
+    from nacl.bindings.crypto_scalarmult import crypto_scalarmult
 
 
 def _getRandomNumber(random, bits):
@@ -491,7 +491,10 @@ class SSHTransportBase(protocol.Protocol):
         if eckey.find(b'ecdh') != -1:
             supportedPublicKeys += [eckey.replace(b'ecdh', b'ecdsa')]
 
-    supportedPublicKeys += [b'ssh-rsa', b'ssh-dss', b'ssh-ed25519']
+    supportedPublicKeys += [b'ssh-rsa', b'ssh-dss']
+
+    if requireModule('nacl'):
+        supportedPublicKeys += [b'ssh-ed25519']
 
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()

@@ -51,9 +51,10 @@ from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 
 # Try to import nacl.  If it's not there, make an empty class.
-try:
+from twisted.python.reflect import requireModule
+if requireModule('nacl'):
     import nacl.signing
-except ImportError:
+else:
     class nacl:
         class signing:
             class VerifyKey:
