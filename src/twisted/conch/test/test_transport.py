@@ -6,6 +6,7 @@ Tests for ssh/transport.py and the classes therein.
 """
 
 from __future__ import absolute_import, division
+from twisted.python.reflect import requireModule
 
 import struct
 import binascii
@@ -44,10 +45,9 @@ else:
         class SSHFactory:
             pass
 
-try:
-    import nacl
+if requireModule('nacl'):
     skipNacl = None
-except ImportError:
+else:
     skipNacl = 'Cannot run without pynacl.'
 
 from hashlib import md5, sha1, sha256, sha384, sha512

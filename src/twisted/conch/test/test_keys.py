@@ -6,6 +6,7 @@ Tests for L{twisted.conch.ssh.keys}.
 """
 
 from __future__ import absolute_import, division
+from twisted.python.reflect import requireModule
 
 try:
     import cryptography
@@ -28,10 +29,10 @@ try:
 except ImportError:
     pyasn1 = None
 
-try:
-    import nacl.signing
+
+if requireModule('nacl'):
     skipNacl = None
-except ImportError:
+else:
     nacl = None
     skipNacl = 'Cannot run without pynacl.'
 
