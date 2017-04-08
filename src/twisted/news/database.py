@@ -10,8 +10,15 @@ import getpass, pickle, time, socket
 import os
 import StringIO
 from hashlib import md5
-from email.Message import Message
-from email.Generator import Generator
+try:
+    # Python 3
+    from email.message import Message
+    from email.generator import Generator
+except ImportError:
+    # Python 2
+    from email.Message import Message
+    from email.Generator import Generator
+
 from zope.interface import implementer, Interface
 
 from twisted.news.nntp import NNTPError

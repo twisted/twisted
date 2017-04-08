@@ -7,7 +7,13 @@ Tests for L{twisted.news.database}.
 
 __metaclass__ = type
 
-from email.Parser import Parser
+try:
+    # Python 3
+    from email.parser import Parser
+except ImportError:
+    # Python 2
+    from email.Parser import Parser
+
 from socket import gethostname
 
 from twisted.trial.unittest import TestCase
