@@ -209,8 +209,8 @@ class CGITests(unittest.TestCase):
 
     def test_duplicateHeaderCGI(self):
         """
-        If a CGI script emits two instances of the same header, both
-        are sent in the response.
+        If a CGI script emits two instances of the same header, both are sent
+        in the response.
         """
         cgiFilename = self.writeCGI(DUAL_HEADER_CGI)
 

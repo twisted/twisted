@@ -98,9 +98,9 @@ class CGIScript(resource.Resource):
         if hasattr(request, "content"):
             # 'request.content' is either a StringIO or a TemporaryFile, and
             # the file pointer is sitting at the beginning (seek(0,0))
-            request.content.seek(0,2)
+            request.content.seek(0, 2)
             length = request.content.tell()
-            request.content.seek(0,0)
+            request.content.seek(0, 0)
             env['CONTENT_LENGTH'] = str(length)
 
         try:
@@ -134,16 +134,16 @@ class CGIScript(resource.Resource):
         """
         Run the cgi script.
 
-        @type env: A C{dict} of C{str}, or L{None}
+        @type env: A L{dict} of L{str}, or L{None}
         @param env: The environment variables to pass to the process that will
             get spawned. See
-            L{twisted.internet.interfaces.IReactorProcess.spawnProcess}
-            for more information about environments and process creation.
+            L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for
+            more information about environments and process creation.
 
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
 
-        @type qargs: A C{list} of C{str}
+        @type qargs: A L{list} of L{str}
         @param qargs: The command line arguments to pass to the process that
             will get spawned.
         """
@@ -157,15 +157,15 @@ class FilteredScript(CGIScript):
     """
     I am a special version of a CGI script, that uses a specific executable.
 
-    This is useful for interfacing with other scripting languages that adheres
-    to the CGI standard. My C{filter} attribute specifies what executable
-    to run, and my C{filename} init parameter describes which script to
-    pass to the first argument of that script.
+    This is useful for interfacing with other scripting languages that adhere
+    to the CGI standard. My C{filter} attribute specifies what executable to
+    run, and my C{filename} init parameter describes which script to pass to
+    the first argument of that script.
 
     To customize me for a particular location of a CGI interpreter, override
     C{filter}.
 
-    @type filter: C{str}
+    @type filter: L{str}
     @ivar filter: The absolute path to the executable.
     """
 
@@ -176,7 +176,7 @@ class FilteredScript(CGIScript):
         """
         Run a script through the C{filter} executable.
 
-        @type env: A C{dict} of C{str}, or L{None}
+        @type env: A L{dict} of L{str}, or L{None}
         @param env: The environment variables to pass to the process that will
             get spawned. See
             L{twisted.internet.interfaces.IReactorProcess.spawnProcess}
@@ -185,7 +185,7 @@ class FilteredScript(CGIScript):
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
 
-        @type qargs: A C{list} of C{str}
+        @type qargs: A L{list} of L{str}
         @param qargs: The command line arguments to pass to the process that
             will get spawned.
         """
