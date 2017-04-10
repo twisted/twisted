@@ -143,7 +143,7 @@ def getDeprecated(self, decorators):
             else:
                 fn = self.expandName(decorator[0].name)
 
-            if fn == "eventually._deprecate.deprecated":
+            if fn == "eventually.deprecated":
                 try:
                     self._deprecated_info = deprecatedToUsefulText(
                         self.name, decorator)
@@ -194,7 +194,7 @@ def deprecatedToUsefulText(name, deprecated):
     """
     Change a C{@deprecated} to a display string.
     """
-    from eventually import getDeprecationWarningString
+    from eventually._deprecate import _getDeprecationWarningString
 
     version = versionToUsefulObject(deprecated[1])
     if deprecated[2]:
@@ -205,7 +205,8 @@ def deprecatedToUsefulText(name, deprecated):
     else:
         replacement = None
 
-    return getDeprecationWarningString(name, version, replacement=replacement) + "."
+    return _getDeprecationWarningString(
+        name, version, replacement=replacement) + "."
 
 
 

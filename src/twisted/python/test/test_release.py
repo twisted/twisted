@@ -538,7 +538,9 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "def foo():\n"
             "    '%s'\n"
             "import incremental\n"
-            "@deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
+            "import eventually\n"
+            "@eventually.deprecated("
+            "incremental.Version('Twisted', 16, 0, 0))\n"
             "def _bar():\n"
             "    '%s'\n"
             "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
@@ -547,7 +549,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "" % (docstring, privateDocstring))
 
         outputPath = FilePath(self.mktemp())
-
         builder = APIBuilder()
         builder.build(projectName, projectURL, sourceURL, inputPath,
                       outputPath)
