@@ -115,8 +115,8 @@ How to do a release candidate
 8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
 9. Push the changes up to GitHub.
 10. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs.
-11. Copy ``NEWS`` to ``/tmp/twisted-release/`` as ``NEWS.txt`` for people to view without having to download the tarballs.
-    (e.g. ``cp NEWS /tmp/twisted-release/NEWS.txt``)
+11. Copy ``NEWS.rst`` to ``/tmp/twisted-release/`` for people to view without having to download the tarballs.
+    (e.g. ``cp NEWS.rst /tmp/twisted-release/NEWS.rst``)
 12. Upload the tarballs to ``twistedmatrix.com/Releases/rc/$RELEASE`` (see #4353)
 
   - You can use ``rsync --rsh=ssh --partial --progress -av /tmp/twisted-release/ t-web@dornkirk.twistedmatrix.com:/srv/t-web/data/releases/rc/<RELEASE>/`` to do this.
