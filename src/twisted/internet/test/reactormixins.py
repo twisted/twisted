@@ -23,8 +23,7 @@ import os, signal, time
 from twisted.trial.unittest import SynchronousTestCase, SkipTest
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
+from twisted.python.reflect import namedAny, fullyQualifiedName
 
 from twisted.python import log
 from twisted.python.failure import Failure

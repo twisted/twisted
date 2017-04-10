@@ -194,7 +194,7 @@ def deprecatedToUsefulText(name, deprecated):
     """
     Change a C{@deprecated} to a display string.
     """
-    from twisted.python.deprecate import _getDeprecationWarningString
+    from eventually import getDeprecationWarningString
 
     version = versionToUsefulObject(deprecated[1])
     if deprecated[2]:
@@ -205,7 +205,7 @@ def deprecatedToUsefulText(name, deprecated):
     else:
         replacement = None
 
-    return _getDeprecationWarningString(name, version, replacement=replacement) + "."
+    return getDeprecationWarningString(name, version, replacement=replacement) + "."
 
 
 

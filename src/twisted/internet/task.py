@@ -18,9 +18,10 @@ from zope.interface import implementer
 
 from twisted.python import log
 from twisted.python import reflect
-from twisted.python.deprecate import _getDeprecationWarningString
 from twisted.python.failure import Failure
+
 from incremental import Version
+from eventually import deprecatedProperty
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime
@@ -72,19 +73,14 @@ class LoopingCall:
         from twisted.internet import reactor
         self.clock = reactor
 
-    @property
+    @deprecatedProperty(Version("Twisted", 16, 0, 0),
+                        'the deferred returned by start()')
     def deferred(self):
         """
         DEPRECATED. L{Deferred} fired when loop stops or fails.
 
         Use the L{Deferred} returned by L{LoopingCall.start}.
         """
-        warningString = _getDeprecationWarningString(
-            "twisted.internet.task.LoopingCall.deferred",
-            Version("Twisted", 16, 0, 0),
-            replacement='the deferred returned by start()')
-        warnings.warn(warningString, DeprecationWarning, stacklevel=2)
-
         return self._deferred
 
     def withCount(cls, countCallable):

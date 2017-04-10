@@ -16,25 +16,21 @@ except ImportError:
     invalidate_caches = None
 
 from twisted.python import deprecate
-from twisted.python.deprecate import _getDeprecationWarningString
 from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
 from twisted.python.deprecate import (
     getDeprecationWarningString,
-    deprecated, _appendToDocstring, _getDeprecationDocstring,
-    _fullyQualifiedName as fullyQualifiedName,
-    _mutuallyExclusiveArguments,
-    deprecatedProperty,
-    _passedArgSpec, _passedSignature
+    deprecated, deprecatedProperty,
+    _mutuallyExclusiveArguments
 )
 
 from twisted.python.compat import _PY3, execfile
 from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import fullyQualifiedName
 
 from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-
 from twisted.trial.unittest import SynchronousTestCase
 
 # Note that various tests in this module require manual encoding of paths to
@@ -60,85 +56,6 @@ class _MockDeprecatedAttribute(object):
 
 
 
-class ModuleProxyTests(SynchronousTestCase):
-    """
-    Tests for L{twisted.python.deprecate._ModuleProxy}, which proxies
-    access to module-level attributes, intercepting access to deprecated
-    attributes and passing through access to normal attributes.
-    """
-    def _makeProxy(self, **attrs):
-        """
-        Create a temporary module proxy object.
-
-        @param **kw: Attributes to initialise on the temporary module object
-
-        @rtype: L{twistd.python.deprecate._ModuleProxy}
-        """
-        mod = types.ModuleType('foo')
-        for key, value in attrs.items():
-            setattr(mod, key, value)
-        return deprecate._ModuleProxy(mod)
-
-
-    def test_getattrPassthrough(self):
-        """
-        Getting a normal attribute on a L{twisted.python.deprecate._ModuleProxy}
-        retrieves the underlying attribute's value, and raises C{AttributeError}
-        if a non-existent attribute is accessed.
-        """
-        proxy = self._makeProxy(SOME_ATTRIBUTE='hello')
-        self.assertIs(proxy.SOME_ATTRIBUTE, 'hello')
-        self.assertRaises(AttributeError, getattr, proxy, 'DOES_NOT_EXIST')
-
-
-    def test_getattrIntercept(self):
-        """
-        Getting an attribute marked as being deprecated on
-        L{twisted.python.deprecate._ModuleProxy} results in calling the
-        deprecated wrapper's C{get} method.
-        """
-        proxy = self._makeProxy()
-        _deprecatedAttributes = object.__getattribute__(
-            proxy, '_deprecatedAttributes')
-        _deprecatedAttributes['foo'] = _MockDeprecatedAttribute(42)
-        self.assertEqual(proxy.foo, 42)
-
-
-    def test_privateAttributes(self):
-        """
-        Private attributes of L{twisted.python.deprecate._ModuleProxy} are
-        inaccessible when regular attribute access is used.
-        """
-        proxy = self._makeProxy()
-        self.assertRaises(AttributeError, getattr, proxy, '_module')
-        self.assertRaises(
-            AttributeError, getattr, proxy, '_deprecatedAttributes')
-
-
-    def test_setattr(self):
-        """
-        Setting attributes on L{twisted.python.deprecate._ModuleProxy} proxies
-        them through to the wrapped module.
-        """
-        proxy = self._makeProxy()
-        proxy._module = 1
-        self.assertNotEqual(object.__getattribute__(proxy, '_module'), 1)
-        self.assertEqual(proxy._module, 1)
-
-
-    def test_repr(self):
-        """
-        L{twisted.python.deprecated._ModuleProxy.__repr__} produces a string
-        containing the proxy type and a representation of the wrapped module
-        object.
-        """
-        proxy = self._makeProxy()
-        realModule = object.__getattribute__(proxy, '_module')
-        self.assertEqual(
-            repr(proxy), '<%s module=%r>' % (type(proxy).__name__, realModule))
-
-
-
 class DeprecatedAttributeTests(SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate._DeprecatedAttribute} and
@@ -149,71 +66,6 @@ class DeprecatedAttributeTests(SynchronousTestCase):
         self.version = deprecatedattributes.version
         self.message = deprecatedattributes.message
         self._testModuleName = __name__ + '.foo'
-
-
-    def _getWarningString(self, attr):
-        """
-        Create the warning string used by deprecated attributes.
-        """
-        return _getDeprecationWarningString(
-            deprecatedattributes.__name__ + '.' + attr,
-            deprecatedattributes.version,
-            DEPRECATION_WARNING_FORMAT + ': ' + deprecatedattributes.message)
-
-
-    def test_deprecatedAttributeHelper(self):
-        """
-        L{twisted.python.deprecate._DeprecatedAttribute} correctly sets its
-        __name__ to match that of the deprecated attribute and emits a warning
-        when the original attribute value is accessed.
-        """
-        name = 'ANOTHER_DEPRECATED_ATTRIBUTE'
-        setattr(deprecatedattributes, name, 42)
-        attr = deprecate._DeprecatedAttribute(
-            deprecatedattributes, name, self.version, self.message)
-
-        self.assertEqual(attr.__name__, name)
-
-        # Since we're accessing the value getter directly, as opposed to via
-        # the module proxy, we need to match the warning's stack level.
-        def addStackLevel():
-            attr.get()
-
-        # Access the deprecated attribute.
-        addStackLevel()
-        warningsShown = self.flushWarnings([
-            self.test_deprecatedAttributeHelper])
-        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            self._getWarningString(name))
-        self.assertEqual(len(warningsShown), 1)
-
-
-    def test_deprecatedAttribute(self):
-        """
-        L{twisted.python.deprecate.deprecatedModuleAttribute} wraps a
-        module-level attribute in an object that emits a deprecation warning
-        when it is accessed the first time only, while leaving other unrelated
-        attributes alone.
-        """
-        # Accessing non-deprecated attributes does not issue a warning.
-        deprecatedattributes.ANOTHER_ATTRIBUTE
-        warningsShown = self.flushWarnings([self.test_deprecatedAttribute])
-        self.assertEqual(len(warningsShown), 0)
-
-        name = 'DEPRECATED_ATTRIBUTE'
-
-        # Access the deprecated attribute. This uses getattr to avoid repeating
-        # the attribute name.
-        getattr(deprecatedattributes, name)
-
-        warningsShown = self.flushWarnings([self.test_deprecatedAttribute])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            self._getWarningString(name))
 
 
     def test_wrappedModule(self):
@@ -373,7 +225,7 @@ class WarnAboutFunctionTests(SynchronousTestCase):
         self.package.child(b'module.py').setContent(b'''
 "A module string"
 
-from twisted.python import deprecate
+import eventually
 
 def testFunction():
     "A doc string"
@@ -383,7 +235,7 @@ def testFunction():
 def callTestFunction():
     b = testFunction()
     if b == 3:
-        deprecate.warnAboutFunction(testFunction, "A Warning String")
+        eventually.warnAboutFunction(testFunction, "A Warning String")
 ''')
         # Python 3 doesn't accept bytes in sys.path:
         packagePath = self.package.parent().path.decode("utf-8")
@@ -616,40 +468,6 @@ class DeprecationWarningsTests(SynchronousTestCase):
                          fullyQualifiedName(dummy))
 
 
-    def test_getDeprecationDocstring(self):
-        """
-        L{_getDeprecationDocstring} returns a note about the deprecation to go
-        into a docstring.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        self.assertEqual(
-            "Deprecated in Twisted 8.0.0.",
-            _getDeprecationDocstring(version, ''))
-
-
-    def test_deprecatedUpdatesDocstring(self):
-        """
-        The docstring of the deprecated function is appended with information
-        about the deprecation.
-        """
-
-        def localDummyCallable():
-            """
-            Do nothing.
-
-            This is used to test the deprecation decorators.
-            """
-
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(localDummyCallable)
-
-        _appendToDocstring(
-            localDummyCallable,
-            _getDeprecationDocstring(version, ''))
-
-        self.assertEqual(localDummyCallable.__doc__, dummy.__doc__)
-
-
     def test_versionMetadata(self):
         """
         Deprecating a function adds version information to the decorated
@@ -873,175 +691,10 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
 
 
 
-class AppendToDocstringTests(SynchronousTestCase):
-    """
-    Test the _appendToDocstring function.
-
-    _appendToDocstring is used to add text to a docstring.
-    """
-
-    def test_appendToEmptyDocstring(self):
-        """
-        Appending to an empty docstring simply replaces the docstring.
-        """
-
-        def noDocstring():
-            pass
-
-        _appendToDocstring(noDocstring, "Appended text.")
-        self.assertEqual("Appended text.", noDocstring.__doc__)
-
-
-    def test_appendToSingleLineDocstring(self):
-        """
-        Appending to a single line docstring places the message on a new line,
-        with a blank line separating it from the rest of the docstring.
-
-        The docstring ends with a newline, conforming to Twisted and PEP 8
-        standards. Unfortunately, the indentation is incorrect, since the
-        existing docstring doesn't have enough info to help us indent
-        properly.
-        """
-
-        def singleLineDocstring():
-            """This doesn't comply with standards, but is here for a test."""
-
-        _appendToDocstring(singleLineDocstring, "Appended text.")
-        self.assertEqual(
-            ["This doesn't comply with standards, but is here for a test.",
-             "",
-             "Appended text."],
-            singleLineDocstring.__doc__.splitlines())
-        self.assertTrue(singleLineDocstring.__doc__.endswith('\n'))
-
-
-    def test_appendToMultilineDocstring(self):
-        """
-        Appending to a multi-line docstring places the messade on a new line,
-        with a blank line separating it from the rest of the docstring.
-
-        Because we have multiple lines, we have enough information to do
-        indentation.
-        """
-
-        def multiLineDocstring():
-            """
-            This is a multi-line docstring.
-            """
-
-        def expectedDocstring():
-            """
-            This is a multi-line docstring.
-
-            Appended text.
-            """
-
-        _appendToDocstring(multiLineDocstring, "Appended text.")
-        self.assertEqual(
-            expectedDocstring.__doc__, multiLineDocstring.__doc__)
-
-
-
 class MutualArgumentExclusionTests(SynchronousTestCase):
     """
     Tests for L{mutuallyExclusiveArguments}.
     """
-
-    def checkPassed(self, func, *args, **kw):
-        """
-        Test an invocation of L{passed} with the given function, arguments, and
-        keyword arguments.
-
-        @param func: A function whose argspec will be inspected.
-        @type func: A callable.
-
-        @param args: The arguments which could be passed to C{func}.
-
-        @param kw: The keyword arguments which could be passed to C{func}.
-
-        @return: L{_passedSignature} or L{_passedArgSpec}'s return value
-        @rtype: L{dict}
-        """
-        if getattr(inspect, "signature", None):
-            # Python 3
-            return _passedSignature(inspect.signature(func), args, kw)
-        else:
-            # Python 2
-            return _passedArgSpec(inspect.getargspec(func), args, kw)
-
-
-    def test_passed_simplePositional(self):
-        """
-        L{passed} identifies the arguments passed by a simple
-        positional test.
-        """
-        def func(a, b):
-            pass
-        self.assertEqual(self.checkPassed(func, 1, 2), dict(a=1, b=2))
-
-
-    def test_passed_tooManyArgs(self):
-        """
-        L{passed} raises a L{TypeError} if too many arguments are
-        passed.
-        """
-        def func(a, b):
-            pass
-        self.assertRaises(TypeError, self.checkPassed, func, 1, 2, 3)
-
-
-    def test_passed_doublePassKeyword(self):
-        """
-        L{passed} raises a L{TypeError} if a argument is passed both
-        positionally and by keyword.
-        """
-        def func(a):
-            pass
-        self.assertRaises(TypeError, self.checkPassed, func, 1, a=2)
-
-
-    def test_passed_unspecifiedKeyword(self):
-        """
-        L{passed} raises a L{TypeError} if a keyword argument not
-        present in the function's declaration is passed.
-        """
-        def func(a):
-            pass
-        self.assertRaises(TypeError, self.checkPassed, func, 1, z=2)
-
-
-    def test_passed_star(self):
-        """
-        L{passed} places additional positional arguments into a tuple
-        under the name of the star argument.
-        """
-        def func(a, *b):
-            pass
-        self.assertEqual(self.checkPassed(func, 1, 2, 3),
-                         dict(a=1, b=(2, 3)))
-
-
-    def test_passed_starStar(self):
-        """
-        Additional keyword arguments are passed as a dict to the star star
-        keyword argument.
-        """
-        def func(a, **b):
-            pass
-        self.assertEqual(self.checkPassed(func, 1, x=2, y=3, z=4),
-                         dict(a=1, b=dict(x=2, y=3, z=4)))
-
-
-    def test_passed_noDefaultValues(self):
-        """
-        The results of L{passed} only include arguments explicitly
-        passed, not default values.
-        """
-        def func(a, b, c=1, d=2, e=3):
-            pass
-        self.assertEqual(self.checkPassed(func, 1, 2, e=7),
-                         dict(a=1, b=2, e=7))
-
 
     def test_mutualExclusionPrimeDirective(self):
         """
