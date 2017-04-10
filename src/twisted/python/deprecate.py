@@ -8,7 +8,7 @@ Deprecation framework for Twisted.
 To mark a method, function, or class as being deprecated do this::
 
     from incremental import Version
-    from twisted.python.deprecate import deprecated
+    from eventually import deprecated
 
     @deprecated(Version("Twisted", 8, 0, 0))
     def badAPI(self, first, second):
@@ -30,7 +30,7 @@ appended to their docstring.
 To deprecate properties you can use::
 
     from incremental import Version
-    from twisted.python.deprecate import deprecatedProperty
+    from eventually import deprecatedProperty
 
     class OtherwiseUndeprecatedClass(object):
 
@@ -92,4 +92,7 @@ __all__ = [
     'setWarningMethod',
     'deprecatedModuleAttribute',
     'getDeprecationWarningString',
+    'DEPRECATION_WARNING_FORMAT',
+    '_mutuallyExclusiveArguments',
+    'warnAboutFunction',
 ]

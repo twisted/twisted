@@ -8,7 +8,7 @@
 
 from twisted.python import log
 from twisted.python.compat import NativeStringIO as StringIO, escape
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 from incremental import Version
 
 

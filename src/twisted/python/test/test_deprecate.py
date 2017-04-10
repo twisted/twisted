@@ -2,12 +2,12 @@
 # See LICENSE for details.
 
 """
-Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
+Tests for Twisted's deprecation framework, provided by L{eventually}.
 """
 
 from __future__ import division, absolute_import
 
-import sys, types, warnings, inspect
+import sys, types, warnings
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
 try:
@@ -16,14 +16,14 @@ except ImportError:
     invalidate_caches = None
 
 from twisted.python import deprecate
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
-from twisted.python.deprecate import (
+from eventually import DEPRECATION_WARNING_FORMAT
+from eventually import (
     getDeprecationWarningString,
     deprecated, deprecatedProperty,
     _mutuallyExclusiveArguments
 )
 
-from twisted.python.compat import _PY3, execfile
+from twisted.python.compat import _PY3
 from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
@@ -40,7 +40,7 @@ from twisted.trial.unittest import SynchronousTestCase
 
 class _MockDeprecatedAttribute(object):
     """
-    Mock of L{twisted.python.deprecate._DeprecatedAttribute}.
+    Mock of L{eventually._DeprecatedAttribute}.
 
     @ivar value: The value of the attribute.
     """
@@ -58,8 +58,8 @@ class _MockDeprecatedAttribute(object):
 
 class DeprecatedAttributeTests(SynchronousTestCase):
     """
-    Tests for L{twisted.python.deprecate._DeprecatedAttribute} and
-    L{twisted.python.deprecate.deprecatedModuleAttribute}, which issue
+    Tests for L{eventually._DeprecatedAttribute} and
+    L{eventually.deprecatedModuleAttribute}, which issue
     warnings for deprecated module-level attributes.
     """
     def setUp(self):
@@ -72,7 +72,7 @@ class DeprecatedAttributeTests(SynchronousTestCase):
         """
         Deprecating an attribute in a module replaces and wraps that module
         instance, in C{sys.modules}, with a
-        L{twisted.python.deprecate._ModuleProxy} instance but only if it hasn't
+        L{eventually._ModuleProxy} instance but only if it hasn't
         already been wrapped.
         """
         sys.modules[self._testModuleName] = mod = types.ModuleType('foo')
@@ -107,7 +107,7 @@ class ImportedModuleAttributeTests(TwistedModulesMixin, SynchronousTestCase):
     """
 
     _packageInit = """\
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 from incremental import Version
 
 deprecatedModuleAttribute(
@@ -211,7 +211,7 @@ deprecatedModuleAttribute(
 
 class WarnAboutFunctionTests(SynchronousTestCase):
     """
-    Tests for L{twisted.python.deprecate.warnAboutFunction} which allows the
+    Tests for L{eventually.warnAboutFunction} which allows the
     callers of a function to issue a C{DeprecationWarning} about that function.
     """
     def setUp(self):
@@ -721,57 +721,3 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             return a + b
 
         self.assertRaises(TypeError, func, a=3, b=4)
-
-
-    def test_invalidParameterType(self):
-        """
-        Create a fake signature with an invalid parameter
-        type to test error handling.  The valid parameter
-        types are specified in L{inspect.Parameter}.
-        """
-        class FakeSignature:
-            def __init__(self, parameters):
-                self.parameters = parameters
-
-        class FakeParameter:
-            def __init__(self, name, kind):
-                self.name = name
-                self.kind = kind
-
-        def func(a, b):
-            pass
-
-        func(1, 2)
-        parameters = inspect.signature(func).parameters
-        dummyParameters = parameters.copy()
-        dummyParameters['c'] = FakeParameter("fake", "fake")
-        fakeSig = FakeSignature(dummyParameters)
-        self.assertRaises(TypeError, _passedSignature, fakeSig, (1, 2), {})
-    if not getattr(inspect, "signature", None):
-        test_invalidParameterType.skip = "inspect.signature() not available"
-
-
-if sys.version_info >= (3,):
-    _path = FilePath(__file__).parent().child("_deprecatetests.py.3only")
-
-    _g = {}
-    execfile(_path.path, _g)
-
-    KeywordOnlyTests = _g["KeywordOnlyTests"]
-else:
-    from twisted.trial.unittest import TestCase
-
-    class KeywordOnlyTests(TestCase):
-        """
-        A dummy class to show that this test file was discovered but the tests
-        are unable to be ran in this version of Python.
-        """
-        skip = (
-            "keyword only arguments (PEP 3102) are "
-            "only in Python 3 and higher")
-
-        def test_notAvailable(self):
-            """
-            A skipped test to show that this was not ran because the Python is
-            too old.
-            """

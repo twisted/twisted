@@ -29,12 +29,12 @@ from zope.interface import implementer
 from twisted.python import log
 from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
-from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
+from eventually import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
 
 from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
-from twisted.python.deprecate import getDeprecationWarningString
+from eventually import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address

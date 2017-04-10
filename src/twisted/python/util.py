@@ -16,7 +16,7 @@ except ImportError:
 
 from twisted.python.compat import _PY3, unicode
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 from twisted.python._oldstyle import _oldStyle, _replaceIf
 
 # For backwards compatibility, some things import this, so just link it

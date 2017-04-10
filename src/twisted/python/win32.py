@@ -22,7 +22,7 @@ try:
 except ImportError:
     pass
 
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 from twisted.python.runtime import platform
 from incremental import Version
 

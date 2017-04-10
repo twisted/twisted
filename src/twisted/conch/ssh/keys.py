@@ -47,7 +47,7 @@ from twisted.python.compat import (
     iterbytes, long, izip, nativeString, unicode, _PY3,
     _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
 from twisted.python.constants import NamedConstant, Names
-from twisted.python.deprecate import deprecated, getDeprecationWarningString
+from eventually import deprecated, getDeprecationWarningString
 
 # Curve lookup table
 _curveTable = {

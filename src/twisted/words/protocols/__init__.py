@@ -6,7 +6,7 @@ Chat protocols.
 """
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 
 
 deprecatedModuleAttribute(

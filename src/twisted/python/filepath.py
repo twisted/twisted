@@ -29,7 +29,7 @@ from zope.interface import Interface, Attribute, implementer
 # modified for inclusion in the standard library.  --glyph
 
 from twisted.python.compat import comparable, cmp, unicode
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 from twisted.python.runtime import platform
 from incremental import Version
 

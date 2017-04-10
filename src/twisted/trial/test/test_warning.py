@@ -469,7 +469,7 @@ class CollectWarningsTests(SynchronousTestCase):
 
         This might be caused by C{sys.modules} containing something that's not
         really a module and imports things on setattr.  py.test does this, as
-        does L{twisted.python.deprecate.deprecatedModuleAttribute}.
+        does L{eventually.deprecatedModuleAttribute}.
         """
         d = {}
 

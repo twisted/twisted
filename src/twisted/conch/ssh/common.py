@@ -16,7 +16,7 @@ from twisted.conch.ssh._cryptography_backports import (
     intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
 
 from twisted.python.compat import unicode
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 from twisted.python.versions import Version
 
 __all__ = ["NS", "getNS", "MP", "getMP", "ffs"]

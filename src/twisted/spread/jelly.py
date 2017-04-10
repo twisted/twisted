@@ -106,7 +106,7 @@ from twisted.persisted.crefutil import _Container
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 from twisted.python.compat import _PY3
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 from incremental import Version
 
 DictTypes = (dict,)

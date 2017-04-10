@@ -9,7 +9,7 @@ testing purposes.
 from __future__ import division, absolute_import
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 
 
 # Known module-level attributes.

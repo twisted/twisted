@@ -169,12 +169,12 @@ from twisted.internet.interfaces import (
 )
 
 from twisted.python import reflect, util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
+from eventually import _mutuallyExclusiveArguments
 from twisted.python.compat import nativeString, networkString, unicode
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 
 
 def _sessionCounter(counter=itertools.count()):

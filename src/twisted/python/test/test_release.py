@@ -531,7 +531,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "from twisted.python.deprecate import deprecated\n"
+            "from eventually import deprecated\n"
             "from incremental import Version\n"
             "@deprecated(Version('Twisted', 15, 0, 0), "
             "'Baz')\n"

@@ -11,7 +11,7 @@ import stringprep
 from unicodedata import ucd_3_2_0 as unicodedata
 
 from twisted.python.compat import unichr
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 from incremental import Version
 
 from zope.interface import Interface, implementer

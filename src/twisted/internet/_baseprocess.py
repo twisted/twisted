@@ -8,7 +8,7 @@ L{IReactorProcess} implementations.
 """
 
 from twisted.python.reflect import qual
-from twisted.python.deprecate import getWarningMethod
+from eventually import getWarningMethod
 from twisted.python.failure import Failure
 from twisted.python.log import err
 

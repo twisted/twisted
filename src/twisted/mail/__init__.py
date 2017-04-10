@@ -6,7 +6,7 @@ Twisted Mail: Servers and clients for POP3, ESMTP, and IMAP.
 """
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 
 from twisted._version import __version__ as version
 __version__ = version.short()

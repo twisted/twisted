@@ -36,7 +36,7 @@ from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python.compat import _keys, _PY3, _b64decodebytes
 from twisted.python import failure, reflect, log
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
 

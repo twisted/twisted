@@ -20,7 +20,7 @@ import unittest as pyunit
 from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 from incremental import Version, getVersionString
 from twisted.python.failure import Failure
 from twisted.trial import unittest

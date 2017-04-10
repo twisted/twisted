@@ -21,7 +21,7 @@ from zope.interface import Attribute, Interface, implementer
 from twisted.python.util import FancyEqMixin, FancyStrMixin
 from incremental import Version
 from twisted.python.reflect import fullyQualifiedName
-from twisted.python.deprecate import deprecated
+from eventually import deprecated
 from twisted.python import log
 from twisted.internet import abstract, error, task, interfaces, defer
 from twisted.pair import ethernet, raw

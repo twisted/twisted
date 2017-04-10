@@ -17,7 +17,7 @@ from dis import findlinestarts as _findlinestarts
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
-from twisted.python.deprecate import (
+from eventually import (
     getDeprecationWarningString, warnAboutFunction)
 
 from twisted.trial import itrial, util
@@ -1195,7 +1195,7 @@ class SynchronousTestCase(_Assertions):
             a the first L{version<incremental.Version>} that C{f}
             should have been deprecated since, and C{replacement} is a suggested
             replacement for the deprecated functionality, as described by
-            L{twisted.python.deprecate.deprecated}.  If there is no suggested
+            L{eventually.deprecated}.  If there is no suggested
             replacement, this parameter may also be simply a
             L{version<incremental.Version>} by itself.
 

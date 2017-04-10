@@ -41,7 +41,7 @@ from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
-from twisted.python.deprecate import getDeprecationWarningString
+from eventually import getDeprecationWarningString
 from incremental import Version
 from twisted.web.client import BrowserLikePolicyForHTTPS
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor

@@ -36,7 +36,7 @@ from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
+from eventually import deprecatedModuleAttribute
 from twisted.python.compat import escape
 
 NOT_DONE_YET = 1

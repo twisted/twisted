@@ -143,7 +143,7 @@ def getDeprecated(self, decorators):
             else:
                 fn = self.expandName(decorator[0].name)
 
-            if fn == "twisted.python.deprecate.deprecated":
+            if fn == "eventually.deprecated":
                 try:
                     self._deprecated_info = deprecatedToUsefulText(
                         self.name, decorator)
