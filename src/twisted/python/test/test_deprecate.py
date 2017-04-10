@@ -16,8 +16,8 @@ except ImportError:
     invalidate_caches = None
 
 from twisted.python import deprecate
-from eventually import DEPRECATION_WARNING_FORMAT
-from eventually import (
+from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
+from twisted.python.deprecate import (
     getDeprecationWarningString,
     deprecated, deprecatedProperty,
     _mutuallyExclusiveArguments
