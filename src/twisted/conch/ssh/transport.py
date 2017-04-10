@@ -19,8 +19,6 @@ import zlib
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
-
-
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
