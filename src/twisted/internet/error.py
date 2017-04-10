@@ -8,8 +8,8 @@ Exceptions and errors for use in twisted.internet modules.
 from __future__ import division, absolute_import
 
 import socket
+import eventually
 
-from twisted.python import deprecate
 from incremental import Version
 
 
@@ -307,7 +307,7 @@ class PotentialZombieWarning(Warning):
         "never see this process finish, and it may become a "
         "zombie process.")
 
-deprecate.deprecatedModuleAttribute(
+eventually.deprecatedModuleAttribute(
     Version("Twisted", 10, 0, 0),
     "There is no longer any potential for zombie process.",
     __name__,
