@@ -1,7 +1,7 @@
 [tool.towncrier]
-    package = "towncrier"
+    package = "twisted"
     package_dir = "src"
-    filename = "NEWS.rst"
+    filename = "NEWS"
 
     [[tool.towncrier.section]]
         path = ""
