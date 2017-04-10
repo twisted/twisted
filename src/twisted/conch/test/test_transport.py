@@ -1294,8 +1294,8 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.dataReceived(
             b'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
             b'\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
-            b'\x99\x00\x00\x00bdiffie-hellman-group1-sha1,diffie-hellman-g'
-            b'roup-exchange-sha1,diffie-hellman-group-exchange-sha256\x00'
+            b'\x99\x00\x00\x00bdiffie-hellman-group-exchange-sha1,diffie-he'
+            b'llman-group-exchange-sha256,diffie-hellman-group1-sha1\x00'
             b'\x00\x00\x0fssh-dss,ssh-rsa\x00\x00\x00\x85aes128-ctr,aes128-'
             b'cbc,aes192-ctr,aes192-cbc,aes256-ctr,aes256-cbc,cast128-ctr,c'
             b'ast128-cbc,blowfish-ctr,blowfish-cbc,3des-ctr,3des-cbc\x00'
@@ -1468,6 +1468,14 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_KEXINIT(kexmsg)
         self.assertRaises(AttributeError)
         self.assertRaises(UnsupportedAlgorithm)
+
+
+    def test_KEXDH_INIT_GROUP1(self):
+        """
+        KEXDH_INIT messages are processed when the
+        diffie-hellman-group1-sha1 key exchange algorithm is requested.
+        """
+        self.assertKexDHInitResponse(b'diffie-hellman-group1-sha1')
 
 
     def test_KEXDH_INIT_GROUP14(self):
@@ -1819,6 +1827,14 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         KEXDH_INIT responses.
         """
         self.assertKexInitResponseForDH(b'diffie-hellman-group14-sha1')
+
+
+    def test_KEXINIT_group1(self):
+       """
+       KEXINIT messages requesting diffie-hellman-group1-sha1 result in
+       KEXDH_INIT responses.
+       """
+       self.assertKexInitResponseForDH(b'diffie-hellman-group1-sha1')
 
 
     def test_KEXINIT_badKexAlg(self):
