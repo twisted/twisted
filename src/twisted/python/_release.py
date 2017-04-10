@@ -14,11 +14,9 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
-import textwrap
 
 from zope.interface import Interface, implementer
 
-from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
 from twisted.python.filepath import FilePath
