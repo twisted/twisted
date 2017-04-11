@@ -99,6 +99,12 @@ _EXTRA_OPTIONS = dict(
         'pyasn1',
         'cryptography >= 0.9.1',
         'appdirs >= 1.4.0',
+        'pynacl >= 1.1.2',
+    ],
+    conch_no_25519=[
+        'pyasn1',
+        'cryptography >= 0.9.1',
+        'appdirs >= 1.4.0',
     ],
     soap=['soappy'],
     serial=['pyserial'],
@@ -113,6 +119,7 @@ _EXTRA_OPTIONS = dict(
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +
     _EXTRA_OPTIONS['conch'] +
+    _EXTRA_OPTIONS['conch_no_25519'] +
     _EXTRA_OPTIONS['soap'] +
     _EXTRA_OPTIONS['serial'] +
     _EXTRA_OPTIONS['http2']
@@ -122,6 +129,7 @@ _EXTRAS_REQUIRE = {
     'dev': _EXTRA_OPTIONS['dev'],
     'tls': _EXTRA_OPTIONS['tls'],
     'conch': _EXTRA_OPTIONS['conch'],
+    'conch_no_25519': _EXTRA_OPTIONS['conch_no_25519'],
     'soap': _EXTRA_OPTIONS['soap'],
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
