@@ -610,7 +610,7 @@ class _ClientMachine(object):
     @_machine.state()
     def _stopped(self):
         """
-        The service has been stopped an is disconnected.
+        The service has been stopped and is disconnected.
         """
 
     @_machine.input()
