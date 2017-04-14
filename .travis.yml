@@ -48,8 +48,14 @@ matrix:
       env: TOXENV=txchecker-travis-required
     - python: 3.5
       env: TOXENV=txchecker-travis-all
+    # Test without pynacl as a dependency.
+    - python: 2.7
+      env: TOXENV=conch_no_25519-py27-withcov-posix,codecov-publish
+    - python: 3.5
+      env: TOXENV=conch_no_25519-py35-withcov-posix,codecov-publish
   allow_failures:
     - env: TOXENV=txchecker-travis-all
+    - env: TOXENV=pyflakes3
 
 
 addons:
