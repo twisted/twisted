@@ -630,7 +630,7 @@ class _ClientMachine(object):
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
             .addCallback(self._connectionMade)
-            .addErrback(lambda _: self._connectionFailed()))
+            .addErrback(self._connectionFailed))
 
 
     @_machine.output()
@@ -715,16 +715,27 @@ class _ClientMachine(object):
 
 
     @_machine.input()
-    def _connectionFailed(self):
+    def _connectionFailed(self, f):
         """
         The current connection attempt failed.
         """
+
 
     @_machine.output()
     def _wait(self):
         """
         Schedule a retry attempt.
         """
+        self._doWait()
+
+    @_machine.output()
+    def _ignoreAndWait(self, f):
+        """
+        Schedule a retry attempt, and ignore the Failure passed in.
+        """
+        return self._doWait()
+
+    def _doWait(self):
         self._failedAttempts += 1
         delay = self._timeoutForAttempt(self._failedAttempts)
         self._log.info("Scheduling retry {attempt} to connect {endpoint} "
@@ -761,12 +772,31 @@ class _ClientMachine(object):
         """
         self._unawait(Failure(CancelledError()))
 
+    @_machine.output()
+    def _ignoreAndCancelConnectWaiters(self, f):
+        """
+        Notify all pending requests for a connection that no more connections
+        are expected, after ignoring the Failure passed in.
+        """
+        self._unawait(Failure(CancelledError()))
+
 
     @_machine.output()
     def _finishStopping(self):
         """
         Notify all deferreds waiting on the service stopping.
         """
+        self._doFinishStopping()
+
+    @_machine.output()
+    def _ignoreAndFinishStopping(self, f):
+        """
+        Notify all deferreds waiting on the service stopping, and ignore the
+        Failure passed in.
+        """
+        self._doFinishStopping()
+
+    def _doFinishStopping(self):
         self._stopWaiters, waiting = [], self._stopWaiters
         for w in waiting:
             w.callback(None)
@@ -853,7 +883,7 @@ class _ClientMachine(object):
     _connecting.upon(_connectionMade, enter=_connected,
                      outputs=[_notifyWaiters])
     _connecting.upon(_connectionFailed, enter=_waiting,
-                     outputs=[_wait])
+                     outputs=[_ignoreAndWait])
 
     _waiting.upon(start, enter=_waiting,
                   outputs=[])
@@ -886,7 +916,8 @@ class _ClientMachine(object):
     # Note that this is triggered synchonously with the transition from
     # _connecting
     _disconnecting.upon(_connectionFailed, enter=_stopped,
-                        outputs=[_cancelConnectWaiters, _finishStopping])
+                        outputs=[_ignoreAndCancelConnectWaiters,
+                                 _ignoreAndFinishStopping])
 
     _restarting.upon(start, enter=_restarting,
                      outputs=[])
