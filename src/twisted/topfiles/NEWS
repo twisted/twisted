@@ -1662,7 +1662,7 @@ Bugfixes
  - trial now gracefully handles the presence of objects in sys.modules
    which respond to attributes being set on them by modifying
    sys.modules. (#4748)
- - eventually.deprecatedModuleAttribute no longer
+ - twisted.python.deprecate.deprecatedModuleAttribute no longer
    spuriously warns twice when used to deprecate a module within a
    package.  This should make it easier to write unit tests for
    deprecated modules. (#4806)
@@ -1767,7 +1767,7 @@ Features
    full traceback, if there is a problem writing out the dropin cache
    file. (#2409)
  - Added a 'replacement' parameter to the
-   'eventually.deprecated' decorator.  This allows
+   'twisted.python.deprecate.deprecated' decorator.  This allows
    deprecations to unambiguously specify what they have been
    deprecated in favor of. (#3047)
  - Added access methods to FilePath for FilePath.statinfo's st_ino,
@@ -1938,7 +1938,7 @@ Bugfixes
    number source (since it is not one). (#4468)
  - twisted.internet.main.installReactor now blocks installation of
    another reactor when using python -O (#4476)
- - eventually.deprecatedModuleAttribute now emits only
+ - twisted.python.deprecate.deprecatedModuleAttribute now emits only
    one warning when used to deprecate a package attribute which is a
    module. (#4492)
  - The "brief" mode of twisted.python.failure.Failure.getTraceback now
