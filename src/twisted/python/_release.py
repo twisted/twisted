@@ -491,7 +491,7 @@ class BuildAPIDocsScript(object):
 
 class CheckTopfileScript(object):
     """
-    A thing for checking whether a checkout has a topfile.
+    A thing for checking whether a checkout has a newsfragment.
     """
     def __init__(self, _print):
         self._print = _print
@@ -530,27 +530,27 @@ class CheckTopfileScript(object):
 
         if len(files) == 1:
             if files[0] == os.sep.join(["docs", "fun", "Twisted.Quotes"]):
-                self._print("Quotes change only; no topfile needed.")
+                self._print("Quotes change only; no newsfragment needed.")
                 sys.exit(0)
 
         topfiles = []
 
         for change in files:
-            if os.sep + "topfiles" + os.sep in change:
+            if os.sep + "newsfragments" + os.sep in change:
                 if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
                     topfiles.append(change)
 
         if branch.startswith("release-"):
             if topfiles:
-                self._print("No topfiles should be on the release branch.")
+                self._print("No newsfragments should be on the release branch.")
                 sys.exit(1)
             else:
-                self._print("Release branch with no topfiles, all good.")
+                self._print("Release branch with no newsfragments, all good.")
                 sys.exit(0)
 
         for change in topfiles:
             self._print("Found " + change)
             sys.exit(0)
 
-        self._print("No topfile found. Have you committed it?")
+        self._print("No newsfragment found. Have you committed it?")
         sys.exit(1)

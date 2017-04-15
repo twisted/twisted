@@ -1039,7 +1039,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+        self.assertEqual(logs[-1],
+                         "No newsfragment found. Have you committed it?")
 
 
     def test_noChangeFromTrunk(self):
@@ -1098,7 +1099,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
-                         "Release branch with no topfiles, all good.")
+                         "Release branch with no newsfragments, all good.")
 
 
     def test_releaseWithTopfiles(self):
@@ -1108,7 +1109,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         fragment = topfiles.child("1234.misc")
         fragment.setContent(b"")
@@ -1128,7 +1129,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1],
-                         "No topfiles should be on the release branch.")
+                         "No newsfragments should be on the release branch.")
 
 
     def test_onlyQuotes(self):
@@ -1155,7 +1156,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
-                         "Quotes change only; no topfile needed.")
+                         "Quotes change only; no newsfragment needed.")
 
 
     def test_topfileAdded(self):
@@ -1166,7 +1167,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         fragment = topfiles.child("1234.misc")
         fragment.setContent(b"")
@@ -1185,7 +1186,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+        self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")
 
 
     def test_topfileButNotFragmentAdded(self):
@@ -1196,7 +1197,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         notFragment = topfiles.child("1234.txt")
         notFragment.setContent(b"")
@@ -1215,7 +1216,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+        self.assertEqual(logs[-1],
+                         "No newsfragment found. Have you committed it?")
 
 
     def test_topfileAddedButWithOtherTopfiles(self):
@@ -1226,7 +1228,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         fragment = topfiles.child("1234.misc")
         fragment.setContent(b"")
@@ -1245,4 +1247,4 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+        self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")
