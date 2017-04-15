@@ -10,3 +10,9 @@ observers need not care about which event loop is running. Thus, it is possible
 to use the same code for different loops, from Twisted's basic, yet portable,
 select-based loop to the loops of various GUI toolkits like GTK+ or Tk.
 """
+
+# t.p.compat monkeypatches some things that the Windows support code needs, so,
+# just import it to make sure they apply.
+from twisted.python import compat
+compat
+del compat
