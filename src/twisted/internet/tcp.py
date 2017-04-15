@@ -16,11 +16,12 @@ import sys
 import operator
 import struct
 
+import eventually
 from zope.interface import implementer
 
 from twisted.python.compat import _PY3, lazyByteSlice
 from twisted.python.runtime import platformType
-from twisted.python import versions, deprecate
+from twisted.python import versions
 
 try:
     # Try to get the memory BIO based startTLS implementation, available since
@@ -217,10 +218,10 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
             warningFormat = (
                 'Returning a value other than None from %(fqpn)s is '
                 'deprecated since %(version)s.')
-            warningString = deprecate.getDeprecationWarningString(
+            warningString = eventually.getDeprecationWarningString(
                 offender, versions.Version('Twisted', 11, 0, 0),
                 format=warningFormat)
-            deprecate.warnAboutFunction(offender, warningString)
+            eventually.warnAboutFunction(offender, warningString)
         return rval
 
 

@@ -7,11 +7,13 @@
 I am the support module for making a ftp server with twistd.
 """
 
+import eventually
+
 from twisted.application import internet
 from twisted.cred import portal, checkers, strcred
 from twisted.protocols import ftp
 
-from twisted.python import usage, deprecate, versions
+from twisted.python import usage, versions
 
 import warnings
 
@@ -44,7 +46,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         authenticated connections. (DEPRECATED; see --help-auth instead)
         """
         self['password-file'] = filename
-        msg = deprecate.getDeprecationWarningString(
+        msg = eventually.getDeprecationWarningString(
             self.opt_password_file, versions.Version('Twisted', 11, 1, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self.addChecker(checkers.FilePasswordDB(filename, cache=True))

@@ -15,13 +15,16 @@ try:
 except ImportError:
     invalidate_caches = None
 
-from twisted.python import deprecate
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
-from twisted.python.deprecate import (
-    getDeprecationWarningString,
-    deprecated, deprecatedProperty,
-    _mutuallyExclusiveArguments
-)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    from twisted.python import deprecate
+    from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
+    from twisted.python.deprecate import (
+        getDeprecationWarningString,
+        deprecated, deprecatedProperty,
+        _mutuallyExclusiveArguments
+    )
+    from twisted.python.test import deprecatedattributes
 
 from twisted.python.compat import _PY3
 from incremental import Version
@@ -29,7 +32,6 @@ from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import fullyQualifiedName
 
-from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -721,3 +723,23 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             return a + b
 
         self.assertRaises(TypeError, func, a=3, b=4)
+
+
+
+class DeprecateDeprecationTests(SynchronousTestCase):
+    """
+    L{twisted.python.deprecate} is deprecated.
+    """
+    def test_deprecateDeprecation(self):
+        """
+        L{twisted.python.deprecate} is deprecated since Twisted NEXT.
+        """
+        from twisted.python import deprecate
+        deprecate
+
+        warningsShown = self.flushWarnings([self.test_deprecateDeprecation])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            ("twisted.python.deprecate was deprecated in Twisted NEXT: "
+             "Please use eventually from PyPI instead."),
+            warningsShown[0]['message'])
