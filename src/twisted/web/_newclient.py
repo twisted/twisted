@@ -282,14 +282,7 @@ class HTTPParser(LineReceiver):
                     header = b''.join(self._partialHeader)
                     name, value = header.split(b':', 1)
                     value = value.strip()
-                    # Handle comma-separated list as field-value list
-                    if b',' in value:
-                        values = value.split(b',')
-                        values = [field_value.strip() for field_value in
-                                  values]
-                        self.headerReceived(name, values)
-                    else:
-                        self.headerReceived(name, value)
+                    self.headerReceived(name, value)
                 if not line:
                     # Empty line means the header section is over.
                     self.allHeadersReceived()
@@ -342,10 +335,7 @@ class HTTPParser(LineReceiver):
             headers = self.connHeaders
         else:
             headers = self.headers
-        if type(value) is list:
-            headers.setRawHeaders(name, value)
-        else:
-            headers.addRawHeader(name, value)
+        headers.addRawHeader(name, value)
 
 
     def allHeadersReceived(self):
