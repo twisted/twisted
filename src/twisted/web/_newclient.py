@@ -510,6 +510,23 @@ class HTTPClientParser(HTTPParser):
             else:
                 contentLengthHeaders = self.connHeaders.getRawHeaders(
                     b'content-length')
+                # Parsing of content length headers for multiple field
+                # values as supplemental feature. See Iss. #9064
+                if isinstance(contentLengthHeaders, list):
+                    for field_value in contentLengthHeaders:
+                        # split field value byte string when comma separated
+                        # byte string can be b'1, 2' for example when parsed
+                        # from header
+                        if b',' in field_value:
+                            # given found b',', split and reset content
+                            # length header with field values list
+                            field_value_items = field_value.split(b',')
+                            field_value_items = [x.strip()
+                                                 for x in field_value_items]
+                            self.connHeaders.setRawHeaders(b'content-length',
+                                                           field_value_items)
+                    contentLengthHeaders = self.connHeaders.getRawHeaders(
+                        b'content-length')
                 if contentLengthHeaders is None:
                     contentLength = None
                 elif len(set(contentLengthHeaders)) == 1:
