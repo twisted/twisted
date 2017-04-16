@@ -44,7 +44,7 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import runtime, procutils
-from twisted.python.compat import _PY3, networkString, xrange, bytesEnviron
+from twisted.python.compat import _PY3, networkString, range, bytesEnviron
 from twisted.python.filepath import FilePath
 
 
@@ -590,7 +590,7 @@ class ProcessTests(unittest.TestCase):
         protocols = []
         deferreds = []
 
-        for i in xrange(CONCURRENT_PROCESS_TEST_COUNT):
+        for i in range(CONCURRENT_PROCESS_TEST_COUNT):
             p = TestManyProcessProtocol()
             protocols.append(p)
             reactor.spawnProcess(p, pyExe, args, env=properEnv)
@@ -2340,6 +2340,81 @@ class DumbWin32ProcTests(unittest.TestCase):
         self.assertEqual(program, "/usr/bin/python")
 
 
+
+class Win32CreateProcessFlagsTests(unittest.TestCase):
+    """
+    Check the flags passed to CreateProcess.
+    """
+
+    @defer.inlineCallbacks
+    def test_flags(self):
+        """
+        Verify that the flags passed to win32process.CreateProcess() prevent a
+        new console window from being created. Use the following script
+        to test this interactively::
+
+            # Add the following lines to a script named
+            #   should_not_open_console.pyw
+            from twisted.internet import reactor, utils
+
+            def write_result(result):
+            open("output.log", "w").write(repr(result))
+            reactor.stop()
+
+            PING_EXE = r"c:\windows\system32\ping.exe"
+            d = utils.getProcessOutput(PING_EXE, ["slashdot.org"])
+            d.addCallbacks(write_result)
+            reactor.run()
+
+        To test this, run::
+
+            pythonw.exe should_not_open_console.pyw
+        """
+        from twisted.internet import _dumbwin32proc
+        flags = []
+        realCreateProcess = _dumbwin32proc.win32process.CreateProcess
+
+        def fakeCreateprocess(appName, commandLine, processAttributes,
+                              threadAttributes, bInheritHandles, creationFlags,
+                              newEnvironment, currentDirectory, startupinfo):
+            """
+            See the Windows API documentation for I{CreateProcess} for further details.
+
+            @param appName: The name of the module to be executed
+            @param commandLine: The command line to be executed.
+            @param processAttributes: Pointer to SECURITY_ATTRIBUTES structure or None.
+            @param threadAttributes: Pointer to SECURITY_ATTRIBUTES structure or  None
+            @param bInheritHandles: boolean to determine if inheritable handles from this
+                                    process are inherited in the new process
+            @param creationFlags: flags that control priority flags and creation of process.
+            @param newEnvironment: pointer to new environment block for new process, or None.
+            @param currentDirectory: full path to current directory of new process.
+            @param startupinfo: Pointer to STARTUPINFO or STARTUPINFOEX structure
+            @return: True on success, False on failure
+            @rtype: L{bool}
+            """
+            flags.append(creationFlags)
+            return realCreateProcess(appName, commandLine,
+                            processAttributes, threadAttributes,
+                            bInheritHandles, creationFlags, newEnvironment,
+                            currentDirectory, startupinfo)
+
+        self.patch(_dumbwin32proc.win32process, "CreateProcess",
+                   fakeCreateprocess)
+        exe = sys.executable
+        scriptPath = FilePath(__file__).sibling("process_cmdline.py")
+
+        d = defer.Deferred()
+        processProto = TrivialProcessProtocol(d)
+        comspec = str(os.environ["COMSPEC"])
+        cmd = [comspec, "/c", exe, scriptPath.path]
+        _dumbwin32proc.Process(reactor, processProto, None, cmd, {}, None)
+        yield d
+        self.assertEqual(flags,
+                         [_dumbwin32proc.win32process.CREATE_NO_WINDOW])
+
+
+
 class UtilTests(unittest.TestCase):
     """
     Tests for process-related helper functions (currently only
@@ -2551,6 +2626,7 @@ if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(re
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
     DumbWin32ProcTests.skip = skipMessage
+    Win32CreateProcessFlagsTests.skip = skipMessage
     Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):

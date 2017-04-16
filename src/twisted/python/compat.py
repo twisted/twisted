@@ -40,6 +40,16 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+if sys.version_info >= (3, 4, 0):
+    _PY34PLUS = True
+else:
+    _PY34PLUS = False
+
+if sys.version_info >= (3, 5, 0):
+    _PY35PLUS = True
+else:
+    _PY35PLUS = False
+
 if platform.python_implementation() == 'PyPy':
     _PYPY = True
 else:
@@ -629,6 +639,7 @@ if _PY3:
     def items(d):
         return list(d.items())
 
+    range = range
     xrange = range
     izip = zip
 else:
@@ -641,6 +652,7 @@ else:
     def items(d):
         return d.items()
 
+    range = xrange
     xrange = xrange
     from itertools import izip
     izip # shh pyflakes
@@ -853,6 +865,7 @@ __all__ = [
     "items",
     "iteritems",
     "itervalues",
+    "range",
     "xrange",
     "urllib_parse",
     "bytesEnviron",

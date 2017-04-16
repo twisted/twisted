@@ -286,13 +286,9 @@ class FailureTests(SynchronousTestCase):
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += '%s:%s:%s\n' % (filename, lineno, method)
 
-        if _PY3:
-            zde = "class 'ZeroDivisionError'"
-        else:
-            zde = "type 'exceptions.ZeroDivisionError'"
-
+        zde = repr(ZeroDivisionError)
         self.assertTracebackFormat(tb,
-            "Traceback: <%s>: " % (zde,),
+            "Traceback: %s: " % (zde,),
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
@@ -546,7 +542,7 @@ class FailureTests(SynchronousTestCase):
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
 
-    if not _PY3:
+    if getattr(BaseException, "__traceback__", None) is None:
         test_tracebackFromExceptionInPython3.skip = "Python 3 only."
         test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
 
@@ -557,10 +553,7 @@ class FailureTests(SynchronousTestCase):
         representation of the underlying exception.
         """
         f = getDivisionFailure()
-        if _PY3:
-            typeName = 'builtins.ZeroDivisionError'
-        else:
-            typeName = 'exceptions.ZeroDivisionError'
+        typeName = reflect.fullyQualifiedName(ZeroDivisionError)
         self.assertEqual(
             repr(f),
             '<twisted.python.failure.Failure '
