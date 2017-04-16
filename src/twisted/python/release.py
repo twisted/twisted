@@ -13,6 +13,8 @@ from __future__ import print_function
 
 import os
 
+from twisted.python.compat import raw_input
+
 
 # errors
 
