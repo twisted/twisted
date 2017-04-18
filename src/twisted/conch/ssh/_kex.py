@@ -148,9 +148,7 @@ class _DHGroup14SHA1(object):
     generator = 2
 
 
-
-# Which ECDH hash function to use is dependent on the size.
-_kexAlgorithms = {
+_baseKexAlgorithms = {
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
     b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
     b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
@@ -159,6 +157,9 @@ _kexAlgorithms = {
     b"ecdh-sha2-nistp521": _ECDH512(),
     }
 
+
+# Set the default kex algorithms to the base algorithms.
+_kexAlgorithms = _baseKexAlgorithms
 
 
 def getKex(kexAlgorithm):

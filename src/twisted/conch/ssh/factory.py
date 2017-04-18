@@ -55,7 +55,7 @@ class SSHFactory(protocol.Factory):
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = self.privateKeys.keys()
+
         if not self.primes:
             log.msg('disabling non-fixed-group key exchange algorithms '
                     'because we cannot find moduli file')
