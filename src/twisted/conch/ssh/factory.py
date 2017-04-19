@@ -56,6 +56,11 @@ class SSHFactory(protocol.Factory):
         """
         t = protocol.Factory.buildProtocol(self, addr)
 
+        # Remove any keys we have but don't want to use.
+        for i in range(len(t.supportedPublicKeys) - 1, -1, -1):
+            if t.supportedPublicKeys[i] not in self.privateKeys:
+                t.supportedPublicKeys.pop(i)
+
         if not self.primes:
             log.msg('disabling non-fixed-group key exchange algorithms '
                     'because we cannot find moduli file')

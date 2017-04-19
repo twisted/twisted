@@ -1311,7 +1311,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.kexAlg,
                          b'diffie-hellman-group-exchange-sha1')
         self.assertEqual(self.proto.keyAlg,
-                         b'ssh-dss')
+                         b'ssh-rsa')
         self.assertEqual(self.proto.outgoingCompressionType,
                          b'none')
         self.assertEqual(self.proto.incomingCompressionType,
