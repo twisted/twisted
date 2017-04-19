@@ -1270,6 +1270,16 @@ y:""" +
 "6683104>")
 
 
+    def testNoNacl(self):
+        """
+        Make sure dummy classes are created if the nacl module isn't available.
+        """
+        if not requireModule('nacl'):
+            blankNacl = keys.nacl()
+            self.assertIsNotNone(blankNacl)
+            self.assertIsNotNone(blankNacl.signing.SigningKey)
+            self.assertIsNotNone(blankNacl.signing.VerifyKey)
+
 class KeyKeyObjectTests(unittest.TestCase):
     """
     The L{keys.Key.keyObject} property provides deprecated access to a PyCrypto
