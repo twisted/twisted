@@ -38,7 +38,7 @@ class RomanNumeral(int):
         # Regular code for formatting roman numerals
 
 old_int = intrinsics.replace(int, RomanNumeral)
-print 13
+print(13)
 """
         ),
         Bullet("The output is simply the roman numerals XIII"),

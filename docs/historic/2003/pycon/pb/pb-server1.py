@@ -1,12 +1,14 @@
 #! /usr/bin/python
 
+from __future__ import print_function
+
 from twisted.spread import pb
 import twisted.internet.app
         
 class ServerObject(pb.Root):
     def remote_add(self, one, two):
         answer = one + two
-        print "returning result:", answer
+        print("returning result:", answer)
         return answer
     def remote_subtract(self, one, two):
         return one - two

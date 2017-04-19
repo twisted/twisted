@@ -43,10 +43,10 @@ class FingerClient(basic.LineReceiver):
     # This will be called when the server sends us a line.
     # IMPORTANT: line *without "\n" at end.
     # Yes, this means empty line does not mean EOF
-    def lineReceived(self, line): print line
+    def lineReceived(self, line): print(line)
 
     # This will be called when the connection is terminated
-    def connectionLost(self, _): print "-"*40
+    def connectionLost(self, _): print("-" * 40)
 </pre>
 <hr />
 <em>Phoebe (Blind Sided, season 1) -- Standard dating protocol.</em>
@@ -64,7 +64,7 @@ class FingerFactory(protocol.ClientFactory):
     def __init__(self, user): self.user = user
 
     def clientConnectionFailed(self, _, reason):
-        print "error", reason.value
+        print("error", reason.value)
 </pre>
 
 <hr />
@@ -131,7 +131,7 @@ class FingerFactory(protocol.ClientFactory):
     def __init__(self, user):
         self.user, self.d = user, defer.Deferred()
 
-    def gotLine(self, line): print line
+    def gotLine(self, line): print(line)
 
     def clientConnectionLost(self, _, why): self.d.callback(None)
 
@@ -427,11 +427,11 @@ reactor.listenSSL(111, FingerWebFactory(), ServerContextFactory())
 
 <pre class="python">
 class Advertizer(protocol.ProcessProtocol):
-    def outReceived(self, data): print "out", `data`
+    def outReceived(self, data): print("out", `data`)
 
-    def errReceived(self, data): print "error", `data`
+    def errReceived(self, data): print("error", `data`)
 
-    def processEnded(self, reason): print "ended", reason
+    def processEnded(self, reason): print("ended", reason)
 
 reactor.spawnProcess(Advertizer(),
                      "echo", ["echo", "hello", "world"])
@@ -487,7 +487,7 @@ from twisted.internet import reactor
 import sys
 
 def failed(reason):
-    print "failed:", reason.value;reactor.stop()
+    print("failed:", reason.value;reactor.stop())
 
 pb.getObjectAt("unix", "/var/run/finger.control", 30
 ).addCallback(lambda o: o.callRemote("setUser", *sys.argv[1:3],

@@ -173,7 +173,7 @@ class="python">Export</code>.
 <pre class="python">
 class Export(Transaction):
     def doIt(self, opts):
-        print "Export"
+        print("Export")
         root = opts['cvsroot']
         ver = opts['release-version']
         sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))

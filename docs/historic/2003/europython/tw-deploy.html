@@ -939,7 +939,7 @@ class UserNameVirtualHost(resource.Resource):
         resrc = self._getResourceForRequest(request)
         request.path=request.path[:-1]
         request.postpath=request.uri.split('/')[1:]
-        print request, request.path, request.postpath
+        print(request, request.path, request.postpath)
         return resrc.getChildForRequest(request)
 </pre>
 <hr />

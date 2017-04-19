@@ -259,7 +259,7 @@ try:
     config = ServerOptions()
     config.parseOptions()
 except usage.error, ue:
-    print "%s: %s" % (sys.argv[0], ue)
+    print("%s: %s" % (sys.argv[0], ue))
     sys.exit(1)
 </pre>
 
@@ -928,10 +928,10 @@ class MyObject(pb.Referenceable):
 # Client Side
     ...
     def myCallback(result):
-        print result # result will be 'did it'
+        print(result) # result will be 'did it'
     def myErrback(stacktrace):
-        print 'oh no, mr. bill!'
-        print stacktrace
+        print('oh no, mr. bill!')
+        print(stacktrace)
     myRemoteReference.doIt(pbcallback=myCallback,
                            pberrback=myErrback)
 </pre>
@@ -1082,7 +1082,7 @@ from twisted.spread import pb
 from twisted.internet import main
 class Echoer(pb.Root):
     def remote_echo(self, st):
-        print 'echoing:', st
+        print('echoing:', st)
         return st
 if __name__ == '__main__':
     app = main.Application("pbsimple")
@@ -1107,13 +1107,13 @@ if __name__ == '__main__':
 from twisted.spread import pb
 from twisted.internet import main
 def gotObject(object):
-    print "got object:",object
+    print("got object:", object)
     object.echo("hello network", pbcallback=gotEcho)
 def gotEcho(echo):
-    print 'server echoed:',echo
+    print('server echoed:', echo)
     main.shutDown()
 def gotNoObject(reason):
-    print "no object:",reason
+    print("no object:", reason)
     main.shutDown()
 pb.getObjectAt("localhost", 8789, gotObject, gotNoObject, 30)
 main.run()
@@ -1150,7 +1150,7 @@ from twisted.spread import pb
 from twisted.internet import main
 class SimplePerspective(pb.Perspective):
     def perspective_echo(self, text):
-        print 'echoing',text
+        print('echoing', text)
         return text
 class SimpleService(pb.Service):
     def getPerspectiveNamed(self, name):
@@ -1212,16 +1212,16 @@ if __name__ == '__main__':
 from twisted.spread import pb
 from twisted.internet import main
 def success(message):
-    print "Message received:",message
+    print("Message received:", message)
     main.shutDown()
 def failure(error):
-    print "Failure...",error
+    print("Failure...", error)
     main.shutDown()
 def connected(perspective):
     perspective.echo("hello world",
                      pbcallback=success,
                      pberrback=failure)
-    print "connected."
+    print("connected.")
 pb.connect(connected, failure,   "localhost", pb.portno,
            "guest", "guest",     "pbecho", "guest", 30)
 main.run()

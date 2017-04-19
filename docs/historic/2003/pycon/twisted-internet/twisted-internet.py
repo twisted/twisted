@@ -33,11 +33,11 @@ from twisted.internet.protocol import Protocol
 
 class Echo(Protocol):
     def connectionMade(self):
-        print 'connection made with', self.transport.getPeer()
+        print('connection made with', self.transport.getPeer())
     def dataReceived(self, data):
         self.transport.write(data)
     def connectionLost(self, reason):
-        print 'connection was lost, alas'
+        print('connection was lost, alas')
 """
 
 SERVER_CODE = """\
@@ -86,7 +86,7 @@ class MyFactory(ClientFactory):
     def clientConnectionLost(self, connector, reason):
         connector.connect() # reconnect
     def clientConnectionFailed(self, connector, reason):
-        print "connection failed"
+        print("connection failed")
         reactor.stop()
 """
 
@@ -150,7 +150,7 @@ SCHEDULING_CODE = """\
 from twisted.internet import reactor
 
 def f(x, y=1):
-    print x, y
+    print(x, y)
 
 i = reactor.callLater(0.1, f, 2, y=4)
 i.delay(2)

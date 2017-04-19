@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from deferexex import adder
 
 class MyExc(Exception):
@@ -11,14 +13,14 @@ class MyObj:
 
     def trapIt(self, failure):
         failure.trap(MyExc)
-        print 'error (', failure.getErrorMessage(), '). x was:', self.x
+        print('error (', failure.getErrorMessage(), '). x was:', self.x)
         return self.x
 
     def onSuccess(self, result):
-        print result + 3
+        print(result + 3)
 
     def whenTrapped(eslf, result):
-        print 'Finally, result was', result
+        print('Finally, result was', result)
 
     def run(self, o):
         o.callRemote("add", 1, 2).addCallback(

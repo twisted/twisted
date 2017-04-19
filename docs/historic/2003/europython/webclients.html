@@ -70,7 +70,7 @@ import htmllib, formatter
 
 h = htmllib.HTMLParser(formatter.NullFormatter())
 h.feed(htmlString)
-print h.anchorlist
+print(h.anchorlist)
 </pre>
 
 <hr />
@@ -89,7 +89,7 @@ class IMGFinder(htmllib.HTMLParser):
 
 h = IMGFinder(formatter.NullFormatter())
 h.feed(htmlString)
-print h.ims
+print(h.ims)
 </pre>
 
 <hr />
@@ -355,7 +355,7 @@ h.putheader('Authorization',
             base64.encodestring(user+":"+password).strip())
 h.endheaders()
 h.getreply()
-print h.getfile().read()
+print(h.getfile().read())
 </pre>
 <hr />
 <em>Tara (Family, season 5) -- And, uh, these are my-my friends.</em>
