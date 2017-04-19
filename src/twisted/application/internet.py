@@ -564,6 +564,7 @@ class _ClientMachine(object):
         self._clock = clock
         self._connectionInProgress = succeed(None)
 
+        self._stickyError = None
         self._awaitingConnected = []
 
         self._stopWaiters = []
@@ -574,6 +575,19 @@ class _ClientMachine(object):
     def _init(self):
         """
         The service has not been started.
+        """
+
+    @_machine.state()
+    def _connecting_first_time(self):
+        """
+        The service has started connecting for the first time.
+        """
+
+    @_machine.state()
+    def _halted(self):
+        """
+        The first connection failed, and we were told to give up if that
+        happened. We will wait here, without retrying, until told to restart.
         """
 
     @_machine.state()
@@ -608,15 +622,31 @@ class _ClientMachine(object):
         """
 
     @_machine.state()
+    def _restartingAndFailTheFirstTime(self):
+        """
+        The service is disconnecting and has been asked to restart, and we
+        have instructions to give up if we fail the first attempt after
+        restart.
+        """
+
+    @_machine.state()
     def _stopped(self):
         """
-        The service has been stopped an is disconnected.
+        The service has been stopped and is disconnected.
         """
 
     @_machine.input()
     def start(self):
         """
         Start this L{ClientService}, initiating the connection retry loop.
+        """
+
+    @_machine.input()
+    def startAndFailTheFirstTime(self):
+        """
+        Start this L{ClientService}, initiating the connection retry loop. In
+        this mode, a failure on the very first connection attempt will stop
+        the service and signal the failure via whenConnected.
         """
 
     @_machine.output()
@@ -630,7 +660,23 @@ class _ClientMachine(object):
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
             .addCallback(self._connectionMade)
-            .addErrback(lambda _: self._connectionFailed()))
+            .addErrback(self._connectionFailed))
+
+
+    @_machine.output()
+    def _resetStickyError(self):
+        """
+        Clear an error left by failOnFirstFailure.
+        """
+        self._stickyError = None
+
+
+    @_machine.output()
+    def _fireStickyError(self):
+        """
+        Return a Deferred that fails with the previously-set eror.
+        """
+        return fail(self._stickyError)
 
 
     @_machine.output()
@@ -714,17 +760,34 @@ class _ClientMachine(object):
         self._unawait(self._currentConnection)
 
 
+    @_machine.output()
+    def _notifyInitialConnectionFailed(self, f):
+        self._stickyError = f
+        self._unawait(f)
+
+
     @_machine.input()
-    def _connectionFailed(self):
+    def _connectionFailed(self, f):
         """
         The current connection attempt failed.
         """
+
 
     @_machine.output()
     def _wait(self):
         """
         Schedule a retry attempt.
         """
+        self._doWait()
+
+    @_machine.output()
+    def _ignoreAndWait(self, f):
+        """
+        Schedule a retry attempt, and ignore the Failure passed in.
+        """
+        return self._doWait()
+
+    def _doWait(self):
         self._failedAttempts += 1
         delay = self._timeoutForAttempt(self._failedAttempts)
         self._log.info("Scheduling retry {attempt} to connect {endpoint} "
@@ -761,12 +824,31 @@ class _ClientMachine(object):
         """
         self._unawait(Failure(CancelledError()))
 
+    @_machine.output()
+    def _ignoreAndCancelConnectWaiters(self, f):
+        """
+        Notify all pending requests for a connection that no more connections
+        are expected, after ignoring the Failure passed in.
+        """
+        self._unawait(Failure(CancelledError()))
+
 
     @_machine.output()
     def _finishStopping(self):
         """
         Notify all deferreds waiting on the service stopping.
         """
+        self._doFinishStopping()
+
+    @_machine.output()
+    def _ignoreAndFinishStopping(self, f):
+        """
+        Notify all deferreds waiting on the service stopping, and ignore the
+        Failure passed in.
+        """
+        self._doFinishStopping()
+
+    def _doFinishStopping(self):
         self._stopWaiters, waiting = [], self._stopWaiters
         for w in waiting:
             w.callback(None)
@@ -840,6 +922,8 @@ class _ClientMachine(object):
 
     _init.upon(start, enter=_connecting,
                outputs=[_connect])
+    _init.upon(startAndFailTheFirstTime, enter=_connecting_first_time,
+               outputs=[_connect])
     _init.upon(stop, enter=_stopped,
                outputs=[_deferredSucceededWithNone],
                collector=_firstResult)
@@ -853,9 +937,28 @@ class _ClientMachine(object):
     _connecting.upon(_connectionMade, enter=_connected,
                      outputs=[_notifyWaiters])
     _connecting.upon(_connectionFailed, enter=_waiting,
-                     outputs=[_wait])
+                     outputs=[_ignoreAndWait])
+
+    _connecting_first_time.upon(startAndFailTheFirstTime,
+                                enter=_connecting_first_time, outputs=[])
+    _connecting_first_time.upon(stop, enter=_disconnecting,
+                                outputs=[_waitForStop, _stopConnecting],
+                                collector=_firstResult)
+    _connecting_first_time.upon(_connectionMade, enter=_connected,
+                                outputs=[_notifyWaiters])
+    # this _connectionFailed transition is the important difference
+    _connecting_first_time.upon(_connectionFailed, enter=_halted,
+                                outputs=[_notifyInitialConnectionFailed])
+
+    _halted.upon(startAndFailTheFirstTime, enter=_halted, outputs=[])
+    _halted.upon(stop, enter=_stopped,
+                 outputs=[_deferredSucceededWithNone,
+                          _resetStickyError, _finishStopping],
+                 collector=_firstResult)
 
     _waiting.upon(start, enter=_waiting,
+                  outputs=[])
+    _waiting.upon(startAndFailTheFirstTime, enter=_waiting,
                   outputs=[])
     _waiting.upon(stop, enter=_stopped,
                   outputs=[_waitForStop,
@@ -868,6 +971,8 @@ class _ClientMachine(object):
 
     _connected.upon(start, enter=_connected,
                     outputs=[])
+    _connected.upon(startAndFailTheFirstTime, enter=_connected,
+                    outputs=[])
     _connected.upon(stop, enter=_disconnecting,
                     outputs=[_waitForStop, _disconnect],
                     collector=_firstResult)
@@ -875,6 +980,9 @@ class _ClientMachine(object):
                     outputs=[_forgetConnection, _wait])
 
     _disconnecting.upon(start, enter=_restarting,
+                        outputs=[_resetFailedAttempts])
+    _disconnecting.upon(startAndFailTheFirstTime,
+                        enter=_restartingAndFailTheFirstTime,
                         outputs=[_resetFailedAttempts])
     _disconnecting.upon(stop, enter=_disconnecting,
                         outputs=[_waitForStop],
@@ -886,7 +994,8 @@ class _ClientMachine(object):
     # Note that this is triggered synchonously with the transition from
     # _connecting
     _disconnecting.upon(_connectionFailed, enter=_stopped,
-                        outputs=[_cancelConnectWaiters, _finishStopping])
+                        outputs=[_ignoreAndCancelConnectWaiters,
+                                 _ignoreAndFinishStopping])
 
     _restarting.upon(start, enter=_restarting,
                      outputs=[])
@@ -896,7 +1005,19 @@ class _ClientMachine(object):
     _restarting.upon(_clientDisconnected, enter=_connecting,
                      outputs=[_finishStopping, _connect])
 
+    _restartingAndFailTheFirstTime.upon(startAndFailTheFirstTime,
+                                        enter=_restartingAndFailTheFirstTime,
+                                        outputs=[])
+    _restartingAndFailTheFirstTime.upon(stop, enter=_disconnecting,
+                                        outputs=[_waitForStop],
+                                        collector=_firstResult)
+    _restartingAndFailTheFirstTime.upon(_clientDisconnected,
+                                        enter=_connecting_first_time,
+                                        outputs=[_finishStopping, _connect])
+
     _stopped.upon(start, enter=_connecting,
+                  outputs=[_connect])
+    _stopped.upon(startAndFailTheFirstTime, enter=_connecting_first_time,
                   outputs=[_connect])
     _stopped.upon(stop, enter=_stopped,
                   outputs=[_deferredSucceededWithNone],
@@ -905,6 +1026,11 @@ class _ClientMachine(object):
     _init.upon(whenConnected, enter=_init,
                outputs=[_awaitingConnection],
                collector=_firstResult)
+    _connecting_first_time.upon(whenConnected, enter=_connecting_first_time,
+                                outputs=[_awaitingConnection],
+                                collector=_firstResult)
+    _halted.upon(whenConnected, enter=_halted, outputs=[_fireStickyError],
+                 collector=_firstResult)
     _connecting.upon(whenConnected, enter=_connecting,
                      outputs=[_awaitingConnection],
                      collector=_firstResult)
@@ -936,7 +1062,8 @@ class ClientService(service.Service, object):
     """
 
     _log = Logger()
-    def __init__(self, endpoint, factory, retryPolicy=None, clock=None):
+    def __init__(self, endpoint, factory, retryPolicy=None, clock=None,
+                 failOnFirstFailure=False):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -956,9 +1083,23 @@ class ClientService(service.Service, object):
             this attribute will not be serialized, and the default value (the
             reactor) will be restored when deserialized.
         @type clock: L{IReactorTime}
+
+        @param failOnFirstFailure: If True, a failure on the first connection
+            attempt will halt the service, instead of scheduling a
+            reconnection attempt. The connection failure will be delivered to
+            any outstanding Deferreds returned by whenConnected() (made
+            previously, or while in the halted state). The service will
+            remain in the running state (so .stopService may still be called
+            normally), but no new connections will be attempted until it is
+            restarted (with .stopService followed by .startService).
+            Stopping/restarting the service clears the error, so new
+            whenConnected() calls will wait for the new connection rather
+            than reporting an error about the old one.
+        @type failOnFirstFailure: C{bool}
         """
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
+        self._failOnFirstFailure = failOnFirstFailure
 
         self._machine = _ClientMachine(
             endpoint, factory, retryPolicy, clock,
@@ -974,7 +1115,9 @@ class ClientService(service.Service, object):
         @return: a Deferred that fires with a protocol produced by the factory
             passed to C{__init__}
         @rtype: L{Deferred} firing with L{IProtocol} or failing with
-            L{CancelledError} the service is stopped.
+            L{CancelledError} the service is stopped, or with
+            L{ConnectionFailed} if failOnFirstFailure was True and the
+            initial connection failed.
         """
         return self._machine.whenConnected()
 
@@ -987,7 +1130,10 @@ class ClientService(service.Service, object):
             self._log.warn("Duplicate ClientService.startService {log_source}")
             return
         super(ClientService, self).startService()
-        self._machine.start()
+        if self._failOnFirstFailure:
+            self._machine.startAndFailTheFirstTime()
+        else:
+            self._machine.start()
 
 
     def stopService(self):

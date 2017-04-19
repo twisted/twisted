@@ -27,6 +27,7 @@ from twisted.internet.interfaces import (
     IStreamServerEndpoint, IStreamClientEndpoint, IListeningPort,
     IHalfCloseableProtocol, IFileDescriptorReceiver
 )
+from twisted.internet.error import ConnectionLost, ConnectionRefusedError
 from twisted.internet import task
 from twisted.python.failure import Failure
 from twisted.logger import globalLogPublisher, formatEvent
@@ -965,3 +966,112 @@ class ClientServiceTests(SynchronousTestCase):
 
         self.assertIsNone(self.successResultOf(firstStopDeferred))
         self.assertIsNone(self.successResultOf(secondStopDeferred))
+
+class ClientServiceFirstFailureTests(ClientServiceTests):
+    """
+    Tests for L{ClientService} with failOnFirstFailure=True.
+    """
+
+    def makeReconnector(self, *args, **kwargs):
+        kwargs.update(failOnFirstFailure=True)
+        return ClientServiceTests.makeReconnector(self, *args, **kwargs)
+
+
+    # we override the specific test cases where behavior diverges
+    def test_clientConnectionFailed(self):
+        """
+        When the first client connection fails, the service removes its
+        reference to the protocol, stops reconnecting, and signals an error
+        to any Deferreds obtained through whenConnected. The service remains
+        in the running state, so it can be stopped normally later.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        self.assertEqual(len(cq.connectQueue), 1)
+        whenConnected1 = service.whenConnected()
+        class SpecialException(Exception):
+            pass
+        cq.connectQueue[0].errback(Failure(SpecialException()))
+        whenConnected2 = service.whenConnected()
+        self.assertIsInstance(self.failureResultOf(whenConnected1).value,
+                              SpecialException)
+        self.assertIsInstance(self.failureResultOf(whenConnected2).value,
+                              SpecialException)
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 1)
+        d = service.stopService()
+        self.successResultOf(d)
+
+
+    def test_stopServiceWhileRetrying(self):
+        """
+        When the service is stopped while retrying, the retry is cancelled.
+        Except that in this mode, an error on the first attempt prevents us
+        from retrying.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        cq.connectQueue[0].errback(Exception())
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 1)
+        d = service.stopService()
+        self.successResultOf(d)
+
+
+    def test_whenConnectedErrbacksOnStopService(self):
+        """
+        When failOnFirstFailure=True, calling L{ClientService.stopService} at
+        point X causes the L{Deferred} returned by
+        L{ClientService.whenConnected} to errback with Failure Y:
+        * before the connection error: the ConnectionFailure
+        * before stopService: the ConnectionFailure
+        * after stopService: L{CancelledError}
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        beforeErrbackAndStop = service.whenConnected()
+
+        # The protocol fails to connect, and the service is waiting to
+        # reconnect. This Failure will be delivered to any whenConnected()
+        # Deferreds that were called before the connection failed, and until
+        # the service is stopped.
+        cq.connectQueue[0].errback(ConnectionRefusedError("go away"))
+        afterErrback = service.whenConnected()
+
+        service.stopService()
+        # Deferreds obtained after stopService will get CancelledError
+        afterErrbackAndStop = service.whenConnected()
+
+        self.assertIsInstance(self.failureResultOf(beforeErrbackAndStop).value,
+                              ConnectionRefusedError)
+        self.assertIsInstance(self.failureResultOf(afterErrback).value,
+                              ConnectionRefusedError)
+        self.assertIsInstance(self.failureResultOf(afterErrbackAndStop).value,
+                              CancelledError)
+
+    # and we add some new tests which are specific to this mode
+
+    def test_clientConnectionFailedSecondTime(self):
+        """
+        As long as the first connection succeeded, then when the second
+        client connection fails, the service removes its reference to the
+        protocol and tries again after a timeout.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           clock=clock)
+        self.assertEqual(len(cq.connectQueue), 1)
+        cq.connectQueue[0].callback(None)
+        cq.constructedProtocols[0].connectionLost(Failure(ConnectionLost()))
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 2)
+        cq.connectQueue[1].errback(Failure(ConnectionRefusedError()))
+        whenConnected = service.whenConnected()
+        self.assertNoResult(whenConnected)
+        # Don't fail during test tear-down when service shutdown causes all
+        # waiting connections to fail.
+        whenConnected.addErrback(lambda ignored: ignored.trap(CancelledError))
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 3)
