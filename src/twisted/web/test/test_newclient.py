@@ -20,14 +20,24 @@ from twisted.internet.protocol import Protocol
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport, AccumulatingProtocol
 from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
-from twisted.web._newclient import Request, Response, HTTPParser, HTTPClientParser
-from twisted.web._newclient import BadResponseVersion, ParseError, HTTP11ClientProtocol
-from twisted.web._newclient import ChunkedEncoder, RequestGenerationFailed
-from twisted.web._newclient import RequestTransmissionFailed, ResponseFailed
+from twisted.web._newclient import HTTPParser, HTTPClientParser
+from twisted.web._newclient import BadResponseVersion, ParseError
+from twisted.web._newclient import ChunkedEncoder
 from twisted.web._newclient import WrongBodyLength, RequestNotSent
-from twisted.web._newclient import ConnectionAborted, ResponseNeverReceived
-from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, ExcessWrite
+from twisted.web._newclient import ConnectionAborted
+from twisted.web._newclient import BadHeaders, ExcessWrite
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
+from twisted.web.client import (
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    Request,
+    RequestGenerationFailed,
+    RequestTransmissionFailed,
+    Response,
+    ResponseDone,
+    ResponseFailed,
+    ResponseNeverReceived,
+    )
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
