@@ -36,7 +36,7 @@ from twisted.python import log
 from twisted import cred
 
 ##
-## Authentication
+#  Authentication
 ##
 @implementer(cred.credentials.IUsernamePassword)
 class APOPCredentials:
@@ -565,7 +565,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.processCommand(*line.split(' '))
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
-            self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
+            self.failResponse(
+                'bad protocol or server: %s: %s' % (e.__class__.__name__, e))
 
 
     def processCommand(self, command, *args):
@@ -787,7 +788,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         (interface, avatar, logout) = result
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
-            log.err("_cbMailbox() called with an interface other than IMailbox")
+            log.err(
+                "_cbMailbox() called with an interface other than IMailbox")
             return
 
         self.mbox = avatar
@@ -813,7 +815,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         elif issubclass(failure, cred.error.LoginFailed):
             self.failResponse('Authentication failed')
         if getattr(self.factory, 'noisy', True):
-            log.msg("Denied login attempt from " + str(self.transport.getPeer()))
+            log.msg(
+                "Denied login attempt from " + str(self.transport.getPeer()))
 
 
     def _ebUnexpected(self, failure):
@@ -904,7 +907,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>}
         @return: A deferred which fires when the iterator finishes.
         """
-        return self.schedule(_IteratorBuffer(self.transport.writeSequence, gen))
+        return self.schedule(
+            _IteratorBuffer(self.transport.writeSequence, gen))
 
 
     def do_STAT(self):
@@ -973,7 +977,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                         self.failResponse(err.getErrorMessage())
                         log.msg("Unexpected do_LIST failure:")
                         log.err(err)
-                return self._longOperation(d.addCallbacks(cbMessage, ebMessage))
+                return self._longOperation(
+                    d.addCallbacks(cbMessage, ebMessage))
 
 
     def do_UIDL(self, i=None):
@@ -990,7 +995,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if i is None:
             d = defer.maybeDeferred(self.mbox.listMessages)
             def cbMessages(msgs):
-                return self._coiterate(formatUIDListResponse(msgs, self.mbox.getUidl))
+                return self._coiterate(
+                    formatUIDListResponse(msgs, self.mbox.getUidl))
             def ebMessages(err):
                 self.failResponse(err.getErrorMessage())
                 log.msg("Unexpected do_UIDL failure:")
