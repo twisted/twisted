@@ -436,45 +436,30 @@ class AnotherPOP3Tests(unittest.TestCase):
 
 
     def testIllegalPASS(self):
-        dummy = DummyPOP3()
-        client = LineSendingProtocol([
-            "PASS fooz",
-            "QUIT"
-        ])
-        d = loopback.loopbackAsync(dummy, client)
-        return d.addCallback(self._cbTestIllegalPASS, client, dummy)
-
-
-    def _cbTestIllegalPASS(self, ignored, client, dummy):
-        expectedOutput = '\r\n'.join([
-            '+OK <moshez>',
-            '-ERR USER required before PASS',
-            '+OK ']) + '\r\n'
-        self.assertEqual(expectedOutput,
-                         '\r\n'.join(client.response) + '\r\n')
-        dummy.connectionLost(
-            failure.Failure(Exception("Test harness disconnect")))
+        return self.runTest(
+            ['PASS fooz',
+             'QUIT'],
+            ['+OK <moshez>',
+             '-ERR USER required before PASS',
+             '+OK '])
 
 
     def testEmptyPASS(self):
-        dummy = DummyPOP3()
-        client = LineSendingProtocol([
-            "PASS ",
-            "QUIT"
-        ])
-        d = loopback.loopbackAsync(dummy, client)
-        return d.addCallback(self._cbTestEmptyPASS, client, dummy)
+        return self.runTest(
+            ['PASS ',
+             'QUIT'],
+            ['+OK <moshez>',
+             '-ERR USER required before PASS',
+             '+OK '])
 
 
-    def _cbTestEmptyPASS(self, ignored, client, dummy):
-        expectedOutput = '\r\n'.join([
-            '+OK <moshez>',
-            '-ERR USER required before PASS',
-            '+OK ']) + '\r\n'
-        self.assertEqual(expectedOutput,
-                         '\r\n'.join(client.response) + '\r\n')
-        dummy.connectionLost(
-            failure.Failure(Exception("Test harness disconnect")))
+    def testWhiteSpaceInPASS(self):
+        return self.runTest(
+            ['PASS fooz barz',
+             'QUIT'],
+            ['+OK <moshez>',
+             '-ERR USER required before PASS',
+             '+OK '])
 
 
 
