@@ -36,7 +36,7 @@ from twisted.python import log
 from twisted import cred
 
 ##
-#  Authentication
+## Authentication
 ##
 @implementer(cred.credentials.IUsernamePassword)
 class APOPCredentials:
@@ -566,7 +566,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
             self.failResponse(
-                'bad protocol or server: %s: %s' % (e.__class__.__name__, e))
+                        'bad protocol or server: %s: %s' % (e.__class__.__name__, e)
+            )
 
 
     def processCommand(self, command, *args):
@@ -789,7 +790,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
             log.err(
-                "_cbMailbox() called with an interface other than IMailbox")
+                "_cbMailbox() called with an interface other than IMailbox"
+            )
             return
 
         self.mbox = avatar
@@ -816,7 +818,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.failResponse('Authentication failed')
         if getattr(self.factory, 'noisy', True):
             log.msg(
-                "Denied login attempt from " + str(self.transport.getPeer()))
+                "Denied login attempt from " + str(self.transport.getPeer())
+            )
 
 
     def _ebUnexpected(self, failure):
@@ -846,7 +849,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse('USER accepted, send PASS')
 
 
-    def do_PASS(self, password, *args):
+    def do_PASS(self, password, *words):
         """
         Handle a PASS command.
 
@@ -859,11 +862,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type password: L{bytes}
         @param password: A password.
 
-        @type args: L{tuple} or L{None}
-        @param args: Other words composing the password.
+        @type words: L{tuple} of L{bytes}
+        @param words: Other words composing the password joined with a space.
         """
-        if args:
-            password += ' ' + ' '.join(args)
+        password = b' '.join((password,) + words)
 
         if self._userIs is None:
             self.failResponse("USER required before PASS")
@@ -908,7 +910,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @return: A deferred which fires when the iterator finishes.
         """
         return self.schedule(
-            _IteratorBuffer(self.transport.writeSequence, gen))
+                    _IteratorBuffer(self.transport.writeSequence, gen)
+        )
 
 
     def do_STAT(self):
@@ -978,7 +981,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                         log.msg("Unexpected do_LIST failure:")
                         log.err(err)
                 return self._longOperation(
-                    d.addCallbacks(cbMessage, ebMessage))
+                            d.addCallbacks(cbMessage, ebMessage)
+                )
 
 
     def do_UIDL(self, i=None):
@@ -996,7 +1000,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             d = defer.maybeDeferred(self.mbox.listMessages)
             def cbMessages(msgs):
                 return self._coiterate(
-                    formatUIDListResponse(msgs, self.mbox.getUidl))
+                            formatUIDListResponse(msgs, self.mbox.getUidl)
+                )
             def ebMessages(err):
                 self.failResponse(err.getErrorMessage())
                 log.msg("Unexpected do_UIDL failure:")

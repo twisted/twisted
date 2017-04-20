@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.mail.pop3 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -310,6 +309,20 @@ class DummyPOP3(pop3.POP3):
 
 
 
+class DummyPOP3Auth(DummyPOP3):
+    """
+    Class to test successful authentication in twisted.mail.pop3.POP3.
+    """
+
+
+    def __init__(self, user, password):
+        self.portal = cred.portal.Portal(TestRealm())
+        ch = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        ch.addUser(user, password)
+        self.portal.registerChecker(ch)
+
+
+
 class DummyMailbox(pop3.Mailbox):
 
     messages = ['From: moshe\nTo: moshe\n\nHow are you, friend?\n']
@@ -346,8 +359,26 @@ class DummyMailbox(pop3.Mailbox):
 class AnotherPOP3Tests(unittest.TestCase):
 
 
-    def runTest(self, lines, expectedOutput):
-        dummy = DummyPOP3()
+    def run_test(self, lines, expectedOutput, protocolInstance=None):
+        """
+        Helper function to compare the output of the protocol implementation
+        to a given input with the expected output.
+
+        @type lines: L{tuple} of L{bytes}
+        @param lines: Input to pass to the protocol.
+
+        @type expectedOutput: L{tuple} of L{bytes}
+        @param expectedOutput: How the protocol is expected to respond.
+
+        @type protocolInstance: instance of L{twisted.mail.pop3.POP3}
+        or L{None}.
+        @param protocolInstance: If None, a new DummyPOP3 will be used.
+        """
+        if protocolInstance:
+            dummy = protocolInstance
+        else:
+            dummy = DummyPOP3()
+
         client = LineSendingProtocol(lines)
         d = loopback.loopbackAsync(dummy, client)
         return d.addCallback(self._cbRunTest, client, dummy, expectedOutput)
@@ -370,7 +401,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         granularity are not very good.  It would likely be an improvement to
         split it into a number of smaller, more focused tests.
         """
-        return self.runTest(
+        return self.run_test(
             ["APOP moshez dummy",
              "LIST",
              "UIDL",
@@ -403,7 +434,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         """
         Test the no-op command.
         """
-        return self.runTest(
+        return self.run_test(
             ['APOP spiv dummy',
              'NOOP',
              'QUIT'],
@@ -435,31 +466,165 @@ class AnotherPOP3Tests(unittest.TestCase):
         self.assertEqual(client.response[5], ".")
 
 
-    def testIllegalPASS(self):
-        return self.runTest(
-            ['PASS fooz',
-             'QUIT'],
-            ['+OK <moshez>',
-             '-ERR USER required before PASS',
-             '+OK '])
+    def run_PASS(self, real_user, real_password,
+                 tried_user=None, tried_password=None):
+        """
+        Test a login with PASS.
+
+        If L{real_user} matches L{tried_user} and L{real_password} matches
+        L{tried_password}, a successful login will be expected.
+
+        Otherwise an unsuccessful login will be expected.
+
+        @type real_user: L{bytes}
+        @param real_user: The user to test.
+
+        @type real_password: L{bytes}
+        @param real_password: The password of the test user.
+
+        @type tried_user: L{bytes} or L{None}
+        @param tried_user: The user to call USER with.
+        If None, real_user will be used.
+
+        @type tried_password: L{bytes} or L{None}
+        @param tried_password: The password to call PASS with.
+        If None, real_password will be used.
+        """
+        if not tried_user:
+            tried_user = real_user
+        if not tried_password:
+            tried_password = real_password
+        response = [b'+OK <moshez>',
+                    b'+OK USER accepted, send PASS',
+                    b'-ERR Authentication failed',
+                    b'+OK ']
+        if real_user == tried_user and real_password == tried_password:
+            response = [b'+OK <moshez>',
+                        b'+OK USER accepted, send PASS',
+                        b'+OK Authentication succeeded',
+                        b'+OK ']
+        return self.run_test(
+            [b' '.join([b'USER', tried_user]),
+             b' '.join([b'PASS', tried_password]),
+             b'QUIT'],
+            response,
+            protocolInstance=DummyPOP3Auth(real_user, real_password))
 
 
-    def testEmptyPASS(self):
-        return self.runTest(
-            ['PASS ',
-             'QUIT'],
-            ['+OK <moshez>',
-             '-ERR USER required before PASS',
-             '+OK '])
+    def run_PASS_before_USER(self, password):
+        """
+        Test protocol violation produced by calling PASS before USER.
+
+        @type password: L{bytes}
+        @param password: A password to test.
+        """
+        return self.run_test(
+            [b' '.join([b'PASS', password]),
+             b'QUIT'],
+            [b'+OK <moshez>',
+             b'-ERR USER required before PASS',
+             b'+OK '])
 
 
-    def testWhiteSpaceInPASS(self):
-        return self.runTest(
-            ['PASS fooz barz',
-             'QUIT'],
-            ['+OK <moshez>',
-             '-ERR USER required before PASS',
-             '+OK '])
+    def test_illegal_PASS_before_USER(self):
+        """
+        Test PASS before USER with a wrong password.
+        """
+        return self.run_PASS_before_USER(b'fooz')
+
+
+    def test_empty_PASS_before_USER(self):
+        """
+        Test PASS before USER with an empty password.
+        """
+        return self.run_PASS_before_USER(b'')
+
+
+    def test_one_space_PASS_before_USER(self):
+        """
+        Test PASS before USER with an password that is a space.
+        """
+        return self.run_PASS_before_USER(b' ')
+
+
+    def test_space_PASS_before_USER(self):
+        """
+        Test PASS before USER with a password containing a space.
+        """
+        return self.run_PASS_before_USER(b'fooz barz')
+
+
+    def test_multiple_spaces_PASS_before_USER(self):
+        """
+        Test PASS before USER with a password containing multiple spaces.
+        """
+        return self.run_PASS_before_USER(b'fooz barz asdf')
+
+
+    def test_other_whitespace_PASS_before_USER(self):
+        """
+        Test PASS before USER with a password containing tabs and spaces.
+        """
+        return self.run_PASS_before_USER(b'fooz barz\tcrazy@! \t ')
+
+
+    def test_good_PASS(self):
+        """
+        Test PASS with a good password.
+        """
+        return self.run_PASS(b'testuser', b'fooz')
+
+
+    def test_space_PASS(self):
+        """
+        Test PASS with a password containing a space.
+        """
+        return self.run_PASS(b'testuser', b'fooz barz')
+
+
+    def test_multiple_spaces_PASS(self):
+        """
+        Test PASS with a password containing a space.
+        """
+        return self.run_PASS(b'testuser', b'fooz barz asdf')
+
+
+    def test_other_whitespace_PASS(self):
+        """
+        Test PASS with a password containing tabs and spaces.
+        """
+        return self.run_PASS(b'testuser', b'fooz barz\tcrazy@! \t ')
+
+
+    def test_wrong_PASS(self):
+        """
+        Test PASS with a wrong password.
+        """
+        return self.run_PASS(b'testuser', b'fooz',
+                             tried_password=b'barz')
+
+
+    def test_wrong_space_PASS(self):
+        """
+        Test PASS with a password containing a space.
+        """
+        return self.run_PASS(b'testuser', b'fooz barz',
+                             tried_password=b'foozbarz ')
+
+
+    def test_wrong_multiple_spaces_PASS(self):
+        """
+        Test PASS with a password containing a space.
+        """
+        return self.run_PASS(b'testuser', b'fooz barz asdf',
+                             tried_password='foozbarz   ')
+
+
+    def test_wrong_other_whitespace_PASS(self):
+        """
+        Test PASS with a password containing tabs and spaces.
+        """
+        return self.run_PASS(b'testuser', b'fooz barz\tcrazy@! \t ')
 
 
 
@@ -1140,7 +1305,7 @@ class POP3MiscTests(unittest.TestCase):
     Miscellaneous tests more to do with module/package structure than
     anything to do with the Post Office Protocol.
     """
-    def testAll(self):
+    def test_all(self):
         """
         This test checks that all names listed in
         twisted.mail.pop3.__all__ are actually present in the module.

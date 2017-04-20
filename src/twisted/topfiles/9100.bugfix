@@ -1,1 +1,1 @@
-twisted.mail.pop3 now accepts passwords that contain spaces.
+The POP3 server implemented by twisted.mail.pop3 now accepts passwords that contain spaces.
