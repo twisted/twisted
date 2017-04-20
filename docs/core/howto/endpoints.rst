@@ -152,6 +152,26 @@ Keep in mind that you may need to wrap this up for your particular application, 
 For example, that little snippet is slightly oversimplified: at the time ``connectedNow`` is run, the bot hasn't authenticated or joined the channel yet, so its message will be refused.
 A real-life IRC bot would need to have its own method for waiting until the connection is fully ready for chat before chatting.
 
+Reporting an Initial Failure
+----------------------------
+
+Often times, a failure of the very first connection attempt is special. It may indicate a problem that won't go away by just trying harder. The service may be configured with the wrong hostname, or the user may not have an internet connection at all (perhaps they forgot to turn on their wifi adapter).
+
+Applications can ask ``whenConnected`` to make their ``Deferred`` fail if the service makes one or more connection attempts in a row without success. You can pass the ``failAfterFailures`` parameter into ``ClientService`` to set this threshold. Setting it to 1 means it will fail after a single connection failure. Setting it to 2 means it will try once, wait a bit, try again, and then either fail or succeed depending upon the outcome of the second connection attempt. The default of ``None`` means it will wait forever for a successful connection.
+
+Regardless of ``failAfterFailures``, the ``Deferred`` will always fail with :api:`twisted.internet.defer.CancelledError <CancelledError>` if the service is stopped before a connection is made.
+
+.. code-block:: python
+
+    waitForConnection = myReconnectingService.whenConnected(failAfterFailures=1)
+    def connectedNow(clientForIRC):
+        clientForIRC.say("#bot-test", "hello, world!")
+    def failed(f):
+        print("initial connection failed: %s" % (f,))
+        # now you should stop the service and report the error upwards
+    waitForConnection.addCallbacks(connectedNow, failed)
+
+
 Retry Policies
 --------------
 
