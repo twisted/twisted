@@ -5,6 +5,7 @@
 Test cases for L{twisted.logger._logger}.
 """
 
+from twisted.internet.defer import maybeDeferred
 from twisted.trial import unittest
 
 from .._levels import InvalidLogLevelError
@@ -200,6 +201,25 @@ class LoggerTests(unittest.TestCase):
             raise RuntimeError("baloney!")
         except RuntimeError:
             log.failure("Whoops")
+
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEqual(len(errors), 1)
+
+        self.assertEqual(log.emitted["level"], LogLevel.critical)
+        self.assertEqual(log.emitted["format"], "Whoops")
+
+
+    def test_failureTransposedArguments(self):
+        """
+        Test that log.failure() emits the right data when given format and
+        failure arguments in reverse order. This is pertinent when logging in
+        an errback.
+        """
+        def crash():
+            raise RuntimeError("baloney!")
+
+        log = TestLogger()
+        maybeDeferred(crash).addErrback(log.failure, "Whoops")
 
         errors = self.flushLoggedErrors(RuntimeError)
         self.assertEqual(len(errors), 1)

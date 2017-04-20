@@ -8,7 +8,7 @@ Logger class.
 
 from time import time
 
-from twisted.python.compat import currentframe
+from twisted.python.compat import currentframe, StringType
 from twisted.python.failure import Failure
 from ._levels import InvalidLogLevelError, LogLevel
 
@@ -149,6 +149,12 @@ class Logger(object):
             d.addErrback(lambda f: log.failure, "While frobbing {knob}",
                          f, knob=knob)
 
+        The first two arguments can be transposed to make this method
+        convenient as a C{Deferred}'s C{errback}::
+
+            d = deferredFrob(knob)
+            d.addErrback(log.failure, "While frobbing {knob}", knob=knob)
+
         This method is generally meant to capture unexpected exceptions in
         code; an exception that is caught and handled somehow should be logged,
         if appropriate, via L{Logger.error} instead.  If some unknown exception
@@ -172,6 +178,15 @@ class Logger(object):
             non-deterministic behavior from observers that schedule work for
             later execution.
         """
+        # Allow failure and format to be transposed, to allow convenient use
+        # of this method as a Deferred's errback.
+        failure, format = (
+            (failure if isinstance(failure, Failure) else (
+                format if isinstance(format, Failure) else None)),
+            (format if isinstance(format, StringType) else (
+                failure if isinstance(failure, StringType) else None)),
+        )
+
         if failure is None:
             failure = Failure()
 
