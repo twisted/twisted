@@ -843,7 +843,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse('USER accepted, send PASS')
 
 
-    def do_PASS(self, password):
+    def do_PASS(self, password, *args):
         """
         Handle a PASS command.
 
@@ -855,7 +855,13 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @type password: L{bytes}
         @param password: A password.
+
+        @type args: L{tuple} or L{None}
+        @param args: Other words composing the password.
         """
+        if args:
+            password += ' ' + ' '.join(args)
+
         if self._userIs is None:
             self.failResponse("USER required before PASS")
             return
