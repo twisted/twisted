@@ -1494,7 +1494,7 @@ class _StandardEndpointFactory(object):
                                                                       uri.port)
             return wrapClientTLS(connectionCreator, endpoint)
         else:
-            raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
+            raise SchemeNotSupported("Unsupported scheme, forgot http:// or ftp:// in the url: %r ?" % (uri.toBytes()))
 
 
 
