@@ -1,0 +1,1 @@
+TLS-related tests now pass when run with OpenSSL 1.1.0.  This makes tests pass again on macOS and Windows, as cryptography 1.8 and later include OpenSSL 1.1.0.

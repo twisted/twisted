@@ -122,7 +122,7 @@ class FakeTransport:
     def _checkProducer(self):
         # Cheating; this is called at "idle" times to allow producers to be
         # found and dealt with
-        if self.producer:
+        if self.producer and not self.streamingProducer:
             self.producer.resumeProducing()
 
 

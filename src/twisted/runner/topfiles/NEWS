@@ -1,6 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Runner 17.1.0 (2017-02-04)
+==================================
+
+Bugfixes
+--------
+ - On Python 3, procmon now handles process output without exceptions
+   (#8919)
+
+
+Twisted Runner 16.6.0 (2016-11-17)
+==================================
+
+No significant changes have been made for this release.
+
+
 Twisted Runner 16.5.0 (2016-10-28)
 ==================================
 

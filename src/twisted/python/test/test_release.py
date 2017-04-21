@@ -11,6 +11,7 @@ only ever performed on Linux.
 from __future__ import print_function
 
 import glob
+import functools
 import operator
 import os
 import sys
@@ -20,9 +21,8 @@ import shutil
 
 from datetime import date
 from io import BytesIO as StringIO
-from urllib2 import urlopen
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
 from twisted.python.procutils import which
 from twisted.python import release
@@ -57,29 +57,6 @@ else:
         pydoctorSkip = "Pydoctor is too old."
     else:
         pydoctorSkip = skip
-
-
-from twisted.python._release import intersphinxURLs
-
-def checkIntersphinxSkip():
-    """
-    Determine if we should skip the intersphinx tests.
-
-    @return: a skip message if we can't retrieve any of the relevant URLs.
-    """
-    skip = ""
-    for iu in intersphinxURLs:
-        try:
-            opened = urlopen(iu)
-        except Exception as e:
-            skip += "could not retrieve {} because {}\n".format(iu, e)
-        else:
-            opened.close()
-    if skip:
-        return skip
-
-if not pydoctorSkip:
-    pydoctorSkip = checkIntersphinxSkip()
 
 
 if not skip and which("sphinx-build"):
@@ -356,12 +333,75 @@ class UtilityTests(ExternalTempdirTestCase):
 
 
 
+def doNotFailOnNetworkError(func):
+    """
+    A decorator which makes APIBuilder tests not fail because of intermittent
+    network failures -- mamely, APIBuilder being unable to get the "object
+    inventory" of other projects.
+
+    @param func: The function to decorate.
+
+    @return: A decorated function which won't fail if the object inventory
+        fetching fails.
+    """
+    @functools.wraps(func)
+    def wrapper(*a, **kw):
+        try:
+            func(*a, **kw)
+        except FailTest as e:
+            if e.args[0].startswith("'Failed to get object inventory from "):
+                raise SkipTest(
+                    ("This test is prone to intermittent network errors. "
+                     "See ticket 8753. Exception was: {!r}").format(e))
+            raise
+    return wrapper
+
+
+
+class DoNotFailTests(TestCase):
+    """
+    Tests for L{doNotFailOnNetworkError}.
+    """
+
+    def test_skipsOnAssertionError(self):
+        """
+        When the test raises L{FailTest} and the assertion failure starts with
+        "'Failed to get object inventory from ", the test will be skipped
+        instead.
+        """
+        @doNotFailOnNetworkError
+        def inner():
+            self.assertEqual("Failed to get object inventory from blah", "")
+
+        try:
+            inner()
+        except Exception as e:
+            self.assertIsInstance(e, SkipTest)
+
+
+    def test_doesNotSkipOnDifferentError(self):
+        """
+        If there is a L{FailTest} that is not the intersphinx fetching error,
+        it will be passed through.
+        """
+        @doNotFailOnNetworkError
+        def inner():
+            self.assertEqual("Error!!!!", "")
+
+        try:
+            inner()
+        except Exception as e:
+            self.assertIsInstance(e, FailTest)
+
+
+
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
     skip = pydoctorSkip
 
+    @doNotFailOnNetworkError
     def test_build(self):
         """
         L{APIBuilder.build} writes an index file which includes the name of the
@@ -423,6 +463,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertEqual(stdout.getvalue(), '')
 
 
+    @doNotFailOnNetworkError
     def test_buildWithPolicy(self):
         """
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
@@ -472,6 +513,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertEqual(stdout.getvalue(), '')
 
 
+    @doNotFailOnNetworkError
     def test_buildWithDeprecated(self):
         """
         The templates and System for Twisted includes adding deprecations.

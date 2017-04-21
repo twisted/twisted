@@ -86,7 +86,7 @@ except ImportError:
         return (key, pdict)
 
 
-from zope.interface import implementer, provider
+from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
@@ -98,6 +98,7 @@ from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.protocols import policies, basic
 
 from twisted.web.iweb import (
@@ -110,6 +111,7 @@ try:
 except ImportError:
     H2Connection = None
     H2_ENABLED = False
+
 
 from twisted.web._responses import (
     SWITCHING,
@@ -131,6 +133,7 @@ from twisted.web._responses import (
     NOT_EXTENDED,
 
     RESPONSES)
+
 
 if _PY3:
     _intTypes = int
@@ -376,6 +379,101 @@ def parseContentRange(header):
 
 
 
+class _IDeprecatedHTTPChannelToRequestInterface(Interface):
+    """
+    The interface L{HTTPChannel} expects of L{Request}.
+    """
+
+    requestHeaders = Attribute(
+        "A L{http_headers.Headers} instance giving all received HTTP request "
+        "headers.")
+
+    responseHeaders = Attribute(
+        "A L{http_headers.Headers} instance holding all HTTP response "
+        "headers to be sent.")
+
+
+    def connectionLost(reason):
+        """
+        The underlying connection has been lost.
+
+        @param reason: A failure instance indicating the reason why
+            the connection was lost.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+
+    def gotLength(length):
+        """
+        Called when L{HTTPChannel} has determined the length, if any,
+        of the incoming request's body.
+
+        @param length: The length of the request's body.
+        @type length: L{int} if the request declares its body's length
+            and L{None} if it does not.
+        """
+
+
+    def handleContentChunk(data):
+        """
+        Deliver a received chunk of body data to the request.  Note
+        this does not imply chunked transfer encoding.
+
+        @param data: The received chunk.
+        @type data: L{bytes}
+        """
+
+
+    def parseCookies():
+        """
+        Parse the request's cookies out of received headers.
+        """
+
+
+    def requestReceived(command, path, version):
+        """
+        Called when the entire request, including its body, has been
+        received.
+
+        @param command: The request's HTTP command.
+        @type command: L{bytes}
+
+        @param path: The request's path.  Note: this is actually what
+            RFC7320 calls the URI.
+        @type path: L{bytes}
+
+        @param version: The request's HTTP version.
+        @type version: L{bytes}
+        """
+
+
+    def __eq__(other):
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        @rtype: L{bool}
+        """
+
+
+    def __ne__(other):
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        @rtype: L{bool}
+        """
+
+
+
 class StringTransport:
     """
     I am a StringIO wrapper that conforms for the transport API. I support
@@ -548,7 +646,8 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
-@implementer(interfaces.IConsumer)
+@implementer(interfaces.IConsumer,
+             _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
     """
     A HTTP request.
@@ -1349,6 +1448,49 @@ class Request:
         self.channel.loseConnection()
 
 
+    def __eq__(self, other):
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        @rtype: L{bool}
+        """
+        # When other is not an instance of request, return
+        # NotImplemented so that Python uses other.__eq__ to perform
+        # the comparison.  This ensures that a Request proxy generated
+        # by proxyForInterface compares equal to an actual Request
+        # instanceby turning request != proxy into proxy != request.
+        if isinstance(other, Request):
+            return self is other
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        @rtype: L{bool}
+        """
+        # When other is not an instance of request, return
+        # NotImplemented so that Python uses other.__ne__ to perform
+        # the comparison.  This ensures that a Request proxy generated
+        # by proxyForInterface can compare equal to an actual Request
+        # instance by turning request != proxy into proxy != request.
+        if isinstance(other, Request):
+            return self is not other
+        return NotImplemented
+
+
+
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
@@ -1619,11 +1761,35 @@ class _NoPushProducer(object):
         pass
 
 
+    def registerProducer(self, producer, streaming):
+        """
+        Register to receive data from a producer.
 
-@implementer(interfaces.ITransport)
+        @param producer: The producer to register.
+        @param streaming: Whether this is a streaming producer or not.
+        """
+        pass
+
+
+    def unregisterProducer(self):
+        """
+        Stop consuming data from a producer, without disconnecting.
+        """
+        pass
+
+
+
+@implementer(interfaces.ITransport,
+             interfaces.IPushProducer,
+             interfaces.IConsumer)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
+
+    The L{HTTPChannel} provides L{interfaces.ITransport} and
+    L{interfaces.IConsumer} to the L{Request} objects it creates. It also
+    implements L{interfaces.IPushProducer} to C{self.transport}, allowing the
+    transport to pause it.
 
     @ivar MAX_LENGTH: Maximum length for initial request line and each line
         from the header.
@@ -1649,15 +1815,52 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         while processing an outstanding request.
     @type _dataBuffer: L{list} of L{bytes}
 
-    @ivar _producer: Either the transport, if it provides
+    @ivar _networkProducer: Either the transport, if it provides
         L{interfaces.IPushProducer}, or a null implementation of
         L{interfaces.IPushProducer}. Used to attempt to prevent the transport
         from producing excess data when we're responding to a request.
-    @type _producer: L{interfaces.IPushProducer}
+    @type _networkProducer: L{interfaces.IPushProducer}
+
+    @ivar _requestProducer: If the L{Request} object or anything it calls
+        registers itself as an L{interfaces.IProducer}, it will be stored here.
+        This is used to create a producing pipeline: pause/resume producing
+        methods will be propagated from the C{transport}, through the
+        L{HTTPChannel} instance, to the c{_requestProducer}.
+
+        The reason we proxy through the producing methods rather than the old
+        behaviour (where we literally just set the L{Request} object as the
+        producer on the transport) is because we want to be able to exert
+        backpressure on the client to prevent it from sending in arbitrarily
+        many requests without ever reading responses. Essentially, if the
+        client never reads our responses we will eventually stop reading its
+        requests.
+    @type _requestProducer: L{interfaces.IPushProducer}
+
+    @ivar _requestProducerStreaming: A boolean that tracks whether the producer
+        on the L{Request} side of this channel has registered itself as a
+        L{interfaces.IPushProducer} or an L{interfaces.IPullProducer}.
+    @type _requestProducerStreaming: L{bool} or L{None}
+
+    @ivar _waitingForTransport: A boolean that tracks whether the transport has
+        asked us to stop producing. This is used to keep track of what we're
+        waiting for: if the transport has asked us to stop producing then we
+        don't want to unpause the transport until it asks us to produce again.
+    @type _waitingForTransport: L{bool}
+
+    @ivar abortTimeout: The number of seconds to wait after we attempt to shut
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
+    @type abortTimeout: L{int}
+
+    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
+        used to forcibly close the transport if it doesn't close cleanly.
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
 
     maxHeaders = 500
     totalHeadersSize = 16384
+    abortTimeout = 15
 
     length = 0
     persistent = 1
@@ -1671,6 +1874,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _savedTimeOut = None
     _receivedHeaderCount = 0
     _receivedHeaderSize = 0
+    _requestProducer = None
+    _requestProducerStreaming = None
+    _waitingForTransport = False
+    _abortingCall = None
 
     def __init__(self):
         # the request queue
@@ -1682,9 +1889,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         self.setTimeout(self.timeOut)
-        self._producer = interfaces.IPushProducer(
+        self._networkProducer = interfaces.IPushProducer(
             self.transport, _NoPushProducer()
         )
+        self._networkProducer.registerProducer(self, True)
 
 
     def lineReceived(self, line):
@@ -1841,9 +2049,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
 
-        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        self._producer.pauseProducing()
         self._handlingRequest = True
+
+        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
+        if not self._waitingForTransport:
+            self._networkProducer.pauseProducing()
 
         req = self.requests[-1]
         req.requestReceived(command, path, version)
@@ -1928,7 +2138,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if request != self.requests[0]: raise TypeError
         del self.requests[0]
 
-        self._producer.resumeProducing()
+        # We should only resume the producer if we're not waiting for the
+        # transport.
+        if not self._waitingForTransport:
+            self._networkProducer.resumeProducing()
 
         if self.persistent:
             self._handlingRequest = False
@@ -1941,18 +2154,41 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._dataBuffer = []
             self.setLineMode(data)
         else:
-            self.transport.loseConnection()
+            self.loseConnection()
 
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
-        policies.TimeoutMixin.timeoutConnection(self)
+        if self.abortTimeout is not None:
+            # We use self.callLater because that's what TimeoutMixin does.
+            self._abortingCall = self.callLater(
+                self.abortTimeout, self.forceAbortClient
+            )
+        self.loseConnection()
+
+
+    def forceAbortClient(self):
+        """
+        Called if C{abortTimeout} seconds have passed since the timeout fired,
+        and the connection still hasn't gone away. This can really only happen
+        on extremely bad connections or when clients are maliciously attempting
+        to keep connections open.
+        """
+        log.msg(
+            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
+        )
+        self.transport.abortConnection()
 
 
     def connectionLost(self, reason):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+        # If we were going to force-close the transport, we don't have to now.
+        if self._abortingCall is not None:
+            self._abortingCall.cancel()
+            self._abortingCall = None
 
 
     def isSecure(self):
@@ -2046,6 +2282,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
+        self._networkProducer.unregisterProducer()
         return self.transport.loseConnection()
 
 
@@ -2076,7 +2313,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
-        return self.transport.registerProducer(producer, streaming)
+        if self._requestProducer is not None:
+            raise RuntimeError(
+                "Cannot register producer %s, because producer %s was never "
+                "unregistered." % (producer, self._requestProducer))
+
+        if not streaming:
+            producer = _PullToPush(producer, self)
+
+        self._requestProducer = producer
+        self._requestProducerStreaming = streaming
+
+        if not streaming:
+            producer.startStreaming()
 
 
     def unregisterProducer(self):
@@ -2085,7 +2334,83 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
-        return self.transport.unregisterProducer()
+        if self._requestProducer is None:
+            return
+
+        if not self._requestProducerStreaming:
+            self._requestProducer.stopStreaming()
+
+        self._requestProducer = None
+        self._requestProducerStreaming = None
+
+
+    def stopProducing(self):
+        """
+        Stop producing data.
+
+        The HTTPChannel doesn't *actually* implement this, beacuse the
+        assumption is that it will only be called just before C{loseConnection}
+        is called. There's nothing sensible we can do other than call
+        C{loseConnection} anyway.
+        """
+        if self._requestProducer is not None:
+            self._requestProducer.stopProducing()
+
+
+    def pauseProducing(self):
+        """
+        Pause producing data.
+
+        This will be called by the transport when the send buffers have been
+        filled up. We want to simultaneously pause the producing L{Request}
+        object and also pause our transport.
+
+        The logic behind pausing the transport is specifically to avoid issues
+        like https://twistedmatrix.com/trac/ticket/8868. In this case, our
+        inability to send does not prevent us handling more requests, which
+        means we increasingly queue up more responses in our send buffer
+        without end. The easiest way to handle this is to ensure that if we are
+        unable to send our responses, we will not read further data from the
+        connection until the client pulls some data out. This is a bit of a
+        blunt instrument, but it's ok.
+
+        Note that this potentially interacts with timeout handling in a
+        positive way. Once the transport is paused the client may run into a
+        timeout which will cause us to tear the connection down. That's a good
+        thing!
+        """
+        self._waitingForTransport = True
+
+        # The first step is to tell any producer we might currently have
+        # registered to stop producing. If we can slow our applications down
+        # we should.
+        if self._requestProducer is not None:
+            self._requestProducer.pauseProducing()
+
+        # The next step here is to pause our own transport, as discussed in the
+        # docstring.
+        if not self._handlingRequest:
+            self._networkProducer.pauseProducing()
+
+
+    def resumeProducing(self):
+        """
+        Resume producing data.
+
+        This will be called by the transport when the send buffer has dropped
+        enough to actually send more data. When this happens we can unpause any
+        outstanding L{Request} producers we have, and also unpause our
+        transport.
+        """
+        self._waitingForTransport = False
+
+        if self._requestProducer is not None:
+            self._requestProducer.resumeProducing()
+
+        # We only want to resume the network producer if we're not currently
+        # waiting for a response to show up.
+        if not self._handlingRequest:
+            self._networkProducer.resumeProducing()
 
 
     def _send100Continue(self):
@@ -2108,7 +2433,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-        self.transport.loseConnection()
+        self.loseConnection()
 
 
 
@@ -2383,7 +2708,12 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
             if negotiatedProtocol == b'h2':
                 if not H2_ENABLED:
-                    raise ValueError("Neogitated HTTP/2 without support.")
+                    raise ValueError("Negotiated HTTP/2 without support.")
+
+                # We need to make sure that the HTTPChannel is unregistered
+                # from the transport so that the H2Connection can register
+                # itself if possible.
+                self._channel._networkProducer.unregisterProducer()
 
                 transport = self._channel.transport
                 self._channel = H2Connection()

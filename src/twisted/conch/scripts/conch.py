@@ -63,12 +63,14 @@ class ClientOptions(options.ConchOptions):
         else:
             sys.exit("Bad escape character '%s'." % esc)
 
+
     def opt_localforward(self, f):
         "Forward local port to remote address (lport:host:port)"
         localPort, remoteHost, remotePort = f.split(':') # doesn't do v6 yet
         localPort = int(localPort)
         remotePort = int(remotePort)
         self.localForwards.append((localPort, (remoteHost, remotePort)))
+
 
     def opt_remoteforward(self, f):
         """Forward remote port to local address (rport:host:port)"""
@@ -77,9 +79,12 @@ class ClientOptions(options.ConchOptions):
         connPort = int(connPort)
         self.remoteForwards.append((remotePort, (connHost, connPort)))
 
+
     def parseArgs(self, host, *command):
         self['host'] = host
         self['command'] = ' '.join(command)
+
+
 
 # Rest of code in "run"
 options = None
@@ -146,6 +151,8 @@ def run():
         print('Connection to %s closed.' % options['host'])
     sys.exit(exitStatus)
 
+
+
 def handleError():
     from twisted.python import failure
     global exitStatus
@@ -154,10 +161,14 @@ def handleError():
     log.err(failure.Failure())
     raise
 
+
+
 def _stopReactor():
     try:
         reactor.stop()
     except: pass
+
+
 
 def doConnect():
 #    log.deferr = handleError # HACK
@@ -175,13 +186,20 @@ def doConnect():
     host = options['host']
     port = options['port']
     vhk = default.verifyHostKey
+    if not options['host-key-algorithms']:
+        options['host-key-algorithms'] = default.getHostKeyAlgorithms(
+                                             host, options)
     uao = default.SSHUserAuthClient(options['user'], options, SSHConnection())
     connect.connect(host, port, options, vhk, uao).addErrback(_ebExit)
+
+
 
 def _ebExit(f):
     global exitStatus
     exitStatus = "conch: exiting with error %s" % f
     reactor.callLater(0.1, _stopReactor)
+
+
 
 def onConnect():
 #    if keyAgent and options['agent']:
@@ -216,9 +234,13 @@ def onConnect():
                 if e.errno != errno.EBADF:
                     raise
 
+
+
 def reConnect():
     beforeShutdown()
     conn.transport.transport.loseConnection()
+
+
 
 def beforeShutdown():
     remoteForwards = options.remoteForwards
@@ -226,9 +248,13 @@ def beforeShutdown():
         log.msg('cancelling %s:%s' % (remotePort, hostport))
         conn.cancelRemoteForwarding(remotePort)
 
+
+
 def stopConnection():
     if not options['reconnect']:
         reactor.callLater(0.1, _stopReactor)
+
+
 
 class _KeepAlive:
 
@@ -238,21 +264,26 @@ class _KeepAlive:
         self.lc = task.LoopingCall(self.sendGlobal)
         self.lc.start(300)
 
+
     def sendGlobal(self):
-        d = self.conn.sendGlobalRequest("conch-keep-alive@twistedmatrix.com",
-                "", wantReply = 1)
+        d = self.conn.sendGlobalRequest(b"conch-keep-alive@twistedmatrix.com",
+                b"", wantReply = 1)
         d.addBoth(self._cbGlobal)
         self.globalTimeout = reactor.callLater(30, self._ebGlobal)
+
 
     def _cbGlobal(self, res):
         if self.globalTimeout:
             self.globalTimeout.cancel()
             self.globalTimeout = None
 
+
     def _ebGlobal(self):
         if self.globalTimeout:
             self.globalTimeout = None
             self.conn.transport.loseConnection()
+
+
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -266,6 +297,7 @@ class SSHConnection(connection.SSHConnection):
             del self.__class__.cancelRemoteForwarding
         onConnect()
 
+
     def serviceStopped(self):
         lf = self.localForwards
         self.localForwards = []
@@ -273,32 +305,37 @@ class SSHConnection(connection.SSHConnection):
             s.loseConnection()
         stopConnection()
 
+
     def requestRemoteForwarding(self, remotePort, hostport):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-        d = self.sendGlobalRequest('tcpip-forward', data,
+        d = self.sendGlobalRequest(b'tcpip-forward', data,
                                    wantReply=1)
         log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
         d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
         d.addErrback(self._ebRemoteForwarding, remotePort, hostport)
+
 
     def _cbRemoteForwarding(self, result, remotePort, hostport):
         log.msg('accepted remote forwarding %s:%s' % (remotePort, hostport))
         self.remoteForwards[remotePort] = hostport
         log.msg(repr(self.remoteForwards))
 
+
     def _ebRemoteForwarding(self, f, remotePort, hostport):
         log.msg('remote forwarding %s:%s failed' % (remotePort, hostport))
         log.msg(f)
 
+
     def cancelRemoteForwarding(self, remotePort):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-        self.sendGlobalRequest('cancel-tcpip-forward', data)
+        self.sendGlobalRequest(b'cancel-tcpip-forward', data)
         log.msg('cancelling remote forwarding %s' % remotePort)
         try:
             del self.remoteForwards[remotePort]
         except:
             pass
         log.msg(repr(self.remoteForwards))
+
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
         log.msg('%s %s' % ('FTCP', repr(data)))
@@ -332,6 +369,8 @@ class SSHConnection(connection.SSHConnection):
         else:
             # because of the unix thing
             self.__class__.__bases__[0].channelClosed(self, channel)
+
+
 
 class SSHSession(channel.SSHChannel):
 
@@ -379,6 +418,7 @@ class SSHSession(channel.SSHChannel):
             #if hasattr(conn.transport, 'transport'):
             #    conn.transport.transport.setTcpNoDelay(1)
 
+
     def handleInput(self, char):
         #log.msg('handling %s' % repr(char))
         if char in ('\n', '\r'):
@@ -417,40 +457,50 @@ class SSHSession(channel.SSHChannel):
             self.escapeMode = 0
             self.write(char)
 
+
     def dataReceived(self, data):
         self.stdio.write(data)
+
 
     def extReceived(self, t, data):
         if t==connection.EXTENDED_DATA_STDERR:
             log.msg('got %s stderr data' % len(data))
             sys.stderr.write(data)
 
+
     def eofReceived(self):
         log.msg('got eof')
         self.stdio.loseWriteConnection()
 
+
     def closeReceived(self):
         log.msg('remote side closed %s' % self)
         self.conn.sendClose(self)
+
 
     def closed(self):
         global old
         log.msg('closed %s' % self)
         log.msg(repr(self.conn.channels))
 
+
     def request_exit_status(self, data):
         global exitStatus
         exitStatus = int(struct.unpack('>L', data)[0])
         log.msg('exit status: %s' % exitStatus)
 
+
     def sendEOF(self):
         self.conn.sendEOF(self)
+
 
     def stopWriting(self):
         self.stdio.pauseProducing()
 
+
     def startWriting(self):
         self.stdio.resumeProducing()
+
 
     def _windowResized(self, *args):
         winsz = fcntl.ioctl(0, tty.TIOCGWINSZ, '12345678')
@@ -459,8 +509,11 @@ class SSHSession(channel.SSHChannel):
         self.conn.sendRequest(self, b'window-change', struct.pack('!4L', *newSize))
 
 
+
 class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel): pass
 class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel): pass
+
+
 
 def _leaveRawMode():
     global _inRawMode
@@ -469,6 +522,7 @@ def _leaveRawMode():
     fd = sys.stdin.fileno()
     tty.tcsetattr(fd, tty.TCSANOW, _savedRawMode)
     _inRawMode = 0
+
 
 def _enterRawMode():
     global _inRawMode, _savedRawMode
@@ -504,6 +558,8 @@ def _enterRawMode():
         tty.tcsetattr(fd, tty.TCSANOW, new)
         #tty.setraw(fd)
         _inRawMode = 1
+
+
 
 if __name__ == '__main__':
     run()

@@ -14,11 +14,10 @@ try:
 except ImportError:
     setgroups = getgroups = None
 
-from functools import wraps
-
 from twisted.python.compat import _PY3, unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python._oldstyle import _oldStyle, _replaceIf
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
@@ -31,6 +30,7 @@ deprecatedModuleAttribute(
 
 
 
+@_oldStyle
 class InsensitiveDict:
     """
     Dictionary, that has case-insensitive keys.
@@ -434,6 +434,7 @@ def searchupwards(start, files=[], dirs=[]):
 
 
 
+@_oldStyle
 class LineLog:
     """
     A limited-size line-based log, useful for logging line-based
@@ -448,7 +449,7 @@ class LineLog:
         """
         if size < 0:
             size = 0
-        self.log = [None]*size
+        self.log = [None] * size
         self.size = size
 
 
@@ -461,18 +462,26 @@ class LineLog:
 
 
     def str(self):
-        return '\n'.join(filter(None,self.log))
+        return bytes(self)
+
+    if not _PY3:
+        def __str__(self):
+            return self.__bytes__()
+
+
+    def __bytes__(self):
+        return b'\n'.join(filter(None, self.log))
 
 
     def __getitem__(self, item):
-        return filter(None,self.log)[item]
+        return filter(None, self.log)[item]
 
 
     def clear(self):
         """
-        Empty the log
+        Empty the log.
         """
-        self.log = [None]*self.size
+        self.log = [None] * self.size
 
 
 
@@ -569,6 +578,7 @@ class _IntervalDifferentialIterator(object):
 
 
 
+@_oldStyle
 class FancyStrMixin:
     """
     Mixin providing a flexible implementation of C{__str__}.
@@ -607,6 +617,7 @@ class FancyStrMixin:
 
 
 
+@_oldStyle
 class FancyEqMixin:
     """
     Mixin that implements C{__eq__} and C{__ne__}.
@@ -996,37 +1007,6 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
 
 
 
-def _replaceIf(condition, alternative):
-    """
-    If C{condition}, replace this function with C{alternative}.
-
-    @param condition: A L{bool} which says whether this should be replaced.
-
-    @param alternative: An alternative function that will be swapped in instead
-        of the original, if C{condition} is truthy.
-
-    @return: A decorator.
-    """
-    def decorator(func):
-
-        if condition is True:
-            call = alternative
-        elif condition is False:
-            call = func
-        else:
-            raise ValueError(("condition argument to _replaceIf requires a "
-                              "bool, not {}").format(repr(condition)))
-
-        @wraps(func)
-        def wrapped(*args, **kwargs):
-            return call(*args, **kwargs)
-
-        return wrapped
-
-    return decorator
-
-
-
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "println", "makeStatBar", "OrderedDict",
@@ -1034,7 +1014,7 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes", "runWithWarningsSuppressed",
+    "untilConcludes", "runWithWarningsSuppressed", "_replaceIf",
 ]
 
 
