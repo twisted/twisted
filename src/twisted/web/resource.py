@@ -68,6 +68,8 @@ class IResource(Interface):
             then a call like C{A.putChild(b"bar", B)} will make resource B
             available at I{http://example.com/foo/bar}.
         @type path: C{bytes}
+
+        @raises L{TypeError} if the provided path is not C{bytes}.
         """
 
 
@@ -216,6 +218,9 @@ class Resource:
 
         @see: L{IResource.putChild}
         """
+        if not isinstance(path, bytes):
+            raise TypeError("path must be bytes")
+
         self.children[path] = child
         child.server = self.server
 

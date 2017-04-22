@@ -1,0 +1,1 @@
+twisted.web.Resouce.putChild raises a TypeError when the supplied path is not bytes (broken since python3 has been supported).
