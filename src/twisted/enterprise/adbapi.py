@@ -463,18 +463,44 @@ class ConnectionPool:
     def _runInteraction(self, interaction, *args, **kw):
         conn = self.connectionFactory(self)
         trans = self.transactionFactory(self, conn)
-        try:
-            result = interaction(trans, *args, **kw)
-            trans.close()
-            conn.commit()
-            return result
-        except:
-            excType, excValue, excTraceback = sys.exc_info()
+        if self.reconnect and self.dbapiName == 'MySQLdb':
+            from MySQLdb import OperationalError
             try:
-                conn.rollback()
+                result = interaction(trans, *args, **kw)
+                trans.close()
+                conn.commit()
+                return result
+            except OperationalError as e:
+                # 2006: MySQL server has gone away
+                # 2013: Lost connection to MySQL server
+                # 1213: Deadlock found when trying to get lock
+                if e[0] not in (2006, 2013, 1213):
+                    raise
+                log.msg("%s got error %s, retrying operation" % (self.__class__.__name__, e))
+                conn = self.connections.get(self.threadID())
+                self.disconnect(conn)
+                # try the interaction again
+                return self._runInteraction(interaction, *args, **kw)
             except:
-                log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+                excType, excValue, excTraceback = sys.exc_info()
+                try:
+                    conn.rollback()
+                except:
+                    log.err(None, "Rollback failed")
+                compat.reraise(excValue, excTraceback)
+        else:
+            try:
+                result = interaction(trans, *args, **kw)
+                trans.close()
+                conn.commit()
+                return result
+            except:
+                excType, excValue, excTraceback = sys.exc_info()
+                try:
+                    conn.rollback()
+                except:
+                    log.err(None, "Rollback failed")
+                compat.reraise(excValue, excTraceback)
 
 
     def _runQuery(self, trans, *args, **kw):
