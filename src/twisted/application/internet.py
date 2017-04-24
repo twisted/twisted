@@ -809,22 +809,26 @@ class _ClientMachine(object):
         connect.
 
         @param failAfterFailures: number of connection failures after which
-        the Deferred will deliver a Failure (None means the Deferred will
-        only fail if/when the service is stopped). Set this to 1 to make the
-        very first connection failure signal an error. Use 2 to allow one
-        failure but signal an error if the subsequent retry then fails.
+            the Deferred will deliver a Failure (None means the Deferred will
+            only fail if/when the service is stopped).  Set this to 1 to make
+            the very first connection failure signal an error.  Use 2 to
+            allow one failure but signal an error if the subsequent retry
+            then fails.
         @type failAfterFailures: L{int} or None
 
-        @return: a Deferred that fires with a protocol produced by the factory
-            passed to C{__init__}
+        @return: a Deferred that fires with a protocol produced by the
+            factory passed to C{__init__}
         @rtype: L{Deferred} that may:
-        * fire with L{IProtocol}
-        * fail with L{CancelledError} when the service is stopped
-        * fail with e.g.
-          L{DNSLookupError<twisted.internet.error.DNSLookupError>} or
-          L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}
-          when the number of consecutive failed connection attempts equals
-          the value of "failAfterFailures"
+
+            - fire with L{IProtocol}
+
+            - fail with L{CancelledError} when the service is stopped
+
+            - fail with e.g.
+              L{DNSLookupError<twisted.internet.error.DNSLookupError>} or
+              L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}
+              when the number of consecutive failed connection attempts
+              equals the value of "failAfterFailures"
         """
 
     @_machine.output()
@@ -1037,22 +1041,26 @@ class ClientService(service.Service, object):
         connect.
 
         @param failAfterFailures: number of connection failures after which
-        the Deferred will deliver a Failure (None means the Deferred will
-        only fail if/when the service is stopped). Set this to 1 to make the
-        very first connection failure signal an error. Use 2 to allow one
-        failure but signal an error if the subsequent retry then fails.
+            the Deferred will deliver a Failure (None means the Deferred will
+            only fail if/when the service is stopped).  Set this to 1 to make
+            the very first connection failure signal an error.  Use 2 to
+            allow one failure but signal an error if the subsequent retry
+            then fails.
         @type failAfterFailures: L{int} or None
 
-        @return: a Deferred that fires with a protocol produced by the factory
-            passed to C{__init__}
+        @return: a Deferred that fires with a protocol produced by the
+            factory passed to C{__init__}
         @rtype: L{Deferred} that may:
-        * fire with L{IProtocol}
-        * fail with L{CancelledError} when the service is stopped
-        * fail with e.g.
-          L{DNSLookupError<twisted.internet.error.DNSLookupError>} or
-          L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}
-          when the number of consecutive failed connection attempts equals
-          the value of "failAfterFailures"
+
+            - fire with L{IProtocol}
+
+            - fail with L{CancelledError} when the service is stopped
+
+            - fail with e.g.
+              L{DNSLookupError<twisted.internet.error.DNSLookupError>} or
+              L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}
+              when the number of consecutive failed connection attempts
+              equals the value of "failAfterFailures"
         """
         return self._machine.whenConnected(failAfterFailures)
 
