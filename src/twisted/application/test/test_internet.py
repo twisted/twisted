@@ -822,13 +822,76 @@ class ClientServiceTests(SynchronousTestCase):
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         a = service.whenConnected()
         b = service.whenConnected()
+        c = service.whenConnected(failAfterFailures=1)
         self.assertNoResult(a)
         self.assertNoResult(b)
+        self.assertNoResult(c)
         cq.connectQueue[0].callback(None)
         resultA = self.successResultOf(a)
         resultB = self.successResultOf(b)
+        resultC = self.successResultOf(c)
         self.assertIdentical(resultA, resultB)
+        self.assertIdentical(resultA, resultC)
         self.assertIdentical(resultA, cq.applicationProtocols[0])
+
+
+    def test_whenConnectedFails(self):
+        """
+        L{ClientService.whenConnected} returns a L{Deferred} that fails, if
+        asked, when some number of connections have failed.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        a0 = service.whenConnected()
+        a1 = service.whenConnected(failAfterFailures=1)
+        a2 = service.whenConnected(failAfterFailures=2)
+        a3 = service.whenConnected(failAfterFailures=3)
+        self.assertNoResult(a0)
+        self.assertNoResult(a1)
+        self.assertNoResult(a2)
+        self.assertNoResult(a3)
+
+        f1 = Failure(Exception())
+        cq.connectQueue[0].errback(f1)
+
+        self.assertNoResult(a0)
+        self.assertIdentical(self.failureResultOf(a1, Exception), f1)
+        self.assertNoResult(a2)
+        self.assertNoResult(a3)
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 2)
+
+        self.assertNoResult(a0)
+        self.assertNoResult(a2)
+        self.assertNoResult(a3)
+
+        f2 = Failure(Exception())
+        cq.connectQueue[1].errback(f2)
+
+        self.assertNoResult(a0)
+        self.assertIdentical(self.failureResultOf(a2, Exception), f2)
+        self.assertNoResult(a3)
+
+        AT_LEAST_TWO_ATTEMPTS = AT_LEAST_ONE_ATTEMPT # close enough
+        clock.advance(AT_LEAST_TWO_ATTEMPTS)
+        self.assertEqual(len(cq.connectQueue), 3)
+
+        self.assertNoResult(a0)
+        self.assertNoResult(a3)
+
+        cq.connectQueue[2].callback(None)
+
+        resultA0 = self.successResultOf(a0)
+        resultA3 = self.successResultOf(a3)
+        self.assertIdentical(resultA0, resultA3)
+        self.assertIdentical(resultA0, cq.applicationProtocols[0])
+
+        # a new whenConnected Deferred, obtained after we're connected,
+        # should have fired already, even if failAfterFailures is set
+        a4 = service.whenConnected(failAfterFailures=1)
+        resultA4 = self.successResultOf(a4)
+        self.assertIdentical(resultA0, resultA4)
 
 
     def test_whenConnectedStopService(self):
@@ -840,12 +903,15 @@ class ClientServiceTests(SynchronousTestCase):
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         a = service.whenConnected()
         b = service.whenConnected()
+        c = service.whenConnected(failAfterFailures=1)
         self.assertNoResult(a)
         self.assertNoResult(b)
+        self.assertNoResult(c)
         service.stopService()
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.failureResultOf(a, CancelledError)
         self.failureResultOf(b, CancelledError)
+        self.failureResultOf(c, CancelledError)
 
 
     def test_retryCancelled(self):
