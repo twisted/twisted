@@ -155,13 +155,19 @@ A real-life IRC bot would need to have its own method for waiting until the conn
 Reporting an Initial Failure
 ----------------------------
 
-Often times, a failure of the very first connection attempt is special. It may indicate a problem that won't go away by just trying harder. The service may be configured with the wrong hostname, or the user may not have an internet connection at all (perhaps they forgot to turn on their wifi adapter).
+Often times, a failure of the very first connection attempt is special.
+It may indicate a problem that won't go away by just trying harder.
+The service may be configured with the wrong hostname, or the user may not have an internet connection at all (perhaps they forgot to turn on their wifi adapter).
 
-Applications can ask ``whenConnected`` to make their ``Deferred`` fail if the service makes one or more connection attempts in a row without success. You can pass the ``failAfterFailures`` parameter into ``ClientService`` to set this threshold.
+Applications can ask ``whenConnected`` to make their ``Deferred`` fail if the service makes one or more connection attempts in a row without success.
+You can pass the ``failAfterFailures`` parameter into ``ClientService`` to set this threshold.
 
 By calling ``whenConnected(failAfterFailures=1)`` when the service is first started (just before or just after ``startService``), your application will get notification of an initial connection failure.
 
-Setting it to 1 makes it fail after a single connection failure. Setting it to 2 means it will try once, wait a bit, try again, and then either fail or succeed depending upon the outcome of the second connection attempt. You can use 3 or more too, if you're feeling particularly patient. The default of ``None`` means it will wait forever for a successful connection.
+Setting it to 1 makes it fail after a single connection failure.
+Setting it to 2 means it will try once, wait a bit, try again, and then either fail or succeed depending upon the outcome of the second connection attempt.
+You can use 3 or more too, if you're feeling particularly patient.
+The default of ``None`` means it will wait forever for a successful connection.
 
 Regardless of ``failAfterFailures``, the ``Deferred`` will always fail with :api:`twisted.internet.defer.CancelledError <CancelledError>` if the service is stopped before a connection is made.
 

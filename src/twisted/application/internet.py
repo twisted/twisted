@@ -555,6 +555,10 @@ class _ClientMachine(object):
         @param log: The logger for the L{ClientService} instance this state
             machine is associated to.
         @type log: L{Logger}
+
+        @ivar _awaitingConnected: notifications to make when connection
+            succeeds, fails, or is cancelled
+        @type _awaitingConnected: list of (Deferred, count) tuples
         """
         self._endpoint = endpoint
         self._failedAttempts = 0
@@ -564,7 +568,7 @@ class _ClientMachine(object):
         self._clock = clock
         self._connectionInProgress = succeed(None)
 
-        self._awaitingConnected = [] # tuples of (Deferred, count)
+        self._awaitingConnected = []
 
         self._stopWaiters = []
         self._log = log
