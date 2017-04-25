@@ -466,6 +466,34 @@ class AnotherPOP3Tests(unittest.TestCase):
         self.assertEqual(client.response[5], ".")
 
 
+    def run_authenticated_test(self, lines, expectedOutput):
+        """
+        Helper function to compare the output of the protocol implementation
+        after authentication to a given input with the expected output.
+
+        @type lines: L{tuple} of L{bytes}
+        @param lines: Input to pass to the protocol.
+
+        @type expectedOutput: L{tuple} of L{bytes}
+        @param expectedOutput: How the protocol is expected to respond.
+        """
+        (user, password) = (b'testuser', b'testpassword')
+
+        response = [b'+OK <moshez>',
+                    b'+OK USER accepted, send PASS',
+                    b'+OK Authentication succeeded']
+        response += expectedOutput + [b'+OK ']
+
+        fullInput = [b' '.join([b'USER', user]),
+                     b' '.join([b'PASS', password])]
+        fullInput += lines + [b'QUIT']
+
+        return self.run_test(
+            fullInput,
+            response,
+            protocolInstance=DummyPOP3Auth(user, password))
+
+
     def run_PASS(self, real_user, real_password,
                  tried_user=None, tried_password=None):
         """
@@ -625,6 +653,17 @@ class AnotherPOP3Tests(unittest.TestCase):
         Test PASS with a password containing tabs and spaces.
         """
         return self.run_PASS(b'testuser', b'fooz barz\tcrazy@! \t ')
+
+
+    def test_wrong_command(self):
+        """
+        After logging in, test a dummy command that is not defined.
+        """
+        return self.run_authenticated_test(
+            [b'DUMMY COMMAND'],
+            [b' '.join([b'-ERR bad protocol or server: POP3Error:',
+                        b'Unknown protocol command: DUMMY'])]
+        ).addCallback(self.flushLoggedErrors, pop3.POP3Error)
 
 
 
