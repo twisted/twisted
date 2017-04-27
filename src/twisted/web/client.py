@@ -804,11 +804,19 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # feature equivalent.
 
 from twisted.web.error import SchemeNotSupported
-from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-from twisted.web._newclient import ResponseDone, ResponseFailed
-from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import (
-    ResponseNeverReceived, PotentialDataLoss, _WrapperException)
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    Request,
+    RequestGenerationFailed,
+    RequestNotSent,
+    RequestTransmissionFailed,
+    Response,
+    ResponseDone,
+    ResponseFailed,
+    ResponseNeverReceived,
+    _WrapperException,
+    )
 
 
 
@@ -2194,8 +2202,27 @@ def readBody(response):
 
 
 __all__ = [
-    'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
-    'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
-    'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
-    'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'readBody', 'BrowserLikeRedirectAgent', 'URI']
+    'Agent',
+    'BrowserLikeRedirectAgent',
+    'ContentDecoderAgent',
+    'CookieAgent',
+    'downloadPage',
+    'getPage',
+    'GzipDecoder',
+    'HTTPClientFactory',
+    'HTTPConnectionPool',
+    'HTTPDownloader',
+    'HTTPPageDownloader',
+    'HTTPPageGetter',
+    'PartialDownloadError',
+    'ProxyAgent',
+    'readBody',
+    'RedirectAgent',
+    'RequestGenerationFailed',
+    'RequestTransmissionFailed',
+    'Response',
+    'ResponseDone',
+    'ResponseFailed',
+    'ResponseNeverReceived',
+    'URI',
+    ]
