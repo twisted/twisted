@@ -405,6 +405,13 @@ class Command:
         self.lines = []
 
 
+    def __repr__(self):
+        return "<imap4.Command {!r} {!r} {!r} {!r} {!r}>".format(
+            self.command, self.args, self.wantResponse, self.continuation,
+            self.lines
+        )
+
+
     def format(self, tag):
         if self.args is None:
             return b' '.join((tag, self.command))
@@ -3241,7 +3248,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         the deferred's errback is invoked instead.
         """
         cmd = b'LIST'
-        args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
+        args = b'"%s" "%s"' % (reference.encode('ascii'),
+                               wildcard.encode('imap4-utf-7'))
         resp = (b'LIST',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbList, b'LIST')
@@ -3352,13 +3360,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message.seek(0, 2)
         L = message.tell()
         message.seek(0, 0)
-        fmt = '%s (%s)%s {%d}'
+        fmt = b'%s (%s)%s {%d}'
         if date:
-            date = ' "%s"' % date
+            date = b' "%s"' % date
         else:
-            date = ''
+            date = b''
         cmd = fmt % (
-            _prepareMailboxName(mailbox), ' '.join(flags),
+            _prepareMailboxName(mailbox), b' '.join(flags),
             date, L
         )
         d = self.sendCommand(Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
