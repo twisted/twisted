@@ -18,8 +18,8 @@ from __future__ import division, absolute_import
 from zope.interface import implementer
 
 from twisted.python import log
+from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.compat import networkString
 from twisted.web.resource import IResource, ErrorPage
 from twisted.web import util
 from twisted.cred import error
@@ -45,7 +45,7 @@ class UnauthorizedResource(object):
         def generateWWWAuthenticate(scheme, challenge):
             l = []
             for k,v in challenge.items():
-                l.append(networkString("%s=%s" % (k, quoteString(v))))
+                l.append(networkString("%s=%s" % (nativeString(k), quoteString(nativeString(v)))))
             return b" ".join([scheme, b", ".join(l)])
 
         def quoteString(s):
