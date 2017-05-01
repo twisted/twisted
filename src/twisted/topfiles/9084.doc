@@ -1,0 +1,1 @@
+The examples in Twisted howto "Using the Twisted Application Framework", section "Customizing twistd logging" have been updated to use latest logging modules and syntax
