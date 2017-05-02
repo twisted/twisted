@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.mail.test.test_imap -*-
+# -*- test-case-name: twisted.mail.test.test_imap.IMAP4HelperTests -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -40,7 +40,9 @@ from twisted.python import log, text
 from twisted.python.compat import (
     _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
-    intToBytes, iterbytes, long, nativeString, networkString, unicode)
+    intToBytes, iterbytes, long, nativeString, networkString, unicode,
+    _matchingString
+)
 from twisted.internet import interfaces
 
 from twisted.cred import credentials
@@ -168,10 +170,10 @@ class MessageSet(object):
             if end is None:
                 end = self.last
 
-        if start > end:
+        if end is not None and start > end:
             # Try to keep in low, high order if possible
             # (But we don't know what None means, this will keep
-            # None at the start of the ranges list)
+            # None at the end of the ranges list)
             start, end = end, start
 
         self.ranges.append((start, end))
@@ -285,6 +287,10 @@ class MessageSet(object):
             else:
                 p.append('%d:%d' % (low, high))
         return ','.join(p)
+
+
+    def __bytes__(self):
+        return str(self).encode("ascii")
 
 
     def __repr__(self):
@@ -447,7 +453,8 @@ _CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
-_nonAtomChars = b'(){%*"\]' + _SP + _CTL
+_nonAtomChars = b']\\\\(){%*"' + _SP + _CTL
+_nonAtomRE = re.compile(b'[' + _nonAtomChars + b']')
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
 _atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
@@ -3450,19 +3457,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        Any non-zero number of queries are accepted by this method, as
-        returned by the C{Query}, C{Or}, and C{Not} functions.
+        Any non-zero number of queries are accepted by this method, as returned
+        by the C{Query}, C{Or}, and C{Not} functions.
 
-        One keyword argument is accepted: if uid is passed in with a non-zero
-        value, the server is asked to return message UIDs instead of message
-        sequence numbers.
+        @param uid: if true, the server is asked to return message UIDs instead
+            of message sequence numbers.  (This is a keyword-only argument.)
+        @type uid: L{bool}
 
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a list of all
-        the message sequence numbers return by the search, or whose errback
-        will be invoked if there is an error.
+            the message sequence numbers return by the search, or whose errback
+            will be invoked if there is an error.
         """
-        if kwarg.get(b'uid'):
+        if kwarg.get('uid'):
             cmd = b'UID SEARCH'
         else:
             cmd = b'SEARCH'
@@ -3487,7 +3494,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: C{MessageSet} or L{bytes}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3953,47 +3960,46 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         Retrieve a specific section of one or more messages
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: C{MessageSet} or L{bytes}
         @param messages: A message sequence set
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
-        numbers or of unique message IDs.
+            numbers or of unique message IDs.
 
         @type headerType: L{str}
-        @param headerType: If specified, must be one of HEADER,
-        HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or TEXT, and will determine
-        which part of the message is retrieved.  For HEADER.FIELDS and
-        HEADER.FIELDS.NOT, C{headerArgs} must be a sequence of header names.
-        For MIME, C{headerNumber} must be specified.
+        @param headerType: If specified, must be one of HEADER, HEADER.FIELDS,
+            HEADER.FIELDS.NOT, MIME, or TEXT, and will determine which part of
+            the message is retrieved.  For HEADER.FIELDS and HEADER.FIELDS.NOT,
+            C{headerArgs} must be a sequence of header names.  For MIME,
+            C{headerNumber} must be specified.
 
         @type headerNumber: L{int} or L{int} sequence
-        @param headerNumber: The nested rfc822 index specifying the
-        entity to retrieve.  For example, C{1} retrieves the first
-        entity of the message, and C{(2, 1, 3}) retrieves the 3rd
-        entity inside the first entity inside the second entity of
-        the message.
+        @param headerNumber: The nested rfc822 index specifying the entity to
+            retrieve.  For example, C{1} retrieves the first entity of the
+            message, and C{(2, 1, 3}) retrieves the 3rd entity inside the first
+            entity inside the second entity of the message.
 
-        @type headerArgs: A sequence of L{str}
+        @type headerArgs: A sequence of L{bytes}
         @param headerArgs: If C{headerType} is HEADER.FIELDS, these are the
-        headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
-        headers to exclude from retrieval.
+            headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
+            headers to exclude from retrieval.
 
         @type peek: C{bool}
-        @param peek: If true, cause the server to not set the \\Seen
-        flag on this message as a result of this command.
+        @param peek: If true, cause the server to not set the \\Seen flag on
+            this message as a result of this command.
 
         @type offset: L{int}
-        @param offset: The number of octets at the beginning of the result
-        to skip.
+        @param offset: The number of octets at the beginning of the result to
+            skip.
 
         @type length: L{int}
         @param length: The number of octets to retrieve.
 
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a mapping of
-        message numbers to retrieved data, or whose errback is invoked
-        if there is an error.
+        @return: A deferred whose callback is invoked with a mapping of message
+            numbers to retrieved data, or whose errback is invoked if there is
+            an error.
         """
         #fmt = '%s BODY%s[%s%s%s]%s'
         if headerNumber is None:
@@ -4021,7 +4027,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         else:
             extra = b'<' + intToBytes(offset) + b'.' + intToBytes(length) + b'>'
         fetch = uid and b'UID FETCH' or b'FETCH'
-        cmd = messages + b' BODY' +  (peek and b'.PEEK' or b'') + b'[' + number + header + payload + b']' + extra
+        cmd = messages
+        cmd += b' BODY'
+        cmd += b'.PEEK' if peek else b''
+        cmd += b'['
+        cmd += number
+        cmd += header
+        cmd += payload
+        cmd += b']'
+        cmd += extra
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
         return d
@@ -4190,7 +4204,7 @@ def parseIdList(s, lastMessageId=None):
     """
     Parse a message set search key into a C{MessageSet}.
 
-    @type s: L{str}
+    @type s: L{bytes}
     @param s: A string description of an id list, for example "1:3, 4:*"
 
     @type lastMessageId: L{int}
@@ -4202,6 +4216,8 @@ def parseIdList(s, lastMessageId=None):
     @return: A C{MessageSet} that contains the ids defined in the list
     """
     res = MessageSet()
+    if isinstance(s, unicode):
+        s = s.encode('charmap')
     parts = s.split(b',')
     for p in parts:
         if b':' in p:
@@ -4226,12 +4242,7 @@ def parseIdList(s, lastMessageId=None):
                 high = high or lastMessageId
                 low = low or lastMessageId
 
-                # RFC says that 2:4 and 4:2 are equivalent
-                if low is not None and high is None:
-                    low, high = high, low
-                elif low > high:
-                    low, high = high, low
-                res.extend((low, high))
+                res.add(low, high)
             except ValueError:
                 raise IllegalIdentifierError(p)
         else:
@@ -4251,13 +4262,16 @@ def parseIdList(s, lastMessageId=None):
 
 
 _SIMPLE_BOOL = (
-    'ALL', 'ANSWERED', 'DELETED', 'DRAFT', 'FLAGGED', 'NEW', 'OLD', 'RECENT',
-    'SEEN', 'UNANSWERED', 'UNDELETED', 'UNDRAFT', 'UNFLAGGED', 'UNSEEN'
+    b'ALL', b'ANSWERED', b'DELETED', b'DRAFT', b'FLAGGED', b'NEW', b'OLD',
+    b'RECENT', b'SEEN', b'UNANSWERED', b'UNDELETED', b'UNDRAFT', b'UNFLAGGED',
+    b'UNSEEN'
 )
 
 _NO_QUOTES = (
-    'LARGER', 'SMALLER', 'UID'
+    b'LARGER', b'SMALLER', b'UID'
 )
+
+_sorted = sorted
 
 def Query(sorted=0, **kwarg):
     """
@@ -4372,28 +4386,40 @@ def Query(sorted=0, **kwarg):
     cmd = []
     keys = kwarg.keys()
     if sorted:
-        keys.sort()
+        keys = _sorted(keys)
     for k in keys:
         v = kwarg[k]
         k = k.upper()
+        if isinstance(k, unicode):
+            k = k.encode('charmap')
+        if isinstance(v, unicode):
+            v = v.encode('charmap')
         if k in _SIMPLE_BOOL and v:
             cmd.append(k)
-        elif k == 'HEADER':
-            cmd.extend([k, v[0], '"%s"' % (v[1],)])
-        elif k == 'KEYWORD' or k == 'UNKEYWORD':
+        elif k == b'HEADER':
+            cmd.extend([k, v[0], b'"%s"' % (v[1],)])
+        elif k == b'KEYWORD' or k == b'UNKEYWORD':
             # Discard anything that does not fit into an "atom".  Perhaps turn
             # the case where this actually removes bytes from the value into a
             # warning and then an error, eventually.  See #6277.
-            v = string.translate(v, string.maketrans('', ''), _nonAtomChars)
+            v = _nonAtomRE.sub(b"", v)
             cmd.extend([k, v])
         elif k not in _NO_QUOTES:
-            cmd.extend([k, '"%s"' % (v,)])
+            if isinstance(v, MessageSet):
+                fmt = b'"%s"'
+            elif isinstance(v, bytes):
+                fmt = b'"%s"'
+            else:
+                fmt = b'"%d"'
+            cmd.extend([k, fmt % (v,)])
+        elif isinstance(v, int):
+            cmd.extend([k, b'%d' % (v,)])
         else:
-            cmd.extend([k, '%s' % (v,)])
+            cmd.extend([k, b'%s' % (v,)])
     if len(cmd) > 1:
-        return '(%s)' % ' '.join(cmd)
+        return b'(%s)' % b' '.join(cmd)
     else:
-        return ' '.join(cmd)
+        return b' '.join(cmd)
 
 
 
@@ -4404,13 +4430,13 @@ def Or(*args):
     if len(args) < 2:
         raise IllegalQueryError(args)
     elif len(args) == 2:
-        return '(OR %s %s)' % args
+        return b'(OR %s %s)' % args
     else:
-        return '(OR %s %s)' % (args[0], Or(*args[1:]))
+        return b'(OR %s %s)' % (args[0], Or(*args[1:]))
 
 def Not(query):
     """The negation of a query"""
-    return '(NOT %s)' % (query,)
+    return b'(NOT %s)' % (query,)
 
 
 def wildcardToRegexp(wildcard, delim=None):
@@ -4443,23 +4469,30 @@ def splitQuoted(s):
     result = []
     word = []
     inQuote = inWord = False
+    qu = _matchingString('"', s)
+    esc = _matchingString('\x5c', s)
+    empty = _matchingString('', s)
+    nil = _matchingString('NIL', s)
     for i, c in enumerate(iterbytes(s)):
-        if c == b'"':
-            if i and s[i-1:i] == b'\\':
+        if c == qu:
+            if i and s[i-1:i] == esc:
                 word.pop()
-                word.append('"')
+                word.append(qu)
             elif not inQuote:
                 inQuote = True
             else:
                 inQuote = False
-                result.append(b''.join(word))
+                result.append(empty.join(word))
                 word = []
-        elif not inWord and not inQuote and c not in (b'"' + string.whitespace.encode("ascii")):
+        elif (
+                not inWord and not inQuote and
+                c not in (qu + (string.whitespace.encode("ascii")))
+        ):
             inWord = True
             word.append(c)
         elif inWord and not inQuote and c in string.whitespace.encode("ascii"):
-            w = b''.join(word)
-            if w == b'NIL':
+            w = empty.join(word)
+            if w == nil:
                 result.append(None)
             else:
                 result.append(w)
@@ -4471,8 +4504,8 @@ def splitQuoted(s):
     if inQuote:
         raise MismatchedQuoting(s)
     if inWord:
-        w = b''.join(word)
-        if w == b'NIL':
+        w = empty.join(word)
+        if w == nil:
             result.append(None)
         else:
             result.append(w)
@@ -4505,23 +4538,22 @@ def collapseStrings(results):
 
     ['a', 'b', ['c', 'd']] is returned as ['ab', ['cd']]
 
-    @type results: L{list} of L{str} and L{list}
+    @type results: L{list} of L{bytes} and L{list}
     @param results: The list to be collapsed
 
-    @rtype: L{list} of L{str} and L{list}
+    @rtype: L{list} of L{bytes} and L{list}
     @return: A new list which is the collapsed form of C{results}
     """
     copy = []
     begun = None
-    listsList = [isinstance(s, list) for s in results]
 
     pred = lambda e: isinstance(e, tuple)
     tran = {
         0: lambda e: splitQuoted(b''.join(e)),
         1: lambda e: [b''.join([i[0] for i in e])]
     }
-    for (i, c, isList) in zip(list(range(len(results))), results, listsList):
-        if isList:
+    for i, c in enumerate(results):
+        if isinstance(c, list):
             if begun is not None:
                 copy.extend(splitOn(results[begun:i], pred, tran))
                 begun = None
@@ -4594,12 +4626,14 @@ def parseNestedParens(s, handleLiteral = 1):
 
 
 def _quote(s):
-    return b'"' + s.replace(b'\\', b'\\\\').replace(b'"', b'\\"') + b'"'
+    qu = _matchingString('"', s)
+    esc = _matchingString('\x5c', s)
+    return qu + s.replace(esc, esc + esc).replace(qu, esc + qu) + qu
 
 
 
 def _literal(s):
-    return '{%d}\r\n%s' % (len(s), s)
+    return b'{%d}\r\n%s' % (len(s), s)
 
 
 
@@ -4627,6 +4661,8 @@ def _needsQuote(s):
 
 
 def _prepareMailboxName(name):
+    if not isinstance(name, unicode):
+        name = name.decode("charmap")
     name = name.encode('imap4-utf-7')
     if _needsQuote(name):
         return _quote(name)
@@ -4634,9 +4670,12 @@ def _prepareMailboxName(name):
 
 
 
+
 def _needsLiteral(s):
-    # Change this to "return 1" to wig out stupid clients
-    return b'\n' in s or b'\r' in s or len(s) > 1000
+    # change this to "return 1" to wig out stupid clients
+    cr = _matchingString("\n", s)
+    lf = _matchingString("\r", s)
+    return cr in s or lf in s or len(s) > 1000
 
 
 
@@ -4664,18 +4703,25 @@ def collapseNestedLists(items):
     """
     pieces = []
     for i in items:
+        if isinstance(i, unicode):
+            i = i.encode("charmap")
         if i is None:
             pieces.extend([b' ', b'NIL'])
-        elif isinstance(i, (DontQuoteMe, int, long)):
+        elif isinstance(i, (int, long)):
             pieces.extend([b' ', networkString(str(i))])
-        elif isinstance(i, (bytes, unicode)):
+        elif isinstance(i, DontQuoteMe):
+            pieces.extend([b' ', i.value])
+        elif isinstance(i, bytes):
+            # XXX warning
             if _needsLiteral(i):
-                pieces.extend([b' ', b'{', intToBytes(len(i)), b'}', IMAP4Server.delimiter, i])
+                pieces.extend([b' ', b'{', intToBytes(len(i)), b'}',
+                               IMAP4Server.delimiter, i])
             else:
                 pieces.extend([b' ', _quote(i)])
         elif hasattr(i, 'read'):
             d = i.read()
-            pieces.extend([b' ', b'{', intToBytes(len(d)), b'}', IMAP4Server.delimiter, d])
+            pieces.extend([b' ', b'{', intToBytes(len(d)), b'}',
+                           IMAP4Server.delimiter, d])
         else:
             pieces.extend([b' ', b'(' + collapseNestedLists(i) + b')'])
     return b''.join(pieces[1:])
@@ -5511,12 +5557,13 @@ class _FetchParser:
             part = b''
             separator = b''
             if self.part:
-                part = b'.'.join([str(x + 1) for x in self.part])
+                part = b'.'.join([unicode(x + 1).encode("ascii")
+                                  for x in self.part])
                 separator = b'.'
 #            if self.peek:
 #                base += '.PEEK'
             if self.header:
-                base += '[%s%s%s]' % (part, separator, self.header,)
+                base += b'[%s%s%s]' % (part, separator, self.header,)
             elif self.text:
                 base += b'[' + part + separator + b'TEXT]'
             elif self.mime:
@@ -5651,11 +5698,11 @@ class _FetchParser:
 
     def state_whitespace(self, s):
         # Eat up all the leading whitespace
-        if not s or not s[0].isspace():
+        if not s or not s[0:1].isspace():
             raise Exception("Whitespace expected, none found")
         i = 0
         for i in range(len(s)):
-            if not s[i].isspace():
+            if not s[i:i + 1].isspace():
                 break
         return i
 
@@ -5711,7 +5758,7 @@ class _FetchParser:
     def state_part_number(self, s):
         m = self._partExpr.match(s)
         if m is not None:
-            self.parts = [int(p) - 1 for p in m.groups()[0].split('.')]
+            self.parts = [int(p) - 1 for p in m.groups()[0].split(b'.')]
             return m.end()
         else:
             self.parts = []
@@ -5741,10 +5788,10 @@ class _FetchParser:
             used += 5
         else:
             h = self.Header()
-            if l.startswith('header.fields.not'):
+            if l.startswith(b'header.fields.not'):
                 h.negate = True
                 used += 17
-            elif l.startswith('header.fields'):
+            elif l.startswith(b'header.fields'):
                 used += 13
             else:
                 raise Exception("Unhandled section contents: %r" % (l,))
@@ -5757,20 +5804,20 @@ class _FetchParser:
 
 
     def state_finish_section(self, s):
-        if not s.startswith(']'):
+        if not s.startswith(b']'):
             raise Exception("section must end with ]")
         return 1
 
 
     def state_header_list(self, s):
-        if not s.startswith('('):
+        if not s.startswith(b'('):
             raise Exception("Header list must begin with (")
-        end = s.find(')')
+        end = s.find(b')')
         if end == -1:
             raise Exception("Header list must end with )")
 
         headers = s[1:end].split()
-        self.pending_body.header.fields = map(str.upper, headers)
+        self.pending_body.header.fields = [h.upper() for h in headers]
         return end + 1
 
 

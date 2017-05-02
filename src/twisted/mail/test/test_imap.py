@@ -27,7 +27,7 @@ from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
-from twisted.python.compat import intToBytes, networkString, range
+from twisted.python.compat import intToBytes, range, unicode, _bytesChr
 from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
@@ -301,7 +301,7 @@ class IMAP4HelperTests(unittest.TestCase):
     Tests for various helper utilities in the IMAP4 module.
     """
     def test_fileProducer(self):
-        b = (('x' * 1) + ('y' * 1) + ('z' * 1)) * 10
+        b = ((b'x' * 1) + (b'y' * 1) + (b'z' * 1)) * 10
         c = BufferingConsumer()
         f = BytesIO(b)
         p = imap4.FileProducer(f)
@@ -310,8 +310,8 @@ class IMAP4HelperTests(unittest.TestCase):
         def cbProduced(result):
             self.failUnlessIdentical(result, p)
             self.assertEqual(
-                ('{%d}\r\n' % len(b))+ b,
-                ''.join(c.buffer))
+                (b'{%d}\r\n' % len(b))+ b,
+                b''.join(c.buffer))
         return d.addCallback(cbProduced)
 
 
@@ -366,7 +366,8 @@ class IMAP4HelperTests(unittest.TestCase):
         C{":"}-separated format.
         """
         cases = [
-            ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
+            ({b'Header1': b'Value1', b'Header2': b'Value2'},
+             b'Header2: Value2\r\nHeader1: Value1\r\n'),
         ]
 
         for (input, expected) in cases:
@@ -392,13 +393,14 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_messageSetStringRepresentationWithWildcards(self):
         """
-        In a L{MessageSet}, in the presence of wildcards, if the highest message
-        id is known, the wildcard should get replaced by that high value.
+        In a L{MessageSet}, in the presence of wildcards, if the highest
+        message id is known, the wildcard should get replaced by that high
+        value.
         """
         inputs = [
-            MessageSet(imap4.parseIdList(b'*')),
-            MessageSet(imap4.parseIdList(b'3:*', 6)),
-            MessageSet(imap4.parseIdList(b'*:2', 6)),
+            imap4.parseIdList(b'*'),
+            imap4.parseIdList(b'3:*', 6),
+            imap4.parseIdList(b'*:2', 6),
         ]
 
         outputs = [
@@ -408,7 +410,7 @@ class IMAP4HelperTests(unittest.TestCase):
         ]
 
         for i, o in zip(inputs, outputs):
-            self.assertEqual(str(i), o)
+            self.assertEqual(bytes(i), o)
 
 
     def test_messageSetStringRepresentationWithInversion(self):
@@ -418,8 +420,8 @@ class IMAP4HelperTests(unittest.TestCase):
         like 2:3, because according to the RFC they have the same meaning.
         """
         inputs = [
-            MessageSet(imap4.parseIdList(b'2:3')),
-            MessageSet(imap4.parseIdList(b'3:2')),
+            imap4.parseIdList(b'2:3'),
+            imap4.parseIdList(b'3:2'),
         ]
 
         outputs = [
@@ -433,55 +435,55 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_quotedSplitter(self):
         cases = [
-            '''Hello World''',
-            '''Hello "World!"''',
-            '''World "Hello" "How are you?"''',
-            '''"Hello world" How "are you?"''',
-            '''foo bar "baz buz" NIL''',
-            '''foo bar "baz buz" "NIL"''',
-            '''foo NIL "baz buz" bar''',
-            '''foo "NIL" "baz buz" bar''',
-            '''"NIL" bar "baz buz" foo''',
-            'oo \\"oo\\" oo',
-            '"oo \\"oo\\" oo"',
-            'oo \t oo',
-            '"oo \t oo"',
-            'oo \\t oo',
-            '"oo \\t oo"',
-            'oo \o oo',
-            '"oo \o oo"',
-            'oo \\o oo',
-            '"oo \\o oo"',
+            b'''Hello World''',
+            b'''Hello "World!"''',
+            b'''World "Hello" "How are you?"''',
+            b'''"Hello world" How "are you?"''',
+            b'''foo bar "baz buz" NIL''',
+            b'''foo bar "baz buz" "NIL"''',
+            b'''foo NIL "baz buz" bar''',
+            b'''foo "NIL" "baz buz" bar''',
+            b'''"NIL" bar "baz buz" foo''',
+            b'oo \\"oo\\" oo',
+            b'"oo \\"oo\\" oo"',
+            b'oo \t oo',
+            b'"oo \t oo"',
+            b'oo \\t oo',
+            b'"oo \\t oo"',
+            b'oo \o oo',
+            b'"oo \o oo"',
+            b'oo \\o oo',
+            b'"oo \\o oo"',
         ]
 
         answers = [
-            ['Hello', 'World'],
-            ['Hello', 'World!'],
-            ['World', 'Hello', 'How are you?'],
-            ['Hello world', 'How', 'are you?'],
-            ['foo', 'bar', 'baz buz', None],
-            ['foo', 'bar', 'baz buz', 'NIL'],
-            ['foo', None, 'baz buz', 'bar'],
-            ['foo', 'NIL', 'baz buz', 'bar'],
-            ['NIL', 'bar', 'baz buz', 'foo'],
-            ['oo', '"oo"', 'oo'],
-            ['oo "oo" oo'],
-            ['oo', 'oo'],
-            ['oo \t oo'],
-            ['oo', '\\t', 'oo'],
-            ['oo \\t oo'],
-            ['oo', '\o', 'oo'],
-            ['oo \o oo'],
-            ['oo', '\\o', 'oo'],
-            ['oo \\o oo'],
+            [b'Hello', b'World'],
+            [b'Hello', b'World!'],
+            [b'World', b'Hello', b'How are you?'],
+            [b'Hello world', b'How', b'are you?'],
+            [b'foo', b'bar', b'baz buz', None],
+            [b'foo', b'bar', b'baz buz', b'NIL'],
+            [b'foo', None, b'baz buz', b'bar'],
+            [b'foo', b'NIL', b'baz buz', b'bar'],
+            [b'NIL', b'bar', b'baz buz', b'foo'],
+            [b'oo', b'"oo"', b'oo'],
+            [b'oo "oo" oo'],
+            [b'oo', b'oo'],
+            [b'oo \t oo'],
+            [b'oo', b'\\t', b'oo'],
+            [b'oo \\t oo'],
+            [b'oo', b'\o', b'oo'],
+            [b'oo \o oo'],
+            [b'oo', b'\\o', b'oo'],
+            [b'oo \\o oo'],
 
         ]
 
         errors = [
-            '"mismatched quote',
-            'mismatched quote"',
-            'mismatched"quote',
-            '"oops here is" another"',
+            b'"mismatched quote',
+            b'mismatched quote"',
+            b'mismatched"quote',
+            b'"oops here is" another"',
         ]
 
         for s in errors:
@@ -493,23 +495,24 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_stringCollapser(self):
         cases = [
-            ['a', 'b', 'c', 'd', 'e'],
-            ['a', ' ', '"', 'b', 'c', ' ', '"', ' ', 'd', 'e'],
-            [['a', 'b', 'c'], 'd', 'e'],
-            ['a', ['b', 'c', 'd'], 'e'],
-            ['a', 'b', ['c', 'd', 'e']],
-            ['"', 'a', ' ', '"', ['b', 'c', 'd'], '"', ' ', 'e', '"'],
-            ['a', ['"', ' ', 'b', 'c', ' ', ' ', '"'], 'd', 'e'],
+            [b'a', b'b', b'c', b'd', b'e'],
+            [b'a', b' ', b'"', b'b', b'c', b' ', b'"', b' ', b'd', b'e'],
+            [[b'a', b'b', b'c'], b'd', b'e'],
+            [b'a', [b'b', b'c', b'd'], b'e'],
+            [b'a', b'b', [b'c', b'd', b'e']],
+            [b'"', b'a', b' ', b'"', [b'b', b'c', b'd'], b'"', b' ', b'e',
+             b'"'],
+            [b'a', [b'"', b' ', b'b', b'c', b' ', b' ', b'"'], b'd', b'e'],
         ]
 
         answers = [
-            ['abcde'],
-            ['a', 'bc ', 'de'],
-            [['abc'], 'de'],
-            ['a', ['bcd'], 'e'],
-            ['ab', ['cde']],
-            ['a ', ['bcd'], ' e'],
-            ['a', [' bc  '], 'de'],
+            [b'abcde'],
+            [b'a', b'bc ', b'de'],
+            [[b'abc'], b'de'],
+            [b'a', [b'bcd'], b'e'],
+            [b'ab', [b'cde']],
+            [b'a ', [b'bcd'], b' e'],
+            [b'a', [b' bc  '], b'de'],
         ]
 
         for (case, expected) in zip(cases, answers):
@@ -517,80 +520,64 @@ class IMAP4HelperTests(unittest.TestCase):
 
 
     def test_parenParser(self):
-        s = '\r\n'.join(['xx'] * 4)
-        cases = [
-            '(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' % (len(s), s,),
+        s = b'\r\n'.join([b'xx'] * 4)
+        def check(case, expected):
+            parsed = imap4.parseNestedParens(case)
+            self.assertEqual(parsed, [expected])
+            # XXX This code used to work, but changes occurred within the
+            # imap4.py module which made it no longer necessary for *all* of it
+            # to work.  In particular, only the part that makes
+            # 'BODY.PEEK[HEADER.FIELDS.NOT (Subject Bcc Cc)]' come out
+            # correctly no longer needs to work.  So, I am loathe to delete the
+            # entire section of the test. --exarkun
 
-#            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
-#            'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
-#            '"IMAP4rev1 WG mtg summary and minutes" '
-#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-#            '(("Terry Gray" NIL "gray" "cac.washington.edu")) '
-#            '((NIL NIL "imap" "cac.washington.edu")) '
-#            '((NIL NIL "minutes" "CNRI.Reston.VA.US") '
-#            '("John Klensin" NIL "KLENSIN" "INFOODS.MIT.EDU")) NIL NIL '
-#            '"<B27397-0100000@cac.washington.edu>") '
-#            'BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028 92))',
+            # self.assertEqual(b'(' + imap4.collapseNestedLists(parsed) + b')',
+            #                  expected)
 
-            '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
-            'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
-            '"IMAP4rev1 WG mtg summary and minutes" '
-            '(("Terry Gray" NIL gray cac.washington.edu)) '
-            '(("Terry Gray" NIL gray cac.washington.edu)) '
-            '(("Terry Gray" NIL gray cac.washington.edu)) '
-            '((NIL NIL imap cac.washington.edu)) '
-            '((NIL NIL minutes CNRI.Reston.VA.US) '
-            '("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
-            '<B27397-0100000@cac.washington.edu>) '
-            'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
-            '("oo \\"oo\\" oo")',
-            '("oo \\\\ oo")',
-            '("oo \\ oo")',
-            '("oo \\o")',
-            '("oo \o")',
-            '(oo \o)',
-            '(oo \\o)',
 
-        ]
+        check(
+            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' %
+            (len(s), s,),
+            [b'BODY.PEEK', [b'HEADER.FIELDS.NOT', [b'subject', b'bcc', b'cc']],
+             s],
+        )
+        check(
+            b'(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700" '
+            b'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
+            b'"IMAP4rev1 WG mtg summary and minutes" '
+            b'(("Terry Gray" NIL gray cac.washington.edu)) '
+            b'(("Terry Gray" NIL gray cac.washington.edu)) '
+            b'(("Terry Gray" NIL gray cac.washington.edu)) '
+            b'((NIL NIL imap cac.washington.edu)) '
+            b'((NIL NIL minutes CNRI.Reston.VA.US) '
+            b'("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
+            b'<B27397-0100000@cac.washington.edu>) '
+            b'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
+            [b'FLAGS', [rb'\Seen'], b'INTERNALDATE',
+             b'17-Jul-1996 02:44:25 -0700', b'RFC822.SIZE', b'4286',
+             b'ENVELOPE',
+             [b'Wed, 17 Jul 1996 02:23:25 -0700 (PDT)',
+              b'IMAP4rev1 WG mtg summary and minutes',
+              [[b"Terry Gray", None, b"gray", b"cac.washington.edu"]],
+              [[b"Terry Gray", None, b"gray", b"cac.washington.edu"]],
+              [[b"Terry Gray", None, b"gray", b"cac.washington.edu"]],
+              [[None, None, b"imap", b"cac.washington.edu"]],
+              [[None, None, b"minutes", b"CNRI.Reston.VA.US"],
+               [b"John Klensin", None, b"KLENSIN", b"INFOODS.MIT.EDU"]],
+              None, None, b"<B27397-0100000@cac.washington.edu>"],
+             b"BODY",
+             [b"TEXT", b"PLAIN", [b"CHARSET", b"US-ASCII"], None, None,
+              b"7BIT", b"3028", b"92"]]
+        )
 
-        answers = [
-            ['BODY.PEEK', ['HEADER.FIELDS.NOT', ['subject', 'bcc', 'cc']], s],
+        check(b'("oo \\"oo\\" oo")', [b'oo "oo" oo'])
+        check(b'("oo \\\\ oo")', [b'oo \\\\ oo'])
+        check(b'("oo \\ oo")', [b'oo \\ oo'])
 
-            ['FLAGS', [r'\Seen'], 'INTERNALDATE',
-            '17-Jul-1996 02:44:25 -0700', 'RFC822.SIZE', '4286', 'ENVELOPE',
-            ['Wed, 17 Jul 1996 02:23:25 -0700 (PDT)',
-            'IMAP4rev1 WG mtg summary and minutes', [["Terry Gray", None,
-            "gray", "cac.washington.edu"]], [["Terry Gray", None,
-            "gray", "cac.washington.edu"]], [["Terry Gray", None,
-            "gray", "cac.washington.edu"]], [[None, None, "imap",
-            "cac.washington.edu"]], [[None, None, "minutes",
-            "CNRI.Reston.VA.US"], ["John Klensin", None, "KLENSIN",
-            "INFOODS.MIT.EDU"]], None, None,
-            "<B27397-0100000@cac.washington.edu>"], "BODY", ["TEXT", "PLAIN",
-            ["CHARSET", "US-ASCII"], None, None, "7BIT", "3028", "92"]],
-            ['oo "oo" oo'],
-            ['oo \\\\ oo'],
-            ['oo \\ oo'],
-            ['oo \\o'],
-            ['oo \o'],
-            ['oo', '\o'],
-            ['oo', '\\o'],
-        ]
-
-        for (case, expected) in zip(cases, answers):
-            self.assertEqual(imap4.parseNestedParens(case), [expected])
-
-        # XXX This code used to work, but changes occurred within the
-        # imap4.py module which made it no longer necessary for *all* of it
-        # to work.  In particular, only the part that makes
-        # 'BODY.PEEK[HEADER.FIELDS.NOT (Subject Bcc Cc)]' come out correctly
-        # no longer needs to work.  So, I am loathe to delete the entire
-        # section of the test. --exarkun
-        #
-
-#        for (case, expected) in zip(answers, cases):
-#            self.assertEqual('(' + imap4.collapseNestedLists(case) + ')', expected)
+        check(b'("oo \\o")', [b'oo \\o'])
+        check(b'("oo \o")', [b'oo \o'])
+        check(b'(oo \o)', [b'oo', b'\o'])
+        check(b'(oo \\o)', [b'oo', b'\\o'])
 
 
     def test_fetchParserSimple(self):
@@ -607,6 +594,7 @@ class IMAP4HelperTests(unittest.TestCase):
         ]
 
         for (inp, outp) in cases:
+            inp = inp.encode('ascii')
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), 1)
@@ -615,16 +603,19 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_fetchParserMacros(self):
         cases = [
-            ['ALL', (4, ['flags', 'internaldate', 'rfc822.size', 'envelope'])],
-            ['FULL', (5, ['flags', 'internaldate', 'rfc822.size', 'envelope', 'body'])],
-            ['FAST', (3, ['flags', 'internaldate', 'rfc822.size'])],
+            [b'ALL', (4, [b'flags', b'internaldate', b'rfc822.size',
+                          b'envelope'])],
+            [b'FULL', (5, [b'flags', b'internaldate', b'rfc822.size',
+                           b'envelope', b'body'])],
+            [b'FAST', (3, [b'flags', b'internaldate', b'rfc822.size'])],
         ]
 
         for (inp, outp) in cases:
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), outp[0])
-            expectedResult = [str(token).lower() for token in p.result]
+            expectedResult = [str(token).lower().encode("ascii")
+                              for token in p.result]
             expectedResult.sort()
             outp[1].sort()
             self.assertEqual(expectedResult, outp[1])
@@ -634,7 +625,7 @@ class IMAP4HelperTests(unittest.TestCase):
         P = imap4._FetchParser
 
         p = P()
-        p.parseString('BODY')
+        p.parseString(b'BODY')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
@@ -642,21 +633,21 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
-        p.parseString('BODY.PEEK')
+        p.parseString(b'BODY.PEEK')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
-        p.parseString('BODY[]')
+        p.parseString(b'BODY[]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].empty, True)
         self.assertEqual(str(p.result[0]), 'BODY[]')
 
         p = P()
-        p.parseString('BODY[HEADER]')
+        p.parseString(b'BODY[HEADER]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
@@ -667,7 +658,7 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
-        p.parseString('BODY.PEEK[HEADER]')
+        p.parseString(b'BODY.PEEK[HEADER]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
@@ -678,40 +669,46 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
-        p.parseString('BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        p.parseString(b'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, False)
-        self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEqual(p.result[0].header.fields,
+                         [b'SUBJECT', b'CC', b'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
-        p.parseString('BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
+        p.parseString(b'BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, False)
-        self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEqual(p.result[0].header.fields,
+                         [b'SUBJECT', b'CC', b'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
-        p.parseString('BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
+        p.parseString(b'BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, True)
-        self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
+        self.assertEqual(p.result[0].header.fields,
+                         [b'SUBJECT', b'CC', b'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
 
         p = P()
-        p.parseString('BODY[1.MIME]<10.50>')
+        p.parseString(b'BODY[1.MIME]<10.50>')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
@@ -720,20 +717,24 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(p.result[0].partialBegin, 10)
         self.assertEqual(p.result[0].partialLength, 50)
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[1.MIME]<10.50>')
+        self.assertEqual(bytes(p.result[0]), b'BODY[1.MIME]<10.50>')
 
         p = P()
-        p.parseString('BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
+        p.parseString(
+            b'BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
         self.assertEqual(len(p.result), 1)
         self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].part, (0, 2, 8, 10))
-        self.assertEqual(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
+        self.assertEqual(p.result[0].header.fields, [b'MESSAGE-ID', b'DATE'])
         self.assertEqual(p.result[0].partialBegin, 103)
         self.assertEqual(p.result[0].partialLength, 69)
         self.assertEqual(p.result[0].empty, False)
-        self.assertEqual(str(p.result[0]), 'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
+        self.assertEqual(
+            bytes(p.result[0]),
+            b'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>'
+        )
 
 
     def test_files(self):
@@ -742,25 +743,26 @@ class IMAP4HelperTests(unittest.TestCase):
             u'biz'
         ]
 
-        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
+        output = b'"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
 
         self.assertEqual(imap4.collapseNestedLists(inputStructure), output)
 
 
     def test_quoteAvoider(self):
         input = [
-            'foo', imap4.DontQuoteMe('bar'), "baz", BytesIO(b'this is a file\r\n'),
-            imap4.DontQuoteMe('buz'), ""
+            b'foo', imap4.DontQuoteMe(b'bar'), b"baz",
+            BytesIO(b'this is a file\r\n'),
+            imap4.DontQuoteMe(b'buz'), b""
         ]
 
-        output = '"foo" bar "baz" {16}\r\nthis is a file\r\n buz ""'
+        output = b'"foo" bar "baz" {16}\r\nthis is a file\r\n buz ""'
 
         self.assertEqual(imap4.collapseNestedLists(input), output)
 
 
     def test_literals(self):
         cases = [
-            ('({10}\r\n0123456789)', [['0123456789']]),
+            (b'({10}\r\n0123456789)', [[b'0123456789']]),
         ]
 
         for (case, expected) in cases:
@@ -796,15 +798,15 @@ class IMAP4HelperTests(unittest.TestCase):
         ]
 
         outputs = [
-            'FLAGGED',
-            '(DELETED UNFLAGGED)',
-            '(OR FLAGGED DELETED)',
-            '(BEFORE "today")',
-            '(OR DELETED (OR UNSEEN NEW))',
-            '(OR (NOT (OR (SINCE "yesterday" SMALLER 1000) ' # Continuing
-            '(OR (BEFORE "tuesday" LARGER 10000) (OR (BEFORE ' # Some more
-            '"today" DELETED UNSEEN) (NOT (SUBJECT "spam")))))) ' # And more
-            '(NOT (UID 1:5)))',
+            b'FLAGGED',
+            b'(DELETED UNFLAGGED)',
+            b'(OR FLAGGED DELETED)',
+            b'(BEFORE "today")',
+            b'(OR DELETED (OR UNSEEN NEW))',
+            b'(OR (NOT (OR (SINCE "yesterday" SMALLER 1000) ' # Continuing
+            b'(OR (BEFORE "tuesday" LARGER 10000) (OR (BEFORE ' # Some more
+            b'"today" DELETED UNSEEN) (NOT (SUBJECT "spam")))))) ' # And more
+            b'(NOT (UID 1:5)))',
         ]
 
         for (query, expected) in zip(inputs, outputs):
@@ -819,8 +821,8 @@ class IMAP4HelperTests(unittest.TestCase):
         @see: U{http://tools.ietf.org/html/rfc3501#section-9}
         @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
         """
-        query = imap4.Query(keyword='twisted')
-        self.assertEqual('(KEYWORD twisted)', query)
+        query = imap4.Query(keyword=b'twisted')
+        self.assertEqual(b'(KEYWORD twisted)', query)
 
 
     def test_queryUnkeywordFlagWithQuotes(self):
@@ -831,8 +833,8 @@ class IMAP4HelperTests(unittest.TestCase):
         @see: U{http://tools.ietf.org/html/rfc3501#section-9}
         @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
         """
-        query = imap4.Query(unkeyword='twisted')
-        self.assertEqual('(UNKEYWORD twisted)', query)
+        query = imap4.Query(unkeyword=b'twisted')
+        self.assertEqual(b'(UNKEYWORD twisted)', query)
 
 
     def _keywordFilteringTest(self, keyword):
@@ -845,15 +847,15 @@ class IMAP4HelperTests(unittest.TestCase):
         """
         # Check all the printable exclusions
         self.assertEqual(
-            '(%s twistedrocks)' % (keyword.upper(),),
-            imap4.Query(**{keyword: r'twisted (){%*"\] rocks'}))
+            b'(%s twistedrocks)' % (keyword.encode("ascii").upper(),),
+            imap4.Query(**{keyword: rb'twisted (){%*"\] rocks'}))
 
         # Check all the non-printable exclusions
         self.assertEqual(
-            '(%s twistedrocks)' % (keyword.upper(),),
+            b'(%s twistedrocks)' % (keyword.encode("ascii").upper(),),
             imap4.Query(**{
-                    keyword: 'twisted %s rocks' % (
-                    ''.join(chr(ch) for ch in range(33)),)}))
+                    keyword: b'twisted %s rocks' % (
+                    b''.join(_bytesChr(ch) for ch in range(33)),)}))
 
 
     def test_queryKeywordFlag(self):
@@ -2286,8 +2288,8 @@ class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
     def _cbTestFlagChange(self, ignored, flags):
         E = self.client.events
         expect = [[b'flagsChanged', {x[0]: x[1]}] for x in flags.items()]
-        E.sort()
-        expect.sort()
+        E.sort(key=lambda o: o[0])
+        expect.sort(key=lambda o: o[0])
         self.assertEqual(E, expect)
 
 
@@ -3556,19 +3558,31 @@ class FakeyServer(imap4.IMAP4Server):
         pass
 
 
+def _bytesify(x):
+    """
+    @type x: L{bytes} or L{unicode}.
+    @rtype: L{bytes}
+    """
+    if isinstance(x, unicode):
+        return x.encode("ascii")
+    else:
+        return x
+
+
 
 @implementer(imap4.IMessage)
 class FakeyMessage(util.FancyStrMixin):
     showAttributes = ('headers', 'flags', 'date', '_body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
-        self.headers = headers
-        self.flags = flags
-        self._body = body
-        self.size = len(body)
-        self.date = date
-        self.uid = uid
-        self.subpart = subpart
+        self.headers = dict((_bytesify(k), _bytesify(v))
+                            for k, v in headers.items())
+        self.flags = tuple(_bytesify(v) for v in flags)
+        self._body = _bytesify(body)
+        self.size = len(self._body)
+        self.date = _bytesify(date)
+        self.uid = _bytesify(uid)
+        self.subpart = _bytesify(subpart)
 
 
     def getHeaders(self, negate, *names):
@@ -4622,7 +4636,9 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
             # Verify exception given to client has the correct message
             self.assertEqual(
-                b"SEARCH failed: Invalid search command FOO", networkString(str(results)))
+                str(b"SEARCH failed: Invalid search command FOO"),
+                str(results),
+            )
 
         d.addCallback(errorReceived)
         d.addErrback(self._ebGeneral)
@@ -4782,7 +4798,7 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
             # Verify exception given to client has the correct message
             self.assertEqual(
-                "SEARCH failed: FOO is not a valid search criteria",
+                str(b"SEARCH failed: FOO is not a valid search criteria"),
                 str(results))
 
         d.addCallback(errorReceived)
@@ -4900,7 +4916,7 @@ class CopyWorkerTests(unittest.TestCase):
         d = f([im for im in zip(range(1, 11), msgs)], b'tag', m)
 
         def cbCopy(results):
-            self.assertEqual(results, zip([1] * 10, range(1, 11)))
+            self.assertEqual(results, list(zip([1] * 10, range(1, 11))))
             for (orig, new) in zip(msgs, m.msgs):
                 self.assertIdentical(orig, new)
 
