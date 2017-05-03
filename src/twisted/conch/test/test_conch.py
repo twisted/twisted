@@ -631,15 +631,6 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin,
             'ecdh-sha2-nistp521')
 
 
-    def test_DH_GROUP1(self):
-        """
-        The diffie-hellman-group1-sha1 key exchange algorithm is compatible
-        with OpenSSH.
-        """
-        return self.assertExecuteWithKexAlgorithm(
-            'diffie-hellman-group1-sha1')
-
-
     def test_DH_GROUP14(self):
         """
         The diffie-hellman-group14-sha1 key exchange algorithm is compatible

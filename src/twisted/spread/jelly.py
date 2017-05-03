@@ -623,6 +623,8 @@ class _Jellier:
         if sxp is None:
             sxp = []
         sxp.append(unpersistable_atom)
+        if isinstance(reason, unicode):
+            reason = reason.encode("utf-8")
         sxp.append(reason)
         return sxp
 
