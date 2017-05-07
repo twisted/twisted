@@ -7,4 +7,7 @@
 URL parsing, construction and rendering.
 """
 
-from hyperlink._url import *
+from hyperlink._url import URL
+
+
+__all__ = ["URL"]
