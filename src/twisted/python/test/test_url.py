@@ -5,12 +5,18 @@
 """
 Tests for L{twisted.python.url}.
 """
-
 from __future__ import unicode_literals
 
-from ..url import URL
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    from ..url import URL
+
 unicode = type(u'')
 from unittest import TestCase
+from twisted import trial
+
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
@@ -796,3 +802,22 @@ class TestURL(TestCase):
             "expected iterable of text for path, not: {}"
             .format(repr(u'foo'))
         )
+
+
+class UrlDeprecationTests(trial.unittest.TestCase):
+    """
+    L{twisted.python.constants} is deprecated.
+    """
+    def test_urlDeprecation(self):
+        """
+        L{twisted.python.constants} is deprecated since Twisted 16.5.
+        """
+        from twisted.python import url
+        url
+
+        warningsShown = self.flushWarnings([self.test_urlDeprecation])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            ("twisted.python.url was deprecated in Twisted NEXT:"
+             " Please use hyperlink from PyPI instead."),
+            warningsShown[0]['message'])
