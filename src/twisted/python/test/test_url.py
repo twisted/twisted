@@ -178,7 +178,7 @@ class TestURL(TestCase):
             repr(URL(scheme=u'http', host=u'foo', path=[u'bar'],
                      query=[(u'baz', None), (u'k', u'v')],
                      fragment=u'frob')),
-            "URL.fromText(%s)" % (repr(u"http://foo/bar?baz&k=v#frob"),)
+            "URL.from_text(%s)" % (repr(u"http://foo/bar?baz&k=v#frob"),)
         )
 
 
@@ -793,6 +793,6 @@ class TestURL(TestCase):
             URL(path=u'foo')
         self.assertEqual(
             str(raised.exception),
-            "expected iterable of text for path, got text itself: {}"
+            "expected iterable of text for path, not: {}"
             .format(repr(u'foo'))
         )
