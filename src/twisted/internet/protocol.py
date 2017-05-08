@@ -557,6 +557,8 @@ class Protocol(BaseProtocol):
 
         @type reason: L{twisted.python.failure.Failure}
         """
+        
+        self.connected = 0
 
 
 @implementer(interfaces.IConsumer)
