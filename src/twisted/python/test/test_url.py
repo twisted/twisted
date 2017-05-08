@@ -14,8 +14,8 @@ with warnings.catch_warnings():
     from ..url import URL
 
 unicode = type(u'')
-from unittest import TestCase
-from twisted import trial
+
+from twisted.trial.unittest import SynchronousTestCase
 
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
@@ -82,7 +82,7 @@ relativeLinkTestsForRFC3986 = [
 
 _percentenc = lambda s: ''.join('%%%02X' % ord(c) for c in s)
 
-class TestURL(TestCase):
+class TestURL(SynchronousTestCase):
     """
     Tests for L{URL}.
     """
@@ -804,7 +804,7 @@ class TestURL(TestCase):
         )
 
 
-class UrlDeprecationTests(trial.unittest.TestCase):
+class UrlDeprecationTests(SynchronousTestCase):
     """
     L{twisted.python.constants} is deprecated.
     """
