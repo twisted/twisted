@@ -1369,7 +1369,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             b''.join([common.NS(x) for x in
                      [b','.join(y) for y in
                       [self.proto.supportedKeyExchanges,
-                       self.proto.supportedPublicKeys[::-1],
+                       [b'ssh-dss', b'ssh-rsa'],
                        self.proto.supportedCiphers,
                        self.proto.supportedCiphers,
                        self.proto.supportedMACs,

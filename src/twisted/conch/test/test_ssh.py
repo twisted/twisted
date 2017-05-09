@@ -336,7 +336,12 @@ if cryptography is not None and pyasn1 is not None:
 
         def buildProtocol(self, addr):
             proto = ConchTestServer()
-            proto.supportedPublicKeys = self.privateKeys.keys()
+
+            # Remove any keys we have but don't want to use.
+            for i in range(len(proto.supportedPublicKeys) - 1, -1, -1):
+                if proto.supportedPublicKeys[i] not in self.privateKeys:
+                    proto.supportedPublicKeys.pop(i)
+
             proto.factory = self
 
             if hasattr(self, 'expectedLoseConnection'):
@@ -843,7 +848,7 @@ class SSHFactoryTests(unittest.TestCase):
 
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
-        gpk = lambda: {'ssh-rsa' : keys.Key(None)}
+        gpk = lambda: {b'ssh-rsa' : keys.Key(None)}
         sshFactory.getPrimes = lambda: primes
         sshFactory.getPublicKeys = sshFactory.getPrivateKeys = gpk
         sshFactory.startFactory()

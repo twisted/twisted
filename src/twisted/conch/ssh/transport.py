@@ -532,7 +532,7 @@ class SSHTransportBase(protocol.Protocol):
     def addSupportedKexes(self, kexes):
         basekeys = _kex._baseKexAlgorithms.keys()
         for k in kexes:
-            if k not in basekeys and k.replace('ecdh', 'ecdsa') not in keys._curveTable:
+            if k not in basekeys and k.replace(b'ecdh', b'ecdsa') not in keys._curveTable:
                 log.msg('Unable to support key exchange of type %s' % k)
             elif k not in _kex._kexAlgorithms:
                 # Check to see if it's supported.
