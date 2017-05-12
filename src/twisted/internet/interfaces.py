@@ -2889,3 +2889,32 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
         @return: a client endpoint
         @rtype: a provider of L{IStreamClientEndpoint}
         """
+
+
+class ITransferDecoder(Interface):
+
+    contentLength = Attribute("")
+
+    def setContentLength(self, contentLength):
+        pass
+
+    def dataReceived(self, data):
+        """
+        Interpret the next chunk of bytes received.  Either deliver them to the
+        data callback or invoke the finish callback if enough bytes have been
+        received.
+
+        @return: L{None}
+        """
+
+    def noMoreData(self):
+        """
+        All data which will be delivered to this decoder has been.  Check to
+        make sure as much data as was expected has been received.
+
+        @raise PotentialDataLoss: If the content length is unknown.
+        @raise _DataLoss: If the content length is known and fewer than that
+            many bytes have been delivered.
+
+        @return: L{None}
+        """
