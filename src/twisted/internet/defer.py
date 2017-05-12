@@ -1440,6 +1440,7 @@ def _inlineCallbacks(result, g, deferred):
                     waiting[1] = r
                 else:
                     _inlineCallbacks(r, g, deferred)
+                return r
 
             result.addBoth(gotResult)
             if waiting[0]:
