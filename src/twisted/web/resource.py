@@ -216,6 +216,10 @@ class Resource:
 
         @see: L{IResource.putChild}
         """
+        if not isinstance(path, bytes):
+            emsg = "HTTP paths must be of type bytes (got {0})"
+            raise TypeError(emsg.format(type(path)))
+
         self.children[path] = child
         child.server = self.server
 
