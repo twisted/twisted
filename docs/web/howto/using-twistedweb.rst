@@ -765,6 +765,27 @@ Script called ``foo.rpy`` , if no file by the name of ``foo``
 exists.
 
 
+``File`` objects will try to automatically determine the Content-Type and Content-Encoding headers.
+There is a small set of known mime types and encodings which augment the default mime types provided by the Python standard library `mimetypes`.
+You can always modify the content type and encoding mappings by manipulating the instance variables.
+
+For example to recognize WOFF File Format 2.0 and set the right Content-Type header you can modify the `contentTypes` member of an instance::
+
+.. code-block:: python
+
+
+    from twisted.application import internet, service, strports
+    from twisted.web import static, server, script
+
+    root = static.File("/srv/fonts")
+
+    root.contentTypes[".woff2"] = "application/font-woff2"
+
+    application = service.Application('web')
+    sc = service.IServiceCollection(application)
+    site = server.Site(root)
+    i = strports.service("tcp:80", site)
+    i.setServiceParent(sc)
 
 
 
