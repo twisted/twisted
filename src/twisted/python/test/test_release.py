@@ -66,7 +66,7 @@ else:
 
 
 if not skip and which("git"):
-    gitVersion = runCommand(["git", "--version"]).decode(sys.stdout.encoding).split(u" ")[2].split(u".")
+    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
 
     # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
