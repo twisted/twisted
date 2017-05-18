@@ -28,14 +28,14 @@ from twisted.python.monkey import MonkeyPatcher
 # Types of topfiles.
 TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
-    "https://docs.python.org/2/objects.inv",
-    "https://docs.python.org/3/objects.inv",
-    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.github.io/constantly/docs/objects.inv",
-    "https://hawkowl.github.io/incremental/docs/objects.inv",
-    "https://python-hyper.org/h2/en/stable/objects.inv",
-    "https://python-hyper.org/priority/en/stable/objects.inv",
-    "https://docs.zope.org/zope.interface/objects.inv",
+    u"https://docs.python.org/2/objects.inv",
+    u"https://docs.python.org/3/objects.inv",
+    u"https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    u"https://twisted.github.io/constantly/docs/objects.inv",
+    u"https://hawkowl.github.io/incremental/docs/objects.inv",
+    u"https://python-hyper.org/h2/en/stable/objects.inv",
+    u"https://python-hyper.org/priority/en/stable/objects.inv",
+    u"https://docs.zope.org/zope.interface/objects.inv",
 ]
 
 
@@ -327,16 +327,17 @@ class APIBuilder(object):
 
         from pydoctor.driver import main
 
-        main(
-            ["--project-name", projectName,
-             "--project-url", projectURL,
-             "--system-class", "twisted.python._pydoctor.TwistedSystem",
-             "--project-base-dir", packagePath.parent().path,
-             "--html-viewsource-base", sourceURL,
-             "--add-package", packagePath.path,
-             "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html",
-            ] + intersphinxes)
+        args = [u"--project-name", projectName,
+                u"--project-url", projectURL,
+                u"--system-class", u"twisted.python._pydoctor.TwistedSystem",
+                u"--project-base-dir", packagePath.parent().path,
+                u"--html-viewsource-base", sourceURL,
+                u"--add-package", packagePath.path,
+                u"--html-output", outputPath.path,
+                u"--html-write-function-pages", u"--quiet", u"--make-html",
+               ] + intersphinxes
+        args = [arg.encode("utf-8") for arg in args]
+        main(args)
 
         monkeyPatch.restore()
 

@@ -407,7 +407,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -469,7 +469,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
@@ -518,7 +518,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         """
         The templates and System for Twisted includes adding deprecations.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
