@@ -20,14 +20,11 @@ class Logger(object):
     as a class or module attribute, as documented in L{this module's
     documentation <twisted.logger>}.
 
-    @type namespace: L{str}
-    @ivar namespace: the namespace for this logger
+    @ivar namespace: See L{__init__}
 
-    @type source: L{object}
-    @ivar source: The object which is emitting events via this logger
+    @ivar source: See L{__init__}
 
-    @type: L{ILogObserver}
-    @ivar observer: The observer that this logger will send events to.
+    @ivar observer: See L{__init__}
     """
 
     @staticmethod
