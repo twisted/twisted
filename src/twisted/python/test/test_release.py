@@ -20,7 +20,7 @@ import tempfile
 import shutil
 
 from datetime import date
-from io import BytesIO as StringIO
+from io import BytesIO, StringIO
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
@@ -44,37 +44,37 @@ if os.name != 'posix':
 else:
     skip = None
 
-testingSphinxConf = "master_doc = 'index'\n"
+testingSphinxConf = u"master_doc = 'index'\n"
 
 try:
     import pydoctor.driver
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
-    pydoctorSkip = "Pydoctor is not present."
+    pydoctorSkip = u"Pydoctor is not present."
 else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        pydoctorSkip = "Pydoctor is too old."
+    if getattr(pydoctor, u"version_info", (0,)) < (0, 1):
+        pydoctorSkip = u"Pydoctor is too old."
     else:
         pydoctorSkip = skip
 
 
-if not skip and which("sphinx-build"):
+if not skip and which(u"sphinx-build"):
     sphinxSkip = None
 else:
-    sphinxSkip = "Sphinx not available."
+    sphinxSkip = u"Sphinx not available."
 
 
 if not skip and which("git"):
-    gitVersion = runCommand(["git", "--version"]).split(" ")[2].split(".")
+    gitVersion = runCommand(["git", "--version"]).decode(sys.stdout.encoding).split(u" ")[2].split(u".")
 
     # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
         gitSkip = skip
     else:
-        gitSkip = "old git is present"
+        gitSkip = u"old git is present"
 else:
-    gitSkip = "git is not present."
+    gitSkip = u"git is not present."
 
 
 
@@ -87,7 +87,7 @@ class ExternalTempdirTestCase(TestCase):
         """
         Make our own directory.
         """
-        newDir = tempfile.mkdtemp(dir="/tmp/")
+        newDir = tempfile.mkdtemp(dir=u"/tmp/")
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
 
@@ -130,8 +130,8 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return ("from incremental import Version\n__version__=%r" % (
-        Version(*args, **kwargs))).encode('ascii')
+    return (u"from incremental import Version\n__version__={!r}".format(
+        Version(*args, **kwargs)))
 
 
 
@@ -167,7 +167,7 @@ class StructureAssertingMixin(object):
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace('\n', os.linesep))
+                child.setContent(dirDict[x].replace('\n', os.linesep).encode("utf-8"))
 
     def assertStructure(self, root, dirDict):
         """
@@ -186,11 +186,11 @@ class StructureAssertingMixin(object):
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "%s is not a dir!"
-                                % (child.path,))
+                self.assertTrue(child.isdir(), "{} is not a dir!".format(
+                                child.path))
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().replace(os.linesep, '\n')
+                actual = child.getContent().decode("utf-8").replace(os.linesep, u'\n')
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
@@ -234,9 +234,9 @@ class ProjectTests(ExternalTempdirTestCase):
             directory = directory.child(segment)
             if not directory.exists():
                 directory.createDirectory()
-            directory.child('__init__.py').setContent('')
+            directory.child('__init__.py').setContent(b'')
         directory.child('topfiles').createDirectory()
-        directory.child('_version.py').setContent(genVersion(*version))
+        directory.child('_version.py').setContent(genVersion(*version).encode("utf-8"))
         return Project(directory)
 
 
@@ -420,10 +420,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n"
-            "def _bar():\n"
-            "    '%s'" % (docstring, privateDocstring))
+            u"def foo():\n"
+            u"    '{}'\n"
+            u"def _bar():\n"
+            u"    '{}'".format(docstring, privateDocstring).encode("utf-8"))
 
         outputPath = FilePath(self.mktemp())
 
@@ -477,8 +477,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n" % (docstring,))
+            u"def foo():\n"
+            u"    '{}'\n".format(docstring).encode("utf-8"))
         packagePath.child("_version.py").setContent(
             genVersion("twisted", 1, 0, 0))
         outputPath = FilePath(self.mktemp())
@@ -489,28 +489,28 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
         self.assertTrue(
             indexPath.exists(),
-            "API index %r did not exist." % (outputPath.path,))
+            u"API index {} did not exist.".format(outputPath.path))
         self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            b'<a href="http://twistedmatrix.com/">Twisted</a>',
             indexPath.getContent(),
             "Project name/location not in file contents.")
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            "Package documentation file %r did not exist."
-            % (twistedPath.path,))
+            u"Package documentation file %r did not exist.".format(
+            twistedPath.path))
         self.assertIn(
             docstring, twistedPath.getContent(),
             "Docstring not in package documentation file.")
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
-            '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted">View Source</a>',
+            b'<a href="https://github.com/twisted/twisted/tree/'
+            b'twisted-1.0.0/src/twisted">View Source</a>',
             twistedPath.getContent())
 
-        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stdout.getvalue(), b'')
 
 
     @doNotFailOnNetworkError
@@ -531,21 +531,21 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "from twisted.python.deprecate import deprecated\n"
-            "from incremental import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0), "
-            "'Baz')\n"
-            "def foo():\n"
-            "    '%s'\n"
-            "from twisted.python import deprecate\n"
-            "import incremental\n"
-            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
-            "def _bar():\n"
-            "    '%s'\n"
-            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            "class Baz(object):\n"
-            "    pass"
-            "" % (docstring, privateDocstring))
+            u"from twisted.python.deprecate import deprecated\n"
+            u"from incremental import Version\n"
+            u"@deprecated(Version('Twisted', 15, 0, 0), "
+            u"'Baz')\n"
+            u"def foo():\n"
+            u"    '{}'\n"
+            u"from twisted.python import deprecate\n"
+            u"import incremental\n"
+            u"@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
+            u"def _bar():\n"
+            u"    '{}'\n"
+            u"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            u"class Baz(object):\n"
+            u"    pass"
+            u"".format(docstring, privateDocstring).encode("utf-8"))
 
         outputPath = FilePath(self.mktemp())
 
@@ -774,13 +774,13 @@ class NewsBuilderMixin(StructureAssertingMixin):
         L{NewsBuilder._writeHeader} accepts a file-like object opened for
         writing and a header string and writes out a news file header to it.
         """
-        output = StringIO()
-        self.builder._writeHeader(output, "Super Awesometastic 32.16")
+        output = BytesIO()
+        self.builder._writeHeader(output, u"Super Awesometastic 32.16")
         self.assertEqual(
-            output.getvalue(),
-            "Super Awesometastic 32.16\n"
-            "=========================\n"
-            "\n")
+            output.getvalue().decode("utf-8"),
+            u"Super Awesometastic 32.16\n"
+            u"=========================\n"
+            u"\n")
 
 
     def test_writeSection(self):
@@ -790,21 +790,21 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges}) and writes out a section header and all
         of the given ticket information.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeSection(
-            output, "Features",
-            [(3, "Great stuff."),
-             (17, "Very long line which goes on and on and on, seemingly "
-              "without end until suddenly without warning it does end.")])
+            output, u"Features",
+            [(3, u"Great stuff."),
+             (17, u"Very long line which goes on and on and on, seemingly "
+              u"without end until suddenly without warning it does end.")])
         self.assertEqual(
-            output.getvalue(),
-            "Features\n"
-            "--------\n"
-            " - Great stuff. (#3)\n"
-            " - Very long line which goes on and on and on, seemingly "
-            "without end\n"
-            "   until suddenly without warning it does end. (#17)\n"
-            "\n")
+            output.getvalue().decode("utf-8"),
+            u"Features\n"
+            u"--------\n"
+            u" - Great stuff. (#3)\n"
+            u" - Very long line which goes on and on and on, seemingly "
+            u"without end\n"
+            u"   until suddenly without warning it does end. (#17)\n"
+            u"\n")
 
 
     def test_writeMisc(self):
@@ -814,18 +814,18 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges} and writes out a section header and all
         of the ticket numbers, but excludes any descriptions.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeMisc(
-            output, "Other",
-            [(x, "") for x in range(2, 50, 3)])
+            output, u"Other",
+            [(x, u"") for x in range(2, 50, 3)])
         self.assertEqual(
-            output.getvalue(),
-            "Other\n"
-            "-----\n"
-            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
-            "#38, #41,\n"
-            "   #44, #47\n"
-            "\n")
+            output.getvalue().decode("utf-8"),
+            u"Other\n"
+            u"-----\n"
+            u" - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
+            u"#38, #41,\n"
+            u"   #44, #47\n"
+            u"\n")
 
 
     def test_build(self):
@@ -837,41 +837,41 @@ class NewsBuilderMixin(StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             "Super Awesometastic 32.16")
 
-        results = self.project.child('NEWS').getContent()
+        results = self.project.child('NEWS').getContent().decode("utf-8")
         self.assertEqual(
             results,
-            'Super Awesometastic 32.16\n'
-            '=========================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - We now support the web. (#5)\n'
-            ' - The widget is more robust. (#12)\n'
-            ' - A very long feature which takes many words to describe '
-            'with any\n'
-            '   accuracy was introduced so that the line wrapping behavior '
-            'of the\n'
-            '   news generating code could be verified. (#15)\n'
-            ' - A simpler feature described on multiple lines was '
-            'added. (#16)\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Improved Documentation\n'
-            '----------------------\n'
-            ' - foo.bar.Baz.quux (#40)\n'
-            ' - writing Foo servers (#41)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #30, #35\n'
-            '\n\n' + self.existingText)
+            u'Super Awesometastic 32.16\n'
+            u'=========================\n'
+            u'\n'
+            u'Features\n'
+            u'--------\n'
+            u' - We now support the web. (#5)\n'
+            u' - The widget is more robust. (#12)\n'
+            u' - A very long feature which takes many words to describe '
+            u'with any\n'
+            u'   accuracy was introduced so that the line wrapping behavior '
+            u'of the\n'
+            u'   news generating code could be verified. (#15)\n'
+            u' - A simpler feature described on multiple lines was '
+            u'added. (#16)\n'
+            u'\n'
+            u'Bugfixes\n'
+            u'--------\n'
+            u' - Broken stuff was fixed. (#23)\n'
+            u'\n'
+            u'Improved Documentation\n'
+            u'----------------------\n'
+            u' - foo.bar.Baz.quux (#40)\n'
+            u' - writing Foo servers (#41)\n'
+            u'\n'
+            u'Deprecations and Removals\n'
+            u'-------------------------\n'
+            u' - Stupid stuff was deprecated. (#25)\n'
+            u'\n'
+            u'Other\n'
+            u'-----\n'
+            u' - #30, #35\n'
+            u'\n\n' + self.existingText)
 
 
     def test_emptyProjectCalledOut(self):
@@ -887,14 +887,14 @@ class NewsBuilderMixin(StructureAssertingMixin):
         self.builder.build(
             project, project.child('NEWS'),
             "Super Awesometastic 32.16")
-        results = project.child('NEWS').getContent()
+        results = project.child('NEWS').getContent().decode("utf-8")
         self.assertEqual(
             results,
-            'Super Awesometastic 32.16\n'
-            '=========================\n'
-            '\n' +
+            u'Super Awesometastic 32.16\n'
+            u'=========================\n'
+            u'\n' +
             self.builder._NO_CHANGES +
-            '\n\n' + self.existingText)
+            u'\n\n' + self.existingText)
 
 
     def test_preserveTicketHint(self):
@@ -904,51 +904,51 @@ class NewsBuilderMixin(StructureAssertingMixin):
         """
         news = self.project.child('NEWS')
         news.setContent(
-            'Ticket numbers in this file can be looked up by visiting\n'
-            'http://twistedmatrix.com/trac/ticket/<number>\n'
-            '\n'
-            'Blah blah other stuff.\n')
+            u'Ticket numbers in this file can be looked up by visiting\n'
+            u'http://twistedmatrix.com/trac/ticket/<number>\n'
+            u'\n'
+            u'Blah blah other stuff.\n'.encode("utf-8"))
 
-        self.builder.build(self.project, news, "Super Awesometastic 32.16")
+        self.builder.build(self.project, news, u"Super Awesometastic 32.16")
 
         self.assertEqual(
-            news.getContent(),
-            'Ticket numbers in this file can be looked up by visiting\n'
-            'http://twistedmatrix.com/trac/ticket/<number>\n'
-            '\n'
-            'Super Awesometastic 32.16\n'
-            '=========================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - We now support the web. (#5)\n'
-            ' - The widget is more robust. (#12)\n'
-            ' - A very long feature which takes many words to describe '
-            'with any\n'
-            '   accuracy was introduced so that the line wrapping behavior '
-            'of the\n'
-            '   news generating code could be verified. (#15)\n'
-            ' - A simpler feature described on multiple lines was '
-            'added. (#16)\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Improved Documentation\n'
-            '----------------------\n'
-            ' - foo.bar.Baz.quux (#40)\n'
-            ' - writing Foo servers (#41)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #30, #35\n'
-            '\n\n'
-            'Blah blah other stuff.\n')
+            news.getContent().decode("utf-8"),
+            u'Ticket numbers in this file can be looked up by visiting\n'
+            u'http://twistedmatrix.com/trac/ticket/<number>\n'
+            u'\n'
+            u'Super Awesometastic 32.16\n'
+            u'=========================\n'
+            u'\n'
+            u'Features\n'
+            u'--------\n'
+            u' - We now support the web. (#5)\n'
+            u' - The widget is more robust. (#12)\n'
+            u' - A very long feature which takes many words to describe '
+            u'with any\n'
+            u'   accuracy was introduced so that the line wrapping behavior '
+            u'of the\n'
+            u'   news generating code could be verified. (#15)\n'
+            u' - A simpler feature described on multiple lines was '
+            u'added. (#16)\n'
+            u'\n'
+            u'Bugfixes\n'
+            u'--------\n'
+            u' - Broken stuff was fixed. (#23)\n'
+            u'\n'
+            u'Improved Documentation\n'
+            u'----------------------\n'
+            u' - foo.bar.Baz.quux (#40)\n'
+            u' - writing Foo servers (#41)\n'
+            u'\n'
+            u'Deprecations and Removals\n'
+            u'-------------------------\n'
+            u' - Stupid stuff was deprecated. (#25)\n'
+            u'\n'
+            u'Other\n'
+            u'-----\n'
+            u' - #30, #35\n'
+            u'\n\n'
+            u'Blah blah other stuff.\n')
 
 
     def test_emptySectionsOmitted(self):
@@ -965,19 +965,19 @@ class NewsBuilderMixin(StructureAssertingMixin):
             'Some Thing 1.2')
 
         self.assertEqual(
-            self.project.child('NEWS').getContent(),
-            'Some Thing 1.2\n'
-            '==============\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n\n'
-            'Here is stuff which was present previously.\n')
+            self.project.child('NEWS').getContent().decode("utf-8"),
+            u'Some Thing 1.2\n'
+            u'==============\n'
+            u'\n'
+            u'Bugfixes\n'
+            u'--------\n'
+            u' - Broken stuff was fixed. (#23)\n'
+            u'\n'
+            u'Deprecations and Removals\n'
+            u'-------------------------\n'
+            u' - Stupid stuff was deprecated. (#25)\n'
+            u'\n\n'
+            u'Here is stuff which was present previously.\n')
 
 
     def test_duplicatesMerged(self):
@@ -995,33 +995,33 @@ class NewsBuilderMixin(StructureAssertingMixin):
             'Project Name 5.0')
 
         self.assertEqual(
-            self.project.child('NEWS').getContent(),
-            'Project Name 5.0\n'
-            '================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - We now support the web. (#5, #15, #16)\n'
-            ' - The widget is more robust. (#12)\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Improved Documentation\n'
-            '----------------------\n'
-            ' - foo.bar.Baz.quux (#40)\n'
-            ' - writing Foo servers (#41)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #30, #35\n'
-            '\n\n'
-            'Here is stuff which was present previously.\n')
+            self.project.child('NEWS').getContent().decode("utf-8"),
+            u'Project Name 5.0\n'
+            u'================\n'
+            u'\n'
+            u'Features\n'
+            u'--------\n'
+            u' - We now support the web. (#5, #15, #16)\n'
+            u' - The widget is more robust. (#12)\n'
+            u'\n'
+            u'Bugfixes\n'
+            u'--------\n'
+            u' - Broken stuff was fixed. (#23)\n'
+            u'\n'
+            u'Improved Documentation\n'
+            u'----------------------\n'
+            u' - foo.bar.Baz.quux (#40)\n'
+            u' - writing Foo servers (#41)\n'
+            u'\n'
+            u'Deprecations and Removals\n'
+            u'-------------------------\n'
+            u' - Stupid stuff was deprecated. (#25)\n'
+            u'\n'
+            u'Other\n'
+            u'-----\n'
+            u' - #30, #35\n'
+            u'\n\n'
+            u'Here is stuff which was present previously.\n')
 
 
     def createFakeTwistedProject(self):
@@ -1095,10 +1095,10 @@ class NewsBuilderMixin(StructureAssertingMixin):
 
         aggregateNews = project.child("NEWS")
 
-        aggregateContent = aggregateNews.getContent()
-        self.assertIn("Third feature addition", aggregateContent)
-        self.assertIn("Fixed that bug", aggregateContent)
-        self.assertIn("Old boring stuff from the past", aggregateContent)
+        aggregateContent = aggregateNews.getContent().decode("utf-8")
+        self.assertIn(u"Third feature addition", aggregateContent)
+        self.assertIn(u"Fixed that bug", aggregateContent)
+        self.assertIn(u"Old boring stuff from the past", aggregateContent)
 
 
     def test_removeNEWSfragments(self):
@@ -1114,7 +1114,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         self.assertEqual(5, len(project.children()))
         output = self._getStatus(project)
         removed = [line for line in output.splitlines()
-                   if line.startswith("D ")]
+                   if line.startswith(u"D ")]
         self.assertEqual(3, len(removed))
 
 
@@ -1147,7 +1147,7 @@ class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
 
     def _getStatus(self, project):
-        return runCommand(["git", "-C", project.path, "status", "--short"])
+        return runCommand(["git", "-C", project.path, "status", "--short"]).decode("utf-8")
 
 
 
@@ -1171,13 +1171,13 @@ class SphinxBuilderTests(TestCase):
     """
     skip = sphinxSkip
 
-    confContent = """\
+    confContent = u"""\
                   source_suffix = '.rst'
                   master_doc = 'index'
                   """
     confContent = textwrap.dedent(confContent)
 
-    indexContent = """\
+    indexContent = u"""\
                    ==============
                    This is a Test
                    ==============
@@ -1211,8 +1211,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent)
-        self.sourceDir.child("index.rst").setContent(self.indexContent)
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
 
 
     def verifyFileExists(self, fileDir, fileName):
@@ -1250,7 +1250,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            self.assertIn("<body", fcontents)
+            self.assertIn(b"<body", fcontents)
 
 
     def test_build(self):
@@ -1280,7 +1280,7 @@ class SphinxBuilderTests(TestCase):
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
-            f.write("\n.. _malformed-link-target\n")
+            f.write(b"\n.. _malformed-link-target\n")
         exception = self.assertRaises(
             SystemExit,
             self.builder.main, [self.sphinxDir.parent().path]
@@ -1389,7 +1389,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         no pending modifications returns C{False}.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        reposDir.child('some-file').setContent("something")
+        reposDir.child('some-file').setContent(b"something")
         self.assertFalse(self.createCommand.isStatusClean(reposDir))
 
 
@@ -1400,7 +1400,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         """
         reposDir = self.makeRepository(self.tmpDir)
         testFile = reposDir.child('some-file')
-        testFile.setContent("something")
+        testFile.setContent(b"something")
         self.commitRepository(reposDir)
         self.assertTrue(testFile.exists())
 
@@ -1415,14 +1415,14 @@ class CommandsTestMixin(StructureAssertingMixin):
         repository as identical in a specified directory.
         """
         structure = {
-            "README.rst": "Hi this is 1.0.0.",
+            "README.rst": u"Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.0"},
+                    "README": u"Hi this is 1.0.0"},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0"},
+                        "README": u"Hi this is 1.0.0"},
                     "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         reposDir = self.makeRepository(self.tmpDir)
         self.createStructure(reposDir, structure)

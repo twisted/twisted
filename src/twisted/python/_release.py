@@ -21,6 +21,7 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
+from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
@@ -129,7 +130,7 @@ class GitCommand(object):
         """
         status = runCommand(
             ["git", "-C", path.path, "status", "--short"]).strip()
-        return status == ''
+        return status == b''
 
 
     @staticmethod
@@ -363,18 +364,18 @@ class NewsBuilder(object):
     _MISC = ".misc"
 
     _headings = {
-        _FEATURE: "Features",
-        _BUGFIX: "Bugfixes",
-        _DOC: "Improved Documentation",
-        _REMOVAL: "Deprecations and Removals",
-        _MISC: "Other"}
+        _FEATURE: u"Features",
+        _BUGFIX: u"Bugfixes",
+        _DOC: u"Improved Documentation",
+        _REMOVAL: u"Deprecations and Removals",
+        _MISC: u"Other"}
 
-    _NO_CHANGES = "No significant changes have been made for this release.\n"
+    _NO_CHANGES = u"No significant changes have been made for this release.\n"
 
     _TICKET_HINT = (
-        'Ticket numbers in this file can be looked up by visiting\n'
-        'http://twistedmatrix.com/trac/ticket/<number>\n'
-        '\n')
+        u'Ticket numbers in this file can be looked up by visiting\n'
+        u'http://twistedmatrix.com/trac/ticket/<number>\n'
+        u'\n')
 
     def _today(self):
         """
@@ -404,7 +405,7 @@ class NewsBuilder(object):
             if ext == ticketType:
                 results.append((
                     int(base),
-                    ' '.join(child.getContent().splitlines())))
+                    ' '.join(child.getContent().decode("utf-8").splitlines())))
         results.sort()
         return results
 
@@ -419,7 +420,7 @@ class NewsBuilder(object):
         @type header: C{str}
         @return: A C{str} containing C{header}.
         """
-        return header + '\n' + '=' * len(header) + '\n\n'
+        return header + u'\n' + '=' * len(header) + u'\n\n'
 
 
     def _writeHeader(self, fileObj, header):
@@ -430,7 +431,7 @@ class NewsBuilder(object):
         @param header: The header to write to the file.
         @type header: C{str}
         """
-        fileObj.write(self._formatHeader(header))
+        fileObj.write(self._formatHeader(header).encode("utf-8"))
 
 
     def _writeSection(self, fileObj, header, tickets):
@@ -455,16 +456,16 @@ class NewsBuilder(object):
             reverse[description].sort()
         reverse = reverse.items()
         # result is a tuple of (descr, tickets)
-        reverse.sort(key=lambda result: result[1][0])
+        reverse = sorted(reverse, key=lambda result: result[1][0])
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        fileObj.write((header + u'\n' + u'-' * len(header) + u'\n').encode("utf-8"))
         for (description, relatedTickets) in reverse:
             ticketList = ', '.join([
                 '#' + str(ticket) for ticket in relatedTickets])
             entry = ' - %s (%s)' % (description, ticketList)
             entry = textwrap.fill(entry, subsequent_indent='   ')
-            fileObj.write(entry + '\n')
-        fileObj.write('\n')
+            fileObj.write((entry + u'\n').encode("utf-8"))
+        fileObj.write(b'\n')
 
 
     def _writeMisc(self, fileObj, header, tickets):
@@ -482,13 +483,13 @@ class NewsBuilder(object):
         if not tickets:
             return
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        fileObj.write((header + u'\n' + u'-' * len(header) + u'\n').encode("utf-8"))
         formattedTickets = []
         for (ticket, ignored) in tickets:
-            formattedTickets.append('#' + str(ticket))
-        entry = ' - ' + ', '.join(formattedTickets)
-        entry = textwrap.fill(entry, subsequent_indent='   ')
-        fileObj.write(entry + '\n\n')
+            formattedTickets.append(u'#' + str(ticket))
+        entry = u' - ' + u', '.join(formattedTickets)
+        entry = textwrap.fill(entry, subsequent_indent=u'   ')
+        fileObj.write((entry + '\n\n').encode("utf-8"))
 
 
     def build(self, path, output, header):
@@ -516,10 +517,10 @@ class NewsBuilder(object):
                 changes.append((part, tickets))
         misc = self._findChanges(path, self._MISC)
 
-        oldNews = output.getContent()
+        oldNews = output.getContent().decode("utf-8")
         with output.sibling('NEWS.new').open('w') as newNews:
             if oldNews.startswith(self._TICKET_HINT):
-                newNews.write(self._TICKET_HINT)
+                newNews.write(self._TICKET_HINT.encode("utf-8"))
                 oldNews = oldNews[len(self._TICKET_HINT):]
 
             self._writeHeader(newNews, header)
@@ -528,11 +529,11 @@ class NewsBuilder(object):
                     self._writeSection(newNews, self._headings.get(part),
                                        tickets)
             else:
-                newNews.write(self._NO_CHANGES)
-                newNews.write('\n')
+                newNews.write(self._NO_CHANGES.encode("utf-8"))
+                newNews.write(b'\n')
             self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-            newNews.write('\n')
-            newNews.write(oldNews)
+            newNews.write(b'\n')
+            newNews.write(oldNews.encode("utf-8"))
         output.sibling('NEWS.new').moveTo(output)
 
 
@@ -668,7 +669,7 @@ class SphinxBuilder(object):
         """
         output = self.build(FilePath(args[0]).child("docs"))
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            sys.stdout.write(u"Unclean build:\n{}\n".format(output))
             raise sys.exit(1)
 
 
@@ -698,7 +699,7 @@ class SphinxBuilder(object):
 
         output = runCommand(['sphinx-build', '-q', '-b', 'html',
                              '-d', doctreeDir.path, docDir.path,
-                             buildDir.path])
+                             buildDir.path]).decode("utf-8")
 
         # Delete the doctrees, as we don't want them after the docs are built
         doctreeDir.remove()
@@ -818,10 +819,10 @@ class CheckTopfileScript(object):
         location = os.path.abspath(args[0])
 
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
-                            cwd=location).strip()
+                            cwd=location).decode(sys.stdout.encoding).strip()
 
         r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).strip()
+                       cwd=location).decode(sys.stdout.encoding).strip()
 
         if not r:
             self._print(
