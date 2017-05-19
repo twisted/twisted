@@ -16,7 +16,10 @@ from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
 from twisted.web.test.test_http import (
-    DummyHTTPHandler, DelayedHTTPHandler, DummyPullProducerHandler
+    DummyHTTPHandler, DummyHTTPHandlerProxy,
+    DelayedHTTPHandlerProxy,
+    DummyPullProducerHandlerProxy,
+    _makeRequestProxyFactory,
 )
 from twisted.internet.address import IPv4Address
 
@@ -308,6 +311,8 @@ class ChunkedHTTPHandler(http.Request):
         self.finish()
 
 
+ChunkedHTTPHandlerProxy = _makeRequestProxyFactory(ChunkedHTTPHandler)
+
 
 class ConsumerDummyHandler(http.Request):
     """
@@ -345,6 +350,8 @@ class ConsumerDummyHandler(http.Request):
         self.finish()
 
 
+ConsumerDummyHandlerProxy = _makeRequestProxyFactory(ConsumerDummyHandler)
+
 
 class AbortingConsumerDummyHandler(ConsumerDummyHandler):
     """
@@ -361,6 +368,9 @@ class AbortingConsumerDummyHandler(ConsumerDummyHandler):
         self.channel.stopProducing()
 
 
+AbortingConsumerDummyHandlerProxy = _makeRequestProxyFactory(
+    AbortingConsumerDummyHandler)
+
 
 class DummyProducerHandler(http.Request):
     """
@@ -372,6 +382,8 @@ class DummyProducerHandler(http.Request):
         self.setResponseCode(200)
         self.registerProducer(DummyProducer(), True)
 
+
+DummyProducerHandlerProxy = _makeRequestProxyFactory(DummyProducerHandler)
 
 
 class HTTP2TestHelpers(object):
@@ -479,7 +491,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # This test is complex because it validates the data very closely: it
         # specifically checks frame ordering and type.
         connection = H2Connection()
-        connection.requestFactory = DummyHTTPHandler
+        connection.requestFactory = DummyHTTPHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
@@ -511,7 +523,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         Send a POST request and confirm that the data is safely transferred.
         """
         connection = H2Connection()
-        connection.requestFactory = DummyHTTPHandler
+        connection.requestFactory = DummyHTTPHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.postRequestHeaders, self.postRequestData
         )
@@ -560,7 +572,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         ]
 
         connection = H2Connection()
-        connection.requestFactory = DummyHTTPHandler
+        connection.requestFactory = DummyHTTPHandlerProxy
         _, transport = self.connectAndReceive(
             connection, postRequestHeaders, self.postRequestData
         )
@@ -599,7 +611,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Stream IDs are always odd numbers.
         streamIDs = list(range(1, REQUEST_COUNT * 2, 2))
@@ -670,7 +682,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = ChunkedHTTPHandler
+        a.requestFactory = ChunkedHTTPHandlerProxy
         getRequestHeaders = self.getRequestHeaders
         getRequestHeaders[2] = (':path', '/chunked/4')
 
@@ -730,7 +742,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # We're going to open a stream and then send a PUSH_PROMISE frame,
         # which is forbidden.
@@ -771,14 +783,14 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         production controlled by the Request if the Request chooses to.
         """
         connection = H2Connection()
-        connection.requestFactory = ConsumerDummyHandler
+        connection.requestFactory = ConsumerDummyHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.postRequestHeaders, self.postRequestData
         )
 
         # At this point no data should have been received by the request *or*
         # the response. We need to dig the request out of the tree of objects.
-        request = connection.streams[1]._request
+        request = connection.streams[1]._request.original
         self.assertFalse(request._requestReceived)
 
         # We should have only received the Settings frame. It's important that
@@ -821,7 +833,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = AbortingConsumerDummyHandler
+        a.requestFactory = AbortingConsumerDummyHandlerProxy
 
         # We're going to send in a POST request.
         frames = buildRequestFrames(
@@ -837,7 +849,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         # At this point no data should have been received by the request *or*
         # the response. We need to dig the request out of the tree of objects.
-        request = a.streams[1]._request
+        request = a.streams[1]._request.original
         self.assertFalse(request._requestReceived)
 
         # Save off the cleanup deferred now, it'll be removed when the
@@ -872,13 +884,13 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # effect it has of not writing to the connection. That means we can
         # delay some writes until *after* the RstStream frame is received.
         connection = H2Connection()
-        connection.requestFactory = DummyProducerHandler
+        connection.requestFactory = DummyProducerHandlerProxy
         frameFactory, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
 
         # Get the request object.
-        request = connection.streams[1]._request
+        request = connection.streams[1]._request.original
 
         # Send two writes in.
         request.write(b"first chunk")
@@ -927,13 +939,13 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # effect it has of not writing to the connection. That means we can
         # delay some writes until *after* the GoAway frame is received.
         connection = H2Connection()
-        connection.requestFactory = DummyProducerHandler
+        connection.requestFactory = DummyProducerHandlerProxy
         frameFactory, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
 
         # Get the request object.
-        request = connection.streams[1]._request
+        request = connection.streams[1]._request.original
 
         # Send two writes in.
         request.write(b"first chunk")
@@ -978,7 +990,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         responses to be emitted.
         """
         connection = H2Connection()
-        connection.requestFactory = DummyHTTPHandler
+        connection.requestFactory = DummyHTTPHandlerProxy
 
         # Add Expect: 100-continue for this request.
         headers = self.getRequestHeaders + [(b'expect', b'100-continue')]
@@ -1017,14 +1029,14 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # this reason we use the DummyProducerHandler, which doesn't write the
         # headers straight away.
         connection = H2Connection()
-        connection.requestFactory = DummyProducerHandler
+        connection.requestFactory = DummyProducerHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
 
         # Grab the request and the completion callback.
         stream = connection.streams[1]
-        request = stream._request
+        request = stream._request.original
         cleanupCallback = connection._streamCleanupCallbacks[1]
 
         # Abort the stream.
@@ -1059,14 +1071,14 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # Here we again want to use the DummyProducerHandler because it doesn't
         # close the connection on its own.
         connection = H2Connection()
-        connection.requestFactory = DummyProducerHandler
+        connection.requestFactory = DummyProducerHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
 
         # Grab the request.
         stream = connection.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         # Send in some writes.
         dataChunks = [b'hello', b'world', b'here', b'are', b'some', b'writes']
@@ -1107,12 +1119,12 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         The L{H2Stream} object forbids registering two producers.
         """
         connection = H2Connection()
-        connection.requestFactory = DummyProducerHandler
+        connection.requestFactory = DummyProducerHandlerProxy
         self.connectAndReceive(connection, self.getRequestHeaders, [])
 
         # Grab the request.
         stream = connection.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         self.assertRaises(ValueError, stream.registerProducer, request, True)
 
@@ -1123,7 +1135,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         unblocked according to HTTP/2 flow control.
         """
         connection = H2Connection()
-        connection.requestFactory = DummyPullProducerHandler
+        connection.requestFactory = DummyPullProducerHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
@@ -1131,7 +1143,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # Get the producer completion deferred and ensure we call
         # request.finish.
         stream = connection.streams[1]
-        request = stream._request
+        request = stream._request.original
         producerComplete = request._actualProducer.result
         producerComplete.addCallback(lambda x: request.finish())
 
@@ -1163,10 +1175,10 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         L{Request} objects can correctly ask isSecure on HTTP/2.
         """
         connection = H2Connection()
-        connection.requestFactory = DelayedHTTPHandler
+        connection.requestFactory = DelayedHTTPHandlerProxy
         self.connectAndReceive(connection, self.getRequestHeaders, [])
 
-        request = connection.streams[1]._request
+        request = connection.streams[1]._request.original
         self.assertFalse(request.isSecure())
         connection.streams[1].abortConnection()
 
@@ -1176,14 +1188,14 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         L{H2Connection} correctly unblocks when a stream is ended.
         """
         connection = H2Connection()
-        connection.requestFactory = DelayedHTTPHandler
+        connection.requestFactory = DelayedHTTPHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
 
         # Delay a call to end request, forcing the connection to block because
         # it has no data to send.
-        request = connection.streams[1]._request
+        request = connection.streams[1]._request.original
         reactor.callLater(0.01, request.finish)
 
         def validateComplete(*args):
@@ -1203,13 +1215,13 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         L{H2Stream} objects can send a series of frames via C{writeSequence}.
         """
         connection = H2Connection()
-        connection.requestFactory = DelayedHTTPHandler
+        connection.requestFactory = DelayedHTTPHandlerProxy
         _, transport = self.connectAndReceive(
             connection, self.getRequestHeaders, []
         )
 
         stream = connection.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         request.setResponseCode(200)
         stream.writeSequence([b'Hello', b',', b'world!'])
@@ -1249,11 +1261,11 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DelayedHTTPHandler
+        a.requestFactory = DelayedHTTPHandlerProxy
 
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1265,7 +1277,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         # Write the first 5 bytes.
         request.write(b'fiver')
@@ -1318,7 +1330,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         frameFactory = FrameFactory()
         transport = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         requestBytes = frameFactory.clientConnectionPreface()
         requestBytes += buildRequestBytes(
@@ -1350,7 +1362,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         connection = H2Connection()
         httpFactory = http.HTTPFactory()
-        connection.requestFactory = SuperRequest
+        connection.requestFactory = _makeRequestProxyFactory(SuperRequest)
 
         # Create some sentinels to look for.
         connection.factory = httpFactory
@@ -1412,12 +1424,12 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1460,12 +1472,12 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyProducerHandler
+        a.requestFactory = DummyProducerHandlerProxy
 
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1477,7 +1489,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request object.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         # Confirm that the stream believes the producer is producing.
         self.assertTrue(stream._producerProducing)
@@ -1558,12 +1570,12 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyProducerHandler
+        a.requestFactory = DummyProducerHandlerProxy
 
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1575,7 +1587,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request object.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         # Confirm that the stream believes the producer is producing.
         self.assertTrue(stream._producerProducing)
@@ -1632,12 +1644,12 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyProducerHandler
+        a.requestFactory = DummyProducerHandlerProxy
 
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1649,7 +1661,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request object.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         # Confirm that the stream believes the producer is producing.
         self.assertTrue(stream._producerProducing)
@@ -1699,7 +1711,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # We use the DummyProducerHandler just because we can guarantee that it
         # doesn't end up with a body.
-        a.requestFactory = DummyProducerHandler
+        a.requestFactory = DummyProducerHandlerProxy
 
         # Send the request.
         requestBytes = f.clientConnectionPreface()
@@ -1713,7 +1725,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request object and the stream completion callback.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
         cleanupCallback = a._streamCleanupCallbacks[1]
 
         # Complete the connection immediately.
@@ -1758,7 +1770,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # We use the DummyProducerHandler just because we can guarantee that it
         # doesn't end up with a body.
-        a.requestFactory = DummyProducerHandler
+        a.requestFactory = DummyProducerHandlerProxy
 
         # Send the request.
         requestBytes = f.clientConnectionPreface()
@@ -1772,7 +1784,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request object and the stream completion callback.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
         cleanupCallback = a._streamCleanupCallbacks[1]
 
         # Complete the connection immediately.
@@ -1818,12 +1830,12 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyProducerHandler
+        a.requestFactory = DummyProducerHandlerProxy
 
         # Shrink the window to 5 bytes, then send the request.
         requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
-            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+            {h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
@@ -1835,7 +1847,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Grab the request object.
         stream = a.streams[1]
-        request = stream._request
+        request = stream._request.original
 
         # Confirm that the stream believes the producer is producing.
         self.assertTrue(stream._producerProducing)
@@ -1887,7 +1899,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Send the request.
         frames = buildRequestFrames(
@@ -1927,7 +1939,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         transport = StringTransport()
         conn = H2Connection()
-        conn.requestFactory = DummyHTTPHandler
+        conn.requestFactory = DummyHTTPHandlerProxy
 
         # Send a request that implies a body is coming. Twisted doesn't send a
         # response until the entire request is received, so it won't queue any
@@ -1954,7 +1966,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DelayedHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Send the request.
         frames = buildRequestFrames(
@@ -1991,7 +2003,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Send the request.
         frames = buildRequestFrames(
@@ -2030,7 +2042,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         frameFactory = FrameFactory()
         transport = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Send the request, but instead of the last frame send a RST_STREAM
         # frame instead. This needs to be very long to actually force the
@@ -2048,7 +2060,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         del frames[-1]
         frames.append(
             frameFactory.buildRstStreamFrame(
-                streamID=1, errorCode=h2.errors.INTERNAL_ERROR
+                streamID=1, errorCode=h2.errors.ErrorCodes.INTERNAL_ERROR
             )
         )
 
@@ -2102,7 +2114,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
         """
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         b.registerProducer(a, True)
         self.assertTrue(b.producer is a)
@@ -2116,7 +2128,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Send the request.
         frames = buildRequestFrames(self.getRequestHeaders, [], f)
@@ -2181,7 +2193,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
         f = FrameFactory()
         b = StringTransport()
         a = H2Connection()
-        a.requestFactory = DummyHTTPHandler
+        a.requestFactory = DummyHTTPHandlerProxy
 
         # Send the request.
         frames = buildRequestFrames(self.getRequestHeaders, [], f)
@@ -2220,7 +2232,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
             hostAddress=hostAddress, peerAddress=peerAddress
         )
         connection = H2Connection()
-        connection.requestFactory = DummyHTTPHandler
+        connection.requestFactory = DummyHTTPHandlerProxy
         connection.makeConnection(transport)
 
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
@@ -2288,6 +2300,9 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         (b'custom-header', b'2'),
     ]
 
+    # A sentinel object used to flag default timeouts
+    _DEFAULT = object()
+
 
     def patch_TimeoutMixin_clock(self, connection, reactor):
         """
@@ -2324,7 +2339,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.patch_TimeoutMixin_clock(conn, reactor)
 
         transport = StringTransport()
-        conn.requestFactory = requestFactory
+        conn.requestFactory = _makeRequestProxyFactory(requestFactory)
         conn.makeConnection(transport)
 
         # one byte at a time, to stress the implementation.
@@ -2348,6 +2363,44 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         )
         self.assertEqual(frames[-1].error_code, errorCode)
         self.assertEqual(frames[-1].last_stream_id, lastStreamID)
+
+
+    def prepareAbortTest(self, abortTimeout=_DEFAULT):
+        """
+        Does the common setup for tests that want to test the aborting
+        functionality of the HTTP/2 stack.
+
+        @param abortTimeout: The value to use for the abortTimeout. Defaults to
+            whatever is set on L{H2Connection.abortTimeout}.
+        @type abortTimeout: L{int} or L{None}
+
+        @return: A tuple of the reactor being used for the connection, the
+            connection itself, and the transport.
+        """
+        if abortTimeout is self._DEFAULT:
+            abortTimeout = H2Connection.abortTimeout
+
+        frameFactory = FrameFactory()
+        initialData = frameFactory.clientConnectionPreface()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+        conn.abortTimeout = abortTimeout
+
+        # Advance the clock.
+        reactor.advance(100)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.ErrorCodes.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.disconnected)
+
+        return reactor, conn, transport
 
 
     def test_timeoutAfterInactivity(self):
@@ -2378,7 +2431,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
+            errorCode=h2.errors.ErrorCodes.NO_ERROR,
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
@@ -2412,7 +2465,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.NO_ERROR,
+            errorCode=h2.errors.ErrorCodes.NO_ERROR,
             lastStreamID=0
         )
         self.assertTrue(transport.disconnecting)
@@ -2421,7 +2474,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
     def test_timeoutWithProtocolErrorIfStreamsOpen(self):
         """
         When a L{H2Connection} times out with active streams, the error code
-        returned is L{h2.errors.PROTOCOL_ERROR}.
+        returned is L{h2.errors.ErrorCodes.PROTOCOL_ERROR}.
         """
         frameFactory = FrameFactory()
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
@@ -2438,7 +2491,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
-            errorCode=h2.errors.PROTOCOL_ERROR,
+            errorCode=h2.errors.ErrorCodes.PROTOCOL_ERROR,
             lastStreamID=1
         )
         self.assertTrue(transport.disconnecting)
@@ -2470,3 +2523,50 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         # Advancing the clock should do nothing.
         reactor.advance(101)
         self.assertEqual(transport.value(), sentData)
+
+
+    def test_timeoutEventuallyForcesConnectionClosed(self):
+        """
+        When a L{H2Connection} has timed the connection out, and the transport
+        doesn't get torn down within 15 seconds, it gets forcibly closed.
+        """
+        reactor, conn, transport = self.prepareAbortTest()
+
+        # Advance the clock to see that we abort the connection.
+        reactor.advance(14)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.disconnected)
+        reactor.advance(1)
+        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.disconnected)
+
+
+    def test_losingConnectionCancelsTheAbort(self):
+        """
+        When a L{H2Connection} has timed the connection out, getting
+        C{connectionLost} called on it cancels the forcible connection close.
+        """
+        reactor, conn, transport = self.prepareAbortTest()
+
+        # Advance the clock, but right before the end fire connectionLost.
+        reactor.advance(14)
+        conn.connectionLost(None)
+
+        # Check that the transport isn't forcibly closed.
+        reactor.advance(1)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.disconnected)
+
+
+    def test_losingConnectionWithNoAbortTimeOut(self):
+        """
+        When a L{H2Connection} has timed the connection out but the
+        C{abortTimeout} is set to L{None}, the connection is never aborted.
+        """
+        reactor, conn, transport = self.prepareAbortTest(abortTimeout=None)
+
+        # Advance the clock an arbitrarily long way, and confirm it never
+        # aborts.
+        reactor.advance(2**32)
+        self.assertTrue(transport.disconnecting)
+        self.assertFalse(transport.disconnected)

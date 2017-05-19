@@ -41,7 +41,7 @@ class TelnetEcho(TelnetProtocol):
 
 factory = ServerFactory()
 factory.protocol = lambda: TelnetTransport(TelnetEcho)
-service = TCPServer(8023, factory)
+service = TCPServer(6023, factory)
 
 application = Application("Telnet Echo Server")
 service.setServiceParent(application)

@@ -44,12 +44,13 @@ matrix:
       env: TOXENV=pyflakes3
     # Twistedchecker is running as a separate job so that we can ignore if it
     # fails.
-    - python: 2.7
+    - python: 3.5
       env: TOXENV=txchecker-travis-required
-    - python: 2.7
+    - python: 3.5
       env: TOXENV=txchecker-travis-all
   allow_failures:
     - env: TOXENV=txchecker-travis-all
+    - env: TOXENV=pyflakes3
 
 
 addons:

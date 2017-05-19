@@ -1,1 +1,0 @@
-twisted.internet.ssl.CertificateOption's 'method' constructor argument is now deprecated, in favour of the new 'raiseMinimumTo', 'lowerMaximumSecurityTo', and 'insecurelyLowerMinimumTo' arguments.
