@@ -446,8 +446,6 @@ notPortedModules = [
     "twisted.web.test.test_html",
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
-    "twisted.words.protocols.oscar",
     "twisted.words.tap",
-    "twisted.words.test.test_oscar",
     "twisted.words.test.test_tap",
 ]
