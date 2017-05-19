@@ -17,18 +17,18 @@ from collections import OrderedDict
 
 from zope.interface import implementer
 
-from twisted.mail.imap4 import MessageSet
-from twisted.mail import imap4
-from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.internet import error
-from twisted.internet import reactor
 from twisted.internet import interfaces
+from twisted.internet import reactor
 from twisted.internet.task import Clock
-from twisted.trial import unittest
-from twisted.python import util, log
+from twisted.mail import imap4
+from twisted.mail.imap4 import MessageSet
+from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.python.compat import intToBytes, networkString
+from twisted.python import util, log
+from twisted.python.compat import intToBytes, networkString, range
+from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -5076,7 +5076,7 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
             self.assertNotEqual(self.server.state, 'timeout')
 
         def cbAdvance(ignored):
-            for i in xrange(4):
+            for i in range(4):
                 c.advance(.5)
 
         SlowMailbox.fetchDeferred.addCallback(cbAdvance)

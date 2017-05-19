@@ -1,1 +1,0 @@
-twisted.internet.unix.Server.doRead and twisted.internet.unix.Client.doRead no longer fail if recvmsg's ancilliary data contains more than one file descriptor.

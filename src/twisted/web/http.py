@@ -86,7 +86,7 @@ except ImportError:
         return (key, pdict)
 
 
-from zope.interface import implementer, provider
+from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
@@ -112,6 +112,7 @@ except ImportError:
     H2Connection = None
     H2_ENABLED = False
 
+
 from twisted.web._responses import (
     SWITCHING,
 
@@ -132,6 +133,7 @@ from twisted.web._responses import (
     NOT_EXTENDED,
 
     RESPONSES)
+
 
 if _PY3:
     _intTypes = int
@@ -377,6 +379,101 @@ def parseContentRange(header):
 
 
 
+class _IDeprecatedHTTPChannelToRequestInterface(Interface):
+    """
+    The interface L{HTTPChannel} expects of L{Request}.
+    """
+
+    requestHeaders = Attribute(
+        "A L{http_headers.Headers} instance giving all received HTTP request "
+        "headers.")
+
+    responseHeaders = Attribute(
+        "A L{http_headers.Headers} instance holding all HTTP response "
+        "headers to be sent.")
+
+
+    def connectionLost(reason):
+        """
+        The underlying connection has been lost.
+
+        @param reason: A failure instance indicating the reason why
+            the connection was lost.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+
+    def gotLength(length):
+        """
+        Called when L{HTTPChannel} has determined the length, if any,
+        of the incoming request's body.
+
+        @param length: The length of the request's body.
+        @type length: L{int} if the request declares its body's length
+            and L{None} if it does not.
+        """
+
+
+    def handleContentChunk(data):
+        """
+        Deliver a received chunk of body data to the request.  Note
+        this does not imply chunked transfer encoding.
+
+        @param data: The received chunk.
+        @type data: L{bytes}
+        """
+
+
+    def parseCookies():
+        """
+        Parse the request's cookies out of received headers.
+        """
+
+
+    def requestReceived(command, path, version):
+        """
+        Called when the entire request, including its body, has been
+        received.
+
+        @param command: The request's HTTP command.
+        @type command: L{bytes}
+
+        @param path: The request's path.  Note: this is actually what
+            RFC7320 calls the URI.
+        @type path: L{bytes}
+
+        @param version: The request's HTTP version.
+        @type version: L{bytes}
+        """
+
+
+    def __eq__(other):
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        @rtype: L{bool}
+        """
+
+
+    def __ne__(other):
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        @rtype: L{bool}
+        """
+
+
+
 class StringTransport:
     """
     I am a StringIO wrapper that conforms for the transport API. I support
@@ -549,7 +646,8 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
-@implementer(interfaces.IConsumer)
+@implementer(interfaces.IConsumer,
+             _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
     """
     A HTTP request.
@@ -1350,6 +1448,49 @@ class Request:
         self.channel.loseConnection()
 
 
+    def __eq__(self, other):
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        @rtype: L{bool}
+        """
+        # When other is not an instance of request, return
+        # NotImplemented so that Python uses other.__eq__ to perform
+        # the comparison.  This ensures that a Request proxy generated
+        # by proxyForInterface compares equal to an actual Request
+        # instanceby turning request != proxy into proxy != request.
+        if isinstance(other, Request):
+            return self is other
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        @rtype: L{bool}
+        """
+        # When other is not an instance of request, return
+        # NotImplemented so that Python uses other.__ne__ to perform
+        # the comparison.  This ensures that a Request proxy generated
+        # by proxyForInterface can compare equal to an actual Request
+        # instance by turning request != proxy into proxy != request.
+        if isinstance(other, Request):
+            return self is not other
+        return NotImplemented
+
+
+
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
@@ -1705,10 +1846,21 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
     @type _waitingForTransport: L{bool}
+
+    @ivar abortTimeout: The number of seconds to wait after we attempt to shut
+        the transport down cleanly to give up and forcibly terminate it. This
+        is only used when we time a connection out, to prevent errors causing
+        the FD to get leaked. If this is L{None}, we will wait forever.
+    @type abortTimeout: L{int}
+
+    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
+        used to forcibly close the transport if it doesn't close cleanly.
+    @type _abortingCall: L{twisted.internet.base.DelayedCall}
     """
 
     maxHeaders = 500
     totalHeadersSize = 16384
+    abortTimeout = 15
 
     length = 0
     persistent = 1
@@ -1725,6 +1877,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducer = None
     _requestProducerStreaming = None
     _waitingForTransport = False
+    _abortingCall = None
 
     def __init__(self):
         # the request queue
@@ -2006,13 +2159,36 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        if self.abortTimeout is not None:
+            # We use self.callLater because that's what TimeoutMixin does.
+            self._abortingCall = self.callLater(
+                self.abortTimeout, self.forceAbortClient
+            )
         self.loseConnection()
+
+
+    def forceAbortClient(self):
+        """
+        Called if C{abortTimeout} seconds have passed since the timeout fired,
+        and the connection still hasn't gone away. This can really only happen
+        on extremely bad connections or when clients are maliciously attempting
+        to keep connections open.
+        """
+        log.msg(
+            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
+        )
+        self.transport.abortConnection()
 
 
     def connectionLost(self, reason):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+        # If we were going to force-close the transport, we don't have to now.
+        if self._abortingCall is not None:
+            self._abortingCall.cancel()
+            self._abortingCall = None
 
 
     def isSecure(self):
@@ -2394,12 +2570,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _timeOut: A timeout value to pass to the backing channel.
     @type _timeOut: L{int} or L{None}
+
+    @ivar _callLater: A value for the C{callLater} callback.
+    @type _callLater: L{callable}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
     _factory = None
     _site = None
     _timeOut = None
+    _callLater = None
 
 
     @property
@@ -2418,35 +2598,97 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @property
     def requestFactory(self):
+        """
+        A callable to use to build L{IRequest} objects.
+
+        Retries the object from the current backing channel.
+        """
         return self._channel.requestFactory
 
 
     @requestFactory.setter
     def requestFactory(self, value):
+        """
+        A callable to use to build L{IRequest} objects.
+
+        Sets the object on the backing channel and also stores the value for
+        propagation to any new channel.
+
+        @param value: The new callable to use.
+        @type value: A L{callable} returning L{IRequest}
+        """
         self._requestFactory = value
         self._channel.requestFactory = value
 
 
     @property
     def site(self):
+        """
+        A reference to the creating L{twisted.web.server.Site} object.
+
+        Returns the site object from the backing channel.
+        """
         return self._channel.site
 
 
     @site.setter
     def site(self, value):
+        """
+        A reference to the creating L{twisted.web.server.Site} object.
+
+        Sets the object on the backing channel and also stores the value for
+        propagation to any new channel.
+
+        @param value: The L{twisted.web.server.Site} object to set.
+        @type value: L{twisted.web.server.Site}
+        """
         self._site = value
         self._channel.site = value
 
 
     @property
     def timeOut(self):
+        """
+        The idle timeout for the backing channel.
+        """
         return self._channel.timeOut
 
 
     @timeOut.setter
     def timeOut(self, value):
+        """
+        The idle timeout for the backing channel.
+
+        Sets the idle timeout on both the backing channel and stores it for
+        propagation to any new backing channel.
+
+        @param value: The timeout to set.
+        @type value: L{int} or L{float}
+        """
         self._timeOut = value
         self._channel.timeOut = value
+
+
+    @property
+    def callLater(self):
+        """
+        A value for the C{callLater} callback. This callback is used by the
+        L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
+        """
+        return self._channel.callLater
+
+
+    @callLater.setter
+    def callLater(self, value):
+        """
+        Sets the value for the C{callLater} callback. This callback is used by
+        the L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
+
+        @param value: The new callback to use.
+        @type value: L{callable}
+        """
+        self._callLater = value
+        self._channel.callLater = value
 
 
     def dataReceived(self, data):
@@ -2479,6 +2721,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.site = self._site
                 self._channel.factory = self._factory
                 self._channel.timeOut = self._timeOut
+                self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
@@ -2565,6 +2808,14 @@ class HTTPFactory(protocol.ServerFactory):
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
+
+        # This is a bit of a hack to ensure that the HTTPChannel timeouts
+        # occur on the same reactor as the one we're using here. This could
+        # ideally be resolved by passing the reactor more generally to the
+        # HTTPChannel, but that won't work for the TimeoutMixin until we fix
+        # https://twistedmatrix.com/trac/ticket/8488
+        p.callLater = self._reactor.callLater
+
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
         p.timeOut = self.timeOut

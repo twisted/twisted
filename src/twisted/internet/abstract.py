@@ -493,7 +493,7 @@ def isIPAddress(addr, family=AF_INET):
 
     @param family: The address family to test for; one of the C{AF_*} constants
         from the L{socket} module.  (This parameter has only been available
-        since Twisted NEXT; previously L{isIPAddress} could only test for IPv4
+        since Twisted 17.1.0; previously L{isIPAddress} could only test for IPv4
         addresses.)
     @type family: C{int}
 

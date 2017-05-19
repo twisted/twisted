@@ -27,7 +27,7 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-from twisted.python.compat import xrange, unicode
+from twisted.python.compat import range, unicode
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
 # constants
@@ -740,7 +740,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin, object):
     PUBLIC_COMMANDS = ['FEAT', 'QUIT']
     FEATURES = ['FEAT', 'MDTM', 'PASV', 'SIZE', 'TYPE A;I']
 
-    passivePortRange = xrange(0, 1)
+    passivePortRange = range(0, 1)
 
     listenFactory = reactor.listenTCP
     _encoding = 'latin-1'
@@ -1557,7 +1557,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
 
     welcomeMessage = "Twisted %s FTP Server" % (copyright.version,)
 
-    passivePortRange = xrange(0, 1)
+    passivePortRange = range(0, 1)
 
     def __init__(self, portal=None, userAnonymous='anonymous'):
         self.portal = portal

@@ -1,1 +1,0 @@
-The documentation for twisted.conch.endpoints.SSHCommandClientEndpoint.existingConnection now describes where the value for the connection parameter might come from.

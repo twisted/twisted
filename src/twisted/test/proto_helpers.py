@@ -122,6 +122,9 @@ class StringTransport:
     @ivar disconnecting: A C{bool} which is C{False} until L{loseConnection} is
         called, then C{True}.
 
+    @ivar disconnected: A C{bool} which is C{False} until L{abortConnection} is
+        called, then C{True}.
+
     @ivar producer: If a producer is currently registered, C{producer} is a
         reference to it.  Otherwise, L{None}.
 
@@ -159,6 +162,7 @@ class StringTransport:
     """
 
     disconnecting = False
+    disconnected = False
 
     producer = None
     streaming = None
@@ -222,8 +226,10 @@ class StringTransport:
 
     def abortConnection(self):
         """
-        Abort the connection. Same as C{loseConnection}.
+        Abort the connection. Same as C{loseConnection}, but also toggles the
+        C{aborted} instance variable to C{True}.
         """
+        self.disconnected = True
         self.loseConnection()
 
 
