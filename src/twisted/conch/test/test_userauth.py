@@ -415,6 +415,19 @@ class SSHUserAuthServerTests(unittest.TestCase):
         return d.addCallback(self._checkFailed)
 
 
+    def test_unsupported_publickey(self):
+        blob = keys.Key.fromString(keydata.publicDSA_openssh).blob()
+
+        # Change the blob to a bad type
+        blob = NS(b'ssh-bad-type') + blob[11:]
+
+        packet = (NS(b'foo') + NS(b'none') + NS(b'publickey') + b'\x00'
+                  + NS(b'ssh-rsa') + NS(blob))
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        return d.addCallback(self._checkFailed)
+
+
     def test_ignoreUnknownCredInterfaces(self):
         """
         L{SSHUserAuthServer} sets up

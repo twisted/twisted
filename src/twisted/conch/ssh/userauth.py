@@ -263,21 +263,25 @@ class SSHUserAuthServer(service.SSHService):
         """
         hasSig = ord(packet[0:1])
         algName, blob, rest = getNS(packet[1:], 2)
-        pubKey = keys.Key.fromString(blob)
-        signature = hasSig and getNS(rest)[0] or None
-        if hasSig:
-            b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
-                NS(self.user) + NS(self.nextService) + NS(b'publickey') +
-                chr(hasSig) +  NS(pubKey.sshType()) + NS(blob))
-            c = credentials.SSHPrivateKey(self.user, algName, blob, b,
-                    signature)
-            return self.portal.login(c, None, interfaces.IConchUser)
-        else:
-            c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
-            return self.portal.login(c, None,
-                    interfaces.IConchUser).addErrback(self._ebCheckKey,
-                            packet[1:])
 
+        try:
+            pubKey = keys.Key.fromString(blob)
+            signature = hasSig and getNS(rest)[0] or None
+            if hasSig:
+                b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
+                    NS(self.user) + NS(self.nextService) + NS(b'publickey') +
+                    chr(hasSig) +  NS(pubKey.sshType()) + NS(blob))
+                c = credentials.SSHPrivateKey(self.user, algName, blob, b,
+                        signature)
+                return self.portal.login(c, None, interfaces.IConchUser)
+            else:
+                c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
+                return self.portal.login(c, None,
+                        interfaces.IConchUser).addErrback(self._ebCheckKey,
+                                packet[1:])
+        except keys.BadKeyError:
+            log.msg("Unsupported key type: %s", algName)
+            return defer.fail(UnauthorizedLogin)
 
     def _ebCheckKey(self, reason, packet):
         """
