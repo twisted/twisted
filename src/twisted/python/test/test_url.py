@@ -7,11 +7,7 @@ Tests for L{twisted.python.url}.
 """
 from __future__ import unicode_literals
 
-import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    from ..url import URL
+from ..url import URL
 
 unicode = type(u'')
 
