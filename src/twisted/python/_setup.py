@@ -191,12 +191,6 @@ _EXTENSIONS = [
         "twisted.python._sendmsg",
         sources=["src/twisted/python/_sendmsg.c"],
         condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-    ConditionalExtension(
-        "twisted.runner.portmap",
-        sources=["src/twisted/runner/portmap.c"],
-        condition=lambda builder: not _PY3 and
-                                  builder._check_header("rpc/rpc.h")),
     ]
 
 
