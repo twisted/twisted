@@ -577,6 +577,51 @@ class _GzipEncoder(object):
 
 
 
+@implementer(iweb._IRequestEncoder)
+class _BrotliEncoder(object):
+    """
+    An encoder which supports Brotli.
+
+    @since: Twisted NEXT
+    """
+    _compressor = None
+
+    @staticmethod
+    def supported(self):
+        try:
+            import brotli
+            return True
+        except ImportError:
+            return False
+
+    def __init__(self, compressLevel, request):
+        import brotli
+        self.compressor = brotli.Compressor(quality=compressLevel)
+        self._request = request
+
+
+    def encode(self, data):
+        """
+        Write to the request, automatically compressing data on the fly.
+        """
+        if not self._request.startedWriting:
+            # Remove the content-length header, we can't honor it
+            # because we compress on the fly.
+            self._request.responseHeaders.removeHeader(b'content-length')
+        return self.compressor.compress(data)
+
+
+    def finish(self):
+        """
+        Finish handling the request request, flushing any data from the zlib
+        buffer.
+        """
+        remain = self.compressor.finish()
+        self.compressor = None
+        return remain
+
+
+
 class _RemoteProducerWrapper:
     def __init__(self, remote):
         self.resumeProducing = remote.remoteMethod("resumeProducing")
