@@ -292,14 +292,12 @@ class MockFactory(factory.SSHFactory):
             C{(generator, prime)} tuple.
         """
         # In these tests, we hardwire the prime values to those defined by the
-        # diffie-hellman-group1-sha1 key exchange algorithm, to avoid requiring
+        # diffie-hellman-group14-sha1 key exchange algorithm, to avoid requiring
         # a moduli file when running tests.
         # See OpenSSHFactory.getPrimes.
         return {
-            1024: ((2, _kex.getDHGeneratorAndPrime(
-                b'diffie-hellman-group1-sha1')[1]),),
             2048: ((3, _kex.getDHGeneratorAndPrime(
-                b'diffie-hellman-group1-sha1')[1]),),
+                b'diffie-hellman-group14-sha1')[1]),),
             4096: ((5, 7),)}
 
 
@@ -443,7 +441,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
 
     _A_KEXINIT_MESSAGE = (
         b"\xAA" * 16 +
-        common.NS(b'diffie-hellman-group1-sha1') +
+        common.NS(b'diffie-hellman-group14-sha1') +
         common.NS(b'ssh-rsa') +
         common.NS(b'aes256-ctr') +
         common.NS(b'aes256-ctr') +
@@ -1309,9 +1307,9 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             b'\x00\x00\x99\x99\x99\x99')
 
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
-        # client preference is used.
+        # client preference is used, after skipping diffie-hellman-group1-sha1
         self.assertEqual(self.proto.kexAlg,
-                         b'diffie-hellman-group1-sha1')
+                         b'diffie-hellman-group-exchange-sha1')
         self.assertEqual(self.proto.keyAlg,
                          b'ssh-dss')
         self.assertEqual(self.proto.outgoingCompressionType,
@@ -1472,14 +1470,6 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertRaises(UnsupportedAlgorithm)
 
 
-    def test_KEXDH_INIT_GROUP1(self):
-        """
-        KEXDH_INIT messages are processed when the
-        diffie-hellman-group1-sha1 key exchange algorithm is requested.
-        """
-        self.assertKexDHInitResponse(b'diffie-hellman-group1-sha1')
-
-
     def test_KEXDH_INIT_GROUP14(self):
         """
         KEXDH_INIT messages are processed when the
@@ -1492,7 +1482,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         """
         Test that _keySetup sets up the next encryption keys.
         """
-        self.proto.kexAlg = b'diffie-hellman-group1-sha1'
+        self.proto.kexAlg = b'diffie-hellman-group14-sha1'
         self.proto.nextEncryptions = MockCipher()
         self.simulateKeyExchange(b'AB', b'CD')
         self.assertEqual(self.proto.sessionID, b'CD')
@@ -1594,12 +1584,12 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.proto.supportedPublicKeys = [b'ssh-rsa']
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(b'\x00\x00\x04\x00')
-        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(1024)[0]
+        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(2048)[0]
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dhPrime) + b'\x00\x00\x00\x01\x02')])
-        self.assertEqual(self.proto.g, 2)
+              common.MP(dhPrime) + b'\x00\x00\x00\x01\x03')])
+        self.assertEqual(self.proto.g, 3)
         self.assertEqual(self.proto.p, dhPrime)
 
 
@@ -1624,7 +1614,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST(b'\x00\x00\x04\x00\x00\x00\x08\x00' +
                                           b'\x00\x00\x0c\x00')
-        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(1024)[0]
+        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(2048)[0]
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
@@ -1641,7 +1631,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         """
         self.test_KEX_DH_GEX_REQUEST_OLD()
         e = pow(self.proto.g, 3, self.proto.p)
-        y = common.getMP(b'\x00\x00\x00\x80' + b'\x99' * 128)[0]
+        y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 256)[0]
         f = common._MPpow(self.proto.g, y, self.proto.p)
         sharedSecret = common._MPpow(e, y, self.proto.p)
         h = self.hashProcessor()
@@ -1673,10 +1663,12 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         """
         self.test_KEX_DH_GEX_REQUEST()
         e = pow(self.proto.g, 3, self.proto.p)
-        y = common.getMP(b'\x00\x00\x00\x80' + b'\x99' * 128)[0]
+        y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 256)[0]
         f = common._MPpow(self.proto.g, y, self.proto.p)
         sharedSecret = common._MPpow(e, y, self.proto.p)
+
         h = self.hashProcessor()
+
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.proto.factory.publicKeys[b'ssh-rsa'].blob()))
@@ -1829,22 +1821,14 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.assertKexInitResponseForDH(b'diffie-hellman-group14-sha1')
 
 
-    def test_KEXINIT_group1(self):
-        """
-        KEXINIT messages requesting diffie-hellman-group1-sha1 result in
-        KEXDH_INIT responses.
-        """
-        self.assertKexInitResponseForDH(b'diffie-hellman-group1-sha1')
-
-
     def test_KEXINIT_badKexAlg(self):
         """
         Test that the client raises a ConchError if it receives a
         KEXINIT message but doesn't have a key exchange algorithm that we
         understand.
         """
-        self.proto.supportedKeyExchanges = [b'diffie-hellman-group2-sha1']
-        data = self.transport.value().replace(b'group1', b'group2')
+        self.proto.supportedKeyExchanges = [b'diffie-hellman-group24-sha1']
+        data = self.transport.value().replace(b'group14', b'group24')
         self.assertRaises(ConchError, self.proto.dataReceived, data)
 
 
@@ -1852,7 +1836,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that the KEXDH_REPLY message verifies the server.
         """
-        self.test_KEXINIT_group1()
+        self.test_KEXINIT_group14()
 
         sharedSecret = common._MPpow(self.proto.g, self.proto.x,
                                         self.proto.p)
@@ -1884,7 +1868,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that _keySetup sets up the next encryption keys.
         """
-        self.proto.kexAlg = b'diffie-hellman-group1-sha1'
+        self.proto.kexAlg = b'diffie-hellman-group14-sha1'
         self.proto.nextEncryptions = MockCipher()
         self.simulateKeyExchange(b'AB', b'CD')
         self.assertEqual(self.proto.sessionID, b'CD')

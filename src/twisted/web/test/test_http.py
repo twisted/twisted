@@ -777,6 +777,48 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(a.factory, b"Foo")
 
 
+    def test_GenericHTTPChannelPropagatesCallLater(self):
+        """
+        If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
+        then we need to propagate it through to the backing channel.
+        """
+        clock = Clock()
+        factory = http.HTTPFactory(reactor=clock)
+        protocol = factory.buildProtocol(None)
+
+        self.assertEqual(protocol.callLater, clock.callLater)
+        self.assertEqual(protocol._channel.callLater, clock.callLater)
+
+
+    def test_genericHTTPChannelCallLaterUpgrade(self):
+        """
+        If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
+        then we need to propagate it across onto a new backing channel after
+        upgrade.
+        """
+        clock = Clock()
+        factory = http.HTTPFactory(reactor=clock)
+        protocol = factory.buildProtocol(None)
+
+        self.assertEqual(protocol.callLater, clock.callLater)
+        self.assertEqual(protocol._channel.callLater, clock.callLater)
+
+        transport = StringTransport()
+        transport.negotiatedProtocol = b'h2'
+        protocol.requestFactory = DummyHTTPHandler
+        protocol.makeConnection(transport)
+
+        # Send a byte to make it think the handshake is done.
+        protocol.dataReceived(b'P')
+
+        self.assertEqual(protocol.callLater, clock.callLater)
+        self.assertEqual(protocol._channel.callLater, clock.callLater)
+    if not http.H2_ENABLED:
+        test_genericHTTPChannelCallLaterUpgrade.skip = (
+            "HTTP/2 support not present"
+        )
+
+
     def test_unregistersProducer(self):
         """
         The L{_GenericHTTPChannelProtocol} will unregister its proxy channel

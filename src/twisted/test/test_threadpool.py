@@ -9,7 +9,7 @@ from __future__ import division, absolute_import
 
 import pickle, time, weakref, gc, threading
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import range
 
 from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
@@ -71,12 +71,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
 
     def _waitForLock(self, lock):
-        # We could just use range(), but then we use an extra 30MB of memory
-        # on Python 2:
-        if _PY3:
-            items = range(1000000)
-        else:
-            items = xrange(1000000)
+        items = range(1000000)
         for i in items:
             if lock.acquire(False):
                 break
