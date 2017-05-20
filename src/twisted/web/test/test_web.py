@@ -12,7 +12,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import _PY3, unichr
+from twisted.python.compat import _PY3, unichr, iterbytes
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -23,6 +23,13 @@ from twisted.web import iweb, http, error
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
+
+brotli = reflect.requireModule('brotli')
+
+if brotli:
+    skipBrotli = None
+else:
+    skipBrotli = "brotli is not installed"
 
 
 class ResourceTests(unittest.TestCase):
@@ -1510,3 +1517,32 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
         from twisted.internet import reactor
         factory = http.HTTPFactory()
         self.assertIs(factory._reactor, reactor)
+
+
+class BrotliEncoderTests(unittest.SynchronousTestCase):
+
+    skip = skipBrotli
+
+    def test_interface(self):
+        """
+        L{server._BrotliEncoder} should implement L{iweb._IRequestEncoder}.
+        """
+        self.assertTrue(verifyObject(iweb._IRequestEncoder,
+                                     server._BrotliEncoder(None, None)))
+
+    def test_basicCompression(self):
+        """
+        L{server._BrotliEncoder} will encode things with the Brotli encoding.
+        """
+        request = DummyRequest([b''])
+        encoder = server._BrotliEncoder(1, request)
+
+        data = b'moredat' * 10
+
+        content = b''
+        for d in iterbytes(data):
+            content += encoder.encode(d)
+        content += encoder.finish()
+
+        self.assertEqual(data,
+                         brotli.decompress(content))
