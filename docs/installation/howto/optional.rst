@@ -41,11 +41,13 @@ The following optional dependencies are supported:
 
 * **osx_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 
-* **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
+* **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's APIs.
 
 * **http2** - packages needed for http2 support.
      * `h2`_
      * `priority`_
+
+* **brotli** - the `brotli`_ package for use in ``twisted.web.server``.
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
@@ -67,3 +69,4 @@ The following optional dependencies are supported:
 .. _idna: https://pypi.python.org/pypi/idna
 .. _h2: https://pypi.python.org/pypi/h2
 .. _priority: https://pypi.python.org/pypi/priority
+.. _brotli: https://pypi.python.org/pypi/Brotli
