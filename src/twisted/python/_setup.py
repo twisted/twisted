@@ -106,6 +106,7 @@ _EXTRA_OPTIONS = dict(
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
+    brotli=['brotli'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
@@ -115,7 +116,8 @@ _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
     _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2']
+    _EXTRA_OPTIONS['http2'] +
+    _EXTRA_OPTIONS['brotli']
 )
 
 _EXTRAS_REQUIRE = {

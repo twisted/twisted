@@ -90,7 +90,7 @@ class OptionalDependenciesTests(TestCase):
     def test_extrasRequireDictContainsKeys(self):
         """
         L{_EXTRAS_REQUIRE} contains options for all documented extras: C{dev},
-        C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform},
+        C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform}, C{brotli},
         C{osx_platform}, and C{windows_platform}.
         """
         self.assertIn('dev', _EXTRAS_REQUIRE)
@@ -102,6 +102,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('osx_platform', _EXTRAS_REQUIRE)
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
+        self.assertIn('brotli', _EXTRAS_REQUIRE)
 
 
     def test_extrasRequiresDevDeps(self):
@@ -154,6 +155,18 @@ class OptionalDependenciesTests(TestCase):
         )
 
 
+    def test_extrasRequiresBrotliDeps(self):
+        """
+        L{_EXTRAS_REQUIRE}' C{brotli} extra contains setuptools requirements
+        for the packages required to make the
+        C{twisted.web.server._BrotliEncoder} work.
+        """
+        self.assertIn(
+            'brotli >= 0.6.0',
+            _EXTRAS_REQUIRE['brotli']
+        )
+
+
     def test_extrasRequiresSerialDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{serial} extra contains setuptools requirements
@@ -192,6 +205,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
+        self.assertIn('brotli >= 0.6.0', deps)
 
 
     def test_extrasRequiresOsxPlatformDeps(self):
@@ -211,6 +225,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
+        self.assertIn('brotli >= 0.6.0', deps)
 
 
     def test_extrasRequiresWindowsPlatformDeps(self):
@@ -230,6 +245,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
+        self.assertIn('brotli >= 0.6.0', deps)
 
 
 
