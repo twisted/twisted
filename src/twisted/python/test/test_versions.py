@@ -15,6 +15,7 @@ from incremental import _inf
 
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 
+
 class VersionsTests(TestCase):
 
     def test_versionComparison(self):
