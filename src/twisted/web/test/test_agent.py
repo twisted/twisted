@@ -18,7 +18,7 @@ from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
-from twisted.python.compat import cookielib, intToBytes
+from twisted.python.compat import cookielib, intToBytes, unicode
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 from twisted.internet.task import Clock
@@ -43,7 +43,8 @@ from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
 from incremental import Version
-from twisted.web.client import BrowserLikePolicyForHTTPS
+from twisted.web.client import (BrowserLikePolicyForHTTPS,
+                                HostnameCachingHTTPSPolicy)
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint
 from twisted.test.proto_helpers import AccumulatingProtocol
@@ -3055,3 +3056,110 @@ class ReadBodyTests(TestCase):
 
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0)
+
+
+
+class TestHostnameCachingHTTPSPolicy(TestCase):
+
+    skip = skipWhenNoSSL
+
+    def testCacheIsUsed(self):
+        """
+        Verify that the connection creator is added to the
+        policy's cache, and that it is reused on subsequent calls
+        to creatorForNetLoc.
+
+        """
+        trustRoot = CustomOpenSSLTrustRoot()
+        policy = HostnameCachingHTTPSPolicy(trustRoot=trustRoot)
+        creator = policy.creatorForNetloc(u"foo", 1589)
+        self.assertTrue(trustRoot.called)
+        trustRoot.called = False
+        self.assertEquals(1, policy._nextCacheId)
+        self.assertEquals(1, len(policy._cache))
+        connection = creator.clientConnectionForTLS(None)
+        self.assertIs(trustRoot.context, connection.get_context())
+
+        policy.creatorForNetloc(u"foo", 1589)
+        self.assertFalse(trustRoot.called)
+
+    def testCacheIdIncremented(self):
+        """
+        Verify that the cacheId is always incremented for new and existing
+        entries.
+        """
+        policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot())
+        hostname = u"foo"
+        host = hostname.decode("ascii")
+
+        hostname2 = u"bard"
+        host2 = hostname2.decode("ascii")
+
+        policy.creatorForNetloc(hostname, 1589)
+        self.assertIn(host, policy._cache)
+        entry = policy._cache[host]
+        self.assertEquals(0, entry.cacheId)
+
+        policy.creatorForNetloc(hostname2, 1589)
+        self.assertIn(host2, policy._cache)
+        entry = policy._cache[host2]
+        self.assertEquals(1, entry.cacheId)
+
+        policy.creatorForNetloc(hostname, 1589)
+        entry = policy._cache[host]
+        self.assertEquals(2, entry.cacheId)
+
+    def testCacheRemovesOldest(self):
+        """
+        Verify that when the cache is full, and a new entry is added,
+        the oldest entry is removed.
+        """
+        policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot())
+        for i in range(0,20):
+            hostname = u"host" + unicode(i)
+            policy.creatorForNetloc(hostname, 8675)
+
+        # Force a, which was the first, to be the most recently used
+        host0 = u"host0".decode("ascii")
+        policy.creatorForNetloc(host0, 309)
+        self.assertIn(host0, policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        hostn = "new"
+        policy.creatorForNetloc(hostn, 309)
+
+        host1 = u"host1".decode("ascii")
+        self.assertNotIn(host1, policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        hostn = hostn.decode("ascii")
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+        entry = policy._cache[hostn]
+        self.assertEquals(21, entry.cacheId)
+
+    def testChangeCacheSize(self):
+        """
+        Verify that changing the cache size results in a policy that,
+        respects the new cache size and not the default.
+
+        """
+        policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot(),
+                                            cacheSize=5)
+        for i in range(0, 5):
+            hostname = u"host" + unicode(i)
+            policy.creatorForNetloc(hostname, 8675)
+
+        first = u"host0".decode("ascii")
+        self.assertIn(first, policy._cache)
+        self.assertEquals(5, len(policy._cache))
+
+        hostn = "new"
+        policy.creatorForNetloc(hostn, 309)
+        self.assertNotIn(first, policy._cache)
+        self.assertEquals(5, len(policy._cache))
+
+        hostn = hostn.decode("ascii")
+        self.assertIn(hostn, policy._cache)
+        entry = policy._cache[hostn]
+        self.assertEquals(5, entry.cacheId)
