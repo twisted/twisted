@@ -54,7 +54,10 @@ class Headers(object):
         b'p3p': b'P3P',
         b'te': b'TE',
         b'www-authenticate': b'WWW-Authenticate',
-        b'x-xss-protection': b'X-XSS-Protection'}
+        b'x-xss-protection': b'X-XSS-Protection',
+        b'content-encoding': b'Content-Encoding',
+        b'content-type': b'Content-Type'
+    }
 
     def __init__(self, rawHeaders=None):
         self._rawHeaders = {}

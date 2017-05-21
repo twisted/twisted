@@ -20,7 +20,9 @@ except ImportError:
         return _quote(
             string.decode('charmap'), *args, **kwargs).encode('charmap')
 
+import re
 import zlib
+
 from binascii import hexlify
 
 from zope.interface import implementer
@@ -40,6 +42,9 @@ from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
 
 NOT_DONE_YET = 1
+_gzipRe = re.compile(rb'[\s,]?gzip[\s,]?')
+_brotliRe = re.compile(rb'[\s,]?br[\s,]?')
+_deflateRe = re.compile(rb'[\s,]?deflate[\s,]?')
 
 __all__ = [
     'supportedMethods',
@@ -512,25 +517,18 @@ class GzipEncoderFactory(object):
 
     compressLevel = 9
 
+
     def encoderForRequest(self, request):
         """
         Check the headers if the client accepts gzip encoding, and encodes the
         request if so.
         """
         acceptHeaders = request.requestHeaders.getRawHeaders(
-            'accept-encoding', [])
-        supported = ','.join(acceptHeaders).split(',')
-        if 'gzip' in supported:
-            encoding = request.responseHeaders.getRawHeaders(
-                'content-encoding')
-            if encoding:
-                encoding = '%s,gzip' % ','.join(encoding)
-            else:
-                encoding = 'gzip'
+            b'accept-encoding', [])
 
-            request.responseHeaders.setRawHeaders('content-encoding',
-                                                  [encoding])
-            return _GzipEncoder(self.compressLevel, request)
+        for supported in acceptHeaders:
+            if _gzipRe.match(supported):
+                return _GzipEncoder(self.compressLevel, request)
 
 
 
@@ -547,6 +545,33 @@ class _GzipEncoder(object):
     @since: 12.3
     """
 
+    _mimeTypesToEncode = [
+        b"application/atom_xml",
+        b"application/javascript",
+        b"application/json",
+        b"application/rss+xml",
+        b"application/vnd.ms-fontobject",
+        b"application/x-font-opentype",
+        b"application/x-font-truetype",
+        b"application/x-font-ttf",
+        b"application/x-javascript",
+        b"application/xhtml+xml",
+        b"application/xml",
+        b"application/xml+rss",
+        b"font/ttf",
+        b"font/eot",
+        b"font/opentype",
+        b"font/otf",
+        b"image/svg+xml",
+        b"image/x-icon",
+        b"image/vnd.microsoft.icon",
+        b"text/css",
+        b"text/html",
+        b"text/javascript",
+        b"text/plain",
+        b"text/xml",
+    ]
+
     _zlibCompressor = None
 
     def __init__(self, compressLevel, request):
@@ -560,6 +585,33 @@ class _GzipEncoder(object):
         Write to the request, automatically compressing data on the fly.
         """
         if not self._request.startedWriting:
+            existingEncoding = b','.join(
+                self._request.responseHeaders.getRawHeaders(
+                    b'content-encoding', []))
+            existingType = self._request.responseHeaders.getRawHeaders(
+                b'content-type', [b'text/plain'])
+
+            encode = False
+
+            for t in existingType:
+                if t.strip() in self._mimeTypesToEncode:
+                    encode = True
+
+            if (_gzipRe.match(existingEncoding) or
+                _brotliRe.match(existingEncoding) or not encode):
+                # Make it pass through
+                self.encode = lambda x: x
+                self.finish = lambda: b''
+                return data
+
+            if existingEncoding:
+                self._request.responseHeaders.setRawHeaders(
+                    b'content-encoding',
+                    [existingEncoding + b',gzip'])
+            else:
+                self._request.responseHeaders.setRawHeaders(
+                    b'content-encoding', [b'gzip'])
+
             # Remove the content-length header, we can't honor it
             # because we compress on the fly.
             self._request.responseHeaders.removeHeader(b'content-length')
@@ -573,51 +625,6 @@ class _GzipEncoder(object):
         """
         remain = self._zlibCompressor.flush()
         self._zlibCompressor = None
-        return remain
-
-
-
-@implementer(iweb._IRequestEncoder)
-class _BrotliEncoder(object):
-    """
-    An encoder which supports Brotli.
-
-    @since: Twisted NEXT
-    """
-    _compressor = None
-
-    @staticmethod
-    def supported(self):
-        try:
-            import brotli
-            return True
-        except ImportError:
-            return False
-
-    def __init__(self, compressLevel, request):
-        import brotli
-        self.compressor = brotli.Compressor(quality=compressLevel)
-        self._request = request
-
-
-    def encode(self, data):
-        """
-        Write to the request, automatically compressing data on the fly.
-        """
-        if not self._request.startedWriting:
-            # Remove the content-length header, we can't honor it
-            # because we compress on the fly.
-            self._request.responseHeaders.removeHeader(b'content-length')
-        return self.compressor.compress(data)
-
-
-    def finish(self):
-        """
-        Finish handling the request request, flushing any data from the zlib
-        buffer.
-        """
-        remain = self.compressor.finish()
-        self.compressor = None
         return remain
 
 
@@ -728,6 +735,7 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom
+    isLeaf = 0
 
     def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
@@ -740,6 +748,17 @@ class Site(http.HTTPFactory):
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
+        self._compressionWrapper = None
+
+        if not 'compressResponses' in kwargs:
+            # deprecate here
+            pass
+        else:
+            if kwargs.pop('compressResponses'):
+                from twisted.web.resource import EncodingResourceWrapper
+                self._compressionWrapper = lambda x: EncodingResourceWrapper(
+                    x, [GzipEncoderFactory()])
+
         http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
@@ -797,7 +816,6 @@ class Site(http.HTTPFactory):
         channel.site = self
         return channel
 
-    isLeaf = 0
 
     def render(self, request):
         """
@@ -827,7 +845,13 @@ class Site(http.HTTPFactory):
         # Sitepath is used to determine cookie names between distributed
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
-        return resource.getChildForRequest(self.resource, request)
+        res = resource.getChildForRequest(self.resource, request)
+
+        if self._compressionWrapper:
+            res = self._compressionWrapper(res)
+
+        return res
+
 
     # IProtocolNegotiationFactory
     def acceptableProtocols(self):

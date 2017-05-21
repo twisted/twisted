@@ -11,6 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.test import iosim, proto_helpers
 from twisted.python import reflect, failure
 from twisted.python.compat import _PY3, unichr, iterbytes
 from twisted.python.filepath import FilePath
@@ -1519,31 +1520,128 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
         self.assertIs(factory._reactor, reactor)
 
 
+class MakeSiteTests(unittest.SynchronousTestCase):
 
-class BrotliEncoderTests(unittest.SynchronousTestCase):
-
-    skip = skipBrotli
-
-    def test_interface(self):
+    def test_none(self):
         """
-        L{server._BrotliEncoder} should implement L{iweb._IRequestEncoder}.
+        L{Site}s with C{compressResponses=True} will not compress responses
+        with no C{Accept-Encoding} header.
         """
-        self.assertTrue(verifyObject(iweb._IRequestEncoder,
-                                     server._BrotliEncoder(None, None)))
+        sre = SimpleResource()
+        r = resource.Resource()
+        r.putChild(b'', sre)
+        site = server.Site(r, compressResponses=True)
 
-    def test_basicCompression(self):
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+
+        c.transport.write(b"GET / HTTP/1.0\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertFalse(b'Content-Encoding' in data)
+
+
+    def test_noneSupported(self):
         """
-        L{server._BrotliEncoder} will encode things with the Brotli encoding.
+        L{Site}s with C{compressResponses=True} will not compress responses
+        with an C{Accept-Encoding} without a supported compression algorithm.
         """
-        request = DummyRequest([b''])
-        encoder = server._BrotliEncoder(1, request)
+        sre = SimpleResource()
+        r = resource.Resource()
+        r.putChild(b'', sre)
+        site = server.Site(r, compressResponses=True)
 
-        data = b'moredat' * 10
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
 
-        content = b''
-        for d in iterbytes(data):
-            content += encoder.encode(d)
-        content += encoder.finish()
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
 
-        self.assertEqual(data,
-                         brotli.decompress(content))
+        c.transport.write(b"GET / HTTP/1.0\r\n")
+        c.transport.write(b"Accept-Encoding: compress\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertFalse(b'Content-Encoding' in data)
+
+
+    def test_doubleGzipEncoding(self):
+        """
+        L{Site}s with C{compressResponses=True} will not double-encode
+        resources that already are gzip-encoded.
+        """
+        sre = resource.EncodingResourceWrapper(SimpleResource(),
+                                               [server.GzipEncoderFactory()])
+        r = resource.Resource()
+        r.putChild(b'', sre)
+        site = server.Site(r, compressResponses=True)
+
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+
+        c.transport.write(b"GET / HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertTrue(b'Content-Encoding: gzip' in data)
+        body = clientProtocol.data.split(b'\r\n\r\n', 1)[1]
+        self.assertEqual(b'correct',
+                         zlib.decompress(body, 16 + zlib.MAX_WBITS))
+
+
+    def test_gzip(self):
+        """
+        L{Site}
+        """
+        sre = SimpleResource()
+        r = resource.Resource()
+        r.putChild(b'', sre)
+        site = server.Site(r, compressResponses=True)
+
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+
+        c.transport.write(b"GET / HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertTrue(b'Content-Encoding: gzip' in data)
+        body = clientProtocol.data.split(b'\r\n\r\n', 1)[1]
+        self.assertEqual(b'correct',
+                         zlib.decompress(body, 16 + zlib.MAX_WBITS))
+
+    def test_gzipBannedFiletype(self):
+
+        sre = SimpleResource(b'image/jpeg')
+        r = resource.Resource()
+        r.putChild(b'', sre)
+        site = server.Site(r, compressResponses=True)
+
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+
+        c.transport.write(b"GET / HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertFalse(b'Content-Encoding: gzip' in data)
+        body = clientProtocol.data.split(b'\r\n\r\n', 1)[1]
+        self.assertEqual(b'correct', body)
