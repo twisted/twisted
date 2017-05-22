@@ -42,9 +42,9 @@ from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
 
 NOT_DONE_YET = 1
-_gzipRe = re.compile(rb'[\s,]?gzip[\s,]?')
-_brotliRe = re.compile(rb'[\s,]?br[\s,]?')
-_deflateRe = re.compile(rb'[\s,]?deflate[\s,]?')
+_gzipRe = re.compile(br'[\s,]?gzip[\s,]?')
+_brotliRe = re.compile(br'[\s,]?br[\s,]?')
+_deflateRe = re.compile(br'[\s,]?deflate[\s,]?')
 
 __all__ = [
     'supportedMethods',

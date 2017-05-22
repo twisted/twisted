@@ -25,13 +25,6 @@ from twisted.web import iweb, http, error
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
 
-brotli = reflect.requireModule('brotli')
-
-if brotli:
-    skipBrotli = None
-else:
-    skipBrotli = "brotli is not installed"
-
 
 class ResourceTests(unittest.TestCase):
     def testListEntities(self):
