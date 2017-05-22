@@ -12,7 +12,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import _PY3, unichr
+from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -1085,7 +1085,7 @@ class AllowedMethodsTests(unittest.TestCase):
         res = GettableResource()
         allowedMethods = resource._computeAllowedMethods(res)
         self.assertEqual(set(allowedMethods),
-                          set([b'GET', b'HEAD', b'fred_render_ethel']))
+                         set([b'GET', b'HEAD', b'fred_render_ethel']))
 
 
     def test_notAllowed(self):
