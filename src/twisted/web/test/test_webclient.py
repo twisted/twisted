@@ -1408,7 +1408,7 @@ class DeprecationTests(unittest.TestCase):
         L{client.getPage} is deprecated.
         """
         port = reactor.listenTCP(
-            0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
+            0, server.server(Data(b'', 'text/plain')), interface="127.0.0.1")
         portno = port.getHost().port
         self.addCleanup(port.stopListening)
         url = networkString("http://127.0.0.1:%d" % (portno,))
@@ -1430,7 +1430,7 @@ class DeprecationTests(unittest.TestCase):
         L{client.downloadPage} is deprecated.
         """
         port = reactor.listenTCP(
-            0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
+            0, server.server(Data(b'', 'text/plain')), interface="127.0.0.1")
         portno = port.getHost().port
         self.addCleanup(port.stopListening)
         url = networkString("http://127.0.0.1:%d" % (portno,))
