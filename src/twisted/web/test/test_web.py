@@ -1223,8 +1223,6 @@ class AccessLogTestsMixin(object):
             factory.stopFactory()
 
         self.assertEqual(
-            # self.linesep is a sad thing.
-            # https://twistedmatrix.com/trac/ticket/6938
             b"this is a bad log format" + self.linesep.encode('ascii'),
             FilePath(logPath).getContent())
 
