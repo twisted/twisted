@@ -21,6 +21,7 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
+from twisted.python.compat import execfile, _matchingString
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
@@ -40,14 +41,55 @@ intersphinxURLs = [
 
 
 def runCommand(args, **kwargs):
-    """Execute a vector of arguments.
+    """
+    Execute a vector of arguments.
 
     This is a wrapper around L{subprocess.check_output}, so it takes
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
+
+    @param args: arguments passed to L{subprocess.check_output}
+    @param kwargs: keyword arguments passed to L{subprocess.check_output}
+    @return: data from L{subprocess.check_output}
+    @rtype: L{bytes}
     """
     kwargs['stderr'] = STDOUT
-    return check_output(args, **kwargs)
+    output = check_output(args, **kwargs)
+    if not isinstance(output, str):
+        output = output.decode("utf-8")
+    return output
+
+
+
+def lenientSetStrContent(fileObj, content, encoding="utf-8"):
+    """
+    Write out C{content} as L{bytes} to a L{FilePath}.
+
+    @param fileObj: file to write to
+    @type fileObj: L{FilePath}
+    @param content: content to write to file
+    @type content: L{str} or L{bytes}
+    @param encoding: string encoding
+    """
+    if not isinstance(content, bytes):
+        content = content.encode(encoding)
+    fileObj.setContent(content)
+
+
+
+def getNativeStrContent(fileObj, encoding="utf-8"):
+    """
+    Get the content from a L{FilePath} and return it as L{str}.
+
+    @param fileObj: file to read from
+    @type fileObj: L{FilePath}
+    @param encoding: string encoding
+    @return: L{str} content from file
+    """
+    content = fileObj.getContent()
+    if not isinstance(content, str):
+        content = content.decode(encoding)
+    return content
 
 
 
@@ -159,8 +201,8 @@ class GitCommand(object):
         """
         runCommand(["git", "-C", fromDir.path,
                     "checkout-index", "--all", "--force",
-                    # prefix has to end up with a "/" so that files get copied
-                    # to a directory whose name is the prefix.
+                    # --prefix has to end up with a "/" so that files
+                    # get copied to a directory whose name is the prefix.
                     "--prefix", exportDir.path + "/"])
 
 
@@ -241,6 +283,7 @@ def findTwistedProjects(baseDirectory):
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
+
 
 
 def replaceInFile(filename, oldToNew):
@@ -336,6 +379,7 @@ class APIBuilder(object):
         monkeyPatch.restore()
 
 
+
 class NewsBuilder(object):
     """
     Generate the new section of a NEWS file.
@@ -403,9 +447,10 @@ class NewsBuilder(object):
         for child in path.children():
             base, ext = os.path.splitext(child.basename())
             if ext == ticketType:
+                childContent = getNativeStrContent(child)
                 results.append((
                     int(base),
-                    ' '.join(child.getContent().splitlines())))
+                    ' '.join(childContent.splitlines())))
         results.sort()
         return results
 
@@ -431,7 +476,10 @@ class NewsBuilder(object):
         @param header: The header to write to the file.
         @type header: C{str}
         """
-        fileObj.write(self._formatHeader(header))
+        formatHeader = self._formatHeader(header)
+        if not isinstance(formatHeader, bytes):
+            formatHeader = formatHeader.encode("utf-8")
+        fileObj.write(formatHeader)
 
 
     def _writeSection(self, fileObj, header, tickets):
@@ -455,17 +503,23 @@ class NewsBuilder(object):
         for description in reverse:
             reverse[description].sort()
         reverse = reverse.items()
-        # result is a tuple of (descr, tickets)
-        reverse.sort(key=lambda result: result[1][0])
+        # Result is a tuple of (descr, tickets)
+        reverse = sorted(reverse, key=lambda result: result[1][0])
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        line = header + '\n' + '-' * len(header) + '\n'
+        if not isinstance(line, bytes):
+            line = line.encode("utf-8")
+        fileObj.write(line)
         for (description, relatedTickets) in reverse:
             ticketList = ', '.join([
                 '#' + str(ticket) for ticket in relatedTickets])
             entry = ' - %s (%s)' % (description, ticketList)
             entry = textwrap.fill(entry, subsequent_indent='   ')
-            fileObj.write(entry + '\n')
-        fileObj.write('\n')
+            line = entry + '\n'
+            if not isinstance(line, bytes):
+                line = line.encode("utf-8")
+            fileObj.write(line)
+        fileObj.write(b'\n')
 
 
     def _writeMisc(self, fileObj, header, tickets):
@@ -483,13 +537,16 @@ class NewsBuilder(object):
         if not tickets:
             return
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        line = (_matchingString(header, b'') + b'\n'
+                + b'-' * len(header) + b'\n')
+        fileObj.write(line)
         formattedTickets = []
         for (ticket, ignored) in tickets:
             formattedTickets.append('#' + str(ticket))
         entry = ' - ' + ', '.join(formattedTickets)
         entry = textwrap.fill(entry, subsequent_indent='   ')
-        fileObj.write(entry + '\n\n')
+        line = _matchingString(entry, b'') + b'\n\n'
+        fileObj.write(line)
 
 
     def build(self, path, output, header):
@@ -517,10 +574,10 @@ class NewsBuilder(object):
                 changes.append((part, tickets))
         misc = self._findChanges(path, self._MISC)
 
-        oldNews = output.getContent()
+        oldNews = getNativeStrContent(output)
         with output.sibling('NEWS.new').open('w') as newNews:
             if oldNews.startswith(self._TICKET_HINT):
-                newNews.write(self._TICKET_HINT)
+                newNews.write(self._TICKET_HINT.encode("utf-8"))
                 oldNews = oldNews[len(self._TICKET_HINT):]
 
             self._writeHeader(newNews, header)
@@ -529,11 +586,11 @@ class NewsBuilder(object):
                     self._writeSection(newNews, self._headings.get(part),
                                        tickets)
             else:
-                newNews.write(self._NO_CHANGES)
-                newNews.write('\n')
+                newNews.write(self._NO_CHANGES.encode("utf-8"))
+                newNews.write(b'\n')
             self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-            newNews.write('\n')
-            newNews.write(oldNews)
+            newNews.write(b'\n')
+            newNews.write(oldNews.encode("utf-8"))
         output.sibling('NEWS.new').moveTo(output)
 
 
@@ -668,8 +725,15 @@ class SphinxBuilder(object):
             build infrastructure.
         """
         output = self.build(FilePath(args[0]).child("docs"))
+        msg = "Unclean build:\n{}\n".format(output)
+        msg = msg.encode("utf-8")
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            if hasattr(sys.stdout, "buffer"):
+                stdout = sys.stdout.buffer
+            else:
+                stdout = sys.stdout
+
+            stdout.write(msg)
             raise sys.exit(1)
 
 
