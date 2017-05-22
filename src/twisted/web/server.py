@@ -795,3 +795,6 @@ class Site(http.HTTPFactory):
             baseProtocols.insert(0, b'h2')
 
         return baseProtocols
+
+
+from twisted.web._newserver import server
