@@ -191,12 +191,6 @@ _EXTENSIONS = [
         "twisted.python._sendmsg",
         sources=["src/twisted/python/_sendmsg.c"],
         condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-    ConditionalExtension(
-        "twisted.runner.portmap",
-        sources=["src/twisted/runner/portmap.c"],
-        condition=lambda builder: not _PY3 and
-                                  builder._check_header("rpc/rpc.h")),
     ]
 
 
@@ -233,6 +227,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
     requirements.append("constantly >= 15.1")
     requirements.append("incremental >= 16.10.1")
     requirements.append("Automat >= 0.3.0")
+    requirements.append("hyperlink >= 17.1.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
@@ -451,8 +446,6 @@ notPortedModules = [
     "twisted.web.test.test_html",
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
-    "twisted.words.protocols.oscar",
     "twisted.words.tap",
-    "twisted.words.test.test_oscar",
     "twisted.words.test.test_tap",
 ]
