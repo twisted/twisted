@@ -21,6 +21,7 @@ from zope.interface import Interface, implementer
 from datetime import date
 from subprocess import check_output, STDOUT, CalledProcessError
 
+from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
@@ -40,14 +41,66 @@ intersphinxURLs = [
 
 
 def runCommand(args, **kwargs):
-    """Execute a vector of arguments.
+    """
+    Execute a vector of arguments.
 
     This is a wrapper around L{subprocess.check_output}, so it takes
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
+
+    @param args: arguments passed to L{subprocess.check_output}
+    @param kwargs: keyword arguments passed to L{subprocess.check_output}
+    @return: command output
+    @rtype: L{str}
     """
     kwargs['stderr'] = STDOUT
-    return check_output(args, **kwargs)
+    output = check_output(args, **kwargs)
+
+    # The check_output() function always returns bytes
+    # on Python 2 and 3, but we want this function to always return
+    # str.
+    if not isinstance(output, str):
+        output = output.decode("utf-8")
+    return output
+
+
+
+class FilePathStrContent(FilePath):
+    """
+    Wrapper around L{FilePath} to make dealing with
+    L{bytes} and L{str}
+    a little easier.
+    """
+    def __init__(self, filePath, encoding='utf-8'):
+        super(FilePathStrContent, self).__init__(filePath.path,
+                                                 filePath.alwaysCreate)
+        self.encoding = encoding
+
+
+    def getContent(self):
+        """
+        Wrapper around L{FilePath.setContent} that always
+        makes sure we are returning L{str} content.
+
+        @rtype: L{str}
+        """
+        content = super(FilePathStrContent, self).getContent()
+        if not isinstance(content, str):
+            content = content.decode(self.encoding)
+        return content
+
+
+    def setContent(self, content):
+        """
+        Wrapper around L{FilePath.setContent} that always
+        makes sure we are setting L{bytes} content.
+
+        @param content: the content we are setting
+        @type content: L{str} or L{bytes}
+        """
+        if not isinstance(content, bytes):
+            content = content.encode(self.encoding)
+        return super(FilePathStrContent, self).setContent(content)
 
 
 
@@ -278,15 +331,15 @@ class APIBuilder(object):
         Call pydoctor's entry point with options which will generate HTML
         documentation for the specified package's API.
 
-        @type projectName: C{str}
+        @type projectName: L{str}
         @param projectName: The name of the package for which to generate
             documentation.
 
-        @type projectURL: C{str}
+        @type projectURL: L{str}
         @param projectURL: The location (probably an HTTP URL) of the project
             on the web.
 
-        @type sourceURL: C{str}
+        @type sourceURL: L{str}
         @param sourceURL: The location (probably an HTTP URL) of the root of
             the source browser for the project.
 
@@ -348,10 +401,10 @@ class NewsBuilder(object):
     @cvar _headings: A C{dict} mapping one of the news entry types to the
         heading to write out for that type of news entry.
 
-    @cvar _NO_CHANGES: A C{str} giving the text which appears when there are
+    @cvar _NO_CHANGES: A L{str} giving the text which appears when there are
         no significant changes in a release.
 
-    @cvar _TICKET_HINT: A C{str} giving the text which appears at the top of
+    @cvar _TICKET_HINT: A L{str} giving the text which appears at the top of
         each news file and which should be kept at the top, not shifted down
         with all the other content.  Put another way, this is the text after
         which the new news text is inserted.
@@ -395,12 +448,13 @@ class NewsBuilder(object):
             C{NewsBuilder._FEATURE}, C{NewsBuilder._BUGFIX},
             C{NewsBuilder._REMOVAL}, or C{NewsBuilder._MISC}.
 
-        @return: A C{list} of two-tuples.  The first element is the ticket
-            number as an C{int}.  The second element of each tuple is the
+        @return: A L{list} of two-tuples.  The first element is the ticket
+            number as an L{int}.  The second element of each tuple is the
             description of the feature.
         """
         results = []
         for child in path.children():
+            child = FilePathStrContent(child)
             base, ext = os.path.splitext(child.basename())
             if ext == ticketType:
                 results.append((
@@ -417,8 +471,8 @@ class NewsBuilder(object):
         A header is a title with '=' signs underlining it.
 
         @param header: The header string to format.
-        @type header: C{str}
-        @return: A C{str} containing C{header}.
+        @type header: L{str}
+        @return: A L{str} containing C{header}.
         """
         return header + '\n' + '=' * len(header) + '\n\n'
 
@@ -429,9 +483,10 @@ class NewsBuilder(object):
 
         @param fileObj: A file-like object to which to write the header.
         @param header: The header to write to the file.
-        @type header: C{str}
+        @type header: L{str}
         """
-        fileObj.write(self._formatHeader(header))
+        formattedHeader = self._formatHeader(header)
+        fileObj.write(formattedHeader.encode("utf-8"))
 
 
     def _writeSection(self, fileObj, header, tickets):
@@ -441,9 +496,9 @@ class NewsBuilder(object):
         @param fileObj: A file-like object to which to write the news section.
 
         @param header: The header for the section to write.
-        @type header: C{str}
+        @type header: L{str}
 
-        @param tickets: A C{list} of ticket information of the sort returned
+        @param tickets: A L{list} of ticket information of the sort returned
             by L{NewsBuilder._findChanges}.
         """
         if not tickets:
@@ -454,18 +509,19 @@ class NewsBuilder(object):
             reverse.setdefault(description, []).append(ticket)
         for description in reverse:
             reverse[description].sort()
-        reverse = reverse.items()
-        # result is a tuple of (descr, tickets)
+        reverse = list(reverse.items())
+        # The result is a list of (descr, tickets).
         reverse.sort(key=lambda result: result[1][0])
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        content = header + '\n' + '-' * len(header) + '\n'
         for (description, relatedTickets) in reverse:
             ticketList = ', '.join([
                 '#' + str(ticket) for ticket in relatedTickets])
             entry = ' - %s (%s)' % (description, ticketList)
             entry = textwrap.fill(entry, subsequent_indent='   ')
-            fileObj.write(entry + '\n')
-        fileObj.write('\n')
+            content += entry + '\n'
+        content += '\n'
+        fileObj.write(content.encode("utf-8"))
 
 
     def _writeMisc(self, fileObj, header, tickets):
@@ -475,21 +531,22 @@ class NewsBuilder(object):
         @param fileObj: A file-like object to which to write the news section.
 
         @param header: The header for the section to write.
-        @type header: C{str}
+        @type header: L{str}
 
-        @param tickets: A C{list} of ticket information of the sort returned
+        @param tickets: A L{list} of ticket information of the sort returned
             by L{NewsBuilder._findChanges}.
         """
         if not tickets:
             return
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        content = header + '\n' + '-' * len(header) + '\n'
         formattedTickets = []
         for (ticket, ignored) in tickets:
             formattedTickets.append('#' + str(ticket))
         entry = ' - ' + ', '.join(formattedTickets)
         entry = textwrap.fill(entry, subsequent_indent='   ')
-        fileObj.write(entry + '\n\n')
+        content += entry + '\n\n'
+        fileObj.write(content.encode("utf-8"))
 
 
     def build(self, path, output, header):
@@ -517,10 +574,11 @@ class NewsBuilder(object):
                 changes.append((part, tickets))
         misc = self._findChanges(path, self._MISC)
 
+        output = FilePathStrContent(output)
         oldNews = output.getContent()
         with output.sibling('NEWS.new').open('w') as newNews:
             if oldNews.startswith(self._TICKET_HINT):
-                newNews.write(self._TICKET_HINT)
+                newNews.write(self._TICKET_HINT.encode("utf-8"))
                 oldNews = oldNews[len(self._TICKET_HINT):]
 
             self._writeHeader(newNews, header)
@@ -529,11 +587,11 @@ class NewsBuilder(object):
                     self._writeSection(newNews, self._headings.get(part),
                                        tickets)
             else:
-                newNews.write(self._NO_CHANGES)
-                newNews.write('\n')
+                newNews.write(self._NO_CHANGES.encode("utf-8"))
+                newNews.write(b'\n')
             self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-            newNews.write('\n')
-            newNews.write(oldNews)
+            newNews.write(b'\n')
+            newNews.write(oldNews.encode("utf-8"))
         output.sibling('NEWS.new').moveTo(output)
 
 
@@ -633,7 +691,7 @@ class NewsBuilder(object):
         @param args: The command line arguments to process.  This must contain
             one string, the path to the base of the Twisted checkout for which
             to build the news.
-        @type args: C{list} of C{str}
+        @type args: L{list} of L{str}
         """
         if len(args) != 1:
             sys.exit("Must specify one argument: the path to the "
@@ -687,7 +745,7 @@ class SphinxBuilder(object):
         @type buildDir: L{twisted.python.filepath.FilePath}
 
         @param version: The version of Twisted to set in the docs.
-        @type version: C{str}
+        @type version: L{str}
 
         @return: the output produced by running the command
         @rtype: L{str}
