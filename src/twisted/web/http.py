@@ -2830,10 +2830,8 @@ class HTTPFactory(protocol.ServerFactory):
             self._updateLogDateTime()
 
         if self.logPath:
-            self._nativeize = False
             self.logFile = self._openLogFile(self.logPath)
         else:
-            self._nativeize = True
             self.logFile = log.logfile
 
 
@@ -2852,7 +2850,7 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Override in subclasses, e.g. to use L{twisted.python.logfile}.
         """
-        f = open(path, "ab", 1)
+        f = open(path, "a", 1)
         return f
 
 
@@ -2869,8 +2867,4 @@ class HTTPFactory(protocol.ServerFactory):
             pass
         else:
             line = self._logFormatter(self._logDateTime, request) + u"\n"
-            if self._nativeize:
-                line = nativeString(line)
-            else:
-                line = line.encode("utf-8")
             logFile.write(line)

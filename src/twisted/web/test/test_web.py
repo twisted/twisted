@@ -1197,7 +1197,7 @@ class AccessLogTestsMixin(object):
             # Value of the "Referer" header.  Probably incorrectly quoted.
             b'"-" '
             # Value pf the "User-Agent" header.  Probably incorrectly quoted.
-            b'"-"' + self.linesep,
+            b'"-"' + self.linesep.encode('ascii'),
             FilePath(logPath).getContent())
 
 
@@ -1225,7 +1225,7 @@ class AccessLogTestsMixin(object):
         self.assertEqual(
             # self.linesep is a sad thing.
             # https://twistedmatrix.com/trac/ticket/6938
-            b"this is a bad log format" + self.linesep,
+            b"this is a bad log format" + self.linesep.encode('ascii'),
             FilePath(logPath).getContent())
 
 
@@ -1235,7 +1235,7 @@ class HTTPFactoryAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     Tests for L{http.HTTPFactory.log}.
     """
     factory = http.HTTPFactory
-    linesep = b"\n"
+    linesep = u"\n"
 
 
 
@@ -1243,9 +1243,6 @@ class SiteAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     """
     Tests for L{server.Site.log}.
     """
-    if _PY3:
-        skip = "Site not ported to Python 3 yet."
-
     linesep = os.linesep
 
     def factory(self, *args, **kwargs):
