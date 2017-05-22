@@ -59,9 +59,13 @@ class _Server(object):
 
         @attr.s
         class _TrashGarbageSiteDontUse(object):
+
             displayTracebacks = self._displayTracebacks
-            _sessions = attr.ib(default=attr.Factory(_SessionFandangler, self, self._sessionFactory))
+            _sessionFandangler = attr.ib(default=attr.Factory(
+                lambda _self: _SessionFandangler(_self, self._sessionFactory),
+                takes_self=True))
             _entropy = attr.ib(default=urandom)
+            sessions = attr.ib(default=attr.Factory(dict))
 
             def getResourceFor(self_, request):
                 res = getChildForRequest(self._resource, request)
@@ -70,7 +74,7 @@ class _Server(object):
                 return res
 
             def makeSession(self):
-                return self._sessions.makeSession()
+                return self._sessionFandangler.makeSession()
 
             def getSession(self, uid):
                 """
@@ -81,7 +85,7 @@ class _Server(object):
 
                 @raise: L{KeyError} if the session is not found.
                 """
-                return self._sessions.getSession(uid)
+                return self._sessionFandangler.getSession(uid)
 
         p = self._protocol(None)
         p.factory = self

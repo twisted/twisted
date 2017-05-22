@@ -11,7 +11,11 @@ from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.test.test_web import SimpleResource
 from twisted.web.http import H2_ENABLED
 
-class MakeSiteTests(SynchronousTestCase):
+
+class ServerTests(SynchronousTestCase):
+    """
+    Tests for L{twisted.web.server.server}.
+    """
 
     def test_noAcceptEncoding(self):
         """
@@ -184,3 +188,14 @@ class MakeSiteTests(SynchronousTestCase):
 
     if not H2_ENABLED:
         test_h2.skip = "HTTP/2 is not enabled."
+
+
+    def test_session(self):
+        """
+        Existing C{site.makeSession} and C{site.getSession} functions work.
+        """
+        site = server.server(None)
+        p = site.buildProtocol(None)
+        session = p.site.makeSession()
+        otherSession = p.site.getSession(session.uid)
+        self.assertIs(session, otherSession)
