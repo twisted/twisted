@@ -15,7 +15,8 @@ __all__ = [
 
 import warnings
 
-from zope.interface import Attribute, Interface, implementer
+from zope.interface import (Attribute, Interface, implementer, implementedBy,
+                            directlyProvides)
 
 from twisted.python.compat import nativeString, unicode
 from twisted.python.reflect import prefixedMethodNames
@@ -405,3 +406,38 @@ class EncodingResourceWrapper(proxyForInterface(IResource)):
             encoder = encoderFactory.encoderForRequest(request)
             if encoder is not None:
                 return encoder
+
+
+
+@implementer(IResource)
+class _WrapperResource(object):
+
+    def __init__(self, resource, wrapperToApply, *args, **kwargs):
+        self._resource = resource
+        self._wrapperToApply = wrapperToApply
+        self._args = args
+        self._kwargs = kwargs
+        self._wrapped = self._wrapperToApply(self._resource, *self._args, **self._kwargs)
+        directlyProvides(self, implementedBy(self._wrapperToApply))
+
+
+    def getChildWithDefault(self, path, request):
+        r = self.__class__(
+            self._resource.getChildWithDefault(path, request),
+            self._wrapperToApply,
+            *self._args, **self._kwargs
+        )
+        return r
+
+
+    def render(self, request):
+        return self._wrapped.render(request)
+
+
+    def __getattr__(self, a):
+        return getattr(self._wrapped, a)
+
+
+
+def _wrap(resource, wrapperToApply, *args, **kwargs):
+    return _WrapperResource(resource, wrapperToApply, *args, **kwargs)

@@ -12,8 +12,8 @@ import copy
 from zope.interface import implementer
 
 from twisted.logger import Logger
-from twisted.web.server import Request
-from twisted.web.resource import getChildForRequest
+from twisted.web.server import Request, GzipEncoderFactory
+from twisted.web.resource import getChildForRequest, EncodingResourceWrapper, _wrap
 from twisted.web.http import (_genericHTTPChannelProtocolFactory,
                               datetimeToLogString,
                               _REQUEST_TIMEOUT, H2_ENABLED, _escape)
@@ -26,11 +26,13 @@ class _Server(object):
 
     _protocol = attr.ib()
     _displayTracebacks = attr.ib()
+    _compressResponses = attr.ib()
     _timeout = attr.ib()
     _resource = attr.ib()
     _requestFactory = attr.ib()
     _logger = attr.ib()
     _reactor = attr.ib()
+
 
     def buildProtocol(self, addr):
 
@@ -38,7 +40,10 @@ class _Server(object):
             displayTracebacks = self._displayTracebacks
 
             def getResourceFor(self_, request):
-                return getChildForRequest(self._resource, request)
+                res = getChildForRequest(self._resource, request)
+                if self._compressResponses:
+                    res = _wrap(res, EncodingResourceWrapper, [GzipEncoderFactory()])
+                return res
 
         p = self._protocol(None)
         p.factory = self
@@ -48,11 +53,14 @@ class _Server(object):
         p.site = _TrashGarbageSiteDontUse()
         return p
 
+
     def doStart(self):
         pass
 
+
     def doStop(self):
         pass
+
 
     def log(self, request):
 
@@ -77,6 +85,7 @@ class _Server(object):
             agent=agent,
         )
 
+
     # IProtocolNegotiationFactory
     def acceptableProtocols(self):
         """
@@ -88,7 +97,6 @@ class _Server(object):
             baseProtocols.insert(0, b'h2')
 
         return baseProtocols
-
 
 
 
@@ -129,7 +137,8 @@ def server(resource, displayTracebacks=True, compressResponses=True,
         from twisted.internet import reactor
 
     server = _Server(_genericHTTPChannelProtocolFactory, displayTracebacks,
-                     timeout, resource, requestFactory, logger, reactor)
+                     compressResponses, timeout, resource, requestFactory,
+                     logger, reactor)
 
     # Set up the Logger source correctly
     logger.source = server
