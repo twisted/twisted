@@ -9,16 +9,35 @@ Next-Generation Web Sites for the Internet Zone Age.
 import attr
 import copy
 
+from os import urandom
+from binascii import hexlify
 from zope.interface import implementer
 
 from twisted.logger import Logger
-from twisted.web.server import Request, GzipEncoderFactory
-from twisted.web.resource import getChildForRequest, EncodingResourceWrapper, _wrap
+from twisted.web.server import Request, GzipEncoderFactory, Session
+from twisted.web.resource import (
+    getChildForRequest, EncodingResourceWrapper, _wrap)
 from twisted.web.http import (_genericHTTPChannelProtocolFactory,
                               datetimeToLogString,
                               _REQUEST_TIMEOUT, H2_ENABLED, _escape)
 from twisted.internet.interfaces import (
     IProtocolFactory, IProtocolNegotiationFactory)
+
+
+@attr.s
+class _SessionFandangler(object):
+    _site = attr.ib()
+    _sessionFactory = attr.ib()
+
+    def makeSession(self):
+        uid = hexlify(self._site._entropy(32))
+        session = self._site.sessions[uid] = self._sessionFactory(self._site, uid)
+        session.startCheckingExpiration()
+        return session
+
+    def getSession(self, uid):
+        return self._site.sessions[uid]
+
 
 
 @implementer(IProtocolFactory, IProtocolNegotiationFactory)
@@ -31,20 +50,38 @@ class _Server(object):
     _timeout = attr.ib()
     _resource = attr.ib()
     _requestFactory = attr.ib()
+    _sessionFactory = attr.ib()
     _logger = attr.ib()
     _reactor = attr.ib()
 
 
     def buildProtocol(self, addr):
 
+        @attr.s
         class _TrashGarbageSiteDontUse(object):
             displayTracebacks = self._displayTracebacks
+            _sessions = attr.ib(default=attr.Factory(_SessionFandangler, self, self._sessionFactory))
+            _entropy = attr.ib(default=urandom)
 
             def getResourceFor(self_, request):
                 res = getChildForRequest(self._resource, request)
                 if self._compressResponses:
                     res = _wrap(res, EncodingResourceWrapper, [GzipEncoderFactory()])
                 return res
+
+            def makeSession(self):
+                return self._sessions.makeSession()
+
+            def getSession(self, uid):
+                """
+                Get a previously generated session.
+
+                @param uid: Unique ID of the session.
+                @type uid: L{bytes}.
+
+                @raise: L{KeyError} if the session is not found.
+                """
+                return self._sessions.getSession(uid)
 
         p = self._protocol(None)
         p.factory = self
@@ -106,7 +143,8 @@ class _Server(object):
 
 
 def server(resource, displayTracebacks=True, compressResponses=True,
-           timeout=_REQUEST_TIMEOUT, requestFactory=Request, logger=None,
+           timeout=_REQUEST_TIMEOUT, requestFactory=Request, sessionFactory=Session,
+           logger=None,
            reactor=None):
     """
     Create a web server.
@@ -143,7 +181,7 @@ def server(resource, displayTracebacks=True, compressResponses=True,
 
     server = _Server(_genericHTTPChannelProtocolFactory, displayTracebacks,
                      compressResponses, timeout, resource, requestFactory,
-                     logger, reactor)
+                     sessionFactory, logger, reactor)
 
     # Set up the Logger source correctly
     logger.source = server

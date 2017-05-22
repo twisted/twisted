@@ -91,7 +91,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 # twisted imports
 from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python import log
 from incremental import Version
 from twisted.python.components import proxyForInterface
@@ -2880,3 +2880,11 @@ class HTTPFactory(protocol.ServerFactory):
             else:
                 line = line.encode("utf-8")
             logFile.write(line)
+
+
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.server.server instead",
+    "twisted.web.http",
+    "HTTPFactory")

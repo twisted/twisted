@@ -23,6 +23,7 @@ except ImportError:
 import zlib
 from binascii import hexlify
 
+from incremental import Version
 from zope.interface import implementer
 
 from twisted.python.compat import networkString, nativeString, intToBytes
@@ -30,6 +31,7 @@ from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
@@ -48,7 +50,8 @@ __all__ = [
     'Site',
     'version',
     'NOT_DONE_YET',
-    'GzipEncoderFactory'
+    'GzipEncoderFactory',
+    'server'
 ]
 
 
@@ -664,6 +667,9 @@ version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
 
+from twisted.web._newserver import server, _SessionFandangler
+
+
 @implementer(interfaces.IProtocolNegotiationFactory)
 class Site(http.HTTPFactory):
     """
@@ -680,7 +686,7 @@ class Site(http.HTTPFactory):
     counter = 0
     requestFactory = Request
     displayTracebacks = True
-    sessionFactory = Session
+    _sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom
 
@@ -701,6 +707,18 @@ class Site(http.HTTPFactory):
         if requestFactory is not None:
             self.requestFactory = requestFactory
 
+        self._sessions = _SessionFandangler(self, self.sessionFactory)
+
+
+    @property
+    def sessionFactory(self):
+        return self._sessionFactory
+
+    @sessionFactory.setter
+    def sessionFactory(self, v):
+        self._sessionFactory = v
+        self._sessions._sessionFactory = v
+
 
     def _openLogFile(self, path):
         from twisted.python import logfile
@@ -713,22 +731,12 @@ class Site(http.HTTPFactory):
         return d
 
 
-    def _mkuid(self):
-        """
-        (internal) Generate an opaque, unique ID for a user's session.
-        """
-        self.counter = self.counter + 1
-        return hexlify(self._entropy(32))
-
-
     def makeSession(self):
         """
         Generate a new Session instance, and store it for future reference.
         """
-        uid = self._mkuid()
-        session = self.sessions[uid] = self.sessionFactory(self, uid)
-        session.startCheckingExpiration()
-        return session
+        self.counter += 1
+        return self._sessions.makeSession()
 
 
     def getSession(self, uid):
@@ -740,7 +748,7 @@ class Site(http.HTTPFactory):
 
         @raise: L{KeyError} if the session is not found.
         """
-        return self.sessions[uid]
+        return self._sessions.getSession(uid)
 
 
     def buildProtocol(self, addr):
@@ -797,4 +805,9 @@ class Site(http.HTTPFactory):
         return baseProtocols
 
 
-from twisted.web._newserver import server
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.server.server instead",
+    "twisted.web.server",
+    "Site")
