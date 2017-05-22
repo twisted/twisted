@@ -17,10 +17,11 @@ from twisted.web.resource import getChildForRequest, EncodingResourceWrapper, _w
 from twisted.web.http import (_genericHTTPChannelProtocolFactory,
                               datetimeToLogString,
                               _REQUEST_TIMEOUT, H2_ENABLED, _escape)
-from twisted.internet.interfaces import IProtocolFactory
+from twisted.internet.interfaces import (
+    IProtocolFactory, IProtocolNegotiationFactory)
 
 
-@implementer(IProtocolFactory)
+@implementer(IProtocolFactory, IProtocolNegotiationFactory)
 @attr.s
 class _Server(object):
 
@@ -55,11 +56,15 @@ class _Server(object):
 
 
     def doStart(self):
-        pass
+        """
+        Start.
+        """
 
 
     def doStop(self):
-        pass
+        """
+        Stop.
+        """
 
 
     def log(self, request):

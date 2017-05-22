@@ -421,15 +421,6 @@ class _WrapperResource(object):
         directlyProvides(self, implementedBy(self._wrapperToApply))
 
 
-    def getChildWithDefault(self, path, request):
-        r = self.__class__(
-            self._resource.getChildWithDefault(path, request),
-            self._wrapperToApply,
-            *self._args, **self._kwargs
-        )
-        return r
-
-
     def render(self, request):
         return self._wrapped.render(request)
 
