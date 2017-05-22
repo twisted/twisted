@@ -66,6 +66,17 @@ else:
 
 
 
+    @implementer(IOpenSSLTrustRoot)
+    class CustomOpenSSLTrustRoot(object):
+        called = False
+        context = None
+
+        def _addCACertsToContext(self, context):
+            self.called = True
+            self.context = context
+
+
+
 class StubHTTPProtocol(Protocol):
     """
     A protocol like L{HTTP11ClientProtocol} but which does not actually know
@@ -1446,13 +1457,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
         from the given trust root.
         """
-        @implementer(IOpenSSLTrustRoot)
-        class CustomOpenSSLTrustRoot(object):
-            called = False
-            context = None
-            def _addCACertsToContext(self, context):
-                self.called = True
-                self.context = context
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
