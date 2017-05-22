@@ -28,10 +28,12 @@ from twisted.internet.interfaces import (
 class _SessionFandangler(object):
     _site = attr.ib()
     _sessionFactory = attr.ib()
+    _reactor = attr.ib(default=None)
 
     def makeSession(self):
         uid = hexlify(self._site._entropy(32))
-        session = self._site.sessions[uid] = self._sessionFactory(self._site, uid)
+        session = self._site.sessions[uid] = self._sessionFactory(
+            self._site, uid, reactor=self._reactor)
         session.startCheckingExpiration()
         return session
 
@@ -62,7 +64,8 @@ class _Server(object):
 
             displayTracebacks = self._displayTracebacks
             _sessionFandangler = attr.ib(default=attr.Factory(
-                lambda _self: _SessionFandangler(_self, self._sessionFactory),
+                lambda _self: _SessionFandangler(_self, self._sessionFactory,
+                                                 self._reactor),
                 takes_self=True))
             _entropy = attr.ib(default=urandom)
             sessions = attr.ib(default=attr.Factory(dict))
@@ -70,7 +73,8 @@ class _Server(object):
             def getResourceFor(self_, request):
                 res = getChildForRequest(self._resource, request)
                 if self._compressResponses:
-                    res = _wrap(res, EncodingResourceWrapper, [GzipEncoderFactory()])
+                    res = _wrap(res,
+                                EncodingResourceWrapper,[GzipEncoderFactory()])
                 return res
 
             def makeSession(self):

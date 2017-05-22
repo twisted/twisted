@@ -194,7 +194,8 @@ class ServerTests(SynchronousTestCase):
         """
         Existing C{site.makeSession} and C{site.getSession} functions work.
         """
-        site = server.server(None)
+        reactor = Clock()
+        site = server.server(None, reactor=reactor)
         p = site.buildProtocol(None)
         session = p.site.makeSession()
         otherSession = p.site.getSession(session.uid)
