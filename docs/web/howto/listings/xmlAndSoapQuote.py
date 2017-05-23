@@ -20,9 +20,8 @@ def main():
     root.putChild('RPC2', XMLRPCQuoter())
     root.putChild('SOAP', SOAPQuoter())
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
-    endpoint.listen(server.Site(root))
+    endpoint.listen(server.makeServer(root))
     reactor.run()
 
 if __name__ == '__main__':
     main()
-
