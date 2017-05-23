@@ -44,14 +44,24 @@ matrix:
       env: TOXENV=pyflakes3
     # Twistedchecker is running as a separate job so that we can ignore if it
     # fails.
-    - python: 2.7
+    - python: 3.5
       env: TOXENV=txchecker-travis-required
-    - python: 2.7
+    - python: 3.5
       env: TOXENV=txchecker-travis-all
+    # This will test some other projects that depend on Twisted.  Now is a good
+    # time to check that these still work since we don't want Twisted changes to
+    # introduce breaking changes downstream.
     - python: 2.7
       env: TOXENV=downstream
+    # We need a builder without IPv6. This is going to be slower than all the
+    # others, but that's ok.
+    - python: 3.5
+      env: TOXENV=py35-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
+      sudo: true
+
   allow_failures:
     - env: TOXENV=txchecker-travis-all
+    - env: TOXENV=pyflakes3
 
 
 addons:

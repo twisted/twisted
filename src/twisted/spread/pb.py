@@ -36,7 +36,7 @@ from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.compat import (unicode, _bytesChr as chr, xrange,
+from twisted.python.compat import (unicode, _bytesChr as chr, range,
                                    comparable, cmp)
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
@@ -157,7 +157,7 @@ class RemoteMethod:
         Asynchronously invoke a remote method.
         """
         return self.obj.broker._sendMessage(b'', self.obj.perspective,
-            self.obj.luid, self.name, args, kw)
+            self.obj.luid, self.name.encode("utf-8"), args, kw)
 
 
 
@@ -579,7 +579,7 @@ class Broker(banana.Banana):
         Called when the consumer attached to me runs out of buffer.
         """
         # Go backwards over the list so we can remove indexes from it as we go
-        for pageridx in xrange(len(self.pageProducers)-1, -1, -1):
+        for pageridx in range(len(self.pageProducers)-1, -1, -1):
             pager = self.pageProducers[pageridx]
             pager.sendNextPage()
             if not pager.stillPaging():
