@@ -663,7 +663,7 @@ version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
 
-from twisted.web._newserver import makeServer, _SessionFandangler
+from twisted.web._newserver import makeServer, _SessionFandangler, makeCombinedLogFormatFileForServer
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)

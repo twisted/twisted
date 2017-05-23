@@ -12,7 +12,7 @@ from os import urandom
 from binascii import hexlify
 from zope.interface import implementer
 
-from twisted.logger import Logger
+from twisted.logger import Logger, globalLogPublisher, formatEvent
 from twisted.web.server import Request, GzipEncoderFactory, Session
 from twisted.web.resource import (
     getChildForRequest, EncodingResourceWrapper, _wrap)
@@ -193,3 +193,33 @@ def makeServer(resource, displayTracebacks=True, compressResponses=True,
     # Set up the Logger source correctly
     logger.source = server
     return server
+
+
+
+def makeCombinedLogFormatFileForServer(server, logFile,
+                                       logPublisher=globalLogPublisher):
+    """
+    Make a Combined Log Format file, logging from C{server}.
+
+    @param server: The server returned by L{makeServer}.
+
+    @param logFile: A file-like object, opened in binary format.
+
+    @param logPublisher: A log publisher to observe.
+    @type logPublisher: A L{twisted.logger.ILogObserver} implementer.
+    """
+
+    def consume(event):
+        # Heuristics to find what should actually be logged
+        if event.get("log_source", None) is server and "agent" in event.keys():
+            e = dict(event)
+            e["log_format"] = (
+                u'{ip} - - {timestamp} "{method} {uri} {protocol}" '
+                u'{code} {length} "{referrer}" "{agent}"'
+            )
+
+            formatted = formatEvent(e).encode('utf-8') + b"\n"
+            logFile.write(formatted)
+
+    logPublisher.addObserver(consume)
+    return lambda: logPublisher.removeObserver(consume)

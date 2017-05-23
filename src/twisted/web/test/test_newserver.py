@@ -3,13 +3,16 @@
 
 import zlib
 
-from twisted.logger import Logger
+from io import BytesIO
+
+from twisted.logger import Logger, LogPublisher
 from twisted.web import server, resource
 from twisted.internet.task import Clock
 from twisted.test import iosim, proto_helpers
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.test.test_web import SimpleResource
 from twisted.web.http import H2_ENABLED
+from twisted.internet.address import IPv4Address
 
 
 class ServerTests(SynchronousTestCase):
@@ -33,11 +36,11 @@ class ServerTests(SynchronousTestCase):
         c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
                                                     lambda: clientProtocol)
 
-        c.transport.write(b"GET / HTTP/1.0\r\n\r\n")
+        c.transport.write(b"GET / HTTP/1.1\r\n\r\n")
         pump.flush()
 
         data = clientProtocol.data.split(b'\r\n')
-        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
         self.assertFalse(b'Content-Encoding' in data)
 
 
@@ -58,11 +61,11 @@ class ServerTests(SynchronousTestCase):
         c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
                                                     lambda: clientProtocol)
 
-        c.transport.write(b"GET / HTTP/1.0\r\n\r\n")
+        c.transport.write(b"GET / HTTP/1.1\r\n\r\n")
         pump.flush()
 
         data = clientProtocol.data.split(b'\r\n')
-        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
         self.assertFalse(b'Content-Encoding' in data)
         self.assertEqual(len(msg), 1)
         self.assertEqual(msg[0]["uri"], "/")
@@ -111,11 +114,11 @@ class ServerTests(SynchronousTestCase):
         c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
                                                     lambda: clientProtocol)
 
-        c.transport.write(b"GET / HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n")
+        c.transport.write(b"GET / HTTP/1.1\r\nAccept-Encoding: gzip\r\n\r\n")
         pump.flush()
 
         data = clientProtocol.data.split(b'\r\n')
-        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
         self.assertFalse(b'Content-Encoding: gzip' in data)
         body = clientProtocol.data.split(b'\r\n\r\n', 1)[1]
         self.assertEqual(b'correct', body)
@@ -200,3 +203,152 @@ class ServerTests(SynchronousTestCase):
         session = p.site.makeSession()
         otherSession = p.site.getSession(session.uid)
         self.assertIs(session, otherSession)
+
+
+class ServerLoggingTests(SynchronousTestCase):
+    """
+    Tests for L{twisted.web._newserver.makeCombinedLogFormatFileForServer}.
+    """
+
+    def test_globalPublisher(self):
+        """
+        Passing no explicit logger and no explicit C{logPublisher} will make it
+        use the global log publisher.
+        """
+        reactor = Clock()
+        reactor.advance(1234567890)
+        r = resource.Resource()
+        r.putChild(b'', SimpleResource())
+        site = server.makeServer(r, reactor=reactor)
+
+        logFile = BytesIO()
+        logger = server.makeCombinedLogFormatFileForServer(site, logFile)
+
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+        s._channel.getPeer = lambda: IPv4Address('TCP', '1.2.3.4', 12345)
+
+        c.transport.write(b"GET / HTTP/1.1\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
+        self.assertFalse(b'Content-Encoding' in data)
+
+        # Log something else on the system, it shouldn't show up in the log
+        myLogger = Logger()
+        myLogger.info("hello!")
+
+        # Reach in and log on the logger in the server, it shouldn't show up
+        site._logger.info("hellllo!")
+
+        logLines = logFile.getvalue().strip().split(b"\n")
+        self.assertEqual(len(logLines), 1)
+        self.assertEqual(
+            logLines[0],
+            # Client IP
+            b'1.2.3.4 '
+            # Some blanks we never fill in
+            b'- - '
+            # The current time (circa 1234567890)
+            b'[13/Feb/2009:23:31:30 +0000] '
+            # Method, URI, version
+            b'"GET / HTTP/1.1" '
+            # Response code
+            b'200 '
+            # Response length
+            b'7 '
+            # Value of the "Referer" header.  Probably incorrectly quoted.
+            b'"-" '
+            # Value pf the "User-Agent" header.  Probably incorrectly quoted.
+            b'"-"')
+
+        # Unsubscribe, we ought to not get anything else.
+        logger()
+        clientProtocol.data = b''
+
+        c.transport.write(b"GET / HTTP/1.1\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
+        self.assertFalse(b'Content-Encoding' in data)
+        logLines = logFile.getvalue().strip().split(b"\n")
+        self.assertEqual(len(logLines), 1)
+
+
+    def test_explicitPublisher(self):
+        """
+        Passing an explicit logger and publisher to L{makeServer} and
+        L{makeCombinedLogFormatFileForServer}.
+        """
+        observer = LogPublisher()
+        logger = Logger(observer=observer)
+
+        reactor = Clock()
+        reactor.advance(1234567890)
+        r = resource.Resource()
+        r.putChild(b'', SimpleResource())
+        site = server.makeServer(r, reactor=reactor, logger=logger)
+
+        logFile = BytesIO()
+        logger = server.makeCombinedLogFormatFileForServer(
+            site, logFile, logPublisher=observer)
+
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+        s._channel.getPeer = lambda: IPv4Address('TCP', '1.2.3.4', 12345)
+
+        c.transport.write(b"GET / HTTP/1.1\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
+        self.assertFalse(b'Content-Encoding' in data)
+
+        # Log something else on the system, it shouldn't show up in the log
+        myLogger = Logger()
+        myLogger.info("hello!")
+
+        # Reach in and log on the logger in the server, it shouldn't show up
+        site._logger.info("hellllo!")
+
+        logLines = logFile.getvalue().strip().split(b"\n")
+        self.assertEqual(len(logLines), 1)
+        self.assertEqual(
+            logLines[0],
+            # Client IP
+            b'1.2.3.4 '
+            # Some blanks we never fill in
+            b'- - '
+            # The current time (circa 1234567890)
+            b'[13/Feb/2009:23:31:30 +0000] '
+            # Method, URI, version
+            b'"GET / HTTP/1.1" '
+            # Response code
+            b'200 '
+            # Response length
+            b'7 '
+            # Value of the "Referer" header.  Probably incorrectly quoted.
+            b'"-" '
+            # Value pf the "User-Agent" header.  Probably incorrectly quoted.
+            b'"-"')
+
+        # Unsubscribe, we ought to not get anything else.
+        logger()
+        clientProtocol.data = b''
+
+        c.transport.write(b"GET / HTTP/1.1\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.1 200 OK' in data)
+        self.assertFalse(b'Content-Encoding' in data)
+        logLines = logFile.getvalue().strip().split(b"\n")
+        self.assertEqual(len(logLines), 1)
