@@ -24,6 +24,7 @@ class BaseLogFile:
     """
 
     synchronized = ["write", "rotate"]
+    _binary = False
 
     def __init__(self, name, directory, defaultMode=None):
         """
@@ -76,19 +77,25 @@ class BaseLogFile:
         for more information.
         """
         self.closed = False
+        binary = self._binary
         if os.path.exists(self.path):
-            self._file = open(self.path, "r+", 1)
+            self._file = open(
+                self.path, "rb+" if binary else "r+", 0 if binary else 1)
             self._file.seek(0, 2)
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
                 oldUmask = os.umask(0o777)
                 try:
-                    self._file = open(self.path, "w+", 1)
+                    self._file = open(
+                        self.path, "wb+" if binary else "w+",
+                        0 if binary else 1)
                 finally:
                     os.umask(oldUmask)
             else:
-                self._file = open(self.path, "w+", 1)
+                self._file = open(
+                    self.path, "wb+" if binary else "w+",
+                    0 if binary else 1)
         if self.defaultMode is not None:
             try:
                 os.chmod(self.path, self.defaultMode)
@@ -245,6 +252,11 @@ class LogFile(BaseLogFile):
         return state
 
 threadable.synchronize(LogFile)
+
+
+class _BinaryLogFile(LogFile):
+    _binary = True
+
 
 
 class DailyLogFile(BaseLogFile):
