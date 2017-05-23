@@ -45,7 +45,7 @@ class RebuildTests(unittest.TestCase):
         os.mkdir(self.libPath)
         self.fakelibPath = os.path.join(self.libPath, 'twisted_rebuild_fakelib')
         os.mkdir(self.fakelibPath)
-        file(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
+        open(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
         sys.path.insert(0, self.libPath)
 
     def tearDown(self):

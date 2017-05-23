@@ -110,13 +110,13 @@ How to do a release candidate
 3. In your Git repo, fetch and check out the new release branch.
 4. Run ``python -m incremental.update Twisted --rc``
 5. Commit the changes made by Incremental.
-6. Run ``./bin/admin/build-news .``
-7. Commit the changes made by build-news - this automatically removes the NEWS topfiles (see #4315)
+6. Run ``towncrier``.
+7. Commit the changes made by towncrier - this automatically removes the NEWS topfiles.
 8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
 9. Push the changes up to GitHub.
 10. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs.
-11. Copy ``NEWS`` to ``/tmp/twisted-release/`` as ``NEWS.txt`` for people to view without having to download the tarballs.
-    (e.g. ``cp NEWS /tmp/twisted-release/NEWS.txt``)
+11. Copy ``NEWS.rst`` to ``/tmp/twisted-release/`` for people to view without having to download the tarballs.
+    (e.g. ``cp NEWS.rst /tmp/twisted-release/NEWS.rst``)
 12. Upload the tarballs to ``twistedmatrix.com/Releases/rc/$RELEASE`` (see #4353)
 
   - You can use ``rsync --rsh=ssh --partial --progress -av /tmp/twisted-release/ t-web@dornkirk.twistedmatrix.com:/srv/t-web/data/releases/rc/<RELEASE>/`` to do this.
@@ -176,7 +176,7 @@ Prepare the branch
 1. Have the release branch, previously used to generate a release candidate, checked out
 2. Run ``python -m incremental.update Twisted``.
 3. Revert the release candidate newsfile changes, in order.
-4. Run ``./bin/admin/build-news .`` to make the final newsfile.
+4. Run ``towncrier`` to make the final newsfile.
 5. Add the quote of the release to the ``README.rst``
 6. Make a new quote file for the next version
 
@@ -219,7 +219,7 @@ Update documentation
 
 2. Build the documentation
 
-  - ``./bin/admin/build-news .``
+  - ``./bin/admin/build-docs .``
   - ``cp -R doc /tmp/twisted-release/``
 
 3. Run the build-apidocs script to build the API docs and then upload them (See also #2891).
