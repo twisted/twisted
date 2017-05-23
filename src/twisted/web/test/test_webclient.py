@@ -1438,10 +1438,7 @@ class DeprecationTests(unittest.TestCase):
         url = networkString("http://127.0.0.1:%d" % (portno,))
 
         path = FilePath(self.mktemp())
-        print('d')
         d = client.downloadPage(url, path.path)
-        print('d2')
-        print(url)
 
         warningInfo = self.flushWarnings([self.test_downloadPageDeprecated])
         self.assertEqual(len(warningInfo), 1)

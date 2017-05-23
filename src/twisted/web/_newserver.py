@@ -43,8 +43,12 @@ class _SessionFandangler(object):
 
 @implementer(IProtocolFactory, IProtocolNegotiationFactory)
 @attr.s
-class _Server(object):
+class Server(object):
+    """
+    A web server.
 
+    Instantiating this object outside of L{makeServer} is B{not supported}.
+    """
     _protocol = attr.ib()
     _displayTracebacks = attr.ib()
     _compressResponses = attr.ib()
@@ -186,9 +190,9 @@ def makeServer(resource, displayTracebacks=True, compressResponses=True,
     if reactor is None:
         from twisted.internet import reactor
 
-    server = _Server(_genericHTTPChannelProtocolFactory, displayTracebacks,
-                     compressResponses, timeout, resource, requestFactory,
-                     sessionFactory, logger, reactor)
+    server = Server(_genericHTTPChannelProtocolFactory, displayTracebacks,
+                    compressResponses, timeout, resource, requestFactory,
+                    sessionFactory, logger, reactor)
 
     # Set up the Logger source correctly
     logger.source = server

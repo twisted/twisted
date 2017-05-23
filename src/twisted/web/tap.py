@@ -227,8 +227,8 @@ def makeService(config):
     site = server.makeServer(root)
 
     if config['logfile']:
-        f = logfile._BinaryLogFile(os.path.basename(config['logfile']),
-                                   os.path.dirname(config['logfile']))
+        f = logfile.BinaryLogFile(os.path.basename(config['logfile']),
+                                  os.path.dirname(config['logfile']))
         server.makeCombinedLogFormatFileForServer(site, f)
 
     site.displayTracebacks = not config["notracebacks"]
