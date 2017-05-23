@@ -149,10 +149,10 @@ class _Server(object):
 
 
 
-def server(resource, displayTracebacks=True, compressResponses=True,
-           timeout=_REQUEST_TIMEOUT, requestFactory=Request, sessionFactory=Session,
-           logger=None,
-           reactor=None):
+def makeServer(resource, displayTracebacks=True, compressResponses=True,
+               timeout=_REQUEST_TIMEOUT, requestFactory=Request, sessionFactory=Session,
+               logger=None,
+               reactor=None):
     """
     Create a web server.
 

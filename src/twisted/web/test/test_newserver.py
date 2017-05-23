@@ -14,18 +14,18 @@ from twisted.web.http import H2_ENABLED
 
 class ServerTests(SynchronousTestCase):
     """
-    Tests for L{twisted.web.server.server}.
+    Tests for L{twisted.web.server.makeServer}.
     """
 
     def test_noAcceptEncoding(self):
         """
-        L{server.server}s with C{compressResponses=True} will not compress
+        L{server.makeServer}s with C{compressResponses=True} will not compress
         responses with no C{Accept-Encoding} header.
         """
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.server(r, compressResponses=True)
+        site = server.makeServer(r, compressResponses=True)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -43,14 +43,14 @@ class ServerTests(SynchronousTestCase):
 
     def test_logger(self):
         """
-        L{server.server} with C{logger} will set the logger.
+        L{server.makeServer} with C{logger} will set the logger.
         """
         msg = []
         logger = Logger(observer=msg.append)
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.server(r, logger=logger)
+        site = server.makeServer(r, logger=logger)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -70,13 +70,13 @@ class ServerTests(SynchronousTestCase):
 
     def test_gzip(self):
         """
-        L{server.server} with C{compressResponses=True} will compress eligible
+        L{server.makeServer} with C{compressResponses=True} will compress eligible
         responses.
         """
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.server(r, compressResponses=True)
+        site = server.makeServer(r, compressResponses=True)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -97,13 +97,13 @@ class ServerTests(SynchronousTestCase):
 
     def test_compressResponsesFalse(self):
         """
-        L{server.server} with C{compressResponses=False} will not compress
+        L{server.makeServer} with C{compressResponses=False} will not compress
         responses.
         """
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.server(r, compressResponses=False)
+        site = server.makeServer(r, compressResponses=False)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -122,7 +122,7 @@ class ServerTests(SynchronousTestCase):
 
     def test_h2(self):
         """
-        L{server.server} with C{compressResponses=False} will not compress
+        L{server.makeServer} with C{compressResponses=False} will not compress
         responses.
         """
         from twisted.internet.ssl import optionsForClientTLS
@@ -138,7 +138,7 @@ class ServerTests(SynchronousTestCase):
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.server(r, compressResponses=False, reactor=reactor)
+        site = server.makeServer(r, compressResponses=False, reactor=reactor)
 
         authCert, serverCert = certificatesForAuthorityAndServer()
         clientInnerF = ClientFactory.forProtocol(
@@ -195,7 +195,7 @@ class ServerTests(SynchronousTestCase):
         Existing C{site.makeSession} and C{site.getSession} functions work.
         """
         reactor = Clock()
-        site = server.server(None, reactor=reactor)
+        site = server.makeServer(None, reactor=reactor)
         p = site.buildProtocol(None)
         session = p.site.makeSession()
         otherSession = p.site.getSession(session.uid)
