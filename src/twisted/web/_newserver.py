@@ -7,7 +7,6 @@ Next-Generation Web Sites for the Internet Zone Age.
 """
 
 import attr
-import copy
 
 from os import urandom
 from binascii import hexlify
