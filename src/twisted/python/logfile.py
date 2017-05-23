@@ -254,7 +254,11 @@ class LogFile(BaseLogFile):
 threadable.synchronize(LogFile)
 
 
-class _BinaryLogFile(LogFile):
+class BinaryLogFile(LogFile):
+    """
+    A L{LogFile} that is opened in binary mode (that is, C{write} only accepts
+    L{bytes}).
+    """
     _binary = True
 
 
