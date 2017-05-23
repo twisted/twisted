@@ -25,10 +25,11 @@ class ServerTests(SynchronousTestCase):
         L{server.makeServer}s with C{compressResponses=True} will not compress
         responses with no C{Accept-Encoding} header.
         """
+        reactor = Clock()
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.makeServer(r, compressResponses=True)
+        site = server.makeServer(r, compressResponses=True, reactor=reactor)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -48,12 +49,13 @@ class ServerTests(SynchronousTestCase):
         """
         L{server.makeServer} with C{logger} will set the logger.
         """
+        reactor = Clock()
         msg = []
         logger = Logger(observer=msg.append)
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.makeServer(r, logger=logger)
+        site = server.makeServer(r, logger=logger, reactor=reactor)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -76,10 +78,11 @@ class ServerTests(SynchronousTestCase):
         L{server.makeServer} with C{compressResponses=True} will compress eligible
         responses.
         """
+        reactor = Clock()
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.makeServer(r, compressResponses=True)
+        site = server.makeServer(r, compressResponses=True, reactor=reactor)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()
@@ -103,10 +106,11 @@ class ServerTests(SynchronousTestCase):
         L{server.makeServer} with C{compressResponses=False} will not compress
         responses.
         """
+        reactor = Clock()
         sre = SimpleResource()
         r = resource.Resource()
         r.putChild(b'', sre)
-        site = server.makeServer(r, compressResponses=False)
+        site = server.makeServer(r, compressResponses=False, reactor=reactor)
 
         serverProtocol = site.buildProtocol(None)
         clientProtocol = proto_helpers.AccumulatingProtocol()

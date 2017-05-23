@@ -75,8 +75,8 @@ class ServiceTests(TestCase):
         service = makeService(options)
         service.startService()
         self.addCleanup(service.stopService)
-        self.assertIsInstance(service.services[0].factory.resource, File)
-        self.assertEqual(service.services[0].factory.resource.path, path.path)
+        self.assertIsInstance(service.services[0].factory._resource, File)
+        self.assertEqual(service.services[0].factory._resource.path, path.path)
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
