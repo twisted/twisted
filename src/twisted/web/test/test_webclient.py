@@ -1425,7 +1425,6 @@ class DeprecationTests(unittest.TestCase):
 
         return d.addErrback(lambda _: None)
 
-    timeout = 5
 
     def test_downloadPageDeprecated(self):
         """
