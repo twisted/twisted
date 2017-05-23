@@ -82,7 +82,7 @@ class LoggerTests(unittest.TestCase):
         namespace for the logger.
         """
         def bringThePain():
-            exec("Logger()", {"Logger": Logger})
+            exec("Logger()", {"Logger": Logger}, {})
         self.assertRaises(CannotDetermineNamespaceError, bringThePain)
 
 
