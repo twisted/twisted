@@ -46,9 +46,9 @@ One way to override the value is with a subclass:
 
 To have Twisted Web actually make use of this session class, rather
 than the default, it is also necessary to override
-the ``sessionFactory`` attribute of :api:`twisted.web.server.Site <Site>` . We could do this with another
+the ``sessionFactory`` attribute of :api:`twisted.web.server.makeServer <makeServer>` . We could do this with another
 subclass, but we could also do it to just one instance
-of ``Site`` :
+of ``makeServer`` :
 
 
 
@@ -57,15 +57,15 @@ of ``Site`` :
 .. code-block:: python
 
 
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
 
-    factory = Site(rootResource)
+    factory = makeServer(rootResource)
     factory.sessionFactory = ShortSession
 
 
 
 
-Sessions given out for requests served by this ``Site`` will
+Sessions given out for requests served by this ``makeServer`` will
 use ``ShortSession`` and only last one minute without activity.
 
 
@@ -121,7 +121,7 @@ session expires, and uses sessions which last for 5 seconds:
 .. code-block:: python
 
 
-    from twisted.web.server import Site, Session
+    from twisted.web.server import makeServer, Session
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -144,7 +144,7 @@ session expires, and uses sessions which last for 5 seconds:
 
     rootResource = Resource()
     rootResource.putChild("logme", ExpirationLogger())
-    factory = Site(rootResource)
+    factory = makeServer(rootResource)
     factory.sessionFactory = ShortSession
 
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
@@ -154,7 +154,7 @@ session expires, and uses sessions which last for 5 seconds:
 
 
 
-Since ``Site`` customization is required, this example can't be
+Since ``makeServer`` customization is required, this example can't be
 rpy-based, so it brings back the manual ``endpoints.TCP4ServerEndpoint``
 and ``reactor.run`` calls. Run it and visit ``/logme`` to see
 it in action. Keep visiting it to keep your session active. Stop visiting it for

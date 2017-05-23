@@ -27,7 +27,7 @@ First, the now-standard import preamble:
 .. code-block:: python
 
 
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -88,7 +88,7 @@ the above defined resource at ``/buy`` :
 
     root = Resource()
     root.putChild("buy", PaymentRequired())
-    factory = Site(root)
+    factory = makeServer(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()
@@ -105,7 +105,7 @@ Here's the complete example:
 .. code-block:: python
 
 
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -116,7 +116,7 @@ Here's the complete example:
 
     root = Resource()
     root.putChild("buy", PaymentRequired())
-    factory = Site(root)
+    factory = makeServer(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()

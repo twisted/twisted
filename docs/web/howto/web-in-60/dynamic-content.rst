@@ -16,7 +16,7 @@ contents of a page.
 
 
 
-Taking care of some of the necessary imports first, we'll import :api:`twisted.web.server.Site <Site>`, the :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` :
+Taking care of some of the necessary imports first, we'll import :api:`twisted.web.server.makeServer <makeServer>`, the :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` :
 
 
 
@@ -26,12 +26,12 @@ Taking care of some of the necessary imports first, we'll import :api:`twisted.w
 
 
     from twisted.internet import reactor, endpoints
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
 
 
 
 
-The Site is a factory which associates a listening port with the HTTP
+The makeServer is a factory which associates a listening port with the HTTP
 protocol implementation. The reactor is the main loop that drives any Twisted
 application. Endpoints are used to create listening ports.
 
@@ -104,7 +104,7 @@ string it returns is what will be sent to the browser.
 
 
 
-With the resource defined, we can create a ``Site`` from it:
+With the resource defined, we can create a ``makeServer`` from it:
 
 
 
@@ -114,14 +114,14 @@ With the resource defined, we can create a ``Site`` from it:
 
 
     resource = ClockPage()
-    factory = Site(resource)
+    factory = makeServer(resource)
 
 
 
 
 Just as with the previous static content example, this
 configuration puts our resource at the very top of the URI hierarchy,
-ie at ``/`` . With that ``Site`` instance, we can
+ie at ``/`` . With that ``makeServer`` instance, we can
 tell the reactor to :doc:`create a TCP server <../../../core/howto/servers>` and start servicing requests:
 
 
@@ -148,7 +148,7 @@ Here's the code with no interruptions:
 
 
     from twisted.internet import reactor, endpoints
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
     from twisted.web.resource import Resource
     import time
 
@@ -158,7 +158,7 @@ Here's the code with no interruptions:
             return "<html><body>%s</body></html>" % (time.ctime(),)
 
     resource = ClockPage()
-    factory = Site(resource)
+    factory = makeServer(resource)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()

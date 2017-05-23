@@ -52,7 +52,7 @@ details.
 
 
 :api:`twisted.web.xmlrpc.XMLRPC <XMLRPC>` instances
-are Resource objects, and they can thus be published using a Site. The
+are Resource objects, and they can thus be published using a Server. The
 following example has two methods published via XML-RPC, ``add(a, b)`` and ``echo(x)`` .
 
 
@@ -91,7 +91,7 @@ following example has two methods published via XML-RPC, ``add(a, b)`` and ``ech
         from twisted.internet import reactor, endpoints
         r = Example()
         endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
-        endpoint.listen(server.Site(r))
+        endpoint.listen(server.makeServer(r))
         reactor.run()
 
 
@@ -137,7 +137,7 @@ argument, before any XML-RPC parameters.  For example:
 
 
     from twisted.web.xmlrpc import XMLRPC, withRequest
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
 
     class Example(XMLRPC):
         @withRequest
@@ -147,7 +147,7 @@ argument, before any XML-RPC parameters.  For example:
     if __name__ == '__main__':
         from twisted.internet import reactor, endpoints
         endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
-        endpoint.listen(Site(Example()))
+        endpoint.listen(makeServer(Example()))
         reactor.run()
 
 
@@ -221,7 +221,7 @@ following:
         date = Date()
         r.putSubHandler('date', date)
         endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
-        endpoint.listen(server.Site(r))
+        endpoint.listen(server.makeServer(r))
         reactor.run()
 
 
@@ -305,7 +305,7 @@ the :api:`twisted.web.xmlrpc.XMLRPCIntrospection <XMLRPCIntrospection>` class:
         r = Example()
         xmlrpc.addIntrospection(r)
         endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
-        endpoint.listen(server.Site(r))
+        endpoint.listen(server.makeServer(r))
         reactor.run()
 
 
@@ -432,7 +432,7 @@ SOAP in the one web server, you can use the :api:`twisted.web.resource.IResource
 
 
 The following example uses an empty :api:`twisted.web.resource.Resource <resource.Resource>` as the root resource for
-a :api:`twisted.web.server.Site <Site>` , and then
+a :api:`twisted.web.server.makeServer <Server>` , and then
 adds ``/RPC2`` and ``/SOAP`` paths to it.
 
 
@@ -446,6 +446,3 @@ adds ``/RPC2`` and ``/SOAP`` paths to it.
 
 Refer to :ref:`Twisted Web
 Development <web-howto-using-twistedweb-development>` for more details about Resources.
-
-
-

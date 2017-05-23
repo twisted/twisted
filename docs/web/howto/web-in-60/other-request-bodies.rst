@@ -59,7 +59,7 @@ only ``render_POST`` changed:
 .. code-block:: python
 
 
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -74,7 +74,7 @@ only ``render_POST`` changed:
 
     root = Resource()
     root.putChild("form", FormPage())
-    factory = Site(root)
+    factory = makeServer(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()

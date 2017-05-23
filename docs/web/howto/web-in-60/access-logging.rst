@@ -16,14 +16,14 @@ If you've run any of the previous examples and watched the output of ``twistd`` 
 If you focus on the latter portion of this log message you'll see something that looks like a standard "combined log format" message.
 However, it's prefixed with the normal Twisted logging prefix giving a timestamp and some protocol and peer addressing information.
 Much of this information is redundant since it is part of the combined log format.
-:api:`twisted.web.server.Site <Site>` lets you produce a more compact log which omits the normal Twisted logging prefix.
-To take advantage of this feature all that is necessary is to tell :api:`twisted.web.server.Site <Site>` where to write this compact log.
+:api:`twisted.web.server.makeServer <makeServer>` lets you produce a more compact log which omits the normal Twisted logging prefix.
+To take advantage of this feature all that is necessary is to tell :api:`twisted.web.server.makeServer <makeServer>` where to write this compact log.
 Do this by passing ``logPath`` to the initializer:
 
 .. code-block:: python
 
     ...
-    factory = Site(root, logPath=b"/tmp/access-logging-demo.log")
+    factory = makeServer(root, logPath=b"/tmp/access-logging-demo.log")
 
 Or if you want to change the logging behavior of a server you're launching with ``twistd web`` then just pass the ``--logfile`` option:
 
@@ -38,7 +38,7 @@ Once you pass ``logPath`` or use ``--logfile`` on the command line the server wi
 
 Any tools expecting combined log format messages should be able to work with these log files.
 
-:api:`twisted.web.server.Site <Site>` also allows the log format used to be customized using its ``logFormatter`` argument.
+:api:`twisted.web.server.makeServer <makeServer>` also allows the log format used to be customized using its ``logFormatter`` argument.
 Twisted Web comes with one alternate formatter, :api:`twisted.web.http.proxiedLogFormatter <proxiedLogFormatter>`, which is for use behind a proxy that sets the ``X-Forwarded-For`` header.
 It logs the client address taken from this header rather than the network address of the client directly connected to the server.
 Here's the complete code for an example that uses both these features:
@@ -46,12 +46,12 @@ Here's the complete code for an example that uses both these features:
 .. code-block:: python
 
     from twisted.web.http import proxiedLogFormatter
-    from twisted.web.server import Site
+    from twisted.web.server import makeServer
     from twisted.web.static import File
     from twisted.internet import reactor, endpoints
 
     resource = File('/tmp')
-    factory = Site(resource, logPath=b"/tmp/access-logging-demo.log", logFormatter=proxiedLogFormatter)
+    factory = makeServer(resource, logPath=b"/tmp/access-logging-demo.log", logFormatter=proxiedLogFormatter)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
     endpoint.listen(factory)
     reactor.run()

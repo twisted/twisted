@@ -21,13 +21,13 @@ and how to prematurely expire a session.
 
 Before diving into the APIs, let's look at the big picture of
 sessions in Twisted Web. Sessions are represented by instances
-of :api:`twisted.web.server.Session <Session>` . The :api:`twisted.web.server.Site <Site>` creates a new instance
+of :api:`twisted.web.server.Session <Session>` . The :api:`twisted.web.server.makeServer <makeServer>` creates a new instance
 of ``Session`` the first time an application asks for it for
 a particular session. ``Session`` instances are kept on
-the ``Site`` instance until they expire (due to inactivity or
+the ``makeServer`` instance until they expire (due to inactivity or
 because they are explicitly expired). Each time after the first that a
 particular session's ``Session`` object is requested, it is
-retrieved from the ``Site`` .
+retrieved from the ``makeServer`` .
 
 
 

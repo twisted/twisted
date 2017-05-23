@@ -75,7 +75,7 @@ You can also write a Python script like:
 
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
     endpoint.listen(
-        server.Site(toplevel.Resource(file="foo/bar", color="blue")))
+        server.makeServer(toplevel.Resource(file="foo/bar", color="blue")))
     reactor.run()
 
 
