@@ -1832,14 +1832,14 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
 
 class HostnameEndpointFallbackNameResolutionTests(unittest.TestCase):
     """
-    Verify that L{HostnameEndpoint._fallbackNameResolution} defers a
-    name resolution call to a thread.
+    L{HostnameEndpoint._fallbackNameResolution} defers a name
+    resolution call to a thread.
     """
 
     def test_fallbackNameResolution(self):
         """
-        A L{Deferred} is returned that fires with the resoution of the
-        the host and request port.
+        L{_fallbackNameResolution} returns a L{Deferred} that fires
+        with the resoution of the the host and request port.
         """
         from twisted.internet import reactor
         ep = endpoints.HostnameEndpoint(reactor,
@@ -1935,8 +1935,8 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
 
     def test_endpointConnectFailure(self):
         """
-        If L{HostnameEndpoint.connect} is invoked and there is no server
-        listening for connections, the returned L{Deferred} will fail with
+        When L{HostnameEndpoint.connect} cannot connect to its
+        destination, the returned L{Deferred} will fail with
         C{ConnectError}.
         """
         expectedError = error.ConnectError(string="Connection Failed")
