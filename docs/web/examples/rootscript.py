@@ -32,7 +32,7 @@ root.processors = {'.rpy': script.ResourceScript}
 resource.addHost("example.com", root)
 
 # Setup Twisted Application.
-site = server.Site(resource)
+site = server.makeServer(resource)
 application = service.Application('vhost')
 sc = service.IServiceCollection(application)
 # Only the processes owned by the root user can listen @ port 80, change the

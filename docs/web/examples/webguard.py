@@ -55,7 +55,7 @@ def main():
     wrapper = guard.HTTPAuthSessionWrapper(
         Portal(SimpleRealm(), checkers),
         [guard.DigestCredentialFactory('md5', 'example.com')])
-    reactor.listenTCP(8889, server.Site(
+    reactor.listenTCP(8889, server.makeServer(
           resource = wrapper))
     reactor.run()
 

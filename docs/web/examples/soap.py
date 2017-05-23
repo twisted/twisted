@@ -40,5 +40,5 @@ class Example(soap.SOAPPublisher):
         return defer.succeed(2)
 
 
-reactor.listenTCP(8080, server.Site(Example()))
+reactor.listenTCP(8080, server.makeServer(Example()))
 reactor.run()
