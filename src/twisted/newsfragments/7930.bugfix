@@ -1,0 +1,2 @@
+Raise CannotDetermineNamespaceError instead of KeyError when unable to
+determine namespace from calling context.
