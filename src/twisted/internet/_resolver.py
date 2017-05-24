@@ -23,6 +23,7 @@ from twisted.internet.error import DNSLookupError
 from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.python.compat import unicode, _PY3
 from twisted.logger import Logger
 
 
@@ -169,8 +170,13 @@ class SimpleResolverComplexifier(object):
 
         @return: see interface
         """
+        # If it's Python 2, encode this to IDNA.
+        if not _PY3 and isinstance(hostName, unicode):
+            hostName = hostName.encode('idna')
+
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
+
         onAddress = self._simpleResolver.getHostByName(hostName)
         def addressReceived(address):
             resolutionReceiver.addressResolved(IPv4Address('TCP', address,
