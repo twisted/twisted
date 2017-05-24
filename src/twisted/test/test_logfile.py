@@ -6,7 +6,6 @@ from __future__ import division, absolute_import
 import contextlib
 import errno
 import os
-import pickle
 import stat
 import time
 
