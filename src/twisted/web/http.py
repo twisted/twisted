@@ -1337,6 +1337,19 @@ class Request:
         @rtype: C{str}
         """
         if isinstance(self.client, address.IPv4Address):
+            try:
+                trustedIPs = self.site._getTrustedReverseProxyIPs()
+            except AttributeError:
+                pass
+            else:
+                if self.client.host in trustedIPs:
+                    ip = self.requestHeaders.getRawHeaders(
+                        b"x-forwarded-for", [b""])[0].split(b",")[0].strip()
+
+                    # Is it a thing?
+                    if ip != b'':
+                        return nativeString(ip)
+
             return self.client.host
         else:
             return None
