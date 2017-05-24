@@ -60,7 +60,7 @@ class IResolverSimple(Interface):
         """
         Resolve the domain name C{name} into an IP address.
 
-        @type name: C{bytes}
+        @type name: C{str}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}

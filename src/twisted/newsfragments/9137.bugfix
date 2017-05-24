@@ -1,0 +1,1 @@
+twisted.internet.interfaces.IResolverSimple implementers will now always be passed bytes on Python 2.
