@@ -109,7 +109,7 @@ class LogFileTests(unittest.TestCase):
         self.assertEqual(log._file.tell(), log.size)
         f = log._file
         f.seek(0, 0)
-        self.assertEqual(f.read(), "0123456789abc")
+        self.assertEqual(f.read(), b"0123456789abc")
 
 
     def test_logReader(self):
@@ -212,7 +212,7 @@ class LogFileTests(unittest.TestCase):
         f = log._file
         self.assertEqual(f.tell(), 6)
         f.seek(0, 0)
-        self.assertEqual(f.read(), "abcdef")
+        self.assertEqual(f.read(), b"abcdef")
 
 
     def test_maxNumberOfLog(self):
