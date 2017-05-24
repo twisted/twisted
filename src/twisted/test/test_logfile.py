@@ -313,34 +313,6 @@ class LogFileTests(unittest.TestCase):
         self.assertEqual(e.errno, errno.ENOENT)
 
 
-    def test_persistence(self):
-        """
-        L{LogFile} objects can be pickled and unpickled, which preserves all
-        the various attributes of the log file.
-        """
-        rotateLength = 12345
-        defaultMode = 0o642
-        maxRotatedFiles = 42
-
-        with contextlib.closing(
-                logfile.LogFile(self.name, self.dir,
-                                rotateLength, defaultMode,
-                                maxRotatedFiles)) as log:
-            log.write("123")
-
-        copy = pickle.loads(pickle.dumps(log))
-        self.addCleanup(copy.close)
-
-        # Check that the unpickled log is the same as the original one.
-        self.assertEqual(self.name, copy.name)
-        self.assertEqual(self.dir, copy.directory)
-        self.assertEqual(self.path, copy.path)
-        self.assertEqual(rotateLength, copy.rotateLength)
-        self.assertEqual(defaultMode, copy.defaultMode)
-        self.assertEqual(maxRotatedFiles, copy.maxRotatedFiles)
-        self.assertEqual(log.size, copy.size)
-
-
     def test_cantChangeFileMode(self):
         """
         Opening a L{LogFile} which can be read and write but whose mode can't
@@ -589,26 +561,3 @@ class DailyLogFileTests(unittest.TestCase):
 
         logDate = log.toDate(seconds)
         self.assertEqual(date, logDate)
-
-
-    def test_persistence(self):
-        """
-        L{DailyLogFile} objects can be pickled and unpickled, which preserves
-        all the various attributes of the log file.
-        """
-        defaultMode = 0o642
-
-        log = logfile.DailyLogFile(self.name, self.dir,
-                                   defaultMode)
-        self.addCleanup(log.close)
-        log.write("123")
-
-        # Check that the unpickled log is the same as the original one.
-        copy = pickle.loads(pickle.dumps(log))
-        self.addCleanup(copy.close)
-
-        self.assertEqual(self.name, copy.name)
-        self.assertEqual(self.dir, copy.directory)
-        self.assertEqual(self.path, copy.path)
-        self.assertEqual(defaultMode, copy.defaultMode)
-        self.assertEqual(log.lastDate, copy.lastDate)
