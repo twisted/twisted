@@ -2893,11 +2893,3 @@ class HTTPFactory(protocol.ServerFactory):
             else:
                 line = line.encode("utf-8")
             logFile.write(line)
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.web.server.server instead",
-    "twisted.web.http",
-    "HTTPFactory")
