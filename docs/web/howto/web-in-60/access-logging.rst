@@ -19,7 +19,7 @@ To output this format, pass the Server you create to ``makeCombinedLogFormatFile
     from twisted.python import logfile
     from twisted.web.server import makeServer, makeCombinedLogFormatFileForServer
     factory = makeServer(root)
-    log = logfile.BinaryLogFile(b"/tmp/", b"access-logging-demo.log")
+    log = logfile.LogFile(b"/tmp/", b"access-logging-demo.log")
     makeCombinedLogFormatFileForServer(factory, log)
 
 Or if you want to change the logging behavior of a server you're launching with ``twist web`` then just pass the ``--logfile`` option:
