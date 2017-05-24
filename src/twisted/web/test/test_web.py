@@ -1268,10 +1268,7 @@ class SiteAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     """
     Tests for L{server.Site.log}.
     """
-    if _PY3:
-        skip = "Site not ported to Python 3 yet."
-
-    linesep = os.linesep
+    linesep = b"\n"
 
     def factory(self, *args, **kwargs):
         return server.Site(resource.Resource(), *args, **kwargs)
