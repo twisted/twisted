@@ -176,7 +176,6 @@ class SimpleResolverComplexifier(object):
 
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
-
         onAddress = self._simpleResolver.getHostByName(hostName)
         def addressReceived(address):
             resolutionReceiver.addressResolved(IPv4Address('TCP', address,
