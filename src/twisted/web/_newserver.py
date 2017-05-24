@@ -52,6 +52,7 @@ class Server(object):
     _protocol = attr.ib()
     _displayTracebacks = attr.ib()
     _compressResponses = attr.ib()
+    _trustedReverseProxyIPs = attr.ib()
     _timeout = attr.ib()
     _resource = attr.ib()
     _requestFactory = attr.ib()
@@ -93,6 +94,16 @@ class Server(object):
                 @raise: L{KeyError} if the session is not found.
                 """
                 return self._sessionFandangler.getSession(uid)
+
+            def _getTrustedReverseProxyIPs(self_):
+                """
+                Get the IPs that are trusted to set X-Forwarded-For headers.
+
+                @rtype: L{list} of L{str}
+                """
+                if self._trustedReverseProxyIPs is None:
+                    return []
+                return self._trustedReverseProxyIPs
 
         p = self._protocol(None)
         p.factory = self
@@ -154,9 +165,9 @@ class Server(object):
 
 
 def makeServer(resource, displayTracebacks=True, compressResponses=True,
-               timeout=_REQUEST_TIMEOUT, requestFactory=Request, sessionFactory=Session,
-               logger=None,
-               reactor=None):
+               timeout=_REQUEST_TIMEOUT, requestFactory=Request,
+               sessionFactory=Session, logger=None,
+               trustedReverseProxyIPs=None, reactor=None):
     """
     Create a web server.
 
@@ -190,9 +201,17 @@ def makeServer(resource, displayTracebacks=True, compressResponses=True,
     if reactor is None:
         from twisted.internet import reactor
 
-    server = Server(_genericHTTPChannelProtocolFactory, displayTracebacks,
-                    compressResponses, timeout, resource, requestFactory,
-                    sessionFactory, logger, reactor)
+    server = Server(protocol=_genericHTTPChannelProtocolFactory,
+                    displayTracebacks=displayTracebacks,
+                    compressResponses=compressResponses,
+                    trustedReverseProxyIPs=trustedReverseProxyIPs,
+                    timeout=timeout,
+                    resource=resource,
+                    requestFactory=requestFactory,
+                    sessionFactory=sessionFactory,
+                    logger=logger,
+                    reactor=reactor,
+    )
 
     # Set up the Logger source correctly
     logger.source = server
