@@ -6,6 +6,7 @@ Tests for various parts of L{twisted.web}.
 """
 
 import os
+import attr
 import zlib
 
 from zope.interface import implementer
@@ -182,6 +183,30 @@ class SiteTest(unittest.TestCase):
         site = server.Site(resource.Resource())
 
         self.assertRaises(KeyError, site.getSession, b'no-such-uid')
+
+
+    def test_sessionFactory(self):
+        """
+        L{site.sessionFactory} is used to make sessions.
+        """
+        @attr.s
+        class MySession(object):
+            site = attr.ib()
+            uid = attr.ib()
+            reactor = attr.ib(default=False)
+
+            def startCheckingExpiration(self):
+                pass
+
+            def expire(self):
+                pass
+
+        site = server.Site(resource.Resource())
+        site.sessionFactory = MySession
+        createdSession = self.getAutoExpiringSession(site)
+        retrievedSession = site.getSession(createdSession.uid)
+        self.assertIs(createdSession, retrievedSession)
+
 
 
 class SessionTests(unittest.TestCase):

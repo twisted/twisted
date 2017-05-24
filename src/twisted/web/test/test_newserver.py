@@ -164,6 +164,40 @@ class ServerTests(SynchronousTestCase):
         self.assertEqual(body, b"4.3.2.1")
 
 
+    def test_TrustedReverseProxyButNoXForwardedFor(self):
+        """
+        The IP returned by C{Request.getClientIP} on a C{Request} made by a
+        C{Server} that was made by L{makeServer} with
+        C{getTrustedReverseProxyIPs()} containing an IP that is a trusted
+        reverse proxy will be the real client IP, if the header does not exist.
+        """
+        reactor = Clock()
+        r = resource.Resource()
+
+        class IPSayingResource(resource.Resource):
+            def render(self, request):
+                return str(request.getClientIP()).encode('utf8')
+
+        r.putChild(b'', IPSayingResource())
+        site = server.makeServer(r, reactor=reactor,
+                                 trustedReverseProxyIPs=['1.2.3.4'])
+
+        serverProtocol = site.buildProtocol(None)
+        clientProtocol = proto_helpers.AccumulatingProtocol()
+
+        c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
+                                                    lambda: clientProtocol)
+        s._channel.getPeer = lambda: IPv4Address('TCP', '1.2.3.4', 12345)
+
+        c.transport.write(b"GET / HTTP/1.0\r\n\r\n")
+        pump.flush()
+
+        data = clientProtocol.data.split(b'\r\n')
+        self.assertTrue(b'HTTP/1.0 200 OK' in data)
+        body = clientProtocol.data.split(b'\r\n\r\n', 1)[1]
+        self.assertEqual(body, b"1.2.3.4")
+
+
     def test_h2(self):
         """
         L{server.makeServer} with C{compressResponses=False} will not compress
