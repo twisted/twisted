@@ -14,6 +14,7 @@ import os, glob, time, stat
 
 from twisted.python import threadable
 from twisted.python._oldstyle import _oldStyle
+from twisted.python.compat import unicode
 
 
 
