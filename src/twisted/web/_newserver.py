@@ -187,10 +187,19 @@ def makeServer(resource, displayTracebacks=True, compressResponses=True,
 
     @param requestFactory: A factory which is called with (channel) and creates
         L{Request} instances.  Default to L{Request}.
-    @type requestFactory: instance of L{twisted.web.iweb.IRequest}
+    @type requestFactory: C{callable} that returns objects that implement
+        L{twisted.web.iweb.IRequest}
+
+    @param sessionFactory: The Session class to use.  Default to L{Session}.
+    @type sessionFactory: L{Session}
 
     @param logger: The logger for the server to use.
     @type logger: L{twisted.logger.Logger}
+
+    @param trustedReverseProxyIPs: A C{list} of IPs which can send
+        C{X-Forwarded-For} headers that C{Request} will use as the IP, instead
+        of the origin IP.
+    @type trustedReverseProxyIPs: L{list} of L{str}
 
     @param reactor: The C{Reactor} used for timekeeping.
     """
