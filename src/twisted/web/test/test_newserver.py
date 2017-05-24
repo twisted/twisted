@@ -90,7 +90,9 @@ class ServerTests(SynchronousTestCase):
         c, s, pump = iosim.connectedServerAndClient(lambda: serverProtocol,
                                                     lambda: clientProtocol)
 
-        c.transport.write(b"GET / HTTP/1.0\r\nAccept-Encoding: gzip\r\n\r\n")
+        c.transport.write(b"GET / HTTP/1.0\r\n"
+                          b"X-Forwarded-For: 4.3.2.1\r\n"
+                          b"Accept-Encoding: gzip\r\n\r\n")
         pump.flush()
 
         data = clientProtocol.data.split(b'\r\n')
