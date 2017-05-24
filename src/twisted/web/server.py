@@ -799,11 +799,3 @@ class Site(http.HTTPFactory):
             baseProtocols.insert(0, b'h2')
 
         return baseProtocols
-
-
-
-deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.web.server.server instead",
-    "twisted.web.server",
-    "Site")

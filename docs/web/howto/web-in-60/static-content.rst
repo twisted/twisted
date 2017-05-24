@@ -9,7 +9,7 @@ Serving Static Content From a Directory
 The goal of this example is to show you how to serve static content from a filesystem.
 First, we need to import some objects:
 
-- :api:`twisted.web.server.makeServer <makeServer>`, an :api:`twisted.internet.interfaces.IProtocolFactory <IProtocolFactory>` which glues a listening server port (:api:`twisted.internet.interfaces.IListeningPort <IListeningPort>`) to the :api:`twisted.web.http.HTTPChannel <HTTPChannel>` implementation::
+- :api:`twisted.web.server.makeServer <makeServer>`, which creates an :api:`twisted.internet.interfaces.IProtocolFactory <IProtocolFactory>` which glues a listening server port (:api:`twisted.internet.interfaces.IListeningPort <IListeningPort>`) to the :api:`twisted.web.http.HTTPChannel <HTTPChannel>` implementation::
 
     from twisted.web.server import makeServer
 
