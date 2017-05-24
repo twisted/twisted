@@ -160,7 +160,7 @@ class ThreadedResolverTests(TestCase):
 
     def test_resolverGivenBytes(self):
         """
-        L{ThreadedResolver.getHostByName} is passed L{bytes}.
+        L{ThreadedResolver.getHostByName} is passed L{str}.
         """
         calls = []
 
@@ -178,10 +178,16 @@ class ThreadedResolverTests(TestCase):
         reactor = JustEnoughReactor()
         reactor.installResolver(fake)
         rec = FirstOneWins(Deferred())
-        reactor.nameResolver.resolveHostName(rec, u"xn--pxaix.localhost")
+        reactor.nameResolver.resolveHostName(
+            rec, u"\u03b4\u03c0\u03b8.invalid")
+        reactor.nameResolver.resolveHostName(
+            rec, u"xn--pxaix.invalid")
 
-        self.assertEqual(len(calls), 1)
-        self.assertIs(type(calls[0]), bytes)
+        self.assertEqual(len(calls), 2)
+        self.assertIs(type(calls[0]), str)
+        self.assertIs(type(calls[1]), str)
+        self.assertEqual("xn--pxaix.invalid", calls[0])
+        self.assertEqual("xn--pxaix.invalid", calls[1])
 
 
 
