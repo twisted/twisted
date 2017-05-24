@@ -13,7 +13,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import _PY3, unichr
+from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
