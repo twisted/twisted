@@ -14,9 +14,12 @@ except ImportError:
 from zope.interface import implementer
 
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.interfaces import IReactorTime, IReactorThreads
+from twisted.internet.interfaces import (IReactorTime, IReactorThreads,
+                                         IResolverSimple)
 from twisted.internet.error import DNSLookupError
-from twisted.internet.base import ThreadedResolver, DelayedCall
+from twisted.internet._resolver import FirstOneWins
+from twisted.internet.defer import Deferred
+from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 
@@ -126,7 +129,7 @@ class ThreadedResolverTests(TestCase):
         """
         If L{socket.gethostbyname} does not complete before the specified
         timeout elapsed, the L{Deferred} returned by
-        L{ThreadedResolver.getHostByBame} fails with L{DNSLookupError}.
+        L{ThreadedResolver.getHostByName} fails with L{DNSLookupError}.
         """
         timeout = 10
 
@@ -153,6 +156,32 @@ class ThreadedResolverTests(TestCase):
         # Eventually the socket.gethostbyname does finish - in this case, with
         # an exception.  Nobody cares, though.
         result.put(IOError("The I/O was errorful"))
+
+
+    def test_resolverGivenBytes(self):
+        """
+        L{ThreadedResolver.getHostByName} is passed L{bytes}.
+        """
+        calls = []
+
+        @implementer(IResolverSimple)
+        class FakeResolver(object):
+            def getHostByName(self, name, timeouts=()):
+                calls.append(name)
+                return Deferred()
+
+        class JustEnoughReactor(ReactorBase):
+            def installWaker(self):
+                pass
+
+        fake = FakeResolver()
+        reactor = JustEnoughReactor()
+        reactor.installResolver(fake)
+        rec = FirstOneWins(Deferred())
+        reactor.nameResolver.resolveHostName(rec, u"xn--pxaix.localhost")
+
+        self.assertEqual(len(calls), 1)
+        self.assertIs(type(calls[0]), bytes)
 
 
 
