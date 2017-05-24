@@ -24,7 +24,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet._idna import _idnaBytes
-from twisted.python.compat import unicode, nativeString, _PY3
+from twisted.python.compat import nativeString
 from twisted.logger import Logger
 
 
