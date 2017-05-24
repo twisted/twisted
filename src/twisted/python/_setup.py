@@ -144,7 +144,7 @@ _CONSOLE_SCRIPTS = [
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
-    "twistd = twisted.scripts.twistd:run",
+    "twistd = twisted.scripts.twistd:main",
     ]
 # Scripts provided by Twisted on Python 2 only.
 _CONSOLE_SCRIPTS_PY2 = [

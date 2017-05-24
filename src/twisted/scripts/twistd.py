@@ -10,9 +10,13 @@ The Twisted Daemon: platform-independent interface.
 
 from __future__ import absolute_import, division
 
+import sys
+import os
+
 from twisted.application import app
 
 from twisted.python.runtime import platformType
+
 if platformType == "win32":
     from twisted.scripts._twistw import ServerOptions, \
         WindowsApplicationRunner as _SomeApplicationRunner
@@ -29,4 +33,10 @@ def run():
     app.run(runApp, ServerOptions)
 
 
+def main():
+    sys.path.insert(0, os.path.abspath(os.getcwd()))
+    run()
+
+
 __all__ = ['run', 'runApp']
+
