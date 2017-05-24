@@ -1,1 +1,1 @@
-twisted.web.server.server has been added, replacing twisted.web.server.Site and twisted.web.http.HTTPFactory. It includes twisted.logger support, automatic response compression by default, and a cleaner API.
+twisted.web.server.makeServer has been added, replacing twisted.web.server.Site and twisted.web.http.HTTPFactory. It includes twisted.logger support, automatic response compression by default, and a cleaner API.
