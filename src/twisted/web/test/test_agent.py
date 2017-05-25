@@ -3072,7 +3072,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         """
         trustRoot = CustomOpenSSLTrustRoot()
         policy = HostnameCachingHTTPSPolicy(trustRoot=trustRoot)
-        creator = policy.creatorForNetloc(u"foo", 1589)
+        creator = policy.creatorForNetloc(b"foo", 1589)
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
         self.assertEquals(1, policy._nextCacheId)
@@ -3080,7 +3080,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         connection = creator.clientConnectionForTLS(None)
         self.assertIs(trustRoot.context, connection.get_context())
 
-        policy.creatorForNetloc(u"foo", 1589)
+        policy.creatorForNetloc(b"foo", 1589)
         self.assertFalse(trustRoot.called)
 
     def testCacheIdIncremented(self):
@@ -3089,10 +3089,10 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         entries.
         """
         policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot())
-        hostname = u"foo"
+        hostname = b"foo"
         host = hostname.decode("ascii")
 
-        hostname2 = u"bard"
+        hostname2 = b"bard"
         host2 = hostname2.decode("ascii")
 
         policy.creatorForNetloc(hostname, 1589)
@@ -3117,22 +3117,21 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot())
         for i in range(0,20):
             hostname = u"host" + unicode(i)
-            policy.creatorForNetloc(hostname, 8675)
+            policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
         # Force a, which was the first, to be the most recently used
-        host0 = u"host0".decode("ascii")
-        policy.creatorForNetloc(host0, 309)
+        host0 = u"host0"
+        policy.creatorForNetloc(host0.encode("ascii"), 309)
         self.assertIn(host0, policy._cache)
         self.assertEquals(20, len(policy._cache))
 
-        hostn = "new"
-        policy.creatorForNetloc(hostn, 309)
+        hostn = u"new"
+        policy.creatorForNetloc(hostn.encode("ascii"), 309)
 
-        host1 = u"host1".decode("ascii")
+        host1 = u"host1"
         self.assertNotIn(host1, policy._cache)
         self.assertEquals(20, len(policy._cache))
 
-        hostn = hostn.decode("ascii")
         self.assertIn(hostn, policy._cache)
         self.assertIn(host0, policy._cache)
         entry = policy._cache[hostn]
@@ -3140,7 +3139,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
 
     def testChangeCacheSize(self):
         """
-        Verify that changing the cache size results in a policy that,
+        Verify that changing the cache size results in a policy that
         respects the new cache size and not the default.
 
         """
@@ -3148,18 +3147,17 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
                                             cacheSize=5)
         for i in range(0, 5):
             hostname = u"host" + unicode(i)
-            policy.creatorForNetloc(hostname, 8675)
+            policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
-        first = u"host0".decode("ascii")
+        first = u"host0"
         self.assertIn(first, policy._cache)
         self.assertEquals(5, len(policy._cache))
 
-        hostn = "new"
-        policy.creatorForNetloc(hostn, 309)
+        hostn = u"new"
+        policy.creatorForNetloc(hostn.encode("ascii"), 309)
         self.assertNotIn(first, policy._cache)
         self.assertEquals(5, len(policy._cache))
 
-        hostn = hostn.decode("ascii")
         self.assertIn(hostn, policy._cache)
         entry = policy._cache[hostn]
         self.assertEquals(5, entry.cacheId)
