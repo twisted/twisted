@@ -23,7 +23,6 @@ from twisted.internet.error import DNSLookupError
 from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet._idna import _idnaBytes
 from twisted.python.compat import nativeString
 from twisted.logger import Logger
 
@@ -118,9 +117,6 @@ class GAIResolver(object):
         addressFamily = _typesToAF[_any if addressTypes is None
                                    else frozenset(addressTypes)]
         socketType = _transportToSocket[transportSemantics]
-
-        # Make it an IDNA encoded str
-        hostName = nativeString(_idnaBytes(hostName))
         def get():
             try:
                 return self._getaddrinfo(hostName, portNumber, addressFamily,
@@ -174,8 +170,8 @@ class SimpleResolverComplexifier(object):
 
         @return: see interface
         """
-        # Make it an IDNA encoded "str"
-        hostName = nativeString(_idnaBytes(hostName))
+        # Make it an str
+        hostName = nativeString(hostName)
 
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)

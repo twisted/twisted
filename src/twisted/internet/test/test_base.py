@@ -179,15 +179,15 @@ class ThreadedResolverTests(TestCase):
         reactor.installResolver(fake)
         rec = FirstOneWins(Deferred())
         reactor.nameResolver.resolveHostName(
-            rec, u"\u03b4\u03c0\u03b8.invalid")
+            rec, u"example.invalid")
         reactor.nameResolver.resolveHostName(
-            rec, u"xn--pxaix.invalid")
+            rec, b"example.invalid")
 
         self.assertEqual(len(calls), 2)
         self.assertIs(type(calls[0]), str)
         self.assertIs(type(calls[1]), str)
-        self.assertEqual("xn--pxaix.invalid", calls[0])
-        self.assertEqual("xn--pxaix.invalid", calls[1])
+        self.assertEqual("example.invalid", calls[0])
+        self.assertEqual("example.invalid", calls[1])
 
 
 
