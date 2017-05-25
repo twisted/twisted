@@ -77,6 +77,7 @@ _dev = [
     'twisted-dev-tools >= 0.0.2',
     'python-subunit',
     'sphinx >= 1.3.1',
+    'towncrier >= 17.4.0'
 ]
 
 if not _PY3:
@@ -227,6 +228,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
     requirements.append("constantly >= 15.1")
     requirements.append("incremental >= 16.10.1")
     requirements.append("Automat >= 0.3.0")
+    requirements.append("hyperlink >= 17.1.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
