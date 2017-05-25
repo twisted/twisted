@@ -182,7 +182,7 @@ class ThreadedResolverTests(TestCase):
         reactor.nameResolver.resolveHostName(
             rec, u"example.example")
         reactor.nameResolver.resolveHostName(
-            rec, b"example.example")
+            rec, "example.example")
         reactor.nameResolver.resolveHostName(
             rec, u"v\xe4\xe4ntynyt.example")
         reactor.nameResolver.resolveHostName(
