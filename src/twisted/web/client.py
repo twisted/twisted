@@ -1046,9 +1046,10 @@ class HostnameCachingHTTPSPolicy(object):
             entry = _HostnameCacheEntry(creator, self._nextCacheId)
             self._cache[host] = entry
             self._purgeCache()
+            self._nextCacheId += 1
+            return entry.creator
         else:
             entry.cacheId = self._nextCacheId
-        finally:
             self._nextCacheId += 1
             return entry.creator
 
