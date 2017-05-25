@@ -158,7 +158,7 @@ class ThreadedResolverTests(TestCase):
         result.put(IOError("The I/O was errorful"))
 
 
-    def test_resolverGivenBytes(self):
+    def test_resolverGivenStr(self):
         """
         L{ThreadedResolver.getHostByName} is passed L{str}.
         """
