@@ -24,6 +24,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.python.compat import nativeString
+from twisted.internet._idna import _idnaBytes
 from twisted.logger import Logger
 
 
@@ -170,7 +171,17 @@ class SimpleResolverComplexifier(object):
 
         @return: see interface
         """
-        # Make it an str
+        # If it's str, we need to make sure that it's just ASCII.
+        try:
+            hostName = hostName.encode('ascii')
+        except UnicodeEncodeError:
+            # If it's not just ASCII, IDNA it. We don't want to give a Unicode
+            # string with non-ASCII in it to Python 3, as if anyone passes that
+            # to a Python 3 stdlib function, it will probably use the wrong
+            # IDNA version and break absolutely everything
+            hostName = _idnaBytes(hostName)
+
+        # Make sure it's passed down as a native str, to maintain the interface
         hostName = nativeString(hostName)
 
         resolution = HostResolution(hostName)

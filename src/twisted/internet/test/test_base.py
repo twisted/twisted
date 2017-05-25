@@ -160,7 +160,8 @@ class ThreadedResolverTests(TestCase):
 
     def test_resolverGivenStr(self):
         """
-        L{ThreadedResolver.getHostByName} is passed L{str}.
+        L{ThreadedResolver.getHostByName} is passed L{str}, encoded using IDNA
+        if required.
         """
         calls = []
 
@@ -179,15 +180,21 @@ class ThreadedResolverTests(TestCase):
         reactor.installResolver(fake)
         rec = FirstOneWins(Deferred())
         reactor.nameResolver.resolveHostName(
-            rec, u"example.invalid")
+            rec, u"example.example")
         reactor.nameResolver.resolveHostName(
-            rec, b"example.invalid")
+            rec, b"example.example")
+        reactor.nameResolver.resolveHostName(
+            rec, u"v\xe4\xe4ntynyt.example")
+        reactor.nameResolver.resolveHostName(
+            rec, u"\u0440\u0444.example")
 
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 4)
         self.assertIs(type(calls[0]), str)
         self.assertIs(type(calls[1]), str)
-        self.assertEqual("example.invalid", calls[0])
-        self.assertEqual("example.invalid", calls[1])
+        self.assertEqual("example.example", calls[0])
+        self.assertEqual("example.example", calls[1])
+        self.assertEqual("xn--vntynyt-5waa.example", calls[2])
+        self.assertEqual("xn--p1ai.example", calls[3])
 
 
 
