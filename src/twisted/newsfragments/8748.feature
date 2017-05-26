@@ -1,1 +1,1 @@
-twisted.internet.defer.futureToDeferred and twisted.internet.defer.deferredToFuture were added, allowing for easy transitions between asyncio coroutines (which await Futures) and twisted coroutines (which await Deferreds).
+twisted.internet.defer.Deferred.asFuture and twisted.internet.defer.Deferred.fromFuture were added, allowing for easy transitions between asyncio coroutines (which await Futures) and twisted coroutines (which await Deferreds).
