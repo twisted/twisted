@@ -187,14 +187,16 @@ class ThreadedResolverTests(TestCase):
             rec, u"v\xe4\xe4ntynyt.example")
         reactor.nameResolver.resolveHostName(
             rec, u"\u0440\u0444.example")
+        reactor.nameResolver.resolveHostName(
+            rec, "xn----7sbb4ac0ad0be6cf.xn--p1ai")
 
-        self.assertEqual(len(calls), 4)
-        self.assertIs(type(calls[0]), str)
-        self.assertIs(type(calls[1]), str)
+        self.assertEqual(len(calls), 5)
+        self.assertEqual(list(map(type, calls)), [str]*5)
         self.assertEqual("example.example", calls[0])
         self.assertEqual("example.example", calls[1])
         self.assertEqual("xn--vntynyt-5waa.example", calls[2])
         self.assertEqual("xn--p1ai.example", calls[3])
+        self.assertEqual("xn----7sbb4ac0ad0be6cf.xn--p1ai", calls[4])
 
 
 
