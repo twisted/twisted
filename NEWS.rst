@@ -55,8 +55,8 @@ Improved Documentation
 Features
 --------
 
-- twisted.internet.defer.Deferred.toFuture and
-  twisted.internet.defer.Deferred.fromFuture were added, allowing for easy
+- twisted.internet.defer.futureToDeferred and
+  twisted.internet.defer.deferredToFuture were added, allowing for easy
   transitions between asyncio coroutines (which await Futures) and twisted
   coroutines (which await Deferreds). (#8748)
 - twisted.application.internet.ClientService.whenConnected now accepts an
