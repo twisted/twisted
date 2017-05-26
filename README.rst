@@ -1,5 +1,5 @@
-Twisted 17.1.0
-==============
+Twisted 17.5.0rc1
+=================
 
 |pypi|
 |coverage|
@@ -10,7 +10,7 @@ Twisted 17.1.0
 
     <hawkowl> we have always been at war with 16.7
 
-For information on what's new in Twisted 17.1.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.5.0rc1, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
