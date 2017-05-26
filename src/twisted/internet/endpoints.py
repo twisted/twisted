@@ -809,7 +809,7 @@ class HostnameEndpoint(object):
         if not IReactorPluggableNameResolver.providedBy(reactor):
             warningString = deprecate.getDeprecationWarningString(
                 reactor.__class__,
-                Version('Twisted', 17, 5, 0, release_candidate=1),
+                Version('Twisted', 17, 5, 0, release_candidate=2),
                 format=("Passing HostnameEndpoint a reactor that does not"
                         " provide IReactorPluggableNameResolver (%(fqpn)s)"
                         " was deprecated in %(version)s"),

@@ -1974,7 +1974,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
             'Passing HostnameEndpoint a reactor that does not provide'
             ' IReactorPluggableNameResolver'
             ' (twisted.test.proto_helpers.MemoryReactorClock)'
-            ' was deprecated in Twisted 17.5.0rc1;'
+            ' was deprecated in Twisted 17.5.0rc2;'
             ' please use a reactor that provides'
             ' IReactorPluggableNameResolver instead'))
 

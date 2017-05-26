@@ -806,7 +806,7 @@ class URLDeprecationTests(SynchronousTestCase):
     """
     def test_urlDeprecation(self):
         """
-        L{twisted.python.constants} is deprecated since Twisted 17.5.0rc1.
+        L{twisted.python.constants} is deprecated since Twisted 17.5.0rc2.
         """
         from twisted.python import url
         url
@@ -814,6 +814,6 @@ class URLDeprecationTests(SynchronousTestCase):
         warningsShown = self.flushWarnings([self.test_urlDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
-            ("twisted.python.url was deprecated in Twisted 17.5.0rc1:"
+            ("twisted.python.url was deprecated in Twisted 17.5.0rc2:"
              " Please use hyperlink from PyPI instead."),
             warningsShown[0]['message'])
