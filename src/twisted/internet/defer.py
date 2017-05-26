@@ -762,7 +762,7 @@ class Deferred:
             C{self} into a L{Deferred} firing with L{None}, regardless of what
             its result previously would have been.
 
-        @since: Twisted NEXT
+        @since: Twisted 17.5.0rc1
 
         @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
         @type loop: L{asyncio.AbstractEventLoop} or similar
@@ -808,7 +808,7 @@ class Deferred:
             not a L{asyncio.Future}.  (The length of this list of techniques is
             exactly why we have left it to the caller!)
 
-        @since: Twisted NEXT
+        @since: Twisted 17.5.0rc1
 
         @param future: The Future to adapt.
         @type future: L{asyncio.Future}
