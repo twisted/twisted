@@ -66,28 +66,18 @@ You should now have the following 4 files:
     calculus/test/test_base_1.py
 
 
-To run the tests, there are two things you must set up.
-Make sure you get both done - nothing below will work unless you do.
+To run the tests, you must ensure you are able to load them.
+Make sure you are in the directory that the ``calculus`` folder is in, if you run ``ls`` or ``dir`` you should see the folder.
+You can test that you can import the ``calculus`` package by running ``python -c import calculus``.
+If it reports an error ("No module named calculus"), double check you are in the correct directory.
 
-First, make sure that the directory that *contains* your ``calculus`` directory is in your Python load path.
-If you're using the Bash shell on some form of unix (e.g., Linux, Mac OS X), run ``PYTHONPATH="$PYTHONPATH:`pwd`/.."`` at the command line in the ``calculus`` directory.
-Once you have your Python path set up correctly, you should be able to run Python from the command line and ``import calculus`` without seeing an import error.
-
-Second, make sure you can run the ``trial`` command.
-That is, make sure the directory containing the ``trial`` program on you system is in your shell's ``PATH``.
-The easiest way to check if you have this is to try running ``trial --help`` at the command line.
-If you see a list of invocation options, you're in business.
-If your shell reports something like ``trial: command not found``, make sure you have Twisted installed properly, and that the Twisted ``bin`` directory is in your ``PATH``.
-If you don't know how to do this, get some local help, or figure it out by searching online for information on setting and changing environment variables for you operating system.
-
-With those (one-time) preliminary steps out of the way, let's perform the tests.
-Run ``trial calculus.test.test_base_1`` from the command line when you are in the directory containing the ``calculus`` directory.
+Run ``python -m twisted.trial calculus.test.test_base_1`` from the command line when you are in the directory containing the ``calculus`` directory.
 
 You should see the following output (though your files are probably not in ``/tmp`` ):
 
 .. code-block:: console
 
-    $ trial calculus.test.test_base_1
+    $ python -m twisted.trial calculus.test.test_base_1
     calculus.test.test_base_1
       CalculationTestCase
         test_add ...                                                         [FAIL]
@@ -151,20 +141,20 @@ By default, failures are printed at the end, but this can be changed with the ``
 One very useful thing in this output is the fully-qualified name of the failed tests.
 This appears at the bottom of each =-delimited area of the output.
 This allows you to copy and paste it to just run a single test you're interested in.
-In our example, you could run ``trial calculus.test.test_base_1.CalculationTestCase.test_subtract`` from the shell.
+In our example, you could run ``python -m twisted.trial calculus.test.test_base_1.CalculationTestCase.test_subtract`` from the shell.
 
-Note that trial can use different reporters to modify its output. Run ``trial --help-reporters`` to see a list of reporters.
+Note that trial can use different reporters to modify its output. Run ``python -m twisted.trial --help-reporters`` to see a list of reporters.
 
-The tests can be run by ``trial`` in multiple ways:
+The tests can be run by Trial in multiple ways:
 
-- ``trial calculus``: run all the tests for the calculus package.
-- ``trial calculus.test``: run using Python's ``import`` notation.
-- ``trial calculus.test.test_base_1``: as above, for a specific test module.
+- ``python -m twisted.trial calculus``: run all the tests for the calculus package.
+- ``python -m twisted.trial calculus.test``: run using Python's ``import`` notation.
+- ``python -m twisted.trial calculus.test.test_base_1``: as above, for a specific test module.
   You can follow that logic by putting your class name and even a method name to only run those specific tests.
 - .. _core-howto-trial-comment:
-  ``trial --testmodule=calculus/base_1.py``: use the ``test-case-name`` comment in the first line of ``calculus/base_1.py`` to find the tests.
-- ``trial calculus/test``: run all the tests in the test directory (not recommended).
-- ``trial calculus/test/test_base_1.py``: run a specific test file (not recommended).
+  ``python -m twisted.trial --testmodule=calculus/base_1.py``: use the ``test-case-name`` comment in the first line of ``calculus/base_1.py`` to find the tests.
+- ``python -m twisted.trial calculus/test``: run all the tests in the test directory (not recommended).
+- ``python -m twisted.trial calculus/test/test_base_1.py``: run a specific test file (not recommended).
 
 The first 3 versions using full qualified names are strongly encouraged: they are much more reliable and they allow you to easily be more selective in your test runs.
 
@@ -183,21 +173,19 @@ We'll do that in a new version of the above base_1 module, ``calculus/base_2.py`
 .. literalinclude:: listings/trial/calculus/base_2.py
 
 
-We'll also create a new version of test_base_1 which imports and tests this
-new implementation,
-in ``calculus/test_base_2.py`` :
+We'll also create a new version of test_base_1 which imports and test this new implementation, in ``calculus/test_base_2.py``:
 
 :download:`test_base_2.py <listings/trial/calculus/test/test_base_2.py>`
 
 .. literalinclude:: listings/trial/calculus/test/test_base_2.py
 
 
-is a copy of test_base_1, but with the import changed. Run ``trial`` again as above, and your tests should now pass:
+is a copy of test_base_1, but with the import changed. Run Trial again as above, and your tests should now pass:
 
 .. code-block:: console
 
 
-    $ trial calculus.test.test_base_2
+    $ python -m twisted.trial calculus.test.test_base_2
 
     Running 4 tests.
     calculus.test.test_base
@@ -362,7 +350,7 @@ factory that uses it as protocol. The only trick is the ``CalculationProxy`` obj
 Twisted, because it is very explicit about what methods you are making
 accessible.
 
-If you run this test (``trial calculus.test.test_remote_1`` ), everything should be fine. You can also
+If you run this test (``python -m twisted.trial calculus.test.test_remote_1`` ), everything should be fine. You can also
 run a server to test it with a telnet client. To do that, call ``python calculus/remote_1.py`` . You should have the following output:
 
 .. code-block:: console
@@ -472,8 +460,7 @@ To actually test that, we'll launch a server with our protocol.
 .. literalinclude:: listings/trial/calculus/test/test_remote_2.py
 
 
-Recent versions of trial will fail loudly if you remove the
-``stopListening`` call, which is good.
+Recent versions of Trial will fail loudly if you remove the ``stopListening`` call, which is good.
 
 Also, you should be aware that ``tearDown`` will be called in any case, after success or failure.
 So don't expect every object you created in the test method to be present, because your tests may have failed in the middle.
@@ -527,7 +514,7 @@ If you try something like that, it will not work. Here is the output you should 
 .. code-block:: console
 
 
-    trial calculus.test.test_remote_3.RemoteCalculationTestCase.test_invalidParameters
+    $ python -m twisted.trial calculus.test.test_remote_3.RemoteCalculationTestCase.test_invalidParameters
     calculus.test.test_remote_3
       RemoteCalculationTestCase
         test_invalidParameters ...                                          [ERROR]
@@ -549,7 +536,7 @@ If you try something like that, it will not work. Here is the output you should 
     FAILED (errors=1)
 
 At first, you could think there is a problem, because you catch this
-exception. But in fact trial doesn't let you do that without controlling it:
+exception. But in fact Trial doesn't let you do that without controlling it:
 you must expect logged errors and clean them. To do that, you have to use the
 ``flushLoggedErrors`` method. You call it with the
 exception you expect, and it returns the list of exceptions logged since the
@@ -658,7 +645,7 @@ run your test suite using another debugger instead. To specify a debugger other
 than ``pdb`` , pass in the fully-qualified name of an
 object that provides the same interface as ``pdb`` .
 Most third-party debuggers tend to implement an interface similar to ``pdb`` , or at least provide a wrapper object that
-does. For example, invoking trial with the line ``trial --debug --debugger pudb`` will open the `PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
+does. For example, invoking Trial with the extra arguments ``-debug --debugger pudb`` will open the `PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
 it is properly installed.
 
 
@@ -689,7 +676,7 @@ Conclusion
 
 So what did you learn in this document?
 
-- How to use the trial command-line tool to run your tests
+- How to use the Trial command-line tool to run your tests
 - How to use string transports to test individual clients and servers without creating sockets
 - If you really want to create sockets, how to cleanly do it so that it doesn't have bad side effects
 - And some small tips you can't live without.
