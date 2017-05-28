@@ -1223,7 +1223,7 @@ class AccessLogTestsMixin(object):
             factory.stopFactory()
 
         self.assertEqual(
-            b"this is a bad log format\n"
+            b"this is a bad log format\n",
             FilePath(logPath).getContent())
 
 
