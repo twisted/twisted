@@ -25,6 +25,7 @@ class BaseLogFile:
     """
 
     synchronized = ["write", "rotate"]
+    _binary = False
 
     def __init__(self, name, directory, defaultMode=None):
         """
@@ -44,7 +45,6 @@ class BaseLogFile:
             self.defaultMode = defaultMode
         self._openFile()
 
-
     def fromFullPath(cls, filename, *args, **kwargs):
         """
         Construct a log file from a full file path.
@@ -54,7 +54,6 @@ class BaseLogFile:
                    os.path.dirname(logPath), *args, **kwargs)
     fromFullPath = classmethod(fromFullPath)
 
-
     def shouldRotate(self):
         """
         Override with a method to that returns true if the log
@@ -62,27 +61,42 @@ class BaseLogFile:
         """
         raise NotImplementedError
 
-
     def _openFile(self):
         """
         Open the log file.
 
-        Files are opened in binary mode.
+        We don't open files in binary mode since:
+
+            - an encoding would have to be chosen and that would have to be
+              configurable
+            - Twisted doesn't actually support logging non-ASCII messages
+              (see U{https://twistedmatrix.com/trac/ticket/989})
+            - logging plain ASCII messages is fine with any non-binary mode.
+
+        See
+        U{https://twistedmatrix.com/pipermail/twisted-python/2013-October/027651.html}
+        for more information.
         """
         self.closed = False
+        binary = self._binary
         if os.path.exists(self.path):
-            self._file = open(self.path, "rb+", 0)
+            self._file = open(
+                self.path, "rb+" if binary else "r+", 0 if binary else 1)
             self._file.seek(0, 2)
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
                 oldUmask = os.umask(0o777)
                 try:
-                    self._file = open(self.path, "wb+", 0)
+                    self._file = open(
+                        self.path, "wb+" if binary else "w+",
+                        0 if binary else 1)
                 finally:
                     os.umask(oldUmask)
             else:
-                self._file = open(self.path, "wb+", 0)
+                self._file = open(
+                    self.path, "wb+" if binary else "w+",
+                    0 if binary else 1)
         if self.defaultMode is not None:
             try:
                 os.chmod(self.path, self.defaultMode)
@@ -90,30 +104,29 @@ class BaseLogFile:
                 # Probably /dev/null or something?
                 pass
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["_file"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self._openFile()
 
     def write(self, data):
         """
         Write some data to the file.
-
-        @param data: The data to write. Unicode will be encoded as UTF-8.
-        @type data: L{bytes} or L{unicode}
         """
         if self.shouldRotate():
             self.flush()
             self.rotate()
-
-        if isinstance(data, unicode):
-            data = data.encode('utf8')
-
         self._file.write(data)
-
 
     def flush(self):
         """
         Flush the file.
         """
         self._file.flush()
-
 
     def close(self):
         """
@@ -143,7 +156,6 @@ class BaseLogFile:
         Return a LogReader for the current log file.
         """
         return LogReader(self.path)
-
 
 
 class LogFile(BaseLogFile):
@@ -241,6 +253,14 @@ class LogFile(BaseLogFile):
         return state
 
 threadable.synchronize(LogFile)
+
+
+class BinaryLogFile(LogFile):
+    """
+    A L{LogFile} that is opened in binary mode (that is, C{write} only accepts
+    L{bytes}).
+    """
+    _binary = True
 
 
 
