@@ -2835,7 +2835,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
-        factory.logFile = NativeStringIO()
+        factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
 
         val = [
@@ -2852,7 +2852,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         proto._channel.requests[0].finish()
 
         # A log message should be written out
-        self.assertIn('sometime "GET /path HTTP/1.1"',
+        self.assertIn(b'sometime "GET /path HTTP/1.1"',
                       factory.logFile.getvalue())
 
 
@@ -2890,7 +2890,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
-        factory.logFile = NativeStringIO()
+        factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
 
         val = [
