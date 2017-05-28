@@ -451,11 +451,13 @@ class Options(dict):
         Returns a string containing a description of these options and how to
         pass them to the executed file.
         """
+        executableName = reflect.filenameToModuleName(sys.argv[0])
 
-        default = "%s%s" % (path.basename(sys.argv[0]),
-                            (self.longOpt and " [options]") or '')
+        if executableName.endswith('.__main__'):
+            executableName = '{} -m {}'.format(os.path.basename(sys.executable), executableName.replace('.__main__', ''))
+
         if self.parent is None:
-            default = "Usage: %s%s" % (path.basename(sys.argv[0]),
+            default = "Usage: %s%s" % (executableName,
                                        (self.longOpt and " [options]") or '')
         else:
             default = '%s' % ((self.longOpt and "[options]") or '')
@@ -466,7 +468,6 @@ class Options(dict):
         if self.parent is not None:
             synopsis = ' '.join((self.parent.getSynopsis(),
                                  self.parent.subCommand, synopsis))
-
         return synopsis
 
     def getUsage(self, width=None):
@@ -866,6 +867,9 @@ def docMakeChunks(optList, width=80):
     """
 
     # XXX: sanity check to make sure we have a sane combination of keys.
+
+    # Sort the options so they always appear in the same order
+    optList.sort(key=lambda o: o.get('short', None) or o.get('long', None))
 
     maxOptLen = 0
     for opt in optList:
