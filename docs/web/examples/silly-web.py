@@ -18,11 +18,11 @@ from twisted.web import server, distrib, static
 from twisted.spread import pb
 
 # The "master" server
-site = server.makeServer(distrib.ResourceSubscription('unix', '.rp'))
+site = server.Site(distrib.ResourceSubscription('unix', '.rp'))
 reactor.listenTCP(19988, site)
 
 # The "slave" server
-fact = pb.PBServerFactory(distrib.ResourcePublisher(server.makeServer(static.File('static'))))
+fact = pb.PBServerFactory(distrib.ResourcePublisher(server.Site(static.File('static'))))
 
 reactor.listenUNIX('./.rp', fact)
 reactor.run()

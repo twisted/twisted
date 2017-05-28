@@ -72,7 +72,7 @@ def main():
     from twisted.internet import reactor
     from twisted.web import server
     r = Echoer()
-    reactor.listenTCP(7080, server.makeServer(r))
+    reactor.listenTCP(7080, server.Site(r))
     reactor.run()
 
 

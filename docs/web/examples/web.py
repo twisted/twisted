@@ -24,6 +24,6 @@ root.processors = {
             '.rpy': script.ResourceScript,
 }
 root.putChild('vhost', vhost.VHostMonsterResource())
-site = server.makeServer(root)
+site = server.Site(root)
 reactor.listenTCP(1999, site)
 reactor.run()
