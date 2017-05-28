@@ -58,5 +58,5 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     r = Example()
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
-    endpoint.listen(server.makeServer(r))
+    endpoint.listen(server.Site(r))
     reactor.run()
