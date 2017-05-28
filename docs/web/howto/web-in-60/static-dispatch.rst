@@ -21,7 +21,7 @@ APIs in Twisted Web is understanding that any URL can be used to address a node
 in a tree. Resources in Twisted Web exist in such a tree, and a request for a
 URL will be responded to by the resource which that URL addresses. The
 addressing scheme considers only the path segments of the URL. Starting with the
-root resource (the one used to construct the ``makeServer`` ) and the first
+root resource (the one used to construct the ``Site`` ) and the first
 path segment, a child resource is looked up. As long as there are more path
 segments, this process is repeated using the result of the previous lookup and
 the next path segment. For example, to handle a request
@@ -38,7 +38,7 @@ different resources at a few different URLs.
 
 
 
-First things first: we need to import :api:`twisted.web.server.makeServer <makeServer>` , the factory for HTTP servers, :api:`twisted.web.resource.Resource <Resource>` , a convenient base class
+First things first: we need to import :api:`twisted.web.server.Site <Site>` , the factory for HTTP servers, :api:`twisted.web.resource.Resource <Resource>` , a convenient base class
 for custom pages, :api:`twisted.internet.reactor <reactor>` ,
 the object which implements the Twisted main loop, and :api:`twisted.internet.endpoints <endpoints>`, which contains classes for creating listening sockets. We'll also import :api:`twisted.web.static.File <File>` to use as the resource at one
 of the example URLs.
@@ -50,7 +50,7 @@ of the example URLs.
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
     from twisted.web.static import File
@@ -91,7 +91,7 @@ URLs ``/foo`` , ``/bar`` , and ``/baz`` :
 
 
 
-Last, all that's required is to create a ``makeServer`` with the root
+Last, all that's required is to create a ``Site`` with the root
 resource, associate it with a listening server port, and start the reactor:
 
 
@@ -101,7 +101,7 @@ resource, associate it with a listening server port, and start the reactor:
 .. code-block:: python
 
 
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()
@@ -128,7 +128,7 @@ Here's the whole example uninterrupted:
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
     from twisted.web.static import File
@@ -138,7 +138,7 @@ Here's the whole example uninterrupted:
     root.putChild("bar", File("/lost+found"))
     root.putChild("baz", File("/opt"))
 
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()

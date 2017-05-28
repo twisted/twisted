@@ -16,7 +16,7 @@ response when a client requests a non-existent URL.
 
 
 
-As in the previous examples, we'll start with :api:`twisted.web.server.makeServer <makeServer>` , :api:`twisted.web.resource.Resource <Resource>` , :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` imports:
+As in the previous examples, we'll start with :api:`twisted.web.server.Site <Site>` , :api:`twisted.web.resource.Resource <Resource>` , :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` imports:
 
 
 
@@ -25,7 +25,7 @@ As in the previous examples, we'll start with :api:`twisted.web.server.makeServe
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -75,7 +75,7 @@ which don't conform to that pattern by returning the not found response:
 
 Aside from including the definition of ``YearPage`` from
 the previous example, the only other thing left to do is the
-normal ``makeServer`` and ``reactor`` setup. Here's the
+normal ``Site`` and ``reactor`` setup. Here's the
 complete code for this example:
 
 
@@ -85,7 +85,7 @@ complete code for this example:
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
     from twisted.web.resource import NoResource
@@ -110,7 +110,7 @@ complete code for this example:
                 return YearPage(year)
 
     root = Calendar()
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()

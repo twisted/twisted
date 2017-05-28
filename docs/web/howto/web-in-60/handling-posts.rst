@@ -39,7 +39,7 @@ this example uses the ``cgi`` module to `escape user-enteredcontent <http://en.w
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -110,7 +110,7 @@ Finally, the example just needs the usual site creation and port setup:
 
     root = Resource()
     root.putChild("form", FormPage())
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()
@@ -135,7 +135,7 @@ Here's the complete source for the example:
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -150,7 +150,7 @@ Here's the complete source for the example:
 
     root = Resource()
     root.putChild("form", FormPage())
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()

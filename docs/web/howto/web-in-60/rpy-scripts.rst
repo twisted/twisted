@@ -66,7 +66,7 @@ put this code in it:
 
 You may recognize this as the resource from
 the :doc:`first dynamic rendering example <dynamic-content>` . What's different is what you don't see: we didn't
-import ``reactor`` or ``makeServer`` . There are no calls
+import ``reactor`` or ``Site`` . There are no calls
 to ``endpoints.TCP4ServerEndpoint`` or ``run`` . Instead, and this is
 the core idea for rpy scripts, we just bound the
 name ``resource`` to the resource we want the script to

@@ -9,9 +9,9 @@ Serving Static Content From a Directory
 The goal of this example is to show you how to serve static content from a filesystem.
 First, we need to import some objects:
 
-- :api:`twisted.web.server.makeServer <makeServer>`, an :api:`twisted.internet.interfaces.IProtocolFactory <IProtocolFactory>` which glues a listening server port (:api:`twisted.internet.interfaces.IListeningPort <IListeningPort>`) to the :api:`twisted.web.http.HTTPChannel <HTTPChannel>` implementation::
+- :api:`twisted.web.server.Site <Site>`, an :api:`twisted.internet.interfaces.IProtocolFactory <IProtocolFactory>` which glues a listening server port (:api:`twisted.internet.interfaces.IListeningPort <IListeningPort>`) to the :api:`twisted.web.http.HTTPChannel <HTTPChannel>` implementation::
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
 
 - :api:`twisted.web.static.File <File>`, an :api:`twisted.web.resource.IResource <IResource>` which glues the HTTP protocol implementation to the filesystem::
 
@@ -29,9 +29,9 @@ Next, we create an instance of the File resource pointed at the directory to ser
 
     resource = File("/tmp")
 
-Then we create an instance of the makeServer factory with that resource::
+Then we create an instance of the Site factory with that resource::
 
-    factory = makeServer(resource)
+    factory = Site(resource)
 
 Now we glue that factory to a TCP port::
 
@@ -44,12 +44,12 @@ Finally, we start the reactor so it can make the program work::
 
 And that's it. Here's the complete program::
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.static import File
     from twisted.internet import reactor, endpoints
 
     resource = File('/tmp')
-    factory = makeServer(resource)
+    factory = Site(resource)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
     endpoint.listen(factory)
     reactor.run()

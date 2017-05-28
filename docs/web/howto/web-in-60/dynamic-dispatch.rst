@@ -19,7 +19,7 @@ order to get an overview of how URLs are treated when using Twisted Web's :api:`
 
 
 
-:api:`twisted.web.server.makeServer <makeServer>` (the object which
+:api:`twisted.web.server.Site <Site>` (the object which
 associates a listening server port with the HTTP implementation), :api:`twisted.web.resource.Resource <Resource>` (a convenient base class
 to use when defining custom pages), :api:`twisted.internet.reactor <reactor>` (the object which implements the Twisted
 main loop), and :api:`twisted.internet.endpoints <endpoints>` return once again:
@@ -31,7 +31,7 @@ main loop), and :api:`twisted.internet.endpoints <endpoints>` return once again:
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -92,7 +92,7 @@ that later).
 
 
 
-All that's left is to create a ``makeServer`` using this resource as its
+All that's left is to create a ``Site`` using this resource as its
 root and then start the reactor:
 
 
@@ -103,7 +103,7 @@ root and then start the reactor:
 
 
     root = Calendar()
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()
@@ -121,7 +121,7 @@ basically like ``Calendar.getChild`` . Here's the full example code:
 .. code-block:: python
 
 
-    from twisted.web.server import makeServer
+    from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
@@ -140,7 +140,7 @@ basically like ``Calendar.getChild`` . Here's the full example code:
           return YearPage(int(name))
 
     root = Calendar()
-    factory = makeServer(root)
+    factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
     reactor.run()
