@@ -77,6 +77,7 @@ _dev = [
     'twisted-dev-tools >= 0.0.2',
     'python-subunit',
     'sphinx >= 1.3.1',
+    'towncrier >= 17.4.0'
 ]
 
 if not _PY3:
@@ -199,12 +200,6 @@ _EXTENSIONS = [
         "twisted.python._sendmsg",
         sources=["src/twisted/python/_sendmsg.c"],
         condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-    ConditionalExtension(
-        "twisted.runner.portmap",
-        sources=["src/twisted/runner/portmap.c"],
-        condition=lambda builder: not _PY3 and
-                                  builder._check_header("rpc/rpc.h")),
     ]
 
 
@@ -241,6 +236,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
     requirements.append("constantly >= 15.1")
     requirements.append("incremental >= 16.10.1")
     requirements.append("Automat >= 0.3.0")
+    requirements.append("hyperlink >= 17.1.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
@@ -439,7 +435,6 @@ notPortedModules = [
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_release",
     "twisted.python.test.test_win32",
-    "twisted.tap.__init__",
     "twisted.tap.portforward",
     "twisted.tap.socks",
     "twisted.test.crash_test_dummy",
@@ -451,21 +446,15 @@ notPortedModules = [
     "twisted.test.test_rebuild",
     "twisted.test.test_shortcut",
     "twisted.test.test_strerror",
-    "twisted.web.distrib",
     "twisted.web.domhelpers",
     "twisted.web.microdom",
     "twisted.web.rewrite",
     "twisted.web.soap",
     "twisted.web.sux",
-    "twisted.web.test.test_cgi",
-    "twisted.web.test.test_distrib",
     "twisted.web.test.test_domhelpers",
     "twisted.web.test.test_html",
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
-    "twisted.web.twcgi",
-    "twisted.words.protocols.oscar",
     "twisted.words.tap",
-    "twisted.words.test.test_oscar",
     "twisted.words.test.test_tap",
 ]

@@ -1,0 +1,1 @@
+twisted.internet.endpoints.HostnameEndpoint and twisted.internet.endpoints.TCP4Client endpoint documentation updated to correctly reflect that the timeout argument takes a float as well as an int.
