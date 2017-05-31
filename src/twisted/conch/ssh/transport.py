@@ -598,24 +598,21 @@ class SSHTransportBase(protocol.Protocol):
         except:
             pass
 
-        try:
-            for k in publicKeys:
-                # Check to see if it's supported.
-                if k not in self.supportedPublicKeys and k != b'ssh-rsa' and k != b'ssh-dss':
-                    self.supportedPublicKeys += [k]
+        for k in publicKeys:
+            # Check to see if it's supported.
+            if k not in self.supportedPublicKeys and k != b'ssh-rsa' and k != b'ssh-dss':
+                self.supportedPublicKeys += [k]
 
-                curve = publicKeys[k]
-                keys._curveTable[k] = curve[0]
+            curve = publicKeys[k]
+            keys._curveTable[k] = curve[0]
 
-                keys._secToNist[curve[1]] = k
+            keys._secToNist[curve[1]] = k
 
-            # Reverse sort to bring the stronger keys up first.
-            self.supportedPublicKeys.sort(reverse=True)
+        # Reverse sort to bring the stronger keys up first.
+        self.supportedPublicKeys.sort(reverse=True)
 
-            for k in tmpkeys:
-                self.supportedPublicKeys.append(k)
-        except Exception as e:
-            print e
+        for k in tmpkeys:
+            self.supportedPublicKeys.append(k)
 
 
     def connectionLost(self, reason):
