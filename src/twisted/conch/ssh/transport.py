@@ -1603,7 +1603,7 @@ class SSHClientTransport(SSHTransportBase):
             # Maybe no common protocols were agreed.
             return
         # Curve25519
-        if self.kexAlg.find(b'curve25519') >= 0:
+        if b'curve25519' in self.kexAlg:
             # Genereate the curve25519 key pair
             self.ecPriv = nacl.public.PrivateKey.generate()
             self.ecPub = self.ecPriv.public_key

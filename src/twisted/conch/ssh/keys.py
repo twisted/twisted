@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Handling of RSA, DSA, EC, and *25519 keys.
+Handling of RSA, DSA, EC, and Ed25519 keys.
 """
 
 from __future__ import absolute_import, division
@@ -54,12 +54,16 @@ from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.reflect import requireModule
 if requireModule('nacl'):
     import nacl.signing
+    import nacl.exceptions
 else:
     class nacl:
         class signing:
             class VerifyKey:
                 pass
             class SigningKey:
+                pass
+        class exceptions:
+            class BadSignatureError:
                 pass
 
 # Curve lookup table
@@ -305,8 +309,8 @@ class Key(object):
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
         elif keyType == b'ssh-ed25519':
-            pr = nacl.signing.SigningKey(common.getNS(rest)[0])
-            return cls(pr)
+            signingKey = nacl.signing.SigningKey(common.getNS(rest)[0])
+            return cls(signingKey)
         elif keyType in [curve for curve in list(_curveTable.keys())]:
             x, y, privateValue, rest = common.getMP(rest, 3)
             return cls._fromECComponents(x=x, y=y, curve=keyType,
@@ -958,7 +962,7 @@ class Key(object):
         @rtype: L{Key}
         @return: A public key.
         """
-        if self.type() is 'ED25519':
+        if self.type() == 'ED25519':
             return Key(self._keyObject.verify_key)
         else:
             return Key(self._keyObject.public_key())
@@ -1283,37 +1287,40 @@ class Key(object):
                           + b64Data + b' ' + extra).strip()
         else:
             if self.type() == 'ED25519':
-                # OpenSSH loosely follows the openssh-key-v1 specification
-                # found here:
-                # http://cvsweb.openbsd.org/cgi-bin/cvsweb/
-                # src/usr.bin/ssh/PROTOCOL.key
-                basestr = b'openssh-key-v1\x00\x00'
-                basestr += b'\x00\x00\x04none\x00' * 2
-                basestr += b"\x00\x00" * 3 + b"\x01"
-                verstr = common.NS(b'ssh-ed25519')
-                verstr += common.NS(self._keyObject.verify_key._key)
-                basestr += common.NS(verstr)
+                def makeEd25519():
+                    # OpenSSH loosely follows the openssh-key-v1 specification
+                    # found here:
+                    # http://cvsweb.openbsd.org/cgi-bin/cvsweb/
+                    # src/usr.bin/ssh/PROTOCOL.key
+                    basestr = b'openssh-key-v1\x00\x00'
+                    basestr += b'\x00\x00\x04none\x00' * 2
+                    basestr += b"\x00\x00" * 3 + b"\x01"
+                    verstr = common.NS(b'ssh-ed25519')
+                    verstr += common.NS(self._keyObject.verify_key._key)
+                    basestr += common.NS(verstr)
 
-                # Part of the openssh-key-v1 spec is to have a random
-                # number repeat itself to verify successful decryption.
-                # Which means every time toString is called here,
-                # the output will be slightly different.
-                randstr = bytearray(randbytes.secureRandom(4))
-                keystr = randstr + randstr
-                keystr += verstr
-                keystr += common.NS(self._keyObject._signing_key)
+                    # Part of the openssh-key-v1 spec is to have a random
+                    # number repeat itself to verify successful decryption.
+                    # Which means every time toString is called here,
+                    # the output will be slightly different.
+                    randstr = bytearray(randbytes.secureRandom(4))
+                    keystr = randstr + randstr
+                    keystr += verstr
+                    keystr += common.NS(self._keyObject._signing_key)
 
-                if extra:
-                    keystr += common.NS(extra)
+                    if extra:
+                        keystr += common.NS(extra)
 
-                i = 1
-                while len(keystr) % 8 != 0:
-                    keystr += struct.pack('b', i)
-                    i += 1
+                    i = 1
+                    while len(keystr) % 8 != 0:
+                        keystr += struct.pack('b', i)
+                        i += 1
 
-                basestr += common.NS(keystr)
+                    basestr += common.NS(keystr)
+                    return basestr
 
-                b64str = base64.b64encode(basestr)
+                edstr = makeEd25519()
+                b64str = base64.b64encode(edstr)
                 retstr = b'-----BEGIN OPENSSH PRIVATE KEY-----\n'
 
                 i = 0
@@ -1553,7 +1560,7 @@ class Key(object):
             try:
                 key.verify(data, common.getNS(signature)[0])
                 return True
-            except:
+            except nacl.exceptions.BadSignatureError:
                 return False
         elif keyType == 'RSA':
             k = self._keyObject
