@@ -1906,7 +1906,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
 
         @return: C{dict} of keyword arguments to pass to connect.
         """
-        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+        return {'timeout': 10.0, 'bindAddress': ('localhost', 49595)}
 
 
     def assertConnectArgs(self, receivedArgs, expectedArgs):
