@@ -521,6 +521,13 @@ class SSHTransportBase(protocol.Protocol):
 
 
     def setSupportedKexes(self, kexes):
+        """
+        Clear out the list of supported key exchanges
+        Then call addSupportedKexes to populate the list.
+
+        @type kexes: L{list}
+        @param kexes: A L{list} of kex name strings
+        """
         # Clear out the currently supported key exchanges.
         self.supportedKeyExchanges = {}
         _kex._kexAlgorithms = {}
@@ -530,45 +537,85 @@ class SSHTransportBase(protocol.Protocol):
 
 
     def addSupportedKexes(self, kexes):
-        basekeys = _kex._baseKexAlgorithms.keys()
-        for k in kexes:
-            if k not in basekeys and k.replace(b'ecdh', b'ecdsa') not in keys._curveTable:
-                log.msg('Unable to support key exchange of type %s' % k)
-            elif k not in _kex._kexAlgorithms:
-                # Check to see if it's supported.
-                if k.startswith(b'ecdh'):
-                    size = int(k[-3:])
+        """
+        Append the list of supported key exchanges.
 
-                    # Add the new kex to the dictionary.
-                    if size <= 256:
-                        _kex._kexAlgorithms[k] = _kex._ECDH256()
-                    elif size <= 384:
-                        _kex._kexAlgorithms[k] = _kex._ECDH384()
-                    else:
-                        _kex._kexAlgorithms[k] = _kex._ECDH512()
+        @type kexes: L{list}
+        @param kexes: A L{list} of kex name strings
+        """
+        for k in kexes:
+            if k.startswith(b'ecdh'):
+                size = int(k[-3:])
+
+                # Add the new kex to the dictionary.
+                if size <= 256:
+                    _kex._kexAlgorithms[k] = _kex._ECDH256()
+                elif size <= 384:
+                    _kex._kexAlgorithms[k] = _kex._ECDH384()
                 else:
-                    _kex._kexAlgorithms[k] = _kex._baseKexAlgorithms[k]
+                    _kex._kexAlgorithms[k] = _kex._ECDH512()
+            else:
+                _kex._kexAlgorithms[k] = _kex._baseKexAlgorithms[k]
 
         # Reload
         self.supportedKeyExchanges = _kex.getSupportedKeyExchanges()
 
 
     def setSupportedPublicKeys(self, publicKeys):
+        """
+         Clear out the list of supported public keys
+         Then call addSupportePublicKeys to populate the list.
+
+         @type publicKeys: L{dict}
+         @param publicKeys: A L{dict} with the name of the public key as the key
+            and a value that is a L{tuple} consisting of an instance of the key method,
+            a L{str} that is the corresponding sec name.
+        """
         self.supportedPublicKeys = []
         self.addSupportePublicKeys(publicKeys)
 
 
     def addSupportePublicKeys(self, publicKeys):
-        for k in publicKeys:
-            # Check to see if it's supported.
-            if k not in self.supportedPublicKeys:
-                if k == b'ssh-rsa' or k == b'ssh-dss' or k in keys._curveTable:
-                    self.supportedPublicKeys += [k]
-                else:
-                    log.msg('Unable to support public key of type %s' % k)
+        """
+        Populate the supported public key list.
 
-        # Reverse sort to bring the stronger keys up first.
-        self.supportedPublicKeys.sort(reverse=True)
+        @type publicKeys: L{dict}
+        @param publicKeys: A L{dict} with the name of the public key as the key
+            and a value that is a L{tuple} consisting of an instance of the key method,
+            a L{str} that is the corresponding sec name.
+        """
+        tmpkeys = []
+
+        try:
+            self.supportedPublicKeys.remove('ssh-rsa')
+            tmpkeys += ['ssh-rsa']
+        except:
+            pass
+
+        try:
+            self.supportedPublicKeys.remove('ssh-dss')
+            tmpkeys += ['ssh-dss']
+        except:
+            pass
+
+        try:
+            for k in publicKeys:
+                # Check to see if it's supported.
+                if k not in self.supportedPublicKeys and k != b'ssh-rsa' and k != b'ssh-dss':
+                    self.supportedPublicKeys += [k]
+
+                curve = publicKeys[k]
+                keys._curveTable[k] = curve[0]
+
+                keys._secToNist[curve[1]] = k
+
+            # Reverse sort to bring the stronger keys up first.
+            self.supportedPublicKeys.sort(reverse=True)
+
+            for k in tmpkeys:
+                self.supportedPublicKeys.append(k)
+        except Exception as e:
+            print e
 
 
     def connectionLost(self, reason):

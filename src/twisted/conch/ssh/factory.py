@@ -61,6 +61,9 @@ class SSHFactory(protocol.Factory):
             if t.supportedPublicKeys[i] not in self.privateKeys:
                 t.supportedPublicKeys.pop(i)
 
+        if not t.supportedPublicKeys:
+            raise KeyError('Did not find any private keys that match the specified public keys.')
+
         if not self.primes:
             log.msg('disabling non-fixed-group key exchange algorithms '
                     'because we cannot find moduli file')
