@@ -1192,8 +1192,6 @@ class ServerAndClientSSHTransportBaseCase:
         return proto2
 
 
-
-
     def test_disconnectIfCantMatchKex(self):
         """
         Test that the transport disconnects if it can't match the key
@@ -1312,13 +1310,10 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         tmpkex = _kex._kexAlgorithms
 
         proto2 = self.klass()
-        basekexes = proto2.supportedKeyExchanges
         kexes = [b"ecdh-sha2-nistp571"]
         proto2.addSupportedKexes(kexes)
 
-        basekexes = basekexes[:3] + kexes + basekexes[3:]
-
-        self.assertEqual(proto2.supportedKeyExchanges, basekexes)
+        self.assertEqual(proto2.supportedKeyExchanges.count(kexes[0]), 1)
 
         # Restore kexes
         _kex._kexAlgorithms = tmpkex
@@ -1845,13 +1840,10 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         tmpkex = _kex._kexAlgorithms
 
         proto2 = self.klass()
-        basekexes = proto2.supportedKeyExchanges
         kexes = [b"ecdh-sha2-nistp571"]
         proto2.addSupportedKexes(kexes)
 
-        basekexes = basekexes[:3] + kexes + basekexes[3:]
-
-        self.assertEqual(proto2.supportedKeyExchanges, basekexes)
+        self.assertEqual(proto2.supportedKeyExchanges.count(kexes[0]), 1)
 
         # Restore kexes
         _kex._kexAlgorithms = tmpkex
