@@ -19,6 +19,7 @@ from zope.interface import implementer
 # installs a user-specified reactor, installing the default reactor and
 # breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
+from twisted.internet.error import TimeoutError
 from twisted.python import failure
 
 from twisted.trial import itrial, util
@@ -81,7 +82,7 @@ class TestCase(SynchronousTestCase):
         from twisted.internet import reactor
         timeout = self.getTimeout()
         def onTimeout(d):
-            e = defer.TimeoutError("%r (%s) still running at %s secs"
+            e = TimeoutError("%r (%s) still running at %s secs"
                 % (self, methodName, timeout))
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram

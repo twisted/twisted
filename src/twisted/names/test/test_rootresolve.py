@@ -11,7 +11,8 @@ from zope.interface.verify import verifyClass
 from twisted.python.log import msg
 from twisted.trial import util
 from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.internet.defer import Deferred, succeed, gatherResults, TimeoutError
+from twisted.internet.defer import Deferred, succeed, gatherResults
+from twisted.internet.error import TimeoutError
 from twisted.internet.interfaces import IResolverSimple
 from twisted.names import client, root
 from twisted.names.root import Resolver

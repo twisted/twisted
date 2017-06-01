@@ -8,7 +8,7 @@ Exception class definitions for Twisted Names.
 
 from __future__ import division, absolute_import
 
-from twisted.internet.defer import TimeoutError
+from twisted.internet.error import TimeoutError
 
 
 class DomainError(ValueError):

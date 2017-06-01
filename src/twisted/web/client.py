@@ -38,6 +38,7 @@ from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
+from twisted.internet.error import TimeoutError
 from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.python.util import InsensitiveDict
@@ -248,7 +249,9 @@ class HTTPPageGetter(http.HTTPClient):
     def timeout(self):
         self.quietLoss = True
         self.transport.abortConnection()
-        self.factory.noPage(defer.TimeoutError("Getting %s took longer than %s seconds." % (self.factory.url, self.factory.timeout)))
+        self.factory.noPage(
+            TimeoutError("Getting %s took longer than %s seconds." %
+                         (self.factory.url, self.factory.timeout)))
 
 
 class HTTPPageDownloader(HTTPPageGetter):

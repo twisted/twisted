@@ -31,7 +31,8 @@ from collections import deque
 
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
-from twisted.internet.defer import Deferred, fail, TimeoutError
+from twisted.internet.defer import Deferred, fail
+from twisted.internet.error import TimeoutError
 from twisted.python import log
 from twisted.python.compat import (
     intToBytes, iteritems, nativeString, networkString)
