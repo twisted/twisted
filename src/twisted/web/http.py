@@ -2177,6 +2177,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         log.msg(
             "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
         )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
         self.transport.abortConnection()
 
 
