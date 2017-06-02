@@ -27,7 +27,7 @@ from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
 from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionLost
+from twisted.internet.error import ConnectionLost, ConnectionDone
 from twisted.protocols import loopback
 from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
 from twisted.test.test_internet import DummyProducer
@@ -392,6 +392,33 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(2**32)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
+
+
+    def test_connectionLostAfterForceClose(self):
+        """
+        If a timed out transport doesn't close after 15 seconds, the
+        L{HTTPChannel} will forcibly close it.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        factory = http.HTTPFactory()
+        protocol = factory.buildProtocol(None)
+        protocol = parametrizeTimeoutMixin(protocol, clock)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        self.assertFalse(transport.disconnecting)
+        self.assertFalse(transport.disconnected)
+
+        # Force the initial timeout and the follow-on forced closure.
+        clock.advance(60)
+        clock.advance(15)
+        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.disconnected)
+
+        # Now call connectionLost on the protocol. This is done by some
+        # transports, including TCP and TLS. We don't have anything we can
+        # assert on here: this just must not explode.
+        protocol.connectionLost(ConnectionDone)
 
 
     def test_noPipeliningApi(self):
