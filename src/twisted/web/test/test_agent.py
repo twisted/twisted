@@ -3063,7 +3063,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
 
     skip = skipWhenNoSSL
 
-    def testCacheIsUsed(self):
+    def test_cacheIsUsed(self):
         """
         Verify that the connection creator is added to the
         policy's cache, and that it is reused on subsequent calls
@@ -3083,7 +3083,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         policy.creatorForNetloc(b"foo", 1589)
         self.assertFalse(trustRoot.called)
 
-    def testCacheIdIncremented(self):
+    def test_cacheIdIncremented(self):
         """
         Verify that the cacheId is always incremented for new and existing
         entries.
@@ -3109,7 +3109,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         entry = policy._cache[host]
         self.assertEquals(2, entry.cacheId)
 
-    def testCacheRemovesOldest(self):
+    def test_cacheRemovesOldest(self):
         """
         Verify that when the cache is full, and a new entry is added,
         the oldest entry is removed.
@@ -3137,7 +3137,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         entry = policy._cache[hostn]
         self.assertEquals(21, entry.cacheId)
 
-    def testChangeCacheSize(self):
+    def test_changeCacheSize(self):
         """
         Verify that changing the cache size results in a policy that
         respects the new cache size and not the default.
