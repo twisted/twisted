@@ -139,7 +139,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['conch']
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 1.5', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
 
 
@@ -186,7 +186,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 1.5', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
@@ -205,7 +205,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 1.5', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
@@ -224,7 +224,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('cryptography >= 1.5', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
