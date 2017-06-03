@@ -1,0 +1,1 @@
+Detect when we’re being run using “-m twisted” or “-m twisted.trial” and use it to build an accurate usage message.
