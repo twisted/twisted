@@ -147,12 +147,13 @@ Note that trial can use different reporters to modify its output. Run ``python -
 
 The tests can be run by Trial in multiple ways:
 
+.. _core-howto-trial-comment:
+
 - ``python -m twisted.trial calculus``: run all the tests for the calculus package.
 - ``python -m twisted.trial calculus.test``: run using Python's ``import`` notation.
 - ``python -m twisted.trial calculus.test.test_base_1``: as above, for a specific test module.
   You can follow that logic by putting your class name and even a method name to only run those specific tests.
-- .. _core-howto-trial-comment:
-  ``python -m twisted.trial --testmodule=calculus/base_1.py``: use the ``test-case-name`` comment in the first line of ``calculus/base_1.py`` to find the tests.
+- ``python -m twisted.trial --testmodule=calculus/base_1.py``: use the ``test-case-name`` comment in the first line of ``calculus/base_1.py`` to find the tests.
 - ``python -m twisted.trial calculus/test``: run all the tests in the test directory (not recommended).
 - ``python -m twisted.trial calculus/test/test_base_1.py``: run a specific test file (not recommended).
 
