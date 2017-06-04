@@ -1,0 +1,1 @@
+twisted.web.http.HTTPChannel and twisted.web._http2.H2Connection have been enhanced so that after they time out they wait a small amount of time to allow the connection to close gracefully and, if it does not, they forcibly close it to avoid allowing malicious clients to forcibly keep the connection open.
