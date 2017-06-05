@@ -53,6 +53,17 @@ class TimeoutError(Exception):
 
 
 
+class NoCurrentResult(BaseException):
+    """
+    This error is raised when attempting to call L{extractCurrentResult} on a
+    L{Deferred} that has not yet called all of its callbacks.
+
+    This error inherits from L{BaseException} rather than L{Exception} to
+    reduce the likelihood of inadvertingly catching this exception as part of
+    an exception handler for other errors.
+    """
+
+
 def logError(err):
     """
     Log and return failure.
@@ -157,6 +168,151 @@ def maybeDeferred(f, *args, **kw):
         return fail(result)
     else:
         return succeed(result)
+
+
+
+def extractCurrentResult(deferred, raises=True):
+    """
+    Extract the current result from a L{Deferred} that has already fired all of
+    its callbacks.
+
+    Take a deferred that has already fired all of its callbacks and extract and
+    return the result of the L{Deferred}. This process of extracting the result
+    will consume the result, error or otherwise. If the L{Deferred} has an
+    error then the process of extracting the result will, by default, re-raise
+    the original exception unless the L{raises} parameter is set to L{False}.
+
+    The primary purpose of this function is to allow code to be written that is
+    internally asynchronous but which can be consumed without an event loop in
+    a synchronous fashion by using L{extractCurrentResult} at the boundaries.
+    This enables libraries to be written that can function both with Twisted
+    and with synchronous code instead of requiring an asynchronous and a
+    synchronous implementation for all functionality.
+
+    @attention: This function CANNOT take a Deferred with pending asynchronous
+        work to be done and make it synchronous. It can ONLY extract results
+        from a L{Deferred} which has already fired its callbacks.
+
+    @type deferred: Deferred
+    @param deferred: The Deferred from which results will be extracted..
+
+    @type raises: bool
+    @param raises: Whether or not to raise the original exception (L{True}) or
+        to return the failure object (L{False}).
+
+    @raise NoCurrentResult: If C{deferred} has pending work to be done
+        and has no current result to extract.
+
+    @return: The result of the L{Deferred}.
+    """
+    def done(result):
+        done.result = result
+
+    # We need a place to store the result, and a way to determine the
+    # difference between no result and any other possible object. So we'll
+    # create a sigil object and stash it locally and default our result to
+    # that.
+    # Note: This *has* to happen before adding the done callback to the
+    #       Deferred or else the callback can fire prior to setting our
+    #       default, thus causing the default to override the value from the
+    #       callback.
+    nothing = done.result = object()
+
+    # Now that the callback is fully setup and prepared, register it with the
+    # deferred. This *should* run immediately since only Deferreds that do not
+    # have any pending work should be passed into this function.
+    deferred.addBoth(done)
+
+    # If we've gotten to this point and we haven't had our collect function
+    # called, then we must be waiting on something in the Deferred chain. If so
+    # we'll error out here because there's nothing we can do to advance the
+    # state of the Deferred. If we've got a result then we'll go ahead and
+    # return it or raise the given exception.
+    if done.result is nothing:
+        raise NoCurrentResult(
+            "Cannot extract the current result of a Deferred that has not "
+            "currently called all of its callbacks."
+        )
+    else:
+        if raises and isinstance(done.result, failure.Failure):
+            done.result.raiseException()
+        else:
+            return done.result
+
+
+
+def observeCurrentResult(deferred, raises=True):
+    """
+    Observes the current result from a L{Deferred} that has already fired all
+    of its callbacks.
+
+    Take a deferred that has already fired all of its callbacks and observe and
+    return the result of the L{Deferred}. This process of extracting the result
+    will *NOT* consume the result. If the L{Deferred} has an error then the
+    process of observing the result will, by default, re-raise the
+    original exception unless the L{raises} parameter is set to L{False}.
+
+    The primary purpose of this function is to allow code to be written that is
+    internally asynchronous but which can be consumed without an event loop in
+    a synchronous fashion by using L{observeCurrentResult} at the boundaries.
+    This enables libraries to be written that can function both with Twisted
+    and with synchronous code instead of requiring an asynchronous and a
+    synchronous implementation for all functionality.
+
+    @attention: This function CANNOT take a Deferred with pending asynchronous
+        work to be done and make it synchronous. It can ONLY extract results
+        from a L{Deferred} which has already fired its callbacks.
+
+    @type deferred: Deferred
+    @param deferred: The Deferred from which results will be extracted..
+
+    @type raises: bool
+    @param raises: Whether or not to raise the original exception (L{True}) or
+        to return the failure object (L{False}).
+
+    @raise NoCurrentResult: If C{deferred} has pending work to be done
+        and has no current result to extract.
+
+    @return: The result of the L{Deferred}.
+    """
+    def done(result):
+        done.result = result
+
+        # We return the result here so that if anything else continued to use
+        # this Deferred after it's been observed then the act of observing has
+        # not broken the flow of values through the callback chain.
+        return result
+
+    # We need a place to store the result, and a way to determine the
+    # difference between no result and any other possible object. So we'll
+    # create a sigil object and stash it locally and default our result to
+    # that.
+    # Note: This *has* to happen before adding the done callback to the
+    #       Deferred or else the callback can fire prior to setting our
+    #       default, thus causing the default to override the value from the
+    #       callback.
+    nothing = done.result = object()
+
+    # Now that the callback is fully setup and prepared, register it with the
+    # deferred. This *should* run immediately since only Deferreds that do not
+    # have any pending work should be passed into this function.
+    deferred.addBoth(done)
+
+    # If we've gotten to this point and we haven't had our collect function
+    # called, then we must be waiting on something in the Deferred chain. If so
+    # we'll error out here because there's nothing we can do to advance the
+    # state of the Deferred. If we've got a result then we'll go ahead and
+    # return it or raise the given exception.
+    if done.result is nothing:
+        raise NoCurrentResult(
+            "Cannot observe the current result of a Deferred that has not "
+            "currently called all of its callbacks."
+        )
+    else:
+        if raises and isinstance(done.result, failure.Failure):
+            done.result.raiseException()
+        else:
+            return done.result
 
 
 
@@ -1913,10 +2069,10 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
-           "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "ensureDeferred",
-           "waitForDeferred", "deferredGenerator", "inlineCallbacks",
-           "returnValue",
+           "AlreadyCalledError", "TimeoutError", "NoCurrentResult",
+           "gatherResults", "maybeDeferred", "ensureDeferred",
+           "extractCurrentResult", "observeCurrentResult", "waitForDeferred",
+           "deferredGenerator", "inlineCallbacks", "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]

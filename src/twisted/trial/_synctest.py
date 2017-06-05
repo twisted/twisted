@@ -14,6 +14,7 @@ import inspect
 import os, warnings, sys, tempfile, types
 from dis import findlinestarts as _findlinestarts
 
+from twisted.internet import defer
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
@@ -686,20 +687,24 @@ class _Assertions(pyunit.TestCase, object):
 
         @return: The result of C{deferred}.
         """
-        result = []
-        deferred.addBoth(result.append)
-        if not result:
+        try:
+            result = defer.extractCurrentResult(deferred, raises=False)
+        except defer.NoCurrentResult:
             self.fail(
-                "Success result expected on %r, found no result instead" % (
-                    deferred,))
-        elif isinstance(result[0], failure.Failure):
-            self.fail(
-                "Success result expected on %r, "
-                "found failure result instead:\n%s" % (
-                    deferred, result[0].getTraceback()))
-        else:
-            return result[0]
+                "Success result expected on {!r}, found no result "
+                "instead".format(deferred)
+            )
 
+        if isinstance(result, failure.Failure):
+            self.fail(
+                "Success result expected on {!r}, "
+                "found failure result instead:\n{}".format(
+                    deferred,
+                    result.getTraceback(),
+                )
+            )
+        else:
+            return result
 
     def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
@@ -726,30 +731,39 @@ class _Assertions(pyunit.TestCase, object):
         @return: The failure result of C{deferred}.
         @rtype: L{failure.Failure}
         """
-        result = []
-        deferred.addBoth(result.append)
-        if not result:
+        try:
+            result = defer.extractCurrentResult(deferred, raises=False)
+        except defer.NoCurrentResult:
             self.fail(
-                "Failure result expected on %r, found no result instead" % (
-                    deferred,))
-        elif not isinstance(result[0], failure.Failure):
+                "Failure result expected on {0!r}, found no result "
+                "instead".format(deferred)
+            )
+
+        if not isinstance(result, failure.Failure):
             self.fail(
-                "Failure result expected on %r, "
-                "found success result (%r) instead" % (deferred, result[0]))
+                "Failure result expected on {0!r}, "
+                "found success result ({1!r}) instead".format(
+                    deferred,
+                    result,
+                )
+            )
         elif (expectedExceptionTypes and
-              not result[0].check(*expectedExceptionTypes)):
+              not result.check(*expectedExceptionTypes)):
             expectedString = " or ".join([
                 '.'.join((t.__module__, t.__name__)) for t in
                 expectedExceptionTypes])
 
             self.fail(
-                "Failure of type (%s) expected on %r, "
-                "found type %r instead: %s" % (
-                    expectedString, deferred, result[0].type,
-                    result[0].getTraceback()))
+                "Failure of type ({0}) expected on {1!r}, "
+                "found type {2!r} instead: {3}".format(
+                    expectedString,
+                    deferred,
+                    result.type,
+                    result.getTraceback(),
+                )
+            )
         else:
-            return result[0]
-
+            return result
 
     def assertNoResult(self, deferred):
         """
@@ -770,19 +784,20 @@ class _Assertions(pyunit.TestCase, object):
         @raise SynchronousTestCase.failureException: If the
             L{Deferred<twisted.internet.defer.Deferred>} has a result.
         """
-        result = []
-        def cb(res):
-            result.append(res)
-            return res
-        deferred.addBoth(cb)
-        if result:
+        try:
+            result = defer.observeCurrentResult(deferred, raises=False)
+        except defer.NoCurrentResult:
+            pass
+        else:
             # If there is already a failure, the self.fail below will
             # report it, so swallow it in the deferred
             deferred.addErrback(lambda _: None)
             self.fail(
-                "No result expected on %r, found %r instead" % (
-                    deferred, result[0]))
-
+                "No result expected on {0!r}, found {1!r} instead".format(
+                    deferred,
+                    result,
+                )
+            )
 
     def assertRegex(self, text, regex, msg=None):
         """
