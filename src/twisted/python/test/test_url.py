@@ -802,11 +802,11 @@ class TestURL(SynchronousTestCase):
 
 class URLDeprecationTests(SynchronousTestCase):
     """
-    L{twisted.python.constants} is deprecated.
+    L{twisted.python.url} is deprecated.
     """
     def test_urlDeprecation(self):
         """
-        L{twisted.python.constants} is deprecated since Twisted NEXT.
+        L{twisted.python.url} is deprecated since Twisted NEXT.
         """
         from twisted.python import url
         url
