@@ -30,6 +30,9 @@ include tox.ini .coveragerc
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
 
+# Include all modules, even on a Python we're not installing for
+recursive-include src/twisted *.py
+
 # Some tests stuff
 recursive-include src/twisted *.pem
 include src/twisted/internet/test/fake_CAs/*
