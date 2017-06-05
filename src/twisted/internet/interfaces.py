@@ -728,7 +728,7 @@ class IResolver(IResolverSimple):
 
 class IReactorTCP(Interface):
 
-    def listenTCP(port, factory, backlog=50, interface=''):
+    def listenTCP(port, factory, backlog=50, interface='', listenMultiple=False):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
 
@@ -741,6 +741,8 @@ class IReactorTCP(Interface):
         @param interface: The local IPv4 or IPv6 address to which to bind;
             defaults to '', ie all IPv4 addresses.  To bind to all IPv4 and IPv6
             addresses, you must call this method twice.
+
+        @param listenMultiple: listen to the same port using different processes
 
         @return: an object that provides L{IListeningPort}.
 
@@ -798,7 +800,8 @@ class IReactorSSL(Interface):
         @return: An object which provides L{IConnector}.
         """
 
-    def listenSSL(port, factory, contextFactory, backlog=50, interface=''):
+    def listenSSL(port, factory, contextFactory, backlog=50, interface='',
+            listenMultiple=False):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -813,6 +816,8 @@ class IReactorSSL(Interface):
         @param backlog: size of the listen queue
 
         @param interface: the hostname to bind to, defaults to '' (all)
+
+        @param listenMultiple: listen to the same port with different processes
         """
 
 

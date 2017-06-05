@@ -457,7 +457,7 @@ class _TCPServerEndpoint(object):
     A TCP server endpoint interface
     """
 
-    def __init__(self, reactor, port, backlog, interface):
+    def __init__(self, reactor, port, backlog, interface, listenMultiple):
         """
         @param reactor: An L{IReactorTCP} provider.
 
@@ -469,11 +469,15 @@ class _TCPServerEndpoint(object):
 
         @param interface: The hostname to bind to
         @type interface: str
+
+        @param listenMultiple: allow multiple processes to listen to the same port
+        @type listenMultiple: bool
         """
         self._reactor = reactor
         self._port = port
         self._backlog = backlog
         self._interface = interface
+        self._listenMultiple = listenMultiple
 
 
     def listen(self, protocolFactory):
@@ -485,7 +489,8 @@ class _TCPServerEndpoint(object):
                              self._port,
                              protocolFactory,
                              backlog=self._backlog,
-                             interface=self._interface)
+                             interface=self._interface,
+                             listenMultiple=self._listenMultiple)
 
 
 
@@ -493,7 +498,7 @@ class TCP4ServerEndpoint(_TCPServerEndpoint):
     """
     Implements TCP server endpoint with an IPv4 configuration
     """
-    def __init__(self, reactor, port, backlog=50, interface=''):
+    def __init__(self, reactor, port, backlog=50, interface='', listenMultiple=False):
         """
         @param reactor: An L{IReactorTCP} provider.
 
@@ -505,8 +510,12 @@ class TCP4ServerEndpoint(_TCPServerEndpoint):
 
         @param interface: The hostname to bind to, defaults to '' (all)
         @type interface: str
+
+        @param listenMultiple: allow multiple processes to listen to the same port
+        @type listenMultiple: bool
         """
-        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
+        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface,
+                listenMultiple)
 
 
 
@@ -514,7 +523,8 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
     """
     Implements TCP server endpoint with an IPv6 configuration
     """
-    def __init__(self, reactor, port, backlog=50, interface='::'):
+    def __init__(self, reactor, port, backlog=50, interface='::',
+            listenMultiple=False):
         """
         @param reactor: An L{IReactorTCP} provider.
 
@@ -526,8 +536,12 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
 
         @param interface: The hostname to bind to, defaults to C{::} (all)
         @type interface: str
+
+        @param listenMultiple: allow multiple processes to listen to the same port
+        @type listenMultiple: bool
         """
-        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
+        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface,
+                listenMultiple)
 
 
 
@@ -1029,7 +1043,7 @@ class SSL4ServerEndpoint(object):
     """
 
     def __init__(self, reactor, port, sslContextFactory,
-                 backlog=50, interface=''):
+                 backlog=50, interface='', listenMultiple=False):
         """
         @param reactor: An L{IReactorSSL} provider.
 
@@ -1050,6 +1064,7 @@ class SSL4ServerEndpoint(object):
         self._sslContextFactory = sslContextFactory
         self._backlog = backlog
         self._interface = interface
+        self._listenMultiple = listenMultiple
 
 
     def listen(self, protocolFactory):
@@ -1061,7 +1076,8 @@ class SSL4ServerEndpoint(object):
                              protocolFactory,
                              contextFactory=self._sslContextFactory,
                              backlog=self._backlog,
-                             interface=self._interface)
+                             interface=self._interface,
+                             listenMultiple=self._listenMultiple)
 
 
 
