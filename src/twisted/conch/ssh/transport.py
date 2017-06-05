@@ -148,6 +148,7 @@ class SSHCiphers:
         b'hmac-sha2-512': sha512,
         b'hmac-sha2-384': sha384,
         b'hmac-sha2-256': sha256,
+        b'hmac-sha2-384': sha384,
         b'hmac-sha1': sha1,
         b'hmac-md5': md5,
         b'none': None
@@ -471,6 +472,7 @@ class SSHTransportBase(protocol.Protocol):
         b'hmac-sha2-512',
         b'hmac-sha2-384',
         b'hmac-sha2-256',
+        b'hmac-sha2-384',
         b'hmac-sha1',
         b'hmac-md5',
         # `none`,
