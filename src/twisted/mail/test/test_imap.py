@@ -3575,8 +3575,8 @@ class FakeyMessage(util.FancyStrMixin):
     showAttributes = ('headers', 'flags', 'date', '_body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
-        self.headers = dict((_bytesify(k), _bytesify(v))
-                            for k, v in headers.items())
+        self.headers = OrderedDict((_bytesify(k), _bytesify(v))
+                                   for k, v in headers.items())
         self.flags = tuple(_bytesify(v) for v in flags)
         self._body = _bytesify(body)
         self.size = len(self._body)
