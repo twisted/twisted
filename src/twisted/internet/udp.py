@@ -484,14 +484,26 @@ class MulticastMixin:
 
     def joinGroup(self, addr, interface=""):
         """Join a multicast group. Returns Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
+        return self.reactor.resolve(addr).addCallback(self._joinAddr1, "", interface, 1)
 
 
-    def _joinAddr1(self, addr, interface, join):
-        return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
+    def joinSourceGroup(self, addr, source, interface=""):
+        """Join a source-specific multicast group. Returns Deferred of success."""
+        return self.reactor.resolve(addr).addCallback(self._joinAddr1, source, interface, 1)
 
 
-    def _joinAddr2(self, interface, addr, join):
+    def _joinAddr1(self, addr, source, interface, join):
+        if source:
+            return self.reactor.resolve(interface).addCallback(self._joinAddr2, source, addr, join)
+        else:
+            return self.reactor.resolve(interface).addCallback(self._joinGroup, addr, join)
+
+
+    def _joinAddr2(self, interface, source, addr, join):
+        return self.reactor.resolve(source).addCallback(self._joinSourceGroup, interface, addr, join)
+
+
+    def _joinGroup(self, interface, addr, join):
         addr = socket.inet_aton(addr)
         interface = socket.inet_aton(interface)
         if join:
@@ -504,9 +516,33 @@ class MulticastMixin:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
 
+    def _joinSourceGroup(self, source, interface, addr, join):
+        if not hasattr(socket, 'IP_ADD_SOURCE_MEMBERSHIP'):
+            setattr(socket, 'IP_ADD_SOURCE_MEMBERSHIP', 39)
+        if not hasattr(socket, 'IP_DROP_SOURCE_MEMBERSHIP'):
+            setattr(socket, 'IP_DROP_SOURCE_MEMBERSHIP', 40)
+
+        addr = socket.inet_aton(addr)
+        interface = socket.inet_aton(interface)
+        source = socket.inet_aton(source)
+	if join:
+            cmd = socket.IP_ADD_SOURCE_MEMBERSHIP
+        else:
+            cmd = socket.IP_DROP_SOURCE_MEMBERSHIP
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface + source)
+        except socket.error as e:
+            return failure.Failure(error.MulticastJoinError(addr, source, interface, *e.args))
+
+
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
+        return self.reactor.resolve(addr).addCallback(self._joinAddr1, "", interface, 0)
+
+
+    def leaveSourceGroup(self, addr, source, interface=""):
+        """Leave multicast group, return Deferred of success."""
+        return self.reactor.resolve(addr).addCallback(self._joinAddr1, source, interface, 0)
 
 
 
