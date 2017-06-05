@@ -553,7 +553,7 @@ class IMAP4HelperTests(unittest.TestCase):
             b'("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
             b'<B27397-0100000@cac.washington.edu>) '
             b'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
-            [b'FLAGS', [rb'\Seen'], b'INTERNALDATE',
+            [b'FLAGS', [br'\Seen'], b'INTERNALDATE',
              b'17-Jul-1996 02:44:25 -0700', b'RFC822.SIZE', b'4286',
              b'ENVELOPE',
              [b'Wed, 17 Jul 1996 02:23:25 -0700 (PDT)',
@@ -848,7 +848,7 @@ class IMAP4HelperTests(unittest.TestCase):
         # Check all the printable exclusions
         self.assertEqual(
             b'(%s twistedrocks)' % (keyword.encode("ascii").upper(),),
-            imap4.Query(**{keyword: rb'twisted (){%*"\] rocks'}))
+            imap4.Query(**{keyword: br'twisted (){%*"\] rocks'}))
 
         # Check all the non-printable exclusions
         self.assertEqual(
