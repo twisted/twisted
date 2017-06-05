@@ -12,7 +12,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import _PY3, unichr
+from twisted.python.compat import unichr
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -1085,7 +1085,7 @@ class AllowedMethodsTests(unittest.TestCase):
         res = GettableResource()
         allowedMethods = resource._computeAllowedMethods(res)
         self.assertEqual(set(allowedMethods),
-                          set([b'GET', b'HEAD', b'fred_render_ethel']))
+                         set([b'GET', b'HEAD', b'fred_render_ethel']))
 
 
     def test_notAllowed(self):
@@ -1197,7 +1197,7 @@ class AccessLogTestsMixin(object):
             # Value of the "Referer" header.  Probably incorrectly quoted.
             b'"-" '
             # Value pf the "User-Agent" header.  Probably incorrectly quoted.
-            b'"-"' + self.linesep,
+            b'"-"' + self.linesep.encode('ascii'),
             FilePath(logPath).getContent())
 
 
@@ -1223,9 +1223,7 @@ class AccessLogTestsMixin(object):
             factory.stopFactory()
 
         self.assertEqual(
-            # self.linesep is a sad thing.
-            # https://twistedmatrix.com/trac/ticket/6938
-            b"this is a bad log format" + self.linesep,
+            b"this is a bad log format" + self.linesep.encode('ascii'),
             FilePath(logPath).getContent())
 
 
@@ -1235,7 +1233,7 @@ class HTTPFactoryAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     Tests for L{http.HTTPFactory.log}.
     """
     factory = http.HTTPFactory
-    linesep = b"\n"
+    linesep = u"\n"
 
 
 
@@ -1243,9 +1241,6 @@ class SiteAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     """
     Tests for L{server.Site.log}.
     """
-    if _PY3:
-        skip = "Site not ported to Python 3 yet."
-
     linesep = os.linesep
 
     def factory(self, *args, **kwargs):

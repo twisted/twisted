@@ -13,6 +13,7 @@ dist/
 venv/
 htmlcov/
 .coverage*
+coverage.xml
 *~
 *.lock
 apidocs/
