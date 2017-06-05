@@ -881,22 +881,26 @@ class RRHeader(tputil.FancyEqMixin):
         @param cls: The query class.
 
         @type ttl: L{int}
-        @param ttl: Time to live for this record.
+        @param ttl: Time to live for this record.  This will be
+            converted to an L{int}.
 
         @type payload: An object implementing C{IEncodable}
         @param payload: A Query Type specific data object.
 
+        @raises TypeError: if the ttl cannot be converted to an L{int}.
         @raises ValueError: if the ttl is negative.
         """
         assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
 
-        if ttl < 0:
+        integralTTL = int(ttl)
+
+        if integralTTL < 0:
             raise ValueError("TTL cannot be negative")
 
         self.name = Name(name)
         self.type = type
         self.cls = cls
-        self.ttl = ttl
+        self.ttl = integralTTL
         self.payload = payload
         self.auth = auth
 
