@@ -912,8 +912,6 @@ class SSHFactoryTests(unittest.TestCase):
     def test_buildProtocolNoPublicKeys(self):
         f3 = self.makeSSHFactory()
 
-        old_priv = f3.privateKeys.copy()
-
         # The failure below will change the base supportedPublicKeys
         old_pub = []
         for key in transport.SSHServerTransport.supportedPublicKeys:
