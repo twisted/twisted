@@ -544,7 +544,7 @@ class SSHTransportBase(protocol.Protocol):
         @param kexes: A L{list} of kex name strings
         """
         for k in kexes:
-            if k.startswith(b'ecdh'):
+            if k.startswith(b'ecdh') and kexes[k] is None:
                 size = int(k[-3:])
 
                 # Add the new kex to the dictionary.
@@ -554,8 +554,10 @@ class SSHTransportBase(protocol.Protocol):
                     _kex._kexAlgorithms[k] = _kex._ECDH384()
                 else:
                     _kex._kexAlgorithms[k] = _kex._ECDH512()
-            else:
+            elif kexes[k] is None:
                 _kex._kexAlgorithms[k] = _kex._baseKexAlgorithms[k]
+            else:
+                _kex._kexAlgorithms[k] = kexes[k]
 
         # Reload
         self.supportedKeyExchanges = _kex.getSupportedKeyExchanges()

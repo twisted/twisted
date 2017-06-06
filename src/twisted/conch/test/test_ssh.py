@@ -909,6 +909,24 @@ class SSHFactoryTests(unittest.TestCase):
             b'diffie-hellman-group-exchange-sha256', p2.supportedKeyExchanges)
 
 
+    def test_buildProtocolNoPublicKeys(self):
+        f3 = self.makeSSHFactory()
+
+        old_priv = f3.privateKeys.copy()
+
+        # The failure below will change the base supportedPublicKeys
+        old_pub = []
+        for key in transport.SSHServerTransport.supportedPublicKeys:
+            old_pub += [key]
+
+        # Remove privateKeys
+        f3.privateKeys = {}
+
+        self.assertRaises(KeyError, f3.buildProtocol, (None,))
+
+        for key in old_pub:
+            transport.SSHServerTransport.supportedPublicKeys += [key]
+
 
 class MPTests(unittest.TestCase):
     """
