@@ -1293,7 +1293,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         tmpkex = _kex._kexAlgorithms
 
         proto2 = self.klass()
-        kexes = {b"ecdh-sha2-nistp256": None, b"ecdh-sha2-nistp384": _kex._ECDH384(),
+        kexes = {b"ecdh-sha2-nistp256": None, b"ecdh-sha2-nistp384": None, b"ecdh-sha2-nistp521": None,
                  b"ecdh-sha2-nistp571": _kex._ECDH512(), b"diffie-hellman-group14-sha1": _kex._DHGroup14SHA1()}
 
         proto2.setSupportedKexes(kexes)
