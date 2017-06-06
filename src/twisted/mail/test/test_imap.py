@@ -27,7 +27,7 @@ from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
-from twisted.python.compat import intToBytes, range, unicode, _bytesChr
+from twisted.python.compat import intToBytes, range, _bytesChr
 from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
@@ -3558,31 +3558,18 @@ class FakeyServer(imap4.IMAP4Server):
         pass
 
 
-def _bytesify(x):
-    """
-    @type x: L{bytes} or L{unicode}.
-    @rtype: L{bytes}
-    """
-    if isinstance(x, unicode):
-        return x.encode("ascii")
-    else:
-        return x
-
-
-
 @implementer(imap4.IMessage)
 class FakeyMessage(util.FancyStrMixin):
     showAttributes = ('headers', 'flags', 'date', '_body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
-        self.headers = OrderedDict((_bytesify(k), _bytesify(v))
-                                   for k, v in headers.items())
-        self.flags = tuple(_bytesify(v) for v in flags)
-        self._body = _bytesify(body)
-        self.size = len(self._body)
-        self.date = _bytesify(date)
-        self.uid = _bytesify(uid)
-        self.subpart = _bytesify(subpart)
+        self.headers = headers
+        self.flags = flags
+        self._body = body
+        self.size = len(body)
+        self.date = date
+        self.uid = uid
+        self.subpart = subpart
 
 
     def getHeaders(self, negate, *names):
