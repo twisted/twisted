@@ -2736,7 +2736,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         # This should not really be logged.  See #6021.
         logged = self.flushLoggedErrors(imap4.IllegalServerResponse)
         self.assertEqual(len(logged), 1)
-        self.assertEqual(logged[0].value.args[0], "Something bad! and bad")
+        self.assertEqual(logged[0].value.args[0], b"Something bad! and bad")
         return d
 
 
