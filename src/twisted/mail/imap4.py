@@ -41,7 +41,7 @@ from twisted.python.compat import (
     _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
     intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString
+    _matchingString, _PY3
 )
 from twisted.internet import interfaces
 
@@ -1156,16 +1156,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_NAMESPACE = auth_NAMESPACE
 
 
-    def _parseMbox(self, name):
-        if isinstance(name, unicode):
-            return name
-        try:
-            return name.decode('imap4-utf-7')
-        except:
-            log.err()
-            raise IllegalMailboxEncoding(name)
-
-
     def _selectWork(self, tag, name, rw, cmdName):
         if self.mbox:
             self.mbox.removeListener(self)
@@ -1175,8 +1165,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.mbox = None
             self.state = 'auth'
 
-        name = self._parseMbox(name)
-        maybeDeferred(self.account.select, self._parseMbox(name), rw
+        name = _parseMbox(name)
+        maybeDeferred(self.account.select, _parseMbox(name), rw
             ).addCallback(self._cbSelectWork, cmdName, tag
             ).addErrback(self._ebSelectWork, cmdName, tag
             )
@@ -1232,7 +1222,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_CREATE(self, tag, name):
-        name = self._parseMbox(name)
+        name = _parseMbox(name)
         try:
             result = self.account.create(name)
         except MailboxException as c:
@@ -1251,7 +1241,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_DELETE(self, tag, name):
-        name = self._parseMbox(name)
+        name = _parseMbox(name)
         if name.lower() == 'inbox':
             self.sendNegativeResponse(tag, b'You cannot delete the inbox')
             return
@@ -1270,7 +1260,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_RENAME(self, tag, oldname, newname):
-        oldname, newname = [self._parseMbox(n) for n in (oldname, newname)]
+        oldname, newname = [_parseMbox(n) for n in (oldname, newname)]
         if oldname.lower() == 'inbox' or newname.lower() == 'inbox':
             self.sendNegativeResponse(tag, b'You cannot rename the inbox, or rename another mailbox to inbox.')
             return
@@ -1291,7 +1281,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_SUBSCRIBE(self, tag, name):
-        name = self._parseMbox(name)
+        name = _parseMbox(name)
         try:
             self.account.subscribe(name)
         except MailboxException as m:
@@ -1307,7 +1297,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_UNSUBSCRIBE(self, tag, name):
-        name = self._parseMbox(name)
+        name = _parseMbox(name)
         try:
             self.account.unsubscribe(name)
         except MailboxException as m:
@@ -1323,7 +1313,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _listWork(self, tag, ref, mbox, sub, cmdName):
-        mbox = self._parseMbox(mbox)
+        mbox = _parseMbox(mbox)
+        ref = _parseMbox(ref)
         maybeDeferred(self.account.listMailboxes, ref, mbox
             ).addCallback(self._cbListWork, tag, sub, cmdName
             ).addErrback(self._ebListWork, tag
@@ -1334,7 +1325,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         for (name, box) in mailboxes:
             if not sub or self.account.isSubscribed(name):
                 flags = box.getFlags()
-                delim = box.getHierarchicalDelimiter()
+                delim = box.getHierarchicalDelimiter().encode('imap4-utf-7')
                 resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name.encode('imap4-utf-7'))
                 self.sendUntaggedResponse(collapseNestedLists(resp))
         self.sendPositiveResponse(tag, cmdName + b' completed')
@@ -1344,15 +1335,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendBadResponse(tag, b"Server error encountered while listing mailboxes.")
         log.err(failure)
 
-    auth_LIST = (_listWork, arg_astring, arg_astring, 0, 'LIST')
+    auth_LIST = (_listWork, arg_astring, arg_astring, 0, b'LIST')
     select_LIST = auth_LIST
 
-    auth_LSUB = (_listWork, arg_astring, arg_astring, 1, 'LSUB')
+    auth_LSUB = (_listWork, arg_astring, arg_astring, 1, b'LSUB')
     select_LSUB = auth_LSUB
 
 
     def do_STATUS(self, tag, mailbox, names):
-        mailbox = self._parseMbox(mailbox)
+        mailbox = _parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox, 0
             ).addCallback(self._cbStatusGotMailbox, tag, mailbox, names
             ).addErrback(self._ebStatusGotMailbox, tag
@@ -1389,7 +1380,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_APPEND(self, tag, mailbox, flags, date, message):
-        mailbox = self._parseMbox(mailbox)
+        mailbox = _parseMbox(mailbox)
         maybeDeferred(self.account.select, mailbox
             ).addCallback(self._cbAppendGotMailbox, tag, flags, date, message
             ).addErrback(self._ebAppendGotMailbox, tag
@@ -3238,28 +3229,32 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         List a subset of the available mailboxes
 
-        This command is allowed in the Authenticated and Selected states.
+        This command is allowed in the Authenticated and Selected
+        states.
 
         @type reference: L{str}
-        @param reference: The context in which to interpret C{wildcard}
+        @param reference: The context in which to interpret
+            C{wildcard}
 
         @type wildcard: L{str}
-        @param wildcard: The pattern of mailbox names to match, optionally
-        including either or both of the '*' and '%' wildcards.  '*' will
-        match zero or more characters and cross hierarchical boundaries.
-        '%' will also match zero or more characters, but is limited to a
-        single hierarchical level.
+        @param wildcard: The pattern of mailbox names to match,
+            optionally including either or both of the '*' and '%'
+            wildcards.  '*' will match zero or more characters and
+            cross hierarchical boundaries.  '%' will also match zero
+            or more characters, but is limited to a single
+            hierarchical level.
 
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a list of L{tuple}s,
-        the first element of which is a L{tuple} of mailbox flags, the second
-        element of which is the hierarchy delimiter for this mailbox, and the
-        third of which is the mailbox name; if the command is unsuccessful,
-        the deferred's errback is invoked instead.
+        @return: A deferred whose callback is invoked with a list of
+            L{tuple}s, the first element of which is a L{tuple} of
+            mailbox flags, the second element of which is the
+            hierarchy delimiter for this mailbox, and the third of
+            which is the mailbox name; if the command is unsuccessful,
+            the deferred's errback is invoked instead.  B{NB}: the
+            delimiter and the mailbox name are L{str}s.
         """
         cmd = b'LIST'
-        args = b'"%s" "%s"' % (reference.encode('ascii'),
-                               wildcard.encode('imap4-utf-7'))
+        args = ('"%s" "%s"' % (reference, wildcard)).encode("imap4-utf-7")
         resp = (b'LIST',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbList, b'LIST')
@@ -3277,10 +3272,16 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         subscribed can be included in the resulting list.
         """
         cmd = b'LSUB'
-        args = '"%s" "%s"' % (reference, wildcard.encode('imap4-utf-7'))
+
+        encodedReference = reference.encode('ascii')
+        encodedWildcard = wildcard.encode('imap4-utf-7')
+        args = b"".join([
+            b'"', encodedReference, b'"'
+            b' "', encodedWildcard, b'"',
+        ])
         resp = (b'LSUB',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
-        d.addCallback(self.__cbList, 'LSUB')
+        d.addCallback(self.__cbList, b'LSUB')
         return d
 
 
@@ -3289,7 +3290,25 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         results = []
         for parts in lines:
             if len(parts) == 4 and parts[0] == command:
+                # flags
                 parts[1] = tuple(parts[1])
+
+                # The mailbox should be a native string.
+                # On Python 2, this maintains the API's contract.
+                #
+                # On Python 3, users specify mailboxes with native
+                # strings, so they should receive mailboxes as native
+                # strings.  Both cases are possible because of the
+                # imap4-utf-7 encoding.
+                #
+                # Mailbox names contain the hierarchical delimiter, so
+                # it too should be a native string.
+                if _PY3:
+                    # delimiter
+                    parts[2] = parts[2].decode('imap4-utf-7')
+                    # mailbox
+                    parts[3] = parts[3].decode('imap4-utf-7')
+
                 results.append(tuple(parts[1:]))
         return results
 
@@ -4670,6 +4689,17 @@ def _needsQuote(s):
 
 
 
+def _parseMbox(name):
+    if isinstance(name, unicode):
+        return name
+    try:
+        return name.decode('imap4-utf-7')
+    except:
+        log.err()
+        raise IllegalMailboxEncoding(name)
+
+
+
 def _prepareMailboxName(name):
     if not isinstance(name, unicode):
         name = name.decode("charmap")
@@ -4760,7 +4790,7 @@ class MemoryAccount(object):
     ## IAccount
     ##
     def addMailbox(self, name, mbox = None):
-        name = name.upper()
+        name = _parseMbox(name.upper())
         if name in self.mailboxes:
             raise MailboxCollision(name)
         if mbox is None:
@@ -4789,11 +4819,11 @@ class MemoryAccount(object):
 
 
     def select(self, name, readwrite=1):
-        return self.mailboxes.get(name.upper())
+        return self.mailboxes.get(_parseMbox(name.upper()))
 
 
     def delete(self, name):
-        name = name.upper()
+        name = _parseMbox(name.upper())
         # See if this mailbox exists at all
         mbox = self.mailboxes.get(name)
         if not mbox:
@@ -4816,8 +4846,8 @@ class MemoryAccount(object):
 
 
     def rename(self, oldname, newname):
-        oldname = oldname.upper()
-        newname = newname.upper()
+        oldname = _parseMbox(oldname.upper())
+        newname = _parseMbox(newname.upper())
         if oldname not in self.mailboxes:
             raise NoSuchMailbox(oldname)
 
@@ -4842,24 +4872,24 @@ class MemoryAccount(object):
 
 
     def isSubscribed(self, name):
-        return name.upper() in self.subscriptions
+        return _parseMbox(name.upper()) in self.subscriptions
 
 
     def subscribe(self, name):
-        name = name.upper()
+        name = _parseMbox(name.upper())
         if name not in self.subscriptions:
             self.subscriptions.append(name)
 
 
     def unsubscribe(self, name):
-        name = name.upper()
+        name = _parseMbox(name.upper())
         if name not in self.subscriptions:
             raise MailboxException("Not currently subscribed to %s" % (name,))
         self.subscriptions.remove(name)
 
 
     def listMailboxes(self, ref, wildcard):
-        ref = self._inferiorNames(ref.upper())
+        ref = self._inferiorNames(_parseMbox(ref.upper()))
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
 

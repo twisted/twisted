@@ -1643,6 +1643,22 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return defer.gatherResults([d1, d2]).addCallback(lambda _: self.listed)
 
 
+    def assertListDelimiterAndMailboxAreStrings(self, results):
+        """
+        Assert a C{LIST} response's delimiter and mailbox are native
+        strings.
+
+        @param results: A list of tuples as returned by
+            L{IMAP4Client.list} or L{IMAP4Client.lsub}.
+        """
+        for result in results:
+            self.assertIsInstance(result[1], str,
+                                  "delimiter %r is not a str")
+            self.assertIsInstance(result[2], str,
+                                  "mailbox %r is not a str")
+        return results
+
+
     def testList(self):
         def mailboxList():
             return self.client.list('root', '%')
@@ -1662,6 +1678,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def lsub():
             return self.client.lsub('root', '%')
         d = self._listSetup(lsub)
+        d.addCallback(self.assertListDelimiterAndMailboxAreStrings)
         d.addCallback(self.assertEqual,
                       [(SimpleMailbox.flags, "/", "ROOT/SUBTHING")])
         return d
