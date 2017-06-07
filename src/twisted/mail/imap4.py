@@ -3160,7 +3160,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback is invoked if the mailbox creation
         is successful and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('CREATE', _prepareMailboxName(name)))
+        return self.sendCommand(Command(b'CREATE', _prepareMailboxName(name)))
 
 
     def delete(self, name):

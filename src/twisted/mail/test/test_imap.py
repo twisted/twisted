@@ -1376,8 +1376,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testCreate(self):
-        succeed = (b'testbox', b'test/box', b'test/', b'test/box/box', b'INBOX')
-        fail = (b'testbox', b'test/box')
+        succeed = ('testbox', 'test/box', 'test/', 'test/box/box', 'INBOX')
+        fail = ('testbox', 'test/box')
 
         def cb(): self.result.append(1)
 
@@ -1401,10 +1401,9 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestCreate(self, ignored, succeed, fail):
         self.assertEqual(self.result, [1] * len(succeed) + [0] * len(fail))
-        mbox = SimpleServer.theAccount.mailboxes.keys()
-        answers = ['inbox', 'testbox', 'test/box', 'test', 'test/box/box']
-        mbox.sort()
-        answers.sort()
+        mbox = sorted(SimpleServer.theAccount.mailboxes)
+        answers = sorted(['inbox', 'testbox', 'test/box', 'test',
+                          'test/box/box'])
         self.assertEqual(mbox, [a.upper() for a in answers])
 
 
