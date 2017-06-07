@@ -1,0 +1,1 @@
+twisted.web.guard.HTTPAuthSessionWrapper configured with DigestCredentialFactory now works on both Python 2 and 3.
