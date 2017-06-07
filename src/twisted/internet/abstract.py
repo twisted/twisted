@@ -13,22 +13,26 @@ from socket import AF_INET, AF_INET6, inet_pton, error
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import _PY3, unicode, lazyByteSlice
+from twisted.python.compat import unicode, lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
-if _PY3:
+try:
+    # Python 2
+    from __builtin__ import buffer
+
+    def _concatenate(bObj, offset, bArray):
+        # Avoid one extra string copy by using a buffer to limit what we include
+        # in the result.
+        return buffer(bObj, offset) + b"".join(bArray)
+except ImportError:
+    # Python 3
     def _concatenate(bObj, offset, bArray):
         # Python 3 lacks the buffer() builtin and the other primitives don't
         # help in this case.  Just do the copy.  Perhaps later these buffers can
         # be joined and FileDescriptor can use writev().  Or perhaps bytearrays
         # would help.
         return bObj[offset:] + b"".join(bArray)
-else:
-    def _concatenate(bObj, offset, bArray):
-        # Avoid one extra string copy by using a buffer to limit what we include
-        # in the result.
-        return buffer(bObj, offset) + b"".join(bArray)
 
 
 class _ConsumerMixin(object):
