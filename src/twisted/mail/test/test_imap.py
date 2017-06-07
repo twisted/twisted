@@ -1504,7 +1504,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def testIllegalDelete(self):
         m = SimpleMailbox()
-        m.flags = (r'\Noselect',)
+        m.flags = (br'\Noselect',)
         SimpleServer.theAccount.addMailbox('delete', m)
         SimpleServer.theAccount.addMailbox('delete/me')
 
@@ -1521,7 +1521,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        expected = "Hierarchically inferior mailboxes exist and \\Noselect is set"
+        expected = str(b"Hierarchically inferior mailboxes exist "
+                       b"and \\Noselect is set")
         d.addCallback(lambda _:
                       self.assertEqual(str(self.failure.value), expected))
         return d
