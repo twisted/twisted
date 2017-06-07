@@ -624,6 +624,14 @@ class AnotherPOP3Tests(unittest.TestCase):
         return self.run_PASS(b'testuser', b'fooz barz\tcrazy@! \t ')
 
 
+    def test_pass_wrong_user(self):
+        """
+        Test PASS with a wrong user.
+        """
+        return self.run_PASS(b'testuser', b'fooz',
+                             tried_user=b'wronguser')
+
+
     def test_wrong_PASS(self):
         """
         Test PASS with a wrong password.
