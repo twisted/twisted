@@ -1835,9 +1835,9 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
     def testExpunge(self):
         m = SimpleMailbox()
         m.messages = [
-            ('Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
-            ('Message 2', ('AnotherFlag',), None, 1),
-            ('Message 3', ('\\Deleted',), None, 2),
+            (b'Message 1', (b'\\Deleted', b'AnotherFlag'), None, 0),
+            (b'Message 2', (b'AnotherFlag',), None, 1),
+            (b'Message 3', (b'\\Deleted',), None, 2),
         ]
         SimpleServer.theAccount.addMailbox('mailbox', m)
         def login():
@@ -1869,7 +1869,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestExpunge(self, ignored, m):
         self.assertEqual(len(m.messages), 1)
-        self.assertEqual(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+        self.assertEqual(m.messages[0], (b'Message 2', (b'AnotherFlag',), None, 1))
 
         self.assertEqual(self.results, [0, 2])
 

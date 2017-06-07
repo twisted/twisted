@@ -3447,7 +3447,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         (lines, last) = result
         ids = []
         for parts in lines:
-            if len(parts) == 2 and parts[1] == 'EXPUNGE':
+            if len(parts) == 2 and parts[1] == b'EXPUNGE':
                 ids.append(self._intOrRaise(parts[0], parts))
         return ids
 
