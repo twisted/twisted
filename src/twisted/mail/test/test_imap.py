@@ -1419,8 +1419,47 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda _:
-                      self.assertEqual(SimpleServer.theAccount.mailboxes.keys(), []))
+        d.addCallback(
+            lambda _:
+            self.assertEqual(list(SimpleServer.theAccount.mailboxes), []))
+        return d
+
+
+    def testDeleteWithInferiorHierarchicalNames(self):
+        """
+        Attempting to delete a mailbox with hierarchically inferior
+        names fails with an informative error.
+
+        @see: U{https://tools.ietf.org/html/rfc3501#section-6.3.4}
+
+        @return: A L{Deferred} with assertions.
+        """
+        SimpleServer.theAccount.addMailbox('delete')
+        SimpleServer.theAccount.addMailbox('delete/me')
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+        def delete():
+            return self.client.delete('delete')
+
+        def assertIMAPException(failure):
+            failure.trap(imap4.IMAP4Exception)
+            self.assertEqual(
+                str(failure.value),
+                str(b'Name "DELETE" has inferior hierarchical names'),
+            )
+
+        loggedIn = self.connected.addCallback(strip(login))
+        loggedIn.addCallbacks(strip(delete), self._ebGeneral)
+        loggedIn.addErrback(assertIMAPException)
+        loggedIn.addCallbacks(self._cbStopClient)
+
+        loopedBack  = self.loopback()
+        d = defer.gatherResults([loggedIn, loopedBack])
+        d.addCallback(
+            lambda _:
+            self.assertEqual(sorted(SimpleServer.theAccount.mailboxes),
+                             ["DELETE", "DELETE/ME"]))
         return d
 
 

@@ -1256,12 +1256,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self.account.delete(name)
         except MailboxException as m:
-            self.sendNegativeResponse(tag, networkString(str(m)))
+            self.sendNegativeResponse(tag, str(m).encode("imap4-utf-7"))
         except:
             self.sendBadResponse(tag, b"Server error encountered while deleting mailbox")
             log.err()
         else:
-            self.sendPositiveResponse(tag, 'Mailbox deleted')
+            self.sendPositiveResponse(tag, b'Mailbox deleted')
 
     auth_DELETE = (do_DELETE, arg_astring)
     select_DELETE = auth_DELETE
@@ -3176,7 +3176,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose calblack is invoked if the mailbox is
         deleted successfully and whose errback is invoked otherwise.
         """
-        return self.sendCommand(Command('DELETE', _prepareMailboxName(name)))
+        return self.sendCommand(Command(b'DELETE', _prepareMailboxName(name)))
 
 
     def rename(self, oldname, newname):
@@ -4790,7 +4790,7 @@ class MemoryAccount(object):
         if not mbox:
             raise MailboxException("No such mailbox")
         # See if this box is flagged \Noselect
-        if r'\Noselect' in mbox.getFlags():
+        if br'\Noselect' in mbox.getFlags():
             # Check for hierarchically inferior mailboxes with this one
             # as part of their root.
             for others in self.mailboxes.keys():
@@ -4800,8 +4800,10 @@ class MemoryAccount(object):
 
         # iff there are no hierarchically inferior names, we will
         # delete it from our ken.
-        if self._inferiorNames(name) > 1:
-            del self.mailboxes[name]
+        if len(self._inferiorNames(name)) > 1:
+            raise MailboxException(
+                'Name "%s" has inferior hierarchical names' % (name,))
+        del self.mailboxes[name]
 
 
     def rename(self, oldname, newname):
