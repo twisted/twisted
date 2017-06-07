@@ -320,7 +320,7 @@ class LiteralString:
             if self.size:
                 data, passon = data[:self.size], data[self.size:]
             else:
-                passon = ''
+                passon = b''
             if data:
                 self.data.append(data)
         return passon
@@ -330,7 +330,7 @@ class LiteralString:
         """
         Call deferred with data and rest of line
         """
-        self.defer.callback((''.join(self.data), line))
+        self.defer.callback((b''.join(self.data), line))
 
 
 
@@ -695,7 +695,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         d = defer.Deferred()
         self.parseState = 'pending'
         self._pendingLiteral = LiteralString(size, d)
-        self.sendContinuationRequest('Ready for %d octets of text' % size)
+        self.sendContinuationRequest(
+            networkString('Ready for %d octets of text' % size))
         self.setRawMode()
         return d
 
