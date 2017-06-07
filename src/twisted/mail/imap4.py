@@ -705,7 +705,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         d = defer.Deferred()
         self.parseState = 'pending'
         self._pendingLiteral = LiteralFile(size, d)
-        self.sendContinuationRequest('Ready for %d octets of data' % size)
+        self.sendContinuationRequest(
+            networkString('Ready for %d octets of data' % size))
         self.setRawMode()
         return d
 
@@ -784,16 +785,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if not line:
             raise IllegalClientResponse("Missing argument")
 
-        if line[0] != '{':
+        if line[:1] != b'{':
             raise IllegalClientResponse("Missing literal")
 
-        if line[-1] != '}':
+        if line[-1:] != b'}':
             raise IllegalClientResponse("Malformed literal")
 
         try:
             size = int(line[1:-1])
         except ValueError:
-            raise IllegalClientResponse("Bad literal size: " + line[1:-1])
+            raise IllegalClientResponse(
+                "Bad literal size: {!r}".format(line[1:-1]))
 
         return self._fileLiteral(size)
 
@@ -869,7 +871,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Optional parenthesised list
         """
-        if line.startswith('('):
+        if line.startswith(b'('):
             return self.arg_plist(line)
         else:
             return (None, line)
@@ -1415,7 +1417,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbAppend(self, result, tag, mbox):
         self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
-        self.sendPositiveResponse(tag, 'APPEND complete')
+        self.sendPositiveResponse(tag, b'APPEND complete')
 
 
     def __ebAppend(self, failure, tag):
@@ -3352,11 +3354,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type mailbox: L{str}
         @param mailbox: The mailbox to which to add this message.
 
-        @type message: Any file-like object
+        @type message: Any file-like object opened in B{binary mode}.
         @param message: The message to add, in RFC822 format.  Newlines
         in this file should be \\r\\n-style.
 
-        @type flags: Any iterable of L{str}
+        @type flags: Any iterable of L{bytes}
         @param flags: The flags to associated with this message.
 
         @type date: L{str}
@@ -3372,15 +3374,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message.seek(0, 2)
         L = message.tell()
         message.seek(0, 0)
-        fmt = b'%s (%s)%s {%d}'
         if date:
-            date = b' "%s"' % date
+            date = networkString(' "%s"' % nativeString(date))
         else:
             date = b''
-        cmd = fmt % (
-            _prepareMailboxName(mailbox), b' '.join(flags),
-            date, L
-        )
+
+        cmd = b''.join([
+            _prepareMailboxName(mailbox),
+            b" (", b" ".join(flags), b")",
+            date,
+            b" {", intToBytes(L), b"}",
+        ])
+
         d = self.sendCommand(Command(b'APPEND', cmd, (), self.__cbContinueAppend, message))
         return d
 

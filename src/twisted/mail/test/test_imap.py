@@ -1721,7 +1721,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def testFullAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile)
+        message = open(infile, "rb")
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():
             return self.client.login(b'testuser', b'password-test')
@@ -1729,7 +1729,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             return self.client.append(
                 'root/subthing',
                 message,
-                ('\\SEEN', '\\DELETED'),
+                (b'\\SEEN', b'\\DELETED'),
                 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
             )
 
@@ -1737,7 +1737,15 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(strip(append), self._ebGeneral)
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
+
         d = defer.gatherResults([d1, d2])
+
+        def _close(result):
+            message.close()
+            return result
+
+        d.addBoth(_close)
+
         return d.addCallback(self._cbTestFullAppend, infile)
 
 
@@ -1745,10 +1753,12 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
         self.assertEqual(1, len(mb.messages))
         self.assertEqual(
-            (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
+            ([b'\\SEEN', b'\\DELETED'],
+             b'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
+             0),
             mb.messages[0][1:]
         )
-        with open(infile) as f:
+        with open(infile, "rb") as f:
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
 
