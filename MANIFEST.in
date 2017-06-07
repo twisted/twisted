@@ -39,7 +39,6 @@ include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 
 # Some extras
-recursive-include src/twisted *.3only
 recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
 
 # Docs
