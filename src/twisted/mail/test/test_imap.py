@@ -987,7 +987,7 @@ class IMAP4HelperTests(unittest.TestCase):
 
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
-    flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
+    flags = (b'\\Flag1', b'Flag2', b'\\AnotherSysFlag', b'LastFlag')
     messages = []
     mUID = 0
     rw = 1
@@ -1059,7 +1059,7 @@ class SimpleMailbox:
     def expunge(self):
         delete = []
         for i in self.messages:
-            if '\\Deleted' in i[1]:
+            if b'\\Deleted' in i[1]:
                 delete.append(i)
         for i in delete:
             self.messages.remove(i)
@@ -1376,8 +1376,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testCreate(self):
-        succeed = ('testbox', 'test/box', 'test/', 'test/box/box', 'INBOX')
-        fail = ('testbox', 'test/box')
+        succeed = (b'testbox', b'test/box', b'test/', b'test/box/box', b'INBOX')
+        fail = (b'testbox', b'test/box')
 
         def cb(): self.result.append(1)
 
@@ -1767,9 +1767,9 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
     def testClose(self):
         m = SimpleMailbox()
         m.messages = [
-            ('Message 1', ('\\Deleted', 'AnotherFlag'), None, 0),
-            ('Message 2', ('AnotherFlag',), None, 1),
-            ('Message 3', ('\\Deleted',), None, 2),
+            (b'Message 1', (b'\\Deleted', b'AnotherFlag'), None, 0),
+            (b'Message 2', (b'AnotherFlag',), None, 1),
+            (b'Message 3', (b'\\Deleted',), None, 2),
         ]
         SimpleServer.theAccount.addMailbox('mailbox', m)
         def login():
@@ -1789,7 +1789,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestClose(self, ignored, m):
         self.assertEqual(len(m.messages), 1)
-        self.assertEqual(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+        self.assertEqual(
+            m.messages[0], (b'Message 2', (b'AnotherFlag',), None, 1))
         self.assertTrue(m.closed)
 
 
