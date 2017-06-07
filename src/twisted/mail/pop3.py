@@ -789,9 +789,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         (interface, avatar, logout) = result
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
-            log.err(
-                "_cbMailbox() called with an interface other than IMailbox"
-            )
+            log.err("_cbMailbox() called with an interface other than IMailbox")
             return
 
         self.mbox = avatar
