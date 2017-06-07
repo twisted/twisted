@@ -1264,12 +1264,13 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testLoginRequiringQuoting(self):
-        self.server._username = '{test}user'
-        self.server._password = '{test}password'
+        self.server._username = b'{test}user'
+        self.server._password = b'{test}password'
 
         def login():
-            d = self.client.login('{test}user', '{test}password')
-            d.addBoth(self._cbStopClient)
+            d = self.client.login(b'{test}user', b'{test}password')
+            d.addErrback(log.err, "Problem with " + str(self))
+            d.addCallback(self._cbStopClient)
 
         d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
         d = defer.gatherResults([self.loopback(), d1])
