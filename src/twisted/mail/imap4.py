@@ -3864,7 +3864,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             #
             # See #6281 for ideas on how this might be improved.
 
-            if key not in ("BODY", "BODY.PEEK"):
+            if key not in (b"BODY", b"BODY.PEEK"):
                 # Only BODY (and by extension, BODY.PEEK) responses can have
                 # body sections.
                 hasSection = False
@@ -3891,7 +3891,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 else:
                     key = (key, (value[0], tuple(value[1])))
                 try:
-                    value = responseParts.next()
+                    value = next(responseParts)
                 except StopIteration:
                     raise IllegalServerResponse(
                         b"Not enough arguments", fetchResponseList)
@@ -3906,7 +3906,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     else:
                         key = key + (value,)
                         try:
-                            value = responseParts.next()
+                            value = next(responseParts)
                         except StopIteration:
                             raise IllegalServerResponse(
                                 b"Not enough arguments", fetchResponseList)
