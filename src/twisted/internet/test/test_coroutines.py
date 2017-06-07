@@ -8,16 +8,11 @@ includes keywords not valid in Pythons before 3.5.
 
 from __future__ import absolute_import, division
 
-from twisted.python.compat import _PY35PLUS, _PY34PLUS, execfile
-from twisted.python.filepath import FilePath
+from twisted.python.compat import _PY35PLUS, _PY34PLUS
 
 
 if _PY35PLUS:
-    _path = FilePath(__file__).parent().child("_awaittests.py.3only")
-
-    _g = {}
-    execfile(_path.path, _g)
-    AwaitTests = _g["AwaitTests"]
+    from ._awaittests import AwaitTests
 else:
     from twisted.trial.unittest import TestCase
 
@@ -36,11 +31,7 @@ else:
 
 
 if _PY34PLUS:
-    _path = FilePath(__file__).parent().child("_yieldfromtests.py.3only")
-
-    _g = {}
-    execfile(_path.path, _g)
-    YieldFromTests = _g["YieldFromTests"]
+    from ._yieldfromtests import YieldFromTests
 else:
     from twisted.trial.unittest import TestCase
 

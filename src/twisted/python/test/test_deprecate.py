@@ -27,7 +27,7 @@ from twisted.python.deprecate import (
     _passedArgSpec, _passedSignature
 )
 
-from twisted.python.compat import _PY3, execfile
+from twisted.python.compat import _PY3
 from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
@@ -1099,12 +1099,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
 
 
 if sys.version_info >= (3,):
-    _path = FilePath(__file__).parent().child("_deprecatetests.py.3only")
-
-    _g = {}
-    execfile(_path.path, _g)
-
-    KeywordOnlyTests = _g["KeywordOnlyTests"]
+    from ._deprecatetests import KeywordOnlyTests
 else:
     from twisted.trial.unittest import TestCase
 
