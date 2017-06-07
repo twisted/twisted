@@ -1693,7 +1693,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def login():
             return self.client.login(b'testuser', b'password-test')
         def status():
-            return self.client.status('root/nonexistent', 'MESSAGES', 'UIDNEXT', 'UNSEEN')
+            return self.client.status('root/nonexistent',
+                                      b'MESSAGES', b'UIDNEXT', b'UNSEEN')
         def statused(result):
             self.statused = result
         def failed(failure):
@@ -1714,7 +1715,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         )
         self.assertEqual(
             self.failure.value.args,
-            ('Could not open mailbox',)
+            (b'Could not open mailbox',)
         )
 
 

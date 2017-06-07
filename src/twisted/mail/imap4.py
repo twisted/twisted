@@ -766,10 +766,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if not line:
             raise IllegalClientResponse("Missing argument")
 
-        if line[0] != "(":
+        if line[:1] != b"(":
             raise IllegalClientResponse("Missing parenthesis")
 
-        i = line.find(")")
+        i = line.find(b")")
 
         if i == -1:
             raise IllegalClientResponse("Mismatched parenthesis")
@@ -1364,7 +1364,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag, mailbox), None, (tag, mailbox), None
             )
         else:
-            self.sendNegativeResponse(tag, "Could not open mailbox")
+            self.sendNegativeResponse(tag, b"Could not open mailbox")
 
 
     def _ebStatusGotMailbox(self, failure, tag):
@@ -3301,10 +3301,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type mailbox: L{str}
         @param mailbox: The name of the mailbox to query
 
-        @type *names: L{str}
+        @type *names: L{bytes}
         @param *names: The status names to query.  These may be any number of:
-            C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
-            C{'UNSEEN'}.
+            C{b'MESSAGES'}, C{b'RECENT'}, C{b'UIDNEXT'}, C{b'UIDVALIDITY'}, and
+            C{b'UNSEEN'}.
 
         @rtype: C{Deferred}
         @return: A deferred which fires with the status information if the
@@ -3314,7 +3314,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             corresponding response from the server.
         """
         cmd = b'STATUS'
-        args = "%s (%s)" % (_prepareMailboxName(mailbox), ' '.join(names))
+
+        preparedMailbox = _prepareMailboxName(mailbox)
+        names = b' '.join(names)
+        args = b''.join([preparedMailbox,
+                         b" (", names, b")"])
         resp = (b'STATUS',)
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbStatus)
