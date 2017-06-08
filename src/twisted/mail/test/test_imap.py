@@ -3248,10 +3248,10 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d), {
-                2: {'UID': '22'},
-                3: {'UID': '23'},
-                4: {'UID': '24'},
-                5: {'UID': '25'}})
+                2: {'UID': b'22'},
+                3: {'UID': b'23'},
+                4: {'UID': b'24'},
+                5: {'UID': b'25'}})
 
 
     def test_fetchUIDNonIntegerFound(self):
@@ -3262,8 +3262,8 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         """
         d = self.client.fetchUID(b'1')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1 (UID)\r\n')
-        self.client.lineReceived('* foo FETCH (UID 22)')
-        self.client.lineReceived('0001 OK FETCH completed')
+        self.client.lineReceived(b'* foo FETCH (UID 22)')
+        self.client.lineReceived(b'0001 OK FETCH completed')
         self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
@@ -3296,7 +3296,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d),
-            {3: {b'RFC822.TEXT': b'Message text'}})
+            {3: {'RFC822.TEXT': b'Message text'}})
 
 
     def test_fetchSpecific(self):
@@ -3313,7 +3313,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'* 7 FETCH (BODY[] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self.successResultOf(d), {7: [['BODY', [], "Some body"]]})
+            self.successResultOf(d), {7: [['BODY', [], b"Some body"]]})
 
 
     def test_fetchSpecificPeek(self):
@@ -3328,7 +3328,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'* 6 FETCH (BODY[] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self.successResultOf(d), {6: [['BODY', [], "Some body"]]})
+            self.successResultOf(d), {6: [['BODY', [], b"Some body"]]})
 
 
     def test_fetchSpecificNumbered(self):
@@ -3346,7 +3346,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d),
-            {7: [['BODY', ['1.2.3'], "Some body"]]})
+            {7: [['BODY', ['1.2.3'], b"Some body"]]})
 
 
     def test_fetchSpecificText(self):
@@ -3381,7 +3381,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d),
-            {4: [['BODY', ['7.TEXT'], "Some body"]]})
+            {4: [['BODY', ['7.TEXT'], b"Some body"]]})
 
 
     def test_incompleteFetchSpecificTextResponse(self):
@@ -3413,7 +3413,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d),
-            {8: [['BODY', ['MIME'], "Some body"]]})
+            {8: [['BODY', ['MIME'], b"Some body"]]})
 
 
     def test_fetchSpecificPartial(self):
@@ -3432,7 +3432,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d),
-            {9: [[b'BODY', [b'TEXT'], b'<17>', b'foo']]})
+            {9: [['BODY', ['TEXT'], '<17>', b'foo']]})
 
 
     def test_incompleteFetchSpecificPartialResponse(self):
@@ -3464,7 +3464,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'* 7 FETCH (BODY[] "<html>test</html>")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self.successResultOf(d), {7: [[b'BODY', [], b"<html>test</html>"]]})
+            self.successResultOf(d), {7: [['BODY', [], b"<html>test</html>"]]})
 
 
 
