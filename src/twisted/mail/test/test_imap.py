@@ -2935,7 +2935,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'EXISTS'} key.
         """
         d = self._examineOrSelect()
-        self._response('* 3 EXISTS')
+        self._response(b'* 3 EXISTS')
         self.assertEqual(
             self.successResultOf(d),
             {'READ-WRITE': False, 'EXISTS': 3})
@@ -2949,7 +2949,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* foo EXISTS')
+        self._response(b'* foo EXISTS')
         self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
@@ -2961,7 +2961,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'RECENT'} key.
         """
         d = self._examineOrSelect()
-        self._response('* 5 RECENT')
+        self._response(b'* 5 RECENT')
         self.assertEqual(
             self.successResultOf(d),
             {'READ-WRITE': False, 'RECENT': 5})
@@ -2975,7 +2975,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* foo RECENT')
+        self._response(b'* foo RECENT')
         self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
@@ -2987,7 +2987,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'UNSEEN'} key.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UNSEEN 8] Message 8 is first unseen')
+        self._response(b'* OK [UNSEEN 8] Message 8 is first unseen')
         self.assertEqual(
             self.successResultOf(d),
             {'READ-WRITE': False, 'UNSEEN': 8})
@@ -3001,7 +3001,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UNSEEN foo] Message foo is first unseen')
+        self._response(b'* OK [UNSEEN foo] Message foo is first unseen')
         self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
@@ -3013,7 +3013,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         including the value associated with the C{'UIDVALIDITY'} key.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDVALIDITY 12345] UIDs valid')
+        self._response(b'* OK [UIDVALIDITY 12345] UIDs valid')
         self.assertEqual(
             self.successResultOf(d),
             {'READ-WRITE': False, 'UIDVALIDITY': 12345})
@@ -3027,7 +3027,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDVALIDITY foo] UIDs valid')
+        self._response(b'* OK [UIDVALIDITY foo] UIDs valid')
         self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
@@ -3039,7 +3039,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         associated with the C{'UIDNEXT'} key.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDNEXT 4392] Predicted next UID')
+        self._response(b'* OK [UIDNEXT 4392] Predicted next UID')
         self.assertEqual(
             self.successResultOf(d),
             {'READ-WRITE': False, 'UIDNEXT': 4392})
@@ -3053,7 +3053,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         L{IllegalServerResponse}.
         """
         d = self._examineOrSelect()
-        self._response('* OK [UIDNEXT foo] Predicted next UID')
+        self._response(b'* OK [UIDNEXT foo] Predicted next UID')
         self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
@@ -3066,12 +3066,12 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response(
-            '* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
+            b'* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
         self.assertEqual(
             self.successResultOf(d), {
                 'READ-WRITE': False,
-                'FLAGS': ('\\Answered', '\\Flagged', '\\Deleted', '\\Seen',
-                          '\\Draft')})
+                'FLAGS': (b'\\Answered', b'\\Flagged', b'\\Deleted', b'\\Seen',
+                          b'\\Draft')})
 
 
     def test_permanentflags(self):
@@ -3083,12 +3083,12 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response(
-            '* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
-            'that list up there')
+            b'* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
+            b'that list up there')
         self.assertEqual(
             self.successResultOf(d), {
                 'READ-WRITE': False,
-                'PERMANENTFLAGS': ('\\Starred',)})
+                'PERMANENTFLAGS': (b'\\Starred',)})
 
 
     def test_unrecognizedOk(self):
@@ -3098,7 +3098,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response(
-            '* OK [X-MADE-UP] I just made this response text up.')
+            b'* OK [X-MADE-UP] I just made this response text up.')
         # The value won't show up in the result.  It would be okay if it did
         # someday, perhaps.  This shouldn't ever happen, though.
         self.assertEqual(
@@ -3111,7 +3111,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         I{OK} with no response code text, parsing does not fail.
         """
         d = self._examineOrSelect()
-        self._response('* OK')
+        self._response(b'* OK')
         self.assertEqual(
             self.successResultOf(d), {'READ-WRITE': False})
 
@@ -3134,7 +3134,7 @@ class IMAP4ClientExamineTests(SelectionTestsMixin,
         S: A932 OK [READ-ONLY] EXAMINE completed
     """
     method = 'examine'
-    command = 'EXAMINE'
+    command = b'EXAMINE'
 
 
 
@@ -3156,7 +3156,7 @@ class IMAP4ClientSelectTests(SelectionTestsMixin,
         S: A142 OK [READ-WRITE] SELECT completed
     """
     method = 'select'
-    command = 'SELECT'
+    command = b'SELECT'
 
 
 
