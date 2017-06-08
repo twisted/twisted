@@ -17,7 +17,7 @@ except ImportError:
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
+from twisted.python.compat import (_PY3, iterbytes, long, networkString, unicode,
                                    intToBytes, NativeStringIO)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
