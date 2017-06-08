@@ -1538,7 +1538,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testRename(self):
-        SimpleServer.theAccount.addMailbox(b'oldmbox')
+        SimpleServer.theAccount.addMailbox('oldmbox')
         def login():
             return self.client.login(b'testuser', b'password-test')
         def rename():
@@ -1550,8 +1550,10 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _:
-                      self.assertEqual(SimpleServer.theAccount.mailboxes.keys(),
-                                        [b'NEWNAME']))
+                      self.assertEqual(
+                          list(SimpleServer.theAccount.mailboxes.keys()),
+                          ['NEWNAME']
+                      ))
         return d
 
 

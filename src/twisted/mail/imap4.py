@@ -1274,7 +1274,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, b"Server error encountered while renaming mailbox")
             log.err()
         else:
-            self.sendPositiveResponse(tag, 'Mailbox renamed')
+            self.sendPositiveResponse(tag, b'Mailbox renamed')
 
     auth_RENAME = (do_RENAME, arg_astring, arg_astring)
     select_RENAME = auth_RENAME
