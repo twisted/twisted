@@ -27,7 +27,7 @@ from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
-from twisted.python.compat import intToBytes, range, _bytesChr
+from twisted.python.compat import intToBytes, range, _bytesChr, networkString
 from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
@@ -1794,15 +1794,28 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login(b'testuser', b'password-test')
+
+        @defer.inlineCallbacks
         def append():
-            message = open(infile)
-            return self.client.sendCommand(
-                imap4.Command(
-                    'APPEND',
-                    'PARTIAL/SUBTHING (\\SEEN) "Right now" {%d}' % os.path.getsize(infile),
-                    (), self.client._IMAP4Client__cbContinueAppend, message
+            with open(infile, 'rb') as message:
+                result = yield self.client.sendCommand(
+                    imap4.Command(
+                        b'APPEND',
+                        # Using networkString is cheating!  In this
+                        # particular case the mailbox name happens to
+                        # be ASCII.  In real code, the mailbox would
+                        # be encoded with imap4-utf-7.
+                        networkString(
+                            'PARTIAL/SUBTHING '
+                            '(\\SEEN) "Right now" '
+                            '{%d}' % (os.path.getsize(infile),)
+                        ),
+                        (),
+                        self.client._IMAP4Client__cbContinueAppend, message
+                    )
                 )
-            )
+                defer.returnValue(result)
+
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
@@ -1815,10 +1828,10 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         mb = SimpleServer.theAccount.mailboxes['PARTIAL/SUBTHING']
         self.assertEqual(1, len(mb.messages))
         self.assertEqual(
-            (['\\SEEN'], 'Right now', 0),
+            ([b'\\SEEN'], b'Right now', 0),
             mb.messages[0][1:]
         )
-        with open(infile) as f:
+        with open(infile, 'rb') as f:
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
 
