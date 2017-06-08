@@ -1335,8 +1335,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(self.server.mbox, mbox)
         self.assertEqual(self.selectedArgs, {
             'EXISTS': 9, 'RECENT': 3, 'UIDVALIDITY': 42,
-            'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
-            'READ-WRITE': 1
+            'FLAGS': (b'\\Flag1', b'Flag2', b'\\AnotherSysFlag', b'LastFlag'),
+            'READ-WRITE': True
         })
 
 

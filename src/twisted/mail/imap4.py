@@ -3037,7 +3037,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback is invoked with mailbox
         information if the select is successful and whose errback is
         invoked otherwise.  Mailbox information consists of a dictionary
-        with the following keys and values::
+        with the following L{str} keys and values::
 
                 FLAGS: A list of strings containing the flags settable on
                         messages in this mailbox.
@@ -3058,7 +3058,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         cmd = b'SELECT'
         args = _prepareMailboxName(mailbox)
-        resp = (b'FLAGS', b'EXISTS', b'RECENT', b'UNSEEN', b'PERMANENTFLAGS', b'UIDVALIDITY')
+        # This appears not to be used, so we can use native strings to
+        # indicate that the return type is native strings.
+        resp = ('FLAGS', 'EXISTS', 'RECENT',
+                'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 1)
         return d
@@ -3128,36 +3131,36 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         datum = {'READ-WRITE': rw}
         lines.append(parseNestedParens(tagline))
         for split in lines:
-            if len(split) > 0 and split[0].upper() == 'OK':
+            if len(split) > 0 and split[0].upper() == b'OK':
                 # Handle all the kinds of OK response.
                 content = split[1]
                 key = content[0].upper()
-                if key == 'READ-ONLY':
+                if key == b'READ-ONLY':
                     datum['READ-WRITE'] = False
-                elif key == 'READ-WRITE':
+                elif key == b'READ-WRITE':
                     datum['READ-WRITE'] = True
-                elif key == 'UIDVALIDITY':
+                elif key == b'UIDVALIDITY':
                     datum['UIDVALIDITY'] = self._intOrRaise(
                         content[1], split)
-                elif key == 'UNSEEN':
+                elif key == b'UNSEEN':
                     datum['UNSEEN'] = self._intOrRaise(content[1], split)
-                elif key == 'UIDNEXT':
+                elif key == b'UIDNEXT':
                     datum['UIDNEXT'] = self._intOrRaise(content[1], split)
-                elif key == 'PERMANENTFLAGS':
+                elif key == b'PERMANENTFLAGS':
                     datum['PERMANENTFLAGS'] = tuple(content[1])
                 else:
                     log.err('Unhandled SELECT response (2): %s' % (split,))
             elif len(split) == 2:
                 # Handle FLAGS, EXISTS, and RECENT
-                if split[0].upper() == 'FLAGS':
+                if split[0].upper() == b'FLAGS':
                     datum['FLAGS'] = tuple(split[1])
-                elif isinstance(split[1], str):
+                elif isinstance(split[1], bytes):
                     # Must make sure things are strings before treating them as
                     # strings since some other forms of response have nesting in
                     # places which results in lists instead.
-                    if split[1].upper() == 'EXISTS':
+                    if split[1].upper() == b'EXISTS':
                         datum['EXISTS'] = self._intOrRaise(split[0], split)
-                    elif split[1].upper() == 'RECENT':
+                    elif split[1].upper() == b'RECENT':
                         datum['RECENT'] = self._intOrRaise(split[0], split)
                     else:
                         log.err('Unhandled SELECT response (0): %s' % (split,))
