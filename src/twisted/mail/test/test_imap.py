@@ -1621,12 +1621,12 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testHierarchicalRename(self):
-        SimpleServer.theAccount.create(b'oldmbox/m1')
-        SimpleServer.theAccount.create(b'oldmbox/m2')
+        SimpleServer.theAccount.create('oldmbox/m1')
+        SimpleServer.theAccount.create('oldmbox/m2')
         def login():
             return self.client.login(b'testuser', b'password-test')
         def rename():
-            return self.client.rename(b'oldmbox', b'newname')
+            return self.client.rename('oldmbox', 'newname')
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(rename), self._ebGeneral)
@@ -1638,7 +1638,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestHierarchicalRename(self, ignored):
         mboxes = SimpleServer.theAccount.mailboxes.keys()
-        expected = [b'newname', b'newname/m1', b'newname/m2']
+        expected = ['newname', 'newname/m1', 'newname/m2']
         mboxes = list(sorted(mboxes))
         self.assertEqual(mboxes, [s.upper() for s in expected])
 
