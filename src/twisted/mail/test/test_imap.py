@@ -2533,7 +2533,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
         def cbSelect(ignored):
-            d = c.fetchMessage('1')
+            d = c.fetchMessage(b'1')
             c.dataReceived(b'* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
             c.dataReceived(b'0003 OK FETCH\r\n')
             return d
@@ -2545,7 +2545,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             d.addCallback(cbSelect)
             return d
 
-        d = c.login('blah', 'blah')
+        d = c.login(b'blah', b'blah')
         c.dataReceived(b'0001 OK LOGIN\r\n')
         d.addCallback(cbLogin)
         return d
@@ -2586,7 +2586,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         c.lineReceived(b'* OK [IMAP4rev1]')
 
         def login():
-            d = c.login('blah', 'blah')
+            d = c.login(b'blah', b'blah')
             c.dataReceived(b'0001 OK LOGIN\r\n')
             return d
         def select():
@@ -2610,13 +2610,13 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             return d
         def test(res):
             self.assertEqual(res, {
-                1: [[b'BODY', ['HEADER.FIELDS', ['SUBJECT']],
+                1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
                     b'Subject: Suprise for your woman...\r\n\r\n']],
-                2: [[b'BODY', [b'HEADER.FIELDS', [b'SUBJECT']],
+                2: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
                     b'Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n\r\n']]
             })
 
-            self.assertEqual(c.flags, {1: ['\\Seen']})
+            self.assertEqual(c.flags, {1: [b'\\Seen']})
 
         return login(
             ).addCallback(strip(select)
@@ -2653,7 +2653,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             return d
         def test(result):
             self.assertEqual(
-                result,  {1: [[b'BODY', [b'HEADER.FIELDS', [b'SUBJECT']], b'Hello']]})
+                result,  {1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']], b'Hello']]})
 
         d = login()
         d.addCallback(strip(select))
@@ -2675,7 +2675,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         protocol.lineReceived(b'* OK [IMAP4rev1]')
 
         def login():
-            d = protocol.login('blah', 'blah')
+            d = protocol.login(b'blah', b'blah')
             protocol.dataReceived(b'0001 OK LOGIN\r\n')
             return d
         def select():
@@ -2711,7 +2711,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
         def login():
-            d = c.login('blah', 'blah')
+            d = c.login(b'blah', b'blah')
             c.dataReceived(b'0001 OK LOGIN\r\n')
             return d
 
@@ -2741,12 +2741,12 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         def test(res):
             self.assertEqual(res, {
                 1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
-                    'Subject: subject one\r\n']],
+                     b'Subject: subject one\r\n']],
                 2: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
-                    'Subject: subject two\r\n']]
+                     b'Subject: subject two\r\n']]
             })
 
-            self.assertEqual(c.flags, {1: ['\\Recent'], 2: ['\\Seen']})
+            self.assertEqual(c.flags, {1: [b'\\Recent'], 2: [b'\\Seen']})
 
         return login(
             ).addCallback(strip(select)
@@ -2767,7 +2767,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         c.lineReceived(b'* OK [IMAP4rev1]')
 
         def login():
-            d = c.login('blah', 'blah')
+            d = c.login(b'blah', b'blah')
             c.dataReceived(b'0001 OK LOGIN\r\n')
             return d
         def select():
@@ -2775,7 +2775,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             c.lineReceived(b'0002 OK SELECT')
             return d
         def fetch():
-            d = c.fetchMessage('1:*')
+            d = c.fetchMessage(b'1:*')
             c.dataReceived(b'* 1 FETCH (RFC822 {24}\r\n')
             c.dataReceived(b'Subject: first subject\r\n')
             c.dataReceived(b' FLAGS (\Seen))\r\n')
@@ -2788,11 +2788,11 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
         def test(res):
             self.assertEqual(res, {
-                1: {'RFC822': 'Subject: first subject\r\n'},
-                2: {'RFC822': 'Subject: second subject\r\n'}})
+                1: {'RFC822': b'Subject: first subject\r\n'},
+                2: {'RFC822': b'Subject: second subject\r\n'}})
 
             self.assertEqual(
-                c.flags, {1: ['\\Seen'], 2: ['\\Recent', '\\Seen']})
+                c.flags, {1: [b'\\Seen'], 2: [b'\\Recent', b'\\Seen']})
 
         return login(
             ).addCallback(strip(select)
@@ -3363,7 +3363,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
             self.successResultOf(d),
-            {8: [[b'BODY', [b'TEXT'], b"Some body"]]})
+            {8: [['BODY', ['TEXT'], b"Some body"]]})
 
 
     def test_fetchSpecificNumberedText(self):

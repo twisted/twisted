@@ -2416,7 +2416,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if self._pendingSize > 0:
             self._pendingBuffer.write(data)
         else:
-            passon = ''
+            passon = b''
             if self._pendingSize < 0:
                 data, passon = data[:self._pendingSize], data[self._pendingSize:]
             self._pendingBuffer.write(data)
@@ -2425,7 +2425,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             self._pendingSize = None
             rest.seek(0, 0)
             self._parts.append(rest.read())
-            self.setLineMode(passon.lstrip('\r\n'))
+            self.setLineMode(passon.lstrip(b'\r\n'))
 
 #    def sendLine(self, line):
 #        print 'S:', repr(line)
@@ -2436,9 +2436,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self._pendingBuffer = self.messageFile(octets)
         self._pendingSize = octets
         if self._parts is None:
-            self._parts = [rest, '\r\n']
+            self._parts = [rest, b'\r\n']
         else:
-            self._parts.extend([rest, '\r\n'])
+            self._parts.extend([rest, b'\r\n'])
         self.setRawMode()
 
 
@@ -2654,8 +2654,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 recent = int(response[0])
             elif elements == 3 and response[1] == b'FETCH':
                 mId = int(response[0])
-                values = self._parseFetchPairs(response[2])
-                flags.setdefault(mId, []).extend(values.get(b'FLAGS', ()))
+                values, _ = self._parseFetchPairs(response[2])
+                flags.setdefault(mId, []).extend(values.get('FLAGS', ()))
             else:
                 log.msg('Unhandled unsolicited response: %s' % (response,))
 
@@ -2930,7 +2930,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbLoginCaps(self, capabilities, username, password):
         # If the server advertises STARTTLS, we might want to try to switch to TLS
-        tryTLS = 'STARTTLS' in capabilities
+        tryTLS = b'STARTTLS' in capabilities
 
         # If our transport supports switching to TLS, we might want to try to switch to TLS.
         tlsableTransport = interfaces.ITLSTransport(self.transport, None) is not None
@@ -3140,14 +3140,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             if len(split) > 0 and split[0].upper() == b'OK':
                 # Handle all the kinds of OK response.
                 content = split[1]
-                key = content[0].upper()
+                if isinstance(content, list):
+                    key = content[0]
+                else:
+                    # not multi-valued, like OK LOGIN
+                    key = content
+                key = key.upper()
                 if key == b'READ-ONLY':
                     datum['READ-WRITE'] = False
                 elif key == b'READ-WRITE':
                     datum['READ-WRITE'] = True
                 elif key == b'UIDVALIDITY':
-                    datum['UIDVALIDITY'] = self._intOrRaise(
-                        content[1], split)
+                    datum['UIDVALIDITY'] = self._intOrRaise(content[1], split)
                 elif key == b'UNSEEN':
                     datum['UNSEEN'] = self._intOrRaise(content[1], split)
                 elif key == b'UIDNEXT':
@@ -3913,6 +3917,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             same structured as produced by L{parseNestedParens}.
         """
         values = {}
+        unstructured = []
+
         responseParts = iter(fetchResponseList)
         while True:
             try:
@@ -3970,11 +3976,22 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
             # If it has a BODY section, grab some extra elements and shuffle
             # around the shape of the key a little bit.
+
+            key = nativeString(key)
+            unstructured.append(key)
+
             if hasSection:
                 if len(value) < 2:
+                    value = [nativeString(v) for v in value]
+                    unstructured.append(value)
+
                     key = (key, tuple(value))
                 else:
-                    key = (key, (value[0], tuple(value[1])))
+                    valueHead = nativeString(value[0])
+                    valueTail = [nativeString(v) for v in value[1]]
+                    unstructured.append([valueHead, valueTail])
+
+                    key = (key, (valueHead, tuple(valueTail)))
                 try:
                     value = next(responseParts)
                 except StopIteration:
@@ -3982,22 +3999,25 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                         b"Not enough arguments", fetchResponseList)
 
                 # Handle partial ranges
-                if value.startswith('<') and value.endswith('>'):
+                if value.startswith(b'<') and value.endswith(b'>'):
                     try:
                         int(value[1:-1])
                     except ValueError:
                         # This isn't really a range, it's some content.
                         pass
                     else:
+                        value = nativeString(value)
+                        unstructured.append(value)
                         key = key + (value,)
                         try:
                             value = next(responseParts)
                         except StopIteration:
                             raise IllegalServerResponse(
                                 b"Not enough arguments", fetchResponseList)
-
+            unstructured.append(value)
             values[key] = value
-        return values
+
+        return values, unstructured
 
 
     def _cbFetch(self, result, requestedParts, structured):
@@ -4012,22 +4032,27 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     info[id][0].extend(parts[2])
 
         results = {}
+        decodedInfo = {}
+
         for (messageId, values) in info.items():
-            mapping = self._parseFetchPairs(values[0])
-            results.setdefault(messageId, {}).update(mapping)
+            structuredMap, unstructuredList = self._parseFetchPairs(values[0])
+            decodedInfo.setdefault(messageId, [[]])[0].extend(unstructuredList)
+            results.setdefault(messageId, {}).update(structuredMap)
+
+        info = decodedInfo
 
         flagChanges = {}
         for messageId in list(results.keys()):
             values = results[messageId]
             for part in list(values.keys()):
-                if part not in requestedParts and part == b'FLAGS':
-                    flagChanges[messageId] = values[b'FLAGS']
+                if part not in requestedParts and part == 'FLAGS':
+                    flagChanges[messageId] = values['FLAGS']
                     # Find flags in the result and get rid of them.
                     for i in range(len(info[messageId][0])):
-                        if info[messageId][0][i] == b'FLAGS':
+                        if info[messageId][0][i] == 'FLAGS':
                             del info[messageId][0][i:i+2]
                             break
-                    del values[b'FLAGS']
+                    del values['FLAGS']
                     if not values:
                         del results[messageId]
 
@@ -4141,7 +4166,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             del terms['rfc822header']
             terms['rfc822.header'] = True
 
-        cmd = messages + b' (' + b' '.join([s.upper() for s in terms.keys()]) + b')'
+        # The terms in 6.4.5 are all ASCII congruent, so wing it.
+        # Note that this isn't a public API, so terms in responses
+        # should not be decoded to native strings.
+        encodedTerms = [networkString(s) for s in terms]
+        cmd = messages + b' (' + b' '.join(
+            [s.upper() for s in encodedTerms]
+        ) + b')'
+
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, map(str.upper, terms.keys()), True)
         return d
