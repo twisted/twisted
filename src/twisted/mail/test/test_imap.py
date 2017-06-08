@@ -1507,7 +1507,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _: self.assertEqual(str(self.failure.value),
-                                                  'No such mailbox'))
+                                                 str(b'No such mailbox')))
         return d
 
 
