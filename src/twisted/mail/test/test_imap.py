@@ -92,19 +92,6 @@ def strip(f):
     return lambda result, f=f: f()
 
 
-
-def sortNest(l):
-    l = l[:]
-    l.sort()
-    for i in range(len(l)):
-        if isinstance(l[i], list):
-            l[i] = sortNest(l[i])
-        elif isinstance(l[i], tuple):
-            l[i] = tuple(sortNest(list(l[i])))
-    return l
-
-
-
 class IMAP4UTF7Tests(unittest.TestCase):
     tests = [
         [u'Hello world', b'Hello world'],
@@ -1717,13 +1704,23 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def mailboxList():
             return self.client.list('root', '%')
         d = self._listSetup(mailboxList)
-        d.addCallback(lambda listed: self.assertEqual(
-            sortNest(listed),
-            sortNest([
-                (SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
-                (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")
-            ])
-        ))
+        @d.addCallback
+        def assertListContents(listed):
+            expectedContents = [
+                (sorted(SimpleMailbox.flags), "/", "ROOT/SUBTHING"),
+                (sorted(SimpleMailbox.flags), "/", "ROOT/ANOTHER-THING")
+            ]
+
+            for _ in range(2):
+                flags, delimiter, mailbox = listed.pop(0)
+                self.assertIn(
+                    (sorted(flags), delimiter, mailbox),
+                    expectedContents,
+                )
+
+            self.assertFalse(listed,
+                             "More results than expected: {!r}".format(listed))
+
         return d
 
 
