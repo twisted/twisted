@@ -791,6 +791,8 @@ class Clock:
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
+        assert when >= 0, \
+               "%s is not greater than or equal to 0 seconds" % (when,)
         dc = base.DelayedCall(self.seconds() + when,
                                what, a, kw,
                                self.calls.remove,
