@@ -1748,17 +1748,20 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def testFullAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile, "rb")
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():
             return self.client.login(b'testuser', b'password-test')
+
+        @defer.inlineCallbacks
         def append():
-            return self.client.append(
-                'root/subthing',
-                message,
-                (b'\\SEEN', b'\\DELETED'),
-                'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
-            )
+            with open(infile, "rb") as message:
+                result = yield self.client.append(
+                    'root/subthing',
+                    message,
+                    (b'\\SEEN', b'\\DELETED'),
+                    'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
+                )
+                defer.returnValue(result)
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)
@@ -1766,12 +1769,6 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
 
         d = defer.gatherResults([d1, d2])
-
-        def _close(result):
-            message.close()
-            return result
-
-        d.addBoth(_close)
 
         return d.addCallback(self._cbTestFullAppend, infile)
 
