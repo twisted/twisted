@@ -3705,7 +3705,8 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
             self.client.status,
             "ignored", "IMPOSSIBLE?!",
         )
-        self.assertEqual(str(exc), "Unknown names: {'IMPOSSIBLE?!'}")
+        self.assertEqual(str(exc),
+                         "Unknown names: " + repr(set(["IMPOSSIBLE?!"])))
 
 
     def testUndecodableName(self):
@@ -3735,8 +3736,10 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
         self.assertTrue(self.flushLoggedErrors(UnicodeDecodeError))
         self.assertEqual(len(logs), 1)
         [event] = logs
-        self.assertEqual(event['why'],
-                         "Could not decode STATUS name: b'NOT\\xffASCII'")
+        self.assertEqual(
+            event['why'],
+            "Could not decode STATUS name: " + repr(b'NOT\xffASCII'),
+        )
 
 
 
