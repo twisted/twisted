@@ -3410,10 +3410,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                     try:
                         status[nativeString(k)] = v
                     except UnicodeDecodeError:
-                        log.err(
-                            None,
-                            "Could not decode STATUS name: {!r}".format(k)
-                        )
+                        raise IllegalServerResponse(repr(items))
         for k in status.keys():
             t = self.STATUS_TRANSFORMATIONS.get(k)
             if t:

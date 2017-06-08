@@ -49,45 +49,6 @@ except ImportError:
 
 
 
-class _RecordsLogs(object):
-    """
-    A context manager that record logs for a test.
-
-    Entering it returns a L{list} that collects events.
-
-    @param predicate: Only events that match this will be recorded.
-    @type predicate: L{LogLevelFilterPredicate}
-
-    """
-    def __init__(self, predicate=LogLevelFilterPredicate(LogLevel.error)):
-        self._predicate = predicate
-        self._logs = []
-        self._record = self._logs.append
-
-
-    def __enter__(self):
-        globalLogPublisher.addObserver(
-            FilteringLogObserver(self._record, [self._predicate]))
-        return self._logs
-
-
-    def __exit__(self, *exc):
-        globalLogPublisher.removeObserver(self._record)
-
-
-# quiet twistedchecker
-_recordLogs = _RecordsLogs
-
-
-def recordLogs(self, ):
-        logs = []
-        record = logs.append
-
-        self.addCleanup(log.removeObserver, record)
-
-        return logs
-
-
 def strip(f):
     return lambda result, f=f: f()
 
@@ -3693,9 +3654,8 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
 
     def testUndecodableName(self):
         """
-        C{STATUS} names that cannot be decoded as ASCII have their
-        L{UnicodeDecodeError} logged before being discarded, while
-        decodable but unexpected values are retained.
+        C{STATUS} names that cannot be decoded as ASCII cause the
+        status Deferred to fail with L{IllegalServerResponse}
         """
 
         d = self.client.status("blurdybloop", "MESSAGES")
@@ -3704,24 +3664,12 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
             b"0001 STATUS blurdybloop (MESSAGES)\r\n",
         )
 
-        with _recordLogs() as logs:
-            self.client.lineReceived(
-                b"* STATUS blurdybloop "
-                b'(MESSAGES 1 ASCIINAME "OK" NOT\xffASCII "NO")'
-            )
-            self.client.lineReceived(b"0001 OK STATUS completed")
-            self.assertEqual(
-                self.successResultOf(d),
-                {'ASCIINAME': b"OK", "MESSAGES": 1},
-            )
-
-        self.assertTrue(self.flushLoggedErrors(UnicodeDecodeError))
-        self.assertEqual(len(logs), 1)
-        [event] = logs
-        self.assertEqual(
-            event['why'],
-            "Could not decode STATUS name: " + repr(b'NOT\xffASCII'),
+        self.client.lineReceived(
+            b"* STATUS blurdybloop "
+            b'(MESSAGES 1 ASCIINAME "OK" NOT\xffASCII "NO")'
         )
+        self.client.lineReceived(b"0001 OK STATUS completed")
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
 
