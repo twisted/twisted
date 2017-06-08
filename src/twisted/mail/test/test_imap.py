@@ -3237,7 +3237,7 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin,
 
     def _response(self, messageNumbers):
         self.client.lineReceived(
-            b"* SEARCH " + b" ".join(map(str, messageNumbers)))
+            b"* SEARCH " + networkString(" ".join(map(str, messageNumbers))))
         self.client.lineReceived(b"0001 OK SEARCH completed")
 
 
