@@ -3183,7 +3183,7 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin,
 
     def _response(self, sequenceNumbers):
         for number in sequenceNumbers:
-            self.client.lineReceived(b'* %s EXPUNGE' % (number,))
+            self.client.lineReceived(networkString('* %s EXPUNGE' % (number,)))
         self.client.lineReceived(b'0001 OK EXPUNGE COMPLETED')
 
 
