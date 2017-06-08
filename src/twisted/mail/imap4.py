@@ -2989,9 +2989,37 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbNamespace(self, result):
         (lines, last) = result
+
+        # Namespaces and their delimiters qualify and delimit
+        # mailboxes, so they should be native strings
+        #
+        # On Python 2, no decoding is necessary to maintain
+        # the API contract.
+        #
+        # On Python 3, users specify mailboxes with native strings, so
+        # they should receive namespaces and delimiters as native
+        # strings.  Both cases are possible because of the imap4-utf-7
+        # encoding.
+        if _PY3:
+            def _prepareNamespaceOrDelimiter(namespaceList):
+                return [
+                    element.decode('imap4-utf-7') for element in namespaceList
+                ]
+        else:
+            def _prepareNamespaceOrDelimiter(element):
+                return element
+
         for parts in lines:
-            if len(parts) == 4 and parts[0] == 'NAMESPACE':
-                return [e or [] for e in parts[1:]]
+            if len(parts) == 4 and parts[0] == b'NAMESPACE':
+                return [
+                    []
+                    if pairOrNone is None else
+                    [
+                        _prepareNamespaceOrDelimiter(value)
+                        for value in pairOrNone
+                    ]
+                    for pairOrNone in parts[1:]
+                ]
         log.err("No NAMESPACE response to NAMESPACE command")
         return [[], [], []]
 

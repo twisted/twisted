@@ -1297,8 +1297,16 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addErrback(self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda _: self.assertEqual(self.namespaceArgs,
-                                                  [[['', '/']], [], []]))
+
+        @d.addCallback
+        def assertAllPairsNativeStrings(ignored):
+            for namespaces in self.namespaceArgs:
+                for pair in namespaces:
+                    for value in pair:
+                        self.assertIsInstance(value, str)
+            return self.namespaceArgs
+
+        d.addCallback(self.assertEqual, [[['', '/']], [], []])
         return d
 
 
