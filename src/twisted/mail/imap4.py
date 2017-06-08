@@ -1343,9 +1343,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def do_STATUS(self, tag, mailbox, names):
+        nativeNames = []
+        for name in names:
+            nativeNames.append(nativeString(name))
+
         mailbox = _parseMbox(mailbox)
+
         maybeDeferred(self.account.select, mailbox, 0
-            ).addCallback(self._cbStatusGotMailbox, tag, mailbox, names
+            ).addCallback(self._cbStatusGotMailbox, tag, mailbox, nativeNames
             ).addErrback(self._ebStatusGotMailbox, tag
             )
 
@@ -1369,7 +1374,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __cbStatus(self, status, tag, box):
-        line = ' '.join(['%s %s' % x for x in status.items()])
+        # STATUS names should only be ASCII
+        line = networkString(' '.join(['%s %s' % x for x in status.items()]))
         self.sendUntaggedResponse(b'STATUS ' + box.encode('imap4-utf-7') + b' ('+ line + b')')
         self.sendPositiveResponse(tag, b'STATUS complete')
 
@@ -3344,6 +3350,16 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return results
 
 
+    _statusNames = {
+        name: name.encode('ascii') for name in (
+            'MESSAGES',
+            'RECENT',
+            'UIDNEXT',
+            'UIDVALIDITY',
+            'UNSEEN',
+        )
+    }
+
     def status(self, mailbox, *names):
         """
         Retrieve the status of the given mailbox
@@ -3355,8 +3371,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         @type *names: L{bytes}
         @param *names: The status names to query.  These may be any number of:
-            C{b'MESSAGES'}, C{b'RECENT'}, C{b'UIDNEXT'}, C{b'UIDVALIDITY'}, and
-            C{b'UNSEEN'}.
+            C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
+            C{'UNSEEN'}.
 
         @rtype: C{Deferred}
         @return: A deferred which fires with the status information if the
@@ -3368,7 +3384,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         cmd = b'STATUS'
 
         preparedMailbox = _prepareMailboxName(mailbox)
-        names = b' '.join(names)
+        try:
+            names = b' '.join(self._statusNames[name] for name in names)
+        except KeyError:
+            raise ValueError("Unknown names: {!r}".format(
+                set(names) - set(self._statusNames)
+            ))
+
         args = b''.join([preparedMailbox,
                          b" (", names, b")"])
         resp = (b'STATUS',)
@@ -3381,10 +3403,17 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         (lines, last) = result
         status = {}
         for parts in lines:
-            if parts[0] == 'STATUS':
+            if parts[0] == b'STATUS':
                 items = parts[2]
                 items = [items[i:i+2] for i in range(0, len(items), 2)]
-                status.update(dict(items))
+                for k, v in items:
+                    try:
+                        status[nativeString(k)] = v
+                    except UnicodeDecodeError:
+                        log.err(
+                            None,
+                            "Could not decode STATUS name: {!r}".format(k)
+                        )
         for k in status.keys():
             t = self.STATUS_TRANSFORMATIONS.get(k)
             if t:

@@ -24,6 +24,10 @@ from twisted.internet import reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
 from twisted.mail.imap4 import MessageSet
+from twisted.logger import (FilteringLogObserver,
+                            globalLogPublisher,
+                            LogLevel,
+                            LogLevelFilterPredicate)
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
@@ -43,6 +47,45 @@ try:
 except ImportError:
     ClientTLSContext = ServerTLSContext = None
 
+
+
+class _RecordsLogs(object):
+    """
+    A context manager that record logs for a test.
+
+    Entering it returns a L{list} that collects events.
+
+    @param predicate: Only events that match this will be recorded.
+    @type predicate: L{LogLevelFilterPredicate}
+
+    """
+    def __init__(self, predicate=LogLevelFilterPredicate(LogLevel.error)):
+        self._predicate = predicate
+        self._logs = []
+        self._record = self._logs.append
+
+
+    def __enter__(self):
+        globalLogPublisher.addObserver(
+            FilteringLogObserver(self._record, [self._predicate]))
+        return self._logs
+
+
+    def __exit__(self, *exc):
+        globalLogPublisher.removeObserver(self._record)
+
+
+# quiet twistedchecker
+_recordLogs = _RecordsLogs
+
+
+def recordLogs(self, ):
+        logs = []
+        record = logs.append
+
+        self.addCleanup(log.removeObserver, record)
+
+        return logs
 
 
 def strip(f):
@@ -1713,7 +1756,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _: self.assertEqual(
             self.statused,
-            {'MESSAGES': 9, 'UIDNEXT': '10', 'UNSEEN': 4}
+            {'MESSAGES': 9, 'UIDNEXT': b'10', 'UNSEEN': 4}
         ))
         return d
 
@@ -1723,7 +1766,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             return self.client.login(b'testuser', b'password-test')
         def status():
             return self.client.status('root/nonexistent',
-                                      b'MESSAGES', b'UIDNEXT', b'UNSEEN')
+                                      'MESSAGES', 'UIDNEXT', 'UNSEEN')
         def statused(result):
             self.statused = result
         def failed(failure):
@@ -3636,6 +3679,67 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         used in silent mode and unsolicited data is received.
         """
         self._flagsSilentlyWithUnsolicitedDataTest('removeFlags', b'-FLAGS.SILENT')
+
+
+
+class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
+                             unittest.SynchronousTestCase):
+    """
+    Tests for the L{IMAP4Client.status} method.
+
+    An example of usage of the STATUS command from RFC 3501, section
+    5.1.2::
+
+        C: A042 STATUS blurdybloop (UIDNEXT MESSAGES)
+        S: * STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)
+        S: A042 OK STATUS completed
+
+    @see: U{https://tools.ietf.org/html/rfc3501#section-5.1.2}
+    """
+
+    def testUnknownName(self):
+        """
+        Only allow sending the C{STATUS} names defined in RFC 3501.
+
+        @see: U{https://tools.ietf.org/html/rfc3501#section-5.1.2}
+        """
+        exc = self.assertRaises(
+            ValueError,
+            self.client.status,
+            "ignored", "IMPOSSIBLE?!",
+        )
+        self.assertEqual(str(exc), "Unknown names: {'IMPOSSIBLE?!'}")
+
+
+    def testUndecodableName(self):
+        """
+        C{STATUS} names that cannot be decoded as ASCII have their
+        L{UnicodeDecodeError} logged before being discarded, while
+        decodable but unexpected values are retained.
+        """
+
+        d = self.client.status("blurdybloop", "MESSAGES")
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 STATUS blurdybloop (MESSAGES)\r\n",
+        )
+
+        with _recordLogs() as logs:
+            self.client.lineReceived(
+                b"* STATUS blurdybloop "
+                b'(MESSAGES 1 ASCIINAME "OK" NOT\xffASCII "NO")'
+            )
+            self.client.lineReceived(b"0001 OK STATUS completed")
+            self.assertEqual(
+                self.successResultOf(d),
+                {'ASCIINAME': b"OK", "MESSAGES": 1},
+            )
+
+        self.assertTrue(self.flushLoggedErrors(UnicodeDecodeError))
+        self.assertEqual(len(logs), 1)
+        [event] = logs
+        self.assertEqual(event['why'],
+                         "Could not decode STATUS name: b'NOT\\xffASCII'")
 
 
 
