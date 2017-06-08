@@ -2870,14 +2870,18 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class PreauthIMAP4ClientMixin:
+class PreauthIMAP4ClientMixin(object):
     """
-    Mixin for L{unittest.TestCase} subclasses which provides a C{setUp} method
-    which creates an L{IMAP4Client} connected to a L{StringTransport} and puts
-    it into the I{authenticated} state.
+    Mixin for L{unittest.SynchronousTestCase} subclasses which
+    provides a C{setUp} method which creates an L{IMAP4Client}
+    connected to a L{StringTransport} and puts it into the
+    I{authenticated} state.
 
-    @ivar transport: A L{StringTransport} to which C{client} is connected.
-    @ivar client: An L{IMAP4Client} which is connected to C{transport}.
+    @ivar transport: A L{StringTransport} to which C{client} is
+        connected.
+
+    @ivar client: An L{IMAP4Client} which is connected to
+        C{transport}.
     """
     clientProtocol = imap4.IMAP4Client
 
@@ -2890,22 +2894,6 @@ class PreauthIMAP4ClientMixin:
         self.client = self.clientProtocol()
         self.client.makeConnection(self.transport)
         self.client.dataReceived(b'* PREAUTH Hello unittest\r\n')
-
-
-    def _extractDeferredResult(self, d):
-        """
-        Synchronously extract the result of the given L{Deferred}.  Fail the
-        test if that is not possible.
-        """
-        result = []
-        error = []
-        d.addCallbacks(result.append, error.append)
-        if result:
-            return result[0]
-        elif error:
-            error[0].raiseException()
-        else:
-            self.fail("Expected result not available")
 
 
 
@@ -2949,7 +2937,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         d = self._examineOrSelect()
         self._response('* 3 EXISTS')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'EXISTS': 3})
 
 
@@ -2962,8 +2950,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response('* foo EXISTS')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_recent(self):
@@ -2976,7 +2963,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         d = self._examineOrSelect()
         self._response('* 5 RECENT')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'RECENT': 5})
 
 
@@ -2989,8 +2976,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response('* foo RECENT')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_unseen(self):
@@ -3003,7 +2989,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         d = self._examineOrSelect()
         self._response('* OK [UNSEEN 8] Message 8 is first unseen')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'UNSEEN': 8})
 
 
@@ -3016,8 +3002,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response('* OK [UNSEEN foo] Message foo is first unseen')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_uidvalidity(self):
@@ -3030,7 +3015,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         d = self._examineOrSelect()
         self._response('* OK [UIDVALIDITY 12345] UIDs valid')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'UIDVALIDITY': 12345})
 
 
@@ -3043,8 +3028,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response('* OK [UIDVALIDITY foo] UIDs valid')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_uidnext(self):
@@ -3057,7 +3041,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         d = self._examineOrSelect()
         self._response('* OK [UIDNEXT 4392] Predicted next UID')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {'READ-WRITE': False, 'UIDNEXT': 4392})
 
 
@@ -3070,8 +3054,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         """
         d = self._examineOrSelect()
         self._response('* OK [UIDNEXT foo] Predicted next UID')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_flags(self):
@@ -3085,7 +3068,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         self._response(
             '* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
         self.assertEqual(
-            self._extractDeferredResult(d), {
+            self.successResultOf(d), {
                 'READ-WRITE': False,
                 'FLAGS': ('\\Answered', '\\Flagged', '\\Deleted', '\\Seen',
                           '\\Draft')})
@@ -3103,7 +3086,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
             '* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
             'that list up there')
         self.assertEqual(
-            self._extractDeferredResult(d), {
+            self.successResultOf(d), {
                 'READ-WRITE': False,
                 'PERMANENTFLAGS': ('\\Starred',)})
 
@@ -3119,7 +3102,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         # The value won't show up in the result.  It would be okay if it did
         # someday, perhaps.  This shouldn't ever happen, though.
         self.assertEqual(
-            self._extractDeferredResult(d), {'READ-WRITE': False})
+            self.successResultOf(d), {'READ-WRITE': False})
 
 
     def test_bareOk(self):
@@ -3130,11 +3113,12 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         d = self._examineOrSelect()
         self._response('* OK')
         self.assertEqual(
-            self._extractDeferredResult(d), {'READ-WRITE': False})
+            self.successResultOf(d), {'READ-WRITE': False})
 
 
 
-class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
+class IMAP4ClientExamineTests(SelectionTestsMixin,
+                              unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.examine} method.
 
@@ -3154,7 +3138,8 @@ class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
 
 
 
-class IMAP4ClientSelectTests(SelectionTestsMixin, unittest.TestCase):
+class IMAP4ClientSelectTests(SelectionTestsMixin,
+                             unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.select} method.
 
@@ -3175,7 +3160,8 @@ class IMAP4ClientSelectTests(SelectionTestsMixin, unittest.TestCase):
 
 
 
-class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin,
+                              unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.expunge} method.
 
@@ -3209,7 +3195,7 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._expunge()
         self._response([3, 3, 5, 8])
-        self.assertEqual(self._extractDeferredResult(d), [3, 3, 5, 8])
+        self.assertEqual(self.successResultOf(d), [3, 3, 5, 8])
 
 
     def test_nonIntegerExpunged(self):
@@ -3220,12 +3206,12 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._expunge()
         self._response([3, 3, 'foo', 8])
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
 
-class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin,
+                             unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.search} method.
 
@@ -3263,7 +3249,7 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._search()
         self._response([2, 5, 10])
-        self.assertEqual(self._extractDeferredResult(d), [2, 5, 10])
+        self.assertEqual(self.successResultOf(d), [2, 5, 10])
 
 
     def test_nonIntegerFound(self):
@@ -3274,12 +3260,12 @@ class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         """
         d = self._search()
         self._response([2, "foo", 10])
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
 
-class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
+                            unittest.SynchronousTestCase):
     """
     Tests for the L{IMAP4Client.fetch} method.
 
@@ -3300,7 +3286,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 5 FETCH (UID 25)')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {
+            self.successResultOf(d), {
                 2: {'UID': '22'},
                 3: {'UID': '23'},
                 4: {'UID': '24'},
@@ -3317,8 +3303,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.assertEqual(self.transport.value(), b'0001 FETCH 1 (UID)\r\n')
         self.client.lineReceived('* foo FETCH (UID 22)')
         self.client.lineReceived('0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_incompleteFetchUIDResponse(self):
@@ -3333,8 +3318,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 3 FETCH (UID)')
         self.client.lineReceived(b'* 4 FETCH (UID 24)')
         self.client.lineReceived(b'0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_fetchBody(self):
@@ -3350,7 +3334,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 3 FETCH (RFC822.TEXT "Message text")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {3: {b'RFC822.TEXT': b'Message text'}})
 
 
@@ -3368,7 +3352,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 7 FETCH (BODY[] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {7: [['BODY', [], "Some body"]]})
+            self.successResultOf(d), {7: [['BODY', [], "Some body"]]})
 
 
     def test_fetchSpecificPeek(self):
@@ -3383,7 +3367,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 6 FETCH (BODY[] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {6: [['BODY', [], "Some body"]]})
+            self.successResultOf(d), {6: [['BODY', [], "Some body"]]})
 
 
     def test_fetchSpecificNumbered(self):
@@ -3400,7 +3384,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 7 FETCH (BODY[1.2.3] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {7: [['BODY', ['1.2.3'], "Some body"]]})
 
 
@@ -3417,7 +3401,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {8: [[b'BODY', [b'TEXT'], b"Some body"]]})
 
 
@@ -3435,7 +3419,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 4 FETCH (BODY[7.TEXT] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {4: [['BODY', ['7.TEXT'], "Some body"]]})
 
 
@@ -3451,8 +3435,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT])')
         self.client.lineReceived(b'0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_fetchSpecificMIME(self):
@@ -3468,7 +3451,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 8 FETCH (BODY[MIME] "Some body")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {8: [['BODY', ['MIME'], "Some body"]]})
 
 
@@ -3487,7 +3470,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 9 FETCH (BODY[TEXT]<17> "foo")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {9: [[b'BODY', [b'TEXT'], b'<17>', b'foo']]})
 
 
@@ -3503,8 +3486,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT]<17>)')
         self.client.lineReceived(b'0001 OK FETCH completed')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+        self.failureResultOf(d, imap4.IllegalServerResponse)
 
 
     def test_fetchSpecificHTML(self):
@@ -3521,7 +3503,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 7 FETCH (BODY[] "<html>test</html>")')
         self.client.lineReceived(b'0001 OK FETCH completed')
         self.assertEqual(
-            self._extractDeferredResult(d), {7: [[b'BODY', [], b"<html>test</html>"]]})
+            self.successResultOf(d), {7: [[b'BODY', [], b"<html>test</html>"]]})
 
 
 
@@ -3557,7 +3539,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'* 3 FETCH (FLAGS (\\Read \\Seen))')
         self.client.lineReceived(b'0001 OK STORE completed')
         self.assertEqual(
-            self._extractDeferredResult(d),
+            self.successResultOf(d),
             {3: {b'FLAGS': [b'\\Read', b'\\Seen']}})
 
 
@@ -3575,7 +3557,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
         self.client.lineReceived(b'0001 OK STORE completed')
-        self.assertEqual(self._extractDeferredResult(d), {})
+        self.assertEqual(self.successResultOf(d), {})
 
 
     def _flagsSilentlyWithUnsolicitedDataTest(self, method, item):
@@ -3594,7 +3576,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
         self.client.lineReceived(b'* 2 FETCH (FLAGS (\\Read \\Seen))')
         self.client.lineReceived(b'0001 OK STORE completed')
-        self.assertEqual(self._extractDeferredResult(d), {})
+        self.assertEqual(self.successResultOf(d), {})
         self.assertEqual(self.client.flags, {2: [b'\\Read', b'\\Seen']})
 
 
