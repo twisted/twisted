@@ -4051,30 +4051,30 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
     def testFetchUID(self):
         self.function = lambda m, u: self.client.fetchUID(m)
 
-        self.messages = '7'
+        self.messages = b'7'
         self.msgObjs = [
             FakeyMessage({}, (), '', '', 12345, None),
             FakeyMessage({}, (), '', '', 999, None),
             FakeyMessage({}, (), '', '', 10101, None),
         ]
         self.expected = {
-            0: {'UID': '12345'},
-            1: {'UID': '999'},
-            2: {'UID': '10101'},
+            0: {'UID': b'12345'},
+            1: {'UID': b'999'},
+            2: {'UID': b'10101'},
         }
         return self._fetchWork(0)
 
 
     def testFetchFlags(self, uid=0):
         self.function = self.client.fetchFlags
-        self.messages = '9'
+        self.messages = b'9'
         self.msgObjs = [
-            FakeyMessage({}, ['FlagA', 'FlagB', '\\FlagC'], '', '', 54321, None),
-            FakeyMessage({}, ['\\FlagC', 'FlagA', 'FlagB'], '', '', 12345, None),
+            FakeyMessage({}, [b'FlagA', b'FlagB', b'\\FlagC'], '', '', 54321, None),
+            FakeyMessage({}, [b'\\FlagC', b'FlagA', b'FlagB'], '', '', 12345, None),
         ]
         self.expected = {
-            0: {'FLAGS': ['FlagA', 'FlagB', '\\FlagC']},
-            1: {'FLAGS': ['\\FlagC', 'FlagA', 'FlagB']},
+            0: {'FLAGS': [b'FlagA', b'FlagB', b'\\FlagC']},
+            1: {'FLAGS': [b'\\FlagC', b'FlagA', b'FlagB']},
         }
         return self._fetchWork(uid)
 

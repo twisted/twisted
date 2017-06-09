@@ -2085,7 +2085,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_rfc822size(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w(b'RFC822.SIZE ' + str(msg.getSize()))
+        _w(b'RFC822.SIZE ' + intToBytes(msg.getSize()))
 
 
     def spew_rfc822(self, id, msg, _w=None, _f=None):
@@ -2106,7 +2106,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_uid(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        _w(b'UID ' + str(msg.getUID()))
+        _w(b'UID ' + intToBytes(msg.getUID()))
 
 
     def spew_bodystructure(self, id, msg, _w=None, _f=None):
@@ -3617,7 +3617,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message numbers to lists of flags, or whose errback is invoked if
         there is an error.
         """
-        return self._fetch(str(messages), useUID=uid, flags=1)
+        return self._fetch(messages, useUID=uid, flags=1)
 
 
     def fetchInternalDate(self, messages, uid=0):
@@ -3639,7 +3639,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if there is an error.  Date strings take the format of
         \"day-month-year time timezone\".
         """
-        return self._fetch(str(messages), useUID=uid, internaldate=1)
+        return self._fetch(messages, useUID=uid, internaldate=1)
 
 
     def fetchEnvelope(self, messages, uid=0):
@@ -3666,7 +3666,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         of a sequence of name, source route, mailbox name, and hostname.
         Fields which are not present for a particular address may be L{None}.
         """
-        return self._fetch(str(messages), useUID=uid, envelope=1)
+        return self._fetch(messages, useUID=uid, envelope=1)
 
 
     def fetchBodyStructure(self, messages, uid=0):
@@ -4033,7 +4033,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         results = {}
         decodedInfo = {}
-
         for (messageId, values) in info.items():
             structuredMap, unstructuredList = self._parseFetchPairs(values[0])
             decodedInfo.setdefault(messageId, [[]])[0].extend(unstructuredList)
@@ -4175,7 +4174,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         ) + b')'
 
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
-        d.addCallback(self._cbFetch, map(str.upper, terms.keys()), True)
+        d.addCallback(self._cbFetch, [t.upper() for t in terms.keys()], True)
         return d
 
 
