@@ -4033,7 +4033,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
     def _fetchWork(self, uid):
         if uid:
             for (i, msg) in zip(range(len(self.msgObjs)), self.msgObjs):
-                self.expected[i]['UID'] = str(msg.getUID())
+                self.expected[i]['UID'] = intToBytes(msg.getUID())
 
         def result(R):
             self.result = R

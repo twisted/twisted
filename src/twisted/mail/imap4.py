@@ -2311,7 +2311,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_UID(self, tag, command, line):
         command = command.upper()
 
-        if command not in ('COPY', 'FETCH', 'STORE', 'SEARCH'):
+        if command not in (b'COPY', b'FETCH', b'STORE', b'SEARCH'):
             raise IllegalClientResponse(command)
 
         self.dispatchCommand(tag, command, line, uid=1)
