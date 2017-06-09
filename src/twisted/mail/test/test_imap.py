@@ -3790,15 +3790,15 @@ class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
             9: [b'\\A', b'\\B', b'C'],
         }
         self.expected = {
-            1: {b'FLAGS': [b'\\A', b'\\B', b'C']},
-            5: {b'FLAGS': [b'\\A', b'\\B', b'C']},
-            9: {b'FLAGS': [b'\\A', b'\\B', b'C']},
+            1: {'FLAGS': [b'\\A', b'\\B', b'C']},
+            5: {'FLAGS': [b'\\A', b'\\B', b'C']},
+            9: {'FLAGS': [b'\\A', b'\\B', b'C']},
         }
         msg = imap4.MessageSet()
         msg.add(1)
         msg.add(5)
         msg.add(9)
-        self.expectedArgs = ((msg, [b'\\A', b'\\B', b'C'], 0), {b'uid': 0})
+        self.expectedArgs = ((msg, [b'\\A', b'\\B', b'C'], 0), {'uid': 0})
         return self._storeWork()
 
 
