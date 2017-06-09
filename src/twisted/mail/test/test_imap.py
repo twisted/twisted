@@ -24,10 +24,6 @@ from twisted.internet import reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
 from twisted.mail.imap4 import MessageSet
-from twisted.logger import (FilteringLogObserver,
-                            globalLogPublisher,
-                            LogLevel,
-                            LogLevelFilterPredicate)
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
