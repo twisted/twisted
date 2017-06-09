@@ -3501,7 +3501,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         self.client.lineReceived(b'0001 OK STORE completed')
         self.assertEqual(
             self.successResultOf(d),
-            {3: {b'FLAGS': [b'\\Read', b'\\Seen']}})
+            {3: {'FLAGS': [b'\\Read', b'\\Seen']}})
 
 
     def _flagsSilentlyTest(self, method, item):

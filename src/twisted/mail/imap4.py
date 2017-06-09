@@ -4271,7 +4271,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d = self.sendCommand(Command(store, args, wantResponse=(b'FETCH',)))
         expected = ()
         if not silent:
-            expected = (b'FLAGS',)
+            expected = ('FLAGS',)
         d.addCallback(self._cbFetch, expected, True)
         return d
 
