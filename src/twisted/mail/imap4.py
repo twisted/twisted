@@ -1718,7 +1718,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BEFORE(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return email.utils.parsedate(msg.getInternalDate()) < date
+        return email.utils.parsedate(nativeString(msg.getInternalDate())) < date
 
 
     def search_BODY(self, query, id, msg):
@@ -2046,22 +2046,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if _w is None:
             _w = self.transport.write
         idate = msg.getInternalDate()
-        ttup = email.utils.parsedate_tz(idate)
+        ttup = email.utils.parsedate_tz(nativeString(idate))
         if ttup is None:
             log.msg("%d:%r: unpareseable internaldate: %r" % (id, msg, idate))
             raise IMAP4Exception("Internal failure generating INTERNALDATE")
 
         # need to specify the month manually, as strftime depends on locale
         strdate = time.strftime("%d-%%s-%Y %H:%M:%S ", ttup[:9])
-        odate = strdate % (_MONTH_NAMES[ttup[1]],)
+        odate = networkString(strdate % (_MONTH_NAMES[ttup[1]],))
         if ttup[9] is None:
-            odate = odate + "+0000"
+            odate = odate + b"+0000"
         else:
             if ttup[9] >= 0:
-                sign = "+"
+                sign = b"+"
             else:
-                sign = "-"
-            odate = odate + sign + str(((abs(ttup[9]) // 3600) * 100 + (abs(ttup[9]) % 3600) // 60)).zfill(4)
+                sign = b"-"
+            odate = odate + sign + intToBytes(
+                ((abs(ttup[9]) // 3600) * 100 +
+                 (abs(ttup[9]) % 3600) // 60)
+            ).zfill(4)
         _w(b'INTERNALDATE ' + _quote(odate))
 
 

@@ -4053,9 +4053,9 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
         self.messages = b'7'
         self.msgObjs = [
-            FakeyMessage({}, (), '', '', 12345, None),
-            FakeyMessage({}, (), '', '', 999, None),
-            FakeyMessage({}, (), '', '', 10101, None),
+            FakeyMessage({}, (), b'', b'', 12345, None),
+            FakeyMessage({}, (), b'', b'', 999, None),
+            FakeyMessage({}, (), b'', b'', 10101, None),
         ]
         self.expected = {
             0: {'UID': b'12345'},
@@ -4069,8 +4069,10 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.function = self.client.fetchFlags
         self.messages = b'9'
         self.msgObjs = [
-            FakeyMessage({}, [b'FlagA', b'FlagB', b'\\FlagC'], '', '', 54321, None),
-            FakeyMessage({}, [b'\\FlagC', b'FlagA', b'FlagB'], '', '', 12345, None),
+            FakeyMessage({}, [b'FlagA', b'FlagB', b'\\FlagC'],
+                         b'', b'', 54321, None),
+            FakeyMessage({}, [b'\\FlagC', b'FlagA', b'FlagB'],
+                         b'', b'', 12345, None),
         ]
         self.expected = {
             0: {'FLAGS': [b'FlagA', b'FlagB', b'\\FlagC']},
@@ -4085,18 +4087,18 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchInternalDate(self, uid=0):
         self.function = self.client.fetchInternalDate
-        self.messages = '13'
+        self.messages = b'13'
         self.msgObjs = [
-            FakeyMessage({}, (), 'Fri, 02 Nov 2003 21:25:10 GMT', '', 23232, None),
-            FakeyMessage({}, (), 'Thu, 29 Dec 2013 11:31:52 EST', '', 101, None),
-            FakeyMessage({}, (), 'Mon, 10 Mar 1992 02:44:30 CST', '', 202, None),
-            FakeyMessage({}, (), 'Sat, 11 Jan 2000 14:40:24 PST', '', 303, None),
+            FakeyMessage({}, (), b'Fri, 02 Nov 2003 21:25:10 GMT', b'', 23232, None),
+            FakeyMessage({}, (), b'Thu, 29 Dec 2013 11:31:52 EST', b'', 101, None),
+            FakeyMessage({}, (), b'Mon, 10 Mar 1992 02:44:30 CST', b'', 202, None),
+            FakeyMessage({}, (), b'Sat, 11 Jan 2000 14:40:24 PST', b'', 303, None),
         ]
         self.expected = {
-            0: {'INTERNALDATE': '02-Nov-2003 21:25:10 +0000'},
-            1: {'INTERNALDATE': '29-Dec-2013 11:31:52 -0500'},
-            2: {'INTERNALDATE': '10-Mar-1992 02:44:30 -0600'},
-            3: {'INTERNALDATE': '11-Jan-2000 14:40:24 -0800'},
+            0: {'INTERNALDATE': b'02-Nov-2003 21:25:10 +0000'},
+            1: {'INTERNALDATE': b'29-Dec-2013 11:31:52 -0500'},
+            2: {'INTERNALDATE': b'10-Mar-1992 02:44:30 -0600'},
+            3: {'INTERNALDATE': b'11-Jan-2000 14:40:24 -0800'},
         }
         return self._fetchWork(uid)
 
