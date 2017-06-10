@@ -4134,13 +4134,15 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchEnvelope(self, uid=0):
         self.function = self.client.fetchEnvelope
-        self.messages = '15'
+        self.messages = b'15'
         self.msgObjs = [
             FakeyMessage({
-                'from': 'user@domain', 'to': 'resu@domain',
-                'date': 'thursday', 'subject': 'it is a message',
-                'message-id': 'id-id-id-yayaya'}, (), '', '', 65656,
-                None),
+                'from': 'user@domain',
+                'to': 'resu@domain',
+                'date': 'thursday',
+                'subject': 'it is a message',
+                'message-id': 'id-id-id-yayaya'
+            }, (), b'', b'', 65656, None),
         ]
         self.expected = {
             0: {'ENVELOPE':

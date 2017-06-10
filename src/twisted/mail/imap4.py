@@ -2172,9 +2172,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             seenUID = False
             start()
             for part in query:
-                if part.type == b'uid':
+                if part.type == 'uid':
                     seenUID = True
-                if part.type == b'body':
+                if part.type == 'body':
                     yield self.spew_body(part, id, msg, write, flush)
                 else:
                     f = getattr(self, 'spew_' + part.type)
@@ -3652,24 +3652,73 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         This command is allowed in the Selected state.
 
         @type messages: C{MessageSet} or L{str}
-        @param messages: The messages for which to retrieve envelope data.
+        @param messages: The messages for which to retrieve envelope
+            data.
 
         @type uid: C{bool}
-        @param uid: Indicates whether the message sequence set is of message
-        numbers or of unique message IDs.
+        @param uid: Indicates whether the message sequence set is of
+            message numbers or of unique message IDs.
 
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a dict mapping
-        message numbers to envelope data, or whose errback is invoked
-        if there is an error.  Envelope data consists of a sequence of the
-        date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to,
-        and message-id header fields.  The date, subject, in-reply-to, and
-        message-id fields are strings, while the from, sender, reply-to,
-        to, cc, and bcc fields contain address data.  Address data consists
-        of a sequence of name, source route, mailbox name, and hostname.
-        Fields which are not present for a particular address may be L{None}.
+        @return: A deferred whose callback is invoked with a dict
+            mapping message numbers to envelope data, or whose errback
+            is invoked if there is an error.  Envelope data consists
+            of a sequence of the date, subject, from, sender,
+            reply-to, to, cc, bcc, in-reply-to, and message-id header
+            fields.  The date, subject, in-reply-to, and message-id
+            fields are L{str}, while the from, sender, reply-to, to,
+            cc, and bcc fields contain address data as L{str}s.
+            Address data consists of a sequence of name, source route,
+            mailbox name, and hostname.  Fields which are not present
+            for a particular address may be L{None}.
         """
-        return self._fetch(messages, useUID=uid, envelope=1)
+        fetched = self._fetch(messages, useUID=uid, envelope=1)
+
+        if _PY3:
+            def decodeEnvelopes(results):
+                (date, subject, from_, sender, replyTo, to, cc, bcc,
+                 inReplyTo, messageID) = range(10)
+
+                def decodeUnlessNone(element):
+                    if element is None:
+                        return element
+                    # TODO: decoding with charmap is wrong.  This
+                    # should use RFC 6855, decoding as UTF-8 when
+                    # possible and ASCII otherwise.  Until then this
+                    # ensures that callers receive native strings that
+                    # may suffer from mojibake but don't lose data.
+                    return element.decode('charmap')
+
+                def decodeAllUnlessNone(sequences):
+                    if sequences is None:
+                        return sequences
+                    return [[decodeUnlessNone(element) for element in sequence]
+                            for sequence in sequences]
+
+                def decodeEnvelopePayload(envelope):
+                    envelope[date] = decodeUnlessNone(envelope[date])
+                    envelope[subject] = decodeUnlessNone(envelope[subject])
+                    envelope[from_] = decodeAllUnlessNone(envelope[from_])
+                    envelope[sender] = decodeAllUnlessNone(envelope[sender])
+                    envelope[replyTo] = decodeAllUnlessNone(envelope[replyTo])
+                    envelope[to] = decodeAllUnlessNone(envelope[to])
+                    envelope[cc] = decodeAllUnlessNone(envelope[cc])
+                    envelope[bcc] = decodeAllUnlessNone(envelope[bcc])
+                    envelope[inReplyTo] = decodeAllUnlessNone(
+                        envelope[inReplyTo])
+                    envelope[messageID] = decodeUnlessNone(envelope[messageID])
+
+                for fetched in results.values():
+                    for kind, envelope in fetched.items():
+                        if kind == 'ENVELOPE':
+                            decodeEnvelopePayload(envelope)
+
+                return results
+        else:
+            def decodeEnvelopes(results):
+                return results
+
+        return fetched.addCallback(decodeEnvelopes)
 
 
     def fetchBodyStructure(self, messages, uid=0):
@@ -4835,7 +4884,9 @@ def collapseNestedLists(items):
     pieces = []
     for i in items:
         if isinstance(i, unicode):
-            i = i.encode("charmap")
+            # anything besides ASCII will have to wait for an RFC 5738
+            # implementation.
+            i = i.encode("ascii")
         if i is None:
             pieces.extend([b' ', b'NIL'])
         elif isinstance(i, (int, long)):
@@ -5038,8 +5089,8 @@ def getEnvelope(msg):
     in_reply_to = headers.get('in-reply-to')
     mid = headers.get('message-id')
     return (date, subject, parseAddr(from_), parseAddr(sender),
-        reply_to and parseAddr(reply_to), to and parseAddr(to),
-        cc and parseAddr(cc), bcc and parseAddr(bcc), in_reply_to, mid)
+            reply_to and parseAddr(reply_to), to and parseAddr(to),
+            cc and parseAddr(cc), bcc and parseAddr(bcc), in_reply_to, mid)
 
 
 
