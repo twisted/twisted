@@ -2,10 +2,18 @@
 # See LICENSE for details.
 
 
-"""Creation of  Windows shortcuts.
+"""
+Creation of  Windows shortcuts.
 
 Requires win32all.
 """
+
+try:
+    # Python 3
+    from itertools import zip_longest
+except ImportError:
+    # Python 2
+    from itertools import izip_longest as zip_longest
 
 from win32com.shell import shell
 import pythoncom
@@ -35,9 +43,9 @@ class Shortcut:
     @param iconidx: If iconpath is set, optional index of the icon desired
     """
 
-    def __init__(self, 
+    def __init__(self,
                  path=None,
-                 arguments=None, 
+                 arguments=None,
                  description=None,
                  workingdir=None,
                  iconpath=None,
@@ -46,11 +54,11 @@ class Shortcut:
             shell.CLSID_ShellLink, None,
             pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
         )
-        data = map(None, 
-                   ['"%s"' % os.path.abspath(path), arguments, description,
-                    os.path.abspath(workingdir), os.path.abspath(iconpath)], 
+        data = list(zip_longest(
+                   ['"{}"'.format(os.path.abspath(path)), arguments, description,
+                    os.path.abspath(workingdir), os.path.abspath(iconpath)],
                    ("SetPath", "SetArguments", "SetDescription",
-                   "SetWorkingDirectory") )
+                   "SetWorkingDirectory") ))
         for value, function in data:
             if value and function:
                 # call function on each non-null value
@@ -58,19 +66,22 @@ class Shortcut:
         if iconpath:
             self.SetIconLocation(iconpath, iconidx)
 
+
     def load( self, filename ):
         """Read a shortcut file from disk."""
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(filename)
-    
+
+
     def save( self, filename ):
         """Write the shortcut to disk.
 
         The file should be named something.lnk.
         """
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(filename, 0)
-    
+
+
     def __getattr__( self, name ):
         if name != "_base":
             return getattr(self._base, name)
-        raise AttributeError("%s instance has no attribute %s" % (
+        raise AttributeError("{} instance has no attribute {}".format(
             self.__class__.__name__, name))
