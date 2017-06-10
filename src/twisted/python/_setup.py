@@ -431,6 +431,4 @@ notPortedModules = [
     "twisted.web.test.test_domhelpers",
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
-    "twisted.words.tap",
-    "twisted.words.test.test_tap",
 ]
