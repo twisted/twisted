@@ -427,8 +427,8 @@ static CYTHON_INLINE float __PYX_NAN() {
   #endif
 #endif
 
-#define __PYX_HAVE___twisted_c_extensions__raiser
-#define __PYX_HAVE_API___twisted_c_extensions__raiser
+#define __PYX_HAVE___twisted_c_extensions___raiser
+#define __PYX_HAVE_API___twisted_c_extensions___raiser
 #ifdef _OPENMP
 #include <omp.h>
 #endif /* _OPENMP */
@@ -624,7 +624,7 @@ static const char *__pyx_filename;
 
 
 static const char *__pyx_f[] = {
-  "_twisted_c_extensions/raiser.pyx",
+  "_twisted_c_extensions/_raiser.pyx",
 };
 
 /*--- Type declarations ---*/
@@ -793,11 +793,11 @@ static int __Pyx_check_binary_version(void);
 static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 
-/* Module declarations from '_twisted_c_extensions.raiser' */
-#define __Pyx_MODULE_NAME "_twisted_c_extensions.raiser"
-int __pyx_module_is_main__twisted_c_extensions__raiser = 0;
+/* Module declarations from '_twisted_c_extensions._raiser' */
+#define __Pyx_MODULE_NAME "_twisted_c_extensions._raiser"
+int __pyx_module_is_main__twisted_c_extensions___raiser = 0;
 
-/* Implementation of '_twisted_c_extensions.raiser' */
+/* Implementation of '_twisted_c_extensions._raiser' */
 static const char __pyx_k_doc[] = "__doc__";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_test[] = "__test__";
@@ -807,10 +807,10 @@ static const char __pyx_k_qualname[] = "__qualname__";
 static const char __pyx_k_metaclass[] = "__metaclass__";
 static const char __pyx_k_raiseException[] = "raiseException";
 static const char __pyx_k_RaiserException[] = "RaiserException";
-static const char __pyx_k_twisted_c_extensions_raiser[] = "_twisted_c_extensions.raiser";
+static const char __pyx_k_twisted_c_extensions__raiser[] = "_twisted_c_extensions._raiser";
 static const char __pyx_k_A_speficic_exception_only_used[] = "\n    A speficic exception only used to be identified in tests.\n    ";
 static const char __pyx_k_A_trivial_extension_that_just_r[] = "\nA trivial extension that just raises an exception.\nSee L{twisted.test.test_failure.test_failureConstructionWithMungedStackSucceeds}.\n";
-static const char __pyx_k_Users_red_code_twgit_src__twist[] = "/Users/red/code/twgit/src/_twisted_c_extensions/raiser.pyx";
+static const char __pyx_k_Users_red_code_twgit_src__twist[] = "/Users/red/code/twgit/src/_twisted_c_extensions/_raiser.pyx";
 static const char __pyx_k_This_function_is_intentionally_b[] = "This function is intentionally broken";
 static PyObject *__pyx_kp_s_A_speficic_exception_only_used;
 static PyObject *__pyx_n_s_RaiserException;
@@ -824,12 +824,12 @@ static PyObject *__pyx_n_s_prepare;
 static PyObject *__pyx_n_s_qualname;
 static PyObject *__pyx_n_s_raiseException;
 static PyObject *__pyx_n_s_test;
-static PyObject *__pyx_n_s_twisted_c_extensions_raiser;
-static PyObject *__pyx_pf_21_twisted_c_extensions_6raiser_raiseException(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static PyObject *__pyx_n_s_twisted_c_extensions__raiser;
+static PyObject *__pyx_pf_21_twisted_c_extensions_7_raiser_raiseException(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_codeobj__2;
 
-/* "_twisted_c_extensions/raiser.pyx":17
+/* "_twisted_c_extensions/_raiser.pyx":17
  * 
  * 
  * def raiseException():             # <<<<<<<<<<<<<<
@@ -838,28 +838,28 @@ static PyObject *__pyx_codeobj__2;
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_21_twisted_c_extensions_6raiser_1raiseException(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static char __pyx_doc_21_twisted_c_extensions_6raiser_raiseException[] = "\n    Raise L{RaiserException}.\n    ";
-static PyMethodDef __pyx_mdef_21_twisted_c_extensions_6raiser_1raiseException = {"raiseException", (PyCFunction)__pyx_pw_21_twisted_c_extensions_6raiser_1raiseException, METH_NOARGS, __pyx_doc_21_twisted_c_extensions_6raiser_raiseException};
-static PyObject *__pyx_pw_21_twisted_c_extensions_6raiser_1raiseException(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_21_twisted_c_extensions_7_raiser_1raiseException(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_21_twisted_c_extensions_7_raiser_raiseException[] = "\n    Raise L{RaiserException}.\n    ";
+static PyMethodDef __pyx_mdef_21_twisted_c_extensions_7_raiser_1raiseException = {"raiseException", (PyCFunction)__pyx_pw_21_twisted_c_extensions_7_raiser_1raiseException, METH_NOARGS, __pyx_doc_21_twisted_c_extensions_7_raiser_raiseException};
+static PyObject *__pyx_pw_21_twisted_c_extensions_7_raiser_1raiseException(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("raiseException (wrapper)", 0);
-  __pyx_r = __pyx_pf_21_twisted_c_extensions_6raiser_raiseException(__pyx_self);
+  __pyx_r = __pyx_pf_21_twisted_c_extensions_7_raiser_raiseException(__pyx_self);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_21_twisted_c_extensions_6raiser_raiseException(CYTHON_UNUSED PyObject *__pyx_self) {
+static PyObject *__pyx_pf_21_twisted_c_extensions_7_raiser_raiseException(CYTHON_UNUSED PyObject *__pyx_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("raiseException", 0);
 
-  /* "_twisted_c_extensions/raiser.pyx":21
+  /* "_twisted_c_extensions/_raiser.pyx":21
  *     Raise L{RaiserException}.
  *     """
  *     raise RaiserException("This function is intentionally broken")             # <<<<<<<<<<<<<<
@@ -873,7 +873,7 @@ static PyObject *__pyx_pf_21_twisted_c_extensions_6raiser_raiseException(CYTHON_
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __PYX_ERR(0, 21, __pyx_L1_error)
 
-  /* "_twisted_c_extensions/raiser.pyx":17
+  /* "_twisted_c_extensions/_raiser.pyx":17
  * 
  * 
  * def raiseException():             # <<<<<<<<<<<<<<
@@ -885,7 +885,7 @@ static PyObject *__pyx_pf_21_twisted_c_extensions_6raiser_raiseException(CYTHON_
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_2);
-  __Pyx_AddTraceback("_twisted_c_extensions.raiser.raiseException", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("_twisted_c_extensions._raiser.raiseException", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
@@ -903,7 +903,7 @@ static struct PyModuleDef __pyx_moduledef = {
   #else
     PyModuleDef_HEAD_INIT,
   #endif
-    "raiser",
+    "_raiser",
     __pyx_k_A_trivial_extension_that_just_r, /* m_doc */
     -1, /* m_size */
     __pyx_methods /* m_methods */,
@@ -927,7 +927,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_qualname, __pyx_k_qualname, sizeof(__pyx_k_qualname), 0, 0, 1, 1},
   {&__pyx_n_s_raiseException, __pyx_k_raiseException, sizeof(__pyx_k_raiseException), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
-  {&__pyx_n_s_twisted_c_extensions_raiser, __pyx_k_twisted_c_extensions_raiser, sizeof(__pyx_k_twisted_c_extensions_raiser), 0, 0, 1, 1},
+  {&__pyx_n_s_twisted_c_extensions__raiser, __pyx_k_twisted_c_extensions__raiser, sizeof(__pyx_k_twisted_c_extensions__raiser), 0, 0, 1, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
@@ -938,7 +938,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "_twisted_c_extensions/raiser.pyx":21
+  /* "_twisted_c_extensions/_raiser.pyx":21
  *     Raise L{RaiserException}.
  *     """
  *     raise RaiserException("This function is intentionally broken")             # <<<<<<<<<<<<<<
@@ -947,7 +947,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "_twisted_c_extensions/raiser.pyx":17
+  /* "_twisted_c_extensions/_raiser.pyx":17
  * 
  * 
  * def raiseException():             # <<<<<<<<<<<<<<
@@ -970,11 +970,11 @@ static int __Pyx_InitGlobals(void) {
 }
 
 #if PY_MAJOR_VERSION < 3
-PyMODINIT_FUNC initraiser(void); /*proto*/
-PyMODINIT_FUNC initraiser(void)
+PyMODINIT_FUNC init_raiser(void); /*proto*/
+PyMODINIT_FUNC init_raiser(void)
 #else
-PyMODINIT_FUNC PyInit_raiser(void); /*proto*/
-PyMODINIT_FUNC PyInit_raiser(void)
+PyMODINIT_FUNC PyInit__raiser(void); /*proto*/
+PyMODINIT_FUNC PyInit__raiser(void)
 #endif
 {
   PyObject *__pyx_t_1 = NULL;
@@ -991,7 +991,7 @@ PyMODINIT_FUNC PyInit_raiser(void)
           Py_FatalError("failed to import 'refnanny' module");
   }
   #endif
-  __Pyx_RefNannySetupContext("PyMODINIT_FUNC PyInit_raiser(void)", 0);
+  __Pyx_RefNannySetupContext("PyMODINIT_FUNC PyInit__raiser(void)", 0);
   if (__Pyx_check_binary_version() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_empty_tuple = PyTuple_New(0); if (unlikely(!__pyx_empty_tuple)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_empty_bytes = PyBytes_FromStringAndSize("", 0); if (unlikely(!__pyx_empty_bytes)) __PYX_ERR(0, 1, __pyx_L1_error)
@@ -1020,7 +1020,7 @@ PyMODINIT_FUNC PyInit_raiser(void)
   #endif
   /*--- Module creation code ---*/
   #if PY_MAJOR_VERSION < 3
-  __pyx_m = Py_InitModule4("raiser", __pyx_methods, __pyx_k_A_trivial_extension_that_just_r, 0, PYTHON_API_VERSION); Py_XINCREF(__pyx_m);
+  __pyx_m = Py_InitModule4("_raiser", __pyx_methods, __pyx_k_A_trivial_extension_that_just_r, 0, PYTHON_API_VERSION); Py_XINCREF(__pyx_m);
   #else
   __pyx_m = PyModule_Create(&__pyx_moduledef);
   #endif
@@ -1037,14 +1037,14 @@ PyMODINIT_FUNC PyInit_raiser(void)
   #if PY_MAJOR_VERSION < 3 && (__PYX_DEFAULT_STRING_ENCODING_IS_ASCII || __PYX_DEFAULT_STRING_ENCODING_IS_DEFAULT)
   if (__Pyx_init_sys_getdefaultencoding_params() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
-  if (__pyx_module_is_main__twisted_c_extensions__raiser) {
+  if (__pyx_module_is_main__twisted_c_extensions___raiser) {
     if (PyObject_SetAttrString(__pyx_m, "__name__", __pyx_n_s_main) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   }
   #if PY_MAJOR_VERSION >= 3
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) __PYX_ERR(0, 1, __pyx_L1_error)
-    if (!PyDict_GetItemString(modules, "_twisted_c_extensions.raiser")) {
-      if (unlikely(PyDict_SetItemString(modules, "_twisted_c_extensions.raiser", __pyx_m) < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
+    if (!PyDict_GetItemString(modules, "_twisted_c_extensions._raiser")) {
+      if (unlikely(PyDict_SetItemString(modules, "_twisted_c_extensions._raiser", __pyx_m) < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
     }
   }
   #endif
@@ -1064,7 +1064,7 @@ PyMODINIT_FUNC PyInit_raiser(void)
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "_twisted_c_extensions/raiser.pyx":11
+  /* "_twisted_c_extensions/_raiser.pyx":11
  * 
  * 
  * class RaiserException(Exception):             # <<<<<<<<<<<<<<
@@ -1078,7 +1078,7 @@ PyMODINIT_FUNC PyInit_raiser(void)
   PyTuple_SET_ITEM(__pyx_t_1, 0, ((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])));
   __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 11, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_RaiserException, __pyx_n_s_RaiserException, (PyObject *) NULL, __pyx_n_s_twisted_c_extensions_raiser, __pyx_kp_s_A_speficic_exception_only_used); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 11, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_RaiserException, __pyx_n_s_RaiserException, (PyObject *) NULL, __pyx_n_s_twisted_c_extensions__raiser, __pyx_kp_s_A_speficic_exception_only_used); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 11, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_RaiserException, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 11, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
@@ -1088,19 +1088,19 @@ PyMODINIT_FUNC PyInit_raiser(void)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "_twisted_c_extensions/raiser.pyx":17
+  /* "_twisted_c_extensions/_raiser.pyx":17
  * 
  * 
  * def raiseException():             # <<<<<<<<<<<<<<
  *     """
  *     Raise L{RaiserException}.
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_21_twisted_c_extensions_6raiser_1raiseException, NULL, __pyx_n_s_twisted_c_extensions_raiser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_21_twisted_c_extensions_7_raiser_1raiseException, NULL, __pyx_n_s_twisted_c_extensions__raiser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_raiseException, __pyx_t_1) < 0) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "_twisted_c_extensions/raiser.pyx":1
+  /* "_twisted_c_extensions/_raiser.pyx":1
  * # Copyright (c) Twisted Matrix Laboratories.             # <<<<<<<<<<<<<<
  * # See LICENSE for details.
  * 
@@ -1120,11 +1120,11 @@ PyMODINIT_FUNC PyInit_raiser(void)
   __Pyx_XDECREF(__pyx_t_4);
   if (__pyx_m) {
     if (__pyx_d) {
-      __Pyx_AddTraceback("init _twisted_c_extensions.raiser", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init _twisted_c_extensions._raiser", __pyx_clineno, __pyx_lineno, __pyx_filename);
     }
     Py_DECREF(__pyx_m); __pyx_m = 0;
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init _twisted_c_extensions.raiser");
+    PyErr_SetString(PyExc_ImportError, "init _twisted_c_extensions._raiser");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();

@@ -87,7 +87,7 @@ class ConditionalExtension(Extension, object):
 _EXTENSIONS = [
     ConditionalExtension(
         "_twisted_c_extensions._raiser",
-        sources=["src/_twisted_c_extensions/raiser.c"]),
+        sources=["src/_twisted_c_extensions/_raiser.c"]),
 
     ConditionalExtension(
         "_twisted_c_extensions._sendmsg",
