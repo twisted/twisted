@@ -1,1 +1,0 @@
-The transition of twisted.python.url to using the hyperlink package enables a URL.click() with no arguments (or 0-length string argument) to resolve dot segments in the path.

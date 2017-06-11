@@ -1,0 +1,1 @@
+twisted.web web servers no longer print tracebacks when they timeout clients that do not respond to TLS CLOSE_NOTIFY messages.
