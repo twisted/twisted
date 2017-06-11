@@ -25,7 +25,6 @@ class BaseLogFile:
     """
 
     synchronized = ["write", "rotate"]
-    _binary = False
 
     def __init__(self, name, directory, defaultMode=None):
         """
@@ -71,7 +70,6 @@ class BaseLogFile:
         The log file is always opened in binary mode.
         """
         self.closed = False
-        binary = self._binary
         if os.path.exists(self.path):
             self._file = open(self.path, "rb+", 0)
             self._file.seek(0, 2)
@@ -240,6 +238,7 @@ class LogFile(BaseLogFile):
         return state
 
 threadable.synchronize(LogFile)
+
 
 
 class DailyLogFile(BaseLogFile):
