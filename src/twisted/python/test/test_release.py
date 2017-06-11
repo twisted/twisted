@@ -19,7 +19,7 @@ import textwrap
 import tempfile
 import shutil
 
-from io import BytesIO as StringIO
+from io import BytesIO, StringIO
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
@@ -42,37 +42,37 @@ if os.name != 'posix':
 else:
     skip = None
 
-testingSphinxConf = "master_doc = 'index'\n"
+testingSphinxConf = u"master_doc = 'index'\n"
 
 try:
     import pydoctor.driver
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
-    pydoctorSkip = "Pydoctor is not present."
+    pydoctorSkip = u"Pydoctor is not present."
 else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        pydoctorSkip = "Pydoctor is too old."
+    if getattr(pydoctor, u"version_info", (0,)) < (0, 1):
+        pydoctorSkip = u"Pydoctor is too old."
     else:
         pydoctorSkip = skip
 
 
-if not skip and which("sphinx-build"):
+if not skip and which(u"sphinx-build"):
     sphinxSkip = None
 else:
-    sphinxSkip = "Sphinx not available."
+    sphinxSkip = u"Sphinx not available."
 
 
 if not skip and which("git"):
-    gitVersion = runCommand(["git", "--version"]).split(" ")[2].split(".")
+    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
 
     # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
         gitSkip = skip
     else:
-        gitSkip = "old git is present"
+        gitSkip = u"old git is present"
 else:
-    gitSkip = "git is not present."
+    gitSkip = u"git is not present."
 
 
 
@@ -85,7 +85,7 @@ class ExternalTempdirTestCase(TestCase):
         """
         Make our own directory.
         """
-        newDir = tempfile.mkdtemp(dir="/tmp/")
+        newDir = tempfile.mkdtemp(dir=u"/tmp/")
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
 
@@ -128,8 +128,8 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return ("from incremental import Version\n__version__=%r" % (
-        Version(*args, **kwargs))).encode('ascii')
+    return (u"from incremental import Version\n__version__={!r}".format(
+        Version(*args, **kwargs)))
 
 
 
@@ -165,7 +165,7 @@ class StructureAssertingMixin(object):
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace('\n', os.linesep))
+                child.setContent(dirDict[x].replace('\n', os.linesep).encode("utf-8"))
 
     def assertStructure(self, root, dirDict):
         """
@@ -184,11 +184,11 @@ class StructureAssertingMixin(object):
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "%s is not a dir!"
-                                % (child.path,))
+                self.assertTrue(child.isdir(), "{} is not a dir!".format(
+                                child.path))
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().replace(os.linesep, '\n')
+                actual = child.getContent().decode("utf-8").replace(os.linesep, u'\n')
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
@@ -232,9 +232,9 @@ class ProjectTests(ExternalTempdirTestCase):
             directory = directory.child(segment)
             if not directory.exists():
                 directory.createDirectory()
-            directory.child('__init__.py').setContent('')
+            directory.child('__init__.py').setContent(b'')
         directory.child('topfiles').createDirectory()
-        directory.child('_version.py').setContent(genVersion(*version))
+        directory.child('_version.py').setContent(genVersion(*version).encode("utf-8"))
         return Project(directory)
 
 
@@ -405,7 +405,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -418,10 +418,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n"
-            "def _bar():\n"
-            "    '%s'" % (docstring, privateDocstring))
+            u"def foo():\n"
+            u"    '{}'\n"
+            u"def _bar():\n"
+            u"    '{}'".format(docstring, privateDocstring).encode("utf-8"))
 
         outputPath = FilePath(self.mktemp())
 
@@ -467,7 +467,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
@@ -475,8 +475,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n" % (docstring,))
+            u"def foo():\n"
+            u"    '{}'\n".format(docstring).encode("utf-8"))
         packagePath.child("_version.py").setContent(
             genVersion("twisted", 1, 0, 0))
         outputPath = FilePath(self.mktemp())
@@ -487,28 +487,28 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
         self.assertTrue(
             indexPath.exists(),
-            "API index %r did not exist." % (outputPath.path,))
+            u"API index {} did not exist.".format(outputPath.path))
         self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            b'<a href="http://twistedmatrix.com/">Twisted</a>',
             indexPath.getContent(),
             "Project name/location not in file contents.")
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            "Package documentation file %r did not exist."
-            % (twistedPath.path,))
+            u"Package documentation file %r did not exist.".format(
+            twistedPath.path))
         self.assertIn(
             docstring, twistedPath.getContent(),
             "Docstring not in package documentation file.")
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
-            '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted">View Source</a>',
+            b'<a href="https://github.com/twisted/twisted/tree/'
+            b'twisted-1.0.0/src/twisted">View Source</a>',
             twistedPath.getContent())
 
-        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stdout.getvalue(), b'')
 
 
     @doNotFailOnNetworkError
@@ -516,7 +516,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         """
         The templates and System for Twisted includes adding deprecations.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -529,21 +529,21 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "from twisted.python.deprecate import deprecated\n"
-            "from incremental import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0), "
-            "'Baz')\n"
-            "def foo():\n"
-            "    '%s'\n"
-            "from twisted.python import deprecate\n"
-            "import incremental\n"
-            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
-            "def _bar():\n"
-            "    '%s'\n"
-            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            "class Baz(object):\n"
-            "    pass"
-            "" % (docstring, privateDocstring))
+            u"from twisted.python.deprecate import deprecated\n"
+            u"from incremental import Version\n"
+            u"@deprecated(Version('Twisted', 15, 0, 0), "
+            u"'Baz')\n"
+            u"def foo():\n"
+            u"    '{}'\n"
+            u"from twisted.python import deprecate\n"
+            u"import incremental\n"
+            u"@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
+            u"def _bar():\n"
+            u"    '{}'\n"
+            u"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            u"class Baz(object):\n"
+            u"    pass"
+            u"".format(docstring, privateDocstring).encode("utf-8"))
 
         outputPath = FilePath(self.mktemp())
 
@@ -671,13 +671,13 @@ class SphinxBuilderTests(TestCase):
     """
     skip = sphinxSkip
 
-    confContent = """\
+    confContent = u"""\
                   source_suffix = '.rst'
                   master_doc = 'index'
                   """
     confContent = textwrap.dedent(confContent)
 
-    indexContent = """\
+    indexContent = u"""\
                    ==============
                    This is a Test
                    ==============
@@ -711,8 +711,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent)
-        self.sourceDir.child("index.rst").setContent(self.indexContent)
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
 
 
     def verifyFileExists(self, fileDir, fileName):
@@ -750,7 +750,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            self.assertIn("<body", fcontents)
+            self.assertIn(b"<body", fcontents)
 
 
     def test_build(self):
@@ -780,7 +780,7 @@ class SphinxBuilderTests(TestCase):
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
-            f.write("\n.. _malformed-link-target\n")
+            f.write(b"\n.. _malformed-link-target\n")
         exception = self.assertRaises(
             SystemExit,
             self.builder.main, [self.sphinxDir.parent().path]
@@ -861,7 +861,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         no pending modifications returns C{False}.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        reposDir.child('some-file').setContent("something")
+        reposDir.child('some-file').setContent(b"something")
         self.assertFalse(self.createCommand.isStatusClean(reposDir))
 
 
@@ -872,7 +872,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         """
         reposDir = self.makeRepository(self.tmpDir)
         testFile = reposDir.child('some-file')
-        testFile.setContent("something")
+        testFile.setContent(b"something")
         self.commitRepository(reposDir)
         self.assertTrue(testFile.exists())
 
@@ -887,14 +887,14 @@ class CommandsTestMixin(StructureAssertingMixin):
         repository as identical in a specified directory.
         """
         structure = {
-            "README.rst": "Hi this is 1.0.0.",
+            "README.rst": u"Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.0"},
+                    "README": u"Hi this is 1.0.0"},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0"},
+                        "README": u"Hi this is 1.0.0"},
                     "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         reposDir = self.makeRepository(self.tmpDir)
         self.createStructure(reposDir, structure)
