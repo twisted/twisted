@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from incremental import Version
@@ -135,10 +135,7 @@ from twisted.web._responses import (
     RESPONSES)
 
 
-if _PY3:
-    _intTypes = int
-else:
-    _intTypes = (int, long)
+_intTypes = (int, long)
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.

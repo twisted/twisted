@@ -18,8 +18,8 @@ from io import BytesIO
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
-                                   intToBytes)
+from twisted.python.compat import (_PY3, iterbytes, long, networkString,
+                                   unicode, intToBytes)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -2153,9 +2153,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(long(1))
-    if _PY3:
-        test_setResponseCodeAcceptsLongIntegers.skip = (
-            "Python 3 has no separate long integer type.")
 
 
     def test_setLastModifiedNeverSet(self):
