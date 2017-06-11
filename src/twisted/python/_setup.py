@@ -71,6 +71,9 @@ on event-based network programming and multiprotocol integration.
     ],
 )
 
+# THIS MUST REMAIN IN SYNC!
+twistedVersion = "17.5.0"
+
 
 _dev = [
     'pyflakes >= 1.0.0',
@@ -89,6 +92,9 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
+    c=[
+        "twistedcextensions == " + twistedVersion
+    ],
     tls=[
         'pyopenssl >= 16.0.0',
         'service_identity',
@@ -116,10 +122,12 @@ _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
     _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2']
+    _EXTRA_OPTIONS['http2'] +
+    _EXTRA_OPTIONS['c']
 )
 
 _EXTRAS_REQUIRE = {
+    'c': _EXTRA_OPTIONS['c'],
     'dev': _EXTRA_OPTIONS['dev'],
     'tls': _EXTRA_OPTIONS['tls'],
     'conch': _EXTRA_OPTIONS['conch'],
@@ -175,11 +183,6 @@ class ConditionalExtension(Extension, object):
 # The C extensions used for Twisted.
 _EXTENSIONS = [
     ConditionalExtension(
-        "twisted.test.raiser",
-        sources=["src/twisted/test/raiser.c"],
-        condition=lambda _: _isCPython),
-
-    ConditionalExtension(
         "twisted.internet.iocpreactor.iocpsupport",
         sources=[
             "src/twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
@@ -188,10 +191,6 @@ _EXTENSIONS = [
         libraries=["ws2_32"],
         condition=lambda _: _isCPython and sys.platform == "win32"),
 
-    ConditionalExtension(
-        "twisted.python._sendmsg",
-        sources=["src/twisted/python/_sendmsg.c"],
-        condition=lambda _: not _PY3 and sys.platform != "win32"),
     ]
 
 
@@ -231,7 +230,8 @@ def getSetupArgs(extensions=_EXTENSIONS):
     requirements.append("hyperlink >= 17.1.1")
 
     arguments.update(dict(
-        packages=find_packages("src"),
+        packages=find_packages("src", exclude=("_twisted_c_extensions",
+                                               "_twisted_c_extensions.*")),
         use_incremental=True,
         setup_requires=["incremental >= 16.10.1"],
         install_requires=requirements,

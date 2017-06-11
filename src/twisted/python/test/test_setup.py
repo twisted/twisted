@@ -104,6 +104,16 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('http2', _EXTRAS_REQUIRE)
 
 
+    def test_extrasRequiresCDeps(self):
+        """
+        L{_EXTRAS_REQUIRE}'s C{C} extra contains setuptools requirements for
+        the tools required for Twisted development.
+        """
+        deps = _EXTRAS_REQUIRE['c']
+        from twisted import __version__
+        self.assertIn('twistedcextensions == ' + __version__, deps)
+
+
     def test_extrasRequiresDevDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{dev} extra contains setuptools requirements for
