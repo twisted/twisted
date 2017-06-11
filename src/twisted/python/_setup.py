@@ -123,8 +123,7 @@ _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
     _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2'] +
-    _EXTRA_OPTIONS['c']
+    _EXTRA_OPTIONS['http2']
 )
 
 _EXTRAS_REQUIRE = {
@@ -136,11 +135,14 @@ _EXTRAS_REQUIRE = {
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
+    'linux_platform': (
+        _EXTRA_OPTIONS['c'] + _PLATFORM_INDEPENDENT
+    ),
     'osx_platform': (
-        _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
+        _EXTRA_OPTIONS['osx'] + _EXTRA_OPTIONS['c'] + _PLATFORM_INDEPENDENT
     ),
     'windows_platform': (
-        _EXTRA_OPTIONS['windows'] + _PLATFORM_INDEPENDENT
+        _EXTRA_OPTIONS['windows'] + _EXTRA_OPTIONS['c'] + _PLATFORM_INDEPENDENT
     ),
 }
 
