@@ -2571,6 +2571,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
 
+
     def test_connectionLostAfterForceClose(self):
         """
         If a timed out transport doesn't close after 15 seconds, the
