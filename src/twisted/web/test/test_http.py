@@ -14,11 +14,12 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
+from io import BytesIO
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
-                                   intToBytes, NativeStringIO)
+from twisted.python.compat import (_PY3, iterbytes, long, networkString,
+                                   unicode, intToBytes)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -2152,9 +2153,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(long(1))
-    if _PY3:
-        test_setResponseCodeAcceptsLongIntegers.skip = (
-            "Python 3 has no separate long integer type.")
 
 
     def test_setLastModifiedNeverSet(self):
@@ -2835,7 +2833,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
-        factory.logFile = NativeStringIO()
+        factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
 
         val = [
@@ -2852,7 +2850,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         proto._channel.requests[0].finish()
 
         # A log message should be written out
-        self.assertIn('sometime "GET /path HTTP/1.1"',
+        self.assertIn(b'sometime "GET /path HTTP/1.1"',
                       factory.logFile.getvalue())
 
 
@@ -2890,7 +2888,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
-        factory.logFile = NativeStringIO()
+        factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
 
         val = [

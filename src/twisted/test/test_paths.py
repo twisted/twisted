@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 import os, time, pickle, errno, stat
 from pprint import pformat
 
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3, long, unicode
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -1570,10 +1570,7 @@ class FilePathTests(AbstractFilePathTests):
         Verify that file inode/device/nlinks/uid/gid stats are numbers in
         a POSIX environment
         """
-        if _PY3:
-            numbers = int
-        else:
-            numbers = (int, long)
+        numbers = (int, long)
         c = self.path.child(b'file1')
         for p in self.path, c:
             self.assertIsInstance(p.getInodeNumber(), numbers)
