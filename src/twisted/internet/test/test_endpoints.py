@@ -1906,7 +1906,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
 
         @return: C{dict} of keyword arguments to pass to connect.
         """
-        return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+        return {'timeout': 10.0, 'bindAddress': ('localhost', 49595)}
 
 
     def assertConnectArgs(self, receivedArgs, expectedArgs):
@@ -1974,7 +1974,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
             'Passing HostnameEndpoint a reactor that does not provide'
             ' IReactorPluggableNameResolver'
             ' (twisted.test.proto_helpers.MemoryReactorClock)'
-            ' was deprecated in Twisted NEXT;'
+            ' was deprecated in Twisted 17.5.0;'
             ' please use a reactor that provides'
             ' IReactorPluggableNameResolver instead'))
 

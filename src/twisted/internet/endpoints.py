@@ -549,7 +549,7 @@ class TCP4ClientEndpoint(object):
 
         @param timeout: The number of seconds to wait before assuming the
             connection has failed.
-        @type timeout: int
+        @type timeout: L{float} or L{int}
 
         @param bindAddress: A (host, port) tuple of local address to bind to,
             or None.
@@ -769,7 +769,7 @@ class HostnameEndpoint(object):
 
         @param timeout: For each individual connection attempt, the number of
             seconds to wait before assuming the connection has failed.
-        @type timeout: L{int}
+        @type timeout: L{float} or L{int}
 
         @param bindAddress: the local address of the network interface to make
             the connections from.
@@ -809,7 +809,7 @@ class HostnameEndpoint(object):
         if not IReactorPluggableNameResolver.providedBy(reactor):
             warningString = deprecate.getDeprecationWarningString(
                 reactor.__class__,
-                Version("Twisted", "NEXT", 0, 0),
+                Version('Twisted', 17, 5, 0),
                 format=("Passing HostnameEndpoint a reactor that does not"
                         " provide IReactorPluggableNameResolver (%(fqpn)s)"
                         " was deprecated in %(version)s"),

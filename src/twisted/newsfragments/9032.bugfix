@@ -1,1 +1,0 @@
-twisted.internet.endpoints.HostnameEndpoint and twisted.web.client.Agent work again with reactors that do not provide IReactorPluggableNameResolver.  This undoes the changes that broke downstream users such as treq.testing.  Note that passing reactors that do not provide IReactorPluggableNameResolver to either is deprecated.
