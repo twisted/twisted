@@ -19,6 +19,7 @@ import platform
 import sys
 
 from distutils.command import build_ext
+from distutils.command import sdist
 from distutils.errors import CompileError
 from setuptools import Extension, find_packages
 from setuptools.command.build_py import build_py
@@ -101,6 +102,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
         conditionalExtensions = extensions
     command_classes = {
         'build_ext': my_build_ext,
+        'sdist': sdist_twisted
     }
 
     arguments.update(dict(
@@ -109,7 +111,6 @@ def getSetupArgs(extensions=_EXTENSIONS):
         setup_requires=["incremental >= 16.10.1"],
         install_requires=["incremental >= 16.10.1"],
         cmdclass=command_classes,
-        include_package_data=False,
         zip_safe=False,
         package_dir={"": "src"},
     ))
@@ -118,6 +119,21 @@ def getSetupArgs(extensions=_EXTENSIONS):
 
 
 ## Helpers and distutil tweaks
+
+class sdist_twisted(sdist.sdist):
+
+    def finalize_options(self):
+        sdist.sdist.finalize_options(self)
+        self.template = "MANIFEST_ext.in"
+
+
+    def make_release_tree(self, base_dir, files):
+        sdist.sdist.make_release_tree(self, base_dir, files)
+
+        # Copy the setup_ext.py in as setup.py
+        dest = os.path.join(base_dir, "setup.py")
+        self.copy_file("setup_ext.py", dest)
+
 
 
 class build_ext_twisted(build_ext.build_ext, object):

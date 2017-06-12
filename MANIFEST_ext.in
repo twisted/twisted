@@ -1,0 +1,3 @@
+exclude setup_ext.py
+recursive-include src/_twisted_c_extensions *
+recursive-exclude src *~

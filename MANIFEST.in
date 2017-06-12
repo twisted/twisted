@@ -33,6 +33,12 @@ recursive-include src/twisted/python/_pydoctortemplates *.html
 # Include all modules, even on a Python we're not installing for
 recursive-include src/twisted *.py
 
+# Don't include the C exts here
+exclude setup_ext.py
+exclude MANIFEST_ext.in
+exclude src/_twisted_c_extensions
+recursive-exclude src/_twisted_c_extensions *
+
 # Some tests stuff
 recursive-include src/twisted *.pem
 include src/twisted/internet/test/fake_CAs/*
@@ -77,5 +83,5 @@ recursive-include docs *.xml
 recursive-include docs Makefile
 
 # Don't have the real old historic docs
-exclude docs/historic/2003
-recursive-exclude docs/historic/2003 *
+exclude docs/historic
+recursive-exclude docs/historic *
