@@ -21,6 +21,7 @@ import opcode
 from inspect import getmro
 
 from twisted.python.compat import NativeStringIO as StringIO
+from twisted.python.compat import _PY3
 from twisted.python import reflect
 
 count = 0
@@ -168,7 +169,9 @@ class Failure(BaseException):
     # The opcode of "yield" in Python bytecode. We need this in _findFailure in
     # order to identify whether an exception was thrown by a
     # throwExceptionIntoGenerator.
-    _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
+    # on PY3, b'a'[0] == 97 while in py2 b'a'[0] == b'a' opcodes are stored in bytes
+    # so we need to properly account for this difference
+    _yieldOpcode = opcode.opmap["YIELD_VALUE"] if _PY3 else chr(opcode.opmap["YIELD_VALUE"])
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
                  captureVars=False):
@@ -385,7 +388,8 @@ class Failure(BaseException):
         @raise StopIteration: If there are no more values in the generator.
         @raise anything else: Anything that the generator raises.
         """
-        return g.throw(self.type, self.value, self.tb)
+        # note that the actual magic to find the traceback information is done in _findFailure
+        return g.throw(self.type, self.value, None)
 
 
     def _findFailure(cls):
