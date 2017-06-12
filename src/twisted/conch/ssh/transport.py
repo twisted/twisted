@@ -529,8 +529,7 @@ class SSHTransportBase(protocol.Protocol):
         @param kexes: A L{list} of kex name strings
         """
         # Clear out the currently supported key exchanges.
-        self.supportedKeyExchanges = {}
-        _kex._kexAlgorithms = {}
+        _kex._kexAlgorithms.clear()
 
         # Set the new exchanges.
         self.addSupportedKexes(kexes)
@@ -560,7 +559,9 @@ class SSHTransportBase(protocol.Protocol):
                 _kex._kexAlgorithms[k] = kexes[k]
 
         # Reload
-        self.supportedKeyExchanges = _kex.getSupportedKeyExchanges()
+        del self.supportedKeyExchanges[:]
+        for kex in _kex.getSupportedKeyExchanges():
+            self.supportedKeyExchanges.append(kex)
 
 
     def setSupportedPublicKeys(self, publicKeys):
@@ -573,7 +574,7 @@ class SSHTransportBase(protocol.Protocol):
             and a value that is a L{tuple} consisting of an instance of the key method,
             a L{str} that is the corresponding sec name.
         """
-        self.supportedPublicKeys = []
+        del self.supportedPublicKeys[:]
         self.addSupportePublicKeys(publicKeys)
 
 
@@ -589,32 +590,33 @@ class SSHTransportBase(protocol.Protocol):
         tmpkeys = []
 
         try:
-            self.supportedPublicKeys.remove('ssh-rsa')
-            tmpkeys += ['ssh-rsa']
+            self.supportedPublicKeys.remove(b'ssh-rsa')
+            tmpkeys += [b'ssh-rsa']
         except:
             pass
 
         try:
-            self.supportedPublicKeys.remove('ssh-dss')
-            tmpkeys += ['ssh-dss']
+            self.supportedPublicKeys.remove(b'ssh-dss')
+            tmpkeys += [b'ssh-dss']
         except:
             pass
 
         for k in publicKeys:
-            # Check to see if it's supported.
-            if k not in self.supportedPublicKeys and k != b'ssh-rsa' and k != b'ssh-dss':
-                self.supportedPublicKeys += [k]
+            if k not in self.supportedPublicKeys:
+                self.supportedPublicKeys.append(k)
 
-            curve = publicKeys[k]
-            keys._curveTable[k] = curve[0]
+            if k.startswith(b'ecdsa'):
+                curve = publicKeys[k]
+                keys._curveTable[k] = curve[0]
 
-            keys._secToNist[curve[1]] = k
+                keys._secToNist[curve[1]] = k
 
         # Reverse sort to bring the stronger keys up first.
         self.supportedPublicKeys.sort(reverse=True)
 
         for k in tmpkeys:
-            self.supportedPublicKeys.append(k)
+            if k not in self.supportedPublicKeys:
+                self.supportedPublicKeys.append(k)
 
 
     def connectionLost(self, reason):
