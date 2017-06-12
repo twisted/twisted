@@ -416,6 +416,10 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
 
     def test_unsupported_publickey(self):
+        """
+        Private key authentication fails when the public key type is
+        unsupported or the public key is corrupt.
+        """
         blob = keys.Key.fromString(keydata.publicDSA_openssh).blob()
 
         # Change the blob to a bad type
