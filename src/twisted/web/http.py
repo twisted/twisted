@@ -2174,6 +2174,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         log.msg(
             "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
         )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
         self.transport.abortConnection()
 
 
@@ -2827,10 +2830,8 @@ class HTTPFactory(protocol.ServerFactory):
             self._updateLogDateTime()
 
         if self.logPath:
-            self._nativeize = False
             self.logFile = self._openLogFile(self.logPath)
         else:
-            self._nativeize = True
             self.logFile = log.logfile
 
 
@@ -2866,8 +2867,4 @@ class HTTPFactory(protocol.ServerFactory):
             pass
         else:
             line = self._logFormatter(self._logDateTime, request) + u"\n"
-            if self._nativeize:
-                line = nativeString(line)
-            else:
-                line = line.encode("utf-8")
-            logFile.write(line)
+            logFile.write(line.encode('utf8'))

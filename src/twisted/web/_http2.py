@@ -251,6 +251,9 @@ class H2Connection(Protocol, TimeoutMixin):
             "Forcibly timing out client: {client}",
             client=self.transport.getPeer()
         )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
         self.transport.abortConnection()
 
 

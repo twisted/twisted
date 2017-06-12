@@ -605,6 +605,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
     def unregisterProducer(self):
+        # If we have no producer, we don't need to do anything here.
+        if self._producer is None:
+            return
+
         # If we received a non-streaming producer, we need to stop the
         # streaming wrapper:
         if isinstance(self._producer._producer, _PullToPush):
