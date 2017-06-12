@@ -267,9 +267,10 @@ class SSHUserAuthServer(service.SSHService):
         try:
             pubKey = keys.Key.fromString(blob)
         except keys.BadKeyError:
-            log.msg("Unsupported key type " + algName + " or bad key")
-            return defer.fail(UnauthorizedLogin(
-                b'Unsupported key type ' + algName + " or bad key"))
+            error = "Unsupported key type %s or bad key" % (
+                algName.decode('ascii'),)
+            log.msg(error)
+            return defer.fail(UnauthorizedLogin(error))
 
         signature = hasSig and getNS(rest)[0] or None
         if hasSig:
