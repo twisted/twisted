@@ -239,6 +239,21 @@ class Failure(BaseException):
             self.value = exc_value
         if isinstance(self.value, Failure):
             self.__dict__ = self.value.__dict__
+            _, _, tb = sys.exc_info()
+            frames = []
+            while tb is not None:
+                f = tb.tb_frame
+                if f.f_code is self.throwExceptionIntoGenerator.__code__:
+                    frames = []
+                else:
+                    frames.append((
+                        f.f_code.co_name,
+                        f.f_code.co_filename,
+                        tb.tb_lineno, (), ()
+                        ))
+                tb = tb.tb_next
+            frames.extend(self.frames)
+            self.frames = frames
             return
         if tb is None:
             if exc_tb:

@@ -128,15 +128,16 @@ class ForwardTraceBackTests(SynchronousTestCase):
 
     def test_forwardTracebacks(self):
         """
-        Test that chained inlineCallbacks are properly forwarding the traceback informations
-        from generator to generator
-        Reproducing #9175
+        Chained inlineCallbacks are forwarding the traceback informations
+        from generator to generator.
+
+        A first simple test with a couple of inline callbacks.
         """
 
         @inlineCallbacks
         def erroring():
-            raise Exception()
             yield "forcing generator"
+            raise Exception('Error Marker')
 
         @inlineCallbacks
         def calling():
@@ -144,4 +145,44 @@ class ForwardTraceBackTests(SynchronousTestCase):
 
         d = calling()
         f = self.failureResultOf(d)
-        self.assertIn("in erroring", f.getTraceback())
+        tb = f.getTraceback()
+        self.assertIn("in erroring", tb)
+        self.assertIn("Error Marker", tb)
+
+
+    def test_forwardLotsOfTracebacks(self):
+        """
+        Several Chained inlineCallbacks gives information about all generators.
+
+        A wider test with a 4 chained inline callbacks.
+
+        Application stack-trace should be reported, and implementation details
+        like "throwExceptionIntoGenerator" symbols are omitted from the stack
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception('Error Marker')
+
+        @inlineCallbacks
+        def calling3():
+            yield erroring()
+
+        @inlineCallbacks
+        def calling2():
+            yield calling3()
+
+        @inlineCallbacks
+        def calling():
+            yield calling2()
+
+        d = calling()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("in erroring", tb)
+        self.assertIn("in calling", tb)
+        self.assertIn("in calling2", tb)
+        self.assertIn("in calling3", tb)
+        self.assertNotIn("throwExceptionIntoGenerator", tb)
+        self.assertIn("Error Marker", tb)
