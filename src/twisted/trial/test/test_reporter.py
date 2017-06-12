@@ -19,6 +19,7 @@ from unittest import TestCase as StdlibTestCase
 
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
+from twisted.python.reflect import qual
 from twisted.trial import itrial, unittest, runner, reporter, util
 from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
@@ -214,10 +215,7 @@ class ErrorReportingTests(StringTest):
 
         test = erroneous.DelayedCall('testHiddenException')
         output = self.getOutput(test).splitlines()
-        if _PY3:
-            errorQual = RuntimeError.__qualname__
-        else:
-            errorQual = "exceptions.RuntimeError"
+        errorQual = qual(RuntimeError)
         match = [
             self.doubleSeparator,
             '[FAIL]',
@@ -832,7 +830,7 @@ class UncleanWarningTodoTests(TodoTests):
 
 
 
-class MockColorizer:
+class MockColorizer(object):
     """
     Used by TreeReporterTests to make sure that output is colored correctly.
     """

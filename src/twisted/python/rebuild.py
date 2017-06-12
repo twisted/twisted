@@ -13,12 +13,16 @@ import types
 import time
 import linecache
 
+from imp import reload
+
 # Sibling Imports
 from twisted.python import log, reflect
+from twisted.python._oldstyle import _oldStyle
 
 lastRebuild = time.time()
 
 
+@_oldStyle
 class Sensitive:
     """
     A utility mixin that's sensitive to rebuilds.
@@ -268,4 +272,3 @@ def rebuild(module, doLog=1):
         log.msg('')
         log.msg('   Rebuilt %s.' % str(module.__name__))
     return module
-

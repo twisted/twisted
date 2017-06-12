@@ -11,8 +11,17 @@ import warnings
 import gc, traceback
 import re
 
+from twisted.python.compat import _PY3, _PY34PLUS
+
+if _PY34PLUS:
+    from asyncio import new_event_loop, Future, CancelledError
+    asyncSkip = None
+else:
+    asyncSkip = "asyncio not available before python 3.4"
+
+
+
 from twisted.python import failure, log
-from twisted.python.compat import _PY3
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
 from twisted.trial import unittest
@@ -2943,3 +2952,151 @@ class EnsureDeferredTests(unittest.TestCase):
         """
         with self.assertRaises(ValueError):
             defer.ensureDeferred("something")
+
+
+
+class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
+    """
+    L{twisted.internet.defer} timeout code.
+    """
+    def test_deprecatedTimeout(self):
+        """
+        L{twisted.internet.defer.timeout} is deprecated.
+        """
+        deferred = defer.Deferred()
+        defer.timeout(deferred)
+        self.assertFailure(deferred, defer.TimeoutError)
+        warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.internet.defer.timeout was deprecated in Twisted 17.1.0;'
+            ' please use twisted.internet.defer.Deferred.addTimeout instead')
+
+
+
+def callAllSoonCalls(loop):
+    """
+    Tickle an asyncio event loop to call all of the things scheduled with
+    call_soon, inasmuch as this can be done via the public API.
+
+    @param loop: The asyncio event loop to flush the previously-called
+        C{call_soon} entries from.
+    """
+    loop.call_soon(loop.stop)
+    loop.run_forever()
+
+
+
+class DeferredFutureAdapterTests(unittest.TestCase):
+
+    skip = asyncSkip
+
+    def test_asFuture(self):
+        """
+        L{defer.Deferred.asFuture} returns a L{asyncio.Future} which fires when
+        the given L{defer.Deferred} does.
+        """
+        d = defer.Deferred()
+        loop = new_event_loop()
+        aFuture = d.asFuture(loop)
+        self.assertEqual(aFuture.done(), False)
+        d.callback(13)
+        callAllSoonCalls(loop)
+        self.assertEqual(self.successResultOf(d), None)
+        self.assertEqual(aFuture.result(), 13)
+
+
+    def test_asFutureCancelFuture(self):
+        """
+        L{defer.Deferred.asFuture} returns a L{asyncio.Future} which, when
+        cancelled, will cancel the original L{defer.Deferred}.
+        """
+        def canceler(dprime):
+            canceler.called = True
+        canceler.called = False
+        d = defer.Deferred(canceler)
+        loop = new_event_loop()
+        aFuture = d.asFuture(loop)
+        aFuture.cancel()
+        callAllSoonCalls(loop)
+        self.assertEqual(canceler.called, True)
+        self.assertEqual(self.successResultOf(d), None)
+        self.assertRaises(CancelledError, aFuture.result)
+
+
+    def test_asFutureSuccessCancel(self):
+        """
+        While Futures don't support succeeding in response to cancellation,
+        Deferreds do; if a Deferred is coerced into a success by a Future
+        cancellation, that should just be ignored.
+        """
+        def canceler(dprime):
+            dprime.callback(9)
+        d = defer.Deferred(canceler)
+        loop = new_event_loop()
+        aFuture = d.asFuture(loop)
+        aFuture.cancel()
+        callAllSoonCalls(loop)
+        self.assertEqual(self.successResultOf(d), None)
+        self.assertRaises(CancelledError, aFuture.result)
+
+
+    def test_asFutureFailure(self):
+        """
+        L{defer.Deferred.asFuture} makes a L{asyncio.Future} fire with an
+        exception when the given L{defer.Deferred} does.
+        """
+        d = defer.Deferred()
+        theFailure = failure.Failure(ZeroDivisionError())
+        loop = new_event_loop()
+        future = d.asFuture(loop)
+        callAllSoonCalls(loop)
+        d.errback(theFailure)
+        callAllSoonCalls(loop)
+        self.assertRaises(ZeroDivisionError, future.result)
+
+
+    def test_fromFuture(self):
+        """
+        L{defer.Deferred.fromFuture} returns a L{defer.Deferred} that fires
+        when the given L{asyncio.Future} does.
+        """
+        loop = new_event_loop()
+        aFuture = Future(loop=loop)
+        d = defer.Deferred.fromFuture(aFuture)
+        self.assertNoResult(d)
+        aFuture.set_result(7)
+        callAllSoonCalls(loop)
+        self.assertEqual(self.successResultOf(d), 7)
+
+
+    def test_fromFutureFutureCancelled(self):
+        """
+        L{defer.Deferred.fromFuture} makes a L{defer.Deferred} fire with
+        an L{asyncio.CancelledError} when the given
+        L{asyncio.Future} is cancelled.
+        """
+        loop = new_event_loop()
+        cancelled = Future(loop=loop)
+        d = defer.Deferred.fromFuture(cancelled)
+        cancelled.cancel()
+        callAllSoonCalls(loop)
+        self.assertRaises(CancelledError, cancelled.result)
+        self.failureResultOf(d).trap(CancelledError)
+
+
+    def test_fromFutureDeferredCancelled(self):
+        """
+        L{defer.Deferred.fromFuture} makes a L{defer.Deferred} which, when
+        cancelled, cancels the L{asyncio.Future} it was created from.
+        """
+        loop = new_event_loop()
+        cancelled = Future(loop=loop)
+        d = defer.Deferred.fromFuture(cancelled)
+        d.cancel()
+        callAllSoonCalls(loop)
+        self.assertEqual(cancelled.cancelled(), True)
+        self.assertRaises(CancelledError, cancelled.result)
+        self.failureResultOf(d).trap(CancelledError)

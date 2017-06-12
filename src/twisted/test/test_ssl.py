@@ -36,6 +36,7 @@ except ImportError:
     # Assuming SSL exists, we're using old version in reactor (i.e. non-protocol)
     newTLS = None
 
+from zope.interface import implementer
 
 class UnintelligentProtocol(basic.LineReceiver):
     """
@@ -160,13 +161,14 @@ class RecordingClientProtocol(protocol.Protocol):
 
 
 
+@implementer(interfaces.IHandshakeListener)
 class ImmediatelyDisconnectingProtocol(protocol.Protocol):
     """
     A protocol that disconnect immediately on connection. It fires the
     C{connectionDisconnected} deferred of its factory on connetion lost.
     """
 
-    def connectionMade(self):
+    def handshakeCompleted(self):
         self.transport.loseConnection()
 
 
@@ -182,7 +184,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 512)
+    pkey.generate_key(crypto.TYPE_RSA, 1024)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
@@ -524,23 +526,17 @@ class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
         close cleanly, and only after the underlying TCP connection has
         disconnected.
         """
+        @implementer(interfaces.IHandshakeListener)
         class CloseAfterHandshake(protocol.Protocol):
             gotData = False
 
             def __init__(self):
                 self.done = defer.Deferred()
 
-            def connectionMade(self):
-                self.transport.write(b"a")
-
-            def dataReceived(self, data):
-                # If we got data, handshake is over:
-                self.gotData = True
+            def handshakeCompleted(self):
                 self.transport.loseConnection()
 
             def connectionLost(self, reason):
-                if not self.gotData:
-                    reason = RuntimeError("We never received the data!")
                 self.done.errback(reason)
                 del self.done
 
@@ -672,7 +668,8 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
 
         # And OP_NO_SSLv2 disables the SSLv2 support.
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertEqual(self.context._options & SSL.OP_NO_SSLv2,
+                         SSL.OP_NO_SSLv2)
 
         # Make sure SSLv3 and TLSv1 aren't disabled though.
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
@@ -718,7 +715,8 @@ class ClientContextFactoryTests(unittest.TestCase):
         SSLv3 or TLSv1 but not SSLv2.
         """
         self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
-        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertEqual(self.context._options & SSL.OP_NO_SSLv2,
+                         SSL.OP_NO_SSLv2)
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
 

@@ -21,6 +21,7 @@ from zope.interface import implementer, Interface, Attribute
 from twisted.persisted import sob
 from twisted.python.reflect import namedAny
 from twisted.python import components
+from twisted.python._oldstyle import _oldStyle
 from twisted.internet import defer
 from twisted.plugin import IPlugin
 
@@ -349,6 +350,7 @@ class IProcess(Interface):
 
 
 @implementer(IProcess)
+@_oldStyle
 class Process:
     """
     Process running parameters.
@@ -407,10 +409,9 @@ def loadApplication(filename, kind, passphrase=None):
     @type passphrase: C{str}
     """
     if kind == 'python':
-        application = sob.loadValueFromFile(filename, 'application',
-                                            passphrase)
+        application = sob.loadValueFromFile(filename, 'application')
     else:
-        application = sob.load(filename, kind, passphrase)
+        application = sob.load(filename, kind)
     return application
 
 

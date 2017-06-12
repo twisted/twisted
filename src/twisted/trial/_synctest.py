@@ -30,7 +30,9 @@ SkipTest = pyunit.SkipTest
 
 
 class FailTest(AssertionError):
-    """Raised to indicate the current test has failed to pass."""
+    """
+    Raised to indicate the current test has failed to pass.
+    """
 
 
 
@@ -55,8 +57,10 @@ class Todo(object):
         self.reason = reason
         self.errors = errors
 
+
     def __repr__(self):
         return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
+
 
     def expected(self, failure):
         """
@@ -70,6 +74,7 @@ class Todo(object):
             if failure.check(error):
                 return True
         return False
+
 
 
 def makeTodo(value):
@@ -128,6 +133,7 @@ class _Warning(object):
         self.lineno = lineno
 
 
+
 def _setWarningRegistryToNone(modules):
     """
     Disable the per-module cache for every module found in C{modules}, typically
@@ -146,6 +152,7 @@ def _setWarningRegistryToNone(modules):
                 pass
 
 
+
 def _collectWarnings(observeWarning, f, *args, **kwargs):
     """
     Call C{f} with C{args} positional arguments and C{kwargs} keyword arguments
@@ -159,7 +166,7 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
     def showWarning(message, category, filename, lineno, file=None, line=None):
         assert isinstance(message, Warning)
         observeWarning(_Warning(
-                message.args[0], category, filename, lineno))
+                str(message), category, filename, lineno))
 
     # Disable the per-module cache for every module otherwise if the warning
     # which the caller is expecting us to collect was already emitted it won't
@@ -694,7 +701,6 @@ class _Assertions(pyunit.TestCase, object):
             return result[0]
 
 
-
     def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
         Return the current failure result of C{deferred} or raise
@@ -745,7 +751,6 @@ class _Assertions(pyunit.TestCase, object):
             return result[0]
 
 
-
     def assertNoResult(self, deferred):
         """
         Assert that C{deferred} does not have a result at this point.
@@ -777,7 +782,6 @@ class _Assertions(pyunit.TestCase, object):
             self.fail(
                 "No result expected on %r, found %r instead" % (
                     deferred, result[0]))
-
 
 
     def assertRegex(self, text, regex, msg=None):
@@ -947,17 +951,21 @@ class SynchronousTestCase(_Assertions):
             testMethod, self, sys.modules.get(self.__class__.__module__)]
 
 
-    # Override the comparison defined by the base TestCase which considers
-    # instances of the same class with the same _testMethodName to be
-    # equal.  Since trial puts TestCase instances into a set, that
-    # definition of comparison makes it impossible to run the same test
-    # method twice.  Most likely, trial should stop using a set to hold
-    # tests, but until it does, this is necessary on Python 2.6. -exarkun
     def __eq__(self, other):
+        """
+        Override the comparison defined by the base TestCase which considers
+        instances of the same class with the same _testMethodName to be
+        equal.  Since trial puts TestCase instances into a set, that
+        definition of comparison makes it impossible to run the same test
+        method twice.  Most likely, trial should stop using a set to hold
+        tests, but until it does, this is necessary on Python 2.6. -exarkun
+        """
         return self is other
+
 
     def __ne__(self, other):
         return self is not other
+
 
     def __hash__(self):
         return hash((self.__class__, self._testMethodName))

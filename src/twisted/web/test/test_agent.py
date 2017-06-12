@@ -1425,7 +1425,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         WebClientContextFactory} to do it.
         """
         def warnMe():
-            client.Agent(MemoryReactorClock(),
+            client.Agent(deterministicResolvingReactor(MemoryReactorClock()),
                          "does-not-provide-IPolicyForHTTPS")
         warnMe()
         warnings = self.flushWarnings([warnMe])
@@ -1465,8 +1465,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(
-            commonName=hostName)
+        authority, server = certificatesForAuthorityAndServer(hostName
+                                                              .decode('ascii'))
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)
         def tlsagent(reactor):

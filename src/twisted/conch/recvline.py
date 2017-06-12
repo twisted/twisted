@@ -64,8 +64,8 @@ class TransportSequence(object):
 
     for keyID in (b'UP_ARROW', b'DOWN_ARROW', b'RIGHT_ARROW', b'LEFT_ARROW',
                   b'HOME', b'INSERT', b'DELETE', b'END', b'PGUP', b'PGDN',
-                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8', b'F9',
-                  b'F10', b'F11', b'F12'):
+                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8',
+                  b'F9', b'F10', b'F11', b'F12'):
         execBytes = keyID + b" = object()"
         execStr = execBytes.decode("ascii")
         exec(execStr)
@@ -74,7 +74,8 @@ class TransportSequence(object):
     BACKSPACE = b'\x7f'
 
     def __init__(self, *transports):
-        assert transports, "Cannot construct a TransportSequence with no transports"
+        assert transports, (
+            "Cannot construct a TransportSequence with no transports")
         self.transports = transports
 
     for method in insults.ITerminalTransport:
@@ -241,7 +242,7 @@ class RecvLine(insults.TerminalProtocol):
         n = self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)
         self.terminal.cursorForward(n)
         self.lineBufferIndex += n
-        self.lineBuffer.extend(' ' * n)
+        self.lineBuffer.extend(iterbytes(b' ' * n))
 
 
     def handle_LEFT(self):
@@ -337,7 +338,7 @@ class HistoricRecvLine(RecvLine):
 
     def handle_UP(self):
         if self.lineBuffer and self.historyPosition == len(self.historyLines):
-            self.historyLines.append(self.lineBuffer)
+            self.historyLines.append(b''.join(self.lineBuffer))
         if self.historyPosition > 0:
             self.handle_HOME()
             self.terminal.eraseToLineEnd()

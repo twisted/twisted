@@ -42,23 +42,23 @@ Version numbers
 ---------------
 
 Twisted releases use a time-based numbering scheme.
-Releases versions like YY.MM.mm, where YY is the last two digits of the year of the release, MM is the number of the release in the year, and mm is the number of the patch release.
+Releases versions like YY.MM.mm, where YY is the last two digits of the year of the release, MM is the month of release, and mm is the number of the patch release.
 
 For example:
 
-- The first release of 2010 is 10.0.0
-- The second release of 2010 is 10.1.0
-- If 10.1.0 has some critical defects, then a patch release would be numbered 10.1.1
-- The first pre-release of 10.0.0 is 10.0.0pre1, the second is 10.0.0pre2
+- A release in Jan 2017 is 17.1.0
+- A release in Nov 2017 is 17.11.0
+- If 17.11.0 has some critical defects, then a patch release would be numbered 17.11.1
+- The first release candidate of 17.1.0 is 17.1.0rc1, the second is 17.1.0rc2
 
-Every release of Twisted includes the whole project, the core and all sub-projects. Each of these has the same number.
+Every release of Twisted includes the whole project.
 
 Throughout this document, we'll refer to the version number of the release as $RELEASE. Examples of $RELEASE include 10.0.0, 10.1.0, 10.1.1 etc.
 
 We'll refer to the first two components of the release as $API, since all releases that share those numbers are mutually API compatible.
 e.g. for 10.0.0, $API is 10.0; for 10.1.0 and 10.1.1, $API is 10.1.
 
-The change-versions script automatically picks the right number for you.
+Incremental automatically picks the correct version number for you.
 Please retrieve it after you run it.
 
 
@@ -68,7 +68,7 @@ Overview
 To release Twisted, we
 
 1. Prepare for a release
-2. Release N pre-releases
+2. Release one or more release candidates
 3. Release the final release
 
 
@@ -102,48 +102,47 @@ Prepare for a release
    - ``git checkout -b release-$RELEASE-4290``
 
 
-How to do a pre-release
------------------------
+How to do a release candidate
+-----------------------------
 
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
 2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL.rst``.
 3. In your Git repo, fetch and check out the new release branch.
-4. Run ``python -m incremental.update Twisted --newversion $RELEASErc1``
+4. Run ``python -m incremental.update Twisted --rc``
 5. Commit the changes made by Incremental.
-6. Run ``./bin/admin/build-news .``
-7. Commit the changes made by build-news - this automatically removes the NEWS topfiles (see #4315)
+6. Run ``towncrier``.
+7. Commit the changes made by towncrier - this automatically removes the NEWS topfiles.
 8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
 9. Push the changes up to GitHub.
 10. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs.
-11. Copy ``NEWS`` to ``/tmp/twisted-release/`` as ``NEWS.txt`` for people to view without having to download the tarballs.
-    (e.g. ``cp NEWS /tmp/twisted-release/NEWS.txt``)
-12. Upload the tarballs to ``twistedmatrix.com/Releases/pre/$RELEASE`` (see #4353)
+11. Copy ``NEWS.rst`` to ``/tmp/twisted-release/`` for people to view without having to download the tarballs.
+    (e.g. ``cp NEWS.rst /tmp/twisted-release/NEWS.rst``)
+12. Upload the tarballs to ``twistedmatrix.com/Releases/rc/$RELEASE`` (see #4353)
 
-  - You can use ``rsync --rsh=ssh --partial --progress -av /tmp/twisted-release/ t-web@dornkirk.twistedmatrix.com:/srv/t-web/data/releases/pre/<RELEASE>/`` to do this.
+  - You can use ``rsync --rsh=ssh --partial --progress -av /tmp/twisted-release/ t-web@dornkirk.twistedmatrix.com:/srv/t-web/data/releases/rc/<RELEASE>/`` to do this.
 
-13. Write the pre-release announcement
+13. Write the release candidate announcement
 
   - Read through the NEWS file and summarize the interesting changes for the release
   - Get someone else to look over the announcement before doing it
 
-14. Announce the pre-release on
+14. Announce the release candidate on
 
   - the twisted-python mailing list
   - on IRC in the ``#twisted`` topic
-  - in a blog post, ideally labs.twistedmatrix.com
 
 
-Pre-release announcement
-------------------------
+Release candidate announcement
+------------------------------
 
-The pre-release announcement should mention the important changes since the last release, and exhort readers to test this pre-release.
+The release candidate announcement should mention the important changes since the last release, and exhort readers to test this release candidate.
 
 Here's what the $RELEASErc1 release announcement might look like::
 
     Live from PyCon Atlanta, I'm pleased to herald the approaching
     footsteps of the $API release.
 
-    Tarballs for the first Twisted $RELEASE pre-release are now available at:
+    Tarballs for the first Twisted $RELEASE release candidate are now available at:
      http://people.canonical.com/~jml/Twisted/
 
     Highlights include:
@@ -174,10 +173,10 @@ How to do a final release
 Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
-1. Have the release branch, previously used to generate a pre-release, checked out
+1. Have the release branch, previously used to generate a release candidate, checked out
 2. Run ``python -m incremental.update Twisted``.
-3. Revert the prerelease newsfile changes, in order.
-4. Run ``./bin/admin/build-news .`` to make the final newsfile.
+3. Revert the release candidate newsfile changes, in order.
+4. Run ``towncrier`` to make the final newsfile.
 5. Add the quote of the release to the ``README.rst``
 6. Make a new quote file for the next version
 
@@ -199,9 +198,9 @@ Cut the tarballs & installers
 
    - ``python setup.py sdist --formats=bztar -d /tmp/twisted-release``
 
-2. Build Windows MSI
+2. Build Windows wheel
 
-  - Download the latest ``.whl`` files from from ​http://buildbot.twistedmatrix.com/builds/twisted-packages/ and save them in the staging directory
+  - Download the latest ``.whl`` files from `Buildbot <https://buildbot.twistedmatrix.com/builds/twisted-packages/>`_ and save them in the staging directory
 
 3. Sign the tarballs and Windows installers.
    (You will need a PGP key for this - use something like Seahorse to generate one, if you don't have one.)
@@ -348,7 +347,7 @@ When things go wrong
 If you discover a showstopper bug during the release process, you have three options.
 
 1. Abort the release, make a new point release (e.g. abort 10.0.0, make 10.0.1 after the bug is fixed)
-2. Abort the release, make a new pre-release (e.g. abort 10.0.0, make 10.0.0pre3 after the bug is fixed)
+2. Abort the release, make a new release candidate (e.g. abort 10.0.0, make 10.0.0pre3 after the bug is fixed)
 3. Interrupt the release, fix the bug, then continue with it (e.g. release 10.0.0 with the bug fix)
 
 If you choose the third option, then you should:
@@ -366,7 +365,7 @@ This section goes over doing these "point" releases.
 1. Ensure all bugfixes are in trunk.
 2. Make a branch off the affected version.
 3. Cherry-pick the merge commits that merge the bugfixes into trunk, onto the new release branch.
-4. Go through the rest of the process for a full release from "How to do a pre-release", merging the release branch into trunk as normal as the end of the process.
+4. Go through the rest of the process for a full release from "How to do a release candidate", merging the release branch into trunk as normal as the end of the process.
 
   - Instead of just ``--rc`` when running the change-versions script, add the patch flag, making it ``--patch --rc``.
   - Instead of waiting a week, a shorter pause is acceptable for a patch release.
@@ -376,7 +375,7 @@ Open questions
 --------------
 
 - How do we manage the case where there are untested builds in trunk?
-- Should picking a release quote be part of the release or the pre-release?
+- Should picking a release quote be part of the release or the release candidate?
 - What bugs should be considered release blockers?
 
   - All bugs with a type from the release blocker family

@@ -29,7 +29,7 @@ from zope.interface import implementer
 from twisted.python import log
 from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
-from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
 
@@ -737,6 +737,33 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
     return factory
 
 
+_GETPAGE_REPLACEMENT_TEXT = "https://pypi.org/project/treq/ or twisted.web.client.Agent"
+
+def _deprecateGetPageClasses():
+    """
+    Mark the protocols and factories associated with L{getPage} and
+    L{downloadPage} as deprecated.
+    """
+    for klass in [
+        HTTPPageGetter, HTTPPageDownloader,
+        HTTPClientFactory, HTTPDownloader
+    ]:
+        deprecatedModuleAttribute(
+            Version("Twisted", 16, 7, 0),
+            getDeprecationWarningString(
+                klass,
+                Version("Twisted", 16, 7, 0),
+                replacement=_GETPAGE_REPLACEMENT_TEXT)
+            .split("; ")[1],
+            klass.__module__,
+            klass.__name__)
+
+_deprecateGetPageClasses()
+
+
+
+@deprecated(Version("Twisted", 16, 7, 0),
+            _GETPAGE_REPLACEMENT_TEXT)
 def getPage(url, contextFactory=None, *args, **kwargs):
     """
     Download a web page as a string.
@@ -753,6 +780,9 @@ def getPage(url, contextFactory=None, *args, **kwargs):
         *args, **kwargs).deferred
 
 
+
+@deprecated(Version("Twisted", 16, 7, 0),
+            _GETPAGE_REPLACEMENT_TEXT)
 def downloadPage(url, file, contextFactory=None, *args, **kwargs):
     """
     Download a web page to a file.
@@ -774,11 +804,19 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # feature equivalent.
 
 from twisted.web.error import SchemeNotSupported
-from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-from twisted.web._newclient import ResponseDone, ResponseFailed
-from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import (
-    ResponseNeverReceived, PotentialDataLoss, _WrapperException)
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    Request,
+    RequestGenerationFailed,
+    RequestNotSent,
+    RequestTransmissionFailed,
+    Response,
+    ResponseDone,
+    ResponseFailed,
+    ResponseNeverReceived,
+    _WrapperException,
+    )
 
 
 
@@ -2164,8 +2202,27 @@ def readBody(response):
 
 
 __all__ = [
-    'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
-    'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
-    'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
-    'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'readBody', 'BrowserLikeRedirectAgent', 'URI']
+    'Agent',
+    'BrowserLikeRedirectAgent',
+    'ContentDecoderAgent',
+    'CookieAgent',
+    'downloadPage',
+    'getPage',
+    'GzipDecoder',
+    'HTTPClientFactory',
+    'HTTPConnectionPool',
+    'HTTPDownloader',
+    'HTTPPageDownloader',
+    'HTTPPageGetter',
+    'PartialDownloadError',
+    'ProxyAgent',
+    'readBody',
+    'RedirectAgent',
+    'RequestGenerationFailed',
+    'RequestTransmissionFailed',
+    'Response',
+    'ResponseDone',
+    'ResponseFailed',
+    'ResponseNeverReceived',
+    'URI',
+    ]

@@ -20,8 +20,9 @@ import inspect
 import opcode
 from inspect import getmro
 
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
+from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python import reflect
+from twisted.python._oldstyle import _oldStyle, _shouldEnableNewStyle
 
 count = 0
 traceupLength = 4
@@ -142,6 +143,8 @@ class _Code(object):
         self.co_filename = filename
 
 
+
+@_oldStyle
 class Failure:
     """
     A basic abstraction for an error that has occurred.
@@ -228,7 +231,8 @@ class Failure:
         if tb is None:
             if exc_tb:
                 tb = exc_tb
-            elif _PY3:
+            elif getattr(self.value, "__traceback__", None):
+                # Python 3
                 tb = self.value.__traceback__
 
         frames = self.frames = []
@@ -338,7 +342,7 @@ class Failure:
         """
         error = self.check(*errorTypes)
         if not error:
-            if _PY3:
+            if _shouldEnableNewStyle:
                 self.raiseException()
             else:
                 raise self
@@ -359,11 +363,11 @@ class Failure:
                 return error
         return None
 
-
     # It would be nice to use twisted.python.compat.reraise, but that breaks
     # the stack exploration in _findFailure; possibly this can be fixed in
     # #5931.
-    if _PY3:
+    if getattr(BaseException, "with_traceback", None):
+        # Python 3
         def raiseException(self):
             raise self.value.with_traceback(self.tb)
     else:
@@ -496,7 +500,8 @@ class Failure:
         exception instance to L{None}.
         """
         self.__dict__ = self.__getstate__()
-        if _PY3:
+        if getattr(self.value, "__traceback__", None):
+            # Python 3
             self.value.__traceback__ = None
 
 
