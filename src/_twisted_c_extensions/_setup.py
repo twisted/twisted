@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.python.test.test_setup -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -10,22 +9,6 @@ Setuptools convenience functionality.
 This file must not import anything from Twisted, as it is loaded by C{exec} in
 C{setup.py}. If you need compatibility functions for this code, duplicate them
 here.
-
-@var _EXTRA_OPTIONS: These are the actual package names and versions that will
-    be used by C{extras_require}.  This is not passed to setup directly so that
-    combinations of the packages can be created without the need to copy
-    package names multiple times.
-
-@var _EXTRAS_REQUIRE: C{extras_require} is a dictionary of items that can be
-    passed to setup.py to install optional dependencies.  For example, to
-    install the optional dev dependencies one would type::
-
-        pip install -e ".[dev]"
-
-    This has been supported by setuptools since 0.5a4.
-
-@var _PLATFORM_INDEPENDENT: A list of all optional cross-platform dependencies,
-    as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 
 @var _EXTENSIONS: The list of L{ConditionalExtension} used by the setup
     process.
