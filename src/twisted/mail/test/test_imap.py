@@ -296,6 +296,86 @@ class MessageProducerTests(unittest.TestCase):
 
 
 
+class MessageSetTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{MessageSet}.
+    """
+
+    def test_equalityAndAddition(self):
+        """
+        Test the following properties of L{MessageSet} addition and
+        equality:
+
+            1. Two empty L{MessageSet}s are equal to each other;
+
+            2. Adding a L{MessageSet} and another L{MessageSet} or a
+               sequence of L{int} representing a sequence of message
+               numbers produces a new L{MessageSet} that:
+
+            3. Has a length equal to the number of messages within
+               each sequence of message numbers;
+
+            4. Yields each message number in ascending order when
+               iterated over.
+        """
+        m1 = MessageSet()
+        m2 = MessageSet()
+
+        self.assertEqual(m1, m2)
+
+        m1 = m1 + (1, 3)
+        self.assertEqual(len(m1), 3)
+        self.assertEqual(list(m1), [1, 2, 3])
+
+        m2 = m2 + (1, 3)
+        self.assertEqual(m1, m2)
+        self.assertEqual(list(m1 + m2), [1, 2, 3])
+
+
+    def test_stringRepresentationWithWildcards(self):
+        """
+        In a L{MessageSet}, in the presence of wildcards, if the
+        highest message id is known, the wildcard should get replaced
+        by that high value.
+        """
+        inputs = [
+            imap4.parseIdList(b'*'),
+            imap4.parseIdList(b'3:*', 6),
+            imap4.parseIdList(b'*:2', 6),
+        ]
+
+        outputs = [
+            b"*",
+            b"3:6",
+            b"2:6",
+        ]
+
+        for i, o in zip(inputs, outputs):
+            self.assertEqual(str(i), o)
+
+
+    def test_stringRepresentationWithInversion(self):
+        """
+        In a L{MessageSet}, inverting the high and low numbers in a
+        range doesn't affect the meaning of the range.  For example,
+        3:2 displays just like 2:3, because according to the RFC they
+        have the same meaning.
+        """
+        inputs = [
+            imap4.parseIdList(b'2:3'),
+            imap4.parseIdList(b'3:2'),
+        ]
+
+        outputs = [
+            "2:3",
+            "2:3",
+        ]
+
+        for i, o in zip(inputs, outputs):
+            self.assertEqual(str(i), o)
+
+
+
 class IMAP4HelperTests(unittest.TestCase):
     """
     Tests for various helper utilities in the IMAP4 module.
@@ -373,62 +453,6 @@ class IMAP4HelperTests(unittest.TestCase):
             output = imap4._formatHeaders(input)
             self.assertEqual(sorted(output.splitlines(True)),
                              sorted(expected.splitlines(True)))
-
-
-    def test_messageSet(self):
-        m1 = MessageSet()
-        m2 = MessageSet()
-
-        self.assertEqual(m1, m2)
-
-        m1 = m1 + (1, 3)
-        self.assertEqual(len(m1), 3)
-        self.assertEqual(list(m1), [1, 2, 3])
-
-        m2 = m2 + (1, 3)
-        self.assertEqual(m1, m2)
-        self.assertEqual(list(m1 + m2), [1, 2, 3])
-
-
-    def test_messageSetStringRepresentationWithWildcards(self):
-        """
-        In a L{MessageSet}, in the presence of wildcards, if the highest message
-        id is known, the wildcard should get replaced by that high value.
-        """
-        inputs = [
-            MessageSet(imap4.parseIdList(b'*')),
-            MessageSet(imap4.parseIdList(b'3:*', 6)),
-            MessageSet(imap4.parseIdList(b'*:2', 6)),
-        ]
-
-        outputs = [
-            b"*",
-            b"3:6",
-            b"2:6",
-        ]
-
-        for i, o in zip(inputs, outputs):
-            self.assertEqual(str(i), o)
-
-
-    def test_messageSetStringRepresentationWithInversion(self):
-        """
-        In a L{MessageSet}, inverting the high and low numbers in a range
-        doesn't affect the meaning of the range. For example, 3:2 displays just
-        like 2:3, because according to the RFC they have the same meaning.
-        """
-        inputs = [
-            MessageSet(imap4.parseIdList(b'2:3')),
-            MessageSet(imap4.parseIdList(b'3:2')),
-        ]
-
-        outputs = [
-            "2:3",
-            "2:3",
-        ]
-
-        for i, o in zip(inputs, outputs):
-            self.assertEqual(str(i), o)
 
 
     def test_quotedSplitter(self):
