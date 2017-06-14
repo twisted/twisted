@@ -301,27 +301,37 @@ class MessageSetTests(unittest.SynchronousTestCase):
     Tests for L{MessageSet}.
     """
 
-    def test_equalityAndAddition(self):
+    def test_equalityIterationAndAddition(self):
         """
         Test the following properties of L{MessageSet} addition and
         equality:
 
             1. Two empty L{MessageSet}s are equal to each other;
 
-            2. Adding a L{MessageSet} and another L{MessageSet} or a
-               sequence of L{int} representing a sequence of message
-               numbers produces a new L{MessageSet} that:
+            2. A L{MessageSet} is not equal to any other object;
+
+            2. Adding a L{MessageSet} and another L{MessageSet} or an
+               L{int} representing a single message or a sequence of
+               L{int}s representing a sequence of message numbers
+               produces a new L{MessageSet} that:
 
             3. Has a length equal to the number of messages within
                each sequence of message numbers;
 
             4. Yields each message number in ascending order when
-               iterated over.
+               iterated over;
+
+            6. L{MessageSet.add} with a single message or a start and
+               end message satisfies 3 and 4 above.
         """
         m1 = MessageSet()
         m2 = MessageSet()
 
         self.assertEqual(m1, m2)
+
+        m1 = m1 + 1
+        self.assertEqual(len(m1), 1)
+        self.assertEqual(list(m1), [1])
 
         m1 = m1 + (1, 3)
         self.assertEqual(len(m1), 3)
@@ -330,6 +340,31 @@ class MessageSetTests(unittest.SynchronousTestCase):
         m2 = m2 + (1, 3)
         self.assertEqual(m1, m2)
         self.assertEqual(list(m1 + m2), [1, 2, 3])
+
+        m1.add(5)
+        self.assertEqual(len(m1), 4)
+        self.assertEqual(list(m1), [1, 2, 3, 5])
+
+        self.assertNotEqual(m1, m2)
+
+        m1.add(6, 8)
+        self.assertEqual(len(m1), 7)
+        self.assertEqual(list(m1), [1, 2, 3, 5, 6, 7, 8])
+
+
+    def test_lengthWithWildcardRange(self):
+        """
+        A L{MessageSet} that has a range that ends with L{None} raises
+        a L{TypeError} when its length is requested.
+        """
+        self.assertRaises(TypeError, len, MessageSet(1, None))
+
+
+    def test_reprSanity(self):
+        """
+        L{MessageSet.__repr__} does not raise an exception
+        """
+        repr(MessageSet(1, 2))
 
 
     def test_stringRepresentationWithWildcards(self):
@@ -340,12 +375,14 @@ class MessageSetTests(unittest.SynchronousTestCase):
         """
         inputs = [
             imap4.parseIdList(b'*'),
+            imap4.parseIdList(b'1:*'),
             imap4.parseIdList(b'3:*', 6),
             imap4.parseIdList(b'*:2', 6),
         ]
 
         outputs = [
             b"*",
+            b"1:*",
             b"3:6",
             b"2:6",
         ]
@@ -373,6 +410,175 @@ class MessageSetTests(unittest.SynchronousTestCase):
 
         for i, o in zip(inputs, outputs):
             self.assertEqual(str(i), o)
+
+
+    def test_createWithSingleMessageNumber(self):
+        """
+        Creating a L{MessageSet} with a single message number adds
+        only that message to the L{MessageSet}; its serialized form
+        includes only that message number, its length is one, and it
+        yields only that message number.
+        """
+        m = MessageSet(1)
+        self.assertEqual(str(m), "1")
+        self.assertEqual(len(m), 1)
+        self.assertEqual(list(m), [1])
+
+
+    def test_createWithSequence(self):
+        """
+        Creating a L{MessageSet} with both a start and end message
+        number adds the sequence between to the L{MessageSet}; its
+        serialized form consists that range, its length is the length
+        of the sequence, and it yields the message numbers inclusively
+        between the start and end.
+        """
+        m = MessageSet(1, 10)
+        self.assertEqual(str(m), "1:10")
+        self.assertEqual(len(m), 10)
+        self.assertEqual(list(m), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+
+    def test_createWithSingleWildcard(self):
+        """
+        Creating a L{MessageSet} with a single L{None}, representing
+        C{*}, adds C{*} to the range; its serialized form includes
+        only C{*}, its length is one, but it cannot be iterated over
+        because its endpoint is unknown.
+        """
+        m = MessageSet(None)
+        self.assertEqual(str(m), "*")
+        self.assertEqual(len(m), 1)
+        self.assertRaises(TypeError, list, m)
+
+
+    def test_setLastSingleWildcard(self):
+        """
+        Setting L{MessageSet.last} replaces L{None}, representing
+        C{*}, with that number, making that L{MessageSet} iterable.
+        """
+        m = MessageSet(None)
+        m.last = 10
+        self.assertEqual(list(m), [10])
+
+
+    def test_setLastWithWildcardRange(self):
+        """
+        Setting L{MessageSet.last} replaces L{None} in all ranges.
+        """
+        m = MessageSet(1, None)
+        m.add(2, None)
+        m.last = 5
+        self.assertEqual(list(m), [1, 2, 3, 4, 5])
+
+
+    def test_setLastTwiceFails(self):
+        """
+        L{MessageSet.last} cannot be set twice.
+        """
+        m = MessageSet(1, None)
+        m.last = 2
+        with self.assertRaises(ValueError):
+            m.last = 3
+
+
+    def test_lastOverridesNoneInAdd(self):
+        """
+        Adding a L{None}, representing C{*}, or a sequence that
+        includes L{None} to a L{MessageSet} whose
+        L{last<MessageSet.last>} property has been set replaces all
+        occurrences of L{None} with the value of
+        L{last<MessageSet.last>}.
+        """
+        hasLast = MessageSet(1)
+        hasLast.last = 4
+
+        hasLast.add(None)
+        self.assertEqual(list(hasLast), [1, 4])
+
+        self.assertEqual(list(hasLast + (None, 5)), [1, 4, 5])
+
+        hasLast.add(3, None)
+        self.assertEqual(list(hasLast), [1, 3, 4])
+
+
+    def test_getLast(self):
+        """
+        Accessing L{MessageSet.last} returns the last value.
+        """
+        m = MessageSet(1, None)
+        m.last = 2
+        self.assertEqual(m.last, 2)
+
+
+    def test_extend(self):
+        """
+        L{MessageSet.extend} accepts as its arugment an L{int} or
+        L{None}, or a sequence L{int}s or L{None}s of length two, or
+        another L{MessageSet}, combining its argument with its
+        instance's existing ranges.
+        """
+        extendWithInt = MessageSet()
+        extendWithInt.extend(1)
+        self.assertEqual(list(extendWithInt), [1])
+
+        extendWithNone = MessageSet()
+        extendWithNone.extend(None)
+        self.assertEqual(str(extendWithNone), "*")
+
+        extendWithSequenceOfInts = MessageSet()
+        extendWithSequenceOfInts.extend((1, 3))
+        self.assertEqual(list(extendWithSequenceOfInts), [1, 2, 3])
+
+        extendWithSequenceOfNones = MessageSet()
+        extendWithSequenceOfNones.extend((None, None))
+        self.assertEqual(str(extendWithSequenceOfNones), "*")
+
+        extendWithMessageSet = MessageSet()
+        extendWithMessageSet.extend(MessageSet(1, 3))
+        self.assertEqual(list(extendWithMessageSet), [1, 2, 3])
+
+
+    def test_contains(self):
+        """
+        A L{MessageSet} contains a number if the number falls within
+        one of its ranges, and raises L{TypeError} if any range
+        contains L{None}.
+        """
+        hasFive = MessageSet(1, 7)
+        doesNotHaveFive = MessageSet(1, 4) + MessageSet(6, 7)
+
+        self.assertIn(5, hasFive)
+        self.assertNotIn(5, doesNotHaveFive)
+
+        hasFiveButHasNone = hasFive + None
+        with self.assertRaises(TypeError):
+            5 in hasFiveButHasNone
+
+
+    def test_rangesMerged(self):
+        """
+        Adding a sequence of message numbers to a L{MessageSet} that
+        begins or ends immediately before or after an existing
+        sequence in that L{MessageSet}, or overlaps one, merges the two.
+        """
+
+        mergeAfter = MessageSet(1, 3)
+        mergeBefore = MessageSet(6, 8)
+
+        mergeBetweenSequence = mergeAfter + mergeBefore
+        mergeBetweenNumber = mergeAfter + MessageSet(5, 7)
+
+        self.assertEqual(list(mergeAfter + (2, 4)), [1, 2, 3, 4])
+        self.assertEqual(list(mergeAfter + (3, 5)), [1, 2, 3, 4, 5])
+
+        self.assertEqual(list(mergeBefore + (5, 7)), [5, 6, 7, 8])
+        self.assertEqual(list(mergeBefore + (4, 6)), [4, 5, 6, 7, 8])
+
+        self.assertEqual(list(mergeBetweenSequence + (3, 5)),
+                         [1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertEqual(list(mergeBetweenNumber + MessageSet(4)),
+                         [1, 2, 3, 4, 5, 6, 7])
 
 
 

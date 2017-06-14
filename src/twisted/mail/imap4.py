@@ -184,6 +184,8 @@ class MessageSet(object):
             return MessageSet(ranges)
         else:
             res = MessageSet(self.ranges)
+            if self.last is not self._empty:
+                res.last = self.last
             try:
                 res.add(*other)
             except TypeError:
@@ -247,8 +249,6 @@ class MessageSet(object):
             while l <= h:
                 yield l
                 l = self.getnext(l)
-                if l is None:
-                    break
 
 
     def __iter__(self):
@@ -296,6 +296,8 @@ class MessageSet(object):
             return self.ranges == other.ranges
         return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class LiteralString:
