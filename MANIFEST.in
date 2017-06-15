@@ -34,10 +34,8 @@ recursive-include src/twisted/python/_pydoctortemplates *.html
 recursive-include src/twisted *.py
 
 # Don't include the C exts here
-exclude setup_ext.py
-exclude MANIFEST_ext.in
-exclude src/_twisted_c_extensions
-recursive-exclude src/_twisted_c_extensions *
+exclude cext
+recursive-exclude cext *
 
 # Some tests stuff
 recursive-include src/twisted *.pem
