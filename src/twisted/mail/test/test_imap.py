@@ -560,7 +560,6 @@ class MessageSetTests(unittest.SynchronousTestCase):
         with self.assertRaises(TypeError):
             5 in hasFiveButHasNone
 
-        # test that TypeError is raised when None does not sort last.
         hasFiveButHasNoneInSequence = hasFive + (10, 12)
         hasFiveButHasNoneInSequence.add(8, None)
         with self.assertRaises(TypeError):

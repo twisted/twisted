@@ -80,11 +80,53 @@ _MONTH_NAMES = dict(zip(
 
 class MessageSet(object):
     """
-    Essentially an infinite bitfield, with some extra features.
+    A set of message identifiers usable by both L{IMAP4Client} and
+    L{IMAP4Server} via L{IMailboxIMAP.store} and
+    L{IMailboxIMAP.fetch}.
+
+    These identifiers can be either message sequence numbers or unique
+    identifiers.  See Section 2.3.1, "Message Numbers", RFC 3501.
+
+    This represents the C{sequence-set} described in Section 9,
+    "Formal Syntax" of RFC 3501:
+
+        - A L{MessageSet} can describe a single identifier, e.g.
+          C{MessageSet(1)}
+
+        - A L{MessageSet} can describe C{*} via L{None}, e.g.
+          C{MessageSet(None)}
+
+        - A L{MessageSet} can describe a range of identifiers, e.g.
+          C{MessageSet(1, 2)}.  The range is inclusive and unordered
+          (see C{seq-range} in RFC 3501, Section 9), so that
+          C{Message(2, 1)} is equivalent to C{MessageSet(1, 2)}, and
+          both describe messages 1 and 2.  Ranges can include C{*} by
+          specifying L{None}, e.g. C{MessageSet(None, 1)}.  In all
+          cases ranges are normalized so that the smallest identifier
+          comes first, and L{None} always comes last; C{Message(2, 1)}
+          becomes C{MessageSet(1, 2)} and C{MessageSet(None, 1)}
+          becomes C{MessageSet(1, None)}
+
+        - A L{MessageSet} can describe a sequence of single
+          identifiers and ranges, constructed by addition.
+          C{MessageSet(1) + MessageSet(5, 10)} refers the message
+          identified by C{1} and the messages identified by C{5}
+          through C{10}.
+
+    B{NB: The meaning of * varies, but it always represents the
+    largest number in use}.
+
+    B{For servers}: Your L{IMailboxIMAP} provider must set
+    L{MessageSet.last} to the highest-valued identifier (unique or
+    message sequence) before iterating over it.
+
+    B{For clients}: C{*} consumes ranges smaller than it, e.g.
+    C{MessageSet(1, 100) + MessageSet(50, None)} is equivalent to
+    C{1:*}.
 
     @type getnext: Function taking L{int} returning L{int}
     @ivar getnext: A function that returns the next message number,
-        used when iterating through the MessageSet.  By default, a
+        used when iterating through the L{MessageSet}.  By default, a
         function returning the next integer is supplied, but as this
         can be rather inefficient for sparse UID iterations, it is
         recommended to supply one when messages are requested by UID.
@@ -123,7 +165,6 @@ class MessageSet(object):
 
     # Ooo.  A property.
     def last():
-        # TODO: there can only ever be one None
         def _setLast(self, value):
             if self._last is not self._empty:
                 raise ValueError("last already set")
@@ -143,9 +184,13 @@ class MessageSet(object):
             return self._last
 
         doc = '''
-            "Highest" message number, referred to by "*".
-            Must be set before attempting to use the MessageSet.
-        '''
+              Replaces all occurrences of "*".  This should be the
+              largest number in use.  Must be set before attempting to
+              use the MessageSet as a container.
+
+              @raises: L{ValueError} if a largest value has already
+                  been set.
+              '''
         return _getLast, _setLast, None, doc
     last = property(*last())
 
@@ -192,6 +237,13 @@ class MessageSet(object):
 
 
     def extend(self, other):
+        """
+        Extend our messages with another message or set of messages.
+
+        @param other: The messages to include.
+        @type other: L{MessageSet}, L{tuple} of two L{int}s, or a
+            single L{int}
+        """
         if isinstance(other, MessageSet):
             self.ranges.extend(other.ranges)
             self.clean()
@@ -235,36 +287,42 @@ class MessageSet(object):
         """
         Is there a L{None} in our ranges?
 
+        L{MessageSet.cleanup} merges overlapping or consecutive
+        ranges.  None is represents a value larger than any number.
+        There are thus two cases:
+
+            1. C{(x, *) + (y, z)} such that C{x} is smaller than C{y}
+
+            2. C{(z, *) + (x, y)} such that C{z} is larger than C{y}
+
+        (Other cases, such as C{y < x < z}, can be split into these
+        two cases; for example C{(y - 1, y)} + C{(x, x) + (z, z + 1)})
+
+        In case 1, C{* > y} and C{* > z}, so C{(x, *) + (y, z) = (x,
+        *)}
+
+        In case 2, C{z > x and z > y}, so the intervals do not merge,
+        and the ranges are sorted as C{[(x, y), (z, *)]}.  C{*} is
+        represented as C{(*, *)}, so this is the same as 2.  but with
+        a C{z} that is greater than everything.
+
+        The result is that there is a maximum of two L{None}s, and one
+        of them has to be the high element in the last tuple in
+        C{self.ranges}.  That means checking if C{self.ranges[-1][-1]}
+        is L{None} suffices to check if I{any} element is L{None}.
+
         @return: L{True} if L{None} is in some range in ranges and
             L{False} if otherwise.
         """
-        # The cleanup method merges overlapping or consecutive ranges.
-        # None is represents a value larger than any number.  There
-        # are thus two cases:
-        #
-        # 1. (x, *) + (y, z) such that x is smaller than y
-        #
-        # 2. (z, *) + (x, y) such that z is larger than y
-        #
-        # (Other cases, such as y < x < z, can be split into these two
-        # cases; for example (y - 1, y) + (x, x) + (z, z + 1)
-        #
-        # In case 1, * > y and * > z, so (x, *) + (y, z) = (x, *)
-        #
-        # In case 2, z > x and z > y, so the intervals do not merge,
-        # and are sorted as [(x, y), (z, *)].  * is represented as (*,
-        # *), so this is the same as 2. but with a z that is greater
-        # than everything.
-        #
-        # The result is that there is a maximum of two Nones, and one
-        # of them has to be the high element in the last tuple in
-        # ranges.  That means checkin self.ranges[-1][-1] suffices
         return self.ranges[-1][-1] is None
 
 
     def __contains__(self, value):
         """
         May raise TypeError if we encounter an open-ended range
+
+        @param value: Is this in our ranges?
+        @type value: L{int}
         """
 
         if self._noneInRanges():
