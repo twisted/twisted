@@ -592,6 +592,65 @@ class MessageSetTests(unittest.SynchronousTestCase):
                          [1, 2, 3, 4, 5, 6, 7])
 
 
+    def test_seq_rangeExamples(self):
+        """
+        Test the C{seq-range} examples from Section 9, "Formal Syntax"
+        of RFC 3501::
+
+            Example: 2:4 and 4:2 are equivalent and indicate values
+                     2, 3, and 4.
+
+            Example: a unique identifier sequence range of
+                     3291:* includes the UID of the last message in
+                     the mailbox, even if that value is less than 3291.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        """
+
+        self.assertEqual(MessageSet(2, 4), MessageSet(4, 2))
+        self.assertEqual(list(MessageSet(2, 4)), [2, 3, 4])
+
+        m = MessageSet(3291, None)
+        m.last = 3290
+        self.assertEqual(list(m), [3290, 3291])
+
+
+    def test_sequence_setExamples(self):
+        """
+        Test the C{sequence-set} examples from Section 9, "Formal
+        Syntax" of RFC 3501.  In particular, L{MessageSet} reorders
+        and coalesces overlaps::
+
+            Example: a message sequence number set of
+                     2,4:7,9,12:* for a mailbox with 15 messages is
+                     equivalent to 2,4,5,6,7,9,12,13,14,15
+
+            Example: a message sequence number set of *:4,5:7
+                     for a mailbox with 10 messages is equivalent to
+                     10,9,8,7,6,5,4,5,6,7 and MAY be reordered and
+                     overlap coalesced to be 4,5,6,7,8,9,10.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        """
+        fromFifteenMessages = (
+            MessageSet(2) +
+            MessageSet(4, 7) +
+            MessageSet(9) +
+            MessageSet(12, None)
+        )
+        fromFifteenMessages.last = 15
+        self.assertEqual(','.join(str(i) for i in fromFifteenMessages),
+                         "2,4,5,6,7,9,12,13,14,15")
+
+        fromTenMessages = (
+            MessageSet(None, 4) +
+            MessageSet(5, 7)
+        )
+        fromTenMessages.last = 10
+        self.assertEqual(','.join(str(i) for i in fromTenMessages),
+                         "4,5,6,7,8,9,10")
+
+
 
 class IMAP4HelperTests(unittest.TestCase):
     """
