@@ -197,14 +197,14 @@ class MessageSet(object):
 
     def _swap(self, this, that, ifIs):
         """
-        Swap L{this} with L{that} if L{this} is L{ifIs}.
+        Swap C{this} with C{that} if C{this} is C{ifIs}.
 
         @param this: The object that may be replaced.
 
-        @param that: The object that may replace L{this}.
+        @param that: The object that may replace C{this}.
 
         @param ifIs: An object whose identity will be compared to
-            L{this}, perhaps resulting in L{that}.
+            C{this}, perhaps resulting in C{that}.
         """
         return that if this is ifIs else this
 
