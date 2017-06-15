@@ -759,14 +759,38 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         return d
 
 
-    def test_SMTPClient(self):
+    def test_SMTPClientRecipientBytes(self):
         """
         Test timeout for L{smtp.SMTPSenderFactory}: the response L{Deferred}
         should be errback with a L{smtp.SMTPTimeoutError}.
         """
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
-            'source@address', 'recipient@address',
+            'source@address', b'recipient@address',
+            BytesIO(b"Message body"), onDone,
+            retries=0, timeout=0.5)
+        return self._timeoutTest(onDone, clientFactory)
+
+
+    def test_SMTPClientRecipientUnicode(self):
+        """
+        Use a L{unicode} recipient.
+        """
+        onDone = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', u'recipient@address',
+            BytesIO(b"Message body"), onDone,
+            retries=0, timeout=0.5)
+        return self._timeoutTest(onDone, clientFactory)
+
+
+    def test_SMTPClientRecipientList(self):
+        """
+        Use a L{list} of recipients.
+        """
+        onDone = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', (u'recipient1@address', b'recipient2@address'),
             BytesIO(b"Message body"), onDone,
             retries=0, timeout=0.5)
         return self._timeoutTest(onDone, clientFactory)

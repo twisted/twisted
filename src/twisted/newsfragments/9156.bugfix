@@ -1,0 +1,1 @@
+twisted.protocols.tls.TLSMemoryBIOProtocol now allows unregisterProducer to be called when no producer is registered, bringing it in line with other transports.
