@@ -84,15 +84,17 @@ class MessageSet(object):
 
     @type getnext: Function taking L{int} returning L{int}
     @ivar getnext: A function that returns the next message number,
-    used when iterating through the MessageSet. By default, a function
-    returning the next integer is supplied, but as this can be rather
-    inefficient for sparse UID iterations, it is recommended to supply
-    one when messages are requested by UID.  The argument is provided
-    as a hint to the implementation and may be ignored if it makes sense
-    to do so (eg, if an iterator is being used that maintains its own
-    state, it is guaranteed that it will not be called out-of-order).
+        used when iterating through the MessageSet.  By default, a
+        function returning the next integer is supplied, but as this
+        can be rather inefficient for sparse UID iterations, it is
+        recommended to supply one when messages are requested by UID.
+        The argument is provided as a hint to the implementation and
+        may be ignored if it makes sense to do so (eg, if an iterator
+        is being used that maintains its own state, it is guaranteed
+        that it will not be called out-of-order).
     """
     _empty = []
+    _infinity = float('inf')
 
     def __init__(self, start=_empty, end=_empty):
         """
@@ -121,21 +123,20 @@ class MessageSet(object):
 
     # Ooo.  A property.
     def last():
+        # TODO: there can only ever be one None
         def _setLast(self, value):
             if self._last is not self._empty:
                 raise ValueError("last already set")
 
             self._last = value
             for i, (l, h) in enumerate(self.ranges):
-                if l is not None:
-                    break # There are no more Nones after this
-                l = value
+                if l is None:
+                    l = value
                 if h is None:
                     h = value
                 if l > h:
                     l, h = h, l
                 self.ranges[i] = (l, h)
-
             self.clean()
 
         def _getLast(self):
@@ -168,11 +169,8 @@ class MessageSet(object):
             if end is None:
                 end = self.last
 
-        if start > end:
-            # Try to keep in low, high order if possible
-            # (But we don't know what None means, this will keep
-            # None at the start of the ranges list)
-            start, end = end, start
+        start, end = sorted([start, end],
+                            key=lambda p: self._infinity if p is None else p)
 
         self.ranges.append((start, end))
         self.clean()
@@ -211,33 +209,70 @@ class MessageSet(object):
         Clean ranges list, combining adjacent ranges
         """
 
-        self.ranges.sort()
+        ranges = sorted((self._infinity if low is None else low,
+                         self._infinity if high is None else high)
+                        for low, high in self.ranges)
 
-        oldl, oldh = None, None
-        for i,(l, h) in enumerate(self.ranges):
-            if l is None:
+        mergedRanges = [(float('-inf'), float('-inf'))]
+
+
+        for low, high in ranges:
+            previousLow, previousHigh = mergedRanges[-1]
+
+            if previousHigh < low - 1:
+                mergedRanges.append((low, high))
                 continue
-            # l is >= oldl and h is >= oldh due to sort()
-            if oldl is not None and l <= oldh + 1:
-                l = oldl
-                h = max(oldh, h)
-                self.ranges[i - 1] = None
-                self.ranges[i] = (l, h)
 
-            oldl, oldh = l, h
+            mergedRanges[-1] = (min(previousLow, low),
+                                max(previousHigh, high))
 
-        self.ranges = [r for r in self.ranges if r]
+        self.ranges = [(None if low is self._infinity else low,
+                        None if high is self._infinity else high)
+                       for low, high in mergedRanges[1:]]
+
+
+    def _noneInRanges(self):
+        """
+        Is there a L{None} in our ranges?
+
+        @return: L{True} if L{None} is in some range in ranges and
+            L{False} if otherwise.
+        """
+        # The cleanup method merges overlapping or consecutive ranges.
+        # None is represents a value larger than any number.  There
+        # are thus two cases:
+        #
+        # 1. (x, *) + (y, z) such that x is smaller than y
+        #
+        # 2. (z, *) + (x, y) such that z is larger than y
+        #
+        # (Other cases, such as y < x < z, can be split into these two
+        # cases; for example (y - 1, y) + (x, x) + (z, z + 1)
+        #
+        # In case 1, * > y and * > z, so (x, *) + (y, z) = (x, *)
+        #
+        # In case 2, z > x and z > y, so the intervals do not merge,
+        # and are sorted as [(x, y), (z, *)].  * is represented as (*,
+        # *), so this is the same as 2. but with a z that is greater
+        # than everything.
+        #
+        # The result is that there is a maximum of two Nones, and one
+        # of them has to be the high element in the last tuple in
+        # ranges.  That means checkin self.ranges[-1][-1] suffices
+        return self.ranges[-1][-1] is None
 
 
     def __contains__(self, value):
         """
         May raise TypeError if we encounter an open-ended range
         """
-        for l, h in self.ranges:
-            if l is None:
-                raise TypeError(
-                    "Can't determine membership; last value not set")
-            if l <= value <= h:
+
+        if self._noneInRanges():
+            raise TypeError(
+                "Can't determine membership; last value not set")
+
+        for low, high in self.ranges:
+            if low <= value <= high:
                 return True
 
         return False
@@ -252,7 +287,7 @@ class MessageSet(object):
 
 
     def __iter__(self):
-        if self.ranges and self.ranges[0][0] is None:
+        if self._noneInRanges():
             raise TypeError("Can't iterate; last value not set")
 
         return self._iterator()
@@ -262,10 +297,9 @@ class MessageSet(object):
         res = 0
         for l, h in self.ranges:
             if l is None:
-                if h is None:
-                    res += 1
-                else:
-                    raise TypeError("Can't size object; last value not set")
+                res += 1
+            elif h is None:
+                raise TypeError("Can't size object; last value not set")
             else:
                 res += (h - l) + 1
 
@@ -280,8 +314,8 @@ class MessageSet(object):
                     p.append('*')
                 else:
                     p.append(str(low))
-            elif low is None:
-                p.append('%d:*' % (high,))
+            elif high is None:
+                p.append('%d:*' % (low,))
             else:
                 p.append('%d:%d' % (low, high))
         return ','.join(p)

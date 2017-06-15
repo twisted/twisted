@@ -328,6 +328,7 @@ class MessageSetTests(unittest.SynchronousTestCase):
         m2 = MessageSet()
 
         self.assertEqual(m1, m2)
+        self.assertNotEqual(m1, ())
 
         m1 = m1 + 1
         self.assertEqual(len(m1), 1)
@@ -457,9 +458,13 @@ class MessageSetTests(unittest.SynchronousTestCase):
         Setting L{MessageSet.last} replaces L{None}, representing
         C{*}, with that number, making that L{MessageSet} iterable.
         """
-        m = MessageSet(None)
-        m.last = 10
-        self.assertEqual(list(m), [10])
+        singleMessageReplaced = MessageSet(None)
+        singleMessageReplaced.last = 10
+        self.assertEqual(list(singleMessageReplaced), [10])
+
+        rangeReplaced = MessageSet(3, None)
+        rangeReplaced.last = 1
+        self.assertEqual(list(rangeReplaced), [1, 2, 3])
 
 
     def test_setLastWithWildcardRange(self):
@@ -554,6 +559,12 @@ class MessageSetTests(unittest.SynchronousTestCase):
         hasFiveButHasNone = hasFive + None
         with self.assertRaises(TypeError):
             5 in hasFiveButHasNone
+
+        # test that TypeError is raised when None does not sort last.
+        hasFiveButHasNoneInSequence = hasFive + (10, 12)
+        hasFiveButHasNoneInSequence.add(8, None)
+        with self.assertRaises(TypeError):
+            5 in hasFiveButHasNoneInSequence
 
 
     def test_rangesMerged(self):

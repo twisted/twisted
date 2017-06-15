@@ -1,1 +1,1 @@
-A placeholder newsfragment so all the Travis builds will pass and codecov will report coverage.
+twisted.mail.imap4.MessageSet now treats * as larger than every message ID, leading to more consistent and robust behavior.
