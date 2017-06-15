@@ -18,6 +18,7 @@ To do::
 import binascii
 import codecs
 import copy
+import functools
 import random
 import re
 import string
@@ -194,6 +195,19 @@ class MessageSet(object):
         return _getLast, _setLast, None, doc
     last = property(*last())
 
+    def _swap(self, this, that, ifIs):
+        """
+        Swap L{this} with L{that} if L{this} is L{ifIs}.
+
+        @param this: The object that may be replaced.
+
+        @param that: The object that may replace L{this}.
+
+        @param ifIs: An object whose identity will be compared to
+            L{this}, perhaps resulting in L{that}.
+        """
+        return that if this is ifIs else this
+
 
     def add(self, start, end=_empty):
         """
@@ -214,9 +228,9 @@ class MessageSet(object):
             if end is None:
                 end = self.last
 
-        start, end = sorted([start, end],
-                            key=lambda p: self._infinity if p is None else p)
-
+        start, end = sorted(
+            [start, end],
+            key=functools.partial(self._swap, that=self._infinity, ifIs=None))
         self.ranges.append((start, end))
         self.clean()
 
@@ -261,9 +275,9 @@ class MessageSet(object):
         Clean ranges list, combining adjacent ranges
         """
 
-        ranges = sorted((self._infinity if low is None else low,
-                         self._infinity if high is None else high)
-                        for low, high in self.ranges)
+        ranges = sorted((self._swap(low, self._infinity, ifIs=None),
+                         self._swap(high, self._infinity, ifIs=None))
+                         for low, high in self.ranges)
 
         mergedRanges = [(float('-inf'), float('-inf'))]
 
@@ -278,8 +292,8 @@ class MessageSet(object):
             mergedRanges[-1] = (min(previousLow, low),
                                 max(previousHigh, high))
 
-        self.ranges = [(None if low is self._infinity else low,
-                        None if high is self._infinity else high)
+        self.ranges = [(self._swap(low, None, ifIs=self._infinity),
+                        self._swap(high, None, ifIs=self._infinity))
                        for low, high in mergedRanges[1:]]
 
 
