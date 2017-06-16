@@ -10,13 +10,14 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
 # System Imports
-import os, copy, cStringIO
+import os, copy
 try:
     import pwd
 except ImportError:
     pwd = None
+from io import BytesIO
 
-from xml.dom.minidom import Element, Text
+from xml.dom.minidom import getDOMImplementation
 
 # Twisted Imports
 from twisted.spread import pb
@@ -62,7 +63,7 @@ class Request(pb.RemoteCopy, server.Request):
         state['requestHeaders'] = Headers(dict(state['requestHeaders']))
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
-        self.content = cStringIO.StringIO(self.content_data)
+        self.content = BytesIO(self.content_data)
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
         self.addCookie        = self.remote.remoteMethod('addCookie')
@@ -235,7 +236,7 @@ class ResourcePublisher(pb.Root, styles.Versioned):
         Look up the resource for the given request and render it.
         """
         res = self.site.getResourceFor(request)
-        log.msg( request )
+        log.msg(request)
         result = res.render(request)
         if result is not server.NOT_DONE_YET:
             request.write(result)
@@ -330,17 +331,21 @@ class UserDirectory(resource.Resource):
         Render as HTML a listing of all known users with links to their
         personal resources.
         """
-        listing = Element('ul')
+
+        domImpl = getDOMImplementation()
+        newDoc = domImpl.createDocument(None, "ul", None)
+        listing = newDoc.documentElement
         for link, text in self._users():
-            linkElement = Element('a')
+            linkElement = newDoc.createElement('a')
             linkElement.setAttribute('href', link + '/')
-            textNode = Text()
-            textNode.data = text
+            textNode = newDoc.createTextNode(text)
             linkElement.appendChild(textNode)
-            item = Element('li')
+            item = newDoc.createElement('li')
             item.appendChild(linkElement)
             listing.appendChild(item)
-        return self.template % {'users': listing.toxml()}
+
+        htmlDoc = self.template % ({'users': listing.toxml()})
+        return htmlDoc.encode("utf-8")
 
 
     def getChild(self, name, request):

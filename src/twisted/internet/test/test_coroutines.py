@@ -8,11 +8,11 @@ includes keywords not valid in Pythons before 3.5.
 
 from __future__ import absolute_import, division
 
-import sys
-from twisted.python.compat import _PY3, execfile
+from twisted.python.compat import _PY35PLUS, _PY34PLUS, execfile
 from twisted.python.filepath import FilePath
 
-if sys.version_info >= (3, 5, 0):
+
+if _PY35PLUS:
     _path = FilePath(__file__).parent().child("_awaittests.py.3only")
 
     _g = {}
@@ -34,7 +34,8 @@ else:
             too old.
             """
 
-if _PY3:
+
+if _PY34PLUS:
     _path = FilePath(__file__).parent().child("_yieldfromtests.py.3only")
 
     _g = {}

@@ -13,8 +13,6 @@ import sys
 import errno
 import base64
 
-from hashlib import sha1
-
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname, join as joinpath
 from os import listdir, utime, stat
@@ -271,7 +269,7 @@ def _secureEnoughString(path):
     @return: A pseudorandom, 16 byte string for use in secure filenames.
     @rtype: the type of C{path}
     """
-    secureishString = armor(sha1(randomBytes(64)).digest())[:16]
+    secureishString = armor(randomBytes(16))[:16]
     return _coerceToFilesystemEncoding(path, secureishString)
 
 
@@ -378,7 +376,7 @@ class AbstractFilePath(object):
                 # sort of thing which should be handled normally. -glyph
                 raise
             raise UnlistableError(ose)
-        return map(self.child, subnames)
+        return [self.child(name) for name in subnames]
 
     def walk(self, descend=None):
         """
@@ -1453,7 +1451,7 @@ class FilePath(AbstractFilePath):
         import glob
         path = ourPath[-1] == sep and ourPath + pattern \
                or sep.join([ourPath, pattern])
-        return list(map(self.clonePath, glob.glob(path)))
+        return [self.clonePath(p) for p in glob.glob(path)]
 
 
     def basename(self):

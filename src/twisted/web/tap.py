@@ -10,20 +10,13 @@ from __future__ import absolute_import, division
 
 import os
 
-from twisted.web import server, static, script, demo, wsgi
+from twisted.application import internet, service, strports
 from twisted.internet import interfaces, reactor
 from twisted.python import usage, reflect, threadpool
-from twisted.python.compat import _PY3
-from twisted.application import internet, service, strports
-
-if not _PY3:
-    # FIXME: https://twistedmatrix.com/trac/ticket/8009
-    from twisted.web import twcgi
-
-    # FIXME: https://twistedmatrix.com/trac/ticket/8010
-    # FIXME: https://twistedmatrix.com/trac/ticket/7598
-    from twisted.web import distrib
-    from twisted.spread import pb
+from twisted.spread import pb
+from twisted.web import distrib
+from twisted.web import server, static, script, demo, wsgi
+from twisted.web import twcgi
 
 
 
@@ -51,13 +44,12 @@ class Options(usage.Options):
             "tracebacks to users may be security risk!")],
     ]
 
-    if not _PY3:
-        optFlags.append([
-            "personal", "",
-            "Instead of generating a webserver, generate a "
-            "ResourcePublisher which listens on  the port given by "
-            "--port, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
-            "if --port is not specified."])
+    optFlags.append([
+        "personal", "",
+        "Instead of generating a webserver, generate a "
+        "ResourcePublisher which listens on  the port given by "
+        "--port, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
+        "if --port is not specified."])
 
     compData = usage.Completions(
                    optActions={"logfile" : usage.CompleteFiles("*.log"),
@@ -106,8 +98,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
         }
-        if not _PY3:
-            self['root'].processors['.cgi'] = twcgi.CGIScript
+        self['root'].processors['.cgi'] = twcgi.CGIScript
 
 
     def opt_processor(self, proc):
@@ -199,7 +190,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             except ImportError:
                 raise usage.UsageError("SSL support not installed")
         if self['port'] is None:
-            if not _PY3 and self['personal']:
+            if self['personal']:
                 path = os.path.expanduser(
                     os.path.join('~', distrib.UserDirectory.userSocketName))
                 self['port'] = 'unix:' + path
@@ -240,7 +231,7 @@ def makeService(config):
 
     site.displayTracebacks = not config["notracebacks"]
 
-    if not _PY3 and config['personal']:
+    if config['personal']:
         personal = strports.service(
             config['port'], makePersonalServerFactory(site))
         personal.setServiceParent(s)
@@ -254,7 +245,3 @@ def makeService(config):
         strports.service(config['port'], site).setServiceParent(s)
 
     return s
-
-
-if _PY3:
-    del makePersonalServerFactory

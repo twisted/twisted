@@ -25,14 +25,8 @@ from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
-if _PY3:
-    class Copyable:
-        """
-        Fake mixin, until twisted.spread is ported.
-        """
-else:
-    from twisted.spread.pb import Copyable, ViewPoint
+from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote

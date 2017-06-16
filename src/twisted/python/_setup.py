@@ -77,6 +77,7 @@ _dev = [
     'twisted-dev-tools >= 0.0.2',
     'python-subunit',
     'sphinx >= 1.3.1',
+    'towncrier >= 17.4.0'
 ]
 
 if not _PY3:
@@ -91,7 +92,10 @@ _EXTRA_OPTIONS = dict(
     tls=[
         'pyopenssl >= 16.0.0',
         'service_identity',
-        'idna >= 0.6'],
+        # idna 2.3 introduced some changes that break a few things.  Avoid it.
+        # The problems were fixed in 2.4.
+        'idna >= 0.6, != 2.3',
+    ],
     conch=[
         'pyasn1',
         'cryptography >= 0.9.1',
@@ -103,7 +107,7 @@ _EXTRA_OPTIONS = dict(
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
-    http2=['h2 >= 2.5.0, < 3.0',
+    http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
 
@@ -176,10 +180,9 @@ _EXTENSIONS = [
         condition=lambda _: _isCPython),
 
     ConditionalExtension(
-        "twisted.runner.portmap",
-        sources=["src/twisted/runner/portmap.c"],
-        condition=lambda builder: not _PY3 and
-                                  builder._check_header("rpc/rpc.h")),
+        "twisted.python._sendmsg",
+        sources=["src/twisted/python/_sendmsg.c"],
+        condition=lambda _: not _PY3 and sys.platform != "win32"),
     ]
 
 
@@ -216,6 +219,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
     requirements.append("constantly >= 15.1")
     requirements.append("incremental >= 16.10.1")
     requirements.append("Automat >= 0.3.0")
+    requirements.append("hyperlink >= 17.1.1")
 
     arguments.update(dict(
         packages=find_packages("src"),
@@ -350,15 +354,6 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.internet._threadedselect",
-    "twisted.internet.glib2reactor",
-    "twisted.internet.gtk2reactor",
-    "twisted.internet.pyuisupport",
-    "twisted.internet.test.process_connectionlost",
-    "twisted.internet.test.process_gireactornocompat",
-    "twisted.internet.tksupport",
-    "twisted.internet.wxreactor",
-    "twisted.internet.wxsupport",
     "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
@@ -373,9 +368,7 @@ notPortedModules = [
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
     "twisted.mail.scripts.mailmail",
-    "twisted.mail.smtp",
     "twisted.mail.tap",
-    "twisted.mail.test.__init__",
     "twisted.mail.test.pop3testserver",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_imap",
@@ -385,7 +378,6 @@ notPortedModules = [
     "twisted.mail.test.test_pop3",
     "twisted.mail.test.test_pop3client",
     "twisted.mail.test.test_scripts",
-    "twisted.mail.test.test_smtp",
     "twisted.news.__init__",
     "twisted.news.database",
     "twisted.news.news",
@@ -395,58 +387,33 @@ notPortedModules = [
     "twisted.news.test.test_database",
     "twisted.news.test.test_news",
     "twisted.news.test.test_nntp",
-    "twisted.plugins.twisted_inet",
     "twisted.plugins.twisted_mail",
-    "twisted.plugins.twisted_names",
     "twisted.plugins.twisted_news",
-    "twisted.plugins.twisted_portforward",
-    "twisted.plugins.twisted_runner",
-    "twisted.plugins.twisted_socks",
-    "twisted.plugins.twisted_words",
     "twisted.protocols.ident",
     "twisted.protocols.mice.__init__",
     "twisted.protocols.mice.mouseman",
     "twisted.protocols.shoutcast",
     "twisted.python._pydoctor",
-    "twisted.python._release",
     "twisted.python.finalize",
-    "twisted.python.formmethod",
     "twisted.python.hook",
     "twisted.python.rebuild",
-    "twisted.python.release",
     "twisted.python.shortcut",
     "twisted.python.test.cmodulepullpipe",
-    "twisted.python.test.test_fakepwd",
     "twisted.python.test.test_pydoctor",
-    "twisted.python.test.test_release",
     "twisted.python.test.test_win32",
-    "twisted.tap.__init__",
-    "twisted.tap.portforward",
-    "twisted.tap.socks",
     "twisted.test.crash_test_dummy",
     "twisted.test.myrebuilder1",
     "twisted.test.myrebuilder2",
-    "twisted.test.test_formmethod",
     "twisted.test.test_hook",
     "twisted.test.test_ident",
     "twisted.test.test_rebuild",
     "twisted.test.test_shortcut",
-    "twisted.test.test_strerror",
-    "twisted.web.distrib",
     "twisted.web.domhelpers",
     "twisted.web.microdom",
     "twisted.web.rewrite",
     "twisted.web.soap",
     "twisted.web.sux",
-    "twisted.web.test.test_cgi",
-    "twisted.web.test.test_distrib",
     "twisted.web.test.test_domhelpers",
-    "twisted.web.test.test_html",
     "twisted.web.test.test_soap",
     "twisted.web.test.test_xml",
-    "twisted.web.twcgi",
-    "twisted.words.protocols.oscar",
-    "twisted.words.tap",
-    "twisted.words.test.test_oscar",
-    "twisted.words.test.test_tap",
 ]
