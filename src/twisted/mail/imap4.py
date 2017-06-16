@@ -301,9 +301,9 @@ class MessageSet(object):
         """
         Is there a L{None} in our ranges?
 
-        L{MessageSet.cleanup} merges overlapping or consecutive
-        ranges.  None is represents a value larger than any number.
-        There are thus two cases:
+        L{MessageSet.clean} merges overlapping or consecutive ranges.
+        None is represents a value larger than any number.  There are
+        thus two cases:
 
             1. C{(x, *) + (y, z)} such that C{x} is smaller than C{y}
 
