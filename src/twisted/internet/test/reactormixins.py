@@ -136,11 +136,13 @@ class ReactorBuilder:
         # it's not _really_ worth it to support on other platforms,
         # since no one really wants to use it on other platforms.
         _reactors.extend([
-                "twisted.internet.gtk2reactor.PortableGtkReactor",
-                "twisted.internet.gireactor.PortableGIReactor",
-                "twisted.internet.gtk3reactor.PortableGtk3Reactor",
-                "twisted.internet.win32eventreactor.Win32Reactor",
-                "twisted.internet.iocpreactor.reactor.IOCPReactor"])
+            "twisted.internet.gtk2reactor.PortableGtkReactor",
+            "twisted.internet.gireactor.PortableGIReactor",
+            "twisted.internet.gtk3reactor.PortableGtk3Reactor",
+            "twisted.internet.win32eventreactor.Win32Reactor",
+            "twisted.internet.iocpreactor.reactor.IOCPReactor",
+            "iocpreactor.IOCPReactor",
+        ])
     else:
         _reactors.extend([
                 "twisted.internet.glib2reactor.Glib2Reactor",
