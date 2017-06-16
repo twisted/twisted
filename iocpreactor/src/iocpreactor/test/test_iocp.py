@@ -17,7 +17,7 @@ from twisted.trial import unittest
 from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
 
-from iocpreactor import _iocp, _tcp as tcp, _udp as udp
+from iocpreactor import _tcp as tcp, _udp as udp, _iocpsupport as _iocp
 from iocpreactor._reactor import IOCPReactor, EVENTS_PER_LOOP, KEY_NORMAL
 from iocpreactor._interfaces import IReadWriteHandle
 from iocpreactor._const import SO_UPDATE_ACCEPT_CONTEXT
