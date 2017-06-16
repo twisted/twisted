@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from incremental import Version
@@ -135,10 +135,7 @@ from twisted.web._responses import (
     RESPONSES)
 
 
-if _PY3:
-    _intTypes = int
-else:
-    _intTypes = (int, long)
+_intTypes = (int, long)
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.
@@ -2177,6 +2174,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         log.msg(
             "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
         )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
         self.transport.abortConnection()
 
 
@@ -2830,10 +2830,8 @@ class HTTPFactory(protocol.ServerFactory):
             self._updateLogDateTime()
 
         if self.logPath:
-            self._nativeize = False
             self.logFile = self._openLogFile(self.logPath)
         else:
-            self._nativeize = True
             self.logFile = log.logfile
 
 
@@ -2869,8 +2867,4 @@ class HTTPFactory(protocol.ServerFactory):
             pass
         else:
             line = self._logFormatter(self._logDateTime, request) + u"\n"
-            if self._nativeize:
-                line = nativeString(line)
-            else:
-                line = line.encode("utf-8")
-            logFile.write(line)
+            logFile.write(line.encode('utf8'))
