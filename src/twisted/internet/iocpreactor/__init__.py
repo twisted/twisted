@@ -12,7 +12,6 @@ from iocpreactor import (
     _reactor as reactor,
     _tcp as tcp,
     _udp as udp,
-    _iocpsupport,
     install
 )
 
