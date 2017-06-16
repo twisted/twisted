@@ -1,0 +1,15 @@
+[run]
+branch = True
+parallel = True
+source = iocpreactor
+
+[paths]
+source=
+   src/iocpreactor
+   build/*/lib/python*/site-packages/iocpreactor
+   build/*/Lib/site-packages/iocpreactor
+   build/pypy*/site-packages/iocpreactor
+
+[report]
+precision = 2
+ignore_errors = True
