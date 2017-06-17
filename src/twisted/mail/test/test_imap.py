@@ -159,10 +159,10 @@ class MessageProducerTests(unittest.TestCase):
     def testSinglePart(self):
         body = b'This is body text.  Rar.'
         headers = OrderedDict()
-        headers[b'from'] = b'sender@host'
-        headers[b'to'] = b'recipient@domain'
-        headers[b'subject'] = b'booga booga boo'
-        headers[b'content-type'] = b'text/plain'
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
 
         msg = FakeyMessage(headers, (), None, body, 123, None )
 
@@ -189,14 +189,14 @@ class MessageProducerTests(unittest.TestCase):
         outerBody = b''
         innerBody = b'Contained body message text.  Squarge.'
         headers = OrderedDict()
-        headers[b'from'] = b'sender@host'
-        headers[b'to'] = b'recipient@domain'
-        headers[b'subject'] = b'booga booga boo'
-        headers[b'content-type'] = b'multipart/alternative; boundary="xyz"'
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
 
         innerHeaders = OrderedDict()
-        innerHeaders[b'subject'] = b'this is subject text'
-        innerHeaders[b'content-type'] = b'text/plain'
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
         msg = FakeyMessage(headers, (), None, outerBody, 123,
                            [FakeyMessage(innerHeaders, (), None, innerBody,
                                          None, None)],
@@ -234,16 +234,16 @@ class MessageProducerTests(unittest.TestCase):
         innerBody1 = b'Contained body message text.  Squarge.'
         innerBody2 = b'Secondary <i>message</i> text of squarge body.'
         headers = OrderedDict()
-        headers[b'from'] = b'sender@host'
-        headers[b'to'] = b'recipient@domain'
-        headers[b'subject'] = b'booga booga boo'
-        headers[b'content-type'] = b'multipart/alternative; boundary="xyz"'
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
         innerHeaders = OrderedDict()
-        innerHeaders[b'subject'] = b'this is subject text'
-        innerHeaders[b'content-type'] = b'text/plain'
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
         innerHeaders2 = OrderedDict()
-        innerHeaders2[b'subject'] = b'<b>this is subject</b>'
-        innerHeaders2[b'content-type'] = b'text/html'
+        innerHeaders2['subject'] = '<b>this is subject</b>'
+        innerHeaders2['content-type'] = 'text/html'
         msg = FakeyMessage(headers, (), None, outerBody, 123, [
             FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
             FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)

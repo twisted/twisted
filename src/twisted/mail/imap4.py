@@ -5763,17 +5763,18 @@ class MessageProducer:
         headers = self.msg.getHeaders(True)
         boundary = None
         if self.msg.isMultipart():
-            content = headers.get(b'content-type')
-            parts = [x.split(b'=', 1) for x in content.split(b';')[1:]]
+            content = headers.get('content-type')
+            parts = [x.split('=', 1) for x in content.split(';')[1:]]
             parts = dict([(k.lower().strip(), v) for (k, v) in parts])
-            boundary = parts.get(b'boundary')
+            boundary = parts.get('boundary')
             if boundary is None:
                 # Bastards
                 boundary = '----=_%f_boundary_%f' % (time.time(), random.random())
-                headers[b'content-type'] += b'; boundary="'+ networkString(boundary) + b'"'
+                headers['content-type'] += '; boundary="'+ networkString(boundary) + b'"'
             else:
-                if boundary.startswith(b'"') and boundary.endswith(b'"'):
+                if boundary.startswith('"') and boundary.endswith('"'):
                     boundary = boundary[1:-1]
+            boundary = networkString(boundary)
 
         self.write(_formatHeaders(headers))
         self.write(b'\r\n')
