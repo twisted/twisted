@@ -369,10 +369,10 @@ class MessageSetTests(unittest.SynchronousTestCase):
         ]
 
         outputs = [
-            b"*",
-            b"1:*",
-            b"3:6",
-            b"2:6",
+            "*",
+            "1:*",
+            "3:6",
+            "2:6",
         ]
 
         for i, o in zip(inputs, outputs):
@@ -1181,10 +1181,10 @@ class IMAP4HelperTests(unittest.TestCase):
         L{IllegalIdentifierError}.
         """
         inputs = [
-            '*:*',
-            'foo',
-            '4:',
-            'bar:5'
+            b'*:*',
+            b'foo',
+            b'4:',
+            b'bar:5'
         ]
 
         for input in inputs:
@@ -1199,13 +1199,13 @@ class IMAP4HelperTests(unittest.TestCase):
         non-negative numbers (RFC 3501 section 9, the seq-number grammar item).
         """
         inputs = [
-            '0:5',
-            '0:0',
-            '*:0',
-            '0',
-            '-3:5',
-            '1:-2',
-            '-1'
+            b'0:5',
+            b'0:0',
+            b'*:0',
+            b'0',
+            b'-3:5',
+            b'1:-2',
+            b'-1'
         ]
 
         for input in inputs:
@@ -1219,20 +1219,20 @@ class IMAP4HelperTests(unittest.TestCase):
         objects.
         """
         inputs = [
-            '1:*',
-            '5:*',
-            '1:2,5:*',
-            '*',
-            '1',
-            '1,2',
-            '1,3,5',
-            '1:10',
-            '1:10,11',
-            '1:5,10:20',
-            '1,5:10',
-            '1,5:10,15:20',
-            '1:10,15,20:25',
-            '4:2'
+            b'1:*',
+            b'5:*',
+            b'1:2,5:*',
+            b'*',
+            b'1',
+            b'1,2',
+            b'1,3,5',
+            b'1:10',
+            b'1:10,11',
+            b'1:5,10:20',
+            b'1,5:10',
+            b'1,5:10,15:20',
+            b'1:10,15,20:25',
+            b'4:2'
         ]
 
         outputs = [
@@ -2251,12 +2251,12 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         the search range.
         """
         self.assertFalse(
-            self.server.search_UID(['2:3'], self.seq, self.msg, (1, 1234)))
+            self.server.search_UID([b'2:3'], self.seq, self.msg, (1, 1234)))
         # 2:* should get translated to 2:<max UID> and then to 1:2
         self.assertTrue(
-            self.server.search_UID(['2:*'], self.seq, self.msg, (1, 1234)))
+            self.server.search_UID([b'2:*'], self.seq, self.msg, (1, 1234)))
         self.assertTrue(
-            self.server.search_UID(['*'], self.seq, self.msg, (1, 1234)))
+            self.server.search_UID([b'*'], self.seq, self.msg, (1, 1234)))
 
 
     def test_searchWildcardHigh(self):
@@ -2265,7 +2265,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         wildcard, because a wildcard means "highest UID in the mailbox".
         """
         self.assertTrue(
-            self.server.search_UID(['1235:*'], self.seq, self.msg, (1234, 1)))
+            self.server.search_UID([b'1235:*'], self.seq, self.msg, (1234, 1)))
 
 
     def test_reversedSearchTerms(self):
@@ -2273,7 +2273,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         L{imap4.IMAP4Server.search_SENTON} returns True if the message date is
         the same as the query date.
         """
-        msgset = imap4.parseIdList('4:2')
+        msgset = imap4.parseIdList(b'4:2')
         self.assertEqual(list(msgset), [2, 3, 4])
 
 

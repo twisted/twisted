@@ -942,7 +942,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         sequence-set
         """
-        rest = ''
+        rest = b''
         arg = line.split(b' ',1)
         if len(arg) == 2:
             rest = arg[1]
@@ -2045,7 +2045,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Returns C{True} if the message UID is in the range defined by the
         search query.
 
-        @type query: A L{list} of L{str}
+        @type query: A L{list} of L{bytes}
         @param query: A list representing the parsed form of the search
             query. Its first element should be a L{str} that can be interpreted
             as a sequence range, for example '2:4,5:*'.
@@ -4513,8 +4513,6 @@ def parseIdList(s, lastMessageId=None):
     @return: A C{MessageSet} that contains the ids defined in the list
     """
     res = MessageSet()
-    if isinstance(s, unicode):
-        s = s.encode('charmap')
     parts = s.split(b',')
     for p in parts:
         if b':' in p:
