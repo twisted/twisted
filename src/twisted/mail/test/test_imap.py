@@ -4744,9 +4744,9 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         text/plain part.
         """
         self.function = self.client.fetchSpecific
-        self.messages = '1'
+        self.messages = b'1'
         parts = [1]
-        outerBody = 'DA body'
+        outerBody = b'DA body'
         headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
@@ -4755,7 +4755,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.msgObjs = [FakeyMessage(
             headers, (), None, outerBody, 123, None)]
 
-        self.expected = {0: [['BODY', ['1'], 'DA body']]}
+        self.expected = {0: [['BODY', ['1'], b'DA body']]}
 
         def result(R):
             self.result = R
