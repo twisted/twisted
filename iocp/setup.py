@@ -13,7 +13,7 @@ if __name__ == "__main__":
         author='Twisted Matrix Laboratories',
         maintainer='Amber Brown',
         maintainer_email='hawkowl@twistedmatrix.com',
-        url="https://github.com/twisted/iocpreactor",
+        url="https://github.com/twisted/twisted",
         classifiers = [
             "Intended Audience :: Developers",
             "License :: OSI Approved :: MIT License",
@@ -24,6 +24,7 @@ if __name__ == "__main__":
             "Programming Language :: Python :: 3.3",
             "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
         ],
         ext_modules=[
             Extension(

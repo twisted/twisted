@@ -7,5 +7,5 @@ Provides IOCPReactor version information.
 
 from incremental import Version
 
-__version__ = Version('IOCPReactor', 16, 12, 0)
+__version__ = Version('IOCPReactor', 17, 5, 0)
 __all__ = ["__version__"]

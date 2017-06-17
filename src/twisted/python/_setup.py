@@ -49,6 +49,10 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+# This is duplicated here and needs to be kept in sync
+# The tests WILL fail if this is not in sync
+CURRENT_TWISTED = '17.5'
+
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
     description="An asynchronous networking framework written in Python",
@@ -68,6 +72,7 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
     ],
 )
 
@@ -106,7 +111,10 @@ _EXTRA_OPTIONS = dict(
     osx=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
-    windows=['pypiwin32'],
+    windows=[
+        'pypiwin32',
+        'iocpreactor == ' + CURRENT_TWISTED,
+    ],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
