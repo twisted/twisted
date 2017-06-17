@@ -5,7 +5,7 @@ source = iocpreactor
 
 [paths]
 source=
-   src/iocpreactor
+   iocpreactor/src/iocpreactor
    build/*/lib/python*/site-packages/iocpreactor
    build/*/Lib/site-packages/iocpreactor
    build/pypy*/site-packages/iocpreactor
