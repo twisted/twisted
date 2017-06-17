@@ -4648,12 +4648,12 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchMessage(self, uid=0):
         self.function = self.client.fetchMessage
-        self.messages = '1,3,7,10101'
+        self.messages = b'1,3,7,10101'
         self.msgObjs = [
-            FakeyMessage({'Header': 'Value'}, (), '', 'BODY TEXT\r\n', 91, None),
+            FakeyMessage({'Header': 'Value'}, (), b'', b'BODY TEXT\r\n', 91, None),
         ]
         self.expected = {
-            0: {'RFC822': 'Header: Value\r\n\r\nBODY TEXT\r\n'}
+            0: {'RFC822': b'Header: Value\r\n\r\nBODY TEXT\r\n'}
         }
         return self._fetchWork(uid)
 

@@ -5678,10 +5678,11 @@ def getBodyStructure(msg, extended=False):
 
 
 def _formatHeaders(headers):
-    hdrs = [b': '.join((k.title(), b'\r\n'.join(v.splitlines()))) for (k, v)
+    # TODO: This should use email.header.Header, which handles encoding
+    hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v)
             in headers.items()]
-    hdrs = b'\r\n'.join(hdrs) + b'\r\n'
-    return hdrs
+    hdrs = '\r\n'.join(hdrs) + '\r\n'
+    return networkString(hdrs)
 
 def subparts(m):
     i = 0
