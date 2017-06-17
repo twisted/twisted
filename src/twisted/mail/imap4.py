@@ -2918,7 +2918,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if the transport cannot be secured.
         """
         assert not self.startedTLS, "Client and Server are currently communicating via TLS"
-
         if contextFactory is None:
             contextFactory = self._getContextFactory()
 
@@ -3093,7 +3092,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def __cbLoginTLS(self, result, username, password):
-        args = ' '.join((_quote(username), _quote(password)))
+        args = b' '.join((_quote(username), _quote(password)))
         return self.sendCommand(Command(b'LOGIN', args))
 
 

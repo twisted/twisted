@@ -5356,7 +5356,7 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
             return self.client.list(b'inbox', b'%')
         def status():
             called.append(None)
-            return self.client.status(b'inbox', b'UIDNEXT')
+            return self.client.status(b'inbox', 'UIDNEXT')
         def examine():
             called.append(None)
             return self.client.examine(b'inbox')
@@ -5367,7 +5367,9 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         self.client.requireTransportSecurity = True
 
         methods = [login, list, status, examine, logout]
-        map(self.connected.addCallback, map(strip, methods))
+        for method in methods:
+            self.connected.addCallback(strip(method))
+
         self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
         def check(ignored):
             self.assertEqual(self.server.startedTLS, True)
