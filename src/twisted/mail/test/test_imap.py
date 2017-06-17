@@ -4789,26 +4789,26 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchFull(self, uid=0):
         self.function = self.client.fetchFull
-        self.messages = '1,3'
+        self.messages = b'1,3'
         self.msgObjs = [
-            FakeyMessage({}, ('\\XYZ', '\\YZX', 'Abc'),
-                'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
-                'xyz' * 2, 654, None),
-            FakeyMessage({}, ('\\One', '\\Two', 'Three'),
-                'Mon, 14 Apr 2003 19:43:44 -0400',
-                'abc' * 4, 555, None),
+            FakeyMessage({}, (b'\\XYZ', b'\\YZX', b'Abc'),
+                b'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
+                b'xyz' * 2, 654, None),
+            FakeyMessage({}, (b'\\One', b'\\Two', b'Three'),
+                b'Mon, 14 Apr 2003 19:43:44 -0400',
+                b'abc' * 4, 555, None),
         ]
         self.expected = {
-            0: {'FLAGS': ['\\XYZ', '\\YZX', 'Abc'],
-                'INTERNALDATE': '25-Jul-2010 06:20:30 -0400',
-                'RFC822.SIZE': '6',
+            0: {'FLAGS': [b'\\XYZ', b'\\YZX', b'Abc'],
+                'INTERNALDATE': b'25-Jul-2010 06:20:30 -0400',
+                'RFC822.SIZE': b'6',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'BODY': [None, None, None, None, None, None, '6']},
-            1: {'FLAGS': ['\\One', '\\Two', 'Three'],
-                'INTERNALDATE': '14-Apr-2003 19:43:44 -0400',
-                'RFC822.SIZE': '12',
+                'BODY': [None, None, None, None, None, None, b'6']},
+            1: {'FLAGS': [b'\\One', b'\\Two', b'Three'],
+                'INTERNALDATE': b'14-Apr-2003 19:43:44 -0400',
+                'RFC822.SIZE': b'12',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'BODY': [None, None, None, None, None, None, '12']},
+                'BODY': [None, None, None, None, None, None, b'12']},
         }
         return self._fetchWork(uid)
 
