@@ -4502,7 +4502,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         I{FETCH BODYSTRUCTURE} command for a multipart message.
         """
         self.function = self.client.fetchBodyStructure
-        self.messages = '3:9,10:*'
+        self.messages = b'3:9,10:*'
         innerMessage = FakeyMessage({
                 'content-type': 'text/plain; name=thing; key="value"',
                 'content-id': 'this-is-the-content-id',
@@ -4512,18 +4512,18 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
                 'content-md5': '123456abcdef',
                 'content-disposition': 'inline',
                 'content-location': 'outer space',
-            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)
+            }, (), b'', b'Body\nText\nGoes\nHere\n', 919293, None)
         self.msgObjs = [FakeyMessage({
                 'content-type': 'multipart/mixed; boundary="xyz"',
                 'content-language': 'en',
                 'content-location': 'nearby',
-            }, (), '', '', 919293, [innerMessage])]
+            }, (), b'', b'', 919293, [innerMessage])]
         self.expected = {0: {'BODYSTRUCTURE': [
-            ['text', 'plain', ['key', 'value', 'name', 'thing'],
-             'this-is-the-content-id', 'describing-the-content-goes-here!',
-             '8BIT', '20', '4', '123456abcdef', ['inline', None], 'fr',
-             'outer space'],
-            'mixed', ['boundary', 'xyz'], None, 'en', 'nearby'
+            [b'text', b'plain', [b'key', b'value', b'name', b'thing'],
+             b'this-is-the-content-id', b'describing-the-content-goes-here!',
+             b'8BIT', b'20', b'4', b'123456abcdef', [b'inline', None], b'fr',
+             b'outer space'],
+            b'mixed', [b'boundary', b'xyz'], None, b'en', b'nearby'
             ]}}
         return self._fetchWork(uid)
 
