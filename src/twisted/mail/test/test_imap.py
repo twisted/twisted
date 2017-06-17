@@ -5291,7 +5291,12 @@ class CopyWorkerTests(unittest.TestCase):
         f = s._IMAP4Server__cbCopy
 
         m = FakeMailbox()
-        msgs = [FakeyMessage({b'Header-Counter': intToBytes(i)}, (), b'Date', b'Body ' + intToBytes(i), i + 10, None) for i in range(1, 11)]
+        msgs = [FakeyMessage({'Header-Counter': str(i)},
+                             (),
+                             b'Date',
+                             b'Body ' + intToBytes(i),
+                             i + 10, None)
+                for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
 
         def cbCopy(results):
