@@ -4553,13 +4553,13 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBodyText(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
-        self.messages = '21'
+        self.messages = b'21'
         self.msgObjs = [FakeyMessage({'content-type': 'text/plain'},
-            (), '', 'Yea whatever', 91825, None)]
+            (), b'', b'Yea whatever', 91825, None)]
         self.expected = {0:
             {'BODY':
-                ['text', 'plain', None, None, None, None,
-                    '12', '1'
+                [b'text', b'plain', None, None, None, None,
+                    b'12', b'1'
                 ]
             }
         }
