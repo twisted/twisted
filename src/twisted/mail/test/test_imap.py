@@ -4573,20 +4573,20 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBodyRFC822(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
-        self.messages = '21'
+        self.messages = b'21'
         self.msgObjs = [FakeyMessage({'content-type': 'message/rfc822'},
-            (), '', 'Yea whatever', 91825,
+            (), b'', b'Yea whatever', 91825,
             [FakeyMessage({'content-type': 'image/jpg'}, (), '',
-                'Body Body Body', None, None
+                b'Body Body Body', None, None
             )]
         )]
         self.expected = {0:
             {'BODY':
-                ['message', 'rfc822', None, None, None, None,
-                    '12', [None, None, [[None, None, None]],
+                [b'message', b'rfc822', None, None, None, None,
+                    b'12', [None, None, [[None, None, None]],
                     [[None, None, None]], None, None, None,
-                    None, None, None], ['image', 'jpg', None,
-                    None, None, None, '14'], '1'
+                    None, None, None], [b'image', b'jpg', None,
+                    None, None, None, b'14'], b'1'
                 ]
             }
         }
