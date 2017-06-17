@@ -79,6 +79,39 @@ _MONTH_NAMES = dict(zip(
         "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()))
 
 
+def _swap(this, that, ifIs):
+    """
+    Swap C{this} with C{that} if C{this} is C{ifIs}.
+
+    @param this: The object that may be replaced.
+
+    @param that: The object that may replace C{this}.
+
+    @param ifIs: An object whose identity will be compared to
+        C{this}.
+    """
+    return that if this is ifIs else this
+
+
+def _swapAllPairs(of, that, ifIs):
+    """
+    Swap each element in each pair in C{of} with C{that} it is
+    C{ifIs}.
+
+    @param of: A list of 2-L{tuples}, whose members may be the object
+        C{that}
+    @type of: L{list} of 2-L{tuple}s
+
+    @param ifIs: An object whose identity will be compared to members
+        of each pair in C{of}
+
+    @return: A L{list} of 2-L{tuples} with all occurences of C{ifIs}
+        replaced with C{that}
+    """
+    return [(_swap(first, that, ifIs), _swap(second, that, ifIs))
+            for first, second in of]
+
+
 class MessageSet(object):
     """
     A set of message identifiers usable by both L{IMAP4Client} and
@@ -195,19 +228,6 @@ class MessageSet(object):
         return _getLast, _setLast, None, doc
     last = property(*last())
 
-    def _swap(self, this, that, ifIs):
-        """
-        Swap C{this} with C{that} if C{this} is C{ifIs}.
-
-        @param this: The object that may be replaced.
-
-        @param that: The object that may replace C{this}.
-
-        @param ifIs: An object whose identity will be compared to
-            C{this}, perhaps resulting in C{that}.
-        """
-        return that if this is ifIs else this
-
 
     def add(self, start, end=_empty):
         """
@@ -230,7 +250,7 @@ class MessageSet(object):
 
         start, end = sorted(
             [start, end],
-            key=functools.partial(self._swap, that=self._infinity, ifIs=None))
+            key=functools.partial(_swap, that=self._infinity, ifIs=None))
         self.ranges.append((start, end))
         self.clean()
 
@@ -275,9 +295,9 @@ class MessageSet(object):
         Clean ranges list, combining adjacent ranges
         """
 
-        ranges = sorted((self._swap(low, self._infinity, ifIs=None),
-                         self._swap(high, self._infinity, ifIs=None))
-                         for low, high in self.ranges)
+        ranges = sorted(_swapAllPairs(self.ranges,
+                                      that=self._infinity,
+                                      ifIs=None))
 
         mergedRanges = [(float('-inf'), float('-inf'))]
 
@@ -292,9 +312,9 @@ class MessageSet(object):
             mergedRanges[-1] = (min(previousLow, low),
                                 max(previousHigh, high))
 
-        self.ranges = [(self._swap(low, None, ifIs=self._infinity),
-                        self._swap(high, None, ifIs=self._infinity))
-                       for low, high in mergedRanges[1:]]
+        self.ranges = _swapAllPairs(mergedRanges[1:],
+                                    that=None,
+                                    ifIs=self._infinity)
 
 
     def _noneInRanges(self):
