@@ -4664,9 +4664,9 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchHeaders(self, uid=0):
         self.function = self.client.fetchHeaders
-        self.messages = '9,6,2'
+        self.messages = b'9,6,2'
         self.msgObjs = [
-            FakeyMessage({'H1': 'V1', 'H2': 'V2'}, (), '', '', 99, None),
+            FakeyMessage({'H1': 'V1', 'H2': 'V2'}, (), b'', b'', 99, None),
         ]
         self.expected = {
             0: {'RFC822.HEADER': imap4._formatHeaders({'H1': 'V1', 'H2': 'V2'})},
