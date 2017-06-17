@@ -4480,11 +4480,11 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
                 'content-location': 'http://example.com/monkeys',
             }, (), '', b'Body\nText\nGoes\nHere\n', 919293, None)]
         self.expected = {0: {'BODYSTRUCTURE': [
-            'text', 'plain', ['key', 'value', 'name', 'thing'],
-            'this-is-the-content-id', 'describing-the-content-goes-here!',
-            '8BIT', '20', '4', 'abcdef123456',
-            ['attachment', ['filename', 'monkeys']], 'es',
-             'http://example.com/monkeys']}}
+            b'text', b'plain', [b'key', b'value', b'name', b'thing'],
+            b'this-is-the-content-id', b'describing-the-content-goes-here!',
+            b'8BIT', b'20', b'4', b'abcdef123456',
+            [b'attachment', [b'filename', b'monkeys']], b'es',
+             b'http://example.com/monkeys']}}
         return self._fetchWork(uid)
 
 
