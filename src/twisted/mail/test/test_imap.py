@@ -4610,38 +4610,38 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         in the case where a subpart is itself multipart.
         """
         self.function = self.client.fetchSimplifiedBody
-        self.messages = '21'
+        self.messages = b'21'
 
         # A couple non-multipart messages to use as the inner-most payload
         singles = [
             FakeyMessage(
                 {'content-type': 'text/plain'},
-                (), 'date', 'Stuff', 54321,  None),
+                (), b'date', b'Stuff', 54321,  None),
             FakeyMessage(
                 {'content-type': 'text/html'},
-                (), 'date', 'Things', 32415, None)]
+                (), b'date', b'Things', 32415, None)]
 
         # A multipart/alternative message containing the above non-multipart
         # messages.  This will be the payload of the outer-most message.
         alternative = FakeyMessage(
             {'content-type': 'multipart/alternative'},
-            (), '', 'Irrelevant', 12345, singles)
+            (), b'', b'Irrelevant', 12345, singles)
 
         # The outer-most message, also with a multipart type, containing just
         # the single middle message.
         mixed = FakeyMessage(
             # The message is multipart/mixed
             {'content-type': 'multipart/mixed'},
-            (), '', 'RootOf', 98765, [alternative])
+            (), b'', b'RootOf', 98765, [alternative])
 
         self.msgObjs = [mixed]
 
         self.expected = {
             0: {'BODY': [
-                    [['text', 'plain', None, None, None, None, '5', '1'],
-                     ['text', 'html', None, None, None, None, '6', '1'],
-                     'alternative'],
-                    'mixed']}}
+                    [[b'text', b'plain', None, None, None, None, b'5', b'1'],
+                     [b'text', b'html', None, None, None, None, b'6', b'1'],
+                     b'alternative'],
+                    b'mixed']}}
 
         return self._fetchWork(False)
 
