@@ -4819,21 +4819,21 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchAll(self, uid=0):
         self.function = self.client.fetchAll
-        self.messages = '1,2:3'
+        self.messages = b'1,2:3'
         self.msgObjs = [
-            FakeyMessage({}, (), 'Mon, 14 Apr 2003 19:43:44 +0400',
-                'Lalala', 10101, None),
-            FakeyMessage({}, (), 'Tue, 15 Apr 2003 19:43:44 +0200',
-                'Alalal', 20202, None),
+            FakeyMessage({}, (), b'Mon, 14 Apr 2003 19:43:44 +0400',
+                b'Lalala', 10101, None),
+            FakeyMessage({}, (), b'Tue, 15 Apr 2003 19:43:44 +0200',
+                b'Alalal', 20202, None),
         ]
         self.expected = {
             0: {'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'RFC822.SIZE': '6',
-                'INTERNALDATE': '14-Apr-2003 19:43:44 +0400',
+                'RFC822.SIZE': b'6',
+                'INTERNALDATE': b'14-Apr-2003 19:43:44 +0400',
                 'FLAGS': []},
             1: {'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'RFC822.SIZE': '6',
-                'INTERNALDATE': '15-Apr-2003 19:43:44 +0200',
+                'RFC822.SIZE': b'6',
+                'INTERNALDATE': b'15-Apr-2003 19:43:44 +0200',
                 'FLAGS': []},
         }
         return self._fetchWork(uid)

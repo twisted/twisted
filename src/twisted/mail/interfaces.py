@@ -395,7 +395,7 @@ class IMessageIMAPPart(Interface):
         """
         Retrieve a group of message headers.
 
-        @type names: L{tuple} of L{bytes}
+        @type names: L{tuple} of L{str}
         @param names: The names of the headers to retrieve or omit.
 
         @type negate: L{bool}
