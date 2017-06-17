@@ -4773,12 +4773,12 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSize(self, uid=0):
         self.function = self.client.fetchSize
-        self.messages = '1:100,2:*'
+        self.messages = b'1:100,2:*'
         self.msgObjs = [
-            FakeyMessage({}, (), '', 'x' * 20, 123, None),
+            FakeyMessage({}, (), b'', b'x' * 20, 123, None),
         ]
         self.expected = {
-            0: {'RFC822.SIZE': '20'},
+            0: {'RFC822.SIZE': b'20'},
         }
         return self._fetchWork(uid)
 
