@@ -4699,10 +4699,10 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         Test the server's handling of requests for specific body sections.
         """
         self.function = self.client.fetchSpecific
-        self.messages = '1'
+        self.messages = b'1'
         outerBody = ''
-        innerBody1 = 'Contained body message text.  Squarge.'
-        innerBody2 = 'Secondary <i>message</i> text of squarge body.'
+        innerBody1 = b'Contained body message text.  Squarge.'
+        innerBody2 = b'Secondary <i>message</i> text of squarge body.'
         headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
@@ -4719,7 +4719,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
             [FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
              FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)])]
         self.expected = {
-            0: [['BODY', ['1'], 'Contained body message text.  Squarge.']]}
+            0: [['BODY', ['1'], b'Contained body message text.  Squarge.']]}
 
 
         def result(R):
