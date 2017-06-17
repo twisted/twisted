@@ -13,7 +13,7 @@ from setuptools.dist import Distribution
 import twisted
 from twisted.trial.unittest import TestCase
 
-from twisted.python import _setup, filepath, __version__
+from twisted.python import _setup, filepath
 from twisted.python.compat import _PY3
 from twisted.python._setup import (
     BuildPy3,
@@ -230,7 +230,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
-        self.assertIn('iocpreactor == ' + __version__, deps)
+        self.assertIn('iocpreactor == ' + twisted.__version__, deps)
 
 
 
