@@ -34,8 +34,8 @@ recursive-include src/twisted/python/_pydoctortemplates *.html
 recursive-include src/twisted *.py
 
 # Ignore IOCPReactor
-exclude iocpreactor
-recursive-exclude iocpreactor *
+exclude iocp
+recursive-exclude iocp *
 
 # Some tests stuff
 recursive-include src/twisted *.pem
