@@ -51,7 +51,7 @@ else:
 
 # This is duplicated here and needs to be kept in sync
 # The tests WILL fail if this is not in sync
-CURRENT_TWISTED = '17.5'
+CURRENT_TWISTED = '17.5.0'
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
