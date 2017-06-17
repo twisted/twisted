@@ -65,11 +65,11 @@ environment:
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
-      TOXENV: iocpreactor,codecov-publish
+      TOXENV: iocpreactor,iocpreactor-codecov-publish
     - PYTHON_HOME: C:\\PYTHON35-x64
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
-      TOXENV: iocpreactor,codecov-publish
+      TOXENV: iocpreactor,iocpreactor-codecov-publish
 
 matrix:
   allow_failures:

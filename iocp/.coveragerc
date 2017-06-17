@@ -1,11 +1,11 @@
 [run]
 branch = True
 parallel = True
-source = iocpreactor/src/iocpreactor
+source = iocpreactor
 
 [paths]
 source=
-   iocpreactor/src/iocpreactor
+   src/iocpreactor
    build/*/lib/python*/site-packages/iocpreactor
    build/*/Lib/site-packages/iocpreactor
    build/pypy*/site-packages/iocpreactor
