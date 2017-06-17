@@ -98,14 +98,14 @@ def _swapAllPairs(of, that, ifIs):
     Swap each element in each pair in C{of} with C{that} it is
     C{ifIs}.
 
-    @param of: A list of 2-L{tuples}, whose members may be the object
+    @param of: A list of 2-L{tuple}s, whose members may be the object
         C{that}
     @type of: L{list} of 2-L{tuple}s
 
     @param ifIs: An object whose identity will be compared to members
         of each pair in C{of}
 
-    @return: A L{list} of 2-L{tuples} with all occurences of C{ifIs}
+    @return: A L{list} of 2-L{tuple}s with all occurences of C{ifIs}
         replaced with C{that}
     """
     return [(_swap(first, that, ifIs), _swap(second, that, ifIs))
