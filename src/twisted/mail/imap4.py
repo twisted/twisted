@@ -1659,7 +1659,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbSearch(self, result, tag, mbox, uid):
         if uid:
             result = map(mbox.getUID, result)
-        ids = b' '.join([str(i) for i in result])
+        ids = networkString(' '.join([str(i) for i in result]))
         self.sendUntaggedResponse(b'SEARCH ' + ids)
         self.sendPositiveResponse(tag, b'SEARCH completed')
 
@@ -4684,7 +4684,7 @@ def Query(sorted=0, **kwarg):
         keys = _sorted(keys)
     for k in keys:
         v = kwarg[k]
-        k = k.upper()
+        strK = k = k.upper()
         if isinstance(k, unicode):
             k = k.encode('charmap')
         if isinstance(v, unicode):
@@ -4692,7 +4692,11 @@ def Query(sorted=0, **kwarg):
         if k in _SIMPLE_BOOL and v:
             cmd.append(k)
         elif k == b'HEADER':
-            cmd.extend([k, v[0], b'"%s"' % (v[1],)])
+            cmd.extend([
+                k,
+                networkString(str(v[0])),
+                networkString(str(v[1])),
+            ])
         elif k == b'KEYWORD' or k == b'UNKEYWORD':
             # Discard anything that does not fit into an "atom".  Perhaps turn
             # the case where this actually removes bytes from the value into a
@@ -4712,7 +4716,7 @@ def Query(sorted=0, **kwarg):
         else:
             cmd.extend([k, b'%s' % (v,)])
     if len(cmd) > 1:
-        return b'(%s)' % b' '.join(cmd)
+        return b'(' + b' '.join(cmd) + b')'
     else:
         return b' '.join(cmd)
 
