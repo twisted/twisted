@@ -708,7 +708,7 @@ class IMAP4HelperTests(unittest.TestCase):
         C{":"}-separated format.
         """
         cases = [
-            ({b'Header1': b'Value1', b'Header2': b'Value2'},
+            ({'Header1': 'Value1', 'Header2': 'Value2'},
              b'Header2: Value2\r\nHeader1: Value1\r\n'),
         ]
 
