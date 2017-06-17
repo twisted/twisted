@@ -1,7 +1,7 @@
 [run]
 branch = True
 parallel = True
-source = src/iocpreactor
+source = iocpreactor/src/iocpreactor
 
 [paths]
 source=
