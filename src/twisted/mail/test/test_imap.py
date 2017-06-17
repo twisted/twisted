@@ -4845,14 +4845,14 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchFast(self, uid=0):
         self.function = self.client.fetchFast
-        self.messages = '1'
+        self.messages = b'1'
         self.msgObjs = [
-            FakeyMessage({}, ('\\X',), '19 Mar 2003 19:22:21 -0500', '', 9, None),
+            FakeyMessage({}, (b'\\X',), b'19 Mar 2003 19:22:21 -0500', b'', 9, None),
         ]
         self.expected = {
-            0: {'FLAGS': ['\\X'],
-                'INTERNALDATE': '19-Mar-2003 19:22:21 -0500',
-                'RFC822.SIZE': '0'},
+            0: {'FLAGS': [b'\\X'],
+                'INTERNALDATE': b'19-Mar-2003 19:22:21 -0500',
+                'RFC822.SIZE': b'0'},
         }
         return self._fetchWork(uid)
 
