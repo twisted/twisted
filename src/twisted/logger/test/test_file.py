@@ -122,7 +122,7 @@ class TextFileLogObserverTests(TestCase):
         """
         with StringIO() as fileHandle:
             observer = textFileLogObserver(fileHandle, timeFormat=u"%f")
-            observer(dict(log_format=u"XYZZY", log_time=86401.23456))
+            observer(dict(log_format=u"XYZZY", log_time=86401.234559))
             self.assertEqual(fileHandle.getvalue(), u"234560 [-#-] XYZZY\n")
 
 
