@@ -1,0 +1,1 @@
+twisted.internet._win32serialport added pyserial 3.x support on Windows.
