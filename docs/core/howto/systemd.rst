@@ -371,7 +371,7 @@ You have also learned how the service can be started on demand, using socket act
 
 Limitations and Known Issues
 ----------------------------
-#. Twisted can not accept UNIX or datagram sockets from ``systemd``\ .
+#. Twisted can not accept datagram sockets from ``systemd``\ .
 #. Twisted does not support listening for SSL connections on sockets inherited from ``systemd``\ .
 
 Further Reading

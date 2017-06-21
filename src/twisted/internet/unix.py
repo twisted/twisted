@@ -245,6 +245,39 @@ class Server(_SendmsgMixin, tcp.Server):
         _SendmsgMixin.__init__(self)
         tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno, reactor)
 
+    @classmethod
+    def _fromConnectedSocket(cls, fileDescriptor, factory, reactor):
+        """
+        Create a new L{Server} based on an existing connected I{SOCK_STREAM}
+        socket.
+
+        Arguments are the same as to L{Server.__init__}, except where noted.
+
+        @param fileDescriptor: An integer file descriptor associated with a
+            connected socket.  The socket must be in non-blocking mode.  Any
+            additional attributes desired, such as I{FD_CLOEXEC}, must also be
+            set already.
+
+        @return: A new instance of C{cls} wrapping the socket given by
+            C{fileDescriptor}.
+        """
+        skt = socket.fromfd(fileDescriptor, socket.AF_UNIX, socket.SOCK_STREAM)
+        protocolAddr = address.UNIXAddress(skt.getsockname())
+
+        proto = factory.buildProtocol(protocolAddr)
+        if proto is None:
+            skt.close()
+            return
+
+        # FIXME: is this a suitable sessionno?
+        sessionno = 0
+        self = cls(skt, proto, skt.getpeername(), None, sessionno, reactor)
+        self.repstr = "<%s #%s on %s>" % (
+            self.protocol.__class__.__name__, self.sessionno, skt.getsockname())
+        self.logstr = "%s,%s,%s" % (
+            self.protocol.__class__.__name__, self.sessionno, skt.getsockname())
+        proto.makeConnection(self)
+        return self
 
     def getHost(self):
         return address.UNIXAddress(self.socket.getsockname())
@@ -291,6 +324,26 @@ class Port(_UNIXPort, tcp.Port):
                           backlog, reactor=reactor)
         self.mode = mode
         self.wantPID = wantPID
+        self._preexistingSocket = None
+
+    @classmethod
+    def _fromListeningDescriptor(cls, reactor, fd, factory):
+        """
+        Create a new L{Port} based on an existing listening I{SOCK_STREAM}
+        socket.
+
+        Arguments are the same as to L{Port.__init__}, except where noted.
+
+        @param fd: An integer file descriptor associated with a listening
+            socket.  The socket must be in non-blocking mode.  Any additional
+            attributes desired, such as I{FD_CLOEXEC}, must also be set already.
+
+        @return: A new instance of C{cls} wrapping the socket given by C{fd}.
+        """
+        port = socket.fromfd(fd, cls.addressFamily, cls.socketType)
+        self = cls(port.getsockname(), factory, reactor=reactor)
+        self._preexistingSocket = port
+        return self
 
     def __repr__(self):
         factoryName = reflect.qual(self.factory.__class__)
@@ -332,9 +385,14 @@ class Port(_UNIXPort, tcp.Port):
                         pass
 
         self.factory.doStart()
+
         try:
-            skt = self.createInternetSocket()
-            skt.bind(self.port)
+            if self._preexistingSocket is not None:
+                skt = self._preexistingSocket
+                self._preexistingSocket = None
+            else:
+                skt = self.createInternetSocket()
+                skt.bind(self.port)
         except socket.error as le:
             raise error.CannotListenError(None, self.port, le)
         else:
