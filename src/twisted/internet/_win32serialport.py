@@ -63,11 +63,13 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
         This is a separate method to facilitate testing.
         """
-        flags, comstat = win32file.ClearCommError(self._serial.hComPort)
+        flags, comstat = self._clearCommError()
         rc, self.read_buf = win32file.ReadFile(self._serial.hComPort,
                                                win32file.AllocateReadBuffer(1),
                                                self._overlappedRead)
 
+    def _clearCommError(self):
+        return win32file.ClearCommError(self._serial.hComPort)
 
     def serialReadEvent(self):
         #get that character we set up
@@ -75,7 +77,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         if n:
             first = to_bytes(self.read_buf[:n])
             #now we should get everything that is already in the buffer
-            flags, comstat = win32file.ClearCommError(self._serial.hComPort)
+            flags, comstat = self._clearCommError()
             if comstat.cbInQue:
                 win32event.ResetEvent(self._overlappedRead.hEvent)
                 rc, buf = win32file.ReadFile(self._serial.hComPort,
