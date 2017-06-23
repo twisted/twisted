@@ -125,4 +125,9 @@ class Twist(object):
         )
 
         cls.startService(reactor, service)
-        cls.run(options)
+        cls.run(cls.runnerArguments(options))
+        try:
+            if reactor.exitSignal:
+                exitWithSignal(reactor.exitSignal)
+        except:
+            pass
