@@ -201,3 +201,102 @@ class TwistTests(twisted.trial.unittest.TestCase):
             )
         )
         self.assertEqual(runners[0].runs, 1)
+
+
+
+class CrippledRunner(object):
+    def __init__(self, **kwargs):
+        self.args = kwargs
+
+    def run(self):
+        pass
+
+
+
+class TwistExitTests(twisted.trial.unittest.TestCase):
+
+    def setUp(self):
+        self.exitWithSignalCalled = False
+
+        def startService(service):
+            pass
+
+        self.patch(MultiService, "startService", startService)
+
+        def fakeExitWithSignal(sig):
+            self.exitWithSignalCalled = True
+
+        self.patch(_twist, 'exitWithSignal', fakeExitWithSignal)
+
+    def test_twistReactorDoesntExitWithSignal(self):
+        """
+        exitWithSignal is not called if the reactor's exitSignal attribute
+        is zero.
+        """
+        class TestTwistdOptions(TwistOptions):
+
+            def __init__(self):
+                TwistOptions.__init__(self)
+
+
+            def installReactor(self, name):
+                reactor = MemoryReactor()
+                reactor.exitSignal = 0
+                return reactor
+
+
+        self.patch(_twist, "TwistOptions", TestTwistdOptions)
+        self.patch(_twist, "Runner", CrippledRunner)
+        Twist.main([
+            "twist", "--reactor=default", "web"
+        ])
+        self.assertFalse(self.exitWithSignalCalled)
+
+
+    def test_twistReactorHasNoExitSignalAttr(self):
+        """
+        exitWithSignal is not called if the runner's reactor does not have
+        an exitSignal attribute.
+        """
+        class TestTwistdOptions(TwistOptions):
+
+            def __init__(self):
+                TwistOptions.__init__(self)
+
+
+            def installReactor(self, name):
+                reactor = MemoryReactor()
+                return reactor
+
+
+        self.patch(_twist, "TwistOptions", TestTwistdOptions)
+        self.patch(_twist, "Runner", CrippledRunner)
+        Twist.main([
+            "twist", "--reactor=default", "web"
+        ])
+        self.assertFalse(self.exitWithSignalCalled)
+
+
+    def test_twistReactorExitsWithSignal(self):
+        """
+        exitWithSignal is called if the runner's reactor exits due
+        to a signal.
+        """
+        class TestTwistdOptions(TwistOptions):
+
+            def __init__(self):
+                TwistOptions.__init__(self)
+
+
+            def installReactor(self, name):
+                reactor = MemoryReactor()
+                reactor.exitSignal = 2
+                return reactor
+
+
+        self.patch(_twist, "TwistOptions", TestTwistdOptions)
+        self.patch(_twist, "Runner", CrippledRunner)
+        Twist.main([
+            "twist", "--reactor=default", "web"
+        ])
+        self.assertTrue(self.exitWithSignalCalled)
