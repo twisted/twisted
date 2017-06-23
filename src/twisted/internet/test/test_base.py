@@ -21,7 +21,7 @@ from twisted.internet._resolver import FirstOneWins
 from twisted.internet.defer import Deferred
 from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
 from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -369,3 +369,49 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
             "traceback at creation:".format(id(dc)))
         self.assertRegex(
             str(dc), expectedRegexp)
+
+
+
+class SignalCapturingReactor(ReactorBase):
+
+    def installWaker(self):
+        pass
+
+
+
+class ReactorBaseSignalTests(TestCase):
+
+    def test_captureSIGINT(self):
+        """
+        ReactorBase's SIGINT handler saves the value of SIGINT to the
+        exitSignal attribute.
+        """
+        reactor = SignalCapturingReactor()
+        reactor.sigInt(signal.SIGINT, None)
+        self.assertEquals(signal.SIGINT, reactor.exitSignal)
+
+    def test_captureSIGTERM(self):
+        """
+        ReactorBase's SIGTERM handler saves the value of SIGTERM to the
+        exitSignal attribute.
+        """
+        reactor = SignalCapturingReactor()
+        reactor.sigInt(signal.SIGTERM, None)
+        self.assertEquals(signal.SIGTERM, reactor.exitSignal)
+
+    def test_captureSIGBREAK(self):
+        """
+        ReactorBase's SIGBREAK handler saves the value of SIGBREAK to the
+        exitSignal attribute.
+        """
+        if not hasattr(signal, "SIGBREAK"):
+            raise SkipTest("signal module does not have SIGBREAK")
+
+        reactor = SignalCapturingReactor()
+        reactor.sigInt(signal.SIGBREAK, None)
+        self.assertEquals(signal.SIGBREAK, reactor.exitSignal)
+
+try:
+    import signal
+except ImportError:
+    ReactorBaseSignalTests.skip = "signal module not available"

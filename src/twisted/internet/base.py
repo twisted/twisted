@@ -473,6 +473,8 @@ class ReactorBase(object):
     @ivar _registerAsIOThread: A flag controlling whether the reactor will
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
+
+    @ivar exitSignal: The signal that cause the reactor to stop, or 0.
     """
 
     _registerAsIOThread = True
@@ -481,6 +483,7 @@ class ReactorBase(object):
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
+    exitSignal = 0
 
     __name__ = "twisted.internet.reactor"
 
@@ -645,21 +648,33 @@ class ReactorBase(object):
 
     def sigInt(self, *args):
         """Handle a SIGINT interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
+        self.exitSignal = args[0]
+
 
     def sigBreak(self, *args):
         """Handle a SIGBREAK interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
+        self.exitSignal = args[0]
+
 
     def sigTerm(self, *args):
         """Handle a SIGTERM interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
+        self.exitSignal = args[0]
+
 
     def disconnectAll(self):
         """Disconnect every reader, and writer in the system.
