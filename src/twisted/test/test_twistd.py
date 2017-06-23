@@ -665,6 +665,47 @@ class ApplicationRunnerTests(unittest.TestCase):
         self.assertTrue(reactor.called)
 
 
+    def test_applicationRunnerCapturesSignal(self):
+        """
+        If the reactor exits with a signal, the application runner caches
+        the signal.
+        """
+
+        class DummyReactorWithSignal(object):
+            """
+            A dummy reactor, providing a C{run} method, checking that it
+            has been called, and setting the exitSignal attribute to a
+            nonzero value..
+
+            @ivar called: if C{run} has been called or not.
+            @type called: C{bool}
+
+            @ivar exitSignal: Simulated signal exit code
+            @type exitSignal: C{int}
+            """
+            called = False
+            exitSignal = 0
+
+            def run(self):
+                """
+                A fake run method, checking that it has been called once and
+                setting exitSignal to a nonzero value
+                """
+                if self.called:
+                    raise RuntimeError("Already called")
+                self.called = True
+                self.exitSignal = 2
+
+        reactor = DummyReactorWithSignal()
+        runner = app.ApplicationRunner({
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
+        runner.startReactor(reactor, None, None)
+        self.assertTrue(reactor.called)
+        self.assertEquals(2, runner.exitSignal)
+
+
 
 class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     """

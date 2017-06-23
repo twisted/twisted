@@ -362,9 +362,12 @@ class ApplicationRunner(object):
     @ivar loggerFactory: Factory for creating object responsible for logging.
 
     @ivar logger: Instance provided by C{loggerFactory}.
+
+    @ivar exitSignal: Signal that caused the reactor to stop
     """
     profilerFactory = AppProfiler
     loggerFactory = AppLogger
+    exitSignal = 0
 
     def __init__(self, config):
         self.config = config
@@ -396,6 +399,10 @@ class ApplicationRunner(object):
             from twisted.internet import reactor
         runReactorWithLogging(
             self.config, oldstdout, oldstderr, self.profiler, reactor)
+        try:
+            self.exitSignal = reactor.exitSignal
+        except AttributeError:
+            pass
 
 
     def preApplication(self):
