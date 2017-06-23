@@ -1968,6 +1968,19 @@ class DaemonizeTests(unittest.TestCase):
 
 class ExitWithSignalTests(unittest.TestCase):
 
+    def setUp(self):
+        self.config = twistd.ServerOptions()
+        self.config.loadedPlugins = {'test_command': MockServiceMaker()}
+        self.config.subOptions = object()
+        self.config.subCommand = 'test_command'
+        self.exitWithSignalCalled = False
+
+        def fakeExitWithSignal(sig):
+            self.exitWithSignalCalled = True
+
+        self.fakeExitWithSignal = fakeExitWithSignal
+
+
     def test_exitWithSignal(self):
         """
         exitWithSignal replaces the existing signal handler with the default
@@ -1995,6 +2008,32 @@ class ExitWithSignalTests(unittest.TestCase):
         self.assertEquals(fake_signal_args[1], signal.SIG_DFL)
         self.assertEquals(fake_kill_args[0], os.getpid())
         self.assertEquals(fake_kill_args[1], signal.SIGINT)
+
+
+    def test_normalExit(self):
+        """
+        exitWithSignal is not called if the runner does not exit with a
+        signal.
+        """
+        self.patch(twistd.app, 'exitWithSignal', self.fakeExitWithSignal)
+        self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
+        twistd.runApp(self.config)
+        self.assertFalse(self.exitWithSignalCalled)
+
+
+    def test_runnerExitsWithSignal(self):
+        """
+        exitWithSignal is called when the runner exits with a signal.
+        """
+        CrippledApplicationRunner.exitSignal = 2
+        self.patch(twistd.app, 'exitWithSignal', self.fakeExitWithSignal)
+        self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
+        twistd.runApp(self.config)
+        self.assertTrue(self.exitWithSignalCalled)
+
+
+    def tearDown(self):
+        CrippledApplicationRunner.exitSignal = 0
 
 
 

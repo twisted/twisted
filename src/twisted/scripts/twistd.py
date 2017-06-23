@@ -20,9 +20,11 @@ else:
     from twisted.scripts._twistd_unix import ServerOptions, \
         UnixApplicationRunner as _SomeApplicationRunner
 
-
 def runApp(config):
-    _SomeApplicationRunner(config).run()
+    runner = _SomeApplicationRunner(config)
+    runner.run()
+    if runner.exitSignal:
+        app.exitWithSignal(runner.exitSignal)
 
 
 def run():
