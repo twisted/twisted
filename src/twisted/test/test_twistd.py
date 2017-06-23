@@ -1966,5 +1966,37 @@ class DaemonizeTests(unittest.TestCase):
 
 
 
+class ExitWithSignalTests(unittest.TestCase):
+
+    def test_exitWithSignal(self):
+        """
+        exitWithSignal replaces the existing signal handler with the default
+        handler and sends the replaced signal to the current process.
+        """
+
+        fake_signal_args = [None, None]
+
+        def fake_signal(sig, handler):
+            fake_signal_args[0] = sig
+            fake_signal_args[1] = handler
+
+
+        fake_kill_args = [None, None]
+
+        def fake_kill(pid, sig):
+            fake_kill_args[0] = pid
+            fake_kill_args[1] = sig
+
+        self.patch(signal, 'signal', fake_signal)
+        self.patch(os, 'kill', fake_kill)
+        app.exitWithSignal(signal.SIGINT)
+
+        self.assertEquals(fake_signal_args[0], signal.SIGINT)
+        self.assertEquals(fake_signal_args[1], signal.SIG_DFL)
+        self.assertEquals(fake_kill_args[0], os.getpid())
+        self.assertEquals(fake_kill_args[1], signal.SIGINT)
+
+
+
 if _twistd_unix is None:
     DaemonizeTests.skip = "twistd unix support not available"

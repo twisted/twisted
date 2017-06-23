@@ -690,3 +690,17 @@ def startApplication(application, save):
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
+
+
+
+def exitWithSignal(sig):
+    """
+    Force the application to terminate with the specified signal by replacing
+    the signal handler with the default and sending the signal to ourselves.
+
+    @param sig:  Signal to use to terminate the process with C{os.kill}.
+    @type sig:  C{int}
+
+    """
+    signal.signal(sig, signal.SIG_DFL)
+    os.kill(os.getpid(), sig)
