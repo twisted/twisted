@@ -396,7 +396,7 @@ class ReactorBaseSignalTests(TestCase):
         exitSignal attribute.
         """
         reactor = SignalCapturingReactor()
-        reactor.sigInt(signal.SIGTERM, None)
+        reactor.sigTerm(signal.SIGTERM, None)
         self.assertEquals(signal.SIGTERM, reactor.exitSignal)
 
     def test_captureSIGBREAK(self):
@@ -408,7 +408,7 @@ class ReactorBaseSignalTests(TestCase):
             raise SkipTest("signal module does not have SIGBREAK")
 
         reactor = SignalCapturingReactor()
-        reactor.sigInt(signal.SIGBREAK, None)
+        reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor.exitSignal)
 
 try:
