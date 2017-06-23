@@ -30,7 +30,7 @@ from zope.interface.verify import verifyObject
 from twisted.trial import unittest
 from twisted.test.test_process import MockOS
 
-from twisted import plugin, logger
+from twisted import plugin, logger, internet
 from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
@@ -649,6 +649,20 @@ class ApplicationRunnerTests(unittest.TestCase):
         runner.startReactor(reactor, None, None)
         self.assertTrue(
             reactor.called, "startReactor did not call reactor.run()")
+
+
+    def test_applicationRunnerChoosesReactorIfNone(self):
+        """
+        L{ApplicationRunner} chooses a reactor if none is specified.
+        """
+        reactor = DummyReactor()
+        self.patch(internet, 'reactor', reactor)
+        runner = app.ApplicationRunner({
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
+        runner.startReactor(None, None, None)
+        self.assertTrue(reactor.called)
 
 
 

@@ -392,6 +392,8 @@ class ApplicationRunner(object):
 
         @see: L{runReactorWithLogging}
         """
+        if reactor is None:
+            from twisted.internet import reactor
         runReactorWithLogging(
             self.config, oldstdout, oldstderr, self.profiler, reactor)
 
