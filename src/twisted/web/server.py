@@ -194,11 +194,20 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
-            # Content-Type header should be supplied.
-            modified = self.code != http.NOT_MODIFIED
+            # Content-Type header should be supplied. We omit it on
+            # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
+            # is a Content-Length header set to 0, as empty bodies don't need
+            # a content-type.
+            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if (modified and contentType is None and
-                self.defaultContentType is not None
+            contentLength = self.responseHeaders.getRawHeaders(
+                b'content-length'
+            )
+            contentLengthZero = contentLength and (contentLength[0] == b'0')
+
+            if (needsCT and contentType is None and
+                self.defaultContentType is not None and
+                not contentLengthZero
                     ):
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])
