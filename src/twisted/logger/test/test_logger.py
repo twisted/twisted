@@ -85,7 +85,7 @@ class LoggerTests(unittest.TestCase):
         result = []
         exec(
             "result.append(Logger())",
-            dict(Logger=Logger), dict(result=result),
+            dict(Logger=Logger), locals(),
         )
         self.assertEqual(result[0].namespace, "<unknown>")
 
