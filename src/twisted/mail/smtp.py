@@ -17,8 +17,9 @@ import socket
 import os
 import random
 import binascii
-import email.utils
 import warnings
+
+from email.utils import parseaddr
 
 from zope.interface import implementer
 
@@ -176,7 +177,7 @@ def quoteaddr(addr):
     if isinstance(addr, bytes):
         addr = addr.decode('ascii')
 
-    res = email.utils.parseaddr(addr)
+    res = parseaddr(addr)
 
     if res == (None, None):
         # It didn't parse, use it as-is
@@ -1896,7 +1897,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
                 if not isinstance(_email, bytes):
                     _email = _email.encode('ascii')
 
-                toEmailFinal.append(email)
+                toEmailFinal.append(_email)
             toEmail = toEmailFinal
 
         self.fromEmail = Address(fromEmail)

@@ -433,6 +433,15 @@ class ServerDNSTests(unittest.TestCase):
             results
         )
 
+    def test_zoneTransferConnectionFails(self):
+        """
+        A failed AXFR TCP connection errbacks the L{Deferred} returned
+        from L{Resolver.lookupZone}.
+        """
+        resolver = Resolver(servers=[("nameserver.invalid", 53)])
+        return self.assertFailure(resolver.lookupZone("impossible.invalid"),
+                                  error.DNSLookupError)
+
 
     def test_similarZonesDontInterfere(self):
         """Tests that unrelated zones don't mess with each other."""
