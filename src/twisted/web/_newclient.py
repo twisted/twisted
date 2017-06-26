@@ -93,8 +93,8 @@ class _WrapperException(Exception):
     L{_WrapperException} is the base exception type for exceptions which
     include one or more other exceptions as the low-level causes.
 
-    @ivar reasons: A list of exceptions.  See subclass documentation for more
-        details.
+    @ivar reasons: A L{list} of one or more L{Failure} instances encountered
+        during an HTTP request.  See subclass documentation for more details.
     """
     def __init__(self, reasons):
         Exception.__init__(self, reasons)

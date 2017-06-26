@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from incremental import Version
@@ -135,10 +135,7 @@ from twisted.web._responses import (
     RESPONSES)
 
 
-if _PY3:
-    _intTypes = int
-else:
-    _intTypes = (int, long)
+_intTypes = (int, long)
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.
@@ -2177,6 +2174,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         log.msg(
             "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
         )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
         self.transport.abortConnection()
 
 
@@ -2570,12 +2570,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _timeOut: A timeout value to pass to the backing channel.
     @type _timeOut: L{int} or L{None}
+
+    @ivar _callLater: A value for the C{callLater} callback.
+    @type _callLater: L{callable}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
     _factory = None
     _site = None
     _timeOut = None
+    _callLater = None
 
 
     @property
@@ -2594,35 +2598,97 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @property
     def requestFactory(self):
+        """
+        A callable to use to build L{IRequest} objects.
+
+        Retries the object from the current backing channel.
+        """
         return self._channel.requestFactory
 
 
     @requestFactory.setter
     def requestFactory(self, value):
+        """
+        A callable to use to build L{IRequest} objects.
+
+        Sets the object on the backing channel and also stores the value for
+        propagation to any new channel.
+
+        @param value: The new callable to use.
+        @type value: A L{callable} returning L{IRequest}
+        """
         self._requestFactory = value
         self._channel.requestFactory = value
 
 
     @property
     def site(self):
+        """
+        A reference to the creating L{twisted.web.server.Site} object.
+
+        Returns the site object from the backing channel.
+        """
         return self._channel.site
 
 
     @site.setter
     def site(self, value):
+        """
+        A reference to the creating L{twisted.web.server.Site} object.
+
+        Sets the object on the backing channel and also stores the value for
+        propagation to any new channel.
+
+        @param value: The L{twisted.web.server.Site} object to set.
+        @type value: L{twisted.web.server.Site}
+        """
         self._site = value
         self._channel.site = value
 
 
     @property
     def timeOut(self):
+        """
+        The idle timeout for the backing channel.
+        """
         return self._channel.timeOut
 
 
     @timeOut.setter
     def timeOut(self, value):
+        """
+        The idle timeout for the backing channel.
+
+        Sets the idle timeout on both the backing channel and stores it for
+        propagation to any new backing channel.
+
+        @param value: The timeout to set.
+        @type value: L{int} or L{float}
+        """
         self._timeOut = value
         self._channel.timeOut = value
+
+
+    @property
+    def callLater(self):
+        """
+        A value for the C{callLater} callback. This callback is used by the
+        L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
+        """
+        return self._channel.callLater
+
+
+    @callLater.setter
+    def callLater(self, value):
+        """
+        Sets the value for the C{callLater} callback. This callback is used by
+        the L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
+
+        @param value: The new callback to use.
+        @type value: L{callable}
+        """
+        self._callLater = value
+        self._channel.callLater = value
 
 
     def dataReceived(self, data):
@@ -2655,6 +2721,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.site = self._site
                 self._channel.factory = self._factory
                 self._channel.timeOut = self._timeOut
+                self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
@@ -2741,6 +2808,14 @@ class HTTPFactory(protocol.ServerFactory):
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
+
+        # This is a bit of a hack to ensure that the HTTPChannel timeouts
+        # occur on the same reactor as the one we're using here. This could
+        # ideally be resolved by passing the reactor more generally to the
+        # HTTPChannel, but that won't work for the TimeoutMixin until we fix
+        # https://twistedmatrix.com/trac/ticket/8488
+        p.callLater = self._reactor.callLater
+
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
         p.timeOut = self.timeOut
@@ -2755,10 +2830,8 @@ class HTTPFactory(protocol.ServerFactory):
             self._updateLogDateTime()
 
         if self.logPath:
-            self._nativeize = False
             self.logFile = self._openLogFile(self.logPath)
         else:
-            self._nativeize = True
             self.logFile = log.logfile
 
 
@@ -2794,8 +2867,4 @@ class HTTPFactory(protocol.ServerFactory):
             pass
         else:
             line = self._logFormatter(self._logDateTime, request) + u"\n"
-            if self._nativeize:
-                line = nativeString(line)
-            else:
-                line = line.encode("utf-8")
-            logFile.write(line)
+            logFile.write(line.encode('utf8'))
