@@ -9,6 +9,8 @@ from signal import SIGTERM
 from io import BytesIO
 import errno
 
+from attr import attrib, attrs, Factory
+
 from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
     FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
@@ -71,28 +73,11 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         calledMethods = []
 
-        self.patch(
-            Runner, "killIfRequested",
-            lambda self: calledMethods.append("killIfRequested")
-        )
-        self.patch(
-            Runner, "startLogging",
-            lambda self: calledMethods.append("startLogging")
-        )
-        self.patch(
-            Runner, "startReactor",
-            lambda self: calledMethods.append("startReactor")
-        )
-        self.patch(
-            Runner, "reactorExited",
-            lambda self: calledMethods.append("reactorExited")
-        )
-
-        runner = Runner(reactor=MemoryReactor())
+        runner = DummyRunner(reactor=MemoryReactor())
         runner.run()
 
         self.assertEqual(
-            calledMethods,
+            runner.calledMethods,
             [
                 "killIfRequested",
                 "startLogging",
@@ -376,6 +361,34 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(len(argumentsSeen), 1)
         self.assertEqual(argumentsSeen[0], arguments)
+
+
+
+@attrs(frozen=True)
+class DummyRunner(Runner):
+    """
+    Stub for L{Runner}.
+
+    Keep track of calls to some methods without actually doing anything.
+    """
+
+    calledMethods = attrib(default=Factory(list))
+
+
+    def killIfRequested(self):
+        self.calledMethods.append("killIfRequested")
+
+
+    def startLogging(self):
+        self.calledMethods.append("startLogging")
+
+
+    def startReactor(self):
+        self.calledMethods.append("startReactor")
+
+
+    def reactorExited(self):
+        self.calledMethods.append("reactorExited")
 
 
 
