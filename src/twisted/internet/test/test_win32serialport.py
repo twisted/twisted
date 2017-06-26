@@ -5,9 +5,14 @@
 Tests for L{twisted.internet.serialport}.
 """
 
+import os
+import shutil
+import tempfile
+
 from twisted.trial import unittest
 from twisted.internet.protocol import Protocol
 from twisted.python.runtime import platform
+from twisted.internet.test.test_serialport import DoNothing
 
 try:
     from twisted.internet import serialport
@@ -50,13 +55,6 @@ class FakeSerial3x(FakeSerialBase):
         self._port_handle = 35
 
 
-class FakeReactor(object):
-    def addEvent(self, a, b, c):
-        # This is the only method called on the reactor by SerialPort in the
-        # real class.
-        pass
-
-
 if serialport is not None:
     class TestableSerialPortBase(serialport.SerialPort):
         """
@@ -82,6 +80,27 @@ if serialport is not None:
         """
         _serialFactory = FakeSerial3x
 
+    class RegularFileSerial(serial.Serial):
+        def _reconfigurePort(self):
+            pass
+
+    class RegularFileSerialPort(serialport.SerialPort):
+        _serialFactory = RegularFileSerial
+
+        def __init__(self, *args, **kwargs):
+            cbInQue = kwargs.get('cbInQue')
+
+            if 'cbInQue' in kwargs:
+                del kwargs['cbInQue']
+
+            self.comstat = serial.win32.COMSTAT
+            self.comstat.cbInQue = cbInQue
+
+            super(RegularFileSerialPort, self).__init__(*args, **kwargs)
+
+        def _clearCommError(self):
+            return True, self.comstat
+
 
 class Win32SerialPortTests(unittest.TestCase):
     """
@@ -97,7 +116,17 @@ class Win32SerialPortTests(unittest.TestCase):
     def setUp(self):
         # Re-usable protocol and reactor
         self.protocol = Protocol()
-        self.reactor = FakeReactor()
+        self.reactor = DoNothing()
+
+        self.directory = tempfile.mkdtemp()
+        self.path = os.path.join(self.directory, 'fake_serial')
+
+        data = b'1234'
+        with open(self.path, 'wb') as f:
+            f.write(data)
+
+    def tearDown(self):
+        shutil.rmtree(self.directory)
 
     def common_serialPortDefaultArgs(self, cls):
         """
@@ -140,3 +169,25 @@ class Win32SerialPortTests(unittest.TestCase):
 
     def test_serialPortInitiallyConnected3x(self):
         self.common_serialPortInitiallyConnected(cls=TestableSerialPort3x)
+
+    def common_exerciseHandleAccess(self, cbInQue):
+        port = RegularFileSerialPort(
+            protocol=self.protocol,
+            deviceNameOrPortNumber=self.path,
+            reactor=self.reactor,
+            cbInQue=cbInQue,
+        )
+        port.serialReadEvent()
+        port.write(b'abcd')
+        port.write(b'ABCD')
+        port.serialWriteEvent()
+        port.connectionLost(reason='Cleanup')
+
+        # No assertion since the point is simply to make sure that in all cases
+        # the port handle resolves instead of raising an exception.
+
+    def test_exerciseHandleAccess_1(self):
+        self.common_exerciseHandleAccess(cbInQue=False)
+
+    def test_exerciseHandleAccess_2(self):
+        self.common_exerciseHandleAccess(cbInQue=True)

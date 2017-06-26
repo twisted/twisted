@@ -37,14 +37,6 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             parity=parity, stopbits=stopbits, timeout=None,
             xonxoff=xonxoff, rtscts=rtscts)
 
-        # Try to detect pyserial version to support internal API changes
-        if hasattr(self._serial, '_port_handle'):
-            # >= 3.0
-            self._serialHandle = self._serial._port_handle
-        else:
-            # <= 2.7
-            self._serialHandle = self._serial.hComPort
-
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor
@@ -67,16 +59,31 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         self._finishPortSetup()
 
 
+    @property
+    def _serialHandle(self):
+        # Try to detect pyserial version to support internal API changes
+        if hasattr(self._serial, '_port_handle'):
+            # >= 3.0
+            return self._serial._port_handle
+        else:
+            # <= 2.7
+            return self._serial.hComPort
+
+
     def _finishPortSetup(self):
         """
         Finish setting up the serial port.
 
         This is a separate method to facilitate testing.
         """
-        flags, comstat = win32file.ClearCommError(self._serialHandle)
+        flags, comstat = self._clearCommError()
         rc, self.read_buf = win32file.ReadFile(self._serialHandle,
                                                win32file.AllocateReadBuffer(1),
                                                self._overlappedRead)
+
+
+    def _clearCommError(self):
+        return win32file.ClearCommError(self._serial.hComPort)
 
 
     def serialReadEvent(self):
@@ -85,7 +92,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         if n:
             first = str(self.read_buf[:n])
             #now we should get everything that is already in the buffer
-            flags, comstat = win32file.ClearCommError(self._serialHandle)
+            flags, comstat = self._clearCommError()
             if comstat.cbInQue:
                 win32event.ResetEvent(self._overlappedRead.hEvent)
                 rc, buf = win32file.ReadFile(self._serialHandle,
