@@ -25,14 +25,8 @@ from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
-if _PY3:
-    class Copyable:
-        """
-        Fake mixin, until twisted.spread is ported.
-        """
-else:
-    from twisted.spread.pb import Copyable, ViewPoint
+from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
@@ -200,11 +194,20 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
-            # Content-Type header should be supplied.
-            modified = self.code != http.NOT_MODIFIED
+            # Content-Type header should be supplied. We omit it on
+            # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
+            # is a Content-Length header set to 0, as empty bodies don't need
+            # a content-type.
+            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if (modified and contentType is None and
-                self.defaultContentType is not None
+            contentLength = self.responseHeaders.getRawHeaders(
+                b'content-length'
+            )
+            contentLengthZero = contentLength and (contentLength[0] == b'0')
+
+            if (needsCT and contentType is None and
+                self.defaultContentType is not None and
+                not contentLengthZero
                     ):
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])

@@ -1,0 +1,1 @@
+twisted.conch.ssh.userauth.SSHUserAuthServer now gracefully handles unsupported authentication key types.

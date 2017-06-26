@@ -93,8 +93,8 @@ class _WrapperException(Exception):
     L{_WrapperException} is the base exception type for exceptions which
     include one or more other exceptions as the low-level causes.
 
-    @ivar reasons: A list of exceptions.  See subclass documentation for more
-        details.
+    @ivar reasons: A L{list} of one or more L{Failure} instances encountered
+        during an HTTP request.  See subclass documentation for more details.
     """
     def __init__(self, reasons):
         Exception.__init__(self, reasons)
@@ -409,21 +409,31 @@ class HTTPClientParser(HTTPParser):
         to keep track of this response's state.
         """
         parts = status.split(b' ', 2)
-        if len(parts) != 3:
+        if len(parts) == 2:
+            # Some broken servers omit the required `phrase` portion of
+            # `status-line`.  One such server identified as
+            # "cloudflare-nginx".  Others fail to identify themselves
+            # entirely.  Fill in an empty phrase for such cases.
+            version, codeBytes = parts
+            phrase = b""
+        elif len(parts) == 3:
+            version, codeBytes, phrase = parts
+        else:
             raise ParseError(u"wrong number of parts", status)
 
         try:
-            statusCode = int(parts[1])
+            statusCode = int(codeBytes)
         except ValueError:
             raise ParseError(u"non-integer status code", status)
 
         self.response = Response._construct(
-            self.parseVersion(parts[0]),
+            self.parseVersion(version),
             statusCode,
-            parts[2],
+            phrase,
             self.headers,
             self.transport,
-            self.request)
+            self.request,
+        )
 
 
     def _finished(self, rest):

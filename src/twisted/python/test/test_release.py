@@ -19,8 +19,7 @@ import textwrap
 import tempfile
 import shutil
 
-from datetime import date
-from io import BytesIO as StringIO
+from io import BytesIO, StringIO
 
 from twisted.trial.unittest import TestCase, FailTest, SkipTest
 
@@ -35,8 +34,7 @@ from subprocess import CalledProcessError
 from twisted.python._release import (
     findTwistedProjects, replaceInFile, Project, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
-    runCommand, NotWorkingDirectory,
-    NewsBuilder, SphinxBuilder,
+    runCommand, NotWorkingDirectory, SphinxBuilder,
     GitCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
@@ -44,37 +42,37 @@ if os.name != 'posix':
 else:
     skip = None
 
-testingSphinxConf = "master_doc = 'index'\n"
+testingSphinxConf = u"master_doc = 'index'\n"
 
 try:
     import pydoctor.driver
     # it might not be installed, or it might use syntax not available in
     # this version of Python.
 except (ImportError, SyntaxError):
-    pydoctorSkip = "Pydoctor is not present."
+    pydoctorSkip = u"Pydoctor is not present."
 else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        pydoctorSkip = "Pydoctor is too old."
+    if getattr(pydoctor, u"version_info", (0,)) < (0, 1):
+        pydoctorSkip = u"Pydoctor is too old."
     else:
         pydoctorSkip = skip
 
 
-if not skip and which("sphinx-build"):
+if not skip and which(u"sphinx-build"):
     sphinxSkip = None
 else:
-    sphinxSkip = "Sphinx not available."
+    sphinxSkip = u"Sphinx not available."
 
 
 if not skip and which("git"):
-    gitVersion = runCommand(["git", "--version"]).split(" ")[2].split(".")
+    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
 
     # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
         gitSkip = skip
     else:
-        gitSkip = "old git is present"
+        gitSkip = u"old git is present"
 else:
-    gitSkip = "git is not present."
+    gitSkip = u"git is not present."
 
 
 
@@ -87,7 +85,7 @@ class ExternalTempdirTestCase(TestCase):
         """
         Make our own directory.
         """
-        newDir = tempfile.mkdtemp(dir="/tmp/")
+        newDir = tempfile.mkdtemp(dir=u"/tmp/")
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
 
@@ -130,8 +128,8 @@ def genVersion(*args, **kwargs):
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
     """
-    return ("from incremental import Version\n__version__=%r" % (
-        Version(*args, **kwargs))).encode('ascii')
+    return (u"from incremental import Version\n__version__={!r}".format(
+        Version(*args, **kwargs)))
 
 
 
@@ -167,7 +165,7 @@ class StructureAssertingMixin(object):
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace('\n', os.linesep))
+                child.setContent(dirDict[x].replace('\n', os.linesep).encode("utf-8"))
 
     def assertStructure(self, root, dirDict):
         """
@@ -186,11 +184,11 @@ class StructureAssertingMixin(object):
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "%s is not a dir!"
-                                % (child.path,))
+                self.assertTrue(child.isdir(), "{} is not a dir!".format(
+                                child.path))
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().replace(os.linesep, '\n')
+                actual = child.getContent().decode("utf-8").replace(os.linesep, u'\n')
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
@@ -234,9 +232,9 @@ class ProjectTests(ExternalTempdirTestCase):
             directory = directory.child(segment)
             if not directory.exists():
                 directory.createDirectory()
-            directory.child('__init__.py').setContent('')
+            directory.child('__init__.py').setContent(b'')
         directory.child('topfiles').createDirectory()
-        directory.child('_version.py').setContent(genVersion(*version))
+        directory.child('_version.py').setContent(genVersion(*version).encode("utf-8"))
         return Project(directory)
 
 
@@ -407,7 +405,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -420,10 +418,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n"
-            "def _bar():\n"
-            "    '%s'" % (docstring, privateDocstring))
+            u"def foo():\n"
+            u"    '{}'\n"
+            u"def _bar():\n"
+            u"    '{}'".format(docstring, privateDocstring).encode("utf-8"))
 
         outputPath = FilePath(self.mktemp())
 
@@ -469,7 +467,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
@@ -477,8 +475,8 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n" % (docstring,))
+            u"def foo():\n"
+            u"    '{}'\n".format(docstring).encode("utf-8"))
         packagePath.child("_version.py").setContent(
             genVersion("twisted", 1, 0, 0))
         outputPath = FilePath(self.mktemp())
@@ -489,28 +487,28 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
         self.assertTrue(
             indexPath.exists(),
-            "API index %r did not exist." % (outputPath.path,))
+            u"API index {} did not exist.".format(outputPath.path))
         self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            b'<a href="http://twistedmatrix.com/">Twisted</a>',
             indexPath.getContent(),
             "Project name/location not in file contents.")
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            "Package documentation file %r did not exist."
-            % (twistedPath.path,))
+            u"Package documentation file %r did not exist.".format(
+            twistedPath.path))
         self.assertIn(
             docstring, twistedPath.getContent(),
             "Docstring not in package documentation file.")
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
-            '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted">View Source</a>',
+            b'<a href="https://github.com/twisted/twisted/tree/'
+            b'twisted-1.0.0/src/twisted">View Source</a>',
             twistedPath.getContent())
 
-        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stdout.getvalue(), b'')
 
 
     @doNotFailOnNetworkError
@@ -518,7 +516,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         """
         The templates and System for Twisted includes adding deprecations.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -531,21 +529,21 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
-            "from twisted.python.deprecate import deprecated\n"
-            "from incremental import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0), "
-            "'Baz')\n"
-            "def foo():\n"
-            "    '%s'\n"
-            "from twisted.python import deprecate\n"
-            "import incremental\n"
-            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
-            "def _bar():\n"
-            "    '%s'\n"
-            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            "class Baz(object):\n"
-            "    pass"
-            "" % (docstring, privateDocstring))
+            u"from twisted.python.deprecate import deprecated\n"
+            u"from incremental import Version\n"
+            u"@deprecated(Version('Twisted', 15, 0, 0), "
+            u"'Baz')\n"
+            u"def foo():\n"
+            u"    '{}'\n"
+            u"from twisted.python import deprecate\n"
+            u"import incremental\n"
+            u"@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
+            u"def _bar():\n"
+            u"    '{}'\n"
+            u"@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            u"class Baz(object):\n"
+            u"    pass"
+            u"".format(docstring, privateDocstring).encode("utf-8"))
 
         outputPath = FilePath(self.mktemp())
 
@@ -653,504 +651,6 @@ class FilePathDeltaTests(TestCase):
 
 
 
-class NewsBuilderMixin(StructureAssertingMixin):
-    """
-    Tests for L{NewsBuilder} using Git.
-    """
-
-    def setUp(self):
-        """
-        Create a fake project and stuff some basic structure and content into
-        it.
-        """
-        self.builder = NewsBuilder()
-        self.project = FilePath(self.mktemp())
-
-        self.existingText = 'Here is stuff which was present previously.\n'
-        self.createStructure(
-            self.project, {
-                'NEWS': self.existingText,
-                '5.feature': 'We now support the web.\n',
-                '12.feature': 'The widget is more robust.\n',
-                '15.feature': (
-                    'A very long feature which takes many words to '
-                    'describe with any accuracy was introduced so that '
-                    'the line wrapping behavior of the news generating '
-                    'code could be verified.\n'),
-                '16.feature': (
-                    'A simpler feature\ndescribed on multiple lines\n'
-                    'was added.\n'),
-                '23.bugfix': 'Broken stuff was fixed.\n',
-                '25.removal': 'Stupid stuff was deprecated.\n',
-                '30.misc': '',
-                '35.misc': '',
-                '40.doc': 'foo.bar.Baz.quux',
-                '41.doc': 'writing Foo servers'})
-
-
-    def test_today(self):
-        """
-        L{NewsBuilder._today} returns today's date in YYYY-MM-DD form.
-        """
-        self.assertEqual(
-            self.builder._today(), date.today().strftime('%Y-%m-%d'))
-
-
-    def test_findFeatures(self):
-        """
-        When called with L{NewsBuilder._FEATURE}, L{NewsBuilder._findChanges}
-        returns a list of bugfix ticket numbers and descriptions as a list of
-        two-tuples.
-        """
-        features = self.builder._findChanges(
-            self.project, self.builder._FEATURE)
-        self.assertEqual(
-            features,
-            [(5, "We now support the web."),
-             (12, "The widget is more robust."),
-             (15,
-              "A very long feature which takes many words to describe with "
-              "any accuracy was introduced so that the line wrapping behavior "
-              "of the news generating code could be verified."),
-             (16, "A simpler feature described on multiple lines was added.")])
-
-
-    def test_findBugfixes(self):
-        """
-        When called with L{NewsBuilder._BUGFIX}, L{NewsBuilder._findChanges}
-        returns a list of bugfix ticket numbers and descriptions as a list of
-        two-tuples.
-        """
-        bugfixes = self.builder._findChanges(
-            self.project, self.builder._BUGFIX)
-        self.assertEqual(
-            bugfixes,
-            [(23, 'Broken stuff was fixed.')])
-
-
-    def test_findRemovals(self):
-        """
-        When called with L{NewsBuilder._REMOVAL}, L{NewsBuilder._findChanges}
-        returns a list of removal/deprecation ticket numbers and descriptions
-        as a list of two-tuples.
-        """
-        removals = self.builder._findChanges(
-            self.project, self.builder._REMOVAL)
-        self.assertEqual(
-            removals,
-            [(25, 'Stupid stuff was deprecated.')])
-
-
-    def test_findDocumentation(self):
-        """
-        When called with L{NewsBuilder._DOC}, L{NewsBuilder._findChanges}
-        returns a list of documentation ticket numbers and descriptions as a
-        list of two-tuples.
-        """
-        doc = self.builder._findChanges(
-            self.project, self.builder._DOC)
-        self.assertEqual(
-            doc,
-            [(40, 'foo.bar.Baz.quux'),
-             (41, 'writing Foo servers')])
-
-
-    def test_findMiscellaneous(self):
-        """
-        When called with L{NewsBuilder._MISC}, L{NewsBuilder._findChanges}
-        returns a list of removal/deprecation ticket numbers and descriptions
-        as a list of two-tuples.
-        """
-        misc = self.builder._findChanges(
-            self.project, self.builder._MISC)
-        self.assertEqual(
-            misc,
-            [(30, ''),
-             (35, '')])
-
-
-    def test_writeHeader(self):
-        """
-        L{NewsBuilder._writeHeader} accepts a file-like object opened for
-        writing and a header string and writes out a news file header to it.
-        """
-        output = StringIO()
-        self.builder._writeHeader(output, "Super Awesometastic 32.16")
-        self.assertEqual(
-            output.getvalue(),
-            "Super Awesometastic 32.16\n"
-            "=========================\n"
-            "\n")
-
-
-    def test_writeSection(self):
-        """
-        L{NewsBuilder._writeSection} accepts a file-like object opened for
-        writing, a section name, and a list of ticket information (as returned
-        by L{NewsBuilder._findChanges}) and writes out a section header and all
-        of the given ticket information.
-        """
-        output = StringIO()
-        self.builder._writeSection(
-            output, "Features",
-            [(3, "Great stuff."),
-             (17, "Very long line which goes on and on and on, seemingly "
-              "without end until suddenly without warning it does end.")])
-        self.assertEqual(
-            output.getvalue(),
-            "Features\n"
-            "--------\n"
-            " - Great stuff. (#3)\n"
-            " - Very long line which goes on and on and on, seemingly "
-            "without end\n"
-            "   until suddenly without warning it does end. (#17)\n"
-            "\n")
-
-
-    def test_writeMisc(self):
-        """
-        L{NewsBuilder._writeMisc} accepts a file-like object opened for
-        writing, a section name, and a list of ticket information (as returned
-        by L{NewsBuilder._findChanges} and writes out a section header and all
-        of the ticket numbers, but excludes any descriptions.
-        """
-        output = StringIO()
-        self.builder._writeMisc(
-            output, "Other",
-            [(x, "") for x in range(2, 50, 3)])
-        self.assertEqual(
-            output.getvalue(),
-            "Other\n"
-            "-----\n"
-            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
-            "#38, #41,\n"
-            "   #44, #47\n"
-            "\n")
-
-
-    def test_build(self):
-        """
-        L{NewsBuilder.build} updates a NEWS file with new features based on the
-        I{<ticket>.feature} files found in the directory specified.
-        """
-        self.builder.build(
-            self.project, self.project.child('NEWS'),
-            "Super Awesometastic 32.16")
-
-        results = self.project.child('NEWS').getContent()
-        self.assertEqual(
-            results,
-            'Super Awesometastic 32.16\n'
-            '=========================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - We now support the web. (#5)\n'
-            ' - The widget is more robust. (#12)\n'
-            ' - A very long feature which takes many words to describe '
-            'with any\n'
-            '   accuracy was introduced so that the line wrapping behavior '
-            'of the\n'
-            '   news generating code could be verified. (#15)\n'
-            ' - A simpler feature described on multiple lines was '
-            'added. (#16)\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Improved Documentation\n'
-            '----------------------\n'
-            ' - foo.bar.Baz.quux (#40)\n'
-            ' - writing Foo servers (#41)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #30, #35\n'
-            '\n\n' + self.existingText)
-
-
-    def test_emptyProjectCalledOut(self):
-        """
-        If no changes exist for a project, I{NEWS} gains a new section for
-        that project that includes some helpful text about how there were no
-        interesting changes.
-        """
-        project = FilePath(self.mktemp()).child("twisted")
-        project.makedirs()
-        self.createStructure(project, {'NEWS': self.existingText})
-
-        self.builder.build(
-            project, project.child('NEWS'),
-            "Super Awesometastic 32.16")
-        results = project.child('NEWS').getContent()
-        self.assertEqual(
-            results,
-            'Super Awesometastic 32.16\n'
-            '=========================\n'
-            '\n' +
-            self.builder._NO_CHANGES +
-            '\n\n' + self.existingText)
-
-
-    def test_preserveTicketHint(self):
-        """
-        If a I{NEWS} file begins with the two magic lines which point readers
-        at the issue tracker, those lines are kept at the top of the new file.
-        """
-        news = self.project.child('NEWS')
-        news.setContent(
-            'Ticket numbers in this file can be looked up by visiting\n'
-            'http://twistedmatrix.com/trac/ticket/<number>\n'
-            '\n'
-            'Blah blah other stuff.\n')
-
-        self.builder.build(self.project, news, "Super Awesometastic 32.16")
-
-        self.assertEqual(
-            news.getContent(),
-            'Ticket numbers in this file can be looked up by visiting\n'
-            'http://twistedmatrix.com/trac/ticket/<number>\n'
-            '\n'
-            'Super Awesometastic 32.16\n'
-            '=========================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - We now support the web. (#5)\n'
-            ' - The widget is more robust. (#12)\n'
-            ' - A very long feature which takes many words to describe '
-            'with any\n'
-            '   accuracy was introduced so that the line wrapping behavior '
-            'of the\n'
-            '   news generating code could be verified. (#15)\n'
-            ' - A simpler feature described on multiple lines was '
-            'added. (#16)\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Improved Documentation\n'
-            '----------------------\n'
-            ' - foo.bar.Baz.quux (#40)\n'
-            ' - writing Foo servers (#41)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #30, #35\n'
-            '\n\n'
-            'Blah blah other stuff.\n')
-
-
-    def test_emptySectionsOmitted(self):
-        """
-        If there are no changes of a particular type (feature, bugfix, etc), no
-        section for that type is written by L{NewsBuilder.build}.
-        """
-        for ticket in self.project.children():
-            if ticket.splitext()[1] in ('.feature', '.misc', '.doc'):
-                ticket.remove()
-
-        self.builder.build(
-            self.project, self.project.child('NEWS'),
-            'Some Thing 1.2')
-
-        self.assertEqual(
-            self.project.child('NEWS').getContent(),
-            'Some Thing 1.2\n'
-            '==============\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n\n'
-            'Here is stuff which was present previously.\n')
-
-
-    def test_duplicatesMerged(self):
-        """
-        If two change files have the same contents, they are merged in the
-        generated news entry.
-        """
-        def feature(s):
-            return self.project.child(s + '.feature')
-        feature('5').copyTo(feature('15'))
-        feature('5').copyTo(feature('16'))
-
-        self.builder.build(
-            self.project, self.project.child('NEWS'),
-            'Project Name 5.0')
-
-        self.assertEqual(
-            self.project.child('NEWS').getContent(),
-            'Project Name 5.0\n'
-            '================\n'
-            '\n'
-            'Features\n'
-            '--------\n'
-            ' - We now support the web. (#5, #15, #16)\n'
-            ' - The widget is more robust. (#12)\n'
-            '\n'
-            'Bugfixes\n'
-            '--------\n'
-            ' - Broken stuff was fixed. (#23)\n'
-            '\n'
-            'Improved Documentation\n'
-            '----------------------\n'
-            ' - foo.bar.Baz.quux (#40)\n'
-            ' - writing Foo servers (#41)\n'
-            '\n'
-            'Deprecations and Removals\n'
-            '-------------------------\n'
-            ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
-            'Other\n'
-            '-----\n'
-            ' - #30, #35\n'
-            '\n\n'
-            'Here is stuff which was present previously.\n')
-
-
-    def createFakeTwistedProject(self):
-        """
-        Create a fake-looking Twisted project to build from.
-        """
-        project = FilePath(self.mktemp()).child("twisted")
-        project.makedirs()
-        self.createStructure(
-            project, {
-                'NEWS': 'Old boring stuff from the past.\n',
-                '_version.py': genVersion("twisted", 1, 2, 3),
-                'topfiles': {
-                    'NEWS': 'Old core news.\n',
-                    '3.feature': 'Third feature addition.\n',
-                    '5.misc': ''},
-                'conch': {
-                    '_version.py': genVersion("twisted.conch", 3, 4, 5),
-                    'topfiles': {
-                        'NEWS': 'Old conch news.\n',
-                        '7.bugfix': 'Fixed that bug.\n'}}})
-        return project
-
-
-    def test_buildAll(self):
-        """
-        L{NewsBuilder.buildAll} calls L{NewsBuilder.build} once for each
-        subproject, passing that subproject's I{topfiles} directory as C{path},
-        the I{NEWS} file in that directory as C{output}, and the subproject's
-        name as C{header}, and then again for each subproject with the
-        top-level I{NEWS} file for C{output}. Blacklisted subprojects are
-        skipped.
-        """
-        builds = []
-        builder = NewsBuilder()
-        builder.build = lambda path, output, header: builds.append((
-            path, output, header))
-        builder._today = lambda: '2009-12-01'
-
-        self.project = self.createFakeTwistedProject()
-        self._commit(self.project)
-        builder.buildAll(self.project)
-
-        coreTopfiles = self.project.child("topfiles")
-        coreNews = coreTopfiles.child("NEWS")
-        coreHeader = "Twisted Core 1.2.3 (2009-12-01)"
-
-        conchTopfiles = self.project.child("conch").child("topfiles")
-        conchNews = conchTopfiles.child("NEWS")
-        conchHeader = "Twisted Conch 1.2.3 (2009-12-01)"
-
-        aggregateNews = self.project.child("NEWS")
-
-        self.assertEqual(
-            builds,
-            [(conchTopfiles, conchNews, conchHeader),
-             (conchTopfiles, aggregateNews, conchHeader),
-             (coreTopfiles, coreNews, coreHeader),
-             (coreTopfiles, aggregateNews, coreHeader)])
-
-
-    def test_buildAllAggregate(self):
-        """
-        L{NewsBuilder.buildAll} aggregates I{NEWS} information into the top
-        files, only deleting fragments once it's done.
-        """
-        builder = NewsBuilder()
-        project = self.createFakeTwistedProject()
-        self._commit(project)
-        builder.buildAll(project)
-
-        aggregateNews = project.child("NEWS")
-
-        aggregateContent = aggregateNews.getContent()
-        self.assertIn("Third feature addition", aggregateContent)
-        self.assertIn("Fixed that bug", aggregateContent)
-        self.assertIn("Old boring stuff from the past", aggregateContent)
-
-
-    def test_removeNEWSfragments(self):
-        """
-        L{NewsBuilder.buildALL} removes all the NEWS fragments after the build
-        process, using the VCS's C{rm} command.
-        """
-        builder = NewsBuilder()
-        project = self.createFakeTwistedProject()
-        self._commit(project)
-        builder.buildAll(project)
-
-        self.assertEqual(5, len(project.children()))
-        output = self._getStatus(project)
-        removed = [line for line in output.splitlines()
-                   if line.startswith("D ")]
-        self.assertEqual(3, len(removed))
-
-
-    def test_checkRepo(self):
-        """
-        L{NewsBuilder.buildAll} raises L{NotWorkingDirectory} when the given
-        path is not a supported repository.
-        """
-        self.assertRaises(
-            NotWorkingDirectory, self.builder.buildAll, self.project)
-
-
-class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
-    """
-    Tests for L{NewsBuilder} using Git.
-    """
-    skip = gitSkip
-
-    def _commit(self, project=None):
-        """
-        Make the C{project} directory a valid Git repository with all
-        files committed.
-        """
-        if project is None:
-            project = self.project
-
-        _gitInit(project)
-        runCommand(["git", "-C", project.path, "add"] + glob.glob(
-            project.path + "/*"))
-        runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
-
-    def _getStatus(self, project):
-        return runCommand(["git", "-C", project.path, "status", "--short"])
-
-
-
 class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
@@ -1171,13 +671,13 @@ class SphinxBuilderTests(TestCase):
     """
     skip = sphinxSkip
 
-    confContent = """\
+    confContent = u"""\
                   source_suffix = '.rst'
                   master_doc = 'index'
                   """
     confContent = textwrap.dedent(confContent)
 
-    indexContent = """\
+    indexContent = u"""\
                    ==============
                    This is a Test
                    ==============
@@ -1211,8 +711,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent)
-        self.sourceDir.child("index.rst").setContent(self.indexContent)
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
 
 
     def verifyFileExists(self, fileDir, fileName):
@@ -1250,7 +750,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            self.assertIn("<body", fcontents)
+            self.assertIn(b"<body", fcontents)
 
 
     def test_build(self):
@@ -1280,7 +780,7 @@ class SphinxBuilderTests(TestCase):
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
-            f.write("\n.. _malformed-link-target\n")
+            f.write(b"\n.. _malformed-link-target\n")
         exception = self.assertRaises(
             SystemExit,
             self.builder.main, [self.sphinxDir.parent().path]
@@ -1315,34 +815,6 @@ class SphinxBuilderTests(TestCase):
         self.assertRaises(CalledProcessError,
                           self.builder.build,
                           self.sphinxDir)
-
-
-
-class ScriptTests(StructureAssertingMixin, ExternalTempdirTestCase):
-    """
-    Tests for the release script functionality.
-    """
-
-    def test_badNumberOfArgumentsToBuildNews(self):
-        """
-        L{NewsBuilder.main} raises L{SystemExit} when other than 1 argument is
-        passed to it.
-        """
-        newsBuilder = NewsBuilder()
-        self.assertRaises(SystemExit, newsBuilder.main, [])
-        self.assertRaises(SystemExit, newsBuilder.main, ["hello", "world"])
-
-
-    def test_buildNews(self):
-        """
-        L{NewsBuilder.main} calls L{NewsBuilder.buildAll} with a L{FilePath}
-        instance constructed from the path passed to it.
-        """
-        builds = []
-        newsBuilder = NewsBuilder()
-        newsBuilder.buildAll = builds.append
-        newsBuilder.main(["/foo/bar/baz"])
-        self.assertEqual(builds, [FilePath("/foo/bar/baz")])
 
 
 
@@ -1389,7 +861,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         no pending modifications returns C{False}.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        reposDir.child('some-file').setContent("something")
+        reposDir.child('some-file').setContent(b"something")
         self.assertFalse(self.createCommand.isStatusClean(reposDir))
 
 
@@ -1400,7 +872,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         """
         reposDir = self.makeRepository(self.tmpDir)
         testFile = reposDir.child('some-file')
-        testFile.setContent("something")
+        testFile.setContent(b"something")
         self.commitRepository(reposDir)
         self.assertTrue(testFile.exists())
 
@@ -1415,14 +887,14 @@ class CommandsTestMixin(StructureAssertingMixin):
         repository as identical in a specified directory.
         """
         structure = {
-            "README.rst": "Hi this is 1.0.0.",
+            "README.rst": u"Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.0"},
+                    "README": u"Hi this is 1.0.0"},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0"},
+                        "README": u"Hi this is 1.0.0"},
                     "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         reposDir = self.makeRepository(self.tmpDir)
         self.createStructure(reposDir, structure)
@@ -1567,7 +1039,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+        self.assertEqual(logs[-1],
+                         "No newsfragment found. Have you committed it?")
 
 
     def test_noChangeFromTrunk(self):
@@ -1626,7 +1099,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
-                         "Release branch with no topfiles, all good.")
+                         "Release branch with no newsfragments, all good.")
 
 
     def test_releaseWithTopfiles(self):
@@ -1636,7 +1109,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         fragment = topfiles.child("1234.misc")
         fragment.setContent(b"")
@@ -1656,7 +1129,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1],
-                         "No topfiles should be on the release branch.")
+                         "No newsfragments should be on the release branch.")
 
 
     def test_onlyQuotes(self):
@@ -1683,7 +1156,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
-                         "Quotes change only; no topfile needed.")
+                         "Quotes change only; no newsfragment needed.")
 
 
     def test_topfileAdded(self):
@@ -1694,7 +1167,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         fragment = topfiles.child("1234.misc")
         fragment.setContent(b"")
@@ -1713,7 +1186,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+        self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")
 
 
     def test_topfileButNotFragmentAdded(self):
@@ -1724,7 +1197,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         notFragment = topfiles.child("1234.txt")
         notFragment.setContent(b"")
@@ -1743,7 +1216,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
-        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+        self.assertEqual(logs[-1],
+                         "No newsfragment found. Have you committed it?")
 
 
     def test_topfileAddedButWithOtherTopfiles(self):
@@ -1754,7 +1228,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles = self.repo.child("twisted").child("newsfragments")
         topfiles.makedirs()
         fragment = topfiles.child("1234.misc")
         fragment.setContent(b"")
@@ -1773,4 +1247,4 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+        self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")

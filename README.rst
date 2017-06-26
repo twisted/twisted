@@ -1,4 +1,4 @@
-Twisted 17.1.0
+Twisted 17.5.0
 ==============
 
 |pypi|
@@ -8,9 +8,11 @@ Twisted 17.1.0
 
 .. code::
 
-    <hawkowl> we have always been at war with 16.7
+    <lukasa> Shhh
+    <lukasa> Don't think about it
+    <lukasa> Just let the asynchrony wash over you
 
-For information on what's new in Twisted 17.1.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.5.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?

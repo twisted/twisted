@@ -555,6 +555,10 @@ class _ClientMachine(object):
         @param log: The logger for the L{ClientService} instance this state
             machine is associated to.
         @type log: L{Logger}
+
+        @ivar _awaitingConnected: notifications to make when connection
+            succeeds, fails, or is cancelled
+        @type _awaitingConnected: list of (Deferred, count) tuples
         """
         self._endpoint = endpoint
         self._failedAttempts = 0
@@ -610,7 +614,7 @@ class _ClientMachine(object):
     @_machine.state()
     def _stopped(self):
         """
-        The service has been stopped an is disconnected.
+        The service has been stopped and is disconnected.
         """
 
     @_machine.input()
@@ -630,7 +634,7 @@ class _ClientMachine(object):
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
             .addCallback(self._connectionMade)
-            .addErrback(lambda _: self._connectionFailed()))
+            .addErrback(self._connectionFailed))
 
 
     @_machine.output()
@@ -715,16 +719,27 @@ class _ClientMachine(object):
 
 
     @_machine.input()
-    def _connectionFailed(self):
+    def _connectionFailed(self, f):
         """
         The current connection attempt failed.
         """
+
 
     @_machine.output()
     def _wait(self):
         """
         Schedule a retry attempt.
         """
+        self._doWait()
+
+    @_machine.output()
+    def _ignoreAndWait(self, f):
+        """
+        Schedule a retry attempt, and ignore the Failure passed in.
+        """
+        return self._doWait()
+
+    def _doWait(self):
         self._failedAttempts += 1
         delay = self._timeoutForAttempt(self._failedAttempts)
         self._log.info("Scheduling retry {attempt} to connect {endpoint} "
@@ -761,31 +776,67 @@ class _ClientMachine(object):
         """
         self._unawait(Failure(CancelledError()))
 
+    @_machine.output()
+    def _ignoreAndCancelConnectWaiters(self, f):
+        """
+        Notify all pending requests for a connection that no more connections
+        are expected, after ignoring the Failure passed in.
+        """
+        self._unawait(Failure(CancelledError()))
+
 
     @_machine.output()
     def _finishStopping(self):
         """
         Notify all deferreds waiting on the service stopping.
         """
+        self._doFinishStopping()
+
+    @_machine.output()
+    def _ignoreAndFinishStopping(self, f):
+        """
+        Notify all deferreds waiting on the service stopping, and ignore the
+        Failure passed in.
+        """
+        self._doFinishStopping()
+
+    def _doFinishStopping(self):
         self._stopWaiters, waiting = [], self._stopWaiters
         for w in waiting:
             w.callback(None)
 
 
     @_machine.input()
-    def whenConnected(self):
+    def whenConnected(self, failAfterFailures=None):
         """
         Retrieve the currently-connected L{Protocol}, or the next one to
         connect.
 
-        @return: a Deferred that fires with a protocol produced by the factory
-            passed to C{__init__}
-        @rtype: L{Deferred} firing with L{IProtocol} or failing with
-            L{CancelledError} the service is stopped.
+        @param failAfterFailures: number of connection failures after which
+            the Deferred will deliver a Failure (None means the Deferred will
+            only fail if/when the service is stopped).  Set this to 1 to make
+            the very first connection failure signal an error.  Use 2 to
+            allow one failure but signal an error if the subsequent retry
+            then fails.
+        @type failAfterFailures: L{int} or None
+
+        @return: a Deferred that fires with a protocol produced by the
+            factory passed to C{__init__}
+        @rtype: L{Deferred} that may:
+
+            - fire with L{IProtocol}
+
+            - fail with L{CancelledError} when the service is stopped
+
+            - fail with e.g.
+              L{DNSLookupError<twisted.internet.error.DNSLookupError>} or
+              L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}
+              when the number of consecutive failed connection attempts
+              equals the value of "failAfterFailures"
         """
 
     @_machine.output()
-    def _currentConnection(self):
+    def _currentConnection(self, failAfterFailures=None):
         """
         Return the currently connected protocol.
 
@@ -795,7 +846,7 @@ class _ClientMachine(object):
 
 
     @_machine.output()
-    def _noConnection(self):
+    def _noConnection(self, failAfterFailures=None):
         """
         Notify the caller that no connection is expected.
 
@@ -805,14 +856,14 @@ class _ClientMachine(object):
 
 
     @_machine.output()
-    def _awaitingConnection(self):
+    def _awaitingConnection(self, failAfterFailures=None):
         """
         Return a deferred that will fire with the next connected protocol.
 
         @return: L{Deferred} that will fire with the next connected protocol.
         """
         result = Deferred()
-        self._awaitingConnected.append(result)
+        self._awaitingConnected.append((result, failAfterFailures))
         return result
 
 
@@ -833,8 +884,29 @@ class _ClientMachine(object):
         @param value: the value to fire the L{Deferred}s with.
         """
         self._awaitingConnected, waiting = [], self._awaitingConnected
-        for w in waiting:
+        for (w, remaining) in waiting:
             w.callback(value)
+
+    @_machine.output()
+    def _deliverConnectionFailure(self, f):
+        """
+        Deliver connection failures to any L{ClientService.whenConnected}
+        L{Deferred}s that have met their failAfterFailures threshold.
+
+        @param f: the Failure to fire the L{Deferred}s with.
+        """
+        ready = []
+        notReady = []
+        for (w, remaining) in self._awaitingConnected:
+            if remaining is None:
+                notReady.append((w, remaining))
+            elif remaining <= 1:
+                ready.append(w)
+            else:
+                notReady.append((w, remaining-1))
+        self._awaitingConnected = notReady
+        for w in ready:
+            w.callback(f)
 
     # State Transitions
 
@@ -853,7 +925,7 @@ class _ClientMachine(object):
     _connecting.upon(_connectionMade, enter=_connected,
                      outputs=[_notifyWaiters])
     _connecting.upon(_connectionFailed, enter=_waiting,
-                     outputs=[_wait])
+                     outputs=[_ignoreAndWait, _deliverConnectionFailure])
 
     _waiting.upon(start, enter=_waiting,
                   outputs=[])
@@ -886,7 +958,8 @@ class _ClientMachine(object):
     # Note that this is triggered synchonously with the transition from
     # _connecting
     _disconnecting.upon(_connectionFailed, enter=_stopped,
-                        outputs=[_cancelConnectWaiters, _finishStopping])
+                        outputs=[_ignoreAndCancelConnectWaiters,
+                                 _ignoreAndFinishStopping])
 
     _restarting.upon(start, enter=_restarting,
                      outputs=[])
@@ -966,17 +1039,34 @@ class ClientService(service.Service, object):
         )
 
 
-    def whenConnected(self):
+    def whenConnected(self, failAfterFailures=None):
         """
         Retrieve the currently-connected L{Protocol}, or the next one to
         connect.
 
-        @return: a Deferred that fires with a protocol produced by the factory
-            passed to C{__init__}
-        @rtype: L{Deferred} firing with L{IProtocol} or failing with
-            L{CancelledError} the service is stopped.
+        @param failAfterFailures: number of connection failures after which
+            the Deferred will deliver a Failure (None means the Deferred will
+            only fail if/when the service is stopped).  Set this to 1 to make
+            the very first connection failure signal an error.  Use 2 to
+            allow one failure but signal an error if the subsequent retry
+            then fails.
+        @type failAfterFailures: L{int} or None
+
+        @return: a Deferred that fires with a protocol produced by the
+            factory passed to C{__init__}
+        @rtype: L{Deferred} that may:
+
+            - fire with L{IProtocol}
+
+            - fail with L{CancelledError} when the service is stopped
+
+            - fail with e.g.
+              L{DNSLookupError<twisted.internet.error.DNSLookupError>} or
+              L{ConnectionRefusedError<twisted.internet.error.ConnectionRefusedError>}
+              when the number of consecutive failed connection attempts
+              equals the value of "failAfterFailures"
         """
-        return self._machine.whenConnected()
+        return self._machine.whenConnected(failAfterFailures)
 
 
     def startService(self):

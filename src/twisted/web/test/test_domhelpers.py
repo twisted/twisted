@@ -8,11 +8,9 @@ Specific tests for (some of) the methods in L{twisted.web.domhelpers}.
 
 from xml.dom import minidom
 
+from twisted.python.compat import unicode
 from twisted.trial.unittest import TestCase
-
-from twisted.web import microdom
-
-from twisted.web import domhelpers
+from twisted.web import domhelpers, microdom
 
 
 class DOMHelpersTestsMixin:

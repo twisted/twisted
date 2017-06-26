@@ -1,6 +1,190 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+.. towncrier release notes start
+
+Twisted 17.5.0 (2017-06-04)
+===========================
+
+Bugfixes
+--------
+
+- spawnProcess no longer opens an unwanted console on Windows (#5726)
+- The transition to the hyperlink package adds IPv6 support to
+  twisted.python.url.URL. This is now deprecated and new code should use
+  hyperlink directly (see #9126). (#8069)
+- twisted.logger now buffers only 200 events by default (reduced from 65536)
+  while waiting for observers to be configured. (#8164)
+- The transition of twisted.python.url to using the hyperlink package enables a
+  URL.click() with no arguments (or 0-length string argument) to resolve dot
+  segments in the path. (#8184)
+- twisted.protocols.finger now works on Python 3. (#8230)
+- TLS-related tests now pass when run with OpenSSL 1.1.0. This makes tests pass
+  again on macOS and Windows, as cryptography 1.8 and later include OpenSSL
+  1.1.0. (#8898)
+- UNIX socket endpoints now process all messages from recvmsg's ancillary data
+  via twisted.internet.unix.Server.doRead/twisted.internet.unix.Client.doRead,
+  while discarding and logging ones that don't contain file descriptors.
+  (#8912)
+- twisted.internet.endpoints.HostnameEndpoint and twisted.web.client.Agent work
+  again with reactors that do not provide IReactorPluggableNameResolver. This
+  undoes the changes that broke downstream users such as treq.testing. Note
+  that passing reactors that do not provide IReactorPluggableNameResolver to
+  either is deprecated. (#9032)
+- A Python 3 Perspective Broker server which receives a remote call with
+  keyword arguments from a Python 2 client will now decode any keys which are
+  binary to strings instead of crashing. This fixes interoperability between
+  Python 2 Buildbot clients and Python 3 Buildbot servers. (#9047)
+- twisted.internet._threadedselect now works on both Python 2 and 3. (#9053)
+- twisted.internet.interfaces.IResolverSimple implementers will now always be
+  passed bytes, properly IDNA encoded if required, on Python 2. On Python 3,
+  they will now be passed correctly IDNA-encoded Unicode forms of the domain,
+  taking advantage of the idna library from PyPI if possible. This is to avoid
+  Python's standard library (which has an out of date idna module) from mis-
+  encoding domain names when non-ASCII Unicode is passed to it. (#9137)
+
+
+Improved Documentation
+----------------------
+
+- The examples in Twisted howto "Using the Twisted Application Framework",
+  section "Customizing twistd logging" have been updated to use latest logging
+  modules and syntax (#9084)
+
+
+Features
+--------
+
+- twisted.internet.defer.Deferred.asFuture and
+  twisted.internet.defer.Deferred.fromFuture were added, allowing for easy
+  transitions between asyncio coroutines (which await Futures) and twisted
+  coroutines (which await Deferreds). (#8748)
+- twisted.application.internet.ClientService.whenConnected now accepts an
+  argument "failAfterFailures". If you set this to 1, the Deferred returned by
+  whenConnected will errback when the connection attempt fails, rather than
+  retrying forever. This lets you react (probably by stopping the
+  ClientService) to connection errors that are likely to be persistent, such as
+  using the wrong hostname, or not being connected to the internet at all.
+  (#9116)
+- twisted.protocols.tls.TLSMemoryBIOProtocol and anything that uses it
+  indirectly including the TLS client and server endpoints now enables TLS 1.3
+  cipher suites. (#9128)
+
+
+Misc
+----
+
+- #8133, #8995, #8997, #9003, #9015, #9021, #9026, #9027, #9049, #9057, #9062,
+  #9065, #9069, #9070, #9072, #9074, #9075, #9111, #9117, #9140, #9144, #9145
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.runner.inetdconf.InvalidRPCServicesConfError,
+  twisted.runner.inetdconf.RPCServicesConf, twisted.runner.inetdtap.RPCServer,
+  and twisted.runner.portmap, deprecated since 16.2.0, have been removed.
+  (#8464)
+- twisted.python.url and twisted.python._url were modified to rely on
+  hyperlink, a new package based on the Twisted URL implementation. Hyperlink
+  adds support for IPv6 (fixing #8069), correct username/password encoding,
+  better scheme/netloc inference, improved URL.click() behavior (fixing #8184),
+  and more. For full docs see hyperlink.readthedocs.io and the CHANGELOG in the
+  hyperlink GitHub repo. (#9126)
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- History-aware terminal protocols like twisted.conch.manhole.Manhole no longer
+  raise a TypeError when a user visits a partial line they added to the command
+  line history by pressing up arrow before return. (#9031)
+- The telnet_echo.tac example had conflicting port callouts between runtime and
+  documentation. File was altered to run on documented port, 6023. (#9055)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Remove diffie-hellman-group1-sha1 from twisted.conch. See https://weakdh.org/
+  (#9019)
+- Removed small and obscure elliptic curves from conch. The only curves conch
+  supports now are the ones also supported by OpenSSH. (#9088)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.smtp has been ported to Python 3. (#8770)
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- RRHeader now converts its ttl argument to an integer, raising a TypeError if
+  it cannot. (#8340)
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.cgi now works on Python 3 (#8009)
+- twisted.web.distrib now works on Python 3 (#8010)
+- twisted.web.http.HTTPFactory now propagates its reactor's callLater method to
+  the HTTPChannel object, rather than having callLater grab the global reactor.
+  This prevents the possibility of HTTPFactory logging using one reactor, but
+  HTTPChannel running timeouts on another. (#8904)
+
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.template.flattenString docstring now correctly references
+  io.BytesIO (rather than NativeStringIO). (#9028)
+
+
+Features
+~~~~~~~~
+
+- twisted.web.client now exposes the RequestGenerationFailed exception type.
+  (#5310)
+- twisted.web.client.Agent will now parse responses that begin with a status
+  line that is missing a phrase. (#7673)
+- twisted.web.http.HTTPChannel and twisted.web._http2.H2Connection have been
+  enhanced so that after they time out they wait a small amount of time to
+  allow the connection to close gracefully and, if it does not, they forcibly
+  close it to avoid allowing malicious clients to forcibly keep the connection
+  open. (#8902)
+
+
+Misc
+~~~~
+
+- #8981, #9018, #9067, #9090, #9092, #9093, #9096
+
+
+Words
+-----
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.words.protocols.oscar, which is client code for Oscar/ICQ, was
+  deprecated in 16.2.0 and has now been removed. (#9024)
+
+
 Twisted Core 17.1.0 (2017-02-04)
 ================================
 
@@ -1380,7 +1564,7 @@ Bugfixes
 
 Deprecations and Removals
 -------------------------
- - twisted.web.http.Request's headers and request_headers attributes,
+ - twisted.web.http.Request's headers and received_headers attributes,
    deprecated since Twisted 13.2, have been removed. (#8136)
  - twisted.web.static.addSlash is deprecated. (#8169)
 

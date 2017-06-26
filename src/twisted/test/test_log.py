@@ -16,6 +16,7 @@ import logging
 import warnings
 import calendar
 from io import IOBase
+from imp import reload
 
 from twisted.trial import unittest
 
@@ -390,11 +391,11 @@ class LogPublisherTests(LogPublisherTestCaseMixin,
 
     def test_singleUnicode(self):
         """
-        L{log.LogPublisher.msg} encodes Unicode as ``ascii`` with
-        ``backslashreplace`` error handling on Python 2.
+        L{log.LogPublisher.msg} does not accept non-ASCII Unicode on Python 2,
+        logging an error instead.
 
-        On Python 3, where Unicode is default message type, the
-        message is logged normally.
+        On Python 3, where Unicode is default message type, the message is
+        logged normally.
         """
         message = u"Hello, \N{VULGAR FRACTION ONE HALF} world."
         self.lp.msg(message)
@@ -402,7 +403,8 @@ class LogPublisherTests(LogPublisherTestCaseMixin,
         if _PY3:
             self.assertIn(message, self.out[0])
         else:
-            self.assertIn(r"Hello, \xbd world", self.out[0])
+            self.assertIn('with str error', self.out[0])
+            self.assertIn('UnicodeEncodeError', self.out[0])
 
 
 

@@ -778,7 +778,7 @@ class TLSMemoryBIOTests(TestCase):
 
         # And when the connection completely dies, check the reason.
         def cbDisconnected(clientProtocol):
-            clientProtocol.lostConnectionReason.trap(Error)
+            clientProtocol.lostConnectionReason.trap(Error, ConnectionLost)
         clientConnectionLost.addCallback(cbDisconnected)
         return clientConnectionLost
 
@@ -1185,6 +1185,18 @@ class TLSProducerTests(TestCase):
         self.assertIsNone(tlsProtocol.transport.producer)
 
 
+    def test_streamingProducerUnregisterTwice(self):
+        """
+        Unregistering a streaming producer when no producer is registered is
+        safe.
+        """
+        clientProtocol, tlsProtocol, producer = self.setupStreamingProducer()
+        clientProtocol.transport.unregisterProducer()
+        clientProtocol.transport.unregisterProducer()
+        self.assertIsNone(tlsProtocol._producer)
+        self.assertIsNone(tlsProtocol.transport.producer)
+
+
     def loseConnectionWithProducer(self, writeBlockedOnRead):
         """
         Common code for tests involving writes by producer after
@@ -1379,7 +1391,8 @@ class TLSProducerTests(TestCase):
         producer is not used, and its stopProducing method is called.
         """
         clientProtocol, tlsProtocol = buildTLSProtocol()
-        clientProtocol.connectionLost = lambda reason: reason.trap(Error)
+        clientProtocol.connectionLost = lambda reason: reason.trap(
+            Error, ConnectionLost)
 
         class Producer(object):
             stopped = False
