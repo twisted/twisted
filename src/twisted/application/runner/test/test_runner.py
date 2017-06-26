@@ -70,7 +70,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} calls the expected methods in order.
         """
-
         calledMethods = []
 
         runner = DummyRunner(reactor=MemoryReactor())
@@ -91,23 +90,12 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} uses the provided PID file.
         """
-
-        def __enter__(self):
-            self.entered = True
-            return self
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            self.exited = True
-
-        self.patch(NonePIDFile, "__enter__", __enter__)
-        self.patch(NonePIDFile, "__exit__", __exit__)
-
-        pidFile = NonePIDFile()
+        pidFile = DummyPIDFile()
 
         runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
 
-        self.assertFalse(hasattr(pidFile, "entered"))
-        self.assertFalse(hasattr(pidFile, "exited"))
+        self.assertFalse(pidFile.entered)
+        self.assertFalse(pidFile.exited)
 
         runner.run()
 
@@ -389,6 +377,29 @@ class DummyRunner(Runner):
 
     def reactorExited(self):
         self.calledMethods.append("reactorExited")
+
+
+
+class DummyPIDFile(NonePIDFile):
+    """
+    Stub for L{PIDFile}.
+
+    Tracks context manager entry/exit without doing anything.
+    """
+    def __init__(self):
+        NonePIDFile.__init__(self)
+
+        self.entered = False
+        self.exited  = False
+
+
+    def __enter__(self):
+        self.entered = True
+        return self
+
+
+    def __exit__(self, excType, excValue, traceback):
+        self.exited  = True
 
 
 
