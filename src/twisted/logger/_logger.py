@@ -14,13 +14,6 @@ from ._levels import InvalidLogLevelError, LogLevel
 
 
 
-class CannotDetermineNamespaceError(Exception):
-    """
-    Unable to determine namespace from calling context.
-    """
-
-
-
 class Logger(object):
     """
     A L{Logger} emits log messages to an observer.  You should instantiate it
@@ -39,7 +32,7 @@ class Logger(object):
         try:
             return currentframe(2).f_globals["__name__"]
         except KeyError:
-            raise CannotDetermineNamespaceError()
+            return "<unknown>"
 
 
     def __init__(self, namespace=None, source=None, observer=None):

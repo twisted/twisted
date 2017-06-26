@@ -10,7 +10,7 @@ from twisted.trial import unittest
 from .._levels import InvalidLogLevelError
 from .._levels import LogLevel
 from .._format import formatEvent
-from .._logger import CannotDetermineNamespaceError, Logger
+from .._logger import Logger
 from .._global import globalLogPublisher
 
 
@@ -78,12 +78,16 @@ class LoggerTests(unittest.TestCase):
 
     def test_namespaceOMGItsTooHard(self):
         """
-        L{CannotDetermineNamespaceError} is raised when unable to determine the
-        namespace for the logger.
+        Default namespace is C{"<unknown>"} when a logger is created from a
+        context in which is can't be determined automatically and no namespace
+        was specified.
         """
-        def bringThePain():
-            exec("Logger()", {"Logger": Logger}, {})
-        self.assertRaises(CannotDetermineNamespaceError, bringThePain)
+        result = []
+        exec(
+            "result.append(Logger())",
+            dict(Logger=Logger), dict(result=result),
+        )
+        self.assertEqual(result[0].namespace, "<unknown>")
 
 
     def test_namespaceAttribute(self):
