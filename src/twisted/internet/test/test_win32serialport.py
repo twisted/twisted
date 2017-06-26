@@ -84,6 +84,10 @@ if serialport is not None:
         def _reconfigurePort(self):
             pass
 
+        def _reconfigure_port(self):
+            pass
+
+
     class RegularFileSerialPort(serialport.SerialPort):
         _serialFactory = RegularFileSerial
 
