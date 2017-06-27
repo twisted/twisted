@@ -70,8 +70,6 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         L{Runner.run} calls the expected methods in order.
         """
-        calledMethods = []
-
         runner = DummyRunner(reactor=MemoryReactor())
         runner.run()
 
