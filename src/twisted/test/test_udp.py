@@ -17,7 +17,6 @@ from twisted.python import runtime
 
 
 class Mixin:
-
     started = 0
     stopped = 0
 
@@ -40,7 +39,6 @@ class Server(Mixin, protocol.DatagramProtocol):
     packetReceived = None
     refused = 0
 
-
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
         if self.packetReceived is not None:
@@ -48,9 +46,7 @@ class Server(Mixin, protocol.DatagramProtocol):
             d.callback(None)
 
 
-
 class Client(Mixin, protocol.ConnectedDatagramProtocol):
-
     packetReceived = None
     refused = 0
 
@@ -74,7 +70,6 @@ class Client(Mixin, protocol.ConnectedDatagramProtocol):
 
 
 class GoodClient(Server):
-
     def connectionRefused(self):
         if self.startedDeferred is not None:
             d, self.startedDeferred = self.startedDeferred, None
@@ -82,13 +77,11 @@ class GoodClient(Server):
         self.refused = 1
 
 
-
 class BadClientError(Exception):
     """
     Raised by BadClient at the end of every datagramReceived call to try and
     screw stuff up.
     """
-
 
 
 class BadClient(protocol.DatagramProtocol):
@@ -105,7 +98,6 @@ class BadClient(protocol.DatagramProtocol):
         """
         self.d = d
 
-
     def datagramReceived(self, bytes, addr):
         if self.d is not None:
             d, self.d = self.d, None
@@ -113,9 +105,7 @@ class BadClient(protocol.DatagramProtocol):
         raise BadClientError("Application code is very buggy!")
 
 
-
 class UDPTests(unittest.TestCase):
-
     def test_oldAddress(self):
         """
         The C{type} of the host address of a listening L{DatagramProtocol}'s
@@ -124,12 +114,13 @@ class UDPTests(unittest.TestCase):
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         p = reactor.listenUDP(0, server, interface="127.0.0.1")
+
         def cbStarted(ignored):
             addr = p.getHost()
             self.assertEqual(addr.type, 'UDP')
             return p.stopListening()
-        return d.addCallback(cbStarted)
 
+        return d.addCallback(cbStarted)
 
     def test_startStop(self):
         """
@@ -140,14 +131,16 @@ class UDPTests(unittest.TestCase):
         server = Server()
         d = server.startedDeferred = defer.Deferred()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
+
         def cbStarted(ignored):
             self.assertEqual(server.started, 1)
             self.assertEqual(server.stopped, 0)
             return port1.stopListening()
+
         def cbStopped(ignored):
             self.assertEqual(server.stopped, 1)
-        return d.addCallback(cbStarted).addCallback(cbStopped)
 
+        return d.addCallback(cbStarted).addCallback(cbStopped)
 
     def test_rebind(self):
         """
@@ -168,7 +161,6 @@ class UDPTests(unittest.TestCase):
 
         return d.addCallback(cbStarted, p)
 
-
     def test_bindError(self):
         """
         A L{CannotListenError} exception is raised when attempting to bind a
@@ -185,13 +177,14 @@ class UDPTests(unittest.TestCase):
                 error.CannotListenError,
                 reactor.listenUDP, port.getHost().port, server2,
                 interface='127.0.0.1')
+
         d.addCallback(cbStarted)
 
         def cbFinished(ignored):
             return port.stopListening()
+
         d.addCallback(cbFinished)
         return d
-
 
     def test_sendPackets(self):
         """
@@ -266,8 +259,6 @@ class UDPTests(unittest.TestCase):
         d.addCallback(cbFinished)
         return d
 
-
-
     def test_connectionRefused(self):
         """
         A L{ConnectionRefusedError} exception is raised when a connection
@@ -310,7 +301,6 @@ class UDPTests(unittest.TestCase):
         d.addCallback(cbFinished)
         return d
 
-
     def test_badConnect(self):
         """
         A call to the transport's connect method fails with an
@@ -329,8 +319,6 @@ class UDPTests(unittest.TestCase):
                           "127.0.0.1", 80)
         return port.stopListening()
 
-
-
     def test_datagramReceivedError(self):
         """
         When datagramReceived raises an exception it is logged but the port
@@ -345,6 +333,7 @@ class UDPTests(unittest.TestCase):
             """
             errs = self.flushLoggedErrors(BadClientError)
             self.assertEqual(len(errs), 2, "Incorrectly found %d errors, expected 2" % (len(errs),))
+
         finalDeferred.addCallback(cbCompleted)
 
         client = BadClient()
@@ -356,6 +345,7 @@ class UDPTests(unittest.TestCase):
             in case it was a Failure.
             """
             return defer.maybeDeferred(port.stopListening).addBoth(lambda ign: result)
+
         finalDeferred.addBoth(cbCleanup)
 
         addr = port.getHost()
@@ -429,7 +419,6 @@ class UDPTests(unittest.TestCase):
         makeAttempt()
         return finalDeferred
 
-
     def test_NoWarningOnBroadcast(self):
         """
         C{'<broadcast>'} is an alternative way to say C{'255.255.255.255'}
@@ -438,6 +427,7 @@ class UDPTests(unittest.TestCase):
         passing hostnames to L{twisted.internet.udp.Port.write} needs to be
         emitted by C{write()} in this case.
         """
+
         class fakeSocket:
             def sendto(self, foo, bar):
                 pass
@@ -448,7 +438,6 @@ class UDPTests(unittest.TestCase):
 
         warnings = self.flushWarnings([self.test_NoWarningOnBroadcast])
         self.assertEqual(len(warnings), 0)
-
 
 
 class ReactorShutdownInteractionTests(unittest.TestCase):
@@ -485,6 +474,7 @@ class ReactorShutdownInteractionTests(unittest.TestCase):
             # disconnected, as the reactor should do in an error condition
             # such as we are inducing.  This is very much a whitebox test.
             reactor.callLater(0, finished.callback, None)
+
         pr.addCallback(pktRece)
 
         def flushErrors(ignored):
@@ -493,15 +483,14 @@ class ReactorShutdownInteractionTests(unittest.TestCase):
             # doesn't hang, this test is satisfied.  (There may be room for
             # another, stricter test.)
             self.flushLoggedErrors()
+
         finished.addCallback(flushErrors)
         self.server.transport.write(b'\0' * 64, ('127.0.0.1',
-                                    self.server.transport.getHost().port))
+                                                 self.server.transport.getHost().port))
         return finished
 
 
-
 class MulticastTests(unittest.TestCase):
-
     def setUp(self):
         self.server = Server()
         self.client = Client()
@@ -511,19 +500,16 @@ class MulticastTests(unittest.TestCase):
         self.client.transport.connect(
             "127.0.0.1", self.server.transport.getHost().port)
 
-
     def tearDown(self):
         return gatherResults([
             maybeDeferred(self.port1.stopListening),
             maybeDeferred(self.port2.stopListening)])
-
 
     def testTTL(self):
         for o in self.client, self.server:
             self.assertEqual(o.transport.getTTL(), 1)
             o.transport.setTTL(2)
             self.assertEqual(o.transport.getTTL(), 2)
-
 
     def test_loopback(self):
         """
@@ -538,6 +524,7 @@ class MulticastTests(unittest.TestCase):
             d = self.server.packetReceived = Deferred()
             self.server.transport.write(b"hello", ("225.0.0.250", addr.port))
             return d
+
         joined.addCallback(cbJoined)
 
         def cbPacket(ignored):
@@ -550,14 +537,15 @@ class MulticastTests(unittest.TestCase):
             d = Deferred()
             reactor.callLater(0, d.callback, None)
             return d
+
         joined.addCallback(cbPacket)
 
         def cbNoPacket(ignored):
             self.assertEqual(len(self.server.packets), 1)
+
         joined.addCallback(cbNoPacket)
 
         return joined
-
 
     def test_interface(self):
         """
@@ -577,9 +565,9 @@ class MulticastTests(unittest.TestCase):
                 self.client.transport.getOutgoingInterface(), "127.0.0.1")
             self.assertEqual(
                 self.server.transport.getOutgoingInterface(), "127.0.0.1")
+
         result.addCallback(cbInterfaces)
         return result
-
 
     def test_joinLeave(self):
         """
@@ -589,18 +577,43 @@ class MulticastTests(unittest.TestCase):
 
         def clientJoined(ignored):
             return self.client.transport.leaveGroup("225.0.0.250")
+
         d.addCallback(clientJoined)
 
         def clientLeft(ignored):
             return self.server.transport.joinGroup("225.0.0.250")
+
         d.addCallback(clientLeft)
 
         def serverJoined(ignored):
             return self.server.transport.leaveGroup("225.0.0.250")
+
         d.addCallback(serverJoined)
 
         return d
 
+    def test_joinLeaveSourceSpecific(self):
+        """
+        Test that a source specific multicast group can be joined and left.
+        """
+        d = self.client.transport.joinSourceGroup("225.0.0.250", "127.0.0.1")
+
+        def clientJoined(ignored):
+            return self.client.transport.leaveSourceGroup("225.0.0.250", "127.0.0.1")
+
+        d.addCallback(clientJoined)
+
+        def clientLeft(ignored):
+            return self.server.transport.joinSourceGroup("225.0.0.250", "127.0.0.1")
+
+        d.addCallback(clientLeft)
+
+        def serverJoined(ignored):
+            return self.server.transport.leaveSourceGroup("225.0.0.250", "127.0.0.1")
+
+        d.addCallback(serverJoined)
+
+        return d
 
     def test_joinFailure(self):
         """
@@ -611,11 +624,11 @@ class MulticastTests(unittest.TestCase):
         return self.assertFailure(
             self.client.transport.joinGroup("127.0.0.1"),
             error.MulticastJoinError)
+
     if runtime.platform.isWindows() and not runtime.platform.isVista():
         # FIXME: https://twistedmatrix.com/trac/ticket/7780
         test_joinFailure.skip = (
             "Windows' UDP multicast is not yet fully supported.")
-
 
     def test_multicast(self):
         """
@@ -632,20 +645,58 @@ class MulticastTests(unittest.TestCase):
             d = self.server.packetReceived = Deferred()
             c.transport.write(b"hello world", ("225.0.0.250", addr.port))
             return d
+
         joined.addCallback(cbJoined)
 
         def cbPacket(ignored):
             self.assertEqual(self.server.packets[0][0], b"hello world")
+
         joined.addCallback(cbPacket)
 
         def cleanup(passthrough):
             result = maybeDeferred(p.stopListening)
             result.addCallback(lambda ign: passthrough)
             return result
+
         joined.addCallback(cleanup)
 
         return joined
 
+    def test_multicastSourceSpecific(self):
+        """
+        Test that a source specific multicast group can be joined and messages sent to and
+        received from it.
+        """
+        c = Server()
+        p = reactor.listenMulticast(0, c)
+        addr = self.server.transport.getHost()
+        outgoingSet = c.transport.setOutgoingInterface("127.0.0.1")
+
+        def cbDoJoin(ignored):
+            return self.server.transport.joinSourceGroup("225.0.0.250", "127.0.0.1", interface="127.0.0.1")
+
+        outgoingSet.addCallback(cbDoJoin)
+
+        def cbJoined(ignored):
+            d = self.server.packetReceived = Deferred()
+            c.transport.write(b"hello world", ("225.0.0.250", addr.port))
+            return d
+
+        outgoingSet.addCallback(cbJoined)
+
+        def cbPacket(ignored):
+            self.assertEqual(self.server.packets[0][0], b"hello world")
+
+        outgoingSet.addCallback(cbPacket)
+
+        def cleanup(passthrough):
+            result = maybeDeferred(p.stopListening)
+            result.addCallback(lambda ign: passthrough)
+            return result
+
+        outgoingSet.addCallback(cleanup)
+
+        return outgoingSet
 
     def test_multiListen(self):
         """
@@ -667,17 +718,18 @@ class MulticastTests(unittest.TestCase):
                                 firstPort.joinGroup(theGroup),
                                 secondPort.joinGroup(theGroup)])
 
-
         def serverJoined(ignored):
             d1 = firstClient.packetReceived = Deferred()
             d2 = secondClient.packetReceived = Deferred()
             firstClient.transport.write(b"hello world", (theGroup, portno))
             return gatherResults([d1, d2])
+
         joined.addCallback(serverJoined)
 
         def gotPackets(ignored):
             self.assertEqual(firstClient.packets[0][0], b"hello world")
             self.assertEqual(secondClient.packets[0][0], b"hello world")
+
         joined.addCallback(gotPackets)
 
         def cleanup(passthrough):
@@ -686,8 +738,10 @@ class MulticastTests(unittest.TestCase):
                 maybeDeferred(secondPort.stopListening)])
             result.addCallback(lambda ign: passthrough)
             return result
+
         joined.addBoth(cleanup)
         return joined
+
     if runtime.platform.isWindows():
         test_multiListen.skip = ("on non-linux platforms it appears multiple "
                                  "processes can listen, but not multiple sockets "
