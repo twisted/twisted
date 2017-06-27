@@ -4249,7 +4249,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         Retrieve a specific section of one or more messages
 
-        @type messages: C{MessageSet} or L{bytes}
+        @type messages: C{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -4290,6 +4290,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             numbers to retrieved data, or whose errback is invoked if there is
             an error.
         """
+        messages = str(messages).encode('ascii')
         #fmt = '%s BODY%s[%s%s%s]%s'
         if headerNumber is None:
             number = b''
@@ -4331,7 +4332,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _fetch(self, messages, useUID=0, **terms):
-        assert isinstance(messages, bytes), messages
+        messages = str(messages).encode('ascii')
         fetch = useUID and b'UID FETCH' or b'FETCH'
 
         if 'rfc822text' in terms:

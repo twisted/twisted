@@ -2825,11 +2825,17 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         c.makeConnection(transport)
         c.lineReceived(b'* OK [IMAP4rev1]')
 
+        def cbCheckTransport(ignored):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1 (RFC822)",
+            )
 
         def cbSelect(ignored):
-            d = c.fetchMessage(b'1')
+            d = c.fetchMessage('1')
             c.dataReceived(b'* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
             c.dataReceived(b'0003 OK FETCH\r\n')
+            d.addCallback(cbCheckTransport)
             return d
 
 
@@ -2888,7 +2894,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             c.lineReceived(b'0002 OK SELECT')
             return d
         def fetch():
-            d = c.fetchSpecific(b'1:*',
+            d = c.fetchSpecific('1:*',
                 headerType = b'HEADER.FIELDS',
                 headerArgs = [b'SUBJECT'])
             c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {38}\r\n')
@@ -2903,6 +2909,11 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             c.dataReceived(b'0003 OK FETCH completed\r\n')
             return d
         def test(res):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1:* BODY[HEADER.FIELDS (SUBJECT)]",
+            )
+
             self.assertEqual(res, {
                 1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
                     b'Subject: Suprise for your woman...\r\n\r\n']],
@@ -2938,7 +2949,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             protocol.lineReceived(b'0002 OK SELECT')
             return d
         def fetch():
-            d = protocol.fetchSpecific(b'1:*',
+            d = protocol.fetchSpecific('1:*',
                 headerType=b'HEADER.FIELDS',
                 headerArgs=[b'SUBJECT'])
             protocol.dataReceived(
@@ -2946,6 +2957,10 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             protocol.dataReceived(b'0003 OK FETCH completed\r\n')
             return d
         def test(result):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1:* BODY[HEADER.FIELDS (SUBJECT)]",
+            )
             self.assertEqual(
                 result,  {1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']], b'Hello']]})
 
@@ -2978,9 +2993,15 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             return d
         def fetch():
             protocol.fetchSpecific(
-                b'1:*',
+                '1:*',
                 headerType=b'HEADER.FIELDS',
                 headerArgs=[b'SUBJECT'])
+
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b"0003 FETCH 1:* BODY[HEADER.FIELDS (SUBJECT)]",
+            )
+
             self.assertRaises(
                 imap4.IllegalServerResponse,
                 protocol.dataReceived,
@@ -3069,7 +3090,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             c.lineReceived(b'0002 OK SELECT')
             return d
         def fetch():
-            d = c.fetchMessage(b'1:*')
+            d = c.fetchMessage('1:*')
             c.dataReceived(b'* 1 FETCH (RFC822 {24}\r\n')
             c.dataReceived(b'Subject: first subject\r\n')
             c.dataReceived(b' FLAGS (\Seen))\r\n')
@@ -3081,6 +3102,11 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
         def test(res):
+            self.assertEqual(
+                transport.value().splitlines()[-1],
+                b'0003 FETCH 1:* (RFC822)',
+                )
+
             self.assertEqual(res, {
                 1: {'RFC822': b'Subject: first subject\r\n'},
                 2: {'RFC822': b'Subject: second subject\r\n'}})
@@ -3533,7 +3559,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         to C{dict}s mapping C{'UID'} to that message's I{UID} in the server's
         response.
         """
-        d = self.client.fetchUID(b'1:7')
+        d = self.client.fetchUID('1:7')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1:7 (UID)\r\n')
         self.client.lineReceived(b'* 2 FETCH (UID 22)')
         self.client.lineReceived(b'* 3 FETCH (UID 23)')
@@ -3554,7 +3580,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         number is expected, the L{Deferred} returned by L{IMAP4Client.fetchUID}
         fails with L{IllegalServerResponse}.
         """
-        d = self.client.fetchUID(b'1')
+        d = self.client.fetchUID('1')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1 (UID)\r\n')
         self.client.lineReceived(b'* foo FETCH (UID 22)')
         self.client.lineReceived(b'0001 OK FETCH completed')
@@ -3567,7 +3593,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchUID(b'1:7')
+        d = self.client.fetchUID('1:7')
         self.assertEqual(self.transport.value(), b'0001 FETCH 1:7 (UID)\r\n')
         self.client.lineReceived(b'* 2 FETCH (UID 22)')
         self.client.lineReceived(b'* 3 FETCH (UID)')
@@ -3583,7 +3609,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         to C{dict}s mapping C{'RFC822.TEXT'} to that message's body as given in
         the server's response.
         """
-        d = self.client.fetchBody(b'3')
+        d = self.client.fetchBody('3')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 3 (RFC822.TEXT)\r\n')
         self.client.lineReceived(b'* 3 FETCH (RFC822.TEXT "Message text")')
@@ -3601,7 +3627,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         to C{list}s of corresponding message data given by the server's
         response.
         """
-        d = self.client.fetchSpecific(b'7')
+        d = self.client.fetchSpecific('7')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 7 BODY[]\r\n')
         self.client.lineReceived(b'* 7 FETCH (BODY[] "Some body")')
@@ -3615,7 +3641,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         L{IMAP4Client.fetchSpecific} issues a I{BODY.PEEK[]} command if passed
         C{True} for the C{peek} parameter.
         """
-        d = self.client.fetchSpecific(b'6', peek=True)
+        d = self.client.fetchSpecific('6', peek=True)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 6 BODY.PEEK[]\r\n')
         # BODY.PEEK responses are just BODY
@@ -3633,7 +3659,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         to C{list}s of corresponding message data given by the server's
         response.
         """
-        d = self.client.fetchSpecific(b'7', headerNumber=(1, 2, 3))
+        d = self.client.fetchSpecific('7', headerNumber=(1, 2, 3))
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 7 BODY[1.2.3]\r\n')
         self.client.lineReceived(b'* 7 FETCH (BODY[1.2.3] "Some body")')
@@ -3650,7 +3676,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         with a C{dict} mapping message sequence numbers to C{list}s of
         corresponding message data given by the server's response.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType=b'TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT] "Some body")')
@@ -3668,7 +3694,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         a C{dict} mapping message sequence numbers to C{list}s of message data
         given by the server's response.
         """
-        d = self.client.fetchSpecific(b'4', headerType=b'TEXT', headerNumber=7)
+        d = self.client.fetchSpecific('4', headerType=b'TEXT', headerNumber=7)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 4 BODY[7.TEXT]\r\n')
         self.client.lineReceived(b'* 4 FETCH (BODY[7.TEXT] "Some body")')
@@ -3685,7 +3711,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType=b'TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT])')
@@ -3700,7 +3726,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         with a C{dict} mapping message sequence numbers to C{list}s of
         corresponding message data given by the server's response.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'MIME')
+        d = self.client.fetchSpecific('8', headerType=b'MIME')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[MIME]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[MIME] "Some body")')
@@ -3719,7 +3745,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         server's response.
         """
         d = self.client.fetchSpecific(
-            b'9', headerType=b'TEXT', offset=17, length=3)
+            '9', headerType=b'TEXT', offset=17, length=3)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 9 BODY[TEXT]<17.3>\r\n')
         self.client.lineReceived(b'* 9 FETCH (BODY[TEXT]<17> "foo")')
@@ -3736,7 +3762,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchSpecific(b'8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType=b'TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT]<17>)')
@@ -3752,7 +3778,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         as a length indicator for a response to a request for a partial
         body).
         """
-        d = self.client.fetchSpecific(b'7')
+        d = self.client.fetchSpecific('7')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 7 BODY[]\r\n')
         self.client.lineReceived(b'* 7 FETCH (BODY[] "<html>test</html>")')
@@ -4349,7 +4375,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
     def testFetchUID(self):
         self.function = lambda m, u: self.client.fetchUID(m)
 
-        self.messages = b'7'
+        self.messages = '7'
         self.msgObjs = [
             FakeyMessage({}, (), b'', b'', 12345, None),
             FakeyMessage({}, (), b'', b'', 999, None),
@@ -4365,7 +4391,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchFlags(self, uid=0):
         self.function = self.client.fetchFlags
-        self.messages = b'9'
+        self.messages = '9'
         self.msgObjs = [
             FakeyMessage({}, [b'FlagA', b'FlagB', b'\\FlagC'],
                          b'', b'', 54321, None),
@@ -4385,7 +4411,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchInternalDate(self, uid=0):
         self.function = self.client.fetchInternalDate
-        self.messages = b'13'
+        self.messages = '13'
         self.msgObjs = [
             FakeyMessage({}, (), b'Fri, 02 Nov 2003 21:25:10 GMT', b'', 23232, None),
             FakeyMessage({}, (), b'Thu, 29 Dec 2013 11:31:52 EST', b'', 101, None),
@@ -4432,7 +4458,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchEnvelope(self, uid=0):
         self.function = self.client.fetchEnvelope
-        self.messages = b'15'
+        self.messages = '15'
         self.msgObjs = [
             FakeyMessage({
                 'from': 'user@domain',
@@ -4468,7 +4494,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         RFC 3501, section 7.4.2.
         """
         self.function = self.client.fetchBodyStructure
-        self.messages = b'3:9,10:*'
+        self.messages = '3:9,10:*'
         self.msgObjs = [FakeyMessage({
                 'content-type': 'text/plain; name=thing; key="value"',
                 'content-id': 'this-is-the-content-id',
@@ -4502,7 +4528,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         I{FETCH BODYSTRUCTURE} command for a multipart message.
         """
         self.function = self.client.fetchBodyStructure
-        self.messages = b'3:9,10:*'
+        self.messages = '3:9,10:*'
         innerMessage = FakeyMessage({
                 'content-type': 'text/plain; name=thing; key="value"',
                 'content-id': 'this-is-the-content-id',
@@ -4530,7 +4556,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
-        self.messages = b'21'
+        self.messages = '21'
         self.msgObjs = [FakeyMessage({}, (), b'', b'Yea whatever', 91825,
             [FakeyMessage({'content-type': 'image/jpg'}, (), b'',
                 b'Body Body Body', None, None
@@ -4553,7 +4579,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBodyText(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
-        self.messages = b'21'
+        self.messages = '21'
         self.msgObjs = [FakeyMessage({'content-type': 'text/plain'},
             (), b'', b'Yea whatever', 91825, None)]
         self.expected = {0:
@@ -4573,7 +4599,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBodyRFC822(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
-        self.messages = b'21'
+        self.messages = '21'
         self.msgObjs = [FakeyMessage({'content-type': 'message/rfc822'},
             (), b'', b'Yea whatever', 91825,
             [FakeyMessage({'content-type': 'image/jpg'}, (), '',
@@ -4610,7 +4636,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         in the case where a subpart is itself multipart.
         """
         self.function = self.client.fetchSimplifiedBody
-        self.messages = b'21'
+        self.messages = '21'
 
         # A couple non-multipart messages to use as the inner-most payload
         singles = [
@@ -4648,7 +4674,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchMessage(self, uid=0):
         self.function = self.client.fetchMessage
-        self.messages = b'1,3,7,10101'
+        self.messages = '1,3,7,10101'
         self.msgObjs = [
             FakeyMessage({'Header': 'Value'}, (), b'', b'BODY TEXT\r\n', 91, None),
         ]
@@ -4664,7 +4690,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchHeaders(self, uid=0):
         self.function = self.client.fetchHeaders
-        self.messages = b'9,6,2'
+        self.messages = '9,6,2'
         self.msgObjs = [
             FakeyMessage({'H1': 'V1', 'H2': 'V2'}, (), b'', b'', 99, None),
         ]
@@ -4680,7 +4706,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchBody(self, uid=0):
         self.function = self.client.fetchBody
-        self.messages = b'1,2,3,4,5,6,7'
+        self.messages = '1,2,3,4,5,6,7'
         self.msgObjs = [
             FakeyMessage({'Header': 'Value'}, (), '', b'Body goes here\r\n', 171, None),
         ]
@@ -4699,7 +4725,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         Test the server's handling of requests for specific body sections.
         """
         self.function = self.client.fetchSpecific
-        self.messages = b'1'
+        self.messages = '1'
         outerBody = ''
         innerBody1 = b'Contained body message text.  Squarge.'
         innerBody2 = b'Secondary <i>message</i> text of squarge body.'
@@ -4744,7 +4770,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         text/plain part.
         """
         self.function = self.client.fetchSpecific
-        self.messages = b'1'
+        self.messages = '1'
         parts = [1]
         outerBody = b'DA body'
         headers = OrderedDict()
@@ -4773,7 +4799,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSize(self, uid=0):
         self.function = self.client.fetchSize
-        self.messages = b'1:100,2:*'
+        self.messages = '1:100,2:*'
         self.msgObjs = [
             FakeyMessage({}, (), b'', b'x' * 20, 123, None),
         ]
@@ -4789,7 +4815,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchFull(self, uid=0):
         self.function = self.client.fetchFull
-        self.messages = b'1,3'
+        self.messages = '1,3'
         self.msgObjs = [
             FakeyMessage({}, (b'\\XYZ', b'\\YZX', b'Abc'),
                 b'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
@@ -4819,7 +4845,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchAll(self, uid=0):
         self.function = self.client.fetchAll
-        self.messages = b'1,2:3'
+        self.messages = '1,2:3'
         self.msgObjs = [
             FakeyMessage({}, (), b'Mon, 14 Apr 2003 19:43:44 +0400',
                 b'Lalala', 10101, None),
@@ -4845,7 +4871,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchFast(self, uid=0):
         self.function = self.client.fetchFast
-        self.messages = b'1'
+        self.messages = '1'
         self.msgObjs = [
             FakeyMessage({}, (b'\\X',), b'19 Mar 2003 19:22:21 -0500', b'', 9, None),
         ]
@@ -5501,7 +5527,7 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
             return self.client.select('mailbox-test')
 
         def fetch():
-            return self.client.fetchUID(b'1:*')
+            return self.client.fetchUID('1:*')
 
         def stillConnected():
             self.assertNotEqual(self.server.state, 'timeout')
