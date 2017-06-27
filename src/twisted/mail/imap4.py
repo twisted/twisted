@@ -4443,6 +4443,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _store(self, messages, cmd, silent, flags, uid):
+        messages = str(messages).encode('ascii')
         if silent:
             cmd = cmd + b'.SILENT'
         store = uid and b'UID STORE' or b'STORE'

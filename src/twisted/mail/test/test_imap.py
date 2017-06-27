@@ -3813,7 +3813,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         @param method: The name of the method to test.
         @param item: The data item which is expected to be specified.
         """
-        d = getattr(self.client, method)(b'3', (b'\\Read', b'\\Seen'), False)
+        d = getattr(self.client, method)('3', (b'\\Read', b'\\Seen'), False)
         self.assertEqual(
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
@@ -3833,7 +3833,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         @param method: The name of the method to test.
         @param item: The data item which is expected to be specified.
         """
-        d = getattr(self.client, method)(b'3', (b'\\Read', b'\\Seen'), True)
+        d = getattr(self.client, method)('3', (b'\\Read', b'\\Seen'), True)
         self.assertEqual(
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
@@ -3851,7 +3851,7 @@ class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         @param method: The name of the method to test.
         @param item: The data item which is expected to be specified.
         """
-        d = getattr(self.client, method)(b'3', (b'\\Read', b'\\Seen'), True)
+        d = getattr(self.client, method)('3', (b'\\Read', b'\\Seen'), True)
         self.assertEqual(
             self.transport.value(),
             b'0001 STORE 3 ' + item + b' (\\Read \\Seen)\r\n')
@@ -4100,7 +4100,7 @@ class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
     def testSetFlags(self, uid=0):
         self.function = self.client.setFlags
-        self.messages = b'1,5,9'
+        self.messages = '1,5,9'
         self.flags = [b'\\A', b'\\B', b'C']
         self.silent = False
         self.uid = uid
