@@ -3993,6 +3993,93 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin,
 
 
 
+class IMAP4ClientCopyTests(PreauthIMAP4ClientMixin,
+                           unittest.SynchronousTestCase):
+    """
+    Tests for the L{IMAP4Client.copy} method.
+
+    An example of the C{COPY} command, which this method implements,
+    from RFC 3501, section 6.4.7::
+
+        C: A003 COPY 2:4 MEETING
+        S: A003 OK COPY completed
+    """
+    clientProtocol = StillSimplerClient
+
+
+    def test_copySequenceNumbers(self):
+        """
+        L{IMAP4Client.copy} copies the messages identified by their
+        sequence numbers to the mailbox, returning a L{Deferred} that
+        succeeds with a true value.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=False)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 OK COPY completed")
+        self.assertEqual(self.successResultOf(d),
+                         ([], b'OK COPY completed'))
+
+
+    def test_copySequenceNumbersFails(self):
+        """
+        L{IMAP4Client.copy} returns a L{Deferred} that fails with an
+        L{IMAP4Exception} when the messages specified by the given
+        sequence numbers could not be copied to the mailbox.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=False)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 BAD COPY failed")
+        self.assertIsInstance(self.failureResultOf(d).value,
+                              imap4.IMAP4Exception)
+
+
+    def test_copyUIDs(self):
+        """
+        L{IMAP4Client.copy} copies the messages identified by their
+        UIDs to the mailbox, returning a L{Deferred} that succeeds
+        with a true value.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=True)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 UID COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 OK COPY completed")
+        self.assertEqual(self.successResultOf(d),
+                         ([], b'OK COPY completed'))
+
+
+    def test_copyUIDsFails(self):
+        """
+        L{IMAP4Client.copy} returns a L{Deferred} that fails with an
+        L{IMAP4Exception} when the messages specified by the given
+        UIDs could not be copied to the mailbox.
+        """
+        d = self.client.copy("2:3", "MEETING", uid=True)
+
+        self.assertEqual(
+            self.transport.value(),
+            b"0001 UID COPY 2:3 MEETING\r\n",
+        )
+
+        self.client.lineReceived(b"0001 BAD COPY failed")
+        self.assertIsInstance(self.failureResultOf(d).value,
+                              imap4.IMAP4Exception)
+
+
+
 class FakeyServer(imap4.IMAP4Server):
     state = 'select'
     timeout = None

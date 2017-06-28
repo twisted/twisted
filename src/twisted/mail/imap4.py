@@ -4462,7 +4462,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type mailbox: L{str}
@@ -4477,11 +4477,12 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         when the copy is successful, or whose errback is invoked if there
         is an error.
         """
+        messages = str(messages).encode('ascii')
         if uid:
             cmd = b'UID COPY'
         else:
             cmd = b'COPY'
-        args = '%s %s' % (messages, _prepareMailboxName(mailbox))
+        args = b' '.join([messages, _prepareMailboxName(mailbox)])
         return self.sendCommand(Command(cmd, args))
 
     #
