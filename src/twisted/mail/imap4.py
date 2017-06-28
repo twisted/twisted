@@ -2821,7 +2821,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         should never change, so for normal use, this flag should never be
         false.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback will be invoked with a
         dictionary mapping capability types to lists of supported
         mechanisms, or to None if a support list is not applicable.
@@ -2863,7 +2863,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in any state of connection.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback will be invoked with None
         when the proper server acknowledgement has been received.
         """
@@ -2885,7 +2885,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in any state of connection.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback will be invoked with a list
         of untagged status updates the server responds with.
         """
@@ -2949,7 +2949,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Non-Authenticated state.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked if the authentication
         succeeds and whose errback will be invoked otherwise.
         """
@@ -3027,7 +3027,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type password: L{str}
         @param password: The password to log in with
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
@@ -3107,7 +3107,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with namespace
         information.  An example of this information is::
 
@@ -3169,7 +3169,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type mailbox: L{str}
         @param mailbox: The name of the mailbox to select
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with mailbox
         information if the select is successful and whose errback is
         invoked otherwise.  Mailbox information consists of a dictionary
@@ -3212,7 +3212,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type mailbox: L{str}
         @param mailbox: The name of the mailbox to examine
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with mailbox
         information if the examine is successful and whose errback
         is invoked otherwise.  Mailbox information consists of a dictionary
@@ -3320,7 +3320,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type name: L{str}
         @param name: The name of the mailbox to create.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked if the mailbox creation
         is successful and whose errback is invoked otherwise.
         """
@@ -3336,7 +3336,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type name: L{str}
         @param name: The name of the mailbox to delete.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose calblack is invoked if the mailbox is
         deleted successfully and whose errback is invoked otherwise.
         """
@@ -3355,7 +3355,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type newname: L{str}
         @param newname: The new name to give the mailbox.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked if the rename is
         successful and whose errback is invoked otherwise.
         """
@@ -3373,7 +3373,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type name: L{str}
         @param name: The mailbox to mark as 'active' or 'subscribed'
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked if the subscription
         is successful and whose errback is invoked otherwise.
         """
@@ -3389,7 +3389,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type name: L{str}
         @param name: The mailbox to unsubscribe
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked if the unsubscription
         is successful and whose errback is invoked otherwise.
         """
@@ -3415,7 +3415,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             or more characters, but is limited to a single
             hierarchical level.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a list of
             L{tuple}s, the first element of which is a L{tuple} of
             mailbox flags, the second element of which is the
@@ -3508,7 +3508,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
             C{'UNSEEN'}.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred which fires with the status information if the
             command is successful and whose errback is invoked otherwise.  The
             status information is in the form of a C{dict}.  Each element of
@@ -3577,7 +3577,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         Eastern Standard Time, on July 1st 2004 at half past 1 PM,
         \"01-07-2004 13:30:00 -0500\".
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
         """
@@ -3616,7 +3616,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
         """
@@ -3633,7 +3633,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         from the selected mailbox if it is opened in read-write mode,
         otherwise it indicates success by no messages are removed.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked when the command
         completes successfully or whose errback is invoked if it fails.
         """
@@ -3650,7 +3650,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         close command, but will also generate an 'expunge' response for
         every message deleted.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         'expunge' responses when this command is successful or whose errback
         is invoked otherwise.
@@ -3684,7 +3684,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             of message sequence numbers.  (This is a keyword-only argument.)
         @type uid: L{bool}
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback will be invoked with a list of all
             the message sequence numbers return by the search, or whose errback
             will be invoked if there is an error.
@@ -3714,14 +3714,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{bytes}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message sequence numbers to unique message identifiers, or whose
         errback is invoked if there is an error.
@@ -3735,14 +3735,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: The messages for which to retrieve flags.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to lists of flags, or whose errback is invoked if
         there is an error.
@@ -3756,14 +3756,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: The messages for which to retrieve the internal date.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to date strings, or whose errback is invoked
         if there is an error.  Date strings take the format of
@@ -3778,15 +3778,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: The messages for which to retrieve envelope
             data.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of
             message numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict
             mapping message numbers to envelope data, or whose errback
             is invoked if there is an error.  Envelope data consists
@@ -3854,15 +3854,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: The messages for which to retrieve body structure
         data.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body structure data, or whose errback is invoked
         if there is an error.  Body structure data describes the MIME-IMB
@@ -3884,14 +3884,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body data, or whose errback is invoked
         if there is an error.  The simplified body structure is the same
@@ -3932,14 +3932,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dicts of message headers, or whose errback is
         invoked if there is an error.
@@ -3953,14 +3953,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to file-like objects containing body text, or whose
         errback is invoked if there is an error.
@@ -3974,14 +3974,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to sizes, or whose errback is invoked if there is
         an error.
@@ -3998,14 +3998,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         C{fetchSize}, C{fetchEnvelope}, and C{fetchSimplifiedBody}
         functions.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
         errback is invoked if there is an error.  They dictionary keys
@@ -4024,14 +4024,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, and C{fetchEnvelope} functions.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
         errback is invoked if there is an error.  They dictionary keys
@@ -4050,14 +4050,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         to issuing all of the C{fetchFlags}, C{fetchInternalDate}, and
         C{fetchSize} functions.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
         errback is invoked if there is an error.  They dictionary keys are
@@ -4070,7 +4070,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def _parseFetchPairs(self, fetchResponseList):
         """
         Given the result of parsing a single I{FETCH} response, construct a
-        C{dict} mapping response keys to response values.
+        L{dict} mapping response keys to response values.
 
         @param fetchResponseList: The result of parsing a I{FETCH} response
             with L{parseNestedParens} and extracting just the response data
@@ -4249,10 +4249,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         Retrieve a specific section of one or more messages
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
             numbers or of unique message IDs.
 
@@ -4285,7 +4285,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @type length: L{int}
         @param length: The number of octets to retrieve.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a mapping of message
             numbers to retrieved data, or whose errback is invoked if there is
             an error.
@@ -4364,21 +4364,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
-        @type silent: C{bool}
+        @type silent: L{bool}
         @param silent: If true, cause the server to suppress its verbose
         response.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
@@ -4406,7 +4406,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
@@ -4420,21 +4420,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or L{str}
+        @type messages: L{MessageSet} or L{str}
         @param messages: A message sequence set
 
         @type flags: Any iterable of L{str}
         @param flags: The flags to set
 
-        @type silent: C{bool}
+        @type silent: L{bool}
         @param silent: If true, cause the server to suppress its verbose
         response.
 
-        @type uid: C{bool}
+        @type uid: L{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
@@ -4472,7 +4472,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param uid: If true, the C{messages} refers to message UIDs, rather
         than message sequence numbers.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: A deferred whose callback is invoked with a true value
         when the copy is successful, or whose errback is invoked if there
         is an error.
