@@ -16,6 +16,7 @@ import binascii
 import hmac
 import struct
 import zlib
+import copy
 
 from hashlib import md5, sha1, sha256, sha384, sha512
 
@@ -477,12 +478,7 @@ class SSHTransportBase(protocol.Protocol):
     ]
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
-    supportedPublicKeys = []
-
-    # Add the supported EC keys, and change the name from ecdh* to ecdsa*
-    for eckey in supportedKeyExchanges:
-        if eckey.startswith(b'ecdh'):
-            supportedPublicKeys += [eckey.replace(b'ecdh', b'ecdsa')]
+    supportedPublicKeys = keys._curveTable.keys()
 
     # Reverse sort to bring the stronger keys up first.
     supportedPublicKeys.sort(reverse=True)
@@ -578,7 +574,7 @@ class SSHTransportBase(protocol.Protocol):
         self.addSupportePublicKeys(publicKeys)
 
 
-    def addSupportePublicKeys(self, publicKeys):
+    def addSupportePublicKeys(self, publicKeys, sort=True):
         """
         Populate the supported public key list.
 
@@ -587,20 +583,6 @@ class SSHTransportBase(protocol.Protocol):
             and a value that is a L{tuple} consisting of an instance of the key method,
             a L{str} that is the corresponding sec name.
         """
-        tmpkeys = []
-
-        try:
-            self.supportedPublicKeys.remove(b'ssh-rsa')
-            tmpkeys += [b'ssh-rsa']
-        except:
-            pass
-
-        try:
-            self.supportedPublicKeys.remove(b'ssh-dss')
-            tmpkeys += [b'ssh-dss']
-        except:
-            pass
-
         for k in publicKeys:
             if k not in self.supportedPublicKeys:
                 self.supportedPublicKeys.append(k)
@@ -611,13 +593,20 @@ class SSHTransportBase(protocol.Protocol):
 
                 keys._secToNist[curve[1]] = k
 
-        # Reverse sort to bring the stronger keys up first.
-        self.supportedPublicKeys.sort(reverse=True)
+        # Sort the keys so the strongest ones are preferred?
+        if sort:
+            # Reverse sort to bring the stronger keys up first.
+            self.supportedPublicKeys.sort(reverse=True)
 
-        for k in tmpkeys:
-            if k not in self.supportedPublicKeys:
-                self.supportedPublicKeys.append(k)
+            # If 'ssh-rsa' or 'ssh-dss' are present, remove and add
+            # to make sure they're in the right order
+            if b'ssh-rsa' in self.supportedPublicKeys:
+                self.supportedPublicKeys.remove(b'ssh-rsa')
+                self.supportedPublicKeys += [b'ssh-rsa']
 
+            if b'ssh-dss' in self.supportedPublicKeys:
+                self.supportedPublicKeys.remove(b'ssh-dss')
+                self.supportedPublicKeys += [b'ssh-dss']
 
     def connectionLost(self, reason):
         """
@@ -1327,6 +1316,8 @@ class SSHServerTransport(SSHTransportBase):
     isClient = False
     ignoreNextPacket = 0
 
+    def __init__(self):
+        self.supportedPublicKeys = copy.deepcopy(SSHTransportBase.supportedPublicKeys)
 
     def ssh_KEXINIT(self, packet):
         """
@@ -1653,6 +1644,9 @@ class SSHClientTransport(SSHTransportBase):
     # This may need to be more dynamic; compare kexgex_client in
     # OpenSSH.
     _dhPreferredGroupSize = 2048
+
+    def __init__(self):
+        self.supportedPublicKeys = copy.deepcopy(SSHTransportBase.supportedPublicKeys)
 
     def connectionMade(self):
         """

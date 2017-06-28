@@ -1271,6 +1271,9 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
         TransportTestCase.setUp(self)
         self.proto.factory = MockFactory()
         self.proto.factory.startFactory()
+        self.proto.supportedPublicKeys = keys._curveTable.keys()
+        self.proto.supportedPublicKeys.sort(reverse=True)
+        self.proto.supportedPublicKeys += [b'ssh-rsa', b'ssh-dss']
 
 
     def tearDown(self):
@@ -1292,19 +1295,18 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         # Save off the kexes
         tmpkex = _kex._kexAlgorithms.copy()
 
-        proto2 = self.klass()
         kexes = {b"ecdh-sha2-nistp256": None,
                  b"ecdh-sha2-nistp384": None,
                  b"ecdh-sha2-nistp521": None,
                  b"ecdh-sha2-nistp571": _kex._ECDH512(),
                  b"diffie-hellman-group14-sha1": _kex._DHGroup14SHA1()}
 
-        proto2.setSupportedKexes(kexes)
+        self.proto.setSupportedKexes(kexes)
 
-        self.assertEqual(len(proto2.supportedKeyExchanges), len(kexes))
+        self.assertEqual(len(self.proto.supportedKeyExchanges), len(kexes))
 
         for k in kexes:
-            self.assertIn(k, proto2.supportedKeyExchanges)
+            self.assertIn(k, self.proto.supportedKeyExchanges)
 
         # Restore kexes
         _kex._kexAlgorithms = tmpkex.copy()
@@ -1321,13 +1323,13 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         # Save off the kexes
         tmpkex = _kex._kexAlgorithms.copy()
 
-        proto2 = self.klass()
-        kexes = {b"ecdh-sha2-nistp571": None, b"diffie-hellman-group14-sha1": None}
+        kexes = {b"ecdh-sha2-nistp571": None,
+                 b"diffie-hellman-group14-sha1": None}
 
-        proto2.addSupportedKexes(kexes)
+        self.proto.addSupportedKexes(kexes)
 
         for k in kexes:
-            self.assertIn(k, proto2.supportedKeyExchanges)
+            self.assertIn(k, self.proto.supportedKeyExchanges)
 
         # Restore kexes
         _kex._kexAlgorithms = tmpkex.copy()
@@ -1344,27 +1346,23 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         old_curve = keys._curveTable.copy()
         old_sec = keys._secToNist.copy()
 
-        new_key = {b'ecdsa-sha2-nistt571': (ec.SECT571K1(), b'sect571k1')}
-
-        proto2 = self.klass()
+        new_keys = {b'ecdsa-sha2-nistt571': (ec.SECT571K1(), b'sect571k1'),
+                    b'ssh-rsa': None,
+                    b'ecdsa-sha2-nistp256': (ec.SECP256R1(), b'secp256r1')}
 
         basekeys = []
 
-        # ssh-dss may or may not be in the list depending on which test is run
-        if b'ssh-dss' not in proto2.supportedPublicKeys:
-            proto2.supportedPublicKeys += [b'ssh-dss']
-
-        for key in proto2.supportedPublicKeys:
+        for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        proto2.addSupportePublicKeys(new_key)
+        self.proto.addSupportePublicKeys(new_keys)
         basekeys.insert(0, b'ecdsa-sha2-nistt571')
 
-        self.assertEqual(proto2.supportedPublicKeys, basekeys)
-        self.assertEqual(new_key[b'ecdsa-sha2-nistt571'][0],
+        self.assertEqual(self.proto.supportedPublicKeys, basekeys)
+        self.assertEqual(new_keys[b'ecdsa-sha2-nistt571'][0],
                          keys._curveTable[b'ecdsa-sha2-nistt571'])
         self.assertEqual(b'ecdsa-sha2-nistt571',
-                         keys._secToNist[new_key[b'ecdsa-sha2-nistt571'][1]])
+                         keys._secToNist[new_keys[b'ecdsa-sha2-nistt571'][1]])
 
         basekeys.pop(0)
 
@@ -1383,22 +1381,20 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         old_curve = keys._curveTable.copy()
         old_sec = keys._secToNist.copy()
 
-        new_key = {b'ecdsa-sha2-nistt571': (ec.SECT571K1(), b'sect571k1')}
-
-        proto2 = self.klass()
+        new_key = {b'ecdsa-sha2-nistp224': (ec.SECP224R1(), b'secp224r1')}
 
         basekeys = []
 
-        for key in proto2.supportedPublicKeys:
+        for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        proto2.setSupportedPublicKeys(new_key)
+        self.proto.setSupportedPublicKeys(new_key)
 
-        self.assertEqual(proto2.supportedPublicKeys, [b'ecdsa-sha2-nistt571'])
-        self.assertEqual(new_key[b'ecdsa-sha2-nistt571'][0],
-                         keys._curveTable[b'ecdsa-sha2-nistt571'])
-        self.assertEqual(b'ecdsa-sha2-nistt571',
-                         keys._secToNist[new_key[b'ecdsa-sha2-nistt571'][1]])
+        self.assertEqual(self.proto.supportedPublicKeys, [b'ecdsa-sha2-nistp224'])
+        self.assertEqual(new_key[b'ecdsa-sha2-nistp224'][0],
+                         keys._curveTable[b'ecdsa-sha2-nistp224'])
+        self.assertEqual(b'ecdsa-sha2-nistp224',
+                         keys._secToNist[new_key[b'ecdsa-sha2-nistp224'][1]])
 
         del transport.SSHTransportBase.supportedPublicKeys[:]
         for key in basekeys:
@@ -1855,7 +1851,9 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
         self.privObj = keys.Key.fromString(keydata.privateRSA_openssh)
         self.calledVerifyHostKey = False
         self.proto.verifyHostKey = self.verifyHostKey
-
+        self.proto.supportedPublicKeys = keys._curveTable.keys()
+        self.proto.supportedPublicKeys.sort(reverse=True)
+        self.proto.supportedPublicKeys += [b'ssh-rsa', b'ssh-dss']
 
 
 class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
@@ -1870,19 +1868,18 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         # Save off the kexes
         tmpkex = _kex._kexAlgorithms.copy()
 
-        proto2 = self.klass()
         kexes = {b"ecdh-sha2-nistp256": None,
                  b"ecdh-sha2-nistp384": None,
                  b"ecdh-sha2-nistp521": None,
                  b"ecdh-sha2-nistp571": _kex._ECDH512(),
                  b"diffie-hellman-group14-sha1": _kex._DHGroup14SHA1()}
 
-        proto2.setSupportedKexes(kexes)
+        self.proto.setSupportedKexes(kexes)
 
-        self.assertEqual(len(proto2.supportedKeyExchanges), len(kexes))
+        self.assertEqual(len(self.proto.supportedKeyExchanges), len(kexes))
 
         for k in kexes:
-            self.assertIn(k, proto2.supportedKeyExchanges)
+            self.assertIn(k, self.proto.supportedKeyExchanges)
 
         # Restore kexes
         _kex._kexAlgorithms = tmpkex.copy()
@@ -1899,13 +1896,12 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         # Save off the kexes
         tmpkex = _kex._kexAlgorithms.copy()
 
-        proto2 = self.klass()
         kexes = {b"ecdh-sha2-nistp571": None, b"diffie-hellman-group14-sha1": None}
 
-        proto2.addSupportedKexes(kexes)
+        self.proto.addSupportedKexes(kexes)
 
         for k in kexes:
-            self.assertIn(k, proto2.supportedKeyExchanges)
+            self.assertIn(k, self.proto.supportedKeyExchanges)
 
         # Restore kexes
         _kex._kexAlgorithms = tmpkex.copy()
@@ -1915,36 +1911,66 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
             self.proto.supportedKeyExchanges.append(key)
 
 
-    def test_addSupportedKeys(self):
+    def test_addSupportedKeysUnsorted(self):
         """
         Test adding a public key to the supported public keys list.
         """
         old_curve = keys._curveTable.copy()
         old_sec = keys._secToNist.copy()
 
-        new_key = {b'ecdsa-sha2-nistt571': (ec.SECT571K1(), b'sect571k1')}
-
-        proto2 = self.klass()
+        new_keys = {b"ecdsa-sha2-nistk409": (ec.SECT409K1(), b'sect409k1'),
+                    b'ssh-rsa': None,
+                    b'ecdsa-sha2-nistp256': (ec.SECP256R1(), b'secp256r1')}
 
         basekeys = []
 
-        #ssh-dss may or may not be in the list depending on which test is run
-        if b'ssh-dss' not in proto2.supportedPublicKeys:
-            proto2.supportedPublicKeys += [b'ssh-dss']
-
-        for key in proto2.supportedPublicKeys:
+        for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        proto2.addSupportePublicKeys(new_key)
-        basekeys.insert(0, b'ecdsa-sha2-nistt571')
+        self.proto.addSupportePublicKeys(new_keys, False)
+        basekeys.append(b"ecdsa-sha2-nistk409")
 
-        self.assertEqual(proto2.supportedPublicKeys, basekeys)
-        self.assertEqual(new_key[b'ecdsa-sha2-nistt571'][0],
-                         keys._curveTable[b'ecdsa-sha2-nistt571'])
-        self.assertEqual(b'ecdsa-sha2-nistt571',
-                         keys._secToNist[new_key[b'ecdsa-sha2-nistt571'][1]])
+        self.assertEqual(self.proto.supportedPublicKeys, basekeys)
+        self.assertEqual(new_keys[b"ecdsa-sha2-nistk409"][0],
+                         keys._curveTable[b"ecdsa-sha2-nistk409"])
+        self.assertEqual(b"ecdsa-sha2-nistk409",
+                         keys._secToNist[new_keys[b"ecdsa-sha2-nistk409"][1]])
 
-        basekeys.pop(0)
+        basekeys.pop()
+
+        del transport.SSHTransportBase.supportedPublicKeys[:]
+        for key in basekeys:
+            transport.SSHTransportBase.supportedPublicKeys += [key]
+
+        keys._curveTable = old_curve.copy()
+        keys._secToNist = old_sec.copy()
+
+    def test_addSupportedKeysSorted(self):
+        """
+        Test adding a public key to the supported public keys list.
+        """
+        old_curve = keys._curveTable.copy()
+        old_sec = keys._secToNist.copy()
+
+        new_keys = {b"ecdsa-sha2-nistk409": (ec.SECT409K1(), b'sect409k1'),
+                    b'ssh-rsa': None,
+                    b'ecdsa-sha2-nistp256': (ec.SECP256R1(), b'secp256r1')}
+
+        basekeys = []
+
+        for key in self.proto.supportedPublicKeys:
+            basekeys += [key]
+
+        self.proto.addSupportePublicKeys(new_keys)
+        basekeys.insert(3, b"ecdsa-sha2-nistk409")
+
+        self.assertEqual(self.proto.supportedPublicKeys, basekeys)
+        self.assertEqual(new_keys[b"ecdsa-sha2-nistk409"][0],
+                         keys._curveTable[b"ecdsa-sha2-nistk409"])
+        self.assertEqual(b"ecdsa-sha2-nistk409",
+                         keys._secToNist[new_keys[b"ecdsa-sha2-nistk409"][1]])
+
+        basekeys.pop(3)
 
         del transport.SSHTransportBase.supportedPublicKeys[:]
         for key in basekeys:
@@ -1961,22 +1987,20 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         old_curve = keys._curveTable.copy()
         old_sec = keys._secToNist.copy()
 
-        new_key = {b'ecdsa-sha2-nistt571': (ec.SECT571K1(), b'sect571k1')}
-
-        proto2 = self.klass()
+        new_key = {b'ecdsa-sha2-nistb233': (ec.SECT233R1(), b'sect233r1')}
 
         basekeys = []
 
-        for key in proto2.supportedPublicKeys:
+        for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        proto2.setSupportedPublicKeys(new_key)
+        self.proto.setSupportedPublicKeys(new_key)
 
-        self.assertEqual(proto2.supportedPublicKeys, [b'ecdsa-sha2-nistt571'])
-        self.assertEqual(new_key[b'ecdsa-sha2-nistt571'][0],
-                         keys._curveTable[b'ecdsa-sha2-nistt571'])
-        self.assertEqual(b'ecdsa-sha2-nistt571',
-                         keys._secToNist[new_key[b'ecdsa-sha2-nistt571'][1]])
+        self.assertEqual(self.proto.supportedPublicKeys, [b'ecdsa-sha2-nistb233'])
+        self.assertEqual(new_key[b'ecdsa-sha2-nistb233'][0],
+                         keys._curveTable[b'ecdsa-sha2-nistb233'])
+        self.assertEqual(b'ecdsa-sha2-nistb233',
+                         keys._secToNist[new_key[b'ecdsa-sha2-nistb233'][1]])
 
         del transport.SSHTransportBase.supportedPublicKeys[:]
         for key in basekeys:
