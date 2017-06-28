@@ -478,7 +478,7 @@ class SSHTransportBase(protocol.Protocol):
     ]
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
-    supportedPublicKeys = keys._curveTable.keys()
+    supportedPublicKeys = list(keys._curveTable.keys())
 
     # Reverse sort to bring the stronger keys up first.
     supportedPublicKeys.sort(reverse=True)

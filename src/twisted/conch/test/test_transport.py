@@ -1271,7 +1271,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
         TransportTestCase.setUp(self)
         self.proto.factory = MockFactory()
         self.proto.factory.startFactory()
-        self.proto.supportedPublicKeys = keys._curveTable.keys()
+        self.proto.supportedPublicKeys = list(keys._curveTable.keys())
         self.proto.supportedPublicKeys.sort(reverse=True)
         self.proto.supportedPublicKeys += [b'ssh-rsa', b'ssh-dss']
 
@@ -1851,7 +1851,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
         self.privObj = keys.Key.fromString(keydata.privateRSA_openssh)
         self.calledVerifyHostKey = False
         self.proto.verifyHostKey = self.verifyHostKey
-        self.proto.supportedPublicKeys = keys._curveTable.keys()
+        self.proto.supportedPublicKeys = list(keys._curveTable.keys())
         self.proto.supportedPublicKeys.sort(reverse=True)
         self.proto.supportedPublicKeys += [b'ssh-rsa', b'ssh-dss']
 
