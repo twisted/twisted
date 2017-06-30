@@ -15,6 +15,8 @@ from collections import OrderedDict
 
 from zope.interface import implementer
 
+from twisted.python.compat import _PY35PLUS
+
 from twisted.trial.unittest import TestCase
 from twisted.test.testutils import XMLAssertionMixin
 
@@ -340,6 +342,29 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             self.assertFlattensTo(d, b'three'),
             self.assertFlattensTo(d, b'three'),
         ])
+
+
+    def test_serializeCoroutine(self):
+        """
+        Test that a deferred is substituted with the current value in the
+        callback chain when flattened.
+        """
+        from textwrap import dedent
+        namespace = {}
+        exec(dedent(
+            """
+            async def coro(x):
+                return x
+            """
+        ), namespace)
+        coro = namespace["coro"]
+
+        return self.assertFlattensTo(coro('four'), b'four')
+
+    if not _PY35PLUS:
+        test_serializeCoroutine.skip = (
+            "coroutines not available before Python 3.5"
+        )
 
 
     def test_serializeIRenderable(self):

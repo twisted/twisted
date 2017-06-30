@@ -15,11 +15,23 @@ from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
 
+try:
+    from inspect import iscoroutine
+except ImportError:
+    def iscoroutine(*args, **kwargs):
+        return False
+
 from twisted.internet.defer import Deferred
 from twisted.python.compat import unicode, nativeString, iteritems
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
+
+try:
+    from twisted.internet.defer import ensureDeferred
+except ImportError:
+    def ensureDeferred(*args, **kwagrs):
+        raise NotImplementedError("Coroutine support requires Twisted>=16.6")
 
 
 
@@ -276,6 +288,9 @@ def _flattenElement(request, root, write, slotData, renderFactory,
         write(escaped.encode('ascii'))
     elif isinstance(root, Deferred):
         yield root.addCallback(lambda result: (result, keepGoing(result)))
+    elif iscoroutine(root):
+        d = ensureDeferred(root)
+        yield d.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield keepGoing(result, renderFactory=root)
