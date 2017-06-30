@@ -21,17 +21,11 @@ except ImportError:
     def iscoroutine(*args, **kwargs):
         return False
 
-from twisted.internet.defer import Deferred
 from twisted.python.compat import unicode, nativeString, iteritems
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
-
-try:
-    from twisted.internet.defer import ensureDeferred
-except ImportError:
-    def ensureDeferred(*args, **kwagrs):
-        raise NotImplementedError("Coroutine support requires Twisted>=16.6")
 
 
 
