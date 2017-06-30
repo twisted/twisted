@@ -3039,6 +3039,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
+
         d = maybeDeferred(self.getCapabilities)
         d.addCallback(self.__cbLoginCaps, username, password)
         return d
@@ -4428,11 +4429,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def _store(self, messages, cmd, silent, flags, uid):
         messages = str(messages).encode('ascii')
-        flags = [networkString(flag) for flag in flags]
+        encodedFlags = [networkString(flag) for flag in flags]
         if silent:
             cmd = cmd + b'.SILENT'
         store = uid and b'UID STORE' or b'STORE'
-        args = b' '.join((messages, cmd, b'('+ b' '.join(flags) + b')'))
+        args = b' '.join((messages, cmd, b'('+ b' '.join(encodedFlags) + b')'))
         d = self.sendCommand(Command(store, args, wantResponse=(b'FETCH',)))
         expected = ()
         if not silent:
