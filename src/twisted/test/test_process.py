@@ -2158,12 +2158,14 @@ class Win32ProcessTests(unittest.TestCase):
     Test process programs that are packaged with twisted.
     """
 
-    def test_stdinReader(self):
-        scriptPath = b"twisted.test.process_stdinreader"
+
+    def _test_stdinReader(self, pyExe, args, env, path):
+        """
+        Spawn a process, write to stdin, and check the output.
+        """
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
-                             env=properEnv)
+        reactor.spawnProcess(p, pyExe, args, env, path)
         p.transport.write(b"hello, world")
         p.transport.closeStdin()
 
@@ -2171,6 +2173,43 @@ class Win32ProcessTests(unittest.TestCase):
             self.assertEqual(p.errF.getvalue(), b"err\nerr\n")
             self.assertEqual(p.outF.getvalue(), b"out\nhello, world\nout\n")
         return d.addCallback(processEnded)
+
+
+    def test_stdinReader_bytesArgs(self):
+        """
+        Pass L{bytes} args to L{_test_stdinReader}.
+        """
+        import win32api
+
+        pyExe = FilePath(sys.executable)._asBytesPath()
+        args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]
+        env = bytesEnviron()
+        env[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+                                             sys.getfilesystemencoding())
+        path = win32api.GetTempPath()
+        path = path.encode(sys.getfilesystemencoding())
+        d = self._test_stdinReader(pyExe, args, env, path)
+        return d
+
+
+    def test_stdinReader_unicodeArgs(self):
+        """
+        Pass L{unicode} args to L{_test_stdinReader}.
+        """
+        import win32api
+
+        pyExe = FilePath(sys.executable)._asTextPath()
+        args = [pyExe, u"-u", u"-m", u"twisted.test.process_stdinreader"]
+        env = properEnv
+        pythonPath = os.pathsep.join(sys.path)
+        if isinstance(pythonPath, bytes):
+            pythonPath = pythonPath.decode(sys.getfilesystemencoding())
+        env[u"PYTHONPATH"] = pythonPath
+        path = win32api.GetTempPath()
+        if isinstance(path, bytes):
+            path = path.decode(sys.getfilesystemencoding())
+        d = self._test_stdinReader(pyExe, args, env, path)
+        return d
 
 
     def test_badArgs(self):
