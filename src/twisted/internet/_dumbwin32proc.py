@@ -29,7 +29,7 @@ PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items, _PY3, unicode
+from twisted.python.compat import items, _PY3
 from twisted.python.win32 import quoteArguments
 from twisted.python.util import _replaceIf
 
@@ -49,10 +49,10 @@ def _fsdecode(x):
 
     @return: L{unicode}
     """
-    if isinstance(x, unicode):
+    if isinstance(x, bytes):
+        return x.decode(sys.getfilesystemencoding())
+    else:
         return x
-
-    return x.decode(sys.getfilesystemencoding())
 
 
 
@@ -196,16 +196,24 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         env = os.environ.copy()
         env.update(environment or {})
+        newenv = {}
+        for key, value in items(env):
 
-        if _PY3:
-            # Make sure all the arguments are Unicode.
-            args = [_fsdecode(x) for x in args]
+            key = _fsdecode(key)
+            value = _fsdecode(value)
+
+            newenv[key] = value
+
+        env = newenv
+
+        # Make sure all the arguments are Unicode.
+        args = [_fsdecode(x) for x in args]
 
         cmdline = quoteArguments(args)
 
-        if _PY3:
-            # The command, too, needs to be Unicode, if it is a value.
-            command = _fsdecode(command) if command else command
+        # The command, too, needs to be Unicode, if it is a value.
+        command = _fsdecode(command) if command else command
+        path = _fsdecode(path) if path else path
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
@@ -213,24 +221,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
                 command, cmdline, None, None, 1, flags, env, path, StartupInfo)
         try:
-            try:
-                doCreate()
-            except TypeError as e:
-                # win32process.CreateProcess cannot deal with mixed
-                # str/unicode environment, so we make it all Unicode
-                if e.args != ('All dictionary items must be strings, or '
-                              'all must be unicode',):
-                    raise
-                newenv = {}
-                for key, value in items(env):
-
-                    key = _fsdecode(key)
-                    value = _fsdecode(value)
-
-                    newenv[key] = value
-
-                env = newenv
-                doCreate()
+            doCreate()
         except pywintypes.error as pwte:
             if not _invalidWin32App(pwte):
                 # This behavior isn't _really_ documented, but let's make it
