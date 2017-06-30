@@ -4290,42 +4290,38 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             numbers to retrieved data, or whose errback is invoked if there is
             an error.
         """
-        messages = str(messages).encode('ascii')
-        #fmt = '%s BODY%s[%s%s%s]%s'
+        fmt = '%s BODY%s[%s%s%s]%s'
         if headerNumber is None:
-            number = b''
+            number = ''
         elif isinstance(headerNumber, int):
-            number = intToBytes(headerNumber)
+            number = str(headerNumber)
         else:
-            number = b'.'.join([networkString(str(n)) for n in headerNumber])
+            number = '.'.join(map(str, headerNumber))
         if headerType is None:
-            header = b''
+            header = ''
         elif number:
-            header = b'.' + headerType
+            header = '.' + headerType
         else:
-            assert isinstance(headerType, bytes), headerType
             header = headerType
-        if header and headerType not in (b'TEXT', b'MIME'):
+        if header and headerType not in ('TEXT', 'MIME'):
             if headerArgs is not None:
-                payload = b' (' + b' '.join(headerArgs) + b')'
+                payload = ' (%s)' % ' '.join(headerArgs)
             else:
-                payload = b' ()'
+                payload = ' ()'
         else:
-            payload = b''
+            payload = ''
         if offset is None:
-            extra = b''
+            extra = ''
         else:
-            extra = b'<' + intToBytes(offset) + b'.' + intToBytes(length) + b'>'
+            extra = '<%d.%d>' % (offset, length)
         fetch = uid and b'UID FETCH' or b'FETCH'
-        cmd = messages
-        cmd += b' BODY'
-        cmd += b'.PEEK' if peek else b''
-        cmd += b'['
-        cmd += number
-        cmd += header
-        cmd += payload
-        cmd += b']'
-        cmd += extra
+        cmd = fmt % (messages, peek and '.PEEK' or '', number, header, payload, extra)
+
+        # APPEND components should be encoded as ASCII unless a
+        # charset identifier is provided.  See #9201.
+        if _PY3:
+            cmd = cmd.encode('charmap')
+
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
         return d

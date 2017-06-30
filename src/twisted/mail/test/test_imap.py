@@ -2896,8 +2896,8 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             return d
         def fetch():
             d = c.fetchSpecific('1:*',
-                headerType = b'HEADER.FIELDS',
-                headerArgs = [b'SUBJECT'])
+                headerType = 'HEADER.FIELDS',
+                headerArgs = ['SUBJECT'])
             c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {38}\r\n')
             c.dataReceived(b'Subject: Suprise for your woman...\r\n')
             c.dataReceived(b'\r\n')
@@ -2951,8 +2951,8 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
             return d
         def fetch():
             d = protocol.fetchSpecific('1:*',
-                headerType=b'HEADER.FIELDS',
-                headerArgs=[b'SUBJECT'])
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
             protocol.dataReceived(
                 b'* 1 FETCH (BODY[HEADER.FIELDS ({7}\r\nSUBJECT)] "Hello")\r\n')
             protocol.dataReceived(b'0003 OK FETCH completed\r\n')
@@ -2995,8 +2995,8 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         def fetch():
             protocol.fetchSpecific(
                 '1:*',
-                headerType=b'HEADER.FIELDS',
-                headerArgs=[b'SUBJECT'])
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
 
             self.assertEqual(
                 transport.value().splitlines()[-1],
@@ -3040,8 +3040,8 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
         def fetch():
             d = c.fetchSpecific(b'1:*',
-                headerType=b'HEADER.FIELDS',
-                headerArgs=[b'SUBJECT'])
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
             # This response includes FLAGS after the requested data.
             c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {22}\r\n')
             c.dataReceived(b'Subject: subject one\r\n')
@@ -3677,7 +3677,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         with a C{dict} mapping message sequence numbers to C{list}s of
         corresponding message data given by the server's response.
         """
-        d = self.client.fetchSpecific('8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType='TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT] "Some body")')
@@ -3695,7 +3695,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         a C{dict} mapping message sequence numbers to C{list}s of message data
         given by the server's response.
         """
-        d = self.client.fetchSpecific('4', headerType=b'TEXT', headerNumber=7)
+        d = self.client.fetchSpecific('4', headerType='TEXT', headerNumber=7)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 4 BODY[7.TEXT]\r\n')
         self.client.lineReceived(b'* 4 FETCH (BODY[7.TEXT] "Some body")')
@@ -3712,7 +3712,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchSpecific('8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType='TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT])')
@@ -3727,7 +3727,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         with a C{dict} mapping message sequence numbers to C{list}s of
         corresponding message data given by the server's response.
         """
-        d = self.client.fetchSpecific('8', headerType=b'MIME')
+        d = self.client.fetchSpecific('8', headerType='MIME')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[MIME]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[MIME] "Some body")')
@@ -3746,7 +3746,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         server's response.
         """
         d = self.client.fetchSpecific(
-            '9', headerType=b'TEXT', offset=17, length=3)
+            '9', headerType='TEXT', offset=17, length=3)
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 9 BODY[TEXT]<17.3>\r\n')
         self.client.lineReceived(b'* 9 FETCH (BODY[TEXT]<17> "foo")')
@@ -3763,7 +3763,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
         L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
         L{IllegalServerResponse}.
         """
-        d = self.client.fetchSpecific('8', headerType=b'TEXT')
+        d = self.client.fetchSpecific('8', headerType='TEXT')
         self.assertEqual(
             self.transport.value(), b'0001 FETCH 8 BODY[TEXT]\r\n')
         self.client.lineReceived(b'* 8 FETCH (BODY[TEXT]<17>)')
