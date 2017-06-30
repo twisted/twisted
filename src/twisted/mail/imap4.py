@@ -1313,7 +1313,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, 'Mailbox cannot be selected')
             return
 
-        flags = mbox.getFlags()
+        flags = [networkString(flag) for flag in mbox.getFlags()]
         self.sendUntaggedResponse(intToBytes(mbox.getMessageCount()) + b' EXISTS')
         self.sendUntaggedResponse(intToBytes(mbox.getRecentCount()) + b' RECENT')
         self.sendUntaggedResponse(b'FLAGS (' + b' '.join(flags) + b')')
@@ -1452,7 +1452,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def _cbListWork(self, mailboxes, tag, sub, cmdName):
         for (name, box) in mailboxes:
             if not sub or self.account.isSubscribed(name):
-                flags = box.getFlags()
+                flags = [networkString(flag) for flag in box.getFlags()]
                 delim = box.getHierarchicalDelimiter().encode('imap4-utf-7')
                 resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name.encode('imap4-utf-7'))
                 self.sendUntaggedResponse(collapseNestedLists(resp))
@@ -1526,7 +1526,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, '[TRYCREATE] No such mailbox')
             return
 
-        d = mbox.addMessage(message, flags, date)
+        decodedFlags = [nativeString(flag) for flag in flags]
+        d = mbox.addMessage(message, decodedFlags, date)
         d.addCallback(self.__cbAppend, tag, mbox)
         d.addErrback(self.__ebAppend, tag)
 
@@ -2167,8 +2168,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_flags(self, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.writen
-        flags = [networkString(flag) for flag in msg.getFlags()]
-        _w(b'FLAGS ' + b'(' + b' '.join(flags) + b')')
+        encodedFlags = [networkString(flag) for flag in msg.getFlags()]
+        _w(b'FLAGS ' + b'(' + b' '.join(encodedFlags) + b')')
 
 
     def spew_internaldate(self, id, msg, _w=None, _f=None):
@@ -2467,9 +2468,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def flagsChanged(self, newFlags):
         for (mId, flags) in newFlags.items():
-            encoded_flags = [networkString(flag) for flag in flags]
+            encodedFlags = [networkString(flag) for flag in flags]
             msg = intToBytes(mId) + (
-                b' FETCH (FLAGS (' +b' '.join(encoded_flags) + b'))'
+                b' FETCH (FLAGS (' +b' '.join(encodedFlags) + b'))'
             )
             self.sendUntaggedResponse(msg, async=True)
 
@@ -3296,13 +3297,15 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 elif key == b'UIDNEXT':
                     datum['UIDNEXT'] = self._intOrRaise(content[1], split)
                 elif key == b'PERMANENTFLAGS':
-                    datum['PERMANENTFLAGS'] = tuple(content[1])
+                    datum['PERMANENTFLAGS'] = tuple(
+                        nativeString(flag) for flag in content[1])
                 else:
                     log.err('Unhandled SELECT response (2): %s' % (split,))
             elif len(split) == 2:
                 # Handle FLAGS, EXISTS, and RECENT
                 if split[0].upper() == b'FLAGS':
-                    datum['FLAGS'] = tuple(split[1])
+                    datum['FLAGS'] = tuple(
+                        nativeString(flag) for flag in split[1])
                 elif isinstance(split[1], bytes):
                     # Must make sure things are strings before treating them as
                     # strings since some other forms of response have nesting in
@@ -3468,10 +3471,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def __cbList(self, result, command):
         (lines, last) = result
         results = []
+
         for parts in lines:
             if len(parts) == 4 and parts[0] == command:
                 # flags
-                parts[1] = tuple(parts[1])
+                parts[1] = tuple(nativeString(flag) for flag in parts[1])
 
                 # The mailbox should be a native string.
                 # On Python 2, this maintains the API's contract.
@@ -3577,7 +3581,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param message: The message to add, in RFC822 format.  Newlines
         in this file should be \\r\\n-style.
 
-        @type flags: Any iterable of L{bytes}
+        @type flags: Any iterable of L{str}
         @param flags: The flags to associated with this message.
 
         @type date: L{str}
@@ -3598,9 +3602,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         else:
             date = b''
 
+        encodedFlags = [networkString(flag) for flag in flags]
+
         cmd = b''.join([
             _prepareMailboxName(mailbox),
-            b" (", b" ".join(flags), b")",
+            b" (", b" ".join(encodedFlags), b")",
             date,
             b" {", intToBytes(L), b"}",
         ])
@@ -5089,7 +5095,7 @@ class MemoryAccount(object):
         if not mbox:
             raise MailboxException("No such mailbox")
         # See if this box is flagged \Noselect
-        if br'\Noselect' in mbox.getFlags():
+        if r'\Noselect' in mbox.getFlags():
             # Check for hierarchically inferior mailboxes with this one
             # as part of their root.
             for others in self.mailboxes.keys():
