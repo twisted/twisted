@@ -3712,12 +3712,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         # Queries should be encoded as ASCII unless a charset
         # identifier is provided.  See #9201.
-        encodedQueries = [query.encode('charmap') for query in queries]
+        if _PY3:
+            queries = [query.encode('charmap') for query in queries]
+
         if kwarg.get('uid'):
             cmd = b'UID SEARCH'
         else:
             cmd = b'SEARCH'
-        args = b' '.join(encodedQueries)
+        args = b' '.join(queries)
         d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
         d.addCallback(self.__cbSearch)
         return d
