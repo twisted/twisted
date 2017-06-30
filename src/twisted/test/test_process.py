@@ -1812,7 +1812,8 @@ class MockProcessTests(unittest.TestCase):
         before are closed and don't leak.
         """
         self._mockWithForkError()
-        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6, -2, -3, -5]))
+        self.assertEqual(set(self.mockos.closed),
+                         set([-1, -4, -6, -2, -3, -5]))
 
 
     def test_mockForkErrorGivenFDs(self):
