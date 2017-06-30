@@ -2166,8 +2166,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def spew_flags(self, id, msg, _w=None, _f=None):
         if _w is None:
-            _w = self.transport.write
-        _w(b'FLAGS ' + b'(' + b' '.join(msg.getFlags()) + b')')
+            _w = self.transport.writen
+        flags = [networkString(flag) for flag in msg.getFlags()]
+        _w(b'FLAGS ' + b'(' + b' '.join(flags) + b')')
 
 
     def spew_internaldate(self, id, msg, _w=None, _f=None):
@@ -2335,6 +2336,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             mode = 0
 
+        flags = [nativeString(flag) for flag in flags]
         maybeDeferred(self.mbox.store, messages, flags, mode, uid=uid).addCallbacks(
             self.__cbStore, self.__ebStore, (tag, self.mbox, uid, silent), None, (tag,), None
         )
@@ -2349,9 +2351,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     uidstr = b' UID ' + intToBytes(mbox.getUID(k))
                 else:
                     uidstr = b''
-                self.sendUntaggedResponse(intToBytes(k) +
-                                          b' FETCH (FLAGS ('+ b' '.join(v) + b')' +
-                                          uidstr + b')')
+
+                flags = [networkString(flag) for flag in v]
+                self.sendUntaggedResponse(
+                    intToBytes(k) +
+                    b' FETCH (FLAGS ('+ b' '.join(flags) + b')' +
+                    uidstr + b')')
         self.sendPositiveResponse(tag, b'STORE completed')
 
 
@@ -2462,7 +2467,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def flagsChanged(self, newFlags):
         for (mId, flags) in newFlags.items():
-            msg = intToBytes(mId) + b' FETCH (FLAGS (' +b' '.join(flags) + b'))'
+            encoded_flags = [networkString(flag) for flag in flags]
+            msg = intToBytes(mId) + (
+                b' FETCH (FLAGS (' +b' '.join(encoded_flags) + b'))'
+            )
             self.sendUntaggedResponse(msg, async=True)
 
 
@@ -3799,53 +3807,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             mailbox name, and hostname.  Fields which are not present
             for a particular address may be L{None}.
         """
-        fetched = self._fetch(messages, useUID=uid, envelope=1)
-
-        if _PY3:
-            def decodeEnvelopes(results):
-                (date, subject, from_, sender, replyTo, to, cc, bcc,
-                 inReplyTo, messageID) = range(10)
-
-                def decodeUnlessNone(element):
-                    if element is None:
-                        return element
-                    # TODO: decoding with charmap is wrong.  This
-                    # should use RFC 6855, decoding as UTF-8 when
-                    # possible and ASCII otherwise.  Until then this
-                    # ensures that callers receive native strings that
-                    # may suffer from mojibake but don't lose data.
-                    return element.decode('charmap')
-
-                def decodeAllUnlessNone(sequences):
-                    if sequences is None:
-                        return sequences
-                    return [[decodeUnlessNone(element) for element in sequence]
-                            for sequence in sequences]
-
-                def decodeEnvelopePayload(envelope):
-                    envelope[date] = decodeUnlessNone(envelope[date])
-                    envelope[subject] = decodeUnlessNone(envelope[subject])
-                    envelope[from_] = decodeAllUnlessNone(envelope[from_])
-                    envelope[sender] = decodeAllUnlessNone(envelope[sender])
-                    envelope[replyTo] = decodeAllUnlessNone(envelope[replyTo])
-                    envelope[to] = decodeAllUnlessNone(envelope[to])
-                    envelope[cc] = decodeAllUnlessNone(envelope[cc])
-                    envelope[bcc] = decodeAllUnlessNone(envelope[bcc])
-                    envelope[inReplyTo] = decodeAllUnlessNone(
-                        envelope[inReplyTo])
-                    envelope[messageID] = decodeUnlessNone(envelope[messageID])
-
-                for fetched in results.values():
-                    for kind, envelope in fetched.items():
-                        if kind == 'ENVELOPE':
-                            decodeEnvelopePayload(envelope)
-
-                return results
-        else:
-            def decodeEnvelopes(results):
-                return results
-
-        return fetched.addCallback(decodeEnvelopes)
+        return self._fetch(messages, useUID=uid, envelope=1)
 
 
     def fetchBodyStructure(self, messages, uid=0):
@@ -4095,6 +4057,27 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             dependent on the key with which they are associated, but retain the
             same structured as produced by L{parseNestedParens}.
         """
+
+        # TODO: RFC 3501 Section 7.4.2, "FETCH Response", says for
+        # BODY responses that "8-bit textual data is permitted if a
+        # charset identifier is part of the body parameter
+        # parenthesized list".  Every other component is 7-bit.  This
+        # should parse out the charset identifier and use it to decode
+        # 8-bit bodies.  Until then, on Python 2 it should continue to
+        # return native (byte) strings, while on Python 3 it should
+        # decode bytes to native strings via charmap, ensuring
+        if _PY3:
+            def nativeStringResponse(thing):
+                if isinstance(thing, bytes):
+                    return thing.decode('charmap')
+                elif isinstance(thing, list):
+                    return [nativeStringResponse(subthing)
+                            for subthing in thing]
+        else:
+            def nativeStringResponse(thing):
+                return thing
+
+
         values = {}
         unstructured = []
 
@@ -4193,6 +4176,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                         except StopIteration:
                             raise IllegalServerResponse(
                                 b"Not enough arguments", fetchResponseList)
+
+            value = nativeStringResponse(value)
             unstructured.append(value)
             values[key] = value
 
@@ -4216,7 +4201,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             structuredMap, unstructuredList = self._parseFetchPairs(values[0])
             decodedInfo.setdefault(messageId, [[]])[0].extend(unstructuredList)
             results.setdefault(messageId, {}).update(structuredMap)
-
         info = decodedInfo
 
         flagChanges = {}
@@ -4444,6 +4428,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def _store(self, messages, cmd, silent, flags, uid):
         messages = str(messages).encode('ascii')
+        flags = [networkString(flag) for flag in flags]
         if silent:
             cmd = cmd + b'.SILENT'
         store = uid and b'UID STORE' or b'STORE'
