@@ -582,7 +582,14 @@ _CTL = b''.join(_bytesChr(ch) for ch in chain(range(0x21), range(0x80, 0x100)))
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
 _nonAtomChars = b']\\\\(){%*"' + _SP + _CTL
-_nonAtomRE = re.compile(b'[' + _nonAtomChars + b']')
+
+# _nonAtomRE is only used in Query, so it uses native strings.
+if _PY3:
+    #
+    _nativeNonAtomChars = _nonAtomChars.decode('charmap')
+else:
+    _nativeNonAtomChars = _nonAtomChars
+_nonAtomRE = re.compile('[' + _nativeNonAtomChars + ']')
 
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
 _atomChars = b''.join(_bytesChr(ch) for ch in list(range(0x100)) if _bytesChr(ch) not in _nonAtomChars)
@@ -3040,7 +3047,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
-
         d = maybeDeferred(self.getCapabilities)
         d.addCallback(self.__cbLoginCaps, username, password)
         return d
@@ -3704,11 +3710,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             the message sequence numbers return by the search, or whose errback
             will be invoked if there is an error.
         """
+        # Queries should be encoded as ASCII unless a charset
+        # identifier is provided.  See #9201.
+        encodedQueries = [query.encode('charmap') for query in queries]
         if kwarg.get('uid'):
             cmd = b'UID SEARCH'
         else:
             cmd = b'SEARCH'
-        args = b' '.join(queries)
+        args = b' '.join(encodedQueries)
         d = self.sendCommand(Command(cmd, args, wantResponse=(cmd,)))
         d.addCallback(self.__cbSearch)
         return d
@@ -4551,13 +4560,13 @@ def parseIdList(s, lastMessageId=None):
 
 
 _SIMPLE_BOOL = (
-    b'ALL', b'ANSWERED', b'DELETED', b'DRAFT', b'FLAGGED', b'NEW', b'OLD',
-    b'RECENT', b'SEEN', b'UNANSWERED', b'UNDELETED', b'UNDRAFT', b'UNFLAGGED',
-    b'UNSEEN'
+    'ALL', 'ANSWERED', 'DELETED', 'DRAFT', 'FLAGGED', 'NEW', 'OLD',
+    'RECENT', 'SEEN', 'UNANSWERED', 'UNDELETED', 'UNDRAFT', 'UNFLAGGED',
+    'UNSEEN'
 )
 
 _NO_QUOTES = (
-    b'LARGER', b'SMALLER', b'UID'
+    'LARGER', 'SMALLER', 'UID'
 )
 
 _sorted = sorted
@@ -4679,40 +4688,32 @@ def Query(sorted=0, **kwarg):
     for k in keys:
         v = kwarg[k]
         strK = k = k.upper()
-        if isinstance(k, unicode):
-            k = k.encode('charmap')
-        if isinstance(v, unicode):
-            v = v.encode('charmap')
         if k in _SIMPLE_BOOL and v:
             cmd.append(k)
-        elif k == b'HEADER':
-            cmd.extend([
-                k,
-                networkString(str(v[0])),
-                networkString(str(v[1])),
-            ])
-        elif k == b'KEYWORD' or k == b'UNKEYWORD':
+        elif k == 'HEADER':
+            cmd.extend([k, str(v[0]), str(v[1])])
+        elif k == 'KEYWORD' or k == 'UNKEYWORD':
             # Discard anything that does not fit into an "atom".  Perhaps turn
             # the case where this actually removes bytes from the value into a
             # warning and then an error, eventually.  See #6277.
-            v = _nonAtomRE.sub(b"", v)
+            v = _nonAtomRE.sub("", v)
             cmd.extend([k, v])
         elif k not in _NO_QUOTES:
             if isinstance(v, MessageSet):
-                fmt = b'"%s"'
-            elif isinstance(v, bytes):
-                fmt = b'"%s"'
+                fmt = '"%s"'
+            elif isinstance(v, str):
+                fmt = '"%s"'
             else:
-                fmt = b'"%d"'
+                fmt = '"%d"'
             cmd.extend([k, fmt % (v,)])
         elif isinstance(v, int):
-            cmd.extend([k, b'%d' % (v,)])
+            cmd.extend([k, '%d' % (v,)])
         else:
-            cmd.extend([k, b'%s' % (v,)])
+            cmd.extend([k, '%s' % (v,)])
     if len(cmd) > 1:
-        return b'(' + b' '.join(cmd) + b')'
+        return '(' + ' '.join(cmd) + ')'
     else:
-        return b' '.join(cmd)
+        return ' '.join(cmd)
 
 
 
@@ -4723,13 +4724,13 @@ def Or(*args):
     if len(args) < 2:
         raise IllegalQueryError(args)
     elif len(args) == 2:
-        return b'(OR %s %s)' % args
+        return '(OR %s %s)' % args
     else:
-        return b'(OR %s %s)' % (args[0], Or(*args[1:]))
+        return '(OR %s %s)' % (args[0], Or(*args[1:]))
 
 def Not(query):
     """The negation of a query"""
-    return b'(NOT %s)' % (query,)
+    return '(NOT %s)' % (query,)
 
 
 def wildcardToRegexp(wildcard, delim=None):

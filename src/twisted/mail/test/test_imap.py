@@ -27,8 +27,8 @@ from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
-from twisted.python.compat import (intToBytes, range, _bytesChr,
-                                   nativeString, networkString)
+from twisted.python.compat import (intToBytes, range, nativeString,
+                                   networkString)
 from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
@@ -1084,15 +1084,15 @@ class IMAP4HelperTests(unittest.TestCase):
         ]
 
         outputs = [
-            b'FLAGGED',
-            b'(DELETED UNFLAGGED)',
-            b'(OR FLAGGED DELETED)',
-            b'(BEFORE "today")',
-            b'(OR DELETED (OR UNSEEN NEW))',
-            b'(OR (NOT (OR (SINCE "yesterday" SMALLER 1000) ' # Continuing
-            b'(OR (BEFORE "tuesday" LARGER 10000) (OR (BEFORE ' # Some more
-            b'"today" DELETED UNSEEN) (NOT (SUBJECT "spam")))))) ' # And more
-            b'(NOT (UID 1:5)))',
+            'FLAGGED',
+            '(DELETED UNFLAGGED)',
+            '(OR FLAGGED DELETED)',
+            '(BEFORE "today")',
+            '(OR DELETED (OR UNSEEN NEW))',
+            '(OR (NOT (OR (SINCE "yesterday" SMALLER 1000) ' # Continuing
+            '(OR (BEFORE "tuesday" LARGER 10000) (OR (BEFORE ' # Some more
+            '"today" DELETED UNSEEN) (NOT (SUBJECT "spam")))))) ' # And more
+            '(NOT (UID 1:5)))',
         ]
 
         for (query, expected) in zip(inputs, outputs):
@@ -1107,8 +1107,8 @@ class IMAP4HelperTests(unittest.TestCase):
         @see: U{http://tools.ietf.org/html/rfc3501#section-9}
         @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
         """
-        query = imap4.Query(keyword=b'twisted')
-        self.assertEqual(b'(KEYWORD twisted)', query)
+        query = imap4.Query(keyword='twisted')
+        self.assertEqual('(KEYWORD twisted)', query)
 
 
     def test_queryUnkeywordFlagWithQuotes(self):
@@ -1119,8 +1119,8 @@ class IMAP4HelperTests(unittest.TestCase):
         @see: U{http://tools.ietf.org/html/rfc3501#section-9}
         @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
         """
-        query = imap4.Query(unkeyword=b'twisted')
-        self.assertEqual(b'(UNKEYWORD twisted)', query)
+        query = imap4.Query(unkeyword='twisted')
+        self.assertEqual('(UNKEYWORD twisted)', query)
 
 
     def _keywordFilteringTest(self, keyword):
@@ -1133,15 +1133,15 @@ class IMAP4HelperTests(unittest.TestCase):
         """
         # Check all the printable exclusions
         self.assertEqual(
-            b'(%s twistedrocks)' % (keyword.encode("ascii").upper(),),
-            imap4.Query(**{keyword: br'twisted (){%*"\] rocks'}))
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{keyword: r'twisted (){%*"\] rocks'}))
 
         # Check all the non-printable exclusions
         self.assertEqual(
-            b'(%s twistedrocks)' % (keyword.encode("ascii").upper(),),
+            '(%s twistedrocks)' % (keyword.upper(),),
             imap4.Query(**{
-                    keyword: b'twisted %s rocks' % (
-                    b''.join(_bytesChr(ch) for ch in range(33)),)}))
+                    keyword: 'twisted %s rocks' % (
+                    ''.join(chr(ch) for ch in range(33)),)}))
 
 
     def test_queryKeywordFlag(self):
@@ -5033,7 +5033,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         Test that a search which starts with a message set properly limits
         the search results to messages in that set.
         """
-        return self._messageSetSearchTest(b'1', [1])
+        return self._messageSetSearchTest('1', [1])
 
 
     def test_searchMessageSetWithStar(self):
@@ -5041,7 +5041,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter ends with a star, all the message from the
         starting point are returned.
         """
-        return self._messageSetSearchTest(b'2:*', [2, 3, 4, 5])
+        return self._messageSetSearchTest('2:*', [2, 3, 4, 5])
 
 
     def test_searchMessageSetWithStarFirst(self):
@@ -5049,7 +5049,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter starts with a star, the result should be identical
         with if the filter would end with a star.
         """
-        return self._messageSetSearchTest(b'*:2', [2, 3, 4, 5])
+        return self._messageSetSearchTest('*:2', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStar(self):
@@ -5057,7 +5057,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter ends with a star, all the message from the
         starting point are returned (also for the SEARCH UID case).
         """
-        return self._messageSetSearchTest(b'UID 10000:*', [2, 3, 4, 5])
+        return self._messageSetSearchTest('UID 10000:*', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStarFirst(self):
@@ -5065,7 +5065,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter starts with a star, the result should be identical
         with if the filter would end with a star (also for the SEARCH UID case).
         """
-        return self._messageSetSearchTest(b'UID *:10000', [2, 3, 4, 5])
+        return self._messageSetSearchTest('UID *:10000', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStarAndHighStart(self):
@@ -5074,7 +5074,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         the mailbox, even if its UID is less than 1234.
         """
         # in our fake mbox the highest message UID is 20002
-        return self._messageSetSearchTest(b'UID 30000:*', [5])
+        return self._messageSetSearchTest('UID 30000:*', [5])
 
 
     def test_searchMessageSetWithList(self):
@@ -5085,7 +5085,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         # 6 is bigger than the biggest message sequence number, but that's
         # okay, because N:* includes the biggest message sequence number even
         # if N is bigger than that (read the rfc nub).
-        return self._messageSetSearchTest(b'(6:*)', [5])
+        return self._messageSetSearchTest('(6:*)', [5])
 
 
     def test_searchOr(self):
@@ -5093,7 +5093,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter contains an I{OR} term, all messages
         which match either subexpression are returned.
         """
-        return self._messageSetSearchTest(b'OR 1 2', [1, 2])
+        return self._messageSetSearchTest('OR 1 2', [1, 2])
 
 
     def test_searchOrMessageSet(self):
@@ -5103,7 +5103,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         all messages in that set are considered for inclusion in the
         results.
         """
-        return self._messageSetSearchTest(b'OR 2:* 2:*', [2, 3, 4, 5])
+        return self._messageSetSearchTest('OR 2:* 2:*', [2, 3, 4, 5])
 
 
     def test_searchNot(self):
@@ -5111,7 +5111,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         If the search filter contains a I{NOT} term, all messages
         which do not match the subexpression are returned.
         """
-        return self._messageSetSearchTest(b'NOT 3', [1, 2, 4, 5])
+        return self._messageSetSearchTest('NOT 3', [1, 2, 4, 5])
 
 
     def test_searchNotMessageSet(self):
@@ -5121,7 +5121,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         no messages in that set are considered for inclusion in the
         result.
         """
-        return self._messageSetSearchTest(b'NOT 2:*', [1])
+        return self._messageSetSearchTest('NOT 2:*', [1])
 
 
     def test_searchAndMessageSet(self):
@@ -5130,7 +5130,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         conjoined with a message sequence set wildcard, only the
         intersection of the results of each term are returned.
         """
-        return self._messageSetSearchTest(b'2:* 3', [3])
+        return self._messageSetSearchTest('2:* 3', [3])
 
 
     def test_searchInvalidCriteria(self):
@@ -5139,7 +5139,7 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
         the client (resulting in an error callback), and an IllegalQueryError is
         logged on the server side.
         """
-        queryTerms = b'FOO'
+        queryTerms = 'FOO'
         def search():
             return self.client.search(queryTerms)
 
@@ -5220,7 +5220,9 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
             self.assertEqual(self.result, self.expected)
             self.assertEqual(self.uid, self.server_received_uid)
             self.assertEqual(
-                imap4.parseNestedParens(self.query),
+                # Queries should be decoded as ASCII unless a charset
+                # identifier is provided.  See #9201.
+                imap4.parseNestedParens(self.query.encode('charmap')),
                 self.server_received_query
             )
         d = loopback.loopbackTCP(self.server, self.client, noisy=False)
@@ -5300,7 +5302,7 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
         IllegalQueryError (e.g. due to invalid search criteria), client sees a
         failure response, and an IllegalQueryError is logged on the server.
         """
-        query = b'FOO'
+        query = 'FOO'
 
         def search():
             return self.client.search(query)
