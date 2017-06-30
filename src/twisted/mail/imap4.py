@@ -4685,7 +4685,7 @@ def Query(sorted=0, **kwarg):
         keys = _sorted(keys)
     for k in keys:
         v = kwarg[k]
-        strK = k = k.upper()
+        k = k.upper()
         if k in _SIMPLE_BOOL and v:
             cmd.append(k)
         elif k == 'HEADER':
