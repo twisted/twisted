@@ -2108,8 +2108,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         Data was received from the network.  Process it.
         """
-        # If we're currently handling a request, buffer this data. We shouldn't
-        # have received it (we've paused the transport), but let's be cautious.
+        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
@@ -2117,6 +2116,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                      self._optimisticEagerReadSize)
                     and not self._waitingForTransport
             ):
+                # If we received more data than a small limit while processing
+                # the head-of-line request, apply TCP backpressure to our peer
+                # to get them to stop sending more request data until we're
+                # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
         return basic.LineReceiver.dataReceived(self, data)
