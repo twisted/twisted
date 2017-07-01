@@ -402,6 +402,7 @@ class ReactorBaseSignalTests(TestCase):
         reactor.sigInt(signal.SIGINT, None)
         self.assertEquals(signal.SIGINT, reactor._exitSignal)
 
+
     def test_captureSIGTERM(self):
         """
         ReactorBase's SIGTERM handler saves the value of SIGTERM to the
@@ -410,6 +411,7 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigTerm(signal.SIGTERM, None)
         self.assertEquals(signal.SIGTERM, reactor._exitSignal)
+
 
     def test_captureSIGBREAK(self):
         """
@@ -422,6 +424,8 @@ class ReactorBaseSignalTests(TestCase):
         reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
+
+
 
 try:
     import signal
