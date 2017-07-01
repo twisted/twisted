@@ -1934,13 +1934,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return
 
-        # If we're currently handling a request, buffer this data. We shouldn't
-        # have received it (we've paused the transport), but let's be cautious.
-        if self._handlingRequest:
-            self._dataBuffer.append(line)
-            self._dataBuffer.append(b'\r\n')
-            return
-
         if self.__first_line:
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
@@ -2078,22 +2071,30 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
-        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        if not self._waitingForTransport:
-            self._networkProducer.pauseProducing()
-
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
 
-    def rawDataReceived(self, data):
-        self.resetTimeout()
-
+    def dataReceived(self, data):
+        """
+        Data was received from the network.  Process it.
+        """
         # If we're currently handling a request, buffer this data. We shouldn't
         # have received it (we've paused the transport), but let's be cautious.
         if self._handlingRequest:
             self._dataBuffer.append(data)
+            if (
+                    (sum(map(len, self._dataBuffer)) >
+                     self._optimisticEagerReadSize)
+                    and not self._waitingForTransport
+            ):
+                self._networkProducer.pauseProducing()
             return
+        return basic.LineReceiver.dataReceived(self, data)
+
+
+    def rawDataReceived(self, data):
+        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
