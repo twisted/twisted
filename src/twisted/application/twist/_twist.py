@@ -100,6 +100,12 @@ class Twist(object):
             fileLogObserverFactory=twistOptions["fileLogObserverFactory"],
         )
         runner.run()
+        reactor = twistOptions["reactor"]
+        try:
+            if reactor._exitSignal:
+                _exitWithSignal(reactor._exitSignal)
+        except:
+            pass
 
 
     @classmethod
@@ -121,8 +127,3 @@ class Twist(object):
 
         cls.startService(reactor, service)
         cls.run(options)
-        try:
-            if reactor._exitSignal:
-                _exitWithSignal(reactor._exitSignal)
-        except:
-            pass
