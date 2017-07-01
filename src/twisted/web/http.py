@@ -943,8 +943,37 @@ class Request:
         """
         Notify when the response to this request has finished.
 
-        @rtype: L{Deferred}
+        @note: There are some caveats around the reliability of the delivery of
+            this notification.
 
+                1. If this L{Request}'s channel is paused, the notification
+                   will not be delivered.  This can happen in one of two ways;
+                   either you can call C{request.transport.pauseProducing}
+                   yourself, or,
+
+                2. In order to deliver this notification promptly when a client
+                   disconnects, the reactor must continue reading from the
+                   transport, so that it can tell when the underlying network
+                   connection has gone away.  Twisted Web will only keep
+                   reading up until a finite (small) maximum buffer size before
+                   it gives up and pauses the transport itself.  If this
+                   occurs, you will not discover that the connection has gone
+                   away until a timeout fires or until the application attempts
+                   to send some data via L{Request.write}.
+
+                3. It is theoretically impossible to distinguish between
+                   successfully I{sending} a response and the peer successfully
+                   I{receiving} it.  There are several networking edge cases
+                   where the L{Deferred}s returned by C{notifyFinish} will
+                   indicate success, but the data will never be received.
+                   There are also edge cases where the connection will appear
+                   to fail, but in reality the response was delivered.  As a
+                   result, the information provided by the result of the
+                   L{Deferred}s returned by this method should be treated as a
+                   guess; do not make critical decisions in your applications
+                   based upon it.
+
+        @rtype: L{Deferred}
         @return: A L{Deferred} which will be triggered when the request is
             finished -- with a L{None} value if the request finishes
             successfully or with an error if the request is interrupted by an
