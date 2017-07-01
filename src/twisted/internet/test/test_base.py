@@ -372,9 +372,17 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
 
 
 
-class SignalCapturingReactor(ReactorBase):
+class TestSpySignalCapturingReactor(ReactorBase):
+
+    """
+    Subclass of ReactorBase to capture signals delivered to the
+    reactor for inspection.
+    """
 
     def installWaker(self):
+        """
+        Required method, unused.
+        """
         pass
 
 
@@ -386,7 +394,7 @@ class ReactorBaseSignalTests(TestCase):
         ReactorBase's SIGINT handler saves the value of SIGINT to the
         _exitSignal attribute.
         """
-        reactor = SignalCapturingReactor()
+        reactor = TestSpySignalCapturingReactor()
         reactor.sigInt(signal.SIGINT, None)
         self.assertEquals(signal.SIGINT, reactor._exitSignal)
 
@@ -395,7 +403,7 @@ class ReactorBaseSignalTests(TestCase):
         ReactorBase's SIGTERM handler saves the value of SIGTERM to the
         _exitSignal attribute.
         """
-        reactor = SignalCapturingReactor()
+        reactor = TestSpySignalCapturingReactor()
         reactor.sigTerm(signal.SIGTERM, None)
         self.assertEquals(signal.SIGTERM, reactor._exitSignal)
 
@@ -407,7 +415,7 @@ class ReactorBaseSignalTests(TestCase):
         if not hasattr(signal, "SIGBREAK"):
             raise SkipTest("signal module does not have SIGBREAK")
 
-        reactor = SignalCapturingReactor()
+        reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
         self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
 
