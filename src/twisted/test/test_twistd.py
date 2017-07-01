@@ -674,27 +674,27 @@ class ApplicationRunnerTests(unittest.TestCase):
         class DummyReactorWithSignal(object):
             """
             A dummy reactor, providing a C{run} method, checking that it
-            has been called, and setting the exitSignal attribute to a
+            has been called, and setting the _exitSignal attribute to a
             nonzero value..
 
             @ivar called: if C{run} has been called or not.
             @type called: C{bool}
 
-            @ivar exitSignal: Simulated signal exit code
-            @type exitSignal: C{int}
+            @ivar _exitSignal: Simulated signal exit code
+            @type _exitSignal: C{int}
             """
             called = False
-            exitSignal = 0
+            _exitSignal = 0
 
             def run(self):
                 """
                 A fake run method, checking that it has been called once and
-                setting exitSignal to a nonzero value
+                setting _exitSignal to a nonzero value
                 """
                 if self.called:
                     raise RuntimeError("Already called")
                 self.called = True
-                self.exitSignal = 2
+                self._exitSignal = 2
 
         reactor = DummyReactorWithSignal()
         runner = app.ApplicationRunner({
@@ -703,7 +703,7 @@ class ApplicationRunnerTests(unittest.TestCase):
             "debug": False})
         runner.startReactor(reactor, None, None)
         self.assertTrue(reactor.called)
-        self.assertEquals(2, runner.exitSignal)
+        self.assertEquals(2, runner._exitSignal)
 
 
 
@@ -2025,7 +2025,7 @@ class ExitWithSignalTests(unittest.TestCase):
         """
         _exitWithSignal is called when the runner exits with a signal.
         """
-        CrippledApplicationRunner.exitSignal = 2
+        CrippledApplicationRunner._exitSignal = 2
         self.patch(twistd.app, '_exitWithSignal', self.fakeExitWithSignal)
         self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
         twistd.runApp(self.config)
@@ -2033,7 +2033,7 @@ class ExitWithSignalTests(unittest.TestCase):
 
 
     def tearDown(self):
-        CrippledApplicationRunner.exitSignal = 0
+        CrippledApplicationRunner._exitSignal = 0
 
 
 

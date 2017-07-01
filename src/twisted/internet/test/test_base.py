@@ -384,32 +384,32 @@ class ReactorBaseSignalTests(TestCase):
     def test_captureSIGINT(self):
         """
         ReactorBase's SIGINT handler saves the value of SIGINT to the
-        exitSignal attribute.
+        _exitSignal attribute.
         """
         reactor = SignalCapturingReactor()
         reactor.sigInt(signal.SIGINT, None)
-        self.assertEquals(signal.SIGINT, reactor.exitSignal)
+        self.assertEquals(signal.SIGINT, reactor._exitSignal)
 
     def test_captureSIGTERM(self):
         """
         ReactorBase's SIGTERM handler saves the value of SIGTERM to the
-        exitSignal attribute.
+        _exitSignal attribute.
         """
         reactor = SignalCapturingReactor()
         reactor.sigTerm(signal.SIGTERM, None)
-        self.assertEquals(signal.SIGTERM, reactor.exitSignal)
+        self.assertEquals(signal.SIGTERM, reactor._exitSignal)
 
     def test_captureSIGBREAK(self):
         """
         ReactorBase's SIGBREAK handler saves the value of SIGBREAK to the
-        exitSignal attribute.
+        _exitSignal attribute.
         """
         if not hasattr(signal, "SIGBREAK"):
             raise SkipTest("signal module does not have SIGBREAK")
 
         reactor = SignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
-        self.assertEquals(signal.SIGBREAK, reactor.exitSignal)
+        self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
 
 try:
     import signal
