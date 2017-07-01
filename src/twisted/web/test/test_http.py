@@ -604,6 +604,27 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         self.assertResponseEquals(value, self.expectedResponses)
 
 
+    def test_pipeliningReadLimit(self):
+        """
+        When pipelined requests are received, we will optimistically continue
+        receiving data up to a specified limit, then pause the transport.
+
+        @see: L{http.HTTPChannel._optimisticEagerReadSize}
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandlerProxy
+        a.makeConnection(b)
+        underLimit = a._optimisticEagerReadSize // len(self.requests)
+        for x in range(1, underLimit + 1):
+            a.dataReceived(self.requests)
+            self.assertEqual(b.producerState, 'producing',
+                             'state was {state!r} after {x} iterations'
+                             .format(state=b.producerState, x=x))
+        a.dataReceived(self.requests)
+        self.assertEquals(b.producerState, 'paused')
+
+
 
 class ShutdownTests(unittest.TestCase):
     """
