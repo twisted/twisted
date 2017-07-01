@@ -41,18 +41,22 @@ class FakeSerial2x(FakeSerialBase):
     """
     Fake Serial class emulating pyserial 2.x behavior.
     """
+    _fakeHandle = 25
+
     def __init__(self, *args, **kwargs):
         super(FakeSerial2x, self).__init__(*args, **kwargs)
-        self.hComPort = 25
+        self.hComPort = self._fakeHandle
 
 
 class FakeSerial3x(FakeSerialBase):
     """
     Fake Serial class emulating pyserial 3.x behavior.
     """
+    _fakeHandle = 35
+
     def __init__(self, *args, **kwargs):
         super(FakeSerial3x, self).__init__(*args, **kwargs)
-        self._port_handle = 35
+        self._port_handle = self._fakeHandle
 
 
 if serialport is not None:
@@ -149,6 +153,7 @@ class Win32SerialPortTests(unittest.TestCase):
         self.assertEqual(0,                   kwargs["xonxoff"])
         self.assertEqual(0,                   kwargs["rtscts"])
         self.assertEqual(None,                kwargs["timeout"])
+        self.assertEqual(port._serialHandle,  cls._serialFactory._fakeHandle)
 
     def test_serialPortDefaultArgs2x(self):
         self.common_serialPortDefaultArgs(cls=TestableSerialPort2x)
@@ -184,6 +189,7 @@ class Win32SerialPortTests(unittest.TestCase):
         port.serialReadEvent()
         port.write(b'abcd')
         port.write(b'ABCD')
+        port.serialWriteEvent()
         port.serialWriteEvent()
         port.connectionLost(reason='Cleanup')
 
