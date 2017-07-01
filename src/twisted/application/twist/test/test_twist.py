@@ -201,6 +201,11 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
     to signals and the reactor.
     """
 
+    """
+    Tests to verify that the Twist script takes the expected actions related
+    to signals and the reactor.
+    """
+
     def setUp(self):
         self.exitWithSignalCalled = False
 
