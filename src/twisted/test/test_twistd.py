@@ -1994,27 +1994,27 @@ class ExitWithSignalTests(unittest.TestCase):
         handler and sends the replaced signal to the current process.
         """
 
-        fake_signal_args = [None, None]
+        fakeSignalArgs = [None, None]
 
         def fake_signal(sig, handler):
-            fake_signal_args[0] = sig
-            fake_signal_args[1] = handler
+            fakeSignalArgs[0] = sig
+            fakeSignalArgs[1] = handler
 
 
-        fake_kill_args = [None, None]
+        fakeKillArgs = [None, None]
 
         def fake_kill(pid, sig):
-            fake_kill_args[0] = pid
-            fake_kill_args[1] = sig
+            fakeKillArgs[0] = pid
+            fakeKillArgs[1] = sig
 
         self.patch(signal, 'signal', fake_signal)
         self.patch(os, 'kill', fake_kill)
         app._exitWithSignal(signal.SIGINT)
 
-        self.assertEquals(fake_signal_args[0], signal.SIGINT)
-        self.assertEquals(fake_signal_args[1], signal.SIG_DFL)
-        self.assertEquals(fake_kill_args[0], os.getpid())
-        self.assertEquals(fake_kill_args[1], signal.SIGINT)
+        self.assertEquals(fakeSignalArgs[0], signal.SIGINT)
+        self.assertEquals(fakeSignalArgs[1], signal.SIG_DFL)
+        self.assertEquals(fakeKillArgs[0], os.getpid())
+        self.assertEquals(fakeKillArgs[1], signal.SIGINT)
 
 
     def test_normalExit(self):
