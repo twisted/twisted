@@ -673,27 +673,18 @@ class ApplicationRunnerTests(unittest.TestCase):
 
         class DummyReactorWithSignal(object):
             """
-            A dummy reactor, providing a C{run} method, checking that it
-            has been called, and setting the _exitSignal attribute to a
-            nonzero value..
-
-            @ivar called: if C{run} has been called or not.
-            @type called: C{bool}
+            A dummy reactor, providing a C{run} method, and setting the
+            _exitSignal attribute to a nonzero value.
 
             @ivar _exitSignal: Simulated signal exit code
             @type _exitSignal: C{int}
             """
-            called = False
             _exitSignal = 0
 
             def run(self):
                 """
-                A fake run method, checking that it has been called once and
-                setting _exitSignal to a nonzero value
+                A fake run method setting _exitSignal to a nonzero value
                 """
-                if self.called:
-                    raise RuntimeError("Already called")
-                self.called = True
                 self._exitSignal = 2
 
         reactor = DummyReactorWithSignal()
@@ -702,7 +693,6 @@ class ApplicationRunnerTests(unittest.TestCase):
             "profiler": "profile",
             "debug": False})
         runner.startReactor(reactor, None, None)
-        self.assertTrue(reactor.called)
         self.assertEquals(2, runner._exitSignal)
 
 
