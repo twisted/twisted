@@ -1968,7 +1968,14 @@ class DaemonizeTests(unittest.TestCase):
 
 class ExitWithSignalTests(unittest.TestCase):
 
+    """
+    Tests for L{twisted.application.app._exitWithSignal}.
+    """
+
     def setUp(self):
+        """
+        Set up the server options and a fake for use by test cases.
+        """
         self.config = twistd.ServerOptions()
         self.config.loadedPlugins = {'test_command': MockServiceMaker()}
         self.config.subOptions = object()
