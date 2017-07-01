@@ -128,6 +128,6 @@ class Twist(object):
         cls.run(cls.runnerArguments(options))
         try:
             if reactor.exitSignal:
-                exitWithSignal(reactor.exitSignal)
+                _exitWithSignal(reactor.exitSignal)
         except:
             pass
