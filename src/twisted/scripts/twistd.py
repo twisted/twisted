@@ -24,7 +24,7 @@ def runApp(config):
     runner = _SomeApplicationRunner(config)
     runner.run()
     if runner.exitSignal:
-        app.exitWithSignal(runner.exitSignal)
+        app._exitWithSignal(runner.exitSignal)
 
 
 def run():

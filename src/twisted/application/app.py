@@ -693,7 +693,7 @@ def startApplication(application, save):
 
 
 
-def exitWithSignal(sig):
+def _exitWithSignal(sig):
     """
     Force the application to terminate with the specified signal by replacing
     the signal handler with the default and sending the signal to ourselves.

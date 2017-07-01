@@ -216,11 +216,11 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         def fakeExitWithSignal(sig):
             self.exitWithSignalCalled = True
 
-        self.patch(_twist, 'exitWithSignal', fakeExitWithSignal)
+        self.patch(_twist, '_exitWithSignal', fakeExitWithSignal)
 
     def test_twistReactorDoesntExitWithSignal(self):
         """
-        exitWithSignal is not called if the reactor's exitSignal attribute
+        _exitWithSignal is not called if the reactor's exitSignal attribute
         is zero.
         """
         class TestTwistdOptions(TwistOptions):
@@ -245,7 +245,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
     def test_twistReactorHasNoExitSignalAttr(self):
         """
-        exitWithSignal is not called if the runner's reactor does not have
+        _exitWithSignal is not called if the runner's reactor does not have
         an exitSignal attribute.
         """
         class TestTwistdOptions(TwistOptions):
@@ -269,7 +269,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
     def test_twistReactorExitsWithSignal(self):
         """
-        exitWithSignal is called if the runner's reactor exits due
+        _exitWithSignal is called if the runner's reactor exits due
         to a signal.
         """
         class TestTwistdOptions(TwistOptions):

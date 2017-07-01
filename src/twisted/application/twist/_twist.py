@@ -13,7 +13,7 @@ from ..service import Application, IService
 from ..runner._exit import exit, ExitStatus
 from ..runner._runner import Runner
 from ._options import TwistOptions
-from twisted.application.app import exitWithSignal
+from twisted.application.app import _exitWithSignal
 
 
 
@@ -123,6 +123,6 @@ class Twist(object):
         cls.run(options)
         try:
             if reactor.exitSignal:
-                exitWithSignal(reactor.exitSignal)
+                _exitWithSignal(reactor.exitSignal)
         except:
             pass

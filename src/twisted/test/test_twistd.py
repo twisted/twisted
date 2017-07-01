@@ -2002,7 +2002,7 @@ class ExitWithSignalTests(unittest.TestCase):
 
         self.patch(signal, 'signal', fake_signal)
         self.patch(os, 'kill', fake_kill)
-        app.exitWithSignal(signal.SIGINT)
+        app._exitWithSignal(signal.SIGINT)
 
         self.assertEquals(fake_signal_args[0], signal.SIGINT)
         self.assertEquals(fake_signal_args[1], signal.SIG_DFL)
@@ -2012,10 +2012,10 @@ class ExitWithSignalTests(unittest.TestCase):
 
     def test_normalExit(self):
         """
-        exitWithSignal is not called if the runner does not exit with a
+        _exitWithSignal is not called if the runner does not exit with a
         signal.
         """
-        self.patch(twistd.app, 'exitWithSignal', self.fakeExitWithSignal)
+        self.patch(twistd.app, '_exitWithSignal', self.fakeExitWithSignal)
         self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
         twistd.runApp(self.config)
         self.assertFalse(self.exitWithSignalCalled)
@@ -2023,10 +2023,10 @@ class ExitWithSignalTests(unittest.TestCase):
 
     def test_runnerExitsWithSignal(self):
         """
-        exitWithSignal is called when the runner exits with a signal.
+        _exitWithSignal is called when the runner exits with a signal.
         """
         CrippledApplicationRunner.exitSignal = 2
-        self.patch(twistd.app, 'exitWithSignal', self.fakeExitWithSignal)
+        self.patch(twistd.app, '_exitWithSignal', self.fakeExitWithSignal)
         self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
         twistd.runApp(self.config)
         self.assertTrue(self.exitWithSignalCalled)
