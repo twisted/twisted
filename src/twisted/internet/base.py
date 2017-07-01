@@ -647,7 +647,8 @@ class ReactorBase(object):
             'during', 'startup', self._reallyStartRunning)
 
     def sigInt(self, *args):
-        """Handle a SIGINT interrupt.
+        """
+        Handle a SIGINT interrupt.
 
         @param args: See handler specification in L{signal.signal}
         """
@@ -657,7 +658,8 @@ class ReactorBase(object):
 
 
     def sigBreak(self, *args):
-        """Handle a SIGBREAK interrupt.
+        """
+        Handle a SIGBREAK interrupt.
 
         @param args: See handler specification in L{signal.signal}
         """
@@ -667,7 +669,8 @@ class ReactorBase(object):
 
 
     def sigTerm(self, *args):
-        """Handle a SIGTERM interrupt.
+        """
+        Handle a SIGTERM interrupt.
 
         @param args: See handler specification in L{signal.signal}
         """
