@@ -226,6 +226,10 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
         self.patch(Runner, 'startLogging', startLogging)
 
+            def installReactor(self, name):
+                reactor = MemoryReactor()
+                reactor._exitSignal = 0
+                return reactor
 
     def test_twistReactorDoesntExitWithSignal(self):
         """
