@@ -10,92 +10,87 @@ from sys import stderr
 from signal import SIGTERM
 from os import kill
 
+from attr import attrib, attrs, Factory
+
 from twisted.logger import (
     globalLogBeginner, textFileLogObserver,
     FilteringLogObserver, LogLevelFilterPredicate,
     LogLevel, Logger,
 )
-from twisted.internet import default as defaultReactor
+
 from ._exit import exit, ExitStatus
 from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError
 
 
 
+@attrs(frozen=True)
 class Runner(object):
     """
     Twisted application runner.
+
+    @cvar _log: The logger attached to this class.
+    @type _log: L{Logger}
+
+    @ivar _reactor: The reactor to start and run the application in.
+    @type _reactor: L{IReactorCore}
+
+    @ivar _pidFile: The file to store the running process ID in.
+    @type _pidFile: L{IPIDFile}
+
+    @ivar _kill: Whether this runner should kill an existing running
+        instance of the application.
+    @type _kill: L{bool}
+
+    @ivar _defaultLogLevel: The default log level to start the logging
+        system with.
+    @type _defaultLogLevel: L{constantly.NamedConstant} from L{LogLevel}
+
+    @ivar _logFile: A file stream to write logging output to.
+    @type _logFile: writable file-like object
+
+    @ivar _fileLogObserverFactory: A factory for the file log observer to
+        use when starting the logging system.
+    @type _pidFile: callable that takes a single writable file-like object
+        argument and returns a L{twisted.logger.FileLogObserver}
+
+    @ivar _whenRunning: Hook to call after the reactor is running;
+        this is where the application code that relies on the reactor gets
+        called.
+    @type _whenRunning: callable that takes the keyword arguments specified
+        by C{whenRunningArguments}
+
+    @ivar _whenRunningArguments: Keyword arguments to pass to
+        C{whenRunning} when it is called.
+    @type _whenRunningArguments: L{dict}
+
+    @ivar _reactorExited: Hook to call after the reactor exits.
+    @type _reactorExited: callable that takes the keyword arguments
+        specified by C{reactorExitedArguments}
+
+    @ivar _reactorExitedArguments: Keyword arguments to pass to
+        C{reactorExited} when it is called.
+    @type _reactorExitedArguments: L{dict}
     """
 
-    log = Logger()
+    _log = Logger()
 
-
-    def __init__(
-        self,
-        reactor=None,
-        pidFile=nonePIDFile, kill=False,
-        defaultLogLevel=LogLevel.info,
-        logFile=stderr, fileLogObserverFactory=textFileLogObserver,
-        whenRunning=lambda **_: None, whenRunningArguments={},
-        reactorExited=lambda **_: None, reactorExitedArguments={},
-    ):
-        """
-        @param reactor: The reactor to start and run the application in.
-        @type reactor: L{IReactorCore}
-
-        @param pidFile: The file to store the running process ID in.
-        @type pidFile: L{IPIDFile}
-
-        @param kill: Whether this runner should kill an existing running
-            instance of the application.
-        @type kill: L{bool}
-
-        @param defaultLogLevel: The default log level to start the logging
-            system with.
-        @type defaultLogLevel: L{constantly.NamedConstant} from L{LogLevel}
-
-        @param logFile: A file stream to write logging output to.
-        @type logFile: writable file-like object
-
-        @param fileLogObserverFactory: A factory for the file log observer to
-            use when starting the logging system.
-        @type pidFile: callable that takes a single writable file-like object
-            argument and returns a L{twisted.logger.FileLogObserver}
-
-        @param whenRunning: Hook to call after the reactor is running;
-            this is where the application code that relies on the reactor gets
-            called.
-        @type whenRunning: callable that takes the keyword arguments specified
-            by C{whenRunningArguments}
-
-        @param whenRunningArguments: Keyword arguments to pass to
-            C{whenRunning} when it is called.
-        @type whenRunningArguments: L{dict}
-
-        @param reactorExited: Hook to call after the reactor exits.
-        @type reactorExited: callable that takes the keyword arguments
-            specified by C{reactorExitedArguments}
-
-        @param reactorExitedArguments: Keyword arguments to pass to
-            C{reactorExited} when it is called.
-        @type reactorExitedArguments: L{dict}
-        """
-        self.reactor                = reactor
-        self.pidFile                = pidFile
-        self.kill                   = kill
-        self.defaultLogLevel        = defaultLogLevel
-        self.logFile                = logFile
-        self.fileLogObserverFactory = fileLogObserverFactory
-        self.whenRunningHook        = whenRunning
-        self.whenRunningArguments   = whenRunningArguments
-        self.reactorExitedHook      = reactorExited
-        self.reactorExitedArguments = reactorExitedArguments
+    _reactor                = attrib()
+    _pidFile                = attrib(default=nonePIDFile)
+    _kill                   = attrib(default=False)
+    _defaultLogLevel        = attrib(default=LogLevel.info)
+    _logFile                = attrib(default=stderr)
+    _fileLogObserverFactory = attrib(default=textFileLogObserver)
+    _whenRunning            = attrib(default=lambda **_: None)
+    _whenRunningArguments   = attrib(default=Factory(dict))
+    _reactorExited          = attrib(default=lambda **_: None)
+    _reactorExitedArguments = attrib(default=Factory(dict))
 
 
     def run(self):
         """
         Run this command.
         """
-        pidFile = self.pidFile
+        pidFile = self._pidFile
 
         self.killIfRequested()
 
@@ -112,12 +107,12 @@ class Runner(object):
 
     def killIfRequested(self):
         """
-        If C{self.kill} is true, attempt to kill a running instance of the
+        If C{self._kill} is true, attempt to kill a running instance of the
         application.
         """
-        pidFile = self.pidFile
+        pidFile = self._pidFile
 
-        if self.kill:
+        if self._kill:
             if pidFile is nonePIDFile:
                 exit(ExitStatus.EX_USAGE, "No PID file specified.")
                 return  # When testing, patched exit doesn't exit
@@ -132,7 +127,7 @@ class Runner(object):
                 return  # When testing, patched exit doesn't exit
 
             self.startLogging()
-            self.log.info("Terminating process: {pid}", pid=pid)
+            self._log.info("Terminating process: {pid}", pid=pid)
 
             kill(pid, SIGTERM)
 
@@ -144,14 +139,14 @@ class Runner(object):
         """
         Start the L{twisted.logger} logging system.
         """
-        logFile = self.logFile
+        logFile = self._logFile
 
-        fileLogObserverFactory = self.fileLogObserverFactory
+        fileLogObserverFactory = self._fileLogObserverFactory
 
         fileLogObserver = fileLogObserverFactory(logFile)
 
         logLevelPredicate = LogLevelFilterPredicate(
-            defaultLogLevel=self.defaultLogLevel
+            defaultLogLevel=self._defaultLogLevel
         )
 
         filteringObserver = FilteringLogObserver(
@@ -163,38 +158,28 @@ class Runner(object):
 
     def startReactor(self):
         """
-        If C{self.reactor} is L{None}, install the default reactor and set
-        C{self.reactor} to the default reactor.
-
-        Register C{self.whenRunning} with the reactor so that it is called once
-        the reactor is running, then start the reactor.
+        Register C{self._whenRunning} with the reactor so that it is called
+        once the reactor is running, then start the reactor.
         """
-        if self.reactor is None:
-            defaultReactor.install()
-            from twisted.internet import reactor
-            self.reactor = reactor
-        else:
-            reactor = self.reactor
+        self._reactor.callWhenRunning(self.whenRunning)
 
-        reactor.callWhenRunning(self.whenRunning)
-
-        self.log.info("Starting reactor...")
-        reactor.run()
+        self._log.info("Starting reactor...")
+        self._reactor.run()
 
 
     def whenRunning(self):
         """
-        Call C{self.whenRunning}.
+        Call C{self._whenRunning} with C{self._whenRunningArguments}.
 
         @note: This method is called after the reactor starts running.
         """
-        self.whenRunningHook(**self.whenRunningArguments)
+        self._whenRunning(**self._whenRunningArguments)
 
 
     def reactorExited(self):
         """
-        Call C{self.reactorExited}.
+        Call C{self._reactorExited} with C{self._reactorExitedArguments}.
 
         @note: This method is called after the reactor exits.
         """
-        self.reactorExitedHook(**self.reactorExitedArguments)
+        self._reactorExited(**self._reactorExitedArguments)

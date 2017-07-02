@@ -427,7 +427,16 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         return p
 
 
-    # IReactorSocket (but not on Windows)
+    # IReactorSocket (no AF_UNIX on Windows)
+
+    if unixEnabled:
+        _supportedAddressFamilies = (
+            socket.AF_INET, socket.AF_INET6, socket.AF_UNIX,
+        )
+    else:
+        _supportedAddressFamilies = (
+            socket.AF_INET, socket.AF_INET6,
+        )
 
     def adoptStreamPort(self, fileDescriptor, addressFamily, factory):
         """
@@ -438,11 +447,15 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamPort}
         """
-        if addressFamily not in (socket.AF_INET, socket.AF_INET6):
+        if addressFamily not in self._supportedAddressFamilies:
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        p = tcp.Port._fromListeningDescriptor(
-            self, fileDescriptor, addressFamily, factory)
+        if unixEnabled and addressFamily == socket.AF_UNIX:
+            p = unix.Port._fromListeningDescriptor(
+                self, fileDescriptor, factory)
+        else:
+            p = tcp.Port._fromListeningDescriptor(
+                self, fileDescriptor, addressFamily, factory)
         p.startListening()
         return p
 
@@ -451,11 +464,15 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         @see:
             L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
         """
-        if addressFamily not in (socket.AF_INET, socket.AF_INET6):
+        if addressFamily not in self._supportedAddressFamilies:
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        return tcp.Server._fromConnectedSocket(
-            fileDescriptor, addressFamily, factory, self)
+        if unixEnabled and addressFamily == socket.AF_UNIX:
+            return unix.Server._fromConnectedSocket(
+                fileDescriptor, factory, self)
+        else:
+            return tcp.Server._fromConnectedSocket(
+                fileDescriptor, addressFamily, factory, self)
 
 
     def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
