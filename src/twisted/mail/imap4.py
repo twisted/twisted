@@ -445,10 +445,7 @@ class LiteralString:
         if self.size > 0:
             self.data.append(data)
         else:
-            if self.size:
-                data, passon = data[:self.size], data[self.size:]
-            else:
-                passon = b''
+            data, passon = data[:self.size], data[self.size:]
             if data:
                 self.data.append(data)
         return passon
@@ -725,7 +722,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         self.resetTimeout()
-
         f = getattr(self, 'parse_' + self.parseState)
         try:
             f(line)
@@ -846,10 +842,41 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
 
-    def arg_astring(self, line):
+    def arg_finalastring(self, line):
+        """
+        Parse an astring from line that represents a command's final
+        argument.  This special case exists to enable parsing empty
+        string literals.
+
+        @param line: A line that contains a string literal.
+        @type line: L{bytes}
+
+        @return: A 2-tuple containing the parsed argument and any
+            trailing data, or a L{Deferred} that fires with that
+            2-tuple
+        @rtype: L{tuple} of (L{bytes}, L{bytes}) or a L{Deferred}
+
+        @see: https://twistedmatrix.com/trac/ticket/9207
+        """
+        return self.arg_astring(line, final=True)
+
+
+    def arg_astring(self, line, final=False):
         """
         Parse an astring from the line, return (arg, rest), possibly
         via a deferred (to handle literals)
+
+        @param line: A line that contains a string literal.
+        @type line: L{bytes}
+
+        @param final: Is this the final argument?
+        @type final L{bool}
+
+        @return: A 2-tuple containing the parsed argument and any
+            trailing data, or a L{Deferred} that fires with that
+            2-tuple
+        @rtype: L{tuple} of (L{bytes}, L{bytes}) or a L{Deferred}
+
         """
         line = line.strip()
         if not line:
@@ -870,6 +897,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 size = int(line[1:-1])
             except ValueError:
                 raise IllegalClientResponse("Bad literal size: " + line[1:-1])
+            if final and not size:
+                return (b'', b'')
             d = self._stringLiteral(size)
         else:
             arg = line.split(b' ',1)
@@ -1230,7 +1259,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addErrback(self.__ebLogin, tag
             )
 
-    unauth_LOGIN = (do_LOGIN, arg_astring, arg_astring)
+    unauth_LOGIN = (do_LOGIN, arg_astring, arg_finalastring)
 
 
     def authenticateLogin(self, user, passwd):
@@ -1371,7 +1400,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 self.sendNegativeResponse(tag, b'Mailbox not created')
 
-    auth_CREATE = (do_CREATE, arg_astring)
+    auth_CREATE = (do_CREATE, arg_finalastring)
     select_CREATE = auth_CREATE
 
 
@@ -1390,7 +1419,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendPositiveResponse(tag, b'Mailbox deleted')
 
-    auth_DELETE = (do_DELETE, arg_astring)
+    auth_DELETE = (do_DELETE, arg_finalastring)
     select_DELETE = auth_DELETE
 
 
@@ -1411,7 +1440,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendPositiveResponse(tag, b'Mailbox renamed')
 
-    auth_RENAME = (do_RENAME, arg_astring, arg_astring)
+    auth_RENAME = (do_RENAME, arg_astring, arg_finalastring)
     select_RENAME = auth_RENAME
 
 
@@ -1427,7 +1456,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendPositiveResponse(tag, b'Subscribed')
 
-    auth_SUBSCRIBE = (do_SUBSCRIBE, arg_astring)
+    auth_SUBSCRIBE = (do_SUBSCRIBE, arg_finalastring)
     select_SUBSCRIBE = auth_SUBSCRIBE
 
 
@@ -1443,7 +1472,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendPositiveResponse(tag, b'Unsubscribed')
 
-    auth_UNSUBSCRIBE = (do_UNSUBSCRIBE, arg_astring)
+    auth_UNSUBSCRIBE = (do_UNSUBSCRIBE, arg_finalastring)
     select_UNSUBSCRIBE = auth_UNSUBSCRIBE
 
 
@@ -2379,7 +2408,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).addCallback(self._cbCopySelectedMailbox, tag, messages, mailbox, uid
             ).addErrback(self._ebCopySelectedMailbox, tag
             )
-    select_COPY = (do_COPY, arg_seqset, arg_astring)
+    select_COPY = (do_COPY, arg_seqset, arg_finalastring)
 
 
     def _cbCopySelectedMailbox(self, mbox, tag, messages, mailbox, uid):

@@ -2852,7 +2852,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         return d
 
 
-    def testPathelogicalScatteringOfLiterals(self):
+    def testPathologicalScatteringOfLiterals(self):
         self.server.checker.addUser(b'testuser', b'password-test')
         transport = StringTransport()
         self.server.makeConnection(transport)
@@ -2867,6 +2867,28 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
         transport.clear()
         self.server.dataReceived(b"password-test\r\n")
+        self.assertEqual(transport.value(), b"01 OK LOGIN succeeded\r\n")
+        self.assertEqual(self.server.state, 'auth')
+
+        self.server.connectionLost(error.ConnectionDone("Connection done."))
+
+
+    def test_emptyStringLiteral(self):
+        """
+        Empty string literals are parsed.
+        """
+        self.server._username = b''
+        self.server._password = b''
+        transport = StringTransport()
+        self.server.makeConnection(transport)
+
+        transport.clear()
+        self.server.dataReceived(b"01 LOGIN {0}\r\n")
+        self.assertEqual(transport.value(),
+                         b"+ Ready for 0 octets of text\r\n")
+
+        transport.clear()
+        self.server.dataReceived(b"{0}\r\n")
         self.assertEqual(transport.value(), b"01 OK LOGIN succeeded\r\n")
         self.assertEqual(self.server.state, 'auth')
 
