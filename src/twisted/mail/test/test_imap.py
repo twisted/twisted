@@ -82,6 +82,29 @@ class IMAP4UTF7Tests(unittest.TestCase):
             bytes.decode('imap4-utf-7'))
 
 
+    def test_encodeAmpersand(self):
+        """
+        Unicode strings that contain an ampersand (C{&}) can be
+        encoded to bytes with the I{imap4-utf-7} codec.
+        """
+        text = u"&Hello&\N{VULGAR FRACTION ONE HALF}&"
+        self.assertEqual(
+            text.encode("imap4-utf-7"),
+            b'&-Hello&-&AL0-&-',
+        )
+
+
+    def test_decodeWithoutFinalASCIIShift(self):
+        """
+        An I{imap4-utf-7} encoded string that does not shift back to
+        ASCII (i.e., it lacks a final C{-}) can be decoded.
+        """
+        self.assertEqual(
+            b'&AL0'.decode('imap4-utf-7'),
+            u"\N{VULGAR FRACTION ONE HALF}",
+        )
+
+
     def test_getreader(self):
         """
         C{codecs.getreader('imap4-utf-7')} returns the I{imap4-utf-7} stream
