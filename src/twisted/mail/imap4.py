@@ -415,10 +415,6 @@ class MessageSet(object):
         return ','.join(p)
 
 
-    def __bytes__(self):
-        return str(self).encode("ascii")
-
-
     def __repr__(self):
         return '<MessageSet %s>' % (str(self),)
 
