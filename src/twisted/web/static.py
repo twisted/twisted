@@ -186,6 +186,15 @@ class File(resource.Resource, filepath.FilePath):
 
     @cvar childNotFound: L{Resource} used to render 404 Not Found error pages.
     @cvar forbidden: L{Resource} used to render 403 Forbidden error pages.
+
+    @ivar contentTypes: a mapping of extensions to MIME types used to set the
+        default value for the Content-Type header.
+        It is initialized with the values returned by L{loadMimeTypes}.
+    @type contentTypes: C{dict}
+
+    @ivar contentEncodings: a mapping of extensions to encoding types used to
+        set default value for the Content-Encoding header.
+    @type contentEncodings: C{dict}
     """
 
     contentTypes = loadMimeTypes()
@@ -870,7 +879,13 @@ class DirectoryLister(resource.Resource):
         B{type} and B{encoding}.
     @type linePattern: C{str}
 
+    @ivar contentTypes: a mapping of extensions to MIME types used to populate
+        the information of a member of this directory.
+        It is initialized with the value L{File.contentTypes}.
+    @type contentTypes: C{dict}
+
     @ivar contentEncodings: a mapping of extensions to encoding types.
+        It is initialized with the value L{File.contentEncodings}.
     @type contentEncodings: C{dict}
 
     @ivar defaultType: default type used when no mimetype is detected.

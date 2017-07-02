@@ -943,8 +943,37 @@ class Request:
         """
         Notify when the response to this request has finished.
 
-        @rtype: L{Deferred}
+        @note: There are some caveats around the reliability of the delivery of
+            this notification.
 
+                1. If this L{Request}'s channel is paused, the notification
+                   will not be delivered.  This can happen in one of two ways;
+                   either you can call C{request.transport.pauseProducing}
+                   yourself, or,
+
+                2. In order to deliver this notification promptly when a client
+                   disconnects, the reactor must continue reading from the
+                   transport, so that it can tell when the underlying network
+                   connection has gone away.  Twisted Web will only keep
+                   reading up until a finite (small) maximum buffer size before
+                   it gives up and pauses the transport itself.  If this
+                   occurs, you will not discover that the connection has gone
+                   away until a timeout fires or until the application attempts
+                   to send some data via L{Request.write}.
+
+                3. It is theoretically impossible to distinguish between
+                   successfully I{sending} a response and the peer successfully
+                   I{receiving} it.  There are several networking edge cases
+                   where the L{Deferred}s returned by C{notifyFinish} will
+                   indicate success, but the data will never be received.
+                   There are also edge cases where the connection will appear
+                   to fail, but in reality the response was delivered.  As a
+                   result, the information provided by the result of the
+                   L{Deferred}s returned by this method should be treated as a
+                   guess; do not make critical decisions in your applications
+                   based upon it.
+
+        @rtype: L{Deferred}
         @return: A L{Deferred} which will be triggered when the request is
             finished -- with a L{None} value if the request finishes
             successfully or with an error if the request is interrupted by an
@@ -1784,7 +1813,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     A receiver for HTTP requests.
 
     The L{HTTPChannel} provides L{interfaces.ITransport} and
-    L{interfaces.IConsumer} to the L{Request} objects it creates. It also
+    L{interfaces.IConsumer} to the L{Request} objects it creates.  It also
     implements L{interfaces.IPushProducer} to C{self.transport}, allowing the
     transport to pause it.
 
@@ -1814,7 +1843,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar _networkProducer: Either the transport, if it provides
         L{interfaces.IPushProducer}, or a null implementation of
-        L{interfaces.IPushProducer}. Used to attempt to prevent the transport
+        L{interfaces.IPushProducer}.  Used to attempt to prevent the transport
         from producing excess data when we're responding to a request.
     @type _networkProducer: L{interfaces.IPushProducer}
 
@@ -1828,9 +1857,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         behaviour (where we literally just set the L{Request} object as the
         producer on the transport) is because we want to be able to exert
         backpressure on the client to prevent it from sending in arbitrarily
-        many requests without ever reading responses. Essentially, if the
+        many requests without ever reading responses.  Essentially, if the
         client never reads our responses we will eventually stop reading its
         requests.
+
     @type _requestProducer: L{interfaces.IPushProducer}
 
     @ivar _requestProducerStreaming: A boolean that tracks whether the producer
@@ -1839,20 +1869,48 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     @type _requestProducerStreaming: L{bool} or L{None}
 
     @ivar _waitingForTransport: A boolean that tracks whether the transport has
-        asked us to stop producing. This is used to keep track of what we're
+        asked us to stop producing.  This is used to keep track of what we're
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
     @type _waitingForTransport: L{bool}
 
     @ivar abortTimeout: The number of seconds to wait after we attempt to shut
-        the transport down cleanly to give up and forcibly terminate it. This
+        the transport down cleanly to give up and forcibly terminate it.  This
         is only used when we time a connection out, to prevent errors causing
-        the FD to get leaked. If this is L{None}, we will wait forever.
+        the FD to get leaked.  If this is L{None}, we will wait forever.
     @type abortTimeout: L{int}
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
     @type _abortingCall: L{twisted.internet.base.DelayedCall}
+
+    @ivar _optimisticEagerReadSize: When a resource takes a long time to answer
+        a request (via L{twisted.web.server.NOT_DONE_YET}, hopefully one day by
+        a L{Deferred}), we would like to be able to let that resource know
+        about the underlying transport disappearing as promptly as possible,
+        via L{Request.notifyFinish}, and therefore via
+        C{self.requests[...].connectionLost()} on this L{HTTPChannel}.
+
+        However, in order to simplify application logic, we implement
+        head-of-line blocking, and do not relay pipelined requests to the
+        application until the previous request has been answered.  This means
+        that said application cannot dispose of any entity-body that comes in
+        from those subsequent requests, which may be arbitrarily large, and it
+        may need to be buffered in memory.
+
+        To implement this tradeoff between prompt notification when possible
+        (in the most frequent case of non-pipelined requests) and correct
+        behavior when not (say, if a client sends a very long-running GET
+        request followed by a PUT request with a very large body) we will
+        continue reading pipelined requests into C{self._dataBuffer} up to a
+        given limit.
+
+        C{_optimisticEagerReadSize} is the number of bytes we will accept from
+        the client and buffer before pausing the transport.
+
+        This behavior has been in place since Twisted NEXT .
+
+    @type _optimisticEagerReadSize: L{int}
     """
 
     maxHeaders = 500
@@ -1875,6 +1933,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducerStreaming = None
     _waitingForTransport = False
     _abortingCall = None
+    _optimisticEagerReadSize = 0x4000
 
     def __init__(self):
         # the request queue
@@ -1902,13 +1961,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._receivedHeaderSize += len(line)
         if (self._receivedHeaderSize > self.totalHeadersSize):
             self._respondToBadRequestAndDisconnect()
-            return
-
-        # If we're currently handling a request, buffer this data. We shouldn't
-        # have received it (we've paused the transport), but let's be cautious.
-        if self._handlingRequest:
-            self._dataBuffer.append(line)
-            self._dataBuffer.append(b'\r\n')
             return
 
         if self.__first_line:
@@ -2048,22 +2100,33 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
-        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        if not self._waitingForTransport:
-            self._networkProducer.pauseProducing()
-
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
 
-    def rawDataReceived(self, data):
-        self.resetTimeout()
-
-        # If we're currently handling a request, buffer this data. We shouldn't
-        # have received it (we've paused the transport), but let's be cautious.
+    def dataReceived(self, data):
+        """
+        Data was received from the network.  Process it.
+        """
+        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
+            if (
+                    (sum(map(len, self._dataBuffer)) >
+                     self._optimisticEagerReadSize)
+                    and not self._waitingForTransport
+            ):
+                # If we received more data than a small limit while processing
+                # the head-of-line request, apply TCP backpressure to our peer
+                # to get them to stop sending more request data until we're
+                # ready.  See docstring for _optimisticEagerReadSize above.
+                self._networkProducer.pauseProducing()
             return
+        return basic.LineReceiver.dataReceived(self, data)
+
+
+    def rawDataReceived(self, data):
+        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
