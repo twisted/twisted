@@ -11,6 +11,7 @@ import codecs
 import locale
 import os
 from io import BytesIO
+import uuid
 
 from itertools import chain
 from collections import OrderedDict
@@ -179,7 +180,8 @@ class BufferingConsumer:
 
 
 
-class MessageProducerTests(unittest.TestCase):
+class MessageProducerTests(unittest.SynchronousTestCase):
+
     def testSinglePart(self):
         body = b'This is body text.  Rar.'
         headers = OrderedDict()
@@ -303,6 +305,104 @@ class MessageProducerTests(unittest.TestCase):
                 b'\r\n'
                 + innerBody2
                 + b'\r\n--xyz--\r\n')
+        return d.addCallback(cbProduced)
+
+
+    def test_multiPartNoBoundary(self):
+        """
+        A boundary is generated if none is provided.
+        """
+        outerBody = b''
+        innerBody = b'Contained body message text.  Squarge.'
+        headers = OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative'
+
+        innerHeaders = OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        msg = FakeyMessage(headers, (), None, outerBody, 123,
+                           [FakeyMessage(innerHeaders, (), None, innerBody,
+                                         None, None)],
+                           )
+
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        p._uuid4 = lambda: uuid.UUID('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+            self.assertEqual(
+                b''.join(c.buffer),
+
+                b'{341}\r\n'
+                b'From: sender@host\r\n'
+                b'To: recipient@domain\r\n'
+                b'Subject: booga booga boo\r\n'
+                b'Content-Type: multipart/alternative; boundary='
+                b'"----=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"'
+                b'\r\n'
+                b'\r\n'
+                b'\r\n'
+                b'------=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\n'
+                b'Subject: this is subject text\r\n'
+                b'Content-Type: text/plain\r\n'
+                b'\r\n'
+                + innerBody
+                + b'\r\n------=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa--\r\n')
+
+        return d.addCallback(cbProduced)
+
+
+    def test_multiPartNoQuotes(self):
+        """
+        A boundary without does not have them added.
+        """
+        outerBody = b''
+        innerBody = b'Contained body message text.  Squarge.'
+        headers = OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary=xyz'
+
+        innerHeaders = OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        msg = FakeyMessage(headers, (), None, outerBody, 123,
+                           [FakeyMessage(innerHeaders, (), None, innerBody,
+                                         None, None)],
+                           )
+
+        c = BufferingConsumer()
+        p = imap4.MessageProducer(msg)
+        d = p.beginProducing(c)
+
+        def cbProduced(result):
+            self.failUnlessIdentical(result, p)
+            self.assertEqual(
+                b''.join(c.buffer),
+
+                b'{237}\r\n'
+                b'From: sender@host\r\n'
+                b'To: recipient@domain\r\n'
+                b'Subject: booga booga boo\r\n'
+                b'Content-Type: multipart/alternative; boundary='
+                b'xyz'
+                b'\r\n'
+                b'\r\n'
+                b'\r\n'
+                b'--xyz\r\n'
+                b'Subject: this is subject text\r\n'
+                b'Content-Type: text/plain\r\n'
+                b'\r\n'
+                + innerBody
+                + b'\r\n--xyz--\r\n')
+
         return d.addCallback(cbProduced)
 
 
