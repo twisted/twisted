@@ -1293,6 +1293,28 @@ class IMAP4HelperTests(unittest.TestCase):
                                   "len(%r) = %r != %r" % (input, L, expected))
 
 
+    def test_parseTimeInvalidFormat(self):
+        """
+        L{imap4.parseTime} raises L{ValueError} when given a a time
+        string whose format is invalid.
+        """
+        self.assertRaises(ValueError, imap4.parseTime, u"invalid")
+
+
+    def test_parseTimeInvalidValues(self):
+        """
+        L{imap4.parseTime} raises L{ValueError} when given a time
+        string composed of invalid values.
+        """
+        invalidStrings = [
+            "invalid-July-2017",
+            "2-invalid-2017",
+            "2-July-invalid",
+        ]
+        for invalid in invalidStrings:
+            self.assertRaises(ValueError, imap4.parseTime, invalid)
+
+
 
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
