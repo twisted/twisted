@@ -3,8 +3,14 @@
 # See LICENSE for details.
 
 """
-This is a web-server which integrates with the twisted.internet
-infrastructure.
+This is a web server which integrates with the twisted.internet infrastructure.
+
+@var NOT_DONE_YET: A token value which L{twisted.web.resource.IResource.render}
+    implementations can return to indicate that the application will later call
+    C{.write} and C{.finish} to complete the request, and that the HTTP
+    connection should be left open.
+@type NOT_DONE_YET: Opaque; do not depend on any particular type for this
+    value.
 """
 
 from __future__ import division, absolute_import
