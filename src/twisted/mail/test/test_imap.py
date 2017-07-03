@@ -678,6 +678,18 @@ class IMAP4HelperTests(unittest.TestCase):
             self.assertEqual(
                 (b'{%d}\r\n' % len(b))+ b,
                 b''.join(c.buffer))
+            return result
+
+        def cbResume(result):
+            # Calling resumeProducing after completion does not raise
+            # an exception
+            p.resumeProducing()
+            return result
+
+        d.addCallback(cbProduced)
+        d.addCallback(cbResume)
+        # The second cbProduced ensures calling resumeProducing after
+        # completion does not change the result.
         return d.addCallback(cbProduced)
 
 

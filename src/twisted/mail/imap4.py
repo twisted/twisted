@@ -6209,11 +6209,15 @@ class FileProducer:
 
 
     def pauseProducing(self):
-        pass
+        """
+        Pause the producer.  This does nothing.
+        """
 
 
     def stopProducing(self):
-        pass
+        """
+        Stop the producer.  This does nothing.
+        """
 
 
     def _size(self):
