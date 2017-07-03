@@ -5265,22 +5265,18 @@ def _getContentType(msg):
     Return a two-tuple of the main and subtype of the given message.
     """
     attrs = None
-    mm = msg.getHeaders(False, 'content-type').get('content-type', None)
+    mm = msg.getHeaders(False, 'content-type').get('content-type', '')
+    mm = ''.join(mm.splitlines())
     if mm:
-        mm = ''.join(mm.splitlines())
         mimetype = mm.split(';')
-        if mimetype:
-            type = mimetype[0].split('/', 1)
-            if len(type) == 1:
-                major = type[0]
-                minor = None
-            elif len(type) == 2:
-                major, minor = type
-            else:
-                major = minor = None
-            attrs = dict(x.strip().lower().split('=', 1) for x in mimetype[1:])
+        type = mimetype[0].split('/', 1)
+        if len(type) == 1:
+            major = type[0]
+            minor = None
         else:
-            major = minor = None
+            # length must be 2, because of split('/', 1)
+            major, minor = type
+        attrs = dict(x.strip().lower().split('=', 1) for x in mimetype[1:])
     else:
         major = minor = None
     return major, minor, attrs

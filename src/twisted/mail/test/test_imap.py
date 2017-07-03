@@ -4545,6 +4545,44 @@ class GetBodyStructureTests(unittest.TestCase):
             structure)
 
 
+    def test_emptyContentType(self):
+        """
+        L{imap4.getBodyStructure} returns L{None} for the major and
+        minor MIME types of a L{IMessagePart} provider whose headers
+        lack a C{Content-Type}, or have an empty value for it.
+        """
+        # missing = FakeyMessage({}, (), b'', b'', 123, None)
+        # missingContentTypeStructure = imap4.getBodyStructure(missing)
+        # missingMajor, missingMinor = missingContentTypeStructure[:2]
+        # self.assertIs(None, missingMajor)
+        # self.assertIs(None, missingMinor)
+
+        # empty = FakeyMessage({"content-type": ""}, (), b'', b'', 123, None)
+        # emptyContentTypeStructure = imap4.getBodyStructure(empty)
+        # emptyMajor, emptyMinor = emptyContentTypeStructure[:2]
+        # self.assertIs(None, emptyMajor)
+        # self.assertIs(None, emptyMinor)
+
+        newline = FakeyMessage({"content-type": "\n"}, (), b'', b'', 123, None)
+        newlineContentTypeStructure = imap4.getBodyStructure(newline)
+        newlineMajor, newlineMinor = newlineContentTypeStructure[:2]
+        self.assertIs(None, newlineMajor)
+        self.assertIs(None, newlineMinor)
+
+
+    def test_onlyMajorContentType(self):
+        """
+        L{imap4.getBodyStructure} returns only a non-L{None} major
+        MIME type for a L{IMessagePart} provider whose headers only
+        have a main a C{Content-Type}.
+        """
+        main = FakeyMessage({"content-type": "main"}, (), b'', b'', 123, None)
+        mainStructure = imap4.getBodyStructure(main)
+        mainMajor, mainMinor = mainStructure[:2]
+        self.assertEqual(mainMajor, "main")
+        self.assertIs(mainMinor, None)
+
+
     def test_singlePartExtended(self):
         """
         L{imap4.getBodyStructure} returns a list giving the basic and extended
