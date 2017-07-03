@@ -1295,10 +1295,14 @@ class IMAP4HelperTests(unittest.TestCase):
         input = [
             b'foo', imap4.DontQuoteMe(b'bar'), b"baz",
             BytesIO(b'this is a file\r\n'),
+            b"this is\r\nquoted",
             imap4.DontQuoteMe(b'buz'), b""
         ]
 
-        output = b'"foo" bar "baz" {16}\r\nthis is a file\r\n buz ""'
+        output = (b'"foo" bar "baz"'
+                  b' {16}\r\nthis is a file\r\n '
+                  b'{15}\r\nthis is\r\nquoted'
+                  b' buz ""')
 
         self.assertEqual(imap4.collapseNestedLists(input), output)
 
@@ -1378,6 +1382,33 @@ class IMAP4HelperTests(unittest.TestCase):
         """
         query = imap4.Query(unkeyword='twisted')
         self.assertEqual('(UNKEYWORD twisted)', query)
+
+
+    def test_queryWithMesssageSet(self):
+        """
+        When passed a L{MessageSet}, L{imap4.Query} returns a query
+        containing a quoted string representing the ID sequence.
+        """
+        query = imap4.Query(messages=imap4.MessageSet(1, None))
+        self.assertEqual(query, '(MESSAGES "1:*")')
+
+
+    def test_queryWithInteger(self):
+        """
+        When passed an L{int}, L{imap4.Query} returns a query
+        containing a quoted integer.
+        """
+        query = imap4.Query(messages=1)
+        self.assertEqual(query, '(MESSAGES "1")')
+
+
+    def test_queryOrIllegalQuery(self):
+        """
+        An L{imap4.Or} query with less than two arguments raises an
+        L{imap4.IllegalQueryError}.
+        """
+        self.assertRaises(imap4.IllegalQueryError,
+                          imap4.Or, imap4.Query(messages=1))
 
 
     def _keywordFilteringTest(self, keyword):
@@ -1547,6 +1578,27 @@ class IMAP4HelperTests(unittest.TestCase):
         ]
         for invalid in invalidStrings:
             self.assertRaises(ValueError, imap4.parseTime, invalid)
+
+
+    def test_statusRequestHelper(self):
+        """
+        L{imap4.statusRequestHelper} builds a L{dict} mapping the
+        requested status names to values extracted from the provided
+        L{IMailboxIMAP}'s.
+        """
+        mbox = SimpleMailbox()
+
+        expected = {
+            'MESSAGES': mbox.getMessageCount(),
+            'RECENT': mbox.getRecentCount(),
+            'UIDNEXT': mbox.getUIDNext(),
+            'UIDVALIDITY': mbox.getUIDValidity(),
+            'UNSEEN': mbox.getUnseenCount(),
+        }
+
+        result = imap4.statusRequestHelper(mbox, expected.keys())
+
+        self.assertEqual(expected, result)
 
 
 
