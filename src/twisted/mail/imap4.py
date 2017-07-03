@@ -24,6 +24,7 @@ import re
 import string
 import tempfile
 import time
+import uuid
 
 import email.utils
 
@@ -5750,6 +5751,7 @@ def iterateInReactor(i):
 
 class MessageProducer:
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+    _uuid4 = staticmethod(uuid.uuid4)
 
     def __init__(self, msg, buffer = None, scheduler = None):
         """
@@ -5787,8 +5789,8 @@ class MessageProducer:
             boundary = parts.get('boundary')
             if boundary is None:
                 # Bastards
-                boundary = '----=_%f_boundary_%f' % (time.time(), random.random())
-                headers['content-type'] += '; boundary="'+ networkString(boundary) + b'"'
+                boundary = '----=%s' % (self._uuid4().hex,)
+                headers['content-type'] += '; boundary="%s"' % (boundary,)
             else:
                 if boundary.startswith('"') and boundary.endswith('"'):
                     boundary = boundary[1:-1]
@@ -5938,6 +5940,8 @@ class _FetchParser:
                     fields.append(f)
                 base += b' (' + b' '.join(fields) + b')'
             if self.part:
+                # TODO: _FetchParser never assigns Header.part - dead
+                # code?
                 base = b'.'.join([(x + 1).__bytes__() for x in self.part]) + b'.' + base
             return base
 
@@ -5993,7 +5997,7 @@ class _FetchParser:
         # In the initial state, the literals "ALL", "FULL", and "FAST"
         # are accepted, as is a ( indicating the beginning of a fetch_att
         # token, as is the beginning of a fetch_att token.
-        if s == '':
+        if s == b'':
             return 0
 
         l = s.lower()
@@ -6027,6 +6031,8 @@ class _FetchParser:
     def state_close_paren(self, s):
         if s.startswith(b')'):
             return 1
+        # TODO: does maybe_fetch_att's startswith(b')') make this dead
+        # code?
         raise Exception("Missing )")
 
 

@@ -903,23 +903,24 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_fetchParserSimple(self):
         cases = [
-            ['ENVELOPE', 'Envelope'],
-            ['FLAGS', 'Flags'],
-            ['INTERNALDATE', 'InternalDate'],
-            ['RFC822.HEADER', 'RFC822Header'],
-            ['RFC822.SIZE', 'RFC822Size'],
-            ['RFC822.TEXT', 'RFC822Text'],
-            ['RFC822', 'RFC822'],
-            ['UID', 'UID'],
-            ['BODYSTRUCTURE', 'BodyStructure'],
+            ['ENVELOPE', 'Envelope', 'envelope'],
+            ['FLAGS', 'Flags', 'flags'],
+            ['INTERNALDATE', 'InternalDate', 'internaldate'],
+            ['RFC822.HEADER', 'RFC822Header', 'rfc822.header'],
+            ['RFC822.SIZE', 'RFC822Size', 'rfc822.size'],
+            ['RFC822.TEXT', 'RFC822Text', 'rfc822.text'],
+            ['RFC822', 'RFC822', 'rfc822'],
+            ['UID', 'UID', 'uid'],
+            ['BODYSTRUCTURE', 'BodyStructure', 'bodystructure'],
         ]
 
-        for (inp, outp) in cases:
+        for (inp, outp, asString) in cases:
             inp = inp.encode('ascii')
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), 1)
             self.assertTrue(isinstance(p.result[0], getattr(p, outp)))
+            self.assertEqual(str(p.result[0]), asString)
 
 
     def test_fetchParserMacros(self):
@@ -1056,6 +1057,127 @@ class IMAP4HelperTests(unittest.TestCase):
             bytes(p.result[0]),
             b'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>'
         )
+
+
+    def test_fetchParserQuotedHeader(self):
+        """
+        Parsing a C{BODY} whose C{HEADER} values require quoting
+        results in a object that perserves that quoting when
+        serialized.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b'BODY[HEADER.FIELDS ((Quoted)]')
+        self.assertEqual(len(p.result), 1)
+        self.assertEqual(p.result[0].peek, False)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertEqual(bytes(p.result[0]),
+                         b'BODY[HEADER.FIELDS ("(Quoted")]')
+
+
+    def test_fetchParserEmptyString(self):
+        """
+        Parsing an empty string results in no data.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b'')
+        self.assertFalse(len(p.result))
+
+
+    def test_fetchParserUnknownAttribute(self):
+        """
+        Parsing a string with an unknown attribute raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"UNKNOWN")
+
+
+    def test_fetchParserIncompleteStringEndsInWhitespace(self):
+        """
+        Parsing a string that prematurely ends in whitespace raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"BODY[HEADER.FIELDS  ")
+
+
+    def test_fetchParserExpectedWhitespace(self):
+        """
+        Parsing a string that contains an unexpected character rather
+        than whitespace raises an L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"BODY[HEADER.FIELDS!]")
+
+
+    def test_fetchParserTextSection(self):
+        """
+        A C{BODY} can contain a C{TEXT} section.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b"BODY[TEXT]")
+        self.assertEqual(len(p.result), 1)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertEqual(p.result[0].peek, False)
+        self.assertIsInstance(p.result[0].text, p.Text)
+        self.assertEqual(bytes(p.result[0]), b'BODY[TEXT]')
+
+
+    def test_fetchParserUnknownSection(self):
+        """
+        Parsing a C{BODY} with an unknown section raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception, p.parseString, b"BODY[UNKNOWN]")
+
+
+    def test_fetchParserMissingSectionClose(self):
+        """
+        Parsing a C{BODY} with an unterminated section list raises an
+        L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b'BODY[HEADER')
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b'BODY[HEADER.FIELDS (SUBJECT)')
+
+
+    def test_fetchParserHeaderMissingParentheses(self):
+        """
+        Parsing a C{BODY} whose C{HEADER.FIELDS} list does not begin
+        with an open parenthesis (C{(}) or end with a close
+        parenthesis (C{)}) raises an L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b"BODY[HEADER.FIELDS Missing)]")
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b'BODY[HEADER.FIELDS (Missing]')
+
+
+    def test_fetchParserDotlessPartial(self):
+        """
+        Parsing a C{BODY} with a range that lacks a period (C{.})
+        raises an L{Exception}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b"BODY<01>")
+
+
+    def test_fetchParserUnclosedPartial(self):
+        """
+        Parsing a C{BODY} with a partial range that's missing its
+        closing greater than sign (C{>}) raises an L{EXCEPTION}.
+        """
+        p = imap4._FetchParser()
+        self.assertRaises(Exception,
+                          p.parseString, b"BODY<0")
 
 
     def test_files(self):
