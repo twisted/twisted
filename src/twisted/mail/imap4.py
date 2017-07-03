@@ -4121,7 +4121,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             def nativeStringResponse(thing):
                 return thing
 
-
         values = {}
         unstructured = []
 
@@ -4297,7 +4296,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             message, and C{(2, 1, 3}) retrieves the 3rd entity inside the first
             entity inside the second entity of the message.
 
-        @type headerArgs: A sequence of L{bytes}
+        @type headerArgs: A sequence of L{str}
         @param headerArgs: If C{headerType} is HEADER.FIELDS, these are the
             headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
             headers to exclude from retrieval.
@@ -4331,7 +4330,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             header = '.' + headerType
         else:
             header = headerType
-        if header and headerType not in ('TEXT', 'MIME'):
+        if header and headerType in ('HEADER.FIELDS', 'HEADER.FIELDS.NOT'):
             if headerArgs is not None:
                 payload = ' (%s)' % ' '.join(headerArgs)
             else:
@@ -4350,6 +4349,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if _PY3:
             cmd = cmd.encode('charmap')
 
+        c = Command(fetch, cmd, wantResponse=(b'FETCH',))
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
         return d

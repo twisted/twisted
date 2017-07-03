@@ -4141,6 +4141,77 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin,
             self.successResultOf(d), {7: [['BODY', [], "<html>test</html>"]]})
 
 
+    def assertFetchSpecificFieldsWithEmptyList(self, section):
+        """
+        Assert that the provided C{BODY} section, when invoked with no
+        arguments, produces an empty list, and that it returns a
+        L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data
+        given by the server's response.
+
+        @param section: The C{BODY} section to test: either
+            C{'HEADER.FIELDS'} or C{'HEADER.FIELDS.NOT'}
+        @type section: L{str}
+        """
+        d = self.client.fetchSpecific('10', headerType=section)
+        self.assertEqual(
+            self.transport.value(),
+            b'0001 FETCH 10 BODY[' + section.encode('ascii') + b' ()]\r\n')
+        # It's unclear what the response would look like - would it be
+        # an empty string?  No IMAP server parses an empty list of headers
+        self.client.lineReceived(
+            b'* 10 FETCH (BODY[' + section.encode('ascii') + b' ()] "")')
+        self.client.lineReceived(b'0001 OK FETCH completed')
+        self.assertEqual(
+            self.successResultOf(d),
+            {10: [['BODY', [section, []], ""]]})
+
+
+    def test_fetchSpecificHeaderFieldsWithoutHeaders(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{'HEADER.FIELDS'}
+        for C{headerType} but no C{headerArgs}, sends the
+        I{BODY[HEADER.FIELDS]} command with no arguments.  It returns
+        a L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data
+        given by the server's response.
+        """
+        self.assertFetchSpecificFieldsWithEmptyList("HEADER.FIELDS")
+
+
+    def test_fetchSpecificHeaderFieldsNotWithoutHeaders(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed
+        C{'HEADER.FIELDS.NOT'} for C{headerType} but no C{headerArgs},
+        sends the I{BODY[HEADER.FIELDS.NOT]} command with no
+        arguments.  It returns a L{Deferred} which fires with a
+        C{dict} mapping message sequence numbers to C{list}s of
+        corresponding message data given by the server's response.
+        """
+        self.assertFetchSpecificFieldsWithEmptyList("HEADER.FIELDS.NOT")
+
+
+    def test_fetchSpecificHeader(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{'HEADER'} for
+        C{headerType}, sends the I{BODY[HEADER]} command.  It returns
+        a L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data
+        given by the server's response.
+        """
+        d = self.client.fetchSpecific('11', headerType='HEADER')
+        self.assertEqual(
+            self.transport.value(), b'0001 FETCH 11 BODY[HEADER]\r\n')
+        self.client.lineReceived(
+            b'* 11 FETCH (BODY[HEADER]'
+            b' "From: someone@localhost\r\nSubject: Some subject")')
+        self.client.lineReceived(b'0001 OK FETCH completed')
+        self.assertEqual(
+            self.successResultOf(d),
+            {11: [['BODY', ['HEADER'],
+                  "From: someone@localhost\r\nSubject: Some subject"]]})
+
+
 
 class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
     """
