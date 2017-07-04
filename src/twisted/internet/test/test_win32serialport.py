@@ -23,16 +23,6 @@ except ImportError as e:
 
 
 if serialport is not None:
-    # class TestableSerialPortBase(serialport.SerialPort):
-    #     """
-    #     Base testable version of Windows
-    #     C{twisted.internet.serialport.SerialPort}.
-    #     """
-    #
-    #     # Fake this out; it calls into win32 library.
-    #     def _finishPortSetup(self):
-    #         pass
-
     class RegularFileSerial(serial.Serial):
         def __init__(self, *args, **kwargs):
             super(RegularFileSerial, self).__init__(*args, **kwargs)
