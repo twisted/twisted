@@ -19,7 +19,6 @@ import binascii
 import codecs
 import copy
 import functools
-import random
 import re
 import string
 import tempfile
