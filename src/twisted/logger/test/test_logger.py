@@ -76,6 +76,20 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.namespace, __name__)
 
 
+    def test_namespaceOMGItsTooHard(self):
+        """
+        Default namespace is C{"<unknown>"} when a logger is created from a
+        context in which is can't be determined automatically and no namespace
+        was specified.
+        """
+        result = []
+        exec(
+            "result.append(Logger())",
+            dict(Logger=Logger), locals(),
+        )
+        self.assertEqual(result[0].namespace, "<unknown>")
+
+
     def test_namespaceAttribute(self):
         """
         Default namespace for classes using L{Logger} as a descriptor is the
