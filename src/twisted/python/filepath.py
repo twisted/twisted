@@ -376,7 +376,7 @@ class AbstractFilePath(object):
                 # sort of thing which should be handled normally. -glyph
                 raise
             raise UnlistableError(ose)
-        return map(self.child, subnames)
+        return [self.child(name) for name in subnames]
 
     def walk(self, descend=None):
         """
@@ -1451,7 +1451,7 @@ class FilePath(AbstractFilePath):
         import glob
         path = ourPath[-1] == sep and ourPath + pattern \
                or sep.join([ourPath, pattern])
-        return list(map(self.clonePath, glob.glob(path)))
+        return [self.clonePath(p) for p in glob.glob(path)]
 
 
     def basename(self):

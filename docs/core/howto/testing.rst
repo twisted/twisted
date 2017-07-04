@@ -1,49 +1,24 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
 Writing tests for Twisted code using Trial
 ==========================================
-
-
-
-
-
 
 Trial basics
 ------------
 
-
-
 **Trial** is Twisted's testing framework.  It provides a
 library for writing test cases and utility functions for working with the
 Twisted environment in your tests, and a command-line utility for running your
-tests. Trial is built on the Python standard library's ``unittest`` 
+tests. Trial is built on the Python standard library's ``unittest``
 module. For more information on how Trial finds tests, see the
 :api:`twisted.trial.runner.TestLoader.loadModule <loadModule>` documentation.
 
-
-
-
 To run all the Twisted tests, do:
-
-
-
-
 
 .. code-block:: console
 
-    
-    $ trial twisted
-
-
+    $ python -m twisted.trial twisted
 
 
 Refer to the Trial man page for other command-line options.
-
-
-
 
 
 Trial directories
@@ -53,7 +28,7 @@ Trial directories
 
 You might notice a new ``_trial_temp`` folder in the
 current working directory after Trial completes the tests. This folder is the
-working directory for the Trial process. It can be used by unit tests and 
+working directory for the Trial process. It can be used by unit tests and
 allows them to write whatever data they like to disk, and not worry
 about polluting the current working directory.
 
@@ -115,9 +90,9 @@ down.
 
 If your test leaves event sources in the reactor, Trial will fail the test.
 The ``tearDown`` method is a good place to put cleanup code: it is
-always run regardless of whether your test passes or fails (like a ``finally`` 
-clause in a try-except-finally construct). Exceptions in ``tearDown`` 
-are flagged as errors and flunk the test. 
+always run regardless of whether your test passes or fails (like a ``finally``
+clause in a try-except-finally construct). Exceptions in ``tearDown``
+are flagged as errors and flunk the test.
 :api:`twisted.trial.unittest.TestCase.addCleanup <TestCase.addCleanup>` is
 another useful tool for cleaning up.  With it, you can register callables to
 clean up resources as the test allocates them.  Generally, code should be
@@ -131,7 +106,7 @@ should be cleaned up by the implementation.
 If your code uses Deferreds or depends on the reactor running, you can
 return a Deferred from your test method, setUp, or tearDown and Trial will
 do the right thing. That is, it will run the reactor for you until the
-Deferred has triggered and its callbacks have been run. Don't use 
+Deferred has triggered and its callbacks have been run. Don't use
 ``reactor.run()`` , ``reactor.stop()`` , ``reactor.crash()`` or ``reactor.iterate()`` in your tests.
 
 
@@ -199,7 +174,7 @@ Interacting with warnings in tests
 
 
 
-Trial includes specific support for interacting with Python's 
+Trial includes specific support for interacting with Python's
 ``warnings`` module.  This support allows warning-emitting code to
 be written test-driven, just as any other code would be.  It also improves
 the way in which warnings reporting when a test suite is running.
@@ -207,9 +182,9 @@ the way in which warnings reporting when a test suite is running.
 
 
 
-:api:`twisted.trial.unittest.TestCase.flushWarnings <TestCase.flushWarnings>` 
+:api:`twisted.trial.unittest.TestCase.flushWarnings <TestCase.flushWarnings>`
 allows tests to be written which make assertions about what warnings have
-been emitted during a particular test method. In order to test a warning with 
+been emitted during a particular test method. In order to test a warning with
 ``flushWarnings`` , write a test which first invokes the code which
 will emit a warning and then calls ``flushWarnings`` and makes
 assertions about the result.  For example:
@@ -220,7 +195,7 @@ assertions about the result.  For example:
 
 .. code-block:: python
 
-    
+
     class SomeWarningsTests(TestCase):
         def test_warning(self):
             warnings.warn("foo is bad")
@@ -237,7 +212,7 @@ the summary section of the default reporter.  Note that unlike usual
 operation, when ``warnings.warn`` is called as part of a test
 method, it will not raise an exception when warnings have been configured as
 errors.  However, if called outside of a test method (for example, at module
-scope in a test module or a module imported by a test module) then it 
+scope in a test module or a module imported by a test module) then it
 *will* raise an exception.
 
 
@@ -251,7 +226,7 @@ Parallel test
 
 In many situations, your unit tests may run faster if they are allowed to
 run in parallel, such that blocking I/O calls allow other tests to continue.
-Trial, like unittest, supports the -j parameter.  Run ``trial -j 3`` 
+Trial, like unittest, supports the -j parameter.  Run ``trial -j 3``
 to run 3 test runners at the same time.
 
 
@@ -271,6 +246,3 @@ then deletes that schema in the tearDown function, your tests will behave in an
 unpredictable fashion as they tromp upon each other if they have their own
 schema.  And this won't actually indicate a real error in your code, merely a
 testing-specific race-condition.
-
-  
-

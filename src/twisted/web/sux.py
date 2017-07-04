@@ -23,6 +23,7 @@ does not:
 from __future__ import print_function
 
 from twisted.internet.protocol import Protocol
+from twisted.python.compat import unicode
 from twisted.python.reflect import prefixedMethodNames
 
 
