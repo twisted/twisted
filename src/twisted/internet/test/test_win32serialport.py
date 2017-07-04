@@ -22,69 +22,23 @@ except ImportError as e:
     serial = None
 
 
-class FakeSerialBase(object):
-    def __init__(self, *args, **kwargs):
-        # Capture for unit test
-        self.captured_args = args
-        self.captured_kwargs = kwargs
-
-    def flushInput(self):
-        # Avoid calling the real method; it invokes Win32 system calls.
-        pass
-
-    def flushOutput(self):
-        # Avoid calling the real method; it invokes Win32 system calls.
-        pass
-
-
-class FakeSerial2x(FakeSerialBase):
-    """
-    Fake Serial class emulating pyserial 2.x behavior.
-    """
-    _fakeHandle = 25
-
-    def __init__(self, *args, **kwargs):
-        super(FakeSerial2x, self).__init__(*args, **kwargs)
-        self.hComPort = self._fakeHandle
-
-
-class FakeSerial3x(FakeSerialBase):
-    """
-    Fake Serial class emulating pyserial 3.x behavior.
-    """
-    _fakeHandle = 35
-
-    def __init__(self, *args, **kwargs):
-        super(FakeSerial3x, self).__init__(*args, **kwargs)
-        self._port_handle = self._fakeHandle
-
-
 if serialport is not None:
-    class TestableSerialPortBase(serialport.SerialPort):
-        """
-        Base testable version of Windows
-        C{twisted.internet.serialport.SerialPort}.
-        """
-
-        # Fake this out; it calls into win32 library.
-        def _finishPortSetup(self):
-            pass
-
-    class TestableSerialPort2x(TestableSerialPortBase):
-        """
-        Testable version of Windows C{twisted.internet.serialport.SerialPort}
-        that uses a fake pyserial 2.x Serial class.
-        """
-        _serialFactory = FakeSerial2x
-
-    class TestableSerialPort3x(TestableSerialPortBase):
-        """
-        Testable version of Windows C{twisted.internet.serialport.SerialPort}
-        that uses a fake pyserial 3.x Serial class.
-        """
-        _serialFactory = FakeSerial3x
+    # class TestableSerialPortBase(serialport.SerialPort):
+    #     """
+    #     Base testable version of Windows
+    #     C{twisted.internet.serialport.SerialPort}.
+    #     """
+    #
+    #     # Fake this out; it calls into win32 library.
+    #     def _finishPortSetup(self):
+    #         pass
 
     class RegularFileSerial(serial.Serial):
+        def __init__(self, *args, **kwargs):
+            super(RegularFileSerial, self).__init__(*args, **kwargs)
+            self.captured_args = args
+            self.captured_kwargs = kwargs
+
         def _reconfigurePort(self):
             pass
 
@@ -136,14 +90,14 @@ class Win32SerialPortTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.directory)
 
-    def common_serialPortDefaultArgs(self, cls):
+    def test_serialPortDefaultArgs(self):
         """
         Test correct positional and keyword arguments have been
         passed to the C{serial.Serial} object.
         """
-        port = cls(self.protocol, "COM3", self.reactor)
+        port = RegularFileSerialPort(self.protocol, self.path, self.reactor)
         # Validate args
-        self.assertEqual(("COM3",), port._serial.captured_args)
+        self.assertEqual((self.path,), port._serial.captured_args)
         # Validate kwargs
         kwargs = port._serial.captured_kwargs
         self.assertEqual(9600,                kwargs["baudrate"])
@@ -153,31 +107,20 @@ class Win32SerialPortTests(unittest.TestCase):
         self.assertEqual(0,                   kwargs["xonxoff"])
         self.assertEqual(0,                   kwargs["rtscts"])
         self.assertEqual(None,                kwargs["timeout"])
-        self.assertEqual(port._serialHandle,  cls._serialFactory._fakeHandle)
+        port.connectionLost(reason='Cleanup')
 
-    def test_serialPortDefaultArgs2x(self):
-        self.common_serialPortDefaultArgs(cls=TestableSerialPort2x)
-
-    def test_serialPortDefaultArgs3x(self):
-        self.common_serialPortDefaultArgs(cls=TestableSerialPort3x)
-
-    def common_serialPortInitiallyConnected(self, cls):
+    def test_serialPortInitiallyConnected(self):
         """
         Test the port is connected at initialization time, and
         C{Protocol.makeConnection} has been called on the desired protocol.
         """
         self.assertEqual(0,    self.protocol.connected)
 
-        port = cls(self.protocol, "COM3", self.reactor)
+        port = RegularFileSerialPort(self.protocol, self.path, self.reactor)
         self.assertEqual(1, port.connected)
         self.assertEqual(1, self.protocol.connected)
         self.assertEqual(port, self.protocol.transport)
-
-    def test_serialPortInitiallyConnected2x(self):
-        self.common_serialPortInitiallyConnected(cls=TestableSerialPort2x)
-
-    def test_serialPortInitiallyConnected3x(self):
-        self.common_serialPortInitiallyConnected(cls=TestableSerialPort3x)
+        port.connectionLost(reason='Cleanup')
 
     def common_exerciseHandleAccess(self, cbInQue):
         port = RegularFileSerialPort(
