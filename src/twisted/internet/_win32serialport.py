@@ -89,21 +89,20 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     def serialReadEvent(self):
         #get that character we set up
         n = win32file.GetOverlappedResult(self._serialHandle, self._overlappedRead, 0)
-        if n:
-            first = str(self.read_buf[:n])
-            #now we should get everything that is already in the buffer
-            flags, comstat = self._clearCommError()
-            if comstat.cbInQue:
-                win32event.ResetEvent(self._overlappedRead.hEvent)
-                rc, buf = win32file.ReadFile(self._serialHandle,
-                                             win32file.AllocateReadBuffer(comstat.cbInQue),
-                                             self._overlappedRead)
-                n = win32file.GetOverlappedResult(self._serialHandle, self._overlappedRead, 1)
-                #handle all the received data:
-                self.protocol.dataReceived(first + str(buf[:n]))
-            else:
-                #handle all the received data:
-                self.protocol.dataReceived(first)
+        first = str(self.read_buf[:n])
+        #now we should get everything that is already in the buffer
+        flags, comstat = self._clearCommError()
+        if comstat.cbInQue:
+            win32event.ResetEvent(self._overlappedRead.hEvent)
+            rc, buf = win32file.ReadFile(self._serialHandle,
+                                         win32file.AllocateReadBuffer(comstat.cbInQue),
+                                         self._overlappedRead)
+            n = win32file.GetOverlappedResult(self._serialHandle, self._overlappedRead, 1)
+            #handle all the received data:
+            self.protocol.dataReceived(first + str(buf[:n]))
+        else:
+            #handle all the received data:
+            self.protocol.dataReceived(first)
 
         #set up next one
         win32event.ResetEvent(self._overlappedRead.hEvent)
