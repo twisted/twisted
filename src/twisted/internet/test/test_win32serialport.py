@@ -120,6 +120,7 @@ class Win32SerialPortTests(unittest.TestCase):
             cbInQue=cbInQue,
         )
         port.serialReadEvent()
+        port.write(b'')
         port.write(b'abcd')
         port.write(b'ABCD')
         port.serialWriteEvent()
