@@ -367,6 +367,29 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         )
 
 
+    def test_serializeCoroutineWithAwait(self):
+        """
+        Test that a coroutine returning an awaited deferred value is
+        substituted with that value when flattened.
+        """
+        from textwrap import dedent
+        namespace = {}
+        exec(dedent(
+            """
+            async def coro(x):
+                return await succeed(x)
+            """
+        ), namespace)
+        coro = namespace["coro"]
+
+        return self.assertFlattensTo(coro('four'), b'four')
+
+    if not _PY35PLUS:
+        test_serializeCoroutine.skip = (
+            "coroutines not available before Python 3.5"
+        )
+
+
     def test_serializeIRenderable(self):
         """
         Test that flattening respects all of the IRenderable interface.
