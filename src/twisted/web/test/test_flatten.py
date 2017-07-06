@@ -373,7 +373,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         substituted with that value when flattened.
         """
         from textwrap import dedent
-        namespace = {}
+        namespace = dict(succeed=succeed)
         exec(dedent(
             """
             async def coro(x):
