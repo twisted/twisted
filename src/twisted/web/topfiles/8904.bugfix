@@ -1,1 +1,0 @@
-twisted.web.http.HTTPFactory now propagates its reactor's callLater method to the HTTPChannel object, rather than having callLater grab the global reactor. This prevents the possibility of HTTPFactory logging using one reactor, but HTTPChannel running timeouts on another.

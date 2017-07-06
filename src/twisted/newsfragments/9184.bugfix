@@ -1,0 +1,1 @@
+The following plugins can now be used on Python 3 with twistd: dns, inetd, portforward, procmon, socks, and words.
