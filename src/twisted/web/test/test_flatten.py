@@ -385,7 +385,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         return self.assertFlattensTo(coro('four'), b'four')
 
     if not _PY35PLUS:
-        test_serializeCoroutine.skip = (
+        test_serializeCoroutineWithAwait.skip = (
             "coroutines not available before Python 3.5"
         )
 
