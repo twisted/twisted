@@ -346,8 +346,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
     def test_serializeCoroutine(self):
         """
-        Test that a deferred is substituted with the current value in the
-        callback chain when flattened.
+        Test that a coroutine returning a value is substituted with the that
+        value when flattened.
         """
         from textwrap import dedent
         namespace = {}
