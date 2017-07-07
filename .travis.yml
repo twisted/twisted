@@ -55,7 +55,6 @@ matrix:
       sudo: true
   allow_failures:
     - env: TOXENV=txchecker-travis-all
-    - env: TOXENV=pyflakes3
 
 
 addons:

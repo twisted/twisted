@@ -1185,6 +1185,18 @@ class TLSProducerTests(TestCase):
         self.assertIsNone(tlsProtocol.transport.producer)
 
 
+    def test_streamingProducerUnregisterTwice(self):
+        """
+        Unregistering a streaming producer when no producer is registered is
+        safe.
+        """
+        clientProtocol, tlsProtocol, producer = self.setupStreamingProducer()
+        clientProtocol.transport.unregisterProducer()
+        clientProtocol.transport.unregisterProducer()
+        self.assertIsNone(tlsProtocol._producer)
+        self.assertIsNone(tlsProtocol.transport.producer)
+
+
     def loseConnectionWithProducer(self, writeBlockedOnRead):
         """
         Common code for tests involving writes by producer after
