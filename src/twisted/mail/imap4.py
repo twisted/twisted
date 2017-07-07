@@ -4348,7 +4348,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if _PY3:
             cmd = cmd.encode('charmap')
 
-        c = Command(fetch, cmd, wantResponse=(b'FETCH',))
         d = self.sendCommand(Command(fetch, cmd, wantResponse=(b'FETCH',)))
         d.addCallback(self._cbFetch, (), False)
         return d
