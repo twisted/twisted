@@ -441,9 +441,13 @@ class LiteralString:
         if self.size > 0:
             self.data.append(data)
         else:
-            data, passon = data[:self.size], data[self.size:]
+            if self.size:
+                data, passon = data[:self.size], data[self.size:]
+            else:
+                passon = b''
             if data:
                 self.data.append(data)
+
         return passon
 
 
@@ -476,7 +480,7 @@ class LiteralFile:
             if self.size:
                 data, passon = data[:self.size], data[self.size:]
             else:
-                passon = ''
+                passon = b''
             if data:
                 self.data.write(data)
         return passon

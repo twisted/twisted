@@ -29,7 +29,7 @@ from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
 from twisted.python.compat import (intToBytes, range, nativeString,
-                                   networkString)
+                                   networkString, iterbytes)
 from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
@@ -3183,7 +3183,11 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         return d
 
 
-    def testPathologicalScatteringOfLiterals(self):
+    def test_fragmentedStringLiterals(self):
+        """
+        String literals whose data is not immediately available are
+        parsed.
+        """
         self.server.checker.addUser(b'testuser', b'password-test')
         transport = StringTransport()
         self.server.makeConnection(transport)
@@ -3197,7 +3201,9 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(transport.value(), b"+ Ready for 13 octets of text\r\n")
 
         transport.clear()
-        self.server.dataReceived(b"password-test\r\n")
+        self.server.dataReceived(b"password")
+        self.assertNot(transport.value())
+        self.server.dataReceived(b"-test\r\n")
         self.assertEqual(transport.value(), b"01 OK LOGIN succeeded\r\n")
         self.assertEqual(self.server.state, 'auth')
 
@@ -6276,3 +6282,154 @@ class IMAP4ServerFetchTests(unittest.TestCase):
         self.assertEqual(self.transport.value(), expected)
         self.transport.clear()
         self.server.connectionLost(error.ConnectionDone("Connection closed"))
+
+
+
+class LiteralTestsMixin(object):
+    """
+    Shared tests for literal classes.
+
+    @ivar literalFactory: A callable that returns instances of the
+        literal under test.
+    """
+
+    def setUp(self):
+        """
+        Shared setup.
+        """
+        self.deferred = defer.Deferred()
+
+
+    def test_partialWrite(self):
+        """
+        The literal returns L{None} when given less data than the
+        literal requires.
+        """
+        literal = self.literalFactory(1024, self.deferred)
+        self.assertIs(None, literal.write(b"incomplete"))
+        self.assertNoResult(self.deferred)
+
+
+    def test_exactWrite(self):
+        """
+        The literal returns an empty L{bytes} instance when given
+        exactly the data the literal requires.
+        """
+        data = b"complete"
+        literal = self.literalFactory(len(data), self.deferred)
+        leftover = literal.write(data)
+
+        self.assertIsInstance(leftover, bytes)
+        self.assertFalse(leftover)
+        self.assertNoResult(self.deferred)
+
+
+    def test_overlongWrite(self):
+        """
+        The literal returns any left over L{bytes} when given more
+        data than the literal requires.
+        """
+        data = b"completeleftover"
+        literal = self.literalFactory(len(b"complete"), self.deferred)
+
+        leftover = literal.write(data)
+
+        self.assertEqual(leftover, b"leftover")
+
+
+    def test_emptyLiteral(self):
+        """
+        The literal returns an empty L{bytes} instance
+        when given an empty L{bytes} instance.
+        """
+        literal = self.literalFactory(0, self.deferred)
+        data = b"leftover"
+
+        leftover = literal.write(data)
+
+        self.assertEqual(leftover, data)
+
+
+
+class LiteralStringTests(LiteralTestsMixin, unittest.SynchronousTestCase):
+    """
+    Tests for L{self.literalFactory}.
+    """
+    literalFactory = imap4.LiteralString
+
+    def test_callback(self):
+        """
+        Calling L{imap4.LiteralString.callback} with a line fires the
+        instance's L{Deferred} with a 2-L{tuple} whose first element
+        is the collected data and whose second is the provided line.
+        """
+        data = b"data"
+        extra = b"extra"
+
+        literal = imap4.LiteralString(len(data), self.deferred)
+
+        for c in iterbytes(data):
+            literal.write(c)
+
+        literal.callback(b"extra")
+
+        result = self.successResultOf(self.deferred)
+        self.assertEqual(result, (data, extra))
+
+
+
+class LiteralFileTests(LiteralTestsMixin, unittest.TestCase):
+    """
+    Tests for L{imap4.LiteralFile}.
+    """
+    literalFactory = imap4.LiteralFile
+
+
+    def test_callback(self):
+        """
+        Calling L{imap4.LiteralFile.callback} with a line fires the
+        instance's L{Deferred} with a 2-L{tuple} whose first element
+        is the file and whose second is the provided line.
+        """
+        data = b"data"
+        extra = b"extra"
+
+        literal = imap4.LiteralFile(len(data), self.deferred)
+
+        for c in iterbytes(data):
+            literal.write(c)
+
+        literal.callback(b"extra")
+
+        result = self.successResultOf(self.deferred)
+        self.assertEqual(len(result), 2)
+
+        dataFile, extra = result
+        self.assertEqual(dataFile.read(), b"data")
+
+
+    def test_callbackSpooledToDisk(self):
+        """
+        A L{imap4.LiteralFile} whose size exceeds the maximum
+        in-memory size spools its content to disk, and invoking its
+        L{callback} with a line fires the instance's L{Deferred} with
+        a 2-L{tuple} whose first element is the spooled file and whose second
+        is the provided line.
+        """
+        data = b"data"
+        extra = b"extra"
+
+        self.patch(imap4.LiteralFile, "_memoryFileLimit", 1)
+
+        literal = imap4.LiteralFile(len(data), self.deferred)
+
+        for c in iterbytes(data):
+            literal.write(c)
+
+        literal.callback(b"extra")
+
+        result = self.successResultOf(self.deferred)
+        self.assertEqual(len(result), 2)
+
+        dataFile, extra = result
+        self.assertEqual(dataFile.read(), b"data")
