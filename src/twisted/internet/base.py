@@ -20,7 +20,7 @@ import traceback
 from twisted.internet.interfaces import (
     IReactorCore, IReactorTime, IReactorThreads, IResolverSimple,
     IReactorPluggableResolver, IReactorPluggableNameResolver, IConnector,
-    IDelayedCall,
+    IDelayedCall, _ISupportsExitSignalCapturing
 )
 
 from twisted.internet import fdesc, main, error, abstract, defer, threads
@@ -445,7 +445,7 @@ class _ThreePhaseEvent(object):
 
 
 @implementer(IReactorCore, IReactorTime, IReactorPluggableResolver,
-             IReactorPluggableNameResolver)
+             IReactorPluggableNameResolver, _ISupportsExitSignalCapturing)
 class ReactorBase(object):
     """
     Default base class for Reactors.
@@ -474,7 +474,7 @@ class ReactorBase(object):
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
 
-    @ivar _exitSignal: The signal that cause the reactor to stop, or 0.
+    @ivar _exitSignal: See L{ISupportsExitSignalCapturing._exitSignal}
     """
 
     _registerAsIOThread = True
@@ -483,7 +483,7 @@ class ReactorBase(object):
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
-    _exitSignal = 0
+    _exitSignal = None
 
     __name__ = "twisted.internet.reactor"
 

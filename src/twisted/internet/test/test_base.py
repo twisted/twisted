@@ -393,6 +393,14 @@ class ReactorBaseSignalTests(TestCase):
     Tests to exercise ReactorBase's signal exit reporting path.
     """
 
+    def test_exitSignalDefaultsToNone(self):
+        """
+        The default value of the _exitSignal attribute is None.
+        """
+        reactor = TestSpySignalCapturingReactor()
+        self.assertIs(None, reactor._exitSignal)
+
+
     def test_captureSIGINT(self):
         """
         ReactorBase's SIGINT handler saves the value of SIGINT to the
