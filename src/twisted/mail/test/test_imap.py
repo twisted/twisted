@@ -766,6 +766,13 @@ class IMAP4HelperTests(unittest.TestCase):
     """
     Tests for various helper utilities in the IMAP4 module.
     """
+    def test_commandRepr(self):
+        """
+        L{imap4.Command}'s C{repr} does not raise an exception.
+        """
+        repr(imap4.Command(b"COMMAND", [b"arg"], (b'extra')))
+
+
     def test_fileProducer(self):
         b = ((b'x' * 1) + (b'y' * 1) + (b'z' * 1)) * 10
         c = BufferingConsumer()
