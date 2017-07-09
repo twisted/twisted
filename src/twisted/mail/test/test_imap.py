@@ -26,7 +26,7 @@ from twisted.internet import interfaces
 from twisted.internet import reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
-from twisted.mail.interfaces import IChallengeResponse
+from twisted.mail.interfaces import IChallengeResponse, ICloseableMailboxIMAP
 from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
@@ -6130,6 +6130,68 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
 
         d = self.connected.addCallback(strip(login))
         d.addErrback(self._ebGeneral)
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_serverTimesOut(self):
+        """
+        The server times out a connection.
+        """
+        c = Clock()
+        self.server.callLater = c.callLater
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+            return d
+
+        def expireTime():
+            c.advance(self.server.POSTAUTH_TIMEOUT * 2)
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(expireTime))
+
+        # The loopback method's Deferred fires the connection is
+        # closed, and the server closes the connection as a result of
+        # expireTime.
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_serverTimesOutAndClosesMailbox(self):
+        """
+        The server closes the selected mailbox, if applicable, when
+        timing out a connection.
+        """
+        SimpleServer.theAccount.addMailbox('mailbox-test')
+        mbox = SimpleServer.theAccount.mailboxes[u'MAILBOX-TEST']
+        verifyObject(ICloseableMailboxIMAP, mbox)
+
+        c = Clock()
+        self.server.callLater = c.callLater
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+
+        def select():
+            return self.client.select("mailbox-test")
+
+        def assertMailboxOpen():
+            self.assertFalse(mbox.closed)
+
+        def expireTime():
+            c.advance(self.server.POSTAUTH_TIMEOUT * 2)
+
+        def assertMailboxClosed():
+            self.assertTrue(mbox.closed)
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(select))
+        d.addCallback(strip(assertMailboxOpen))
+        d.addCallback(strip(expireTime))
+        d.addCallback(strip(assertMailboxClosed))
+
+        # The loopback method's Deferred fires the connection is
+        # closed, and the server closes the connection as a result of
+        # expireTime.
         return defer.gatherResults([d, self.loopback()])
 
 
