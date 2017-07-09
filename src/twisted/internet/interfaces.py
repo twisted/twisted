@@ -2888,3 +2888,20 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
         @return: a client endpoint
         @rtype: a provider of L{IStreamClientEndpoint}
         """
+
+
+
+class _ISupportsExitSignalCapturing(Interface):
+    """
+    An implementor of L{ISupportsExitSignalCapturing} will capture the
+    value of any delivered exit signal (SIGINT, SIGTERM, SIGBREAK) for which
+    it has installed a handler.  The caught signal number is made available in
+    the _exitSignal attribute.
+    """
+
+    _exitSignal = Attribute(
+        """
+        C{int} or C{None}, the integer exit signal delivered to the
+        application, or None if no signal was delivered.
+        """
+    )
