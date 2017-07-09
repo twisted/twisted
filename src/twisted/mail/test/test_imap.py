@@ -7,6 +7,7 @@
 Test case for twisted.mail.imap4
 """
 
+import base64
 import codecs
 import locale
 import os
@@ -17,6 +18,7 @@ from itertools import chain
 from collections import OrderedDict
 
 from zope.interface import implementer
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.internet import defer
 from twisted.internet import error
@@ -24,6 +26,7 @@ from twisted.internet import interfaces
 from twisted.internet import reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
+from twisted.mail.interfaces import IChallengeResponse
 from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
@@ -2751,12 +2754,63 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
         realm = TestRealm()
         realm.theAccount = Account(b'testuser')
-        portal = Portal(realm)
-        portal.registerChecker(TestChecker())
-        self.server.portal = portal
+        self.portal = Portal(realm)
+        self.portal.registerChecker(TestChecker())
+        self.server.portal = self.portal
 
         self.authenticated = 0
         self.account = realm.theAccount
+
+
+    def test_customChallengers(self):
+        """
+        L{imap4.IMAP4Server} accepts a L{dict} mapping challenge type
+        names to L{twisted.mail.interfaces.IChallengeResponse}
+        providers.
+        """
+
+        @implementer(IChallengeResponse, IUsernamePassword)
+        class SPECIALAuth(object):
+
+            def getChallenge(self):
+                return b'SPECIAL'
+
+
+            def setResponse(self, response):
+                self.username, self.password = response.split(None, 1)
+
+
+            def moreChallenges(self):
+                return False
+
+
+            def checkPassword(self, password):
+                self.password = self.password
+
+        special = SPECIALAuth()
+        verifyObject(IChallengeResponse, special)
+
+        server = imap4.IMAP4Server({b'SPECIAL': SPECIALAuth})
+        server.portal = self.portal
+
+        transport = StringTransport()
+        server.makeConnection(transport)
+
+        self.assertIn(b"AUTH=SPECIAL", transport.value())
+
+        transport.clear()
+        server.dataReceived(b'001 AUTHENTICATE SPECIAL\r\n')
+
+        self.assertIn(base64.b64encode(special.getChallenge()),
+                      transport.value())
+
+        transport.clear()
+        server.dataReceived(base64.b64encode(b'username password') + b'\r\n')
+
+        self.assertEqual(transport.value(),
+                         b"001 OK Authentication successful\r\n")
+
+        server.connectionLost(error.ConnectionDone("Connection done."))
 
 
     def testCramMD5(self):
@@ -2807,7 +2861,10 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testLOGIN(self):
-        self.server.challengers[b'LOGIN'] = imap4.LOGINCredentials
+        self.server.challengers[b'LOGIN'] = loginCred = imap4.LOGINCredentials
+
+        verifyClass(IChallengeResponse, loginCred)
+
         cAuth = imap4.LOGINAuthenticator(b'testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -2857,7 +2914,10 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testPLAIN(self):
-        self.server.challengers[b'PLAIN'] = imap4.PLAINCredentials
+        self.server.challengers[b'PLAIN'] = plainCred = imap4.PLAINCredentials
+
+        verifyClass(IChallengeResponse, plainCred)
+
         cAuth = imap4.PLAINAuthenticator(b'testuser')
         self.client.registerAuthenticator(cAuth)
 
