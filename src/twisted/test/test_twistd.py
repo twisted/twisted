@@ -49,6 +49,7 @@ from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
 from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
+from twisted.internet.base import ReactorBase
 
 try:
     from twisted.scripts import _twistd_unix
@@ -738,6 +739,36 @@ class ApplicationRunnerTests(unittest.TestCase):
             "debug": False})
         runner.startReactor(reactor, None, None)
         self.assertEquals(2, runner._exitSignal)
+
+    def test_applicationRunnerIgnoresNoSignal(self):
+        """
+        The runner sets its _exitSignal instance attribute to None if
+        the reactor does not implement L{_ISupportsExitSignalCapturing}.
+        """
+
+        class DummyReactorWithExitSignalAttribute(object):
+            """
+            A dummy reactor, providing a C{run} method, and setting the
+            _exitSignal attribute to a nonzero value.
+            """
+
+            def installWaker(self):
+                """Dummy method, does nothing."""
+
+            def run(self):
+                """
+                A fake run method setting _exitSignal to a nonzero value
+                that should be ignored.
+                """
+                self._exitSignal = 2
+
+        reactor = DummyReactorWithExitSignalAttribute()
+        runner = app.ApplicationRunner({
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
+        runner.startReactor(reactor, None, None)
+        self.assertEquals(None, runner._exitSignal)
 
 
     def test_applicationRunnerIgnoresNoSignal(self):
