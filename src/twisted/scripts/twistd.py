@@ -23,7 +23,7 @@ else:
 def runApp(config):
     runner = _SomeApplicationRunner(config)
     runner.run()
-    if runner._exitSignal:
+    if runner._exitSignal is not None:
         app._exitWithSignal(runner._exitSignal)
 
 
