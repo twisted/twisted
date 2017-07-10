@@ -21,6 +21,7 @@ from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python._oldstyle import _oldStyle
 from twisted.python.reflect import (qual, namedAny, namedModule)
+from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -362,12 +363,9 @@ class ApplicationRunner(object):
     @ivar loggerFactory: Factory for creating object responsible for logging.
 
     @ivar logger: Instance provided by C{loggerFactory}.
-
-    @ivar _exitSignal: Signal that caused the reactor to stop
     """
     profilerFactory = AppProfiler
     loggerFactory = AppLogger
-    _exitSignal = 0
 
     def __init__(self, config):
         self.config = config
@@ -399,10 +397,11 @@ class ApplicationRunner(object):
             from twisted.internet import reactor
         runReactorWithLogging(
             self.config, oldstdout, oldstderr, self.profiler, reactor)
-        try:
+
+        if _ISupportsExitSignalCapturing.providedBy(reactor):
             self._exitSignal = reactor._exitSignal
-        except AttributeError:
-            pass
+        else:
+            self._exitSignal = None
 
 
     def preApplication(self):
