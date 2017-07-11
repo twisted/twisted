@@ -522,10 +522,10 @@ class SSHTransportBase(protocol.Protocol):
         Then call addSupportedKexes to populate the list.
 
         @type kexes: L{list}
-        @param kexes: A L{list} of kex name strings
+        @param kexes: A L{bytes} of kex name strings
         """
         # Clear out the currently supported key exchanges.
-        _kex._kexAlgorithms.clear()
+        self.kexAlgorithms.clear()
 
         # Set the new exchanges.
         self.addSupportedKexes(kexes)
@@ -536,7 +536,7 @@ class SSHTransportBase(protocol.Protocol):
         Append the list of supported key exchanges.
 
         @type kexes: L{list}
-        @param kexes: A L{list} of kex name strings
+        @param kexes: A L{bytes} of kex name strings
         """
         for k in kexes:
             if k.startswith(b'ecdh') and kexes[k] is None:
@@ -544,20 +544,20 @@ class SSHTransportBase(protocol.Protocol):
 
                 # Add the new kex to the dictionary.
                 if size <= 256:
-                    _kex._kexAlgorithms[k] = _kex._ECDH256()
+                    self.kexAlgorithms[k] = _kex._ECDH256()
                 elif size <= 384:
-                    _kex._kexAlgorithms[k] = _kex._ECDH384()
+                    self.kexAlgorithms[k] = _kex._ECDH384()
                 else:
-                    _kex._kexAlgorithms[k] = _kex._ECDH512()
+                    self.kexAlgorithms[k] = _kex._ECDH512()
             elif kexes[k] is None:
-                _kex._kexAlgorithms[k] = _kex._baseKexAlgorithms[k]
+                self.kexAlgorithms[k] = _kex._baseKexAlgorithms[k]
             else:
-                _kex._kexAlgorithms[k] = kexes[k]
+                self.kexAlgorithms[k] = kexes[k]
 
         # Reload
         del self.supportedKeyExchanges[:]
-        for kex in _kex.getSupportedKeyExchanges():
-            self.supportedKeyExchanges.append(kex)
+        self.supportedKeyExchanges = _kex.getSupportedKeyExchanges(self.kexAlgorithms)
+
 
 
     def setSupportedPublicKeys(self, publicKeys):
@@ -571,17 +571,19 @@ class SSHTransportBase(protocol.Protocol):
             a L{str} that is the corresponding sec name.
         """
         del self.supportedPublicKeys[:]
-        self.addSupportePublicKeys(publicKeys)
+        self.addSupportedPublicKeys(publicKeys)
 
 
-    def addSupportePublicKeys(self, publicKeys, sort=True):
+    def addSupportedPublicKeys(self, publicKeys, sort=True):
         """
         Populate the supported public key list.
 
         @type publicKeys: L{dict}
         @param publicKeys: A L{dict} with the name of the public key as the key
             and a value that is a L{tuple} consisting of an instance of the key method,
-            a L{str} that is the corresponding sec name.
+            a L{bytes} that is the corresponding sec name.
+        @param sort: Arrange the keys in self.supportedPublicKeys so the
+            strongest keys are preferred.
         """
         for k in publicKeys:
             if k not in self.supportedPublicKeys:
@@ -1318,6 +1320,8 @@ class SSHServerTransport(SSHTransportBase):
 
     def __init__(self):
         self.supportedPublicKeys = copy.deepcopy(SSHTransportBase.supportedPublicKeys)
+        self.supportedKeyExchanges = copy.deepcopy(SSHTransportBase.supportedKeyExchanges)
+        self.kexAlgorithms = copy.deepcopy(_kex._baseKexAlgorithms)
 
     def ssh_KEXINIT(self, packet):
         """
@@ -1647,6 +1651,8 @@ class SSHClientTransport(SSHTransportBase):
 
     def __init__(self):
         self.supportedPublicKeys = copy.deepcopy(SSHTransportBase.supportedPublicKeys)
+        self.supportedKeyExchanges = copy.deepcopy(SSHTransportBase.supportedKeyExchanges)
+        self.kexAlgorithms = copy.deepcopy(_kex._baseKexAlgorithms)
 
     def connectionMade(self):
         """

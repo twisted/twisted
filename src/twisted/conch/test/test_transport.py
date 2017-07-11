@@ -1292,9 +1292,6 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         """
         Test setting a set of key exchanges
         """
-        # Save off the kexes
-        tmpkex = _kex._kexAlgorithms.copy()
-
         kexes = {b"ecdh-sha2-nistp256": None,
                  b"ecdh-sha2-nistp384": None,
                  b"ecdh-sha2-nistp521": None,
@@ -1307,9 +1304,8 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
 
         for k in kexes:
             self.assertIn(k, self.proto.supportedKeyExchanges)
+            self.assertIn(k, self.proto.kexAlgorithms)
 
-        # Restore kexes
-        _kex._kexAlgorithms = tmpkex.copy()
         del self.proto.supportedKeyExchanges[:]
 
         for key in _kex.getSupportedKeyExchanges():
@@ -1320,9 +1316,6 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         """
         Test adding a kex to the key exchanges
         """
-        # Save off the kexes
-        tmpkex = _kex._kexAlgorithms.copy()
-
         kexes = {b"ecdh-sha2-nistp571": None,
                  b"diffie-hellman-group14-sha1": None}
 
@@ -1330,9 +1323,8 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
 
         for k in kexes:
             self.assertIn(k, self.proto.supportedKeyExchanges)
+            self.assertIn(k, self.proto.kexAlgorithms)
 
-        # Restore kexes
-        _kex._kexAlgorithms = tmpkex.copy()
         del self.proto.supportedKeyExchanges[:]
 
         for key in _kex.getSupportedKeyExchanges():
@@ -1355,7 +1347,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        self.proto.addSupportePublicKeys(new_keys)
+        self.proto.addSupportedPublicKeys(new_keys)
         basekeys.insert(0, b'ecdsa-sha2-nistt571')
 
         self.assertEqual(self.proto.supportedPublicKeys, basekeys)
@@ -1865,9 +1857,6 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test setting a set of key exchanges
         """
-        # Save off the kexes
-        tmpkex = _kex._kexAlgorithms.copy()
-
         kexes = {b"ecdh-sha2-nistp256": None,
                  b"ecdh-sha2-nistp384": None,
                  b"ecdh-sha2-nistp521": None,
@@ -1880,9 +1869,8 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         for k in kexes:
             self.assertIn(k, self.proto.supportedKeyExchanges)
+            self.assertIn(k, self.proto.kexAlgorithms)
 
-        # Restore kexes
-        _kex._kexAlgorithms = tmpkex.copy()
         del self.proto.supportedKeyExchanges[:]
 
         for key in _kex.getSupportedKeyExchanges():
@@ -1893,18 +1881,14 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test adding a kex to the key exchanges
         """
-        # Save off the kexes
-        tmpkex = _kex._kexAlgorithms.copy()
-
         kexes = {b"ecdh-sha2-nistp571": None, b"diffie-hellman-group14-sha1": None}
 
         self.proto.addSupportedKexes(kexes)
 
         for k in kexes:
             self.assertIn(k, self.proto.supportedKeyExchanges)
+            self.assertIn(k, self.proto.kexAlgorithms)
 
-        # Restore kexes
-        _kex._kexAlgorithms = tmpkex.copy()
         del self.proto.supportedKeyExchanges[:]
 
         for key in _kex.getSupportedKeyExchanges():
@@ -1927,7 +1911,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        self.proto.addSupportePublicKeys(new_keys, False)
+        self.proto.addSupportedPublicKeys(new_keys, False)
         basekeys.append(b"ecdsa-sha2-nistk409")
 
         self.assertEqual(self.proto.supportedPublicKeys, basekeys)
@@ -1961,7 +1945,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         for key in self.proto.supportedPublicKeys:
             basekeys += [key]
 
-        self.proto.addSupportePublicKeys(new_keys)
+        self.proto.addSupportedPublicKeys(new_keys)
         basekeys.insert(3, b"ecdsa-sha2-nistk409")
 
         self.assertEqual(self.proto.supportedPublicKeys, basekeys)

@@ -242,15 +242,16 @@ def getDHGeneratorAndPrime(kexAlgorithm):
 
 
 
-def getSupportedKeyExchanges():
+def getSupportedKeyExchanges(kexAlgs=_kexAlgorithms):
     """
     Get a list of supported key exchange algorithm names in order of
     preference.
 
+    @param kexAlgs: An optional L{dict} of keys to sort and return.
     @return: A C{list} of supported key exchange algorithm names.
     @rtype: C{list} of L{bytes}
     """
-    kexAlgorithms = _kexAlgorithms.copy()
+    kexAlgorithms = kexAlgs.copy()
     return sorted(
         kexAlgorithms,
         key = lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)
