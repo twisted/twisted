@@ -428,7 +428,14 @@ class Resolver(common.ResolverBase):
         controller.timeoutCall = self._reactor.callLater(
             timeout or 10, self._timeoutZone, d, controller,
             connector, timeout or 10)
-        return d.addCallback(self._cbLookupZone, connector)
+
+        def eliminateTimeout(failure):
+            controller.timeoutCall.cancel()
+            controller.timeoutCall = None
+            return failure
+
+        return d.addCallbacks(self._cbLookupZone, eliminateTimeout,
+                              callbackArgs=(connector,))
 
 
     def _timeoutZone(self, d, controller, connector, seconds):
@@ -452,6 +459,7 @@ class AXFRController:
         self.deferred = deferred
         self.soa = None
         self.records = []
+        self.pending = [(deferred,)]
 
 
     def connectionMade(self, protocol):
@@ -538,7 +546,8 @@ class DNSClientFactory(protocol.ClientFactory):
         # deferreds.
         pending = self.controller.pending[:]
         del self.controller.pending[:]
-        for d, query, timeout in pending:
+        for pendingState in pending:
+            d = pendingState[0]
             d.errback(reason)
 
 

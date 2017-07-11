@@ -287,6 +287,18 @@ class UnauthorizedResourceTests(unittest.TestCase):
             request.responseHeaders.getRawHeaders(b'www-authenticate'),
             [b'basic realm="example\\\\\\"foo"'])
 
+    def test_renderQuotesDigest(self):
+        """
+        The digest value must be correctly quoted.
+        It is a byte string in python3, so we must make sure the proper conversion is done
+        """
+        resource = UnauthorizedResource([
+                digest.DigestCredentialFactory(b'md5', b'example\\"foo')])
+        request = DummyRequest([b''])
+        request.render(resource)
+        auth_header = request.responseHeaders.getRawHeaders(b'www-authenticate')[0]
+        self.assertIn(b'realm="example\\\\\\"foo"', auth_header)
+        self.assertIn(b'hm="md5', auth_header)
 
 
 implementer(portal.IRealm)
