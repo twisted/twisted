@@ -40,11 +40,13 @@ from twisted.python.log import (ILogObserver as LegacyILogObserver,
                                 textFromEventDict)
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IReactorDaemonize
+from twisted.internet.interfaces import (IReactorDaemonize,
+                                         _ISupportsExitSignalCapturing)
 from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.python.fakepwd import UserDatabase
 from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
 from twisted.internet.base import ReactorBase
+from twisted.test.proto_helpers import MemoryReactor
 
 try:
     from twisted.scripts import _twistd_unix
@@ -1986,6 +1988,79 @@ class DaemonizeTests(unittest.TestCase):
 
 
 
+@implementer(_ISupportsExitSignalCapturing)
+class SignalCapturingMemoryReactor(MemoryReactor):
+    """
+    MemoryReactor that implements the _ISupportsExitSignalCapturing interface,
+    all other operations identical to MemoryReactor.
+    """
+
+
+
+class StubApplicationRunnerWithSignal(twistd._SomeApplicationRunner):
+    """
+    An application runner that uses a SignalCapturingMemoryReactor and
+    has a _signalValue attribute that it will set in the reactor.
+
+    @ivar: _signalValue: The signal value to set on the reactor's _exitSignal
+        attribute.
+    """
+    loggerFactory = CrippledAppLogger
+
+    def __init__(self, config):
+        super(StubApplicationRunnerWithSignal, self).__init__(config)
+        self._signalValue = None
+
+
+    def preApplication(self):
+        """
+        Does nothing.
+        """
+
+    def postApplication(self):
+        """
+        Instantiate a SignalCapturingMemoryReactor and start it
+        in the runner.
+        """
+        reactor = SignalCapturingMemoryReactor()
+        reactor._exitSignal = self._signalValue
+        self.startReactor(reactor, sys.stdout, sys.stderr)
+
+
+
+def stubApplicationRunnerFactoryCreator(signum):
+    """
+    Create a factory function to instantiate a
+    StubApplicationRunnerWithSignal that will report signum as the captured
+    signal..
+
+    @param signum: The integer signal number or None
+    @type signum: C{int} or C{None}
+
+    @return: A factory function to create stub runners.
+    @rtype: stubApplicationRunnerFactory
+    """
+
+    def stubApplicationRunnerFactory(config):
+        """
+        Create a StubApplicationRunnerWithSignal using a reactor that
+        implements _ISupportsExitSignalCapturing and whose _exitSignal
+        attribute is set to signum.
+
+        @param config: The runner configuration, platform dependent.
+        @type config: L{twisted.scripts.twistd.ServerOptions}
+
+        @return: A runner to use for the test.
+        @rtype: twisted.test.test_twistd.StubApplicationRunnerWithSignal
+        """
+        runner = StubApplicationRunnerWithSignal(config)
+        runner._signalValue = signum
+        return runner
+
+    return stubApplicationRunnerFactory
+
+
+
 class ExitWithSignalTests(unittest.TestCase):
 
     """
@@ -2000,12 +2075,20 @@ class ExitWithSignalTests(unittest.TestCase):
         self.config.loadedPlugins = {'test_command': MockServiceMaker()}
         self.config.subOptions = object()
         self.config.subCommand = 'test_command'
-        self.exitWithSignalCalled = False
+        self.fakeKillArgs = [None, None]
 
-        def fakeExitWithSignal(sig):
-            self.exitWithSignalCalled = True
+        def fakeKill(pid, sig):
+            """
+            Fake method to capture arguments passed to os.kill.
 
-        self.fakeExitWithSignal = fakeExitWithSignal
+            @param pid: The pid of the process being killed.
+
+            @param sig: The signal sent to the process.
+            """
+            self.fakeKillArgs[0] = pid
+            self.fakeKillArgs[1] = sig
+
+        self.patch(os, 'kill', fakeKill)
 
 
     def test_exitWithSignal(self):
@@ -2020,21 +2103,13 @@ class ExitWithSignalTests(unittest.TestCase):
             fakeSignalArgs[0] = sig
             fakeSignalArgs[1] = handler
 
-
-        fakeKillArgs = [None, None]
-
-        def fake_kill(pid, sig):
-            fakeKillArgs[0] = pid
-            fakeKillArgs[1] = sig
-
         self.patch(signal, 'signal', fake_signal)
-        self.patch(os, 'kill', fake_kill)
         app._exitWithSignal(signal.SIGINT)
 
         self.assertEquals(fakeSignalArgs[0], signal.SIGINT)
         self.assertEquals(fakeSignalArgs[1], signal.SIG_DFL)
-        self.assertEquals(fakeKillArgs[0], os.getpid())
-        self.assertEquals(fakeKillArgs[1], signal.SIGINT)
+        self.assertEquals(self.fakeKillArgs[0], os.getpid())
+        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
 
 
     def test_normalExit(self):
@@ -2042,25 +2117,28 @@ class ExitWithSignalTests(unittest.TestCase):
         _exitWithSignal is not called if the runner does not exit with a
         signal.
         """
-        self.patch(twistd.app, '_exitWithSignal', self.fakeExitWithSignal)
-        self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
+        self.patch(
+            twistd,
+            '_SomeApplicationRunner',
+            stubApplicationRunnerFactoryCreator(None)
+        )
         twistd.runApp(self.config)
-        self.assertFalse(self.exitWithSignalCalled)
+        self.assertIsNone(self.fakeKillArgs[0])
+        self.assertIsNone(self.fakeKillArgs[1])
 
 
     def test_runnerExitsWithSignal(self):
         """
         _exitWithSignal is called when the runner exits with a signal.
         """
-        CrippledApplicationRunner._exitSignal = 2
-        self.patch(twistd.app, '_exitWithSignal', self.fakeExitWithSignal)
-        self.patch(twistd, '_SomeApplicationRunner', CrippledApplicationRunner)
+        self.patch(
+            twistd,
+            '_SomeApplicationRunner',
+            stubApplicationRunnerFactoryCreator(signal.SIGINT)
+        )
         twistd.runApp(self.config)
-        self.assertTrue(self.exitWithSignalCalled)
-
-
-    def tearDown(self):
-        CrippledApplicationRunner._exitSignal = 0
+        self.assertEquals(self.fakeKillArgs[0], os.getpid())
+        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
 
 
 
