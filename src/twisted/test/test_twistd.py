@@ -50,6 +50,7 @@ from twisted.python.usage import UsageError
 from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
 from twisted.internet.base import ReactorBase
+from twisted.test.proto_helpers import MemoryReactor
 
 try:
     from twisted.scripts import _twistd_unix
