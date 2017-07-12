@@ -1,0 +1,1 @@
+twisted.python.web.http.HTTPFactory now always opens logFile in binary mode and writes access logs in UTF-8, to avoid encoding issues and newline differences on Windows.
