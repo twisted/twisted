@@ -62,12 +62,13 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     @property
     def _serialHandle(self):
         # Try to detect pyserial version to support internal API changes
-        if hasattr(self._serial, '_port_handle'):
+        serial = self._serial
+        try:
             # >= 3.0
-            return self._serial._port_handle
-        else:
+            return serial._port_handle
+        except AttributeError:
             # <= 2.7
-            return self._serial.hComPort
+            return serial.hComPort
 
 
     def _finishPortSetup(self):
