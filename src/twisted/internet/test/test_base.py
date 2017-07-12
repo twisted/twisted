@@ -383,7 +383,6 @@ class TestSpySignalCapturingReactor(ReactorBase):
         """
         Required method, unused.
         """
-        pass
 
 
 

@@ -223,7 +223,6 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
             @param _: Unused self param
             """
-            pass
 
         self.patch(Runner, 'startLogging', startLogging)
 
