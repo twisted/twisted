@@ -3152,6 +3152,7 @@ class ServerStringTests(unittest.TestCase):
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
+        test_sslNoTrailingNewlinePem.skip = skipSSL
 
 
     def test_unix(self):
