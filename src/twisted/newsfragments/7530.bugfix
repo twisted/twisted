@@ -1,0 +1,1 @@
+Allow for key and cert .pem files that do not have a a trailing newline
