@@ -11,6 +11,7 @@ import tempfile
 
 from twisted.trial import unittest
 from twisted.internet.protocol import Protocol
+from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.internet.test.test_serialport import DoNothing
 
@@ -97,7 +98,7 @@ class Win32SerialPortTests(unittest.TestCase):
         self.assertEqual(0,                   kwargs["xonxoff"])
         self.assertEqual(0,                   kwargs["rtscts"])
         self.assertEqual(None,                kwargs["timeout"])
-        port.connectionLost(reason='Cleanup')
+        port.connectionLost(Failure(Exception("Cleanup")))
 
     def test_serialPortInitiallyConnected(self):
         """
@@ -110,7 +111,7 @@ class Win32SerialPortTests(unittest.TestCase):
         self.assertEqual(1, port.connected)
         self.assertEqual(1, self.protocol.connected)
         self.assertEqual(port, self.protocol.transport)
-        port.connectionLost(reason='Cleanup')
+        port.connectionLost(Failure(Exception("Cleanup")))
 
     def common_exerciseHandleAccess(self, cbInQue):
         port = RegularFileSerialPort(
@@ -125,7 +126,7 @@ class Win32SerialPortTests(unittest.TestCase):
         port.write(b'ABCD')
         port.serialWriteEvent()
         port.serialWriteEvent()
-        port.connectionLost(reason='Cleanup')
+        port.connectionLost(Failure(Exception("Cleanup")))
 
         # No assertion since the point is simply to make sure that in all cases
         # the port handle resolves instead of raising an exception.
