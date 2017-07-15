@@ -2002,7 +2002,7 @@ class StubApplicationRunnerWithSignal(twistd._SomeApplicationRunner):
     An application runner that uses a SignalCapturingMemoryReactor and
     has a _signalValue attribute that it will set in the reactor.
 
-    @ivar: _signalValue: The signal value to set on the reactor's _exitSignal
+    @ivar _signalValue: The signal value to set on the reactor's _exitSignal
         attribute.
     """
     loggerFactory = CrippledAppLogger
