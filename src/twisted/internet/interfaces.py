@@ -2893,7 +2893,7 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
 
 class _ISupportsExitSignalCapturing(Interface):
     """
-    An implementor of L{ISupportsExitSignalCapturing} will capture the
+    An implementor of L{_ISupportsExitSignalCapturing} will capture the
     value of any delivered exit signal (SIGINT, SIGTERM, SIGBREAK) for which
     it has installed a handler.  The caught signal number is made available in
     the _exitSignal attribute.

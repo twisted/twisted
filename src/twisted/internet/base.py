@@ -474,7 +474,7 @@ class ReactorBase(object):
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
 
-    @ivar _exitSignal: See L{ISupportsExitSignalCapturing._exitSignal}
+    @ivar _exitSignal: See L{_ISupportsExitSignalCapturing._exitSignal}
     """
 
     _registerAsIOThread = True
