@@ -149,17 +149,19 @@ class XMLParser(Protocol):
         stateTable = self._buildStateTable()
         if not self.state:
             # all UTF-16 starts with this string
-            if data.startswith('\xff\xfe'):
-                self._prepend = '\xff\xfe'
+            if data.startswith(b'\xff\xfe'):
+                self._prepend = b'\xff\xfe'
                 self.encodings.append('UTF-16')
                 data = data[2:]
-            elif data.startswith('\xfe\xff'):
-                self._prepend = '\xfe\xff'
+            elif data.startswith(b'\xfe\xff'):
+                self._prepend = b'\xfe\xff'
                 self.encodings.append('UTF-16')
                 data = data[2:]
             self.state = 'begin'
         if self.encodings:
             data = self._decode(data)
+        elif isinstance(data, bytes):
+            data = data.decode("utf-8")
         # bring state, lineno, colno into local scope
         lineno, colno = self.lineno, self.colno
         curState = self.state
@@ -173,7 +175,7 @@ class XMLParser(Protocol):
         try:
             for byte in data:
                 # do newline stuff
-                if byte == '\n':
+                if byte == u'\n':
                     lineno += 1
                     colno = 0
                 else:

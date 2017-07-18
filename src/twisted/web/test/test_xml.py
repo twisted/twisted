@@ -28,7 +28,7 @@ class Sux0r(sux.XMLParser):
 class SUXTests(TestCase):
 
     def testBork(self):
-        s = "<bork><bork><bork>"
+        s = b"<bork><bork><bork>"
         ms = Sux0r()
         ms.connectionMade()
         ms.dataReceived(s)
@@ -506,13 +506,13 @@ alert("I hate you");
         s = '<foo><bar><baz /></bar></foo>'
         j =(u'<?xml version="1.0" encoding="UCS-2" ?>\r\n<JAPANESE>\r\n'
             u'<TITLE>\u5c02\u9580\u5bb6\u30ea\u30b9\u30c8 </TITLE></JAPANESE>')
-        j2=('\xff\xfe<\x00?\x00x\x00m\x00l\x00 \x00v\x00e\x00r\x00s\x00i\x00o'
-            '\x00n\x00=\x00"\x001\x00.\x000\x00"\x00 \x00e\x00n\x00c\x00o\x00d'
-            '\x00i\x00n\x00g\x00=\x00"\x00U\x00C\x00S\x00-\x002\x00"\x00 \x00?'
-            '\x00>\x00\r\x00\n\x00<\x00J\x00A\x00P\x00A\x00N\x00E\x00S\x00E'
-            '\x00>\x00\r\x00\n\x00<\x00T\x00I\x00T\x00L\x00E\x00>\x00\x02\\'
-            '\x80\x95\xb6[\xea0\xb90\xc80 \x00<\x00/\x00T\x00I\x00T\x00L\x00E'
-            '\x00>\x00<\x00/\x00J\x00A\x00P\x00A\x00N\x00E\x00S\x00E\x00>\x00')
+        j2=(b'\xff\xfe<\x00?\x00x\x00m\x00l\x00 \x00v\x00e\x00r\x00s\x00i\x00o'
+            b'\x00n\x00=\x00"\x001\x00.\x000\x00"\x00 \x00e\x00n\x00c\x00o\x00d'
+            b'\x00i\x00n\x00g\x00=\x00"\x00U\x00C\x00S\x00-\x002\x00"\x00 \x00?'
+            b'\x00>\x00\r\x00\n\x00<\x00J\x00A\x00P\x00A\x00N\x00E\x00S\x00E'
+            b'\x00>\x00\r\x00\n\x00<\x00T\x00I\x00T\x00L\x00E\x00>\x00\x02\\'
+            b'\x80\x95\xb6[\xea0\xb90\xc80 \x00<\x00/\x00T\x00I\x00T\x00L\x00E'
+            b'\x00>\x00<\x00/\x00J\x00A\x00P\x00A\x00N\x00E\x00S\x00E\x00>\x00')
         def reverseBytes(s):
             fmt = str(len(s) // 2) + 'H'
             return struct.pack('<' + fmt, *struct.unpack('>' + fmt, s))
@@ -535,8 +535,8 @@ alert("I hate you");
         de=j3.documentElement
         de.appendChild(div)
         de.appendChild(j3.createComment(u'\u221a'))
-        self.assertEqual(j3.toxml(), hdr+
-                          u'<foo><div>\u221a</div><!--\u221a--></foo>'.encode('utf8'))
+        self.assertEqual(j3.toxml(), (hdr +
+                         u'<foo><div>\u221a</div><!--\u221a--></foo>'))
 
     def testNamedChildren(self):
         tests = {"<foo><bar /><bar unf='1' /><bar>asdfadsf</bar>"

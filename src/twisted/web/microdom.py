@@ -20,12 +20,11 @@ Microdom mainly focuses on working with HTML and XHTML.
 
 # System Imports
 import re
-from cStringIO import StringIO
+from io import BytesIO, StringIO
 
-from types import StringTypes, UnicodeType
 
 # Twisted Imports
-from twisted.python.compat import range
+from twisted.python.compat import range, iteritems, unicode
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import XMLParser, ParseError
 
@@ -298,9 +297,9 @@ class Document(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write('<?xml version="1.0"?>' + newl)
+        stream.write(u'<?xml version="1.0"?>' + newl)
         if self.doctype:
-            stream.write("<!DOCTYPE "+self.doctype+">" + newl)
+            stream.write(u"<!DOCTYPE " + self.doctype + u">" + newl)
         self.documentElement.writexml(stream, indent, addindent, newl, strip,
                                       nsprefixes, namespace)
 
@@ -344,7 +343,7 @@ class EntityReference(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write(self.nodeValue)
+        stream.write(u"" + self.nodeValue)
 
     def cloneNode(self, deep=0, parent=None):
         return EntityReference(self.eref, parent)
@@ -367,8 +366,8 @@ class Comment(CharacterData):
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
         val=self.data
-        if isinstance(val, UnicodeType):
-            val=val.encode('utf8')
+        if isinstance(val, bytes):
+            val = val.decode('utf8')
         stream.write("<!--%s-->" % val)
 
     def cloneNode(self, deep=0, parent=None):
@@ -399,17 +398,17 @@ class Text(CharacterData):
                  nsprefixes={}, namespace=''):
         if self.raw:
             val = self.nodeValue
-            if not isinstance(val, StringTypes):
+            if not isinstance(val, (str, unicode)):
                 val = str(self.nodeValue)
         else:
             v = self.nodeValue
-            if not isinstance(v, StringTypes):
+            if not isinstance(v, (str, unicode)):
                 v = str(v)
             if strip:
                 v = ' '.join(v.split())
             val = escape(v)
-        if isinstance(val, UnicodeType):
-            val = val.encode('utf8')
+        if isinstance(val, bytes):
+            val = val.decode('utf8')
         stream.write(val)
 
     def __repr__(self):
@@ -422,16 +421,16 @@ class CDATASection(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write("<![CDATA[")
-        stream.write(self.nodeValue)
-        stream.write("]]>")
+        stream.write(u"<![CDATA[")
+        stream.write(u"" + self.nodeValue)
+        stream.write(u"]]>")
 
 def _genprefix():
     i = 0
     while True:
         yield  'p' + str(i)
         i = i + 1
-genprefix = _genprefix().next
+genprefix = next(_genprefix())
 
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
@@ -623,7 +622,7 @@ class Element(Node):
             # namespace.  Nothing extra to do here.
             bext(self.tagName)
 
-        j = ''.join
+        j = u''.join
         for attr, val in sorted(self.attributes.items()):
             if isinstance(attr, tuple):
                 ns, key = attr
@@ -638,7 +637,7 @@ class Element(Node):
                 assert val is not None
                 writeattr(attr, val)
         if newprefixes:
-            for ns, prefix in newprefixes.iteritems():
+            for ns, prefix in iteritems(newprefixes):
                 if prefix:
                     writeattr('xmlns:'+prefix, ns)
             newprefixes.update(nsprefixes)
@@ -647,7 +646,7 @@ class Element(Node):
             downprefixes = nsprefixes
         w(j(begin))
         if self.childNodes:
-            w(">")
+            w(u">")
             newindent = indent + addindent
             for child in self.childNodes:
                 if self.tagName in BLOCKELEMENTS and \
@@ -661,7 +660,7 @@ class Element(Node):
         elif self.tagName.lower() not in ALLOWSINGLETON:
             w(j(('></', endTagName, '>')))
         else:
-            w(" />")
+            w(u" />")
 
 
     def __repr__(self):
@@ -977,10 +976,10 @@ def parse(readable, *args, **kwargs):
     return doc
 
 def parseString(st, *args, **kw):
-    if isinstance(st, UnicodeType):
+    if isinstance(st, unicode):
         # this isn't particularly ideal, but it does work.
-        return parse(StringIO(st.encode('UTF-16')), *args, **kw)
-    return parse(StringIO(st), *args, **kw)
+        return parse(BytesIO(st.encode('UTF-16')), *args, **kw)
+    return parse(BytesIO(st), *args, **kw)
 
 
 def parseXML(readable):
@@ -999,7 +998,7 @@ class lmx:
     """Easy creation of XML."""
 
     def __init__(self, node='div'):
-        if isinstance(node, StringTypes):
+        if isinstance(node, (str, unicode)):
             node = Element(node)
         self.node = node
 
