@@ -122,15 +122,16 @@ class DOMHelpersTestsMixin:
 
     def test_get(self):
         doc1 = self.dom.parseString('<a><b id="bar"/><c class="foo"/></a>')
+        doc = self.dom.Document()
         node=domhelpers.get(doc1, "foo")
         actual=node.toxml()
-        expected = self.dom.Element('c')
+        expected = doc.createElement('c')
         expected.setAttribute('class', 'foo')
         self.assertEqual(actual, expected.toxml())
 
-        node=domhelpers.get(doc1, "bar")
-        actual=node.toxml()
-        expected = self.dom.Element('b')
+        node = domhelpers.get(doc1, "bar")
+        actual = node.toxml()
+        expected = doc.createElement('b')
         expected.setAttribute('id', 'bar')
         self.assertEqual(actual, expected.toxml())
 
@@ -141,9 +142,10 @@ class DOMHelpersTestsMixin:
 
     def test_getIfExists(self):
         doc1 = self.dom.parseString('<a><b id="bar"/><c class="foo"/></a>')
+        doc = self.dom.Document()
         node=domhelpers.getIfExists(doc1, "foo")
         actual=node.toxml()
-        expected = self.dom.Element('c')
+        expected = doc.createElement('c')
         expected.setAttribute('class', 'foo')
         self.assertEqual(actual, expected.toxml())
 
@@ -153,21 +155,23 @@ class DOMHelpersTestsMixin:
 
     def test_getAndClear(self):
         doc1 = self.dom.parseString('<a><b id="foo"><c></c></b></a>')
-        node=domhelpers.getAndClear(doc1, "foo")
-        actual=node.toxml()
-        expected = self.dom.Element('b')
+        doc = self.dom.Document()
+        node = domhelpers.getAndClear(doc1, "foo")
+        actual = node.toxml()
+        expected = doc.createElement('b')
         expected.setAttribute('id', 'foo')
         self.assertEqual(actual, expected.toxml())
 
 
     def test_locateNodes(self):
         doc1 = self.dom.parseString('<a><b foo="olive"><c foo="olive"/></b><d foo="poopy"/></a>')
+        doc = self.dom.Document()
         node_list=domhelpers.locateNodes(
             doc1.childNodes, 'foo', 'olive', noNesting=1)
         actual=''.join([node.toxml() for node in node_list])
-        expected = self.dom.Element('b')
+        expected = doc.createElement('b')
         expected.setAttribute('foo', 'olive')
-        c = self.dom.Element('c')
+        c = doc.createElement('c')
         c.setAttribute('foo', 'olive')
         expected.appendChild(c)
 
