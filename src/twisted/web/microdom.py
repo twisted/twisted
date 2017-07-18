@@ -811,6 +811,7 @@ class MicroDOMParser(XMLParser):
         attributes = _unescapeDict(attributes)
         namespaces = self.nsstack[-1][0]
         newspaces = {}
+        keysToDelete = []
         for k, v in attributes.items():
             if k.startswith('xmlns'):
                 spacenames = k.split(':',1)
@@ -818,7 +819,9 @@ class MicroDOMParser(XMLParser):
                     newspaces[spacenames[1]] = v
                 else:
                     newspaces[''] = v
-                del attributes[k]
+                keysToDelete.append(k)
+        for k in keysToDelete:
+            del attributes[k]
         if newspaces:
             namespaces = namespaces.copy()
             namespaces.update(newspaces)
