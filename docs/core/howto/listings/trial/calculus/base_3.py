@@ -25,4 +25,4 @@ class Calculation(object):
 
     def divide(self, a, b):
         a, b = self._make_ints(a, b)
-        return a / b
+        return a // b
