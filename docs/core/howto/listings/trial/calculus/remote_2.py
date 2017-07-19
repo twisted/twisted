@@ -21,15 +21,15 @@ class RemoteCalculationProtocol(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        op, a, b = line.split()
+        op, a, b = line.decode('utf-8').split()
         op = getattr(self.proxy, 'remote_%s' % (op,))
         try:
             result = op(a, b)
         except TypeError:
             log.err()
-            self.sendLine("error")
+            self.sendLine(b"error")
         else:
-            self.sendLine(str(result))
+            self.sendLine(str(result).encode('utf-8'))
 
 
 

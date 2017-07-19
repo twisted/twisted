@@ -20,12 +20,12 @@ class RemoteCalculationProtocol(basic.LineReceiver):
 
 
     def lineReceived(self, line):
-        op, a, b = line.split()
+        op, a, b = line.decode('utf-8').split()
         a = int(a)
         b = int(b)
         op = getattr(self.proxy, 'remote_%s' % (op,))
         result = op(a, b)
-        self.sendLine(str(result))
+        self.sendLine(str(result).encode('utf-8'))
 
 
 
