@@ -10,7 +10,7 @@ class ClientTimeoutError(Exception):
 
 
 
-class RemoteCalculationClient(object, basic.LineReceiver, policies.TimeoutMixin):
+class RemoteCalculationClient(basic.LineReceiver, policies.TimeoutMixin):
 
     def __init__(self):
         self.results = []
