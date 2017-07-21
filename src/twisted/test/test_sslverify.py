@@ -62,7 +62,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import protocol, defer, reactor, ssl, endpoints
 from twisted.internet._idna import _idnaText
 
 from twisted.internet.error import CertificateError, ConnectionLost
@@ -2990,6 +2990,17 @@ class KeyPairTests(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
             sslverify.KeyPair(self.sKey).__setstate__, state)
+
+
+    def test_noTrailingNewlinePemCert(self):
+        noTrailingNewlineKeyPemPath = getModule(
+            "twisted.test").filePath.sibling(
+            "cert.pem.no_trailing_newline")
+        escapedNoTrailingNewlineKeyPEMPathName = endpoints.quoteStringArgument(
+            noTrailingNewlineKeyPemPath.path)
+
+        certPEM = FilePath(escapedNoTrailingNewlineKeyPEMPathName).getContent()
+        ssl.Certificate.loadPEM(certPEM)
 
 
 
