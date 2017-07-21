@@ -1,1 +1,0 @@
-A Python 3 Perspective Broker server which receives a remote call with keyword arguments from a Python 2 client will now decode any keys which are binary to strings instead of crashing.  This fixes interoperability between Python 2 Buildbot clients and Python 3 Buildbot servers.

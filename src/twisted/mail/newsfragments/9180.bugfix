@@ -1,0 +1,1 @@
+Sending a list of recipients with twisted.smtp.SenderFactory has been fixed.  This fixes a problem found when running buildbot.

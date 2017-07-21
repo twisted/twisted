@@ -56,12 +56,16 @@ else:
     from twisted.internet.ssl import ClientContextFactory
     useSSL = True
 
+s = None
 try:
-    socket.socket(socket.AF_INET6, socket.SOCK_STREAM).close()
+    s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    s.bind(('::1', 0))
 except socket.error as e:
     ipv6Skip = str(e)
 else:
     ipv6Skip = None
+if s is not None:
+    s.close()
 
 
 

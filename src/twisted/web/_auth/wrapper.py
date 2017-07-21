@@ -13,17 +13,17 @@ denied, a 401 will be sent in the response along with I{WWW-Authenticate}
 headers for each of the allowed authentication schemes.
 """
 
-from __future__ import division, absolute_import
+from __future__ import absolute_import, division
 
-from zope.interface import implementer
-
-from twisted.python import log
-from twisted.python.components import proxyForInterface
-from twisted.python.compat import networkString
-from twisted.web.resource import IResource, ErrorPage
-from twisted.web import util
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
+from twisted.python import log
+from twisted.python.compat import unicode
+from twisted.python.components import proxyForInterface
+from twisted.web import util
+from twisted.web.resource import ErrorPage, IResource
+
+from zope.interface import implementer
 
 
 @implementer(IResource)
@@ -42,14 +42,19 @@ class UnauthorizedResource(object):
         """
         Send www-authenticate headers to the client
         """
+        def ensureBytes(s):
+            return s.encode('ascii') if isinstance(s, unicode) else s
+
         def generateWWWAuthenticate(scheme, challenge):
             l = []
-            for k,v in challenge.items():
-                l.append(networkString("%s=%s" % (k, quoteString(v))))
+            for k, v in challenge.items():
+                k = ensureBytes(k)
+                v = ensureBytes(v)
+                l.append(k + b"=" + quoteString(v))
             return b" ".join([scheme, b", ".join(l)])
 
         def quoteString(s):
-            return '"%s"' % (s.replace('\\', '\\\\').replace('"', '\\"'),)
+            return b'"' + s.replace(b'\\', b'\\\\').replace(b'"', b'\\"') + b'"'
 
         request.setResponseCode(401)
         for fact in self._credentialFactories:
