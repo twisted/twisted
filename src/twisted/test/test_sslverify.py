@@ -21,7 +21,7 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
-    from twisted.internet import ssl, endpoints
+    from twisted.internet import ssl
 
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
