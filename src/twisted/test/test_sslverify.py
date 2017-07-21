@@ -2998,10 +2998,8 @@ class KeyPairTests(unittest.TestCase):
         noTrailingNewlineKeyPemPath = getModule(
             "twisted.test").filePath.sibling(
             "cert.pem.no_trailing_newline")
-        escapedNoTrailingNewlineKeyPEMPathName = endpoints.quoteStringArgument(
-            noTrailingNewlineKeyPemPath.path)
 
-        certPEM = FilePath(escapedNoTrailingNewlineKeyPEMPathName).getContent()
+        certPEM = noTrailingNewlineKeyPemPath.getContent()
         ssl.Certificate.loadPEM(certPEM)
 
 
