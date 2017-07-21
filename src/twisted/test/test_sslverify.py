@@ -21,6 +21,8 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
+    from twisted.internet import ssl, endpoints
+
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
@@ -62,7 +64,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
-from twisted.internet import protocol, defer, reactor, ssl, endpoints
+from twisted.internet import protocol, defer, reactor
 from twisted.internet._idna import _idnaText
 
 from twisted.internet.error import CertificateError, ConnectionLost
