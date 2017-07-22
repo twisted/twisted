@@ -896,7 +896,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             try:
                 size = int(line[1:-1])
             except ValueError:
-                raise IllegalClientResponse("Bad literal size: " + line[1:-1])
+                raise IllegalClientResponse(
+                    "Bad literal size: " + repr(line[1:-1]))
             if final and not size:
                 return (b'', b'')
             d = self._stringLiteral(size)
@@ -1048,7 +1049,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if line.startswith(b'"'):
             try:
                 spam, date, rest = line.split(b'"',2)
-            except IndexError:
+            except ValueError:
                 raise IllegalClientResponse("Malformed date-time")
             return (date, rest[1:])
         else:
@@ -1064,7 +1065,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if len(arg) == 1:
                 raise IllegalClientResponse("Missing charset identifier")
             if len(arg) == 2:
-                arg.append('')
+                arg.append(b'')
             spam, arg, rest = arg
             return (arg, rest)
         else:
