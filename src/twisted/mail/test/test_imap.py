@@ -9,6 +9,7 @@ Test case for twisted.mail.imap4
 
 import base64
 import codecs
+import functools
 import locale
 import os
 from io import BytesIO
@@ -6939,16 +6940,6 @@ class SynchronousMailbox(object):
 
 
 
-class StringTransportConsumer(StringTransport):
-    producer = None
-    streaming = None
-
-    def registerProducer(self, producer, streaming):
-        self.producer = producer
-        self.streaming = streaming
-
-
-
 class PipeliningTests(unittest.TestCase):
     """
     Tests for various aspects of the IMAP4 server's pipelining support.
@@ -6962,15 +6953,50 @@ class PipeliningTests(unittest.TestCase):
     def setUp(self):
         self.iterators = []
 
-        self.transport = StringTransportConsumer()
+        self.transport = StringTransport()
         self.server = imap4.IMAP4Server(None, None, self.iterateInReactor)
         self.server.makeConnection(self.transport)
 
+        mailbox = SynchronousMailbox(self.messages)
+
+        # Skip over authentication and folder selection
+        self.server.state = 'select'
+        self.server.mbox = mailbox
+
+        # Get rid of any greeting junk
+        self.transport.clear()
+
 
     def iterateInReactor(self, iterator):
+        """
+        A fake L{imap4.iterateInReactor} that records the iterators it
+        receives.
+
+        @param iterator: An iterator.
+
+        @return: A L{Deferred} associated with this iterator.
+        """
         d = defer.Deferred()
         self.iterators.append((iterator, d))
         return d
+
+
+    def flushPending(self, asLongAs=lambda: True):
+        """
+        Advance pending iterators enqueued with L{iterateInReactor} in
+        a round-robin fashion, resuming the transport's producer until
+        it has completed.  This ensures bodies are flushed.
+
+        @param asLongAs: (optional) An optional predicate function.
+            Flushing iterators continues as long as there are
+            iterators and this returns L{True}.
+        """
+        while self.iterators and asLongAs():
+            for e in self.iterators[0][0]:
+                while self.transport.producer:
+                    self.transport.producer.resumeProducing()
+            else:
+                self.iterators.pop(0)[1].callback(None)
 
 
     def tearDown(self):
@@ -6982,42 +7008,86 @@ class PipeliningTests(unittest.TestCase):
         Test that pipelined FETCH commands which can be responded to
         synchronously are responded to correctly.
         """
-        mailbox = SynchronousMailbox(self.messages)
-
-        # Skip over authentication and folder selection
-        self.server.state = 'select'
-        self.server.mbox = mailbox
-
-        # Get rid of any greeting junk
-        self.transport.clear()
-
         # Here's some pipelined stuff
         self.server.dataReceived(
             b'01 FETCH 1 BODY[]\r\n'
             b'02 FETCH 2 BODY[]\r\n'
             b'03 FETCH 3 BODY[]\r\n')
 
-        # Flush anything the server has scheduled to run
-        while self.iterators:
-            for e in self.iterators[0][0]:
-                break
-            else:
-                self.iterators.pop(0)[1].callback(None)
+        self.flushPending()
 
-        # The bodies are empty because we aren't simulating a transport
-        # exactly correctly (we have StringTransportConsumer but we never
-        # call resumeProducing on its producer).  It doesn't matter: just
-        # make sure the surrounding structure is okay, and that no
-        # exceptions occurred.
         self.assertEqual(
-            self.transport.value(),
-            b'* 1 FETCH (BODY[] )\r\n'
-            b'01 OK FETCH completed\r\n'
-            b'* 2 FETCH (BODY[] )\r\n'
-            b'02 OK FETCH completed\r\n'
-            b'* 3 FETCH (BODY[] )\r\n'
-            b'03 OK FETCH completed\r\n')
+            self.transport.value(), b''.join([
+                b'* 1 FETCH (BODY[] )\r\n',
+                networkString(
+                    '01 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[0].getBodyFile().read()),
+                    )
+                ),
+                b'* 2 FETCH (BODY[] )\r\n',
+                networkString(
+                    '02 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[1].getBodyFile().read()),
+                    )
+                ),
+                b'* 3 FETCH (BODY[] )\r\n',
+                networkString(
+                    '03 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[2].getBodyFile().read()),
+                    )
+                ),
+            ]))
 
+
+    def test_bufferedServerStatus(self):
+        """
+        When a server status change occurs during an ongoing FETCH
+        command, the server status is buffered until the FETCH
+        completes.
+        """
+        self.server.dataReceived(
+            b'01 FETCH 1,2 BODY[]\r\n'
+        )
+
+        # Two iterations yields the untagged response and the first
+        # fetched message's body
+        twice = functools.partial(next, iter([True,  True, False]))
+        self.flushPending(asLongAs=twice)
+
+        self.assertEqual(
+            self.transport.value(), b''.join([
+                # The untagged response...
+                b'* 1 FETCH (BODY[] )\r\n',
+                # ...and its body
+                networkString(
+                    '{5}\r\n\r\n\r\n%s' % (
+                        nativeString(self.messages[0].getBodyFile().read()),
+                    )
+                ),
+            ]))
+
+        self.transport.clear()
+
+        # A server status change...
+        self.server.modeChanged(writeable=True)
+
+        # ...remains buffered...
+        self.assertFalse(self.transport.value())
+
+        self.flushPending()
+
+        self.assertEqual(self.transport.value(), b''.join([
+            # The untagged response...
+            b'* 2 FETCH (BODY[] )\r\n',
+            # ...the status change...
+            b"* [READ-WRITE]\r\n",
+            # ...and the completion status and final message's body
+            networkString(
+                '01 OK FETCH completed\r\n{5}\r\n\r\n\r\n%s' % (
+                    nativeString(self.messages[1].getBodyFile().read()),
+                )
+            ),
+        ]))
 
 
 if ClientTLSContext is None:
