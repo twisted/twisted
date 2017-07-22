@@ -134,7 +134,8 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
     if not curClass:
         curClass = obj.__class__
     for base in curClass.__bases__:
-        accumulateMethods(obj, dict, prefix, base)
+        if base is not object:
+            accumulateMethods(obj, dict, prefix, base)
 
     for name, method in curClass.__dict__.items():
         optName = name[len(prefix):]
