@@ -3404,6 +3404,8 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
         transport = StringTransport()
         server.makeConnection(transport)
+        self.addCleanup(server.connectionLost,
+                        error.ConnectionDone("Connection done."))
 
         self.assertIn(b"AUTH=SPECIAL", transport.value())
 
@@ -3419,7 +3421,25 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(transport.value(),
                          b"001 OK Authentication successful\r\n")
 
-        server.connectionLost(error.ConnectionDone("Connection done."))
+
+    def test_unsupportedMethod(self):
+        """
+        An unsupported C{AUTHENTICATE} method results in a negative
+        response.
+        """
+        server = imap4.IMAP4Server()
+        server.portal = self.portal
+
+        transport = StringTransport()
+        server.makeConnection(transport)
+        self.addCleanup(server.connectionLost,
+                        error.ConnectionDone("Connection done."))
+
+        transport.clear()
+
+        server.dataReceived(b'001 AUTHENTICATE UNKNOWN\r\n')
+        self.assertEqual(transport.value(),
+                         b"001 NO AUTHENTICATE method unsupported\r\n")
 
 
     def testCramMD5(self):
