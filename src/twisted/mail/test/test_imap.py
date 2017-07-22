@@ -33,7 +33,7 @@ from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
 from twisted.python.compat import (intToBytes, range, nativeString,
-                                   networkString, iterbytes)
+                                   networkString, iterbytes, _PY3)
 from twisted.trial import unittest
 
 from twisted.cred.portal import Portal
@@ -3440,6 +3440,37 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         server.dataReceived(b'001 AUTHENTICATE UNKNOWN\r\n')
         self.assertEqual(transport.value(),
                          b"001 NO AUTHENTICATE method unsupported\r\n")
+
+
+    def test_missingPortal(self):
+        """
+        An L{imap4.IMAP4Server} that is missing a L{Portal} responds
+        negatively to an authentication
+        """
+        self.server.challengers[b'LOGIN'] = imap4.LOGINCredentials
+
+        cAuth = imap4.LOGINAuthenticator(b'testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        self.server.portal = None
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        def authFailed(failure):
+            failure.trap(imap4.IMAP4Exception)
+            message = str(failure.value)
+            expected = b"Temporary authentication failure"
+            if _PY3:
+                expected = repr(expected)
+
+            self.assertEqual(message, expected)
+
+        d = self.connected.addCallback(strip(auth))
+        d.addErrback(authFailed)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+
+        return defer.gatherResults([d, self.loopback()])
 
 
     def testCramMD5(self):
