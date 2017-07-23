@@ -5,6 +5,10 @@
 """
 UNIX socket support for Twisted.
 
+Some functionality in this module (sending file descriptors) requires either
+Python 3 or the twistedcextensions package from PyPI (included in Twisted's
+'sendfd27' or 'all_non_platform' setuptools extras).
+
 End users shouldn't use this module directly - use the reactor APIs instead.
 
 Maintainer: Itamar Shtull-Trauring
