@@ -63,17 +63,12 @@ class RebuildTests(unittest.TestCase):
                         os.path.join(self.fakelibPath, "myrebuilder.py"))
         from twisted_rebuild_fakelib import myrebuilder
         a = myrebuilder.A()
-        try:
-            object
-        except NameError:
+        from twisted.test import test_rebuild
+        b = myrebuilder.B()
+        class C(myrebuilder.B):
             pass
-        else:
-            from twisted.test import test_rebuild
-            b = myrebuilder.B()
-            class C(myrebuilder.B):
-                pass
-            test_rebuild.C = C
-            C()
+        test_rebuild.C = C
+        C()
         i = myrebuilder.Inherit()
         self.assertEqual(a.a(), 'a')
         # Necessary because the file has not "changed" if a second has not gone
@@ -83,14 +78,9 @@ class RebuildTests(unittest.TestCase):
         shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
                         os.path.join(self.fakelibPath, "myrebuilder.py"))
         rebuild.rebuild(myrebuilder)
-        try:
-            object
-        except NameError:
-            pass
-        else:
-            b2 = myrebuilder.B()
-            self.assertEqual(b2.b(), 'c')
-            self.assertEqual(b.b(), 'c')
+        b2 = myrebuilder.B()
+        self.assertEqual(b2.b(), 'c')
+        self.assertEqual(b.b(), 'c')
         self.assertEqual(i.a(), 'd')
         self.assertEqual(a.a(), 'b')
         # More work to be done on new-style classes
