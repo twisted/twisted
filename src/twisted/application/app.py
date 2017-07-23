@@ -699,7 +699,6 @@ def _exitWithSignal(sig):
 
     @param sig:  Signal to use to terminate the process with C{os.kill}.
     @type sig:  C{int}
-
     """
     signal.signal(sig, signal.SIG_DFL)
     os.kill(os.getpid(), sig)
