@@ -21,7 +21,7 @@ from twisted.trial.unittest import SynchronousTestCase
 
 
 try:
-    from _twisted_c_extensions import _raiser as raiser
+    from _twistedcextensions import _raiser as raiser
 except ImportError:
     raiser = None
 

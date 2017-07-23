@@ -18,7 +18,7 @@ if __name__ == "__main__":
     os.chdir(here)
 
     _setup = {}
-    with open('src/_twisted_c_extensions/_setup.py') as f:
+    with open('src/_twistedcextensions/_setup.py') as f:
         exec(f.read(), _setup)
 
     try:
