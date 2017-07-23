@@ -53,13 +53,7 @@ environment:
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       TOXENV: py35-alldeps-withcov-windows,codecov-publish
-      TWISTED_REACTOR: "default"
-
-matrix:
-  allow_failures:
-    # Some IOCP tests are failing on Appveyor:
-    # https://twistedmatrix.com/trac/ticket/8679
-    - TWISTED_REACTOR: "iocp"
+      TWISTED_REACTOR: "iocp"
 
 install:
   # Install OpenSSH through chocolatey
