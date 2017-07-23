@@ -157,6 +157,8 @@ def inet_pton(af, addr):
     else:
         raise socket.error(97, 'Address family not supported by protocol')
 
+
+
 def inet_ntop(af, addr):
     if af == socket.AF_INET:
         return socket.inet_ntoa(addr)
@@ -275,6 +277,7 @@ def comparable(klass):
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
         return klass
+
 
     def __eq__(self, other):
         c = self.__cmp__(other)
@@ -530,7 +533,6 @@ else:
     def intToBytes(i):
         return b"%d" % i
 
-
     lazyByteSlice = buffer
 
     def networkString(s):
@@ -616,8 +618,10 @@ if _PY3:
     def iteritems(d):
         return d.items()
 
+
     def itervalues(d):
         return d.values()
+
 
     def items(d):
         return list(d.items())
@@ -629,8 +633,10 @@ else:
     def iteritems(d):
         return d.iteritems()
 
+
     def itervalues(d):
         return d.itervalues()
+
 
     def items(d):
         return d.items()
