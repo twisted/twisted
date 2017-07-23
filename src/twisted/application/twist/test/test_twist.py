@@ -16,6 +16,7 @@ from ...runner.test.test_runner import DummyExit
 from ...twist import _twist
 from .._options import TwistOptions
 from .._twist import Twist
+from twisted.test.test_twistd import SignalCapturingMemoryReactor
 
 import twisted.trial.unittest
 
@@ -232,8 +233,8 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         _exitWithSignal is not called if the reactor's _exitSignal attribute
         is zero.
         """
-        reactor = MemoryReactor()
-        reactor._exitSignal = 0
+        reactor = SignalCapturingMemoryReactor()
+        reactor._exitSignal = None
         options = TwistOptions()
         options["reactor"] = reactor
         options["fileLogObserverFactory"] = jsonFileLogObserver
@@ -244,8 +245,8 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
     def test_twistReactorHasNoExitSignalAttr(self):
         """
-        _exitWithSignal is not called if the runner's reactor does not have
-        an _exitSignal attribute.
+        _exitWithSignal is not called if the runner's reactor does not
+        implement L{twisted.internet.interfaces._ISupportsExitSignalCapturing}
         """
         reactor = MemoryReactor()
         options = TwistOptions()
@@ -260,7 +261,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         _exitWithSignal is called if the runner's reactor exits due
         to a signal.
         """
-        reactor = MemoryReactor()
+        reactor = SignalCapturingMemoryReactor()
         reactor._exitSignal = 2
         options = TwistOptions()
         options["reactor"] = reactor

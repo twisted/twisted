@@ -14,6 +14,7 @@ from ..runner._exit import exit, ExitStatus
 from ..runner._runner import Runner
 from ._options import TwistOptions
 from twisted.application.app import _exitWithSignal
+from twisted.internet.interfaces import _ISupportsExitSignalCapturing
 
 
 
@@ -101,11 +102,9 @@ class Twist(object):
         )
         runner.run()
         reactor = twistOptions["reactor"]
-        try:
-            if reactor._exitSignal:
+        if _ISupportsExitSignalCapturing.providedBy(reactor):
+            if reactor._exitSignal is not None:
                 _exitWithSignal(reactor._exitSignal)
-        except:
-            pass
 
 
     @classmethod
