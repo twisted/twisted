@@ -8,7 +8,7 @@ import types
 from twisted.trial import unittest
 from twisted.python import rebuild
 
-import crash_test_dummy
+from . import crash_test_dummy
 f = crash_test_dummy.foo
 
 class Foo: pass
