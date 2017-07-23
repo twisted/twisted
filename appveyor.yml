@@ -69,8 +69,8 @@ matrix:
 
 install:
   # Install OpenSSH through chocolatey
-  - "choco install win32-openssh -confirm"
-  - cmd: "SET PATH=%PATH%;C:\\Program Files\\OpenSSH-Win64"
+  - "choco install openssh -confirm"
+  - "refreshenv"
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
