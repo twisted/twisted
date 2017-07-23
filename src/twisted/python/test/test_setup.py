@@ -5,12 +5,12 @@
 Tests for parts of our release automation system.
 """
 
-
 import os
 
-
 from setuptools.dist import Distribution
+
 import twisted
+from twisted import __version__
 from twisted.trial.unittest import TestCase
 
 from twisted.python import _setup, filepath
@@ -111,7 +111,6 @@ class OptionalDependenciesTests(TestCase):
         C extensions for Twisted.
         """
         deps = _EXTRAS_REQUIRE['sendfd27']
-        from twisted import __version__
         self.assertIn('twistedcextensions == ' + __version__, deps)
 
 
