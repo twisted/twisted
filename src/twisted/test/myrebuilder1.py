@@ -7,7 +7,7 @@ try:
 except NameError:
     pass
 else:
-    class B(object, A):
+    class B(A, object):
         def b(self):
             return 'b'
 class Inherit(A):
