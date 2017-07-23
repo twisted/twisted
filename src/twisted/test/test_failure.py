@@ -74,11 +74,6 @@ class FailureTests(SynchronousTestCase):
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
 
-    if not _shouldEnableNewStyle:
-        test_trapRaisesWrappedException.skip = (
-            "In Python2 with old-style classes, Failure.trap raises the "
-            "current Failure instance instead of the wrapped Exception.")
-
 
     def test_failureValueFromFailure(self):
         """
