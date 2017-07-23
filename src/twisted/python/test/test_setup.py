@@ -9,6 +9,7 @@ Tests for parts of our release automation system.
 import os
 
 
+from pkg_resources import parse_requirements
 from setuptools.dist import Distribution
 import twisted
 from twisted.trial.unittest import TestCase
@@ -81,9 +82,16 @@ class OptionalDependenciesTests(TestCase):
         extras = dict(im_an_extra_dependency="thing")
         attrs = dict(extras_require=extras)
         distribution = Distribution(attrs)
+
+        def canonicalizeExtras(myExtras):
+            parsedExtras = {}
+            for name, val in myExtras.items():
+                parsedExtras[name] = list(parse_requirements(val))
+            return parsedExtras
+
         self.assertEqual(
-            extras,
-            distribution.extras_require
+            canonicalizeExtras(extras),
+            canonicalizeExtras(distribution.extras_require)
         )
 
 
