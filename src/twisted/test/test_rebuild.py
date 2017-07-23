@@ -26,13 +26,15 @@ class HashRaisesRuntimeError:
     def __init__(self):
         self.hashCalled = False
 
+
     def __hash__(self):
         self.hashCalled = True
         raise RuntimeError('not a TypeError!')
 
 
 
-unhashableObject = None # set in test_hashException
+# Set in test_hashException
+unhashableObject = None
 
 
 
@@ -43,15 +45,18 @@ class RebuildTests(unittest.TestCase):
     def setUp(self):
         self.libPath = self.mktemp()
         os.mkdir(self.libPath)
-        self.fakelibPath = os.path.join(self.libPath, 'twisted_rebuild_fakelib')
+        self.fakelibPath = os.path.join(self.libPath,
+                                        'twisted_rebuild_fakelib')
         os.mkdir(self.fakelibPath)
         open(os.path.join(self.fakelibPath, '__init__.py'), 'w').close()
         sys.path.insert(0, self.libPath)
 
+
     def tearDown(self):
         sys.path.remove(self.libPath)
 
-    def testFileRebuild(self):
+
+    def test_FileRebuild(self):
         from twisted.python.util import sibpath
         import shutil, time
         shutil.copyfile(sibpath(__file__, "myrebuilder1.py"),
@@ -71,7 +76,7 @@ class RebuildTests(unittest.TestCase):
             C()
         i = myrebuilder.Inherit()
         self.assertEqual(a.a(), 'a')
-        # necessary because the file has not "changed" if a second has not gone
+        # Necessary because the file has not "changed" if a second has not gone
         # by in unix.  This sucks, but it's not often that you'll be doing more
         # than one reload per second.
         time.sleep(1.1)
@@ -88,10 +93,11 @@ class RebuildTests(unittest.TestCase):
             self.assertEqual(b.b(), 'c')
         self.assertEqual(i.a(), 'd')
         self.assertEqual(a.a(), 'b')
-        # more work to be done on new-style classes
+        # More work to be done on new-style classes
         # self.assertEqual(c.b(), 'c')
 
-    def testRebuild(self):
+
+    def test_Rebuild(self):
         """
         Rebuilding an unchanged module.
         """
@@ -108,7 +114,8 @@ class RebuildTests(unittest.TestCase):
 
         self.failUnlessIdentical(f, crash_test_dummy.foo)
 
-    def testComponentInteraction(self):
+
+    def test_ComponentInteraction(self):
         x = crash_test_dummy.XComponent()
         x.setAdapter(crash_test_dummy.IX, crash_test_dummy.XA)
         x.getComponent(crash_test_dummy.IX)
@@ -125,7 +132,8 @@ class RebuildTests(unittest.TestCase):
                               crash_test_dummy.XA, crash_test_dummy.X,
                               crash_test_dummy.IX)
 
-    def testUpdateInstance(self):
+
+    def test_UpdateInstance(self):
         global Foo, Buz
 
         b = Buz()
@@ -140,7 +148,8 @@ class RebuildTests(unittest.TestCase):
         assert hasattr(b, 'foo'), "Missing method on rebuilt instance"
         assert hasattr(b, 'x'), "Missing class attribute on rebuilt instance"
 
-    def testBananaInteraction(self):
+
+    def test_BananaInteraction(self):
         from twisted.python import rebuild
         from twisted.spread import banana
         rebuild.latestClass(banana.Banana)
