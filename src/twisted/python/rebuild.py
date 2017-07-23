@@ -73,7 +73,7 @@ def latestFunction(oldFunc):
     """
     # This may be CPython specific, since I believe jython instantiates a new
     # module upon reload.
-    dictID = id(oldFunc.func_globals)
+    dictID = id(oldFunc.__globals__)
     module = _modDictIDMap.get(dictID)
     if module is None:
         return oldFunc
@@ -93,7 +93,7 @@ def latestClass(oldClass):
         newClass.__bases__ = tuple(newBases)
         return newClass
     except TypeError:
-        if newClass.__module__ == "__builtin__":
+        if newClass.__module__ in ("__builtin__", "builtins"):
             # __builtin__ members can't be reloaded sanely
             return newClass
         ctor = getattr(newClass, '__metaclass__', type)
@@ -157,7 +157,8 @@ def rebuild(module, doLog=1):
     if doLog:
         log.msg('  (scanning %s): ' % str(module.__name__))
     for k, v in d.items():
-        if type(v) == types.ClassType:
+        if ClassType is not None and type(v) == ClassType:
+            # ClassType exists on Python 2.x and earlier.
             # Failure condition -- instances of classes with buggy
             # __hash__/__cmp__ methods referenced at the module level...
             if v.__module__ == module.__name__:
@@ -166,7 +167,7 @@ def rebuild(module, doLog=1):
                     log.logfile.write("c")
                     log.logfile.flush()
         elif type(v) == types.FunctionType:
-            if v.func_globals is module.__dict__:
+            if v.__globals__ is module.__dict__:
                 functions[v] = 1
                 if doLog:
                     log.logfile.write("f")
