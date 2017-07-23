@@ -14,8 +14,8 @@ Outcomes
 
 By the end of a Twisted release we'll have:
 
-- Tarballs for Twisted as a whole, and for each of its sub-projects
-- Windows installers for the whole Twisted project
+- Tarballs for Twisted and its C extensions
+- Windows wheels for Twisted and its C extensions
 - Updated documentation (API & howtos) on the twistedmatrix.com site
 - Updated documentation on Read The Docs
 - Updated download links on the twistedmatrix.com site
@@ -108,25 +108,27 @@ How to do a release candidate
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
 2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL.rst``.
 3. In your Git repo, fetch and check out the new release branch.
-4. Run ``python -m incremental.update Twisted --rc``
-5. Commit the changes made by Incremental.
-6. Run ``towncrier``.
-7. Commit the changes made by towncrier - this automatically removes the NEWS topfiles.
-8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
-9. Push the changes up to GitHub.
-10. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs.
-11. Copy ``NEWS.rst`` to ``/tmp/twisted-release/`` for people to view without having to download the tarballs.
+4. Run ``python -m incremental.update Twisted --rc`` to update Twisted's version
+5. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/ --rc`` to update the C extension version. Change back into the main parent dir.
+6. Commit the changes made by Incremental.
+7. Run ``towncrier``.
+8. Commit the changes made by towncrier - this automatically removes the NEWS topfiles.
+9. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
+10. Push the changes up to GitHub.
+11. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs for Twisted.
+12. Run ``python cext/setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs for the C extension package.
+13. Copy ``NEWS.rst`` to ``/tmp/twisted-release/`` for people to view without having to download the tarballs.
     (e.g. ``cp NEWS.rst /tmp/twisted-release/NEWS.rst``)
-12. Upload the tarballs to ``twistedmatrix.com/Releases/rc/$RELEASE`` (see #4353)
+14. Upload the tarballs to ``twistedmatrix.com/Releases/rc/$RELEASE`` (see #4353)
 
   - You can use ``rsync --rsh=ssh --partial --progress -av /tmp/twisted-release/ t-web@dornkirk.twistedmatrix.com:/srv/t-web/data/releases/rc/<RELEASE>/`` to do this.
 
-13. Write the release candidate announcement
+15. Write the release candidate announcement
 
   - Read through the NEWS file and summarize the interesting changes for the release
   - Get someone else to look over the announcement before doing it
 
-14. Announce the release candidate on
+16. Announce the release candidate on
 
   - the twisted-python mailing list
   - on IRC in the ``#twisted`` topic
@@ -174,18 +176,19 @@ Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
 1. Have the release branch, previously used to generate a release candidate, checked out
-2. Run ``python -m incremental.update Twisted``.
-3. Revert the release candidate newsfile changes, in order.
-4. Run ``towncrier`` to make the final newsfile.
-5. Add the quote of the release to the ``README.rst``
-6. Make a new quote file for the next version
+2. Run ``python -m incremental.update Twisted`` to update Twisted's version.
+3. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/`` to update the C extension version.
+4. Commit the changes done by Incremental.
+5. Revert the release candidate newsfile changes, in order.
+6. Run ``towncrier`` to make the final newsfile and commit it.
+7. Add the quote of the release to the ``README.rst`` and commit it.
+8. Make a new quote file for the next version and commit it.
 
    - ``git mv docs/fun/Twisted.Quotes docs/historic/Quotes/Twisted-$API; echo '' > docs/fun/Twisted.Quotes; git add docs/fun/Twisted.Quotes``
 
-7. Commit the version and ``README.rst`` changes.
-8. Submit the ticket for review
-9. Pause until the ticket is reviewed and accepted.
-10. Tag the release.
+9. Submit the ticket for review
+10. Pause until the ticket is reviewed and accepted.
+11. Tag the release.
 
    - ``git tag -s twisted-$RELEASE -m "Tag $RELEASE release"``
    - ``git push --tags``
@@ -197,6 +200,7 @@ Cut the tarballs & installers
 1. Using a checkout of the release branch or the release tag (with no local changes!), build the tarballs:
 
    - ``python setup.py sdist --formats=bztar -d /tmp/twisted-release``
+   - ``python cext/setup.py sdist --formats=bztar -d /tmp/twisted-release``
 
 2. Build Windows wheel
 
