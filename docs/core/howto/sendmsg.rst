@@ -6,6 +6,7 @@ Introduction
 
 Beyond supporting streams of data (SOCK_STREAM) or datagrams (SOCK_DGRAM), POSIX sockets have additional features not accessible via send(2) and recv(2).
 These features include things like scatter/gather I/O, duplicating file descriptors into other processes, and accessing out-of-band data.
+Support in Twisted requires either Python 3 or the ``sendfd27`` setuptools extra.
 
 Twisted includes a wrapper around the two C APIs which make these things possible, `sendmsg <http://www.opengroup.org/onlinepubs/007908799/xns/sendmsg.html>`_ and `recvmsg <http://www.opengroup.org/onlinepubs/007908799/xns/recvmsg.html>`_ .
 This document covers their usage.

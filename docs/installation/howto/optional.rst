@@ -23,7 +23,6 @@ The following optional dependencies are supported:
     * `TwistedChecker`_, only available on python2
     * `pydoctor`_, only available on python2
 
-
 * **tls** - packages that are needed to work with TLS.
     * `pyOpenSSL`_
     * `service_identity`_
@@ -37,7 +36,9 @@ The following optional dependencies are supported:
 
 * **serial** - the `pyserial`_ package to work with serial data.
 
-* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+* **sendfd27** - the ``twistedcextensions`` package that provides support for sending file descriptors over UNIX sockets on Python 2.7.
+
+* **all_non_platform** - installs **tls**, **conch**, **soap**, **sendfd27**, and **serial** options.
 
 * **osx_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 
@@ -46,6 +47,7 @@ The following optional dependencies are supported:
 * **http2** - packages needed for http2 support.
      * `h2`_
      * `priority`_
+
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
