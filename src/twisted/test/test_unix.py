@@ -43,6 +43,7 @@ class UnixSocketTests(unittest.TestCase):
         """
         filename = self.mktemp()
         peername = self.mktemp()
+        self.addCleanup(os.remove, peername)
         serverFactory = MyServerFactory()
         connMade = serverFactory.protocolConnectionMade = defer.Deferred()
         unixPort = reactor.listenUNIX(filename, serverFactory)
@@ -188,6 +189,7 @@ class UnixSocketTests(unittest.TestCase):
             d = defer.Deferred()
             f = FailedConnectionClientFactory(d)
             reactor.connectUNIX(self.filename, f, checkPID=True)
+            self.addCleanup(os.remove, self.filename)
             return self.assertFailure(d, error.BadFileError)
         return self._uncleanSocketTest(ranStupidChild)
 
@@ -315,6 +317,9 @@ class DatagramUnixSocketTests(unittest.TestCase):
         """
         clientaddr = self.mktemp()
         serveraddr = self.mktemp()
+        self.addCleanup(os.remove, clientaddr)
+        self.addCleanup(os.remove, serveraddr)
+
         sp = ServerProto()
         cp = ClientProto()
         s = reactor.listenUNIXDatagram(serveraddr, sp)
@@ -360,6 +365,7 @@ class DatagramUnixSocketTests(unittest.TestCase):
         port when used with the given protocol.
         """
         filename = self.mktemp()
+        self.addCleanup(os.remove, filename)
         unixPort = reactor.listenUNIXDatagram(filename, serverProto)
 
         connectedString = "<%s on %r>" % (protocolName, filename)
