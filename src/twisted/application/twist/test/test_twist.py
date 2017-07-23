@@ -196,7 +196,6 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
 
 class TwistExitTests(twisted.trial.unittest.TestCase):
-
     """
     Tests to verify that the Twist script takes the expected actions related
     to signals and the reactor.
