@@ -108,7 +108,7 @@ How to do a release candidate
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
 2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL.rst``.
 3. In your Git repo, fetch and check out the new release branch.
-4. Run ``python -m incremental.update Twisted --rc`` to update Twisted's version
+4. Run ``python -m incremental.update Twisted --rc`` to update Twisted's version and update the constant in ``src/twisted/python/setup.py`` to match.
 5. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/ --rc`` to update the C extension version. Change back into the main parent dir.
 6. Commit the changes made by Incremental.
 7. Run ``towncrier``.
@@ -176,7 +176,7 @@ Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
 1. Have the release branch, previously used to generate a release candidate, checked out
-2. Run ``python -m incremental.update Twisted`` to update Twisted's version.
+2. Run ``python -m incremental.update Twisted`` to update Twisted's version, and update the constant in ``src/twisted/python/setup.py`` to match.
 3. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/`` to update the C extension version.
 4. Commit the changes done by Incremental.
 5. Revert the release candidate newsfile changes, in order.
@@ -285,11 +285,9 @@ Announce
   - Twitter, if you feel like it
   - ``#twisted`` topic on IRC (you'll need ops)
 
-5. Run ``python -m incremental Twisted --dev`` to add a `dev0` postfix.
-6. Commit the dev0 update change.
-7. Merge the release branch into trunk, closing the release ticket at the same time.
-8. Close the release milestone (which should have no tickets in it).
-9. Open a milestone for the next release.
+5. Merge the release branch into trunk, closing the release ticket at the same time.
+6. Close the release milestone (which should have no tickets in it).
+7. Open a milestone for the next release.
 
 
 Release announcement
