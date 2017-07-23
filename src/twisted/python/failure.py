@@ -22,7 +22,7 @@ from inspect import getmro
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python import reflect
-from twisted.python._oldstyle import _oldStyle, _shouldEnableNewStyle
+from twisted.python._oldstyle import _shouldEnableNewStyle
 
 count = 0
 traceupLength = 4
