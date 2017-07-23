@@ -18,6 +18,7 @@ To do::
 import binascii
 import codecs
 import copy
+import functools
 import random
 import re
 import string
@@ -78,21 +79,98 @@ _MONTH_NAMES = dict(zip(
         "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()))
 
 
+def _swap(this, that, ifIs):
+    """
+    Swap C{this} with C{that} if C{this} is C{ifIs}.
+
+    @param this: The object that may be replaced.
+
+    @param that: The object that may replace C{this}.
+
+    @param ifIs: An object whose identity will be compared to
+        C{this}.
+    """
+    return that if this is ifIs else this
+
+
+def _swapAllPairs(of, that, ifIs):
+    """
+    Swap each element in each pair in C{of} with C{that} it is
+    C{ifIs}.
+
+    @param of: A list of 2-L{tuple}s, whose members may be the object
+        C{that}
+    @type of: L{list} of 2-L{tuple}s
+
+    @param ifIs: An object whose identity will be compared to members
+        of each pair in C{of}
+
+    @return: A L{list} of 2-L{tuple}s with all occurences of C{ifIs}
+        replaced with C{that}
+    """
+    return [(_swap(first, that, ifIs), _swap(second, that, ifIs))
+            for first, second in of]
+
+
 class MessageSet(object):
     """
-    Essentially an infinite bitfield, with some extra features.
+    A set of message identifiers usable by both L{IMAP4Client} and
+    L{IMAP4Server} via L{IMailboxIMAP.store} and
+    L{IMailboxIMAP.fetch}.
+
+    These identifiers can be either message sequence numbers or unique
+    identifiers.  See Section 2.3.1, "Message Numbers", RFC 3501.
+
+    This represents the C{sequence-set} described in Section 9,
+    "Formal Syntax" of RFC 3501:
+
+        - A L{MessageSet} can describe a single identifier, e.g.
+          C{MessageSet(1)}
+
+        - A L{MessageSet} can describe C{*} via L{None}, e.g.
+          C{MessageSet(None)}
+
+        - A L{MessageSet} can describe a range of identifiers, e.g.
+          C{MessageSet(1, 2)}.  The range is inclusive and unordered
+          (see C{seq-range} in RFC 3501, Section 9), so that
+          C{Message(2, 1)} is equivalent to C{MessageSet(1, 2)}, and
+          both describe messages 1 and 2.  Ranges can include C{*} by
+          specifying L{None}, e.g. C{MessageSet(None, 1)}.  In all
+          cases ranges are normalized so that the smallest identifier
+          comes first, and L{None} always comes last; C{Message(2, 1)}
+          becomes C{MessageSet(1, 2)} and C{MessageSet(None, 1)}
+          becomes C{MessageSet(1, None)}
+
+        - A L{MessageSet} can describe a sequence of single
+          identifiers and ranges, constructed by addition.
+          C{MessageSet(1) + MessageSet(5, 10)} refers the message
+          identified by C{1} and the messages identified by C{5}
+          through C{10}.
+
+    B{NB: The meaning of * varies, but it always represents the
+    largest number in use}.
+
+    B{For servers}: Your L{IMailboxIMAP} provider must set
+    L{MessageSet.last} to the highest-valued identifier (unique or
+    message sequence) before iterating over it.
+
+    B{For clients}: C{*} consumes ranges smaller than it, e.g.
+    C{MessageSet(1, 100) + MessageSet(50, None)} is equivalent to
+    C{1:*}.
 
     @type getnext: Function taking L{int} returning L{int}
     @ivar getnext: A function that returns the next message number,
-    used when iterating through the MessageSet. By default, a function
-    returning the next integer is supplied, but as this can be rather
-    inefficient for sparse UID iterations, it is recommended to supply
-    one when messages are requested by UID.  The argument is provided
-    as a hint to the implementation and may be ignored if it makes sense
-    to do so (eg, if an iterator is being used that maintains its own
-    state, it is guaranteed that it will not be called out-of-order).
+        used when iterating through the L{MessageSet}.  By default, a
+        function returning the next integer is supplied, but as this
+        can be rather inefficient for sparse UID iterations, it is
+        recommended to supply one when messages are requested by UID.
+        The argument is provided as a hint to the implementation and
+        may be ignored if it makes sense to do so (eg, if an iterator
+        is being used that maintains its own state, it is guaranteed
+        that it will not be called out-of-order).
     """
     _empty = []
+    _infinity = float('inf')
 
     def __init__(self, start=_empty, end=_empty):
         """
@@ -127,24 +205,26 @@ class MessageSet(object):
 
             self._last = value
             for i, (l, h) in enumerate(self.ranges):
-                if l is not None:
-                    break # There are no more Nones after this
-                l = value
+                if l is None:
+                    l = value
                 if h is None:
                     h = value
                 if l > h:
                     l, h = h, l
                 self.ranges[i] = (l, h)
-
             self.clean()
 
         def _getLast(self):
             return self._last
 
         doc = '''
-            "Highest" message number, referred to by "*".
-            Must be set before attempting to use the MessageSet.
-        '''
+              Replaces all occurrences of "*".  This should be the
+              largest number in use.  Must be set before attempting to
+              use the MessageSet as a container.
+
+              @raises: L{ValueError} if a largest value has already
+                  been set.
+              '''
         return _getLast, _setLast, None, doc
     last = property(*last())
 
@@ -168,12 +248,9 @@ class MessageSet(object):
             if end is None:
                 end = self.last
 
-        if start > end:
-            # Try to keep in low, high order if possible
-            # (But we don't know what None means, this will keep
-            # None at the start of the ranges list)
-            start, end = end, start
-
+        start, end = sorted(
+            [start, end],
+            key=functools.partial(_swap, that=self._infinity, ifIs=None))
         self.ranges.append((start, end))
         self.clean()
 
@@ -184,6 +261,8 @@ class MessageSet(object):
             return MessageSet(ranges)
         else:
             res = MessageSet(self.ranges)
+            if self.last is not self._empty:
+                res.last = self.last
             try:
                 res.add(*other)
             except TypeError:
@@ -192,6 +271,13 @@ class MessageSet(object):
 
 
     def extend(self, other):
+        """
+        Extend our messages with another message or set of messages.
+
+        @param other: The messages to include.
+        @type other: L{MessageSet}, L{tuple} of two L{int}s, or a
+            single L{int}
+        """
         if isinstance(other, MessageSet):
             self.ranges.extend(other.ranges)
             self.clean()
@@ -209,33 +295,76 @@ class MessageSet(object):
         Clean ranges list, combining adjacent ranges
         """
 
-        self.ranges.sort()
+        ranges = sorted(_swapAllPairs(self.ranges,
+                                      that=self._infinity,
+                                      ifIs=None))
 
-        oldl, oldh = None, None
-        for i,(l, h) in enumerate(self.ranges):
-            if l is None:
+        mergedRanges = [(float('-inf'), float('-inf'))]
+
+
+        for low, high in ranges:
+            previousLow, previousHigh = mergedRanges[-1]
+
+            if previousHigh < low - 1:
+                mergedRanges.append((low, high))
                 continue
-            # l is >= oldl and h is >= oldh due to sort()
-            if oldl is not None and l <= oldh + 1:
-                l = oldl
-                h = max(oldh, h)
-                self.ranges[i - 1] = None
-                self.ranges[i] = (l, h)
 
-            oldl, oldh = l, h
+            mergedRanges[-1] = (min(previousLow, low),
+                                max(previousHigh, high))
 
-        self.ranges = [r for r in self.ranges if r]
+        self.ranges = _swapAllPairs(mergedRanges[1:],
+                                    that=None,
+                                    ifIs=self._infinity)
+
+
+    def _noneInRanges(self):
+        """
+        Is there a L{None} in our ranges?
+
+        L{MessageSet.clean} merges overlapping or consecutive ranges.
+        None is represents a value larger than any number.  There are
+        thus two cases:
+
+            1. C{(x, *) + (y, z)} such that C{x} is smaller than C{y}
+
+            2. C{(z, *) + (x, y)} such that C{z} is larger than C{y}
+
+        (Other cases, such as C{y < x < z}, can be split into these
+        two cases; for example C{(y - 1, y)} + C{(x, x) + (z, z + 1)})
+
+        In case 1, C{* > y} and C{* > z}, so C{(x, *) + (y, z) = (x,
+        *)}
+
+        In case 2, C{z > x and z > y}, so the intervals do not merge,
+        and the ranges are sorted as C{[(x, y), (z, *)]}.  C{*} is
+        represented as C{(*, *)}, so this is the same as 2.  but with
+        a C{z} that is greater than everything.
+
+        The result is that there is a maximum of two L{None}s, and one
+        of them has to be the high element in the last tuple in
+        C{self.ranges}.  That means checking if C{self.ranges[-1][-1]}
+        is L{None} suffices to check if I{any} element is L{None}.
+
+        @return: L{True} if L{None} is in some range in ranges and
+            L{False} if otherwise.
+        """
+        return self.ranges[-1][-1] is None
 
 
     def __contains__(self, value):
         """
         May raise TypeError if we encounter an open-ended range
+
+        @param value: Is this in our ranges?
+        @type value: L{int}
         """
-        for l, h in self.ranges:
-            if l is None:
-                raise TypeError(
-                    "Can't determine membership; last value not set")
-            if l <= value <= h:
+
+        if self._noneInRanges():
+            raise TypeError(
+                "Can't determine membership; last value not set")
+
+        for low, high in self.ranges:
+            if low <= value <= high:
                 return True
 
         return False
@@ -247,12 +376,10 @@ class MessageSet(object):
             while l <= h:
                 yield l
                 l = self.getnext(l)
-                if l is None:
-                    break
 
 
     def __iter__(self):
-        if self.ranges and self.ranges[0][0] is None:
+        if self._noneInRanges():
             raise TypeError("Can't iterate; last value not set")
 
         return self._iterator()
@@ -262,10 +389,9 @@ class MessageSet(object):
         res = 0
         for l, h in self.ranges:
             if l is None:
-                if h is None:
-                    res += 1
-                else:
-                    raise TypeError("Can't size object; last value not set")
+                res += 1
+            elif h is None:
+                raise TypeError("Can't size object; last value not set")
             else:
                 res += (h - l) + 1
 
@@ -280,8 +406,8 @@ class MessageSet(object):
                     p.append('*')
                 else:
                     p.append(str(low))
-            elif low is None:
-                p.append('%d:*' % (high,))
+            elif high is None:
+                p.append('%d:*' % (low,))
             else:
                 p.append('%d:%d' % (low, high))
         return ','.join(p)
@@ -296,6 +422,8 @@ class MessageSet(object):
             return self.ranges == other.ranges
         return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class LiteralString:
