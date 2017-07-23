@@ -223,7 +223,9 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         The UNIX socket created by L{IReactorUNIX.listenUNIX} is created with
         the mode specified.
         """
-        self._modeTest('listenUNIX', self.mktemp(), ServerFactory())
+        tmp = self.mktemp()
+        self.addCleanup(unlink, tmp)
+        self._modeTest('listenUNIX', tmp, ServerFactory())
 
 
     def test_listenOnLinuxAbstractNamespace(self):
@@ -694,7 +696,9 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         The UNIX socket created by L{IReactorUNIXDatagram.listenUNIXDatagram}
         is created with the mode specified.
         """
-        self._modeTest('listenUNIXDatagram', self.mktemp(), DatagramProtocol())
+        tmp = self.mktemp()
+        self.addCleanup(unlink, tmp)
+        self._modeTest('listenUNIXDatagram', tmp, DatagramProtocol())
 
 
     def test_listenOnLinuxAbstractNamespace(self):
