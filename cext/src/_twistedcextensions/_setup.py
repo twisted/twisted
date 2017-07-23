@@ -69,12 +69,12 @@ class ConditionalExtension(Extension, object):
 # The C extensions used for Twisted.
 _EXTENSIONS = [
     ConditionalExtension(
-        "_twisted_c_extensions._raiser",
-        sources=["src/_twisted_c_extensions/_raiser.c"]),
+        "_twistedcextensions._raiser",
+        sources=["src/_twistedcextensions/_raiser.c"]),
 
     ConditionalExtension(
-        "_twisted_c_extensions._sendmsg",
-        sources=["src/_twisted_c_extensions/sendmsg.c"],
+        "_twistedcextensions._sendmsg",
+        sources=["src/_twistedcextensions/sendmsg.c"],
         condition=lambda _: not _PY3 and sys.platform != "win32"),
     ]
 
