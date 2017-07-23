@@ -59,27 +59,6 @@ class FailureTests(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_trapRaisesCurrentFailure(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the current
-        L{failure.Failure} ie C{self}.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIs(f, untrapped)
-
-    if _shouldEnableNewStyle:
-        test_trapRaisesCurrentFailure.skip = (
-            "In Python 3, or with new-style classes enabled on Python 2, "
-            "Failure.trap raises the wrapped Exception "
-            "instead of the original Failure instance.")
-
-
     def test_trapRaisesWrappedException(self):
         """
         If the wrapped C{Exception} is not a subclass of one of the
