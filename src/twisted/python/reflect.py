@@ -134,6 +134,12 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
     if not curClass:
         curClass = obj.__class__
     for base in curClass.__bases__:
+        # The implementation of the object class is different on PyPy vs.
+        # CPython.  This has the side effect of making accumulateMethods()
+        # pick up object methods from all new-style classes -
+        # such as __getattribute__, etc.
+        # If we ignore 'object' when accumulating methods, we can get
+        # consistent behavior on Pypy and CPython.
         if base is not object:
             accumulateMethods(obj, dict, prefix, base)
 
