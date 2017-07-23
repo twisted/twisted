@@ -55,24 +55,7 @@ if platform.python_implementation() == 'PyPy':
 else:
     _PYPY = False
 
-def _shouldEnableNewStyle():
-    """
-    Returns whether or not we should enable the new-style conversion of
-    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
-    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
-    values and everything else as a truthy value.
 
-    @rtype: L{bool}
-    """
-    value = os.environ.get('TWISTED_NEWSTYLE', '')
-
-    if value in ['', 'no', 'false', 'False', '0']:
-        return False
-    else:
-        return True
-
-
-_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 def _shouldEnableNewStyle():
     """
@@ -173,6 +156,8 @@ def inet_pton(af, addr):
         return struct.pack('!8H', *parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
+
+
 
 def inet_ntop(af, addr):
     if af == socket.AF_INET:
@@ -292,6 +277,7 @@ def comparable(klass):
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
         return klass
+
 
     def __eq__(self, other):
         c = self.__cmp__(other)
@@ -547,7 +533,6 @@ else:
     def intToBytes(i):
         return b"%d" % i
 
-
     lazyByteSlice = buffer
 
     def networkString(s):
@@ -633,8 +618,10 @@ if _PY3:
     def iteritems(d):
         return d.items()
 
+
     def itervalues(d):
         return d.values()
+
 
     def items(d):
         return list(d.items())
@@ -646,8 +633,10 @@ else:
     def iteritems(d):
         return d.iteritems()
 
+
     def itervalues(d):
         return d.itervalues()
+
 
     def items(d):
         return d.items()
