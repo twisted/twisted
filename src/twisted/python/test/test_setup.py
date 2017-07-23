@@ -78,6 +78,19 @@ class OptionalDependenciesTests(TestCase):
         """
         Setuptools' Distribution object parses and stores its C{extras_require}
         argument as an attribute.
+
+        Requirements for install_requires/setup_requires can specified as:
+         * a single requirement as a string, such as:
+           {'im_an_extra_dependency': 'thing'}
+         * a series of requirements as a list, such as:
+           {'im_an_extra_dependency': ['thing']}
+         * a series of requirements as a multi-line string, such as:
+           {'im_an_extra_dependency': '''
+                                      thing
+                                      '''}
+
+        The extras need to be parsed with pkg_resources.parse_requirements(),
+        which returns a generator.
         """
         extras = dict(im_an_extra_dependency="thing")
         attrs = dict(extras_require=extras)
