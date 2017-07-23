@@ -22,7 +22,6 @@ from inspect import getmro
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python import reflect
-from twisted.python._oldstyle import _shouldEnableNewStyle
 
 count = 0
 traceupLength = 4
@@ -341,10 +340,7 @@ class Failure(BaseException):
         """
         error = self.check(*errorTypes)
         if not error:
-            if _shouldEnableNewStyle:
-                self.raiseException()
-            else:
-                raise self
+            self.raiseException()
         return error
 
     def check(self, *errorTypes):
