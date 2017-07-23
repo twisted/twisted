@@ -144,8 +144,7 @@ class _Code(object):
 
 
 
-@_oldStyle
-class Failure:
+class Failure(BaseException):
     """
     A basic abstraction for an error that has occurred.
 
