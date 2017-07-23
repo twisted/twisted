@@ -27,7 +27,9 @@ from twisted.internet import interfaces
 from twisted.internet import reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
-from twisted.mail.interfaces import IChallengeResponse, ICloseableMailboxIMAP
+from twisted.mail.interfaces import (IChallengeResponse,
+                                     IClientAuthentication,
+                                     ICloseableMailboxIMAP)
 from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
 from twisted.python import failure
@@ -3464,6 +3466,71 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
             if _PY3:
                 expected = repr(expected)
 
+            self.assertEqual(message, expected)
+
+        d = self.connected.addCallback(strip(auth))
+        d.addErrback(authFailed)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+
+        return defer.gatherResults([d, self.loopback()])
+
+
+    def test_challengerRaisesException(self):
+        """
+        When a challenger's
+        L{getChallenge<IChallengeResponse.getChallenge>} method raises
+        any exception, a bad response is sent.
+        """
+
+        @implementer(IChallengeResponse)
+        class ValueErrorAuthChallenge(object):
+            message = "A challenge failure"
+
+            def getChallenge(self):
+                raise ValueError(self.message)
+
+
+            def setResponse(self, response):
+                """
+                Never called.
+
+                @param response: See L{IChallengeResponse.setResponse}
+                """
+
+
+            def moreChallenges(self):
+                """
+                Never called.
+                """
+
+        @implementer(IClientAuthentication)
+        class ValueErrorAuthenticator(object):
+
+            def getName(self):
+                return b"ERROR"
+
+            def challengeResponse(self, secret, chal):
+                return b"IGNORED"
+
+        bad = ValueErrorAuthChallenge()
+        verifyObject(IChallengeResponse, bad)
+
+        self.server.challengers[b'ERROR'] = ValueErrorAuthChallenge
+        self.client.registerAuthenticator(ValueErrorAuthenticator())
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        def authFailed(failure):
+            failure.trap(imap4.IMAP4Exception)
+            message = str(failure.value)
+
+            expected = (
+                "Server error: " + ValueErrorAuthChallenge.message
+            ).encode('ascii')
+
+            if _PY3:
+                expected = repr(expected)
             self.assertEqual(message, expected)
 
         d = self.connected.addCallback(strip(auth))
