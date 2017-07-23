@@ -93,7 +93,7 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    c=[
+    sendfd27=[
         "twistedcextensions == " + twistedVersion
     ],
     tls=[
@@ -123,11 +123,12 @@ _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
     _EXTRA_OPTIONS['serial'] +
-    _EXTRA_OPTIONS['http2']
+    _EXTRA_OPTIONS['http2'] +
+    _EXTRA_OPTIONS['sendfd27']
 )
 
 _EXTRAS_REQUIRE = {
-    'c': _EXTRA_OPTIONS['c'],
+    'sendfd27': _EXTRA_OPTIONS['sendfd27'],
     'dev': _EXTRA_OPTIONS['dev'],
     'tls': _EXTRA_OPTIONS['tls'],
     'conch': _EXTRA_OPTIONS['conch'],

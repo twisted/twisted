@@ -90,9 +90,10 @@ class OptionalDependenciesTests(TestCase):
     def test_extrasRequireDictContainsKeys(self):
         """
         L{_EXTRAS_REQUIRE} contains options for all documented extras: C{dev},
-        C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform},
+        C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform}, C{sendfd27},
         C{osx_platform}, and C{windows_platform}.
         """
+        self.assertIn('sendfd27', _EXTRAS_REQUIRE)
         self.assertIn('dev', _EXTRAS_REQUIRE)
         self.assertIn('tls', _EXTRAS_REQUIRE)
         self.assertIn('conch', _EXTRAS_REQUIRE)
@@ -104,12 +105,12 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('http2', _EXTRAS_REQUIRE)
 
 
-    def test_extrasRequiresCDeps(self):
+    def test_extrasRequiresSendFD27Deps(self):
         """
-        L{_EXTRAS_REQUIRE}'s C{C} extra contains setuptools requirements for
-        the tools required for Twisted development.
+        L{_EXTRAS_REQUIRE}'s C{sendfd27} extra contains the package containing
+        C extensions for Twisted.
         """
-        deps = _EXTRAS_REQUIRE['c']
+        deps = _EXTRAS_REQUIRE['sendfd27']
         from twisted import __version__
         self.assertIn('twistedcextensions == ' + __version__, deps)
 
@@ -202,6 +203,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
+        self.assertIn('twistedcextensions == ' + __version__, deps)
 
 
     def test_extrasRequiresOsxPlatformDeps(self):
