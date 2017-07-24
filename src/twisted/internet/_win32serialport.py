@@ -37,6 +37,15 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             parity=parity, stopbits=stopbits, timeout=None,
             xonxoff=xonxoff, rtscts=rtscts)
 
+        try:
+            # >= 3.0 if _port_handle is available
+            serial._port_handle
+            self._pyserial_version = (3, 0)
+        except AttributeError:
+            # <= 2.7 if hComPort is available
+            serial.hComPort
+            self._pyserial_version = (2, 7)
+
         self.flushInput()
         self.flushOutput()
         self.reactor = reactor
@@ -61,14 +70,10 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     @property
     def _serialHandle(self):
-        # Try to detect pyserial version to support internal API changes
-        serial = self._serial
-        try:
-            # >= 3.0
-            return serial._port_handle
-        except AttributeError:
-            # <= 2.7
-            return serial.hComPort
+        if self._pyserial_version >= (3, 0):
+            return self._serial._port_handle
+        else:
+            return self._serial.hComPort
 
 
     def _finishPortSetup(self):
