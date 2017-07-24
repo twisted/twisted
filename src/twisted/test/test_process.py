@@ -26,7 +26,6 @@ import sys
 import signal
 import errno
 import gc
-import stat
 import operator
 
 
