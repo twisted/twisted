@@ -61,13 +61,12 @@ class UNIXFamilyMixin(object):
     """
     Test-helper defining mixin for things related to AF_UNIX sockets.
     """
-    def _modeTest(self, methodName, path, factory):
+    def _modeTest(self, reactor, methodName, path, factory):
         """
         Assert that the mode of the created unix socket is set to the mode
         specified to the reactor method.
         """
         mode = 0o600
-        reactor = self.buildReactor()
         unixPort = getattr(reactor, methodName)(path, factory, mode=mode)
         unixPort.stopListening()
         self.assertEqual(S_IMODE(stat(path).st_mode), mode)
@@ -223,9 +222,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         The UNIX socket created by L{IReactorUNIX.listenUNIX} is created with
         the mode specified.
         """
+        reactor = self.buildReactor()
         tmp = self.mktemp()
         self.addCleanup(unlink, tmp)
-        self._modeTest('listenUNIX', tmp, ServerFactory())
+        self._modeTest(reactor, 'listenUNIX', tmp, ServerFactory())
 
 
     def test_listenOnLinuxAbstractNamespace(self):
@@ -696,9 +696,10 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
         The UNIX socket created by L{IReactorUNIXDatagram.listenUNIXDatagram}
         is created with the mode specified.
         """
+        reactor = self.buildReactor()
         tmp = self.mktemp()
         self.addCleanup(unlink, tmp)
-        self._modeTest('listenUNIXDatagram', tmp, DatagramProtocol())
+        self._modeTest(reactor, 'listenUNIXDatagram', tmp, DatagramProtocol())
 
 
     def test_listenOnLinuxAbstractNamespace(self):

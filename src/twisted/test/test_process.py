@@ -2533,6 +2533,7 @@ class UtilTests(unittest.TestCase):
                            (j(self.bazbar, "executable"), 0)]:
             open(name, "wb").close()
             os.chmod(name, mode)
+            self.addCleanup(os.chmod, name, 0o700)
             self.addCleanup(os.remove, name)
 
         self.oldPath = os.environ.get('PATH', None)
