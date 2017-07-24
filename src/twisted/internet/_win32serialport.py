@@ -39,11 +39,11 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
         try:
             # >= 3.0 if _port_handle is available
-            serial._port_handle
+            self._serial._port_handle
             self._pyserial_version = (3, 0)
         except AttributeError:
             # <= 2.7 if hComPort is available
-            serial.hComPort
+            self._serial.hComPort
             self._pyserial_version = (2, 7)
 
         self.flushInput()
