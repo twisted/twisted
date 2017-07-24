@@ -2516,7 +2516,7 @@ class UtilTests(unittest.TestCase):
         j = os.path.join
 
         base = self.mktemp()
-        self.addCleanup(shutil.rmtree, base)
+        self.addCleanup(shutil.rmtree, base, ignore_errors=True)
 
         self.foo = j(base, "foo")
         self.baz = j(base, "baz")
