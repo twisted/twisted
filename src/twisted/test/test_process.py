@@ -19,6 +19,7 @@ Test running processes.
 
 from __future__ import division, absolute_import, print_function
 
+import shutil
 import gzip
 import os
 import sys
@@ -2515,6 +2516,7 @@ class UtilTests(unittest.TestCase):
         j = os.path.join
 
         base = self.mktemp()
+        self.addCleanup(shutil.rmtree, base)
 
         self.foo = j(base, "foo")
         self.baz = j(base, "baz")
@@ -2533,8 +2535,6 @@ class UtilTests(unittest.TestCase):
                            (j(self.bazbar, "executable"), 0)]:
             open(name, "wb").close()
             os.chmod(name, mode)
-            self.addCleanup(os.chmod, name, 0o700)
-            self.addCleanup(os.remove, name)
 
         self.oldPath = os.environ.get('PATH', None)
         os.environ['PATH'] = os.pathsep.join((
