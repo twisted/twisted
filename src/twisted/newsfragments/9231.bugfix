@@ -1,0 +1,1 @@
+twisted.python.test.test_setup now passes with setuptools 36.2.1
