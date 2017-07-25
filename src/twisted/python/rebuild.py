@@ -56,8 +56,10 @@ class Sensitive:
         yn = (self.lastRebuild < lastRebuild)
         return yn
 
+
     def rebuildUpToDate(self):
         self.lastRebuild = time.time()
+
 
     def latestVersionOf(self, anObject):
         """
@@ -99,6 +101,7 @@ def latestFunction(oldFunc):
     return getattr(module, oldFunc.__name__)
 
 
+
 def latestClass(oldClass):
     """
     Get the latest version of a class.
@@ -117,16 +120,20 @@ def latestClass(oldClass):
             return newClass
 
         ctor = type(newClass)
-        # ctor is the metaclass in both Python 2 and 3, except if it was old-style
+        # The value of type(newClass) is the metaclass
+        # in both Python 2 and 3, except if it was old-style.
         if _isClassType(ctor):
             ctor = getattr(newClass, '__metaclass__', type)
-        return ctor(newClass.__name__, tuple(newBases), dict(newClass.__dict__))
+        return ctor(newClass.__name__, tuple(newBases),
+                    dict(newClass.__dict__))
+
 
 
 class RebuildError(Exception):
     """
     Exception raised when trying to rebuild a class whereas it's not possible.
     """
+
 
 
 def updateInstance(self):
@@ -137,9 +144,11 @@ def updateInstance(self):
         self.__class__ = latestClass(self.__class__)
     except TypeError:
         if hasattr(self.__class__, '__slots__'):
-            raise RebuildError("Can't rebuild class with __slots__ on Python < 2.6")
+            raise RebuildError(
+                "Can't rebuild class with __slots__ on Python < 2.6")
         else:
             raise
+
 
 
 def __getattr__(self, name):
@@ -149,9 +158,11 @@ def __getattr__(self, name):
     if name == '__del__':
         raise AttributeError("Without this, Python segfaults.")
     updateInstance(self)
-    log.msg("(rebuilding stale %s instance (%s))" % (reflect.qual(self.__class__), name))
+    log.msg("(rebuilding stale {} instance ({}))".format(
+            reflect.qual(self.__class__), name))
     result = getattr(self, name)
     return result
+
 
 
 def rebuild(module, doLog=1):
@@ -167,7 +178,7 @@ def rebuild(module, doLog=1):
     if doLog:
         log.msg('Rebuilding %s...' % str(module.__name__))
 
-    ## Safely handle adapter re-registration
+    # Safely handle adapter re-registration
     from twisted.python import components
     components.ALLOW_DUPLICATES = True
 
@@ -223,7 +234,8 @@ def rebuild(module, doLog=1):
 
     for clazz in classes:
         if getattr(module, clazz.__name__) is clazz:
-            log.msg("WARNING: class %s not replaced by reload!" % reflect.qual(clazz))
+            log.msg("WARNING: class {} not replaced by reload!".format(
+                    reflect.qual(clazz)))
         else:
             if doLog:
                 log.logfile.write("x")
@@ -237,7 +249,8 @@ def rebuild(module, doLog=1):
     for nclass in newclasses:
         ga = getattr(module, nclass.__name__)
         if ga is nclass:
-            log.msg("WARNING: new-class %s not replaced by reload!" % reflect.qual(nclass))
+            log.msg("WARNING: new-class {} not replaced by reload!".format(
+                    reflect.qual(nclass)))
         else:
             for r in gc.get_referrers(nclass):
                 if getattr(r, '__class__', None) is nclass:
@@ -287,7 +300,7 @@ def rebuild(module, doLog=1):
                     for base in v.__bases__:
                         if fromOldModule(base):
                             latestClass(v)
-        if doLog and not changed and ((modcount % 10) ==0) :
+        if doLog and not changed and ((modcount % 10) == 0) :
             log.logfile.write(".")
             log.logfile.flush()
 
