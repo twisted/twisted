@@ -25,12 +25,14 @@ def _isClassType(t):
     """
     Compare to types.ClassType in a py2/3-compatible way
 
-    Python 2 used comparison to types.ClassType to check for old-style classes.
-    Python 3 has no concept of old-style classes, so if ClassType doesn't exist,
-    it can't be an old-style class - return False in that case.
+    Python 2 used comparison to types.ClassType to check for old-style
+    classes Python 3 has no concept of old-style classes, so if
+    ClassType doesn't exist, it can't be an old-style class - return
+    False in that case.
 
-    Note that the type() of new-style classes is NOT ClassType, and so this
-    should return False for new-style classes in python 2 as well.
+    Note that the type() of new-style classes is NOT ClassType, and
+    so this should return False for new-style classes in python 2
+    as well.
     """
     _ClassType = getattr(types, 'ClassType', None)
     if _ClassType is None:
