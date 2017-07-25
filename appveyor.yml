@@ -29,7 +29,6 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\bin\\admin\\run_with_env.cmd"
-    TESTS:
 
   # Only use pre-installed Python versions, which Appveyor may upgrade to
   # a later point release.
@@ -43,20 +42,8 @@ environment:
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
-      TOXENV: py27-alldeps-withcov-windows-pyserial2,codecov-publish
-      TWISTED_REACTOR: "select"
-      TESTS: twisted.internet.test.test_win32serialport
-    - PYTHON_HOME: C:\\Python27-x64
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
       TOXENV: py27-alldeps-withcov-windows,codecov-publish
       TWISTED_REACTOR: "iocp"
-    - PYTHON_HOME: C:\\Python27-x64
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
-      TOXENV: py27-alldeps-withcov-windows-pyserial2,codecov-publish
-      TWISTED_REACTOR: "iocp"
-      TESTS: twisted.internet.test.test_win32serialport
     - PYTHON_HOME: C:\\PYTHON34-x64
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
@@ -65,15 +52,6 @@ environment:
       # so we can only choose the default reactor here:
       # https://twistedmatrix.com/trac/ticket/8745
       TWISTED_REACTOR: "default"
-    - PYTHON_HOME: C:\\PYTHON34-x64
-      PYTHON_VERSION: "3.4"
-      PYTHON_ARCH: "64"
-      TOXENV: py34-alldeps-withcov-windows-pyserial2,codecov-publish
-      # The --reactor flag to trial doesn't work on Windows Python 3
-      # so we can only choose the default reactor here:
-      # https://twistedmatrix.com/trac/ticket/8745
-      TWISTED_REACTOR: "default"
-      TESTS: twisted.internet.test.test_win32serialport
     - PYTHON_HOME: C:\\PYTHON35-x64
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
@@ -82,15 +60,6 @@ environment:
       # so we can only choose the default reactor here:
       # https://twistedmatrix.com/trac/ticket/8745
       TWISTED_REACTOR: "default"
-    - PYTHON_HOME: C:\\PYTHON35-x64
-      PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "64"
-      TOXENV: py35-alldeps-withcov-windows-pyserial2,codecov-publish
-      # The --reactor flag to trial doesn't work on Windows Python 3
-      # so we can only choose the default reactor here:
-      # https://twistedmatrix.com/trac/ticket/8745
-      TWISTED_REACTOR: "default"
-      TESTS: twisted.internet.test.test_win32serialport
 
 matrix:
   allow_failures:
@@ -136,4 +105,4 @@ install:
   - "python -m pip install tox"
 
 test_script:
-  - "%CMD_IN_ENV% python -m tox -e %TOXENV% %TESTS%"
+  - "%CMD_IN_ENV% python -m tox -e %TOXENV%"
