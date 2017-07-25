@@ -176,7 +176,7 @@ def rebuild(module, doLog=1):
         if not module.ALLOW_TWISTED_REBUILD:
             raise RuntimeError("I am not allowed to be rebuilt.")
     if doLog:
-        log.msg('Rebuilding %s...' % str(module.__name__))
+        log.msg('Rebuilding {}...'.format(str(module.__name__)))
 
     # Safely handle adapter re-registration
     from twisted.python import components
@@ -189,7 +189,7 @@ def rebuild(module, doLog=1):
     functions = {}
     values = {}
     if doLog:
-        log.msg('  (scanning %s): ' % str(module.__name__))
+        log.msg('  (scanning {}): '.format(str(module.__name__)))
     for k, v in d.items():
         if _isClassType(type(v)):
             # ClassType exists on Python 2.x and earlier.
@@ -222,7 +222,7 @@ def rebuild(module, doLog=1):
 
     if doLog:
         log.msg('')
-        log.msg('  (reload   %s)' % str(module.__name__))
+        log.msg('  (reload   {})'.format(str(module.__name__)))
 
     # Boom.
     reload(module)
@@ -230,7 +230,7 @@ def rebuild(module, doLog=1):
     linecache.clearcache()
 
     if doLog:
-        log.msg('  (cleaning %s): ' % str(module.__name__))
+        log.msg('  (cleaning {}): '.format(str(module.__name__)))
 
     for clazz in classes:
         if getattr(module, clazz.__name__) is clazz:
@@ -257,7 +257,7 @@ def rebuild(module, doLog=1):
                     r.__class__ = ga
     if doLog:
         log.msg('')
-        log.msg('  (fixing   %s): ' % str(module.__name__))
+        log.msg('  (fixing   {}): '.format(str(module.__name__)))
     modcount = 0
     for mk, mod in sys.modules.items():
         modcount = modcount + 1
@@ -307,5 +307,5 @@ def rebuild(module, doLog=1):
     components.ALLOW_DUPLICATES = False
     if doLog:
         log.msg('')
-        log.msg('   Rebuilt %s.' % str(module.__name__))
+        log.msg('   Rebuilt {}.'.format(str(module.__name__)))
     return module
