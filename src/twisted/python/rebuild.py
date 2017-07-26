@@ -140,14 +140,7 @@ def updateInstance(self):
     """
     Updates an instance to be current.
     """
-    try:
-        self.__class__ = latestClass(self.__class__)
-    except TypeError:
-        if hasattr(self.__class__, '__slots__'):
-            raise RebuildError(
-                "Can't rebuild class with __slots__ on Python < 2.6")
-        else:
-            raise
+    self.__class__ = latestClass(self.__class__)
 
 
 
