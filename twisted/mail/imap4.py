@@ -460,7 +460,7 @@ class IMailboxListener(Interface):
 # Some definitions (SP, CTL, DQUOTE) are also from the ABNF RFC -
 # <https://tools.ietf.org/html/rfc2234>.
 _SP = ' '
-_CTL = ''.join(chr(ch) for ch in range(0x21) + range(0x80, 0x100))
+_CTL = ''.join(chr(ch) for ch in list(range(0x21)) + list(range(0x80, 0x100)))
 
 # It is easier to define ATOM-CHAR in terms of what it does not match than in
 # terms of what it does match.
@@ -6154,7 +6154,7 @@ def encoder(s, errors=None):
     r = []
     _in = []
     for c in s:
-        if ord(c) in (range(0x20, 0x26) + range(0x27, 0x7f)):
+        if ord(c) in list(range(0x20, 0x26)) + list(range(0x27, 0x7f)):
             if _in:
                 r.extend(['&', modified_base64(''.join(_in)), '-'])
                 del _in[:]
