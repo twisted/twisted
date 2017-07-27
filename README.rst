@@ -1,10 +1,10 @@
 Twisted 17.5.0
 ==============
 
-|pypi|
-|coverage|
-|travis|
-|appveyor|
+|pypi|_
+|coverage|_
+|travis|_
+|appveyor|_
 
 .. code::
 
@@ -108,7 +108,7 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 .. _pypi: https://pypi.python.org/pypi/twisted
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
-.. _travis https://travis-ci.org/twisted/twisted
+.. _travis: https://travis-ci.org/twisted/twisted
 
 .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
-.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted
+.. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted

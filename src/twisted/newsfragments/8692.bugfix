@@ -1,0 +1,4 @@
+twisted.web.server.Request.notifyFinish will now once again promptly notify
+applications of client disconnection (assuming that the client doesn't send a
+large amount of pipelined request data) rather than waiting for the timeout;
+this fixes a bug introduced in Twisted 16.3.0.
