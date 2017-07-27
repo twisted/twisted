@@ -109,7 +109,7 @@ _EXTRA_OPTIONS = dict(
         'appdirs >= 1.4.0',
     ],
     soap=['soappy'],
-    serial=['pyserial'],
+    serial=['pyserial >= 3.0'],
     osx=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
