@@ -1366,7 +1366,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         keys._secToNist = old_sec.copy()
 
 
-    def test_setSuppotedKeys(self):
+    def test_setSupportedKeys(self):
         """
         Test setting a set of supported public keys.
         """
@@ -1964,7 +1964,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         keys._secToNist = old_sec.copy()
 
 
-    def test_setSuppotedKeys(self):
+    def test_setSupportedKeys(self):
         """
         Test setting a set of supported public keys.
         """
