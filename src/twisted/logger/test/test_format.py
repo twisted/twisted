@@ -244,7 +244,7 @@ class TimeFormattingTests(unittest.TestCase):
         """
         "%f" supported in time format.
         """
-        self.assertEqual(formatTime(1.23456, timeFormat="%f"), u"234560")
+        self.assertEqual(formatTime(1000000.23456, timeFormat="%f"), u"234560")
 
 
 

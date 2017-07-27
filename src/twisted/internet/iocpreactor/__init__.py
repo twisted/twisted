@@ -2,9 +2,20 @@
 # See LICENSE for details.
 
 """
-I/O Completion Ports reactor
+Compat shim imports.
 """
 
-from twisted.internet.iocpreactor.reactor import install
+from iocpreactor import (
+    _abstract as abstract,
+    _const as const,
+    _interfaces as interfaces,
+    _reactor as reactor,
+    _tcp as tcp,
+    _udp as udp,
+    install
+)
 
-__all__ = ['install']
+
+
+__all__ = ["abstract", "const", "interfaces", "reactor", "tcp", "udp",
+           "install"]

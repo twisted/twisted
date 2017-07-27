@@ -92,12 +92,12 @@ def startTLS(transport, contextFactory, normal, bypass):
     Add a layer of SSL to a transport.
 
     @param transport: The transport which will be modified.  This can either by
-        a L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} or a
-        L{FileHandle<twisted.internet.iocpreactor.abstract.FileHandle>}.  The
-        actual requirements of this instance are that it have:
+        a L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} or an
+        IOCPReactor C{FileHandle}.  The actual requirements of this instance
+        are that it has:
 
-          - a C{_tlsClientDefault} attribute indicating whether the transport is
-            a client (C{True}) or a server (C{False})
+          - a C{_tlsClientDefault} attribute indicating whether the transport
+            is a client (C{True}) or a server (C{False})
           - a settable C{TLS} attribute which can be used to mark the fact
             that SSL has been started
           - settable C{getHandle} and C{getPeerCertificate} attributes so

@@ -251,6 +251,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
+        self.assertIn('iocpreactor == ' + twisted.__version__, deps)
 
 
 
