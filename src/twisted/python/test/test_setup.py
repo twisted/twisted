@@ -181,7 +181,7 @@ class OptionalDependenciesTests(TestCase):
         for the packages required to make Twisted's serial support work.
         """
         self.assertIn(
-            'pyserial',
+            'pyserial >= 3.0',
             _EXTRAS_REQUIRE['serial']
         )
 
@@ -209,7 +209,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
+        self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('appdirs >= 1.4.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
@@ -228,7 +228,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
+        self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
@@ -247,7 +247,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
+        self.assertIn('pyserial >= 3.0', deps)
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
