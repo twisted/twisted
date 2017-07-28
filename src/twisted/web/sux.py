@@ -149,12 +149,8 @@ class XMLParser(Protocol):
         stateTable = self._buildStateTable()
         if not self.state:
             # all UTF-16 starts with this string
-            if data.startswith(b'\xff\xfe'):
-                self._prepend = b'\xff\xfe'
-                self.encodings.append('UTF-16')
-                data = data[2:]
-            elif data.startswith(b'\xfe\xff'):
-                self._prepend = b'\xfe\xff'
+            if data.startswith((b'\xff\xfe', b'\xfe\xff')):
+                self._prepend = data[0:2]
                 self.encodings.append('UTF-16')
                 data = data[2:]
             self.state = 'begin'
