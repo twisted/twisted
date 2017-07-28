@@ -368,7 +368,7 @@ class Comment(CharacterData):
         val=self.data
         if isinstance(val, bytes):
             val = val.decode('utf8')
-        stream.write("<!--%s-->" % val)
+        stream.write(u"<!--{}-->".format(val))
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
