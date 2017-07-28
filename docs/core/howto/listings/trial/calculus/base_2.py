@@ -2,6 +2,7 @@
 
 from __future__ import division
 
+
 class Calculation(object):
     def add(self, a, b):
         return a + b
