@@ -211,12 +211,6 @@ class DOMHelpersTestsMixin:
         actual = len(node_list)
         self.assertEqual(actual, 2)
 
-    # NOT SURE WHAT THESE ARE SUPPOSED TO DO..
-    # def test_RawText  FIXME
-    # def test_superSetAttribute FIXME
-    # def test_superPrependAttribute FIXME
-    # def test_superAppendAttribute FIXME
-    # def test_substitute FIXME
 
     def test_escape(self):
         j = 'this string " contains many & characters> xml< won\'t like'
