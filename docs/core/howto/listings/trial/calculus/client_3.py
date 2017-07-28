@@ -31,7 +31,7 @@ class RemoteCalculationClient(basic.LineReceiver, policies.TimeoutMixin):
     def _sendOperation(self, op, a, b):
         d = defer.Deferred()
         self.results.append(d)
-        line = ("%s %d %d" % (op, a, b)).encode('utf-8')
+        line = "{} {} {}".format(op, a, b).encode('utf-8')
         self.sendLine(line)
         self.setTimeout(self._timeOut)
         return d

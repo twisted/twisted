@@ -18,9 +18,9 @@ class ClientCalculationTestCase(unittest.TestCase):
 
     def _test(self, operation, a, b, expected):
         d = getattr(self.proto, operation)(a, b)
-        self.assertEqual(self.tr.value(), ('%s %d %d\r\n' % (operation, a, b)).encode('utf-8'))
+        self.assertEqual(self.tr.value(), '{} {} {}\r\n'.format(operation, a, b).encode('utf-8'))
         self.tr.clear()
-        self.proto.dataReceived(("%d\r\n" % (expected,)).encode('utf-8'))
+        self.proto.dataReceived("{}\r\n".format(expected).encode('utf-8'))
         self.assertEqual(expected, self.successResultOf(d))
 
 
