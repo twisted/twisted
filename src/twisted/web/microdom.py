@@ -299,7 +299,7 @@ class Document(Node):
                  nsprefixes={}, namespace=''):
         stream.write(u'<?xml version="1.0"?>' + newl)
         if self.doctype:
-            stream.write(u"<!DOCTYPE " + self.doctype + u">" + newl)
+            stream.write(u"<!DOCTYPE {}>{}".format(self.doctype, newl))
         self.documentElement.writexml(stream, indent, addindent, newl, strip,
                                       nsprefixes, namespace)
 
