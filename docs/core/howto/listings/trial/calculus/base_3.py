@@ -3,7 +3,7 @@
 class Calculation(object):
     def _make_ints(self, *args):
         try:
-            return map(int, args)
+            return [int(arg) for arg in args]
         except ValueError:
             raise TypeError("Couldn't coerce arguments to integers: %s" % args)
 
