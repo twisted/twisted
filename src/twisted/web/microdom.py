@@ -824,13 +824,16 @@ class MicroDOMParser(XMLParser):
         if newspaces:
             namespaces = namespaces.copy()
             namespaces.update(newspaces)
+        keysToDelete = []
         for k, v in attributes.items():
             ksplit = k.split(':', 1)
             if len(ksplit) == 2:
                 pfx, tv = ksplit
                 if pfx != 'xml' and pfx in namespaces:
                     attributes[namespaces[pfx], tv] = v
-                    del attributes[k]
+                    keysToDelete.append(k)
+        for k in keysToDelete:
+            del attributes[k]
         el = Element(name, attributes, parent,
                      self.filename, self.saveMark(),
                      caseInsensitive=self.caseInsensitive,
