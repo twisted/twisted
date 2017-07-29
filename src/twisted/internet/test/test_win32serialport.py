@@ -55,6 +55,14 @@ if serialport is not None:
             return True, self.comstat
 
 
+class CollectReceivedProtocol(Protocol):
+    def __init__(self):
+        self.received_data = []
+
+    def dataReceived(self, data):
+        self.received_data.append(data)
+
+
 class Win32SerialPortTests(unittest.TestCase):
     """
     Minimal testing for Twisted's Win32 serial port support.
@@ -136,3 +144,24 @@ class Win32SerialPortTests(unittest.TestCase):
 
     def test_exerciseHandleAccess_2(self):
         self.common_exerciseHandleAccess(cbInQue=True)
+
+    def common_serialPortReturnsBytes(self, cbInQue):
+        protocol = CollectReceivedProtocol()
+
+        port = RegularFileSerialPort(
+            protocol=protocol,
+            deviceNameOrPortNumber=self.path,
+            reactor=self.reactor,
+            cbInQue=cbInQue,
+        )
+        port.serialReadEvent()
+        self.assertTrue(all(
+            isinstance(d, bytes) for d in protocol.received_data
+        ))
+        port.connectionLost(Failure(Exception("Cleanup")))
+
+    def test_serialPortReturnsBytes_1(self):
+        self.common_serialPortReturnsBytes(cbInQue=False)
+
+    def test_serialPortReturnsBytes_2(self):
+        self.common_serialPortReturnsBytes(cbInQue=True)

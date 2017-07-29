@@ -15,6 +15,7 @@ from __future__ import division, absolute_import
 from serial import PARITY_NONE
 from serial import STOPBITS_ONE
 from serial import EIGHTBITS
+from serial.serialutil import to_bytes
 import win32file, win32event
 
 # twisted imports
@@ -77,7 +78,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     def serialReadEvent(self):
         #get that character we set up
         n = win32file.GetOverlappedResult(self._serial._port_handle, self._overlappedRead, 0)
-        first = str(self.read_buf[:n])
+        first = to_bytes(self.read_buf[:n])
         #now we should get everything that is already in the buffer
         flags, comstat = self._clearCommError()
         if comstat.cbInQue:
@@ -87,7 +88,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
                                          self._overlappedRead)
             n = win32file.GetOverlappedResult(self._serial._port_handle, self._overlappedRead, 1)
             #handle all the received data:
-            self.protocol.dataReceived(first + str(buf[:n]))
+            self.protocol.dataReceived(first + to_bytes(buf[:n]))
         else:
             #handle all the received data:
             self.protocol.dataReceived(first)
