@@ -176,7 +176,11 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
 
     def opt_add_header(self, header):
-        self['extraHeaders'].append(header)
+        """
+        Specify an additional header to be included in all responses. Specified
+        as "HeaderName: HeaderValue".
+        """
+        self['extraHeaders'].append(header.split(b':', 1))
 
 
     def postOptions(self):
@@ -243,8 +247,7 @@ def makeService(config):
         root.registry.setComponent(interfaces.IServiceCollection, s)
 
     if config['extraHeaders']:
-        headers = [h.split(b':', 1) for h in config['extraHeaders']]
-        root = _AddHeadersResource(root, headers)
+        root = _AddHeadersResource(root, config['extraHeaders'])
 
     if config['logfile']:
         site = server.Site(root, logPath=config['logfile'])
