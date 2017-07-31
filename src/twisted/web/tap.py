@@ -228,6 +228,7 @@ class _AddHeadersResource(resource.Resource):
         return self._originalResource.getChildWithDefault(name, request)
 
 
+
 def makeService(config):
     s = service.MultiService()
     if config['root']:
@@ -240,7 +241,6 @@ def makeService(config):
 
     if isinstance(root, static.File):
         root.registry.setComponent(interfaces.IServiceCollection, s)
-
 
     if config['extraHeaders']:
         headers = [h.split(b':', 1) for h in config['extraHeaders']]
