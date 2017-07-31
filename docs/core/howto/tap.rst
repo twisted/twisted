@@ -310,6 +310,107 @@ For a full list of cred plugins supported, see :api:`twisted.plugins <twisted.pl
 
 
 
+Deploy your application using python packages
+---------------------------------------------
+
+
+
+To deploy your application one possibility is to wrap it up in a python package.
+For this you need to write a special file ``setup.py``, which contains metadata
+of the package. You would have to extend the layout of your files like this:
+
+
+
+
+- **MyProject** - Top level directory
+
+
+- ``setup.py`` - Description file for the package
+
+
+  - **myproject** - Python package
+
+
+    - **__init__.py**
+
+
+  - **twisted**
+
+
+    - **plugins**
+
+      - ``myplugin.py`` - Plugin file
+
+
+
+
+
+.. code-block:: python
+
+
+    from distutils.core import setup
+
+    setup(
+        name='MyApplication',
+        version='0.1dev',
+        packages=['myproject', 'twisted.plugins'],
+        license='Creative Commons Attribution-Noncommercial-Share Alike license',
+        long_description="Insert your long description here",
+        install_requires=[
+            'twisted',
+            ],
+    )
+
+
+
+
+
+To create the python package from the directory the standard setup tools
+can be used:
+
+
+
+
+.. code-block:: console
+
+
+    python setup.py sdist
+
+
+
+
+This command creates a ``dist`` directory in your project folder with the
+compressed archive file ``MyApplication-0.1dev.tar.gz``. This archive contains
+all the code and additional files if specified. This file can be copied and used
+for deployment.
+
+
+
+
+
+To install the application just use pip. It will also install all requirements
+specified in ``setup.py``.
+
+
+
+
+.. code-block:: console
+
+
+    pip install MyApplication-0.1dev.tar.gz
+
+
+
+
+
+
+For more information about packaging in Python have a look at the `hitchhiker's
+guide to packaging <https://the-hitchhikers-guide-to-packaging.readthedocs.io/>`_.
+
+
+
+
+
 Conclusion
 ----------
 
