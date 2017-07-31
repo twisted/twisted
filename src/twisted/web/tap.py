@@ -180,7 +180,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         Specify an additional header to be included in all responses. Specified
         as "HeaderName: HeaderValue".
         """
-        self['extraHeaders'].append(header.split(b':', 1))
+        name, value = header.split(':', 1)
+        self['extraHeaders'].append((name.strip(), value.strip()))
 
 
     def postOptions(self):
