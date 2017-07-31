@@ -15,7 +15,7 @@ from twisted.internet import interfaces, reactor
 from twisted.python import usage, reflect, threadpool
 from twisted.spread import pb
 from twisted.web import distrib
-from twisted.web import server, static, script, demo, wsgi
+from twisted.web import resource, server, static, script, demo, wsgi
 from twisted.web import twcgi
 
 
@@ -65,6 +65,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         usage.Options.__init__(self)
         self['indexes'] = []
         self['root'] = None
+        self['extraHeaders'] = []
 
 
     def opt_index(self, indexName):
@@ -174,6 +175,10 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['root'].ignoreExt(ext)
 
 
+    def opt_add_header(self, header):
+        self['extraHeaders'].append(header)
+
+
     def postOptions(self):
         """
         Set up conditional defaults and check for dependencies.
@@ -211,6 +216,18 @@ def makePersonalServerFactory(site):
 
 
 
+class _AddHeadersResource(resource.Resource):
+    def __init__(self, originalResource, headers):
+        self._originalResource = originalResource
+        self._headers = headers
+
+
+    def getChildWithDefault(self, name, request):
+        for k, v in self._headers:
+            request.responseHeaders.setRawHeaders(k, [v])
+        return self._originalResource.getChildWithDefault(name, request)
+
+
 def makeService(config):
     s = service.MultiService()
     if config['root']:
@@ -223,6 +240,11 @@ def makeService(config):
 
     if isinstance(root, static.File):
         root.registry.setComponent(interfaces.IServiceCollection, s)
+
+
+    if config['extraHeaders']:
+        headers = [h.split(b':', 1) for h in config['extraHeaders']]
+        root = _AddHeadersResource(root, headers)
 
     if config['logfile']:
         site = server.Site(root, logPath=config['logfile'])
