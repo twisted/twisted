@@ -289,8 +289,9 @@ class AddHeadersResourceTests(TestCase):
         response.
         """
         resource = _AddHeadersResource(
-            demo.Test(), [("K1", "V1"), ("K2", "V2")])
+            demo.Test(), [("K1", "V1"), ("K2", "V2"), ("K1", "V3")])
         request = DummyRequest([])
         resource.getChildWithDefault("", request)
-        self.assertEqual(request.responseHeaders.getRawHeaders("K1"), ["V1"])
+        self.assertEqual(
+            request.responseHeaders.getRawHeaders("K1"), ["V1", "V3"])
         self.assertEqual(request.responseHeaders.getRawHeaders("K2"), ["V2"])

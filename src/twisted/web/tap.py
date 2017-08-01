@@ -229,7 +229,7 @@ class _AddHeadersResource(resource.Resource):
 
     def getChildWithDefault(self, name, request):
         for k, v in self._headers:
-            request.responseHeaders.setRawHeaders(k, [v])
+            request.responseHeaders.addRawHeader(k, v)
         return self._originalResource.getChildWithDefault(name, request)
 
 
