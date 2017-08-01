@@ -25,6 +25,7 @@ from twisted.web.server import Site
 from twisted.web.static import Data, File
 from twisted.web.tap import Options, makeService
 from twisted.web.tap import makePersonalServerFactory, _AddHeadersResource
+from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.twcgi import CGIScript
 from twisted.web.wsgi import WSGIResource
 
@@ -278,3 +279,18 @@ class ServiceTests(TestCase):
         self.assertIsInstance(resource, _AddHeadersResource)
         self.assertEqual(resource._headers, [('K1', 'V1'), ('K2', 'V2')])
         self.assertIsInstance(resource._originalResource, demo.Test)
+
+
+
+class AddHeadersResourceTests(TestCase):
+    def test_getChildWithDefault(self):
+        """
+        When getChildWithDefault is invoked, it adds the headers to the
+        response.
+        """
+        resource = _AddHeadersResource(
+            demo.Test(), [("K1", "V1"), ("K2", "V2")])
+        request = DummyRequest([])
+        resource.getChildWithDefault("", request)
+        self.assertEqual(request.responseHeaders.getRawHeaders("K1"), ["V1"])
+        self.assertEqual(request.responseHeaders.getRawHeaders("K2"), ["V2"])
