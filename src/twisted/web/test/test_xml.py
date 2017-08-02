@@ -6,6 +6,8 @@
 Some fairly inadequate testcases for Twisted XML support.
 """
 
+from io import BytesIO
+
 from twisted.trial.unittest import TestCase
 from twisted.web import sux
 from twisted.web import microdom
@@ -52,6 +54,10 @@ class MicroDOMTests(TestCase):
         d = microdom.parseString(s, beExtremelyLenient=True)
         self.assertEqual(d.firstChild().toxml(),
                           '<html>Hi orders! <br />Well. <br /></html>')
+        byteStream = BytesIO()
+        d.firstChild().writexml(byteStream, '', '', '', '', {}, '')
+        self.assertEqual(byteStream.getvalue(),
+                         b'<html>Hi orders! <br />Well. <br /></html>')
 
 
     def test_trailingTextDropping(self):
@@ -63,6 +69,10 @@ class MicroDOMTests(TestCase):
         d = microdom.parseString(s, beExtremelyLenient=True)
         self.assertEqual(d.firstChild().toxml(),
                           '<html><br />Hi orders!</html>')
+        byteStream = BytesIO()
+        d.firstChild().writexml(byteStream, '', '', '', '', {}, '')
+        self.assertEqual(byteStream.getvalue(),
+                         b'<html><br />Hi orders!</html>')
 
 
     def test_noTags(self):
