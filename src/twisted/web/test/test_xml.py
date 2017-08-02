@@ -16,14 +16,19 @@ class Sux0r(sux.XMLParser):
     def __init__(self):
         self.tokens = []
 
+
     def getTagStarts(self):
         return [token for token in self.tokens if token[0] == 'start']
+
 
     def gotTagStart(self, name, attrs):
         self.tokens.append(("start", name, attrs))
 
+
     def gotText(self, text):
         self.tokens.append(("text", text))
+
+
 
 class SUXTests(TestCase):
 
@@ -33,6 +38,7 @@ class SUXTests(TestCase):
         ms.connectionMade()
         ms.dataReceived(s)
         self.assertEqual(len(ms.getTagStarts()),3)
+
 
 
 class MicroDOMTests(TestCase):
@@ -46,6 +52,7 @@ class MicroDOMTests(TestCase):
         d = microdom.parseString(s, beExtremelyLenient=True)
         self.assertEqual(d.firstChild().toxml(),
                           '<html>Hi orders! <br />Well. <br /></html>')
+
 
     def test_trailingTextDropping(self):
         """
@@ -132,8 +139,10 @@ class MicroDOMTests(TestCase):
         n = domhelpers.gatherTextNodes(d)
         self.assertNotEqual(n.find('>'), -1)
 
+
     def test_emptyError(self):
         self.assertRaises(sux.ParseError, microdom.parseString, "")
+
 
     def test_tameDocument(self):
         s = """
@@ -150,6 +159,7 @@ class MicroDOMTests(TestCase):
         d = microdom.parseString(s)
         self.assertEqual(
             domhelpers.gatherTextNodes(d.documentElement).strip() ,'test')
+
 
     def test_awfulTagSoup(self):
         s = """
@@ -177,6 +187,7 @@ alert("I hate you");
         l = domhelpers.findNodesNamed(d.documentElement, 'blink')
         self.assertEqual(len(l), 1)
 
+
     def test_scriptLeniency(self):
         s = """
         <script>(foo < bar) and (bar > foo)</script>
@@ -192,6 +203,7 @@ alert("I hate you");
             d.firstChild().getElementsByTagName("script")[1].firstChild().data,
             "foo </scrip bar ")
 
+
     def test_scriptLeniencyIntelligence(self):
         # if there is comment or CDATA in script, the autoquoting in bEL mode
         # should not happen
@@ -206,6 +218,7 @@ alert("I hate you");
         //]]></script>"""
         self.assertEqual(
             microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+
 
     def test_preserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
@@ -231,12 +244,14 @@ alert("I hate you");
         self.assertTrue(d3.isEqualToDocument(d4), "%r != %r" % (d3.toxml(), d4.toxml()))
         self.assertTrue(d4.isEqualToDocument(d5), "%r != %r" % (d4.toxml(), d5.toxml()))
 
+
     def test_differentQuotes(self):
         s = '<test a="a" b=\'b\' />'
         d = microdom.parseString(s)
         e = d.documentElement
         self.assertEqual(e.getAttribute('a'), 'a')
         self.assertEqual(e.getAttribute('b'), 'b')
+
 
     def test_Linebreaks(self):
         s = '<test \na="a"\n\tb="#b" />'
@@ -245,9 +260,11 @@ alert("I hate you");
         self.assertEqual(e.getAttribute('a'), 'a')
         self.assertEqual(e.getAttribute('b'), '#b')
 
+
     def test_mismatchedTags(self):
         for s in '<test>', '<test> </tset>', '</test>':
             self.assertRaises(microdom.MismatchedTags, microdom.parseString, s)
+
 
     def test_comment(self):
         s = "<bar><!--<foo />--></bar>"
@@ -261,6 +278,7 @@ alert("I hate you");
         self.assertTrue(c is not c2)
         self.assertEqual(c2.toxml(), "<!--<foo />-->")
 
+
     def test_text(self):
         d = microdom.parseString("<bar>xxxx</bar>").documentElement
         text = d.childNodes[0]
@@ -269,6 +287,7 @@ alert("I hate you");
         clone = text.cloneNode()
         self.assertTrue(clone is not text)
         self.assertEqual(clone.toxml(), "xxxx")
+
 
     def test_entities(self):
         nodes = microdom.parseString("<b>&amp;&#12AB;</b>").documentElement.childNodes
@@ -279,12 +298,14 @@ alert("I hate you");
         for n in nodes:
             self.assertTrue(isinstance(n, microdom.EntityReference))
 
+
     def test_CData(self):
         s = '<x><![CDATA[</x>\r\n & foo]]></x>'
         cdata = microdom.parseString(s).documentElement.childNodes[0]
         self.assertTrue(isinstance(cdata, microdom.CDATASection))
         self.assertEqual(cdata.data, "</x>\r\n & foo")
         self.assertEqual(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
+
 
     def test_singletons(self):
         s = "<foo><b/><b /><b\n/></foo>"
@@ -296,6 +317,7 @@ alert("I hate you");
             self.assertTrue(isinstance(n, microdom.Element))
             self.assertEqual(n.nodeName, "b")
             self.assertTrue(n.isEqualToNode(n2))
+
 
     def test_attributes(self):
         s = '<foo a="b" />'
@@ -311,6 +333,7 @@ alert("I hate you");
         node.setAttribute("foo", "bar")
         self.assertEqual(node.getAttribute("foo"), "bar")
 
+
     def test_children(self):
         s = "<foo><bar /><baz /><bax>foo</bax></foo>"
         d = microdom.parseString(s).documentElement
@@ -319,6 +342,7 @@ alert("I hate you");
         self.assertEqual(d.firstChild().nodeName, "bar")
         self.assertTrue(d.hasChildNodes())
         self.assertTrue(not d.firstChild().hasChildNodes())
+
 
     def test_mutate(self):
         s = "<foo />"
@@ -390,6 +414,7 @@ alert("I hate you");
         self.assertEqual(d3.getElementsByTagName('fOo'),
                           [root, root.lastChild().firstChild()])
 
+
     def test_doctype(self):
         s = ('<?xml version="1.0"?>'
         '<!DOCTYPE foo PUBLIC "baz" "http://www.example.com/example.dtd">'
@@ -418,9 +443,11 @@ alert("I hate you");
             self.assertEqual(out, testOut)
             self.assertTrue(d.isEqualToDocument(d2))
 
+
     def test_errors(self):
         for s in ["<foo>&am</foo>", "<foo", "<f>&</f>", "<() />"]:
             self.assertRaises(Exception, microdom.parseString, s)
+
 
     def test_caseInsensitive(self):
         s  = "<foo a='b'><BAx>x</bax></FOO>"
@@ -443,6 +470,8 @@ alert("I hate you");
         self.assertFalse(d6.documentElement.hasAttribute('a'))
         self.assertEqual(d4.documentElement.toxml(), '<foo A="b">x</foo>')
         self.assertEqual(d5.documentElement.toxml(), '<foo a="b">x</foo>')
+
+
     def test_eatingWhitespace(self):
         s = """<hello>
         </hello>"""
@@ -450,6 +479,7 @@ alert("I hate you");
         self.assertTrue(not d.documentElement.hasChildNodes(),
                         d.documentElement.childNodes)
         self.assertTrue(d.isEqualToDocument(microdom.parseString('<hello></hello>')))
+
 
     def test_lenientAmpersand(self):
         prefix = "<?xml version='1.0'?>"
@@ -465,6 +495,7 @@ alert("I hate you");
         d = microdom.parseString("<t>hello & there</t>", beExtremelyLenient=1)
         self.assertEqual(d.documentElement.toxml(), "<t>hello &amp; there</t>")
 
+
     def test_insensitiveLenient(self):
         # testing issue #537
         d = microdom.parseString(
@@ -472,12 +503,14 @@ alert("I hate you");
             beExtremelyLenient=1)
         self.assertEqual(d.documentElement.firstChild().toxml(), "<xa><y>c</y></xa>")
 
+
     def test_laterCloserSimple(self):
         s = "<ul><li>foo<li>bar<li>baz</ul>"
         d = microdom.parseString(s, beExtremelyLenient=1)
         expected = "<ul><li>foo</li><li>bar</li><li>baz</li></ul>"
         actual = d.documentElement.toxml()
         self.assertEqual(expected, actual)
+
 
     def test_laterCloserCaseInsensitive(self):
         s = "<DL><p><DT>foo<DD>bar</DL>"
@@ -538,6 +571,7 @@ alert("I hate you");
         self.assertEqual(j3.toxml(), (hdr +
                          u'<foo><div>\u221a</div><!--\u221a--></foo>'))
 
+
     def test_namedChildren(self):
         tests = {"<foo><bar /><bar unf='1' /><bar>asdfadsf</bar>"
                          "<bam/></foo>" : 3,
@@ -551,6 +585,7 @@ alert("I hate you");
             if result:
                 self.assertTrue(hasattr(result[0], 'tagName'))
 
+
     def test_cloneNode(self):
         s = '<foo a="b"><bax>x</bax></foo>'
         node = microdom.parseString(s).documentElement
@@ -563,6 +598,7 @@ alert("I hate you");
         self.failIfEquals(c1.firstChild(), c2.firstChild())
         self.assertEqual(s, clone.toxml())
         self.assertEqual(node.namespace, clone.namespace)
+
 
     def test_cloneDocument(self):
         s = ('<?xml version="1.0"?>'
@@ -608,6 +644,7 @@ alert("I hate you");
         self.assertEqual(esc1, cooked)
         self.assertEqual(microdom.unescape(esc1), raw)
 
+
     def test_namespaces(self):
         s = '''
         <x xmlns="base">
@@ -638,6 +675,7 @@ alert("I hate you");
             d2.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
             '1')
 
+
     def test_namespaceDelete(self):
         """
         Test that C{toxml} can support xml structures that remove namespaces.
@@ -646,6 +684,7 @@ alert("I hate you");
               '<body xmlns=""></body></html>')
         s2 = microdom.parseString(s1).toxml()
         self.assertEqual(s1, s2)
+
 
     def test_namespaceInheritance(self):
         """
@@ -658,6 +697,7 @@ alert("I hate you");
         parent.childNodes = [child]
         self.assertEqual(parent.toxml(),
                           '<div xmlns="http://www.w3.org/1999/xhtml"><ol></ol></div>')
+
 
     def test_prefixedTags(self):
         """
@@ -839,7 +879,6 @@ class BrokenHTMLTests(TestCase):
 
 
 
-
 class NodeTests(TestCase):
     """
     Tests for L{Node}.
@@ -871,6 +910,7 @@ class NodeTests(TestCase):
         another.firstChild().appendChild(microdom.Node(object()))
         self.assertTrue(node.isEqualToNode(another))
 
+
     def test_validChildInstance(self):
         """
         Children of L{Node} instances must also be L{Node} instances.
@@ -891,6 +931,7 @@ class NodeTests(TestCase):
         self.assertRaises(TypeError, node.replaceChild, child, None)
         self.assertRaises(TypeError, node.replaceChild, None, child)
         self.assertRaises(TypeError, node.replaceChild, None, None)
+
 
 
 class DocumentTests(TestCase):
