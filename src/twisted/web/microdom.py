@@ -437,7 +437,7 @@ class Text(CharacterData):
             if strip:
                 v = ' '.join(v.split())
             val = escape(v)
-        if ioType(stream) == bytes:
+        if streamType == bytes:
             if isinstance(val, unicode):
                 val = val.encode('utf-8')
         else:
@@ -620,8 +620,8 @@ class Element(Node):
         # changing .tagName on the fly(?)
         if not self.preserveCase:
             self.endTagName = self.tagName
+        streamType = ioType(stream)
         w = stream.write
-        streamType = ioType(w)
         if self.nsprefixes:
             newprefixes = self.nsprefixes.copy()
             for ns in nsprefixes.keys():
