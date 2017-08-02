@@ -363,7 +363,6 @@ class EntityReference(Node):
                     s = s.decode("utf-8")
             return stream.write(s)
 
-        nodeValue = self.nodeValue
         w("" + self.nodeValue)
 
     def cloneNode(self, deep=0, parent=None):
@@ -468,7 +467,6 @@ class CDATASection(CharacterData):
                     s = s.decode("utf-8")
             return stream.write(s)
 
-        nodeValue = self.nodeValue
         w("<![CDATA[")
         w("" + self.nodeValue)
         w("]]>")
