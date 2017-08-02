@@ -24,7 +24,7 @@ from io import BytesIO, StringIO
 
 
 # Twisted Imports
-from twisted.python.compat import range, iteritems, unicode
+from twisted.python.compat import ioType, iteritems, range, unicode
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import XMLParser, ParseError
 
@@ -297,9 +297,23 @@ class Document(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write(u'<?xml version="1.0"?>' + newl)
+        streamType = ioType(stream)
+        if streamType == bytes:
+             if isinstance(newl, unicode):
+                 newl = newl.encode("utf-8")
+        else:
+             if isinstance(newl, bytes):
+                 newl = newl.decode("utf-8")
+        if streamType == bytes:
+             stream.write(b'<?xml version="1.0"?>' + newl)
+        else:
+             stream.write(u'<?xml version="1.0"?>' + newl)
         if self.doctype:
-            stream.write(u"<!DOCTYPE {}>{}".format(self.doctype, newl))
+            if streamType == bytes:
+                stream.write(b"<!DOCTYPE " + self.doctype.encode("utf-8") +
+                             b">" + newl)
+            else:
+                stream.write(u"<!DOCTYPE {}>{}".format(self.doctype, newl))
         self.documentElement.writexml(stream, indent, addindent, newl, strip,
                                       nsprefixes, namespace)
 
@@ -343,7 +357,16 @@ class EntityReference(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write(u"" + self.nodeValue)
+        streamType = ioType(stream)
+        nodeValue = self.nodeValue
+        if streamType == bytes:
+            if isinstance(nodeValue, unicode):
+                nodeValue = nodeValue.encode("utf-8")
+            stream.write(b"" + nodeValue)
+        else:
+            if isinstance(nodeValue, bytes):
+                nodeValue = nodeValue.decode("utf-8")
+            stream.write(u"" + self.nodeValue)
 
     def cloneNode(self, deep=0, parent=None):
         return EntityReference(self.eref, parent)
@@ -365,10 +388,16 @@ class Comment(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        val=self.data
-        if isinstance(val, bytes):
-            val = val.decode('utf8')
-        stream.write(u"<!--{}-->".format(val))
+        streamType = ioType(stream)
+        val = self.data
+        if streamType == bytes:
+            if isinstance(val, unicode):
+                val = val.encode('utf-8')
+            stream.write(b"<!--"+ val + b"-->")
+        else:
+            if isinstance(val, bytes):
+                val = val.decode('utf-8')
+            stream.write(u"<!--{}-->".format(val))
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
@@ -396,6 +425,7 @@ class Text(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
+        streamType = ioType(stream)
         if self.raw:
             val = self.nodeValue
             if not isinstance(val, (str, unicode)):
@@ -407,8 +437,12 @@ class Text(CharacterData):
             if strip:
                 v = ' '.join(v.split())
             val = escape(v)
-        if isinstance(val, bytes):
-            val = val.decode('utf8')
+        if ioType(stream) == bytes:
+            if isinstance(val, unicode):
+                val = val.encode('utf-8')
+        else:
+            if isinstance(val, bytes):
+                val = val.decode('utf-8')
         stream.write(val)
 
     def __repr__(self):
@@ -421,9 +455,20 @@ class CDATASection(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        stream.write(u"<![CDATA[")
-        stream.write(u"" + self.nodeValue)
-        stream.write(u"]]>")
+        streamType = ioType(stream)
+        nodeValue = self.nodeValue
+        if streamType == bytes:
+            if isinstance(nodeValue, unicode):
+                nodeValue = nodeValue.encode("utf-8")
+            stream.write(b"<![CDATA[")
+            stream.write(b"" + self.nodeValue)
+            stream.write(b"]]>")
+        else:
+            if isinstance(nodeValue, bytes):
+                nodeValue = nodeValue.decode("utf-8")
+            stream.write(u"<![CDATA[")
+            stream.write(u"" + self.nodeValue)
+            stream.write(u"]]>")
 
 def _genprefix():
     i = 0
@@ -576,6 +621,7 @@ class Element(Node):
         if not self.preserveCase:
             self.endTagName = self.tagName
         w = stream.write
+        streamType = ioType(w)
         if self.nsprefixes:
             newprefixes = self.nsprefixes.copy()
             for ns in nsprefixes.keys():
@@ -622,7 +668,10 @@ class Element(Node):
             # namespace.  Nothing extra to do here.
             bext(self.tagName)
 
-        j = u''.join
+        if streamType == bytes:
+            j = b''.join
+        else:
+            j = u''.join
         for attr, val in sorted(self.attributes.items()):
             if isinstance(attr, tuple):
                 ns, key = attr
@@ -646,7 +695,10 @@ class Element(Node):
             downprefixes = nsprefixes
         w(j(begin))
         if self.childNodes:
-            w(u">")
+            if streamType == bytes:
+                w(b">")
+            else:
+                w(u">")
             newindent = indent + addindent
             for child in self.childNodes:
                 if self.tagName in BLOCKELEMENTS and \
@@ -660,7 +712,10 @@ class Element(Node):
         elif self.tagName.lower() not in ALLOWSINGLETON:
             w(j(('></', endTagName, '>')))
         else:
-            w(u" />")
+            if streamType == bytes:
+                w(b" />")
+            else:
+                w(u" />")
 
 
     def __repr__(self):
