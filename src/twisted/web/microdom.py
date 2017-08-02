@@ -69,6 +69,21 @@ def getElementsByTagNameNoCase(iNode, name):
         slice[:0] = c.childNodes
     return matches
 
+
+
+def _streamWriteWrapper(stream):
+    if ioType(stream) == bytes:
+        def w(s):
+            if isinstance(s, unicode):
+                s = s.encode("utf-8")
+            stream.write(s)
+    else:
+        def w(s):
+            if isinstance(s, bytes):
+                s = s.decode("utf-8")
+            stream.write(s)
+    return w
+
 # order is important
 HTML_ESCAPE_CHARS = (('&', '&amp;'), # don't add any entities before this one
                     ('<', '&lt;'),
@@ -297,15 +312,7 @@ class Document(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        streamType = ioType(stream)
-        def w(s):
-            if streamType == bytes:
-                if isinstance(s, unicode):
-                    s = s.encode("utf-8")
-            else:
-                if isinstance(s, bytes):
-                    s = s.decode("utf-8")
-            return stream.write(s)
+        w = _streamWriteWrapper(stream)
 
         w('<?xml version="1.0"?>' + newl)
         if self.doctype:
@@ -353,16 +360,7 @@ class EntityReference(Node):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        streamType = ioType(stream)
-        def w(s):
-            if streamType == bytes:
-                if isinstance(s, unicode):
-                    s = s.encode("utf-8")
-            else:
-                if isinstance(s, bytes):
-                    s = s.decode("utf-8")
-            return stream.write(s)
-
+        w = _streamWriteWrapper(stream)
         w("" + self.nodeValue)
 
     def cloneNode(self, deep=0, parent=None):
@@ -385,16 +383,7 @@ class Comment(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        streamType = ioType(stream)
-        def w(s):
-            if streamType == bytes:
-                if isinstance(s, unicode):
-                    s = s.encode("utf-8")
-            else:
-                if isinstance(s, bytes):
-                    s = s.decode("utf-8")
-            return stream.write(s)
-
+        w = _streamWriteWrapper(stream)
         val = self.data
         w(u"<!--{}-->".format(val))
 
@@ -424,16 +413,7 @@ class Text(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        streamType = ioType(stream)
-        def w(s):
-            if streamType == bytes:
-                if isinstance(s, unicode):
-                    s = s.encode("utf-8")
-            else:
-                if isinstance(s, bytes):
-                    s = s.decode("utf-8")
-            return stream.write(s)
-
+        w = _streamWriteWrapper(stream)
         if self.raw:
             val = self.nodeValue
             if not isinstance(val, (str, unicode)):
@@ -457,16 +437,7 @@ class CDATASection(CharacterData):
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
-        streamType = ioType(stream)
-        def w(s):
-            if streamType == bytes:
-                if isinstance(s, unicode):
-                    s = s.encode("utf-8")
-            else:
-                if isinstance(s, bytes):
-                    s = s.decode("utf-8")
-            return stream.write(s)
-
+        w = _streamWriteWrapper(stream)
         w("<![CDATA[")
         w("" + self.nodeValue)
         w("]]>")
@@ -622,16 +593,7 @@ class Element(Node):
         if not self.preserveCase:
             self.endTagName = self.tagName
 
-        streamType = ioType(stream)
-        def w(s):
-            if streamType == bytes:
-                if isinstance(s, unicode):
-                    s = s.encode("utf-8")
-            else:
-                if isinstance(s, bytes):
-                    s = s.decode("utf-8")
-            return stream.write(s)
-
+        w = _streamWriteWrapper(stream)
         if self.nsprefixes:
             newprefixes = self.nsprefixes.copy()
             for ns in nsprefixes.keys():
