@@ -475,7 +475,7 @@ def _genprefix():
     while True:
         yield  'p' + str(i)
         i = i + 1
-genprefix = next(_genprefix())
+genprefix = _genprefix()
 
 class _Attr(CharacterData):
     "Support class for getAttributeNode."
@@ -678,7 +678,7 @@ class Element(Node):
                 if ns in nsprefixes:
                     prefix = nsprefixes[ns]
                 else:
-                    prefix = genprefix()
+                    prefix = next(genprefix)
                     newprefixes[ns] = prefix
                 assert val is not None
                 writeattr(prefix+':'+key,val)
