@@ -156,7 +156,7 @@ class XMLParser(Protocol):
             self.state = 'begin'
         if self.encodings:
             data = self._decode(data)
-        elif isinstance(data, bytes):
+        else:
             data = data.decode("utf-8")
         # bring state, lineno, colno into local scope
         lineno, colno = self.lineno, self.colno
