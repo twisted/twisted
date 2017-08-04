@@ -2,7 +2,8 @@
 # See LICENSE for details.
 
 
-"""Creation of  Windows shortcuts.
+"""
+Creation of  Windows shortcuts.
 
 Requires win32all.
 """
@@ -13,7 +14,8 @@ import os
 
 
 def open(filename):
-    """Open an existing shortcut for reading.
+    """
+    Open an existing shortcut for reading.
 
     @return: The shortcut object
     @rtype: Shortcut
@@ -23,8 +25,10 @@ def open(filename):
     return sc
 
 
+
 class Shortcut:
-    """A shortcut on Win32.
+    """
+    A shortcut on Win32.
     >>> sc=Shortcut(path, arguments, description, workingdir, iconpath, iconidx)
     @param path: Location of the target
     @param arguments: If path points to an executable, optional arguments to
@@ -35,9 +39,9 @@ class Shortcut:
     @param iconidx: If iconpath is set, optional index of the icon desired
     """
 
-    def __init__(self, 
+    def __init__(self,
                  path=None,
-                 arguments=None, 
+                 arguments=None,
                  description=None,
                  workingdir=None,
                  iconpath=None,
@@ -46,9 +50,9 @@ class Shortcut:
             shell.CLSID_ShellLink, None,
             pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
         )
-        data = map(None, 
+        data = map(None,
                    ['"%s"' % os.path.abspath(path), arguments, description,
-                    os.path.abspath(workingdir), os.path.abspath(iconpath)], 
+                    os.path.abspath(workingdir), os.path.abspath(iconpath)],
                    ("SetPath", "SetArguments", "SetDescription",
                    "SetWorkingDirectory") )
         for value, function in data:
@@ -58,17 +62,23 @@ class Shortcut:
         if iconpath:
             self.SetIconLocation(iconpath, iconidx)
 
-    def load( self, filename ):
-        """Read a shortcut file from disk."""
+
+    def load(self, filename):
+        """
+        Read a shortcut file from disk.
+        """
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(filename)
-    
+
+
     def save( self, filename ):
-        """Write the shortcut to disk.
+        """
+        Write the shortcut to disk.
 
         The file should be named something.lnk.
         """
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(filename, 0)
-    
+
+
     def __getattr__( self, name ):
         if name != "_base":
             return getattr(self._base, name)
