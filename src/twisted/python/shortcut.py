@@ -20,7 +20,7 @@ def open(filename):
     @return: The shortcut object
     @rtype: Shortcut
     """
-    sc=Shortcut()
+    sc = Shortcut()
     sc.load(filename)
     return sc
 
