@@ -39,20 +39,22 @@ environment:
       PYTHON_ARCH: "64"
       TOXENV: py27-alldeps-withcov-windows,codecov-publish
       TWISTED_REACTOR: "select"
+    - PYTHON_HOME: C:\\PYTHON36-x64
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      TOXENV: py36-alldeps-withcov-windows,codecov-publish
+      TWISTED_REACTOR: "select"
+
+    # IOCPReactor tests
     - PYTHON_HOME: C:\\Python27-x64
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       TOXENV: py27-alldeps-withcov-windows,codecov-publish
       TWISTED_REACTOR: "iocp"
-    - PYTHON_HOME: C:\\PYTHON34-x64
-      PYTHON_VERSION: "3.4"
+    - PYTHON_HOME: C:\\PYTHON36-x64
+      PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
-      TOXENV: py34-alldeps-withcov-windows,codecov-publish
-      TWISTED_REACTOR: "default"
-    - PYTHON_HOME: C:\\PYTHON35-x64
-      PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "64"
-      TOXENV: py35-alldeps-withcov-windows,codecov-publish
+      TOXENV: py36-alldeps-withcov-windows,codecov-publish
       TWISTED_REACTOR: "iocp"
 
 install:
