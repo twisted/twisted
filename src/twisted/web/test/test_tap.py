@@ -254,7 +254,7 @@ class ServiceTests(TestCase):
         test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
 
 
-    def test_add_header_parsing(self):
+    def test_addHeaderParsing(self):
         """
         When --add-header is specific, the value is parsed.
         """
@@ -265,7 +265,7 @@ class ServiceTests(TestCase):
         self.assertEqual(options['extraHeaders'], [('K1', 'V1'), ('K2', 'V2')])
 
 
-    def test_add_header_resource(self):
+    def test_addHeaderRresource(self):
         """
         When --add-header is specified, the resource is a composition that adds
         headers.
@@ -275,7 +275,7 @@ class ServiceTests(TestCase):
             ['--add-header', 'K1: V1', '--add-header', 'K2: V2']
         )
         service = makeService(options)
-        resource = service.services[0].factory.resource
+        resource = service.services[0].factory._resource
         self.assertIsInstance(resource, _AddHeadersResource)
         self.assertEqual(resource._headers, [('K1', 'V1'), ('K2', 'V2')])
         self.assertIsInstance(resource._originalResource, demo.Test)
