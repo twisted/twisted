@@ -3373,6 +3373,25 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         self.account = realm.theAccount
 
 
+    def assertClientFailureMessage(self, failure, expected):
+        """
+        Assert that the provided failure is an L{IMAP4Exception} with
+        the given message.
+
+        @param failure: A failure whose value L{IMAP4Exception}
+        @type failure: L{failure.Failure}
+
+        @param expected: The expected failure message.
+        @type expected: L{bytes}
+        """
+        failure.trap(imap4.IMAP4Exception)
+        message = str(failure.value)
+        if _PY3:
+            expected = repr(expected)
+
+        self.assertEqual(message, expected)
+
+
     def test_customChallengers(self):
         """
         L{imap4.IMAP4Server} accepts a L{dict} mapping challenge type
@@ -3459,17 +3478,9 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         def auth():
             return self.client.authenticate(b'secret')
 
-        def authFailed(failure):
-            failure.trap(imap4.IMAP4Exception)
-            message = str(failure.value)
-            expected = b"Temporary authentication failure"
-            if _PY3:
-                expected = repr(expected)
-
-            self.assertEqual(message, expected)
-
         d = self.connected.addCallback(strip(auth))
-        d.addErrback(authFailed)
+        d.addErrback(self.assertClientFailureMessage,
+                     b"Temporary authentication failure")
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
 
         return defer.gatherResults([d, self.loopback()])
@@ -3484,7 +3495,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
         @implementer(IChallengeResponse)
         class ValueErrorAuthChallenge(object):
-            message = "A challenge failure"
+            message = b"A challenge failure"
 
             def getChallenge(self):
                 raise ValueError(self.message)
@@ -3521,20 +3532,10 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         def auth():
             return self.client.authenticate(b'secret')
 
-        def authFailed(failure):
-            failure.trap(imap4.IMAP4Exception)
-            message = str(failure.value)
-
-            expected = (
-                "Server error: " + ValueErrorAuthChallenge.message
-            ).encode('ascii')
-
-            if _PY3:
-                expected = repr(expected)
-            self.assertEqual(message, expected)
-
         d = self.connected.addCallback(strip(auth))
-        d.addErrback(authFailed)
+        d.addErrback(self.assertClientFailureMessage,
+                     ("Server error: "
+                      + str(ValueErrorAuthChallenge.message)).encode('ascii'))
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
 
         return defer.gatherResults([d, self.loopback()])
@@ -3620,20 +3621,9 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         def auth():
             return self.client.authenticate(b'secret')
 
-        def assertIMAP4Exception(failure):
-            failure.trap(imap4.IMAP4Exception)
-            message = str(failure.value)
-
-            expected = (
-                "Authentication failed: server misconfigured"
-            ).encode('ascii')
-
-            if _PY3:
-                expected = repr(expected)
-            self.assertEqual(message, expected)
-
         d1 = self.connected.addCallback(strip(auth))
-        d1.addErrback(assertIMAP4Exception)
+        d1.addErrback(self.assertClientFailureMessage,
+                      b"Authentication failed: server misconfigured")
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d = defer.gatherResults([self.loopback(), d1])
         return d
