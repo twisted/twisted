@@ -241,7 +241,7 @@ Bugfixes
    restarting. (#8899)
  - twisted.internet.unix.Server.doRead and
    twisted.internet.unix.Client.doRead no longer fail if recvmsg's
-   ancilliary data contains more than one file descriptor. (#8911)
+   ancillary data contains more than one file descriptor. (#8911)
  - twist on Python 3 now correctly prints the help text when given no
    plugin to run. (#8918)
  - twisted.python.sendmsg.sendmsg no longer segfaults on Linux +
