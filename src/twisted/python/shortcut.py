@@ -50,36 +50,37 @@ class Shortcut:
             shell.CLSID_ShellLink, None,
             pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
         )
-        data = map(None,
-                   ['"%s"' % os.path.abspath(path), arguments, description,
-                    os.path.abspath(workingdir), os.path.abspath(iconpath)],
-                   ("SetPath", "SetArguments", "SetDescription",
-                   "SetWorkingDirectory") )
-        for value, function in data:
-            if value and function:
-                # call function on each non-null value
-                getattr(self, function)(value)
-        if iconpath:
-            self.SetIconLocation(iconpath, iconidx)
+        if path is not None:
+            self.SetPath(os.path.abspath(path))
+        if arguments is not None:
+            self.SetArguments(arguments)
+        if description is not None:
+            self.SetDescription(description)
+        if workingdir is not None:
+            self.SetWorkingDirectory(os.path.abspath(workingdir))
+        if iconpath is not None:
+            self.SetIconLocation(os.path.abspath(iconpath), iconidx)
 
 
     def load(self, filename):
         """
         Read a shortcut file from disk.
         """
-        self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(filename)
+        self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(
+            os.path.abspath(filename))
 
 
-    def save( self, filename ):
+    def save(self, filename):
         """
         Write the shortcut to disk.
 
         The file should be named something.lnk.
         """
-        self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(filename, 0)
+        self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(
+            os.path.abspath(filename), 0)
 
 
-    def __getattr__( self, name ):
+    def __getattr__(self, name):
         if name != "_base":
             return getattr(self._base, name)
         raise AttributeError("%s instance has no attribute %s" % (
