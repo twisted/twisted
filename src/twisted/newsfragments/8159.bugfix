@@ -1,0 +1,1 @@
+twisted.internet._win32serialport updated to support pySerial 3.x and dropped pySerial 2.x support.

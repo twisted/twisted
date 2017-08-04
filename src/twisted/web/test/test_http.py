@@ -604,6 +604,27 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         self.assertResponseEquals(value, self.expectedResponses)
 
 
+    def test_pipeliningReadLimit(self):
+        """
+        When pipelined requests are received, we will optimistically continue
+        receiving data up to a specified limit, then pause the transport.
+
+        @see: L{http.HTTPChannel._optimisticEagerReadSize}
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandlerProxy
+        a.makeConnection(b)
+        underLimit = a._optimisticEagerReadSize // len(self.requests)
+        for x in range(1, underLimit + 1):
+            a.dataReceived(self.requests)
+            self.assertEqual(b.producerState, 'producing',
+                             'state was {state!r} after {x} iterations'
+                             .format(state=b.producerState, x=x))
+        a.dataReceived(self.requests)
+        self.assertEquals(b.producerState, 'paused')
+
+
 
 class ShutdownTests(unittest.TestCase):
     """
@@ -2917,10 +2938,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory.startFactory()
         factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
+        proto._channel._optimisticEagerReadSize = 0
 
         val = [
             b"GET /path HTTP/1.1\r\n",
-            b"Connection: close\r\n",
             b"\r\n\r\n"
         ]
 
@@ -2932,6 +2953,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
+        proto.dataReceived(b'GET ') # just a few extra bytes to exhaust the
+                                    # optimistic buffer size
         self.assertEqual(trans.producerState, 'paused')
         proto._channel.requests[0].finish()
         self.assertEqual(trans.producerState, 'producing')
@@ -3407,9 +3430,12 @@ class ChannelProductionTests(unittest.TestCase):
         channel, transport = self.buildChannelAndTransport(
             StringTransport(), DelayedHTTPHandler
         )
+        channel._optimisticEagerReadSize = 0
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
+        # A little extra data to pause the transport.
+        channel.dataReceived(b'123')
         request = channel.requests[0].original
 
         # Register a dummy producer.
@@ -3449,8 +3475,12 @@ class ChannelProductionTests(unittest.TestCase):
             StringTransport(), DelayedHTTPHandler
         )
 
+        channel._optimisticEagerReadSize = 0
+
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
+        channel.dataReceived(b'extra') # exceed buffer size to pause the
+                                       # transport.
         request = channel.requests[0].original
 
         # Register a dummy producer.

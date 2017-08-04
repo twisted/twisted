@@ -29,7 +29,10 @@ class Logger(object):
         @return: the fully qualified python name of a module.
         @rtype: L{str} (native string)
         """
-        return currentframe(2).f_globals["__name__"]
+        try:
+            return currentframe(2).f_globals["__name__"]
+        except KeyError:
+            return "<unknown>"
 
 
     def __init__(self, namespace=None, source=None, observer=None):
