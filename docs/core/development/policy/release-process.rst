@@ -111,7 +111,7 @@ How to do a release candidate
 4. Run ``python -m incremental.update Twisted --rc``
 5. Commit the changes made by Incremental.
 6. Run ``towncrier``.
-7. Commit the changes made by towncrier - this automatically removes the NEWS topfiles.
+7. Commit the changes made by towncrier - this automatically removes the NEWS newsfragments.
 8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
 9. Push the changes up to GitHub.
 10. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs.
