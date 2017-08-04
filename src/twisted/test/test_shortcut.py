@@ -6,16 +6,14 @@ import os.path
 import sys
 import tempfile
 
-from twisted.python.runtime import platform
 from twisted.trial import unittest
 
 skipReason = None
-if platform.isWindows():
-    # Can only be imported on Windows
-    # due to win32com.
+try:
+    from win32com.shell import shell
     from twisted.python import shortcut
-else:
-    skipReason = "Only runs on Windows"
+except ImportError:
+    skipReason = "Only runs on Windows with win32com"
 
 
 
@@ -32,8 +30,8 @@ class ShortcutTests(unittest.TestCase):
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
-        scPath = sc.GetPath(0)[0]
-        self.assertEqual(sc.GetPath(0)[0].endswith('test_shortcut.py'))
+        scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
+        self.assertEqual(scPath[-16:], 'test_shortcut.py')
 
 
     def test_createPythonShortcut(self):
@@ -53,8 +51,10 @@ class ShortcutTests(unittest.TestCase):
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
-        self.assertTrue(sc.GetPath(0)[0].endswith(
-            os.path.basename(sys.executable)))
+        scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
+        executable = os.path.basename(sys.executable)
+        self.assertEqual(scPath[-len(executable):],
+                         executable)
         self.assertEqual(sc.GetDescription(), "The Python executable")
         self.assertEqual(sc.GetWorkingDirectory(), tempDir)
         self.assertEqual(sc.GetIconLocation(), (tempDir, 1))
