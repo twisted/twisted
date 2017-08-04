@@ -23,7 +23,8 @@ class ShortcutTests(unittest.TestCase):
     skip = skipReason
 
     def test_create(self):
-        s1 = shortcut.Shortcut("test_shortcut.py")
+        testFilename = __file__
+        s1 = shortcut.Shortcut(testFilename)
         tempname = self.mktemp() + '.lnk'
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
