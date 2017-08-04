@@ -3596,6 +3596,49 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
                              b"\r\n"]))
 
 
+    def test_unhandledCredentials(self):
+        """
+        A challenger that causes the login to fail
+        L{UnhandledCredentials} results in an C{BAD} response.
+
+        @return: A L{Deferred} that fires when the authorization has
+            failed.
+        """
+        realm = TestRealm()
+        portal = Portal(realm)
+        # This portal has no checkers, so all logins will fail with
+        # UnhandledCredentials
+        self.server.portal = portal
+
+        self.server.challengers[b'LOGIN'] = loginCred = imap4.LOGINCredentials
+
+        verifyClass(IChallengeResponse, loginCred)
+
+        cAuth = imap4.LOGINAuthenticator(b'testuser')
+        self.client.registerAuthenticator(cAuth)
+
+        def auth():
+            return self.client.authenticate(b'secret')
+
+        def assertIMAP4Exception(failure):
+            failure.trap(imap4.IMAP4Exception)
+            message = str(failure.value)
+
+            expected = (
+                "Authentication failed: server misconfigured"
+            ).encode('ascii')
+
+            if _PY3:
+                expected = repr(expected)
+            self.assertEqual(message, expected)
+
+        d1 = self.connected.addCallback(strip(auth))
+        d1.addErrback(assertIMAP4Exception)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d
+
+
     def testCramMD5(self):
         self.server.challengers[b'CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator(b'testuser')
