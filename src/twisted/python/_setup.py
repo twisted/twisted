@@ -415,12 +415,6 @@ notPortedModules = [
     "twisted.test.test_hook",
     "twisted.test.test_rebuild",
     "twisted.test.test_shortcut",
-    "twisted.web.domhelpers",
-    "twisted.web.microdom",
-    "twisted.web.rewrite",
     "twisted.web.soap",
-    "twisted.web.sux",
-    "twisted.web.test.test_domhelpers",
     "twisted.web.test.test_soap",
-    "twisted.web.test.test_xml",
 ]
