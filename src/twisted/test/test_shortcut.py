@@ -25,13 +25,15 @@ class ShortcutTests(unittest.TestCase):
         Create a simple shortcut.
         """
         testFilename = __file__
+        baseFileName = os.path.basename(testFilename)
         s1 = shortcut.Shortcut(testFilename)
         tempname = self.mktemp() + '.lnk'
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
         scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
-        self.assertEqual(scPath[-16:], 'test_shortcut.py')
+        self.assertEqual(scPath[-len(baseFileName):],
+                         baseFileName)
 
 
     def test_createPythonShortcut(self):
@@ -40,6 +42,7 @@ class ShortcutTests(unittest.TestCase):
         and set some values.
         """
         testFilename = sys.executable
+        baseFileName = os.path.basename(testFilename)
         tempDir = tempfile.gettempdir()
         s1 = shortcut.Shortcut(path=testFilename,
                                arguments="-V",
@@ -52,9 +55,8 @@ class ShortcutTests(unittest.TestCase):
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
         scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
-        executable = os.path.basename(sys.executable)
-        self.assertEqual(scPath[-len(executable):],
-                         executable)
+        self.assertEqual(scPath[-len(baseFileName):],
+                         baseFileName)
         self.assertEqual(sc.GetDescription(), "The Python executable")
         self.assertEqual(sc.GetWorkingDirectory(), tempDir)
         self.assertEqual(sc.GetIconLocation(), (tempDir, 1))
