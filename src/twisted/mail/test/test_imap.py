@@ -3540,6 +3540,62 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         return defer.gatherResults([d, self.loopback()])
 
 
+    def test_authNotBase64(self):
+        """
+        A client that responds with a challenge that cannot be decoded
+        as Base 64 receives an L{IllegalClientResponse}.
+        """
+        @implementer(IChallengeResponse)
+        class NotBase64AuthChallenge(object):
+            message = b"Malformed Response - not base64"
+
+            def getChallenge(self):
+                return b"SomeChallenge"
+
+
+            def setResponse(self, response):
+                """
+                Never called.
+
+                @param response: See L{IChallengeResponse.setResponse}
+                """
+
+
+            def moreChallenges(self):
+                """
+                Never called.
+                """
+
+        notBase64 = NotBase64AuthChallenge()
+        verifyObject(IChallengeResponse, notBase64)
+
+        server = imap4.IMAP4Server()
+        server.portal = self.portal
+        server.challengers[b'NOTBASE64'] = NotBase64AuthChallenge
+
+        transport = StringTransport()
+        server.makeConnection(transport)
+        self.addCleanup(server.connectionLost,
+                        error.ConnectionDone("Connection done."))
+
+        self.assertIn(b"AUTH=NOTBASE64", transport.value())
+
+        transport.clear()
+        server.dataReceived(b'001 AUTHENTICATE NOTBASE64\r\n')
+
+        self.assertIn(base64.b64encode(notBase64.getChallenge()),
+                      transport.value())
+
+        transport.clear()
+        server.dataReceived(b'\x00 Not base64\r\n')
+
+        self.assertEqual(transport.value(),
+                         b"".join([
+                             b"001 NO Authentication failed: ",
+                             notBase64.message,
+                             b"\r\n"]))
+
+
     def testCramMD5(self):
         self.server.challengers[b'CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator(b'testuser')
