@@ -11,11 +11,9 @@ from twisted.trial import unittest
 
 skipReason = None
 if platform.isWindows():
-    try:
-        from twisted.python import shortcut
-    except ImportError:
-        skipReason = ("On Windows, twisted.python.shortcut is not "
-                      "available in the absence of win32com.")
+    # Can only be imported on Windows
+    # due to win32com.
+    from twisted.python import shortcut
 else:
     skipReason = "Only runs on Windows"
 
@@ -34,7 +32,8 @@ class ShortcutTests(unittest.TestCase):
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
         sc = shortcut.open(tempname)
-        self.assertTrue(sc.GetPath(0)[0].endswith('test_shortcut.py'))
+        scPath = sc.GetPath(0)[0]
+        self.assertEqual(sc.GetPath(0)[0].endswith('test_shortcut.py'))
 
 
     def test_createPythonShortcut(self):
