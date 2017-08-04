@@ -371,30 +371,15 @@ This makes the script more portable but note that it is not a foolproof method.
 Always make sure that ``/usr/bin/env`` exists or use a softlink/symbolic link to point it to the correct path.
 Python's distutils will rewrite the shebang line upon installation so this policy only covers the source files in version control.
 
-#. For core scripts, add this Twisted running-from-Git header:
+#. For core scripts, add an entry to ``_CONSOLE_SCRIPTS`` in ``src/twisted/python/_setup.py``:
 
    .. code-block:: python
 
-       import sys
-       try:
-           import _preamble
-       except ImportError:
-           sys.clear_exc()
-
-
-   Or for sub-project scripts, add a modified version which also adjusts ``sys.path``:
-
-   .. code-block:: python
-
-       import sys, os
-       extra = os.path.dirname(os.path.dirname(sys.argv[0]))
-       sys.path.insert(0, extra)
-       try:
-           import _preamble
-       except ImportError:
-           sys.clear_exc()
-       sys.path.remove(extra)
-
+       _CONSOLE_SCRIPTS = [
+           ...
+           "twistd = twisted.scripts.twistd:run",
+           "yourmodule" = "twisted.scripts.yourmodule:run",
+       ]
 
 #. And end with:
 
@@ -407,7 +392,10 @@ Python's distutils will rewrite the shebang line upon installation so this polic
 #. Write a manpage and add it to the ``man`` folder of a subproject's ``doc`` folder.
    On Debian systems you can find a skeleton example of a manpage in ``/usr/share/doc/man-db/examples/manpage.example``.
 
-This will ensure your program will work correctly for users of Git, Windows releases and Debian packages.
+
+This will ensure that your program will have a proper ``console_scripts`` entry point, which
+``setup.py`` will use to generate a console script which will work correctly for users of
+Git, Windows releases and Debian packages.
 
 
 Examples
