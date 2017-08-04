@@ -409,9 +409,6 @@ class DomishSuxStreamTests(DomishStreamTestsMixin, unittest.TestCase):
     """
     streamClass = domish.SuxElementStream
 
-    if domish.SuxElementStream is None:
-        skip = "twisted.web is required for SuxElementStream tests."
-
 
 
 class SerializerTests(unittest.TestCase):
