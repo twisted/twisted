@@ -39,7 +39,7 @@ matrix:
     # For now all non-trial tests are in a single job to reduce the time spent
     # on starting separate jobs.
     - python: 2.7
-      env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+      env: TOXENV=narrativedocs,apidocs,pyflakes,newsfragment,manifest-checker
     - python: 3.5
       env: TOXENV=pyflakes3
     # Twistedchecker is running as a separate job so that we can ignore if it
