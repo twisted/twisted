@@ -29,14 +29,6 @@ def open(filename):
 class Shortcut:
     """
     A shortcut on Win32.
-    >>> sc=Shortcut(path, arguments, description, workingdir, iconpath, iconidx)
-    @param path: Location of the target
-    @param arguments: If path points to an executable, optional arguments to
-                      pass
-    @param description: Human-readable description of target
-    @param workingdir: Directory from which target is launched
-    @param iconpath: Filename that contains an icon for the shortcut
-    @param iconidx: If iconpath is set, optional index of the icon desired
     """
 
     def __init__(self,
@@ -46,6 +38,15 @@ class Shortcut:
                  workingdir=None,
                  iconpath=None,
                  iconidx=0):
+        """
+        @param path: Location of the target
+        @param arguments: If path points to an executable, optional arguments
+                      to pass
+        @param description: Human-readable description of target
+        @param workingdir: Directory from which target is launched
+        @param iconpath: Filename that contains an icon for the shortcut
+        @param iconidx: If iconpath is set, optional index of the icon desired
+        """
         self._base = pythoncom.CoCreateInstance(
             shell.CLSID_ShellLink, None,
             pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
