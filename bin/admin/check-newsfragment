@@ -9,6 +9,6 @@ Check that the current commits since branching have a topfile.
 from __future__ import absolute_import, division, print_function
 
 import sys
-from twisted.python._release import CheckTopfileScript
+from twisted.python._release import CheckNewsfragmentScript
 
-CheckTopfileScript(print).main(sys.argv[1:])
+CheckNewsfragmentScript(print).main(sys.argv[1:])
