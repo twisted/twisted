@@ -3490,7 +3490,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
         """
         When a challenger's
         L{getChallenge<IChallengeResponse.getChallenge>} method raises
-        any exception, a bad response is sent.
+        any exception, a C{NO} response is sent.
         """
 
         @implementer(IChallengeResponse)
@@ -3600,7 +3600,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
     def test_unhandledCredentials(self):
         """
         A challenger that causes the login to fail
-        L{UnhandledCredentials} results in an C{BAD} response.
+        L{UnhandledCredentials} results in an C{NO} response.
 
         @return: A L{Deferred} that fires when the authorization has
             failed.
