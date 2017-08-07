@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 
 import gc
+import os
 import re
 import sys
 import textwrap
@@ -866,3 +867,32 @@ class HelpOrderTests(unittest.TestCase):
             )
 
             self.assertTrue(match, msg=msg % (orderName, output))
+
+
+
+class InvocationTests(unittest.TestCase):
+    """
+    Invocation of the trial script.
+    """
+    def test_scriptInModuleDirectory(self):
+        """
+        Create an empty file inside a directory
+        in the current path.  Run trial against this empty file.
+        Running trial against an empty file should succeed.
+        This test makes sure that trial can find the script in the path.
+        """
+        self.addCleanup(os.chdir, os.getcwd())
+        scriptDirectory = FilePath(self.mktemp())
+        scriptDirectory.makedirs()
+        os.chdir(scriptDirectory.path)
+        os.mkdir("tempdir")
+        with open("tempdir/someTest.py", "wb") as f:
+            f.write(b'')
+        with open("tempdir/__init__.py", "wb") as f:
+            f.write(b'')
+        argv = [sys.argv[0], "tempdir.someTest"]
+        self.patch(sys, "argv", argv)
+        with self.assertRaises(SystemExit) as e:
+            trial.run()
+        # SystemExit should be False if trial succeeded.
+        self.assertFalse(e.exception.args[0])

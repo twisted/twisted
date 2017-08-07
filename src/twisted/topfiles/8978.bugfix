@@ -1,0 +1,1 @@
+trial now adds the current directory to sys.path, as it did in Twisted 16.4.1.
