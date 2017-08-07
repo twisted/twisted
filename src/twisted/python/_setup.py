@@ -405,7 +405,6 @@ notPortedModules = [
     "twisted.python.finalize",
     "twisted.python.hook",
     "twisted.python.rebuild",
-    "twisted.python.shortcut",
     "twisted.python.test.cmodulepullpipe",
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_win32",
@@ -414,7 +413,6 @@ notPortedModules = [
     "twisted.test.myrebuilder2",
     "twisted.test.test_hook",
     "twisted.test.test_rebuild",
-    "twisted.test.test_shortcut",
     "twisted.web.soap",
     "twisted.web.test.test_soap",
 ]
