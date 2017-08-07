@@ -112,7 +112,7 @@ How to do a release candidate
 5. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/ --rc`` to update the C extension version. Change back into the main parent dir.
 6. Commit the changes made by Incremental.
 7. Run ``towncrier``.
-8. Commit the changes made by towncrier - this automatically removes the NEWS topfiles.
+8. Commit the changes made by towncrier - this automatically removes the newsfragments.
 9. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
 10. Push the changes up to GitHub.
 11. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs for Twisted.
