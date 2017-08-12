@@ -192,7 +192,8 @@ COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 atom = br"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
 
 class Address:
-    """Parse and hold an RFC 2821 address.
+    """
+    Parse and hold an RFC 6531 address.
 
     Source routes are stipped and ignored, UUCP-style bang-paths
     and %-style routing are not parsed.
