@@ -221,6 +221,8 @@ class Address:
             return
         elif isinstance(addr, unicode):
             addr = addr.encode('utf-8')
+        elif addr is None:
+            addr = b""
 
         self.addrstr = addr
 
