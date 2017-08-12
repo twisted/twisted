@@ -227,7 +227,9 @@ class Address:
         self.addrstr = addr
 
         # Tokenize
-        atl = list(filter(None, self.tstring.split(addr)))
+        atl = [addrComponent
+               for addrComponent in self.tstring.split(addr)
+               if addrComponent]
         local = []
         domain = []
 
@@ -281,9 +283,9 @@ class Address:
         if isinstance(addr, unicode):
             addr = addr.encode('utf-8')
 
-        atl = filter(None, self.tstring.split(addr))
-
-        for t in atl:
+        for t in [addrComponent
+                  for addrComponent in self.tstring.split(addr)
+                  if addrComponent]:
             if t[0] == b'"' and t[-1] == b'"':
                 res.append(t[1:-1])
             elif '\\' in t:
