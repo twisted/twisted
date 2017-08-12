@@ -189,7 +189,7 @@ COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
 
 # Character classes for parsing addresses
-atom = br"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
+atom = u"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~\u00a0-\U001000ff]"
 
 class Address:
     """
