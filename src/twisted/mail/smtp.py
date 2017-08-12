@@ -36,7 +36,7 @@ from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import (_PY3, range, long, unicode, networkString,
                                    nativeString, iteritems, _keys, _bytesChr,
-                                   iterbytes)
+                                   iterbytes, unicode)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -218,8 +218,8 @@ class Address:
         if isinstance(addr, Address):
             self.__dict__ = addr.__dict__.copy()
             return
-        elif not isinstance(addr, bytes):
-            addr = str(addr).encode('utf-8')
+        elif isinstance(addr, unicode):
+            addr = addr.encode('utf-8')
 
         self.addrstr = addr
 
@@ -275,8 +275,8 @@ class Address:
         """
         res = []
 
-        if not isinstance(addr, bytes):
-            addr = str(addr).encode('ascii')
+        if isinstance(addr, unicode):
+            addr = addr.encode('utf-8')
 
         atl = filter(None, self.tstring.split(addr))
 
@@ -1888,14 +1888,14 @@ class SMTPSenderFactory(protocol.ClientFactory):
         assert isinstance(retries, (int, long))
 
         if isinstance(toEmail, unicode):
-            toEmail = [toEmail.encode('ascii')]
+            toEmail = [toEmail.encode('utf-8')]
         elif isinstance(toEmail, bytes):
             toEmail = [toEmail]
         else:
             toEmailFinal = []
             for _email in toEmail:
                 if not isinstance(_email, bytes):
-                    _email = _email.encode('ascii')
+                    _email = _email.encode('utf-8')
 
                 toEmailFinal.append(_email)
             toEmail = toEmailFinal
