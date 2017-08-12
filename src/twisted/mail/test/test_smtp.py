@@ -1861,6 +1861,9 @@ class SendmailTests(unittest.TestCase):
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory.username, b"foo")
         self.assertEqual(factory.password, b"bar")
+        self.assertEqual(factory.fromEmail.local, u"привет".encode("utf-8"))
+        self.assertEqual(factory.toEmail[0],
+                         u"jöhn.doé@example.com".encode("utf-8"))
 
 
     def test_messageFilePassthrough(self):
