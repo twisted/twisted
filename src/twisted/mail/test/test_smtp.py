@@ -1847,6 +1847,21 @@ class SendmailTests(unittest.TestCase):
         self.assertEqual(factory.password, b"bar")
 
 
+    def test_unicodeAddresses(self):
+        """
+        L{twisted.mail.smtp.sendmail} will accept non-ASCII characters
+        in the sender and recipient addresses.
+        """
+        reactor = MemoryReactor()
+        smtp.sendmail("localhost", u"привет@address", u"jöhn.doé@example.com",
+                      b"message", reactor=reactor, username=b"foo",
+                      password=b"bar", requireTransportSecurity=True,
+                      requireAuthentication=True)
+        factory = reactor.tcpClients[0][2]
+        self.assertEqual(factory.username, b"foo")
+        self.assertEqual(factory.password, b"bar")
+
+
     def test_messageFilePassthrough(self):
         """
         L{twisted.mail.smtp.sendmail} will pass through the message untouched
