@@ -205,10 +205,10 @@ class Address:
     @ivar local: The local (\"user\") portion of this address.
     """
 
-    tstring = re.compile(br'''( # A string of
+    tstring = re.compile(u'''( # A string of
                            (?:"[^"]*" # quoted string
                            |\\. # backslash-escaped characted
-                           |''' + atom + br''' # atom character
+                           |''' + atom + u''' # atom character
                            )+|.) # or any single character''', re.X)
     atomre = re.compile(atom) # match any one atom character
 
@@ -219,12 +219,12 @@ class Address:
         if isinstance(addr, Address):
             self.__dict__ = addr.__dict__.copy()
             return
-        elif isinstance(addr, unicode):
-            addr = addr.encode('utf-8')
+        elif isinstance(addr, bytes):
+            addr = addr.decode('utf-8')
         elif addr is None:
-            addr = b""
+            addr = u""
 
-        self.addrstr = addr
+        self.addrstr = addr.encode("utf-8")
 
         # Tokenize
         atl = [addrComponent
@@ -234,15 +234,15 @@ class Address:
         domain = []
 
         while atl:
-            if atl[0] == b'<':
-                if atl[-1] != b'>':
+            if atl[0] == u'<':
+                if atl[-1] != u'>':
                     raise AddressError("Unbalanced <>")
                 atl = atl[1:-1]
-            elif atl[0] == b'@':
+            elif atl[0] == u'@':
                 atl = atl[1:]
                 if not local:
                     # Source route
-                    while atl and atl[0] != b':':
+                    while atl and atl[0] != u':':
                         # remove it
                         atl = atl[1:]
                     if not atl:
@@ -252,10 +252,10 @@ class Address:
                     raise AddressError("Too many @")
                 else:
                     # Now in domain
-                    domain = [b'']
+                    domain = [u'']
             elif (len(atl[0]) == 1 and
                   not self.atomre.match(atl[0]) and
-                  atl[0] != b'.'):
+                  atl[0] != u'.'):
                 raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
             else:
                 if not domain:
@@ -264,12 +264,14 @@ class Address:
                     domain.append(atl[0])
                 atl = atl[1:]
 
-        self.local = b''.join(local)
-        self.domain = b''.join(domain)
-        if self.local != b'' and self.domain == b'':
+        self.local = u''.join(local)
+        self.domain = u''.join(domain)
+        if self.local != u'' and self.domain == u'':
             if defaultDomain is None:
                 defaultDomain = DNSNAME
             self.domain = defaultDomain
+        self.local = self.local.encode("utf-8")
+        self.domain = self.domain.encode("utf-8")
 
     dequotebs = re.compile(br'\\(.)')
 
@@ -280,39 +282,35 @@ class Address:
         """
         res = []
 
-        if isinstance(addr, unicode):
-            addr = addr.encode('utf-8')
+        if isinstance(addr, bytes):
+            addr = addr.decode('utf-8')
 
         for t in [addrComponent
                   for addrComponent in self.tstring.split(addr)
                   if addrComponent]:
-            if t[0] == b'"' and t[-1] == b'"':
+            if t[0] == u'"' and t[-1] == u'"':
                 res.append(t[1:-1])
-            elif '\\' in t:
-                res.append(self.dequotebs.sub(br'\1', t))
+            elif u'\\' in t:
+                res.append(self.dequotebs.sub(u'\1', t))
             else:
                 res.append(t)
 
-        return b''.join(res)
+        return b''.join([r.encode("utf-8") for r in res])
 
-    if _PY3:
-        def __str__(self):
-            return nativeString(bytes(self))
-    else:
-        def __str__(self):
-            return self.__bytes__()
+    def __str__(self):
+        if self.local or self.domain:
+            return u'@'.join((self.local.decode("utf-8"),
+                              self.domain.decode("utf-8")))
+        else:
+            return u''
 
 
     def __bytes__(self):
-        if self.local or self.domain:
-            return b'@'.join((self.local, self.domain))
-        else:
-            return b''
-
+        return self.__str__().encode("utf-8")
 
     def __repr__(self):
-        return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
-                              repr(str(self)))
+        return u"{}.{}({})".format(self.__module__, self.__class__.__name__,
+                                   repr(str(self)))
 
 
 
@@ -455,7 +453,6 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # amount of whitespace between the command and its argument, though
         # it is not required by the protocol, for it is a nice thing to do.
         line = line.strip()
-
         parts = line.split(None, 1)
         if parts:
             method = self.lookupMethod(parts[0]) or self.do_UNKNOWN
@@ -520,15 +517,15 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     # A string of quoted strings, backslash-escaped character or
     # atom characters + '@.,:'
-    qstring = br'("[^"]*"|\\.|' + atom + br'|[@.,:])+'
+    qstring = u'("[^"]*"|\\.|' + atom + u'|[@.,:])+'
 
-    mail_re = re.compile(br'''\s*FROM:\s*(?P<path><> # Empty <>
-                          |<''' + qstring + br'''> # <addr>
-                          |''' + qstring + br''' # addr
+    mail_re = re.compile(u'''\s*FROM:\s*(?P<path><> # Empty <>
+                          |<''' + qstring + u'''> # <addr>
+                          |''' + qstring + u''' # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                           $''', re.I|re.X)
-    rcpt_re = re.compile(br'\s*TO:\s*(?P<path><' + qstring + br'''> # <addr>
-                          |''' + qstring + br''' # addr
+    rcpt_re = re.compile(u'\s*TO:\s*(?P<path><' + qstring + u'''> # <addr>
+                          |''' + qstring + u''' # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                           $''', re.I|re.X)
 
@@ -538,7 +535,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return
         # Clear old recipient list
         self._to = []
-        m = self.mail_re.match(rest)
+
+        m = self.mail_re.match(rest.decode("utf-8"))
         if not m:
             self.sendCode(501, b"Syntax error")
             return
@@ -579,7 +577,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if not self._from:
             self.sendCode(503, b"Must have sender before recipient")
             return
-        m = self.rcpt_re.match(rest)
+        m = self.rcpt_re.match(rest.decode("utf-8"))
         if not m:
             self.sendCode(501, b"Syntax error")
             return
