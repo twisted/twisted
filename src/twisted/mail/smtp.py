@@ -175,7 +175,7 @@ def quoteaddr(addr):
         return b'<' + bytes(addr) + b'>'
 
     if isinstance(addr, bytes):
-        addr = addr.decode('ascii')
+        addr = addr.decode('utf-8')
 
     res = parseaddr(addr)
 
@@ -183,7 +183,7 @@ def quoteaddr(addr):
         # It didn't parse, use it as-is
         return  b'<' + bytes(addr) + b'>'
     else:
-        return  b'<' + res[1].encode('ascii') + b'>'
+        return  b'<' + res[1].encode('utf-8') + b'>'
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
@@ -219,7 +219,7 @@ class Address:
             self.__dict__ = addr.__dict__.copy()
             return
         elif not isinstance(addr, bytes):
-            addr = str(addr).encode('ascii')
+            addr = str(addr).encode('utf-8')
 
         self.addrstr = addr
 
