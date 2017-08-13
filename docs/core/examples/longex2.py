@@ -75,7 +75,7 @@ class Numbers(basic.LineReceiver):
     """
     def lineReceived(self, line):
         try:
-            numbers = map(long, line.split())
+            numbers = [int(num.decode("ascii")) for num in line.split()]
         except ValueError:
             self.sendLine(b'Error.')
             return
