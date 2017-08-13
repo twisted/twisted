@@ -77,7 +77,7 @@ class Numbers(basic.LineReceiver):
         try:
             numbers = map(long, line.split())
         except ValueError:
-            self.sendLine('Error.')
+            self.sendLine(b'Error.')
             return
         deferred = self.factory.calc(numbers)
         deferred.addCallback(str)
