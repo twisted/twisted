@@ -22,10 +22,10 @@ def cbBody(body):
     print('Response body:')
     print(body)
 
-def main(reactor, url=b"http://example.com/"):
+def main(reactor, url=b"http://httpbin.org/get"):
     agent = Agent(reactor)
     d = agent.request(
-        'GET', url,
+        b'GET', url,
         Headers({'User-Agent': ['Twisted Web Client Example']}),
         None)
     d.addCallback(cbRequest)
