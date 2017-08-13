@@ -5,7 +5,7 @@
 #  - All of the test files, so that the tests can be run on an installed copy.
 # We do not want to include:
 #  - Release management files (e.g. topfiles)
-#  - Things only useful when running from a source checkout (_preamble.py)
+#  - Things only useful when running from a source checkout
 
 # Do not include the old topfiles, or news fragments
 recursive-exclude src/twisted *.misc *.bugfix *.doc *.feature *.removal

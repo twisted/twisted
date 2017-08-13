@@ -23,8 +23,8 @@ from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
-# Types of topfiles.
-TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
+# Types of newsfragments.
+NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     u"https://docs.python.org/2/objects.inv",
     u"https://docs.python.org/3/objects.inv",
@@ -201,7 +201,7 @@ class Project(object):
 
     @ivar directory: A L{twisted.python.filepath.FilePath} pointing to the base
         directory of a Twisted-style Python package. The package should contain
-        a C{_version.py} file and a C{topfiles} directory that contains a
+        a C{_version.py} file and a C{newsfragments} directory that contains a
         C{README} file.
     """
 
@@ -241,7 +241,7 @@ def findTwistedProjects(baseDirectory):
     """
     projects = []
     for filePath in baseDirectory.walk():
-        if filePath.basename() == 'topfiles':
+        if filePath.basename() == 'newsfragments':
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
@@ -497,7 +497,7 @@ class BuildAPIDocsScript(object):
 
 
 
-class CheckTopfileScript(object):
+class CheckNewsfragmentScript(object):
     """
     A thing for checking whether a checkout has a newsfragment.
     """
@@ -541,22 +541,22 @@ class CheckTopfileScript(object):
                 self._print("Quotes change only; no newsfragment needed.")
                 sys.exit(0)
 
-        topfiles = []
+        newsfragments = []
 
         for change in files:
             if os.sep + "newsfragments" + os.sep in change:
-                if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
-                    topfiles.append(change)
+                if "." in change and change.rsplit(".", 1)[1] in NEWSFRAGMENT_TYPES:
+                    newsfragments.append(change)
 
         if branch.startswith("release-"):
-            if topfiles:
+            if newsfragments:
                 self._print("No newsfragments should be on the release branch.")
                 sys.exit(1)
             else:
                 self._print("Release branch with no newsfragments, all good.")
                 sys.exit(0)
 
-        for change in topfiles:
+        for change in newsfragments:
             self._print("Found " + change)
             sys.exit(0)
 
