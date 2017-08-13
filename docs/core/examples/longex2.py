@@ -80,7 +80,11 @@ class Numbers(basic.LineReceiver):
             self.sendLine(b'Error.')
             return
         deferred = self.factory.calc(numbers)
-        deferred.addCallback(str)
+
+        def encodeNumber(num):
+            return str(num).encode("ascii")
+
+        deferred.addCallback(encodeNumber)
         deferred.addCallback(self.sendLine)
 
 class Multiplication(protocol.ServerFactory):
