@@ -3,16 +3,16 @@ from __future__ import print_function
 from twisted.protocols import amp
 
 class Sum(amp.Command):
-    arguments = [('a', amp.Integer()),
-                 ('b', amp.Integer())]
-    response = [('total', amp.Integer())]
+    arguments = [(b'a', amp.Integer()),
+                 (b'b', amp.Integer())]
+    response = [(b'total', amp.Integer())]
 
 
 class Divide(amp.Command):
-    arguments = [('numerator', amp.Integer()),
-                 ('denominator', amp.Integer())]
-    response = [('result', amp.Float())]
-    errors = {ZeroDivisionError: 'ZERO_DIVISION'}
+    arguments = [(b'numerator', amp.Integer()),
+                 (b'denominator', amp.Integer())]
+    response = [(b'result', amp.Float())]
+    errors = {ZeroDivisionError: b'ZERO_DIVISION'}
 
 
 class Math(amp.AMP):
