@@ -55,7 +55,8 @@ class Producer(object):
 
         while not self._paused and self._produced < self._goal:
             next_int = randrange(0, 10000)
-            self._proto.sendLine('%d' % next_int)
+            line = "{}".format(next_int)
+            self._proto.sendLine(line.encode("ascii"))
             self._produced += 1
 
         if self._produced == self._goal:
@@ -80,7 +81,7 @@ class ServeRandom(LineReceiver):
         the producer should return.
         """
         print('Connection made from %s' % self.transport.getPeer())
-        self.sendLine('How many random integers do you want?')
+        self.sendLine(b'How many random integers do you want?')
 
     def lineReceived(self, line):
         """
