@@ -50,7 +50,7 @@ from twisted.internet import defer, protocol
 
 def runIterator(reactor, iterator):
     try:
-        iterator.next()
+        next(iterator)
     except StopIteration:
         pass
     else:
