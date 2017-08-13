@@ -34,7 +34,7 @@ class FooService(service.Service):
     def stopService(self):
         service.Service.stopService(self)
         print('lala, stopping')
-        print self.parent.getServiceNamed(self.name) is self
+        print(self.parent.getServiceNamed(self.name) is self)
 
 foo = FooService()
 foo.setName('foo')
