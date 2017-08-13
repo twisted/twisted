@@ -21,11 +21,11 @@ class LongMultiplicationProtocol(basic.LineReceiver):
         try:
             numbers = map(long, line.split())
         except ValueError:
-            self.sendLine('Error.')
+            self.sendLine(b'Error.')
             return
 
         if len(numbers) <= 1:
-            self.sendLine('Error.')
+            self.sendLine(b'Error.')
             return
 
         self.workQueue.append(numbers)
@@ -44,7 +44,7 @@ class LongMultiplicationProtocol(basic.LineReceiver):
     
             # If this piece of work now has only one element, send it.
             if len(work) == 1:
-                self.sendLine(str(work[0]))
+                self.sendLine(str(work[0]).encode("ascii"))
                 del self.workQueue[0]
             
             # Schedule this function to do more work, if there's still work
