@@ -95,10 +95,10 @@ class MailProcessor(basic.LineReceiver):
             emailParser = email.parser.Parser()
             with open(self.messageFilename) as f:
                 emailParser.parse(f)
-            self.sendLine('200 Ok')
+            self.sendLine(b'200 Ok')
         except:
             trace_dump()
-            self.sendLine('435 %s processing error' % FILTERNAME)
+            self.sendLine('435 ' + FILTERNAME.encode("ascii") + ' processing error')
 
 
 def main():
