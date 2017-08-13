@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import math, time
 
+from twisted.python.compat import range
 from twisted.protocols import basic
 
 class CollectingLineReceiver(basic.LineReceiver):
@@ -16,7 +17,7 @@ def benchmark(chunkSize, lineLength, numLines):
     bytes = ('x' * lineLength + '\r\n') * numLines
     chunkCount = len(bytes) / chunkSize + 1
     chunks = []
-    for n in xrange(chunkCount):
+    for n in range(chunkCount):
         chunks.append(bytes[n*chunkSize:(n+1)*chunkSize])
     assert ''.join(chunks) == bytes, (chunks, bytes)
     p = CollectingLineReceiver()

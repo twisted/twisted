@@ -2,6 +2,7 @@
 # See LICENSE for details.
 from __future__ import print_function
 
+from twisted.python.compat import range
 from twisted.test import proto_helpers, test_protocols
 import math
 import time
@@ -57,7 +58,7 @@ class PerformanceTester(object):
         @param number: Defines the number of test runs to be performed.
         @type number: C{int}
         """
-        for iteration in xrange(number):
+        for iteration in range(number):
             self.performTest(iteration)
 
 
@@ -216,7 +217,7 @@ class NetstringPerformanceTester(PerformanceTester):
         dr = self.netstringReceiver.dataReceived
         now = time.time()
         dr(NETSTRING_PREFIX_TEMPLATE % (dataSize,))
-        for idx in xrange(numberOfChunks):
+        for idx in range(numberOfChunks):
             dr(chunk)
         dr(NETSTRING_POSTFIX)
         elapsed = time.time() - now
