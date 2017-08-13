@@ -15,7 +15,6 @@ from twisted.python import usage
 from twisted.internet import reactor
 
 # Standard library imports
-import string
 import sys
 from io import BytesIO
 
@@ -36,7 +35,7 @@ def success(response):
     if response is None:
         print(None)
     else:
-        print(string.join(response, '\n'))
+        print("\n".join(response))
     print('---')
 
 
