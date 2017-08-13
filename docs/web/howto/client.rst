@@ -153,9 +153,9 @@ writes an in-memory string to the consumer:
 
 
 
-:download:`stringprod.py <listings/client/stringprod.py>`
+:download:`bytesprod.py <listings/client/bytesprod.py>`
 
-.. literalinclude:: listings/client/stringprod.py
+.. literalinclude:: listings/client/bytesprod.py
 
 
 
