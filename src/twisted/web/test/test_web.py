@@ -55,6 +55,26 @@ class SimpleResource(resource.Resource):
 
 
 
+class ZeroLengthResource(resource.Resource):
+    """
+    A resource that always returns a zero-length response.
+    """
+    def render(self, request):
+        return b''
+
+
+
+class NoContentResource(resource.Resource):
+    """
+    A resource that always returns a 204 No Content response without setting
+    Content-Length.
+    """
+    def render(self, request):
+        request.setResponseCode(http.NO_CONTENT)
+        return b''
+
+
+
 class SiteTest(unittest.TestCase):
     """
     Unit tests for L{server.Site}.
@@ -729,6 +749,82 @@ class RequestTests(unittest.TestCase):
         self.assertTrue(request.cookies[0].startswith(b'TWISTED_SESSION='))
         # It should be a new session ID.
         self.assertNotIn(b"does-not-exist", request.cookies[0])
+
+
+    def test_OPTIONSStar(self):
+        """
+        L{Request} handles OPTIONS * requests by doing a fast-path return of
+        200 OK.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.setHost(b'example.com', 80)
+        request.gotLength(0)
+        request.requestReceived(b'OPTIONS', b'*', b'HTTP/1.1')
+
+        response = d.transport.written.getvalue()
+        self.assertTrue(response.startswith(b'HTTP/1.1 200 OK'))
+        self.assertIn(b'Content-Length: 0\r\n', response)
+
+
+    def test_rejectNonOPTIONSStar(self):
+        """
+        L{Request} handles any non-OPTIONS verb requesting the * path by doing
+        a fast-return 405 Method Not Allowed, indicating only the support for
+        OPTIONS.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.setHost(b'example.com', 80)
+        request.gotLength(0)
+        request.requestReceived(b'GET', b'*', b'HTTP/1.1')
+
+        response = d.transport.written.getvalue()
+        self.assertTrue(
+            response.startswith(b'HTTP/1.1 405 Method Not Allowed')
+        )
+        self.assertIn(b'Content-Length: 0\r\n', response)
+        self.assertIn(b'Allow: OPTIONS\r\n', response)
+
+
+    def test_noDefaultContentTypeOnZeroLengthResponse(self):
+        """
+        Responses with no length do not have a default content-type applied.
+        """
+        resrc = ZeroLengthResource()
+        resrc.putChild(b'', resrc)
+        site = server.Site(resrc)
+        d = DummyChannel()
+        d.site = site
+        request = server.Request(d, 1)
+        request.site = site
+        request.setHost(b'example.com', 80)
+        request.gotLength(0)
+        request.requestReceived(b'GET', b'/', b'HTTP/1.1')
+
+        self.assertNotIn(
+            b'content-type', request.transport.written.getvalue().lower()
+        )
+
+
+    def test_noDefaultContentTypeOn204Response(self):
+        """
+        Responses with a 204 status code have no default content-type applied.
+        """
+        resrc = NoContentResource()
+        resrc.putChild(b'', resrc)
+        site = server.Site(resrc)
+        d = DummyChannel()
+        d.site = site
+        request = server.Request(d, 1)
+        request.site = site
+        request.setHost(b'example.com', 80)
+        request.gotLength(0)
+        request.requestReceived(b'GET', b'/', b'HTTP/1.1')
+
+        response = request.transport.written.getvalue()
+        self.assertTrue(response.startswith(b'HTTP/1.1 204 No Content\r\n'))
+        self.assertNotIn(b'content-type', response.lower())
 
 
 
