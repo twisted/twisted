@@ -98,7 +98,7 @@ class Protocol(basic.LineReceiver):
                 ).addCallbacks(self._cbLogin, self._ebLogin
                 )
             else:
-                self.sendLine("DENIED")
+                self.sendLine(b"DENIED")
 
     def cmd_PRIVS(self):
         self.sendLine(b"You have the following privileges: ")

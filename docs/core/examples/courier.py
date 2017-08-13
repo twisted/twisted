@@ -98,7 +98,7 @@ class MailProcessor(basic.LineReceiver):
             self.sendLine(b'200 Ok')
         except:
             trace_dump()
-            self.sendLine('435 ' + FILTERNAME.encode("ascii") + ' processing error')
+            self.sendLine(b'435 ' + FILTERNAME.encode("ascii") + b' processing error')
 
 
 def main():
