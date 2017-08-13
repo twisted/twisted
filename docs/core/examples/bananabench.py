@@ -35,7 +35,7 @@ class BananaBench:
             self.enc.sendEncoded(value)
             self.io.truncate(0)
         endtime = time.time()
-        print('    Encode took %s seconds' % (endtime - starttime))
+        print('    Encode took {} seconds'.format(endtime - starttime))
         return endtime - starttime
 
     def testDecode(self, value):
@@ -45,7 +45,7 @@ class BananaBench:
         for i in self.r:
             self.enc.dataReceived(encoded)
         endtime = time.time()
-        print('    Decode took %s seconds' % (endtime - starttime))
+        print('    Decode took {} seconds'.format(endtime - starttime))
         return endtime - starttime
 
     def performTest(self, method, data, encClass):
@@ -54,13 +54,13 @@ class BananaBench:
         self.tearDown()
 
     def runTests(self, testData):
-        print('Test data is: %s' % testData)
+        print('Test data is: {}'.format(testData))
         print('  Using Pure Python Banana:')
         self.performTest(self.testEncode, testData, banana.Banana)
         self.performTest(self.testDecode, testData, banana.Banana)
 
 bench = BananaBench()
-print('Doing %s iterations of each test.' % iterationCount)
+print('Doing {} iterations of each test.'.format(iterationCount))
 print('')
 testData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 bench.runTests(testData)

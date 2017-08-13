@@ -49,14 +49,14 @@ class ReceiveFDProtocol(LineOnlyReceiver):
 
     def lineReceived(self, line):
         if self.descriptor is None:
-            print("Received %r without receiving descriptor!" % (line,))
+            print("Received {} without receiving descriptor!".format(line))
         else:
             # Use the previously received descriptor, along with the newly
             # provided information about which file it is, to present some
             # information to the user.
             data = os.read(self.descriptor, 80)
-            print("Received %r from the server." % (line,))
-            print("First 80 bytes are:\n%r\n" % (data,))
+            print("Received {} from the server.".format(line))
+            print("First 80 bytes are:\n{}\n".format(data))
         os.close(self.descriptor)
         self.transport.loseConnection()
 

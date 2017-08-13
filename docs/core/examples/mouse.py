@@ -60,7 +60,7 @@ class McFooMouse(mouseman.MouseMan):
         log.msg("right")
 
     def move(self, x, y):
-        log.msg("(%d,%d)" % (x, y))
+        log.msg("({},{})".format(x, y))
 
 if __name__ == '__main__':
     from twisted.internet import reactor
@@ -69,8 +69,8 @@ if __name__ == '__main__':
     try:
         o.parseOptions()
     except usage.UsageError as errortext:
-        print("%s: %s" % (sys.argv[0], errortext))
-        print("%s: Try --help for usage details." % (sys.argv[0]))
+        print("{}: {}".format(sys.argv[0], errortext))
+        print("{}: Try --help for usage details.".format(sys.argv[0]))
         raise SystemExit(1)
 
     logFile = sys.stdout
