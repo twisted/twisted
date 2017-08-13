@@ -15,7 +15,12 @@ Run this example by typing in:
 
 from __future__ import print_function
 
-from Tkinter import Tk, Frame, Button, LEFT
+try:
+    # Python 3
+    from tkinter import Tk, Frame, Button, LEFT
+except ImportError:
+    # Python 2
+    from Tkinter import Tk, Frame, Button, LEFT
 from twisted.internet import reactor, tksupport
 
 
