@@ -33,9 +33,9 @@ def printBody(response):
 
 
 def main():
-    agent = ContentDecoderAgent(Agent(reactor), [('gzip', GzipDecoder)])
+    agent = ContentDecoderAgent(Agent(reactor), [(b'gzip', GzipDecoder)])
 
-    d = agent.request('GET', 'http://www.yahoo.com/')
+    d = agent.request(b'GET', b'http://httpbin.org/gzip')
     d.addCallback(printBody)
     d.addErrback(log.err)
     d.addCallback(lambda ignored: reactor.stop())

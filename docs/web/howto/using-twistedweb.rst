@@ -966,6 +966,8 @@ Some other configuration options are available as well:
   server to listen on.  This defaults to 8080.
 - ``--logfile`` : Specify the path to the
   log file.
+- ``--add-header``: Specify additional headers to be served with every response.
+  These are formatted like ``--add-header "HeaderName: HeaderValue"``.
 
 
 
@@ -1537,6 +1539,3 @@ the ``.asis`` extension. Here is a sample file:
     Content-Type: text/html
 
     Hello world
-
-
-

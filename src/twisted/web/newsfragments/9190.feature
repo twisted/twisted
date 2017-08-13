@@ -1,0 +1,1 @@
+twisted.web.server.Request and any Twisted web server using it now support automatic fast responses to HTTP/1.1 and HTTP/2 OPTIONS * requests, and reject any other verb using the * URL form.

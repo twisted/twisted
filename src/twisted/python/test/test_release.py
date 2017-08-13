@@ -33,7 +33,7 @@ from subprocess import CalledProcessError
 
 from twisted.python._release import (
     findTwistedProjects, replaceInFile, Project, filePathDelta,
-    APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
+    APIBuilder, BuildAPIDocsScript, CheckNewsfragmentScript,
     runCommand, NotWorkingDirectory, SphinxBuilder,
     GitCommand, getRepositoryCommand, IVCSCommand)
 
@@ -233,7 +233,7 @@ class ProjectTests(ExternalTempdirTestCase):
             if not directory.exists():
                 directory.createDirectory()
             directory.child('__init__.py').setContent(b'')
-        directory.child('topfiles').createDirectory()
+        directory.child('newsfragments').createDirectory()
         directory.child('_version.py').setContent(genVersion(*version).encode("utf-8"))
         return Project(directory)
 
@@ -271,7 +271,7 @@ class ProjectTests(ExternalTempdirTestCase):
     def test_findTwistedStyleProjects(self):
         """
         findTwistedStyleProjects finds all projects underneath a particular
-        directory. A 'project' is defined by the existence of a 'topfiles'
+        directory. A 'project' is defined by the existence of a 'newsfragments'
         directory and is returned as a Project object.
         """
         baseDirectory = self.makeProjects(
@@ -889,11 +889,11 @@ class CommandsTestMixin(StructureAssertingMixin):
         structure = {
             "README.rst": u"Hi this is 1.0.0.",
             "twisted": {
-                "topfiles": {
+                "newsfragments": {
                     "README": u"Hi this is 1.0.0"},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
-                    "topfiles": {
+                    "newsfragments": {
                         "README": u"Hi this is 1.0.0"},
                     "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         reposDir = self.makeRepository(self.tmpDir)
@@ -984,9 +984,9 @@ class VCSCommandInterfaceTests(TestCase):
 
 
 
-class CheckTopfileScriptTests(ExternalTempdirTestCase):
+class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     """
-    Tests for L{CheckTopfileScript}.
+    L{CheckNewsfragmentScript}.
     """
     skip = gitSkip
 
@@ -1014,14 +1014,15 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([])
+            CheckNewsfragmentScript(logs.append).main([])
 
         self.assertEqual(e.exception.args,
                          ("Must specify one argument: the Twisted checkout",))
 
-    def test_diffFromTrunkNoTopfiles(self):
+    def test_diffFromTrunkNoNewsfragments(self):
         """
-        If there are changes from trunk, then there should also be a topfile.
+        If there are changes from trunk, then there should also be a
+        newsfragment.
         """
         runCommand(["git", "checkout", "-b", "mypatch"],
                    cwd=self.repo.path)
@@ -1036,7 +1037,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1],
@@ -1045,7 +1046,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
     def test_noChangeFromTrunk(self):
         """
-        If there are no changes from trunk, then no need to check the topfiles
+        If there are no changes from trunk, then no need to check the
+        newsfragments
         """
         runCommand(["git", "checkout", "-b", "mypatch"],
                    cwd=self.repo.path)
@@ -1053,7 +1055,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(
@@ -1068,7 +1070,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(
@@ -1078,8 +1080,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
     def test_release(self):
         """
-        Running it on a release branch returns green if there is no topfiles
-        even if there are changes.
+        Running it on a release branch returns green if there is no
+        newsfragments even if there are changes.
         """
         runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
                    cwd=self.repo.path)
@@ -1095,23 +1097,24 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
                          "Release branch with no newsfragments, all good.")
 
 
-    def test_releaseWithTopfiles(self):
+    def test_releaseWithNewsfragments(self):
         """
-        Running it on a release branch returns red if there are new topfiles.
+        Running it on a release branch returns red if there are new
+        newsfragments.
         """
         runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("newsfragments")
-        topfiles.makedirs()
-        fragment = topfiles.child("1234.misc")
+        newsfragments = self.repo.child("twisted").child("newsfragments")
+        newsfragments.makedirs()
+        fragment = newsfragments.child("1234.misc")
         fragment.setContent(b"")
 
         unrelated = self.repo.child("somefile")
@@ -1125,7 +1128,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1],
@@ -1152,24 +1155,24 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
                          "Quotes change only; no newsfragment needed.")
 
 
-    def test_topfileAdded(self):
+    def test_newsfragmentAdded(self):
         """
-        Running it on a branch with a fragment in the topfiles dir added
+        Running it on a branch with a fragment in the newsfragments dir added
         returns green.
         """
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("newsfragments")
-        topfiles.makedirs()
-        fragment = topfiles.child("1234.misc")
+        newsfragments = self.repo.child("twisted").child("newsfragments")
+        newsfragments.makedirs()
+        fragment = newsfragments.child("1234.misc")
         fragment.setContent(b"")
 
         unrelated = self.repo.child("somefile")
@@ -1177,13 +1180,13 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         runCommand(["git", "add", fragment.path, unrelated.path],
                    cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "topfile"],
+        runCommand(["git", "commit", "-m", "newsfragment"],
                    cwd=self.repo.path)
 
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")
@@ -1197,7 +1200,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("newsfragments")
+        topfiles = self.repo.child("twisted").child("topfiles")
         topfiles.makedirs()
         notFragment = topfiles.child("1234.txt")
         notFragment.setContent(b"")
@@ -1213,14 +1216,14 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1],
                          "No newsfragment found. Have you committed it?")
 
 
-    def test_topfileAddedButWithOtherTopfiles(self):
+    def test_newsfragmentAddedButWithOtherNewsfragments(self):
         """
         Running it on a branch with a fragment in the topfiles dir added
         returns green, even if there are other files in the topfiles dir.
@@ -1228,23 +1231,23 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
 
-        topfiles = self.repo.child("twisted").child("newsfragments")
-        topfiles.makedirs()
-        fragment = topfiles.child("1234.misc")
+        newsfragments = self.repo.child("twisted").child("newsfragments")
+        newsfragments.makedirs()
+        fragment = newsfragments.child("1234.misc")
         fragment.setContent(b"")
 
-        unrelated = topfiles.child("somefile")
+        unrelated = newsfragments.child("somefile")
         unrelated.setContent(b"Boo")
 
         runCommand(["git", "add", fragment.path, unrelated.path],
                    cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "topfile"],
+        runCommand(["git", "commit", "-m", "newsfragment"],
                    cwd=self.repo.path)
 
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1], "Found twisted/newsfragments/1234.misc")
