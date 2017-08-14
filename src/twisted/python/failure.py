@@ -20,9 +20,8 @@ import inspect
 import opcode
 from inspect import getmro
 
-from twisted.python.compat import NativeStringIO as StringIO
-from twisted.python.compat import _PY3
 from twisted.python import reflect
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
 
 count = 0
 traceupLength = 4
