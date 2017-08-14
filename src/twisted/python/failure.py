@@ -389,7 +389,7 @@ class Failure(BaseException):
         @raise anything else: Anything that the generator raises.
         """
         # note that the actual magic to find the traceback information is done in _findFailure
-        return g.throw(self.type, self.value, None)
+        return g.throw(self.type, self.value, self.tb)
 
 
     def _findFailure(cls):
