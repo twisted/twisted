@@ -31,7 +31,7 @@ from twisted.mail.interfaces import (IChallengeResponse,
                                      IClientAuthentication,
                                      ICloseableMailboxIMAP)
 from twisted.mail.imap4 import MessageSet
-from twisted.protocols import loopback
+from twisted.protocols import loopback, basic
 from twisted.python import failure
 from twisted.python import util, log
 from twisted.python.compat import (intToBytes, range, nativeString,
@@ -1960,6 +1960,25 @@ class IMAP4HelperMixin:
         return loopback.loopbackAsync(self.server, self.client)
 
 
+    def assertClientFailureMessage(self, failure, expected):
+        """
+        Assert that the provided failure is an L{IMAP4Exception} with
+        the given message.
+
+        @param failure: A failure whose value L{IMAP4Exception}
+        @type failure: L{failure.Failure}
+
+        @param expected: The expected failure message.
+        @type expected: L{bytes}
+        """
+        failure.trap(imap4.IMAP4Exception)
+        message = str(failure.value)
+        if _PY3:
+            expected = repr(expected)
+
+        self.assertEqual(message, expected)
+
+
 
 class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
@@ -3371,25 +3390,6 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
         self.authenticated = 0
         self.account = realm.theAccount
-
-
-    def assertClientFailureMessage(self, failure, expected):
-        """
-        Assert that the provided failure is an L{IMAP4Exception} with
-        the given message.
-
-        @param failure: A failure whose value L{IMAP4Exception}
-        @type failure: L{failure.Failure}
-
-        @param expected: The expected failure message.
-        @type expected: L{bytes}
-        """
-        failure.trap(imap4.IMAP4Exception)
-        message = str(failure.value)
-        if _PY3:
-            expected = repr(expected)
-
-        self.assertEqual(message, expected)
 
 
     def test_customChallengers(self):
@@ -6916,25 +6916,65 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         return d
 
 
+    def startTLSAndAssertSession(self):
+        """
+        Begin a C{STARTTLS} sequence and assert that it results in a
+        TLS session.
+
+        @return: A L{Deferred} that fires when the underlying
+            connection between the client and server has been terminated.
+        """
+        success = []
+        self.connected.addCallback(strip(self.client.startTLS))
+        def checkSecure(ignored):
+            self.assertTrue(
+                interfaces.ISSLTransport.providedBy(self.client.transport))
+        self.connected.addCallback(checkSecure)
+        self.connected.addCallback(success.append)
+
+        d = self.loopback()
+        d.addCallback(lambda x : self.assertTrue(success))
+        return defer.gatherResults([d, self.connected])
+
+
     def test_startTLS(self):
         """
         L{IMAP4Client.startTLS} triggers TLS negotiation and returns a
         L{Deferred} which fires after the client's transport is using
         encryption.
         """
-        success = []
-        self.connected.addCallback(lambda _: self.client.startTLS())
-        def checkSecure(ignored):
-            self.assertTrue(
-                interfaces.ISSLTransport.providedBy(self.client.transport))
-        self.connected.addCallback(checkSecure)
+        disconnected = self.startTLSAndAssertSession()
         self.connected.addCallback(self._cbStopClient)
-        self.connected.addCallback(success.append)
+        self.connected.addErrback(self._ebGeneral)
+        return disconnected
+
+
+    def test_doubleSTARTTLS(self):
+        """
+        A server that receives a second C{STARTTLS} sends a C{NO}
+        response.
+        """
+
+        class DoubleSTARTTLSClient(SimpleClient):
+
+            def startTLS(self):
+                if not self.startedTLS:
+                    return SimpleClient.startTLS(self)
+
+                return self.sendCommand(imap4.Command(b"STARTTLS"))
+
+        self.client = DoubleSTARTTLSClient(self.connected,
+                                           contextFactory=self.clientCTX)
+
+        disconnected = self.startTLSAndAssertSession()
+
+        self.connected.addCallback(strip(self.client.startTLS))
+        self.connected.addErrback(self.assertClientFailureMessage, b"TLS already negotiated")
+
+        self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
 
-        d = self.loopback()
-        d.addCallback(lambda x : self.assertTrue(success))
-        return defer.gatherResults([d, self.connected])
+        return disconnected
 
 
     def testFailedStartTLS(self):
