@@ -958,6 +958,7 @@ class CookieTests(unittest.TestCase):
             b'Set-Cookie: CUSTOMER=WILE_E_COYOTE; path=/; expires=Wednesday, 09-Nov-99 23:12:40 GMT',
             b'Set-Cookie: PART_NUMBER=ROCKET_LAUNCHER_0001; path=/',
             b'Set-Cookie: SHIPPING=FEDEX; path=/foo',
+            b'Set-Cookie: HttpOnly;Secure',
             b'',
             b'body',
             b'more body',
