@@ -1,0 +1,1 @@
+--add-header "HeaderName: Value" can be passed to twist web in order to set extra headers on all responses
