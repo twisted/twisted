@@ -181,6 +181,11 @@ class Request(Copyable, http.Request, components.Componentized):
         self.prepath = []
         self.postpath = list(map(unquote, self.path[1:].split(b'/')))
 
+        # Short-circuit for requests whose path is '*'.
+        if self.path == b'*':
+            self._handleStar()
+            return
+
         try:
             resrc = self.site.getResourceFor(self)
             if resource._IEncodingResource.providedBy(resrc):
@@ -514,6 +519,27 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         return self.appRootURL
 
+
+    def _handleStar(self):
+        """
+        Handle receiving a request whose path is '*'.
+
+        RFC 7231 defines an OPTIONS * request as being something that a client
+        can send as a low-effort way to probe server capabilities or readiness.
+        Rather than bother the user with this, we simply fast-path it back to
+        an empty 200 OK. Any non-OPTIONS verb gets a 405 Method Not Allowed
+        telling the client they can only use OPTIONS.
+        """
+        if self.method == b'OPTIONS':
+            self.setResponseCode(http.OK)
+        else:
+            self.setResponseCode(http.NOT_ALLOWED)
+            self.setHeader(b'Allow', b'OPTIONS')
+
+        # RFC 7231 says we MUST set content-length 0 when responding to this
+        # with no body.
+        self.setHeader(b'Content-Length', b'0')
+        self.finish()
 
 
 @implementer(iweb._IRequestEncoderFactory)

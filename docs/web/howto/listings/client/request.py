@@ -7,8 +7,8 @@ from twisted.web.http_headers import Headers
 agent = Agent(reactor)
 
 d = agent.request(
-    'GET',
-    'http://example.com/',
+    b'GET',
+    b'http://httpbin.com/anything',
     Headers({'User-Agent': ['Twisted Web Client Example']}),
     None)
 
