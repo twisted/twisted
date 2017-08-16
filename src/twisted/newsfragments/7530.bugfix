@@ -1,1 +1,1 @@
-Made `ssl:` endpoints accept key.pem files without trailing newlines
+The `ssl:` endpoint now accepts `certKey` PEM files without trailing newlines.
