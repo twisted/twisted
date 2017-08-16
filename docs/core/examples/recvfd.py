@@ -7,7 +7,7 @@ UNIX sockets.  This client connects to a server listening on a UNIX socket and
 waits for one file descriptor to arrive over the connection.  It displays the
 name of the file and the first 80 bytes it contains, then exits.
 
-To runb this example, run this program with one argument: a path giving the UNIX
+To run this example, run this program with one argument: a path giving the UNIX
 socket the server side of this example is already listening on.  For example:
 
     $ python recvfd.py /tmp/sendfd.sock
