@@ -19,7 +19,7 @@ class LongMultiplicationProtocol(basic.LineReceiver):
         
     def lineReceived(self, line):
         try:
-            numbers = [int(num.decode("ascii")) for num in line.split()]
+            numbers = [int(num) for num in line.split()]
         except ValueError:
             self.sendLine(b'Error.')
             return
