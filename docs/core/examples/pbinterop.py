@@ -4,7 +4,7 @@
 
 """PB interop server."""
 
-from twisted.spread import pb, jelly, flavors
+from twisted.spread import pb, flavors
 from twisted.internet import reactor
 
 
@@ -13,7 +13,7 @@ class Interop(pb.Root):
 
     def __init__(self):
         self.o = pb.Referenceable()
-    
+
     def remote_int(self):
         return 1
 
@@ -46,16 +46,16 @@ class Interop(pb.Root):
 
     def _local_success(self, result):
         if result != "hello, world":
-            raise ValueError("%r != %r" % (result, "hello, world"))
+            raise ValueError("{} != {}".format(result, "hello, world"))
 
     def remote_receive(self, obj):
         expected = [1, 1.5, "hi", u"hi", {1 : 2}]
         if obj != expected:
-            raise ValueError("%r != %r" % (obj, expected))
+            raise ValueError("{} != {}".format(obj, expected))
 
     def remote_self(self, obj):
         if obj != self:
-            raise ValueError("%r != %r" % (obj, self))
+            raise ValueError("{} != {}".format(obj, self))
 
     def remote_copy(self, x):
         o = flavors.Copyable()
