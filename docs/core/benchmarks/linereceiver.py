@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 
-import math, time
+import time
 
 from twisted.python.compat import range
 from twisted.protocols import basic
