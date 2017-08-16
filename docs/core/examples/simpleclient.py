@@ -17,7 +17,7 @@ class EchoClient(protocol.Protocol):
     """Once connected, send a message, then print the result."""
     
     def connectionMade(self):
-        self.transport.write("hello, world!")
+        self.transport.write(b"hello, world!")
     
     def dataReceived(self, data):
         "As soon as any data is received, write it back."
