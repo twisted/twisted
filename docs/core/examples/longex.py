@@ -16,7 +16,7 @@ class LongMultiplicationProtocol(basic.LineReceiver):
     """
     def connectionMade(self):
         self.workQueue = []
-        
+
     def lineReceived(self, line):
         try:
             numbers = [int(num) for num in line.split()]
@@ -38,15 +38,15 @@ class LongMultiplicationProtocol(basic.LineReceiver):
         if self.workQueue:
             # Get the first bit of work off the queue
             work = self.workQueue[0]
-    
+
             # Do a chunk of work: [a, b, c, ...] -> [a*b, c, ...]
             work[:2] = [work[0] * work[1]]
-    
+
             # If this piece of work now has only one element, send it.
             if len(work) == 1:
                 self.sendLine(str(work[0]).encode("ascii"))
                 del self.workQueue[0]
-            
+
             # Schedule this function to do more work, if there's still work
             # to be done.
             if self.workQueue:
