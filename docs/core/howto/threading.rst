@@ -121,7 +121,7 @@ Similarly, you want some code running in a non-reactor thread wants to invoke so
         try:
             result = threads.blockingCallFromThread(
                 reactor, agent.request, "GET", "http://twistedmatrix.com/"))
-        except Error, exc:
+        except Error as exc:
             print(exc)
         else:
             print(result)
