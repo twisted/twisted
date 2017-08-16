@@ -72,7 +72,7 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
 
     def _clearCommError(self):
-        return win32file.ClearCommError(self._serial.hComPort)
+        return win32file.ClearCommError(self._serial._port_handle)
 
 
     def serialReadEvent(self):
