@@ -34,9 +34,9 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, range, long, unicode, networkString,
-                                   nativeString, iteritems, _keys, _bytesChr,
-                                   iterbytes, unicode)
+from twisted.python.compat import (range, long, networkString, nativeString,
+                                   iteritems, _keys, _bytesChr, iterbytes,
+                                   unicode)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
