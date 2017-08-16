@@ -93,7 +93,6 @@ Miscellaneous
 
 - :download:`shaper.py` - example of rate-limiting your web server
 - :download:`stdiodemo.py` - example using stdio, Deferreds, LineReceiver and twisted.web.client.
-- :download:`mouse.py` - example using MouseMan protocol with the SerialPort transport
 - :download:`ptyserv.py` - serve shells in pseudo-terminals over TCP
 - :download:`courier.py` - example of interfacing to Courier's mail filter interface
 - :download:`longex.py` - example of doing arbitrarily long calculations nicely in Twisted
