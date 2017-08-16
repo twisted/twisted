@@ -1,0 +1,1 @@
+twisted.internet._win32serialport SerialPort._clearCommError() no longer raises AttributeError

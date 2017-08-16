@@ -14,18 +14,18 @@ class Realm:
             return pb.IPerspective, Avatar(), lambda: None
 
 def cbLogin(avatar):
-    avatar.callRemote("exception", 10).addCallback(str).addCallback(util.println)
+    avatar.callRemote(b"exception", 10).addCallback(str).addCallback(util.println)
 
 def ebLogin(failure):
     print(failure)
 
 def main():
-    c = checkers.InMemoryUsernamePasswordDatabaseDontUse(user="pass")
+    c = checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b"pass")
     p = portal.Portal(Realm(), [c])
     server = pb.PBServerFactory(p)
     server.unsafeTracebacks = True
     client = pb.PBClientFactory()
-    login = client.login(credentials.UsernamePassword("user", "pass"))
+    login = client.login(credentials.UsernamePassword(b"user", b"pass"))
     login.addCallback(cbLogin).addErrback(ebLogin).addBoth(lambda: reactor.stop())
 
     from twisted.internet import reactor
