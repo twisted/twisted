@@ -101,7 +101,6 @@ Miscellaneous
 - :download:`streaming.py` - example of a push producer/consumer system
 - :download:`filewatch.py` - write the content of a file to standard out one line at a time
 - :download:`shoutcast.py` - example Shoutcast client
-- :download:`gpsfix.py` - example using the SerialPort transport and GPS protocols to display fix data as it is received from the device
 - :download:`wxacceptance.py` - acceptance tests for wxreactor
 - :download:`postfix.py` - test application for PostfixTCPMapServer
 - :download:`udpbroadcast.py` - broadcasting using UDP
