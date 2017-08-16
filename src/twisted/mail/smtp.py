@@ -278,7 +278,7 @@ class Address:
 
     def dequote(self, addr):
         """
-        Remove RFC-2821 quotes from address.
+        Remove RFC 6531 quotes from address.
         """
         res = []
 
@@ -670,7 +670,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
         # Ideally, if we (rather than the other side) lose the connection,
         # we should be able to tell the other side that we are going away.
-        # RFC-2821 requires that we try.
+        # RFC 6531 requires that we try.
         if self.mode is DATA:
             try:
                 for message in self.__messages:
@@ -1870,10 +1870,10 @@ class SMTPSenderFactory(protocol.ClientFactory):
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):
         """
-        @param fromEmail: The RFC 2821 address from which to send this
+        @param fromEmail: The RFC 6531 address from which to send this
         message.
 
-        @param toEmail: A sequence of RFC 2821 addresses to which to
+        @param toEmail: A sequence of RFC 6531 addresses to which to
         send this message.
 
         @param file: A file-like object containing the message to send.
