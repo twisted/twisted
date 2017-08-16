@@ -4,7 +4,7 @@
 
 """PB interop server."""
 
-from twisted.spread import pb, jelly, flavors
+from twisted.spread import pb, flavors
 from twisted.internet import reactor
 
 
@@ -13,7 +13,7 @@ class Interop(pb.Root):
 
     def __init__(self):
         self.o = pb.Referenceable()
-    
+
     def remote_int(self):
         return 1
 
