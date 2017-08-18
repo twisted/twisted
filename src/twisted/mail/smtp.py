@@ -188,8 +188,15 @@ def quoteaddr(addr):
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
 
-# Character classes for parsing addresses
-atom = u"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~\u00a0-\U001000ff]"
+# The list of valid characters in an address are specified in RFC 6531 and
+# RFC 6532.
+# This document lists regular expressions which
+# which implements the rules specified in RFC 6531/6532:
+#  https://tools.ietf.org/html/draft-seantek-mail-regexen-02#section-3.1.3
+# 
+# The following regular expression is taken from the 'atext' regular
+# expression specified in the above document.
+atom = u"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~\u00a0-\U0010ffff]"
 
 class Address:
     """
