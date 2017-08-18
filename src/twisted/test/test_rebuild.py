@@ -7,6 +7,7 @@ import types
 
 from twisted.trial import unittest
 from twisted.python import rebuild
+from twisted.python.compat import _PY3
 
 from . import crash_test_dummy
 f = crash_test_dummy.foo
@@ -100,9 +101,9 @@ class RebuildTests(unittest.TestCase):
         rebuild.rebuild(crash_test_dummy, doLog=False)
         # Instance rebuilding is triggered by attribute access.
         x.do()
-        self.failUnlessIdentical(x.__class__, crash_test_dummy.X)
+        self.assertEqual(x.__class__, crash_test_dummy.X)
 
-        self.failUnlessIdentical(f, crash_test_dummy.foo)
+        self.assertEqual(f, crash_test_dummy.foo)
 
 
     def test_ComponentInteraction(self):
@@ -158,6 +159,54 @@ class RebuildTests(unittest.TestCase):
         self.addCleanup(_cleanup)
         rebuild.rebuild(rebuild)
         self.assertTrue(unhashableObject.hashCalled)
+
+
+    def test_Sensitive(self):
+        """
+        L{twisted.python.rebuild.Sensitive}
+        """
+        from twisted.python import rebuild
+        from twisted.python.rebuild import Sensitive
+
+        class TestSensitive(Sensitive):
+            def test_method(self):
+                pass
+
+        testSensitive = TestSensitive()
+        testSensitive.rebuildUpToDate()
+        self.assertFalse(testSensitive.needRebuildUpdate())
+
+        # Test rebuilding a builtin class
+        newException = rebuild.latestClass(Exception)
+        if _PY3:
+            self.assertEqual(repr(Exception), repr(newException))
+        else:
+            self.assertIn('twisted.python.rebuild.Exception', repr(newException))
+        self.assertEqual(newException, testSensitive.latestVersionOf(newException))
+
+        # Test types.MethodType on method in class
+        self.assertEqual(TestSensitive.test_method,
+            testSensitive.latestVersionOf(TestSensitive.test_method))
+        # Test types.MethodType on method in instance of class
+        self.assertEqual(testSensitive.test_method,
+            testSensitive.latestVersionOf(testSensitive.test_method))
+        # Test a class
+        self.assertEqual(TestSensitive,
+            testSensitive.latestVersionOf(TestSensitive))
+
+        class Foo:
+            pass
+
+        foo = Foo()
+
+        # Test types.InstanceType
+        self.assertEqual(foo, testSensitive.latestVersionOf(foo))
+
+        def myFunction():
+            pass
+
+        # Test types.FunctionType
+        self.assertEqual(myFunction, testSensitive.latestVersionOf(myFunction))
 
 
 
