@@ -7005,6 +7005,30 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         return disconnected
 
 
+    def test_loginBeforeSTARTTLS(self):
+        """
+        A client that attempts to log in before issuing the
+        C{STARTTLS} command receives a C{NO} response.
+        """
+        # Prevent the client from issuing STARTTLS.
+        self.client.startTLS = lambda: defer.succeed(
+            ([], 'OK Begin TLS negotiation now')
+        )
+        self.connected.addCallback(
+            lambda _: self.client.login(b"wrong", b"time"),
+        )
+
+        self.connected.addErrback(
+            self.assertClientFailureMessage,
+            b"LOGIN is disabled before STARTTLS",
+        )
+
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        return defer.gatherResults([self.loopback(), self.connected])
+
+
     def testFailedStartTLS(self):
         failures = []
         def breakServerTLS(ign):
