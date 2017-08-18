@@ -6977,6 +6977,34 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         return disconnected
 
 
+    def test_startTLSWithExistingChallengers(self):
+        """
+        Starting a TLS negotiation with an L{IMAP4Server} that already
+        has C{LOGIN} and C{PLAIN} L{IChallengeResponse} factories uses
+        those factories.
+        """
+        self.server.challengers = {b"LOGIN": imap4.LOGINCredentials,
+                                   b"PLAIN": imap4.PLAINCredentials}
+
+        @defer.inlineCallbacks
+        def assertLOGINandPLAIN():
+            capabilities = yield self.client.getCapabilities()
+            self.assertIn(b"AUTH", capabilities)
+            self.assertIn(b"LOGIN", capabilities[b"AUTH"])
+            self.assertIn(b"PLAIN", capabilities[b"AUTH"])
+
+        self.connected.addCallback(strip(assertLOGINandPLAIN))
+
+        disconnected = self.startTLSAndAssertSession()
+
+        self.connected.addCallback(strip(assertLOGINandPLAIN))
+
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        return disconnected
+
+
     def testFailedStartTLS(self):
         failures = []
         def breakServerTLS(ign):
