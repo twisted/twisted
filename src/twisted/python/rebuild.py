@@ -15,9 +15,16 @@ import linecache
 
 from imp import reload
 
+try:
+    # Python 2
+    from types import InstanceType
+except ImportError:
+    # Python 3
+    pass
+
 # Sibling Imports
 from twisted.python import log, reflect
-from twisted.python._oldstyle import _oldStyle
+from twisted.python.compat import _PY3
 
 lastRebuild = time.time()
 
@@ -41,8 +48,7 @@ def _isClassType(t):
 
 
 
-@_oldStyle
-class Sensitive:
+class Sensitive(object):
     """
     A utility mixin that's sensitive to rebuilds.
 
@@ -72,11 +78,11 @@ class Sensitive:
         if t == types.FunctionType:
             return latestFunction(anObject)
         elif t == types.MethodType:
-            if anObject.im_self is None:
+            if anObject.__self__ is None:
                 return getattr(anObject.im_class, anObject.__name__)
             else:
-                return getattr(anObject.im_self, anObject.__name__)
-        elif t == types.InstanceType:
+                return getattr(anObject.__self__, anObject.__name__)
+        elif not _PY3 and t == InstanceType:
             # Kick it, if it's out of date.
             getattr(anObject, 'nothing', None)
             return anObject
