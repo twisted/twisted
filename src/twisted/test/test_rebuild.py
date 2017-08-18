@@ -64,12 +64,7 @@ class RebuildTests(unittest.TestCase):
                         os.path.join(self.fakelibPath, "myrebuilder.py"))
         from twisted_rebuild_fakelib import myrebuilder
         a = myrebuilder.A()
-        from twisted.test import test_rebuild
         b = myrebuilder.B()
-        class C(myrebuilder.B):
-            pass
-        test_rebuild.C = C
-        C()
         i = myrebuilder.Inherit()
         self.assertEqual(a.a(), 'a')
         # Necessary because the file has not "changed" if a second has not gone
@@ -84,8 +79,6 @@ class RebuildTests(unittest.TestCase):
         self.assertEqual(b.b(), 'c')
         self.assertEqual(i.a(), 'd')
         self.assertEqual(a.a(), 'b')
-        # More work to be done on new-style classes
-        # self.assertEqual(c.b(), 'c')
 
 
     def test_Rebuild(self):
