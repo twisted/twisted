@@ -18,7 +18,7 @@ class RemoteCalculationClient(basic.LineReceiver):
     def _sendOperation(self, op, a, b):
         d = defer.Deferred()
         self.results.append(d)
-        line = "%s %d %d" % (op, a, b)
+        line = u"{} {} {}".format(op, a, b).encode('utf-8')
         self.sendLine(line)
         return d
 

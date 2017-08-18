@@ -60,6 +60,7 @@ else:
     properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
+
 class StubProcessProtocol(protocol.ProcessProtocol):
     """
     ProcessProtocol counter-implementation: all methods on this class raise an
@@ -69,14 +70,18 @@ class StubProcessProtocol(protocol.ProcessProtocol):
     def outReceived(self, data):
         raise NotImplementedError()
 
+
     def errReceived(self, data):
         raise NotImplementedError()
+
 
     def inConnectionLost(self):
         raise NotImplementedError()
 
+
     def outConnectionLost(self):
         raise NotImplementedError()
+
 
     def errConnectionLost(self):
         raise NotImplementedError()
@@ -189,15 +194,19 @@ class TrivialProcessProtocol(protocol.ProcessProtocol):
         self.outData = []
         self.errData = []
 
+
     def processEnded(self, reason):
         self.reason = reason
         self.deferred.callback(None)
 
+
     def outReceived(self, data):
         self.outData.append(data)
 
+
     def errReceived(self, data):
         self.errData.append(data)
+
 
 
 class TestProcessProtocol(protocol.ProcessProtocol):
@@ -207,6 +216,7 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.data = b''
         self.err = b''
         self.transport.write(b"abcd")
+
 
     def childDataReceived(self, childFD, data):
         """
@@ -242,9 +252,11 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         elif childFD == 0:
             self.stages.append(5)
 
+
     def processEnded(self, reason):
         self.reason = reason
         self.deferred.callback(None)
+
 
 
 class EchoProtocol(protocol.ProcessProtocol):
@@ -259,6 +271,7 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.onEnded = onEnded
         self.count = 0
 
+
     def connectionMade(self):
         assert self.n > 2
         for i in range(self.n - 2):
@@ -266,6 +279,7 @@ class EchoProtocol(protocol.ProcessProtocol):
         # test writeSequence
         self.transport.writeSequence([self.s, self.s])
         self.buffer = self.s * self.n
+
 
     def outReceived(self, data):
         if self.buffer[self.count:self.count+len(data)] != data:
@@ -275,6 +289,7 @@ class EchoProtocol(protocol.ProcessProtocol):
             self.count += len(data)
             if self.count == len(self.buffer):
                 self.transport.closeStdin()
+
 
     def processEnded(self, reason):
         self.finished = 1
@@ -360,6 +375,7 @@ class SignalProtocol(protocol.ProcessProtocol):
 class TestManyProcessProtocol(TestProcessProtocol):
     def __init__(self):
         self.deferred = defer.Deferred()
+
 
     def processEnded(self, reason):
         self.reason = reason
@@ -698,11 +714,17 @@ class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
     def __init__(self):
         self.deferred = defer.Deferred()
+
+
     def outReceived(self, data):
         pass
+
+
     def processEnded(self, reason):
         self.finished = 1
         self.deferred.callback(None)
+
+
 
 class TestTwoProcessesBase:
     def setUp(self):
@@ -710,6 +732,7 @@ class TestTwoProcessesBase:
         self.pp = [None, None]
         self.done = 0
         self.verbose = 0
+
 
     def createProcesses(self, usePTY=0):
         scriptPath = b"twisted.test.process_reader"
@@ -721,6 +744,7 @@ class TestTwoProcessesBase:
                                      env=properEnv, usePTY=usePTY)
             self.processes[num] = p
 
+
     def close(self, num):
         if self.verbose: print("closing stdin [%d]" % num)
         p = self.processes[num]
@@ -729,8 +753,10 @@ class TestTwoProcessesBase:
         p.loseConnection()
         if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
+
     def _onClose(self):
         return defer.gatherResults([ p.deferred for p in self.pp ])
+
 
     def test_close(self):
         if self.verbose: print("starting processes")
@@ -739,8 +765,12 @@ class TestTwoProcessesBase:
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
+
+
 class TwoProcessesNonPosixTests(TestTwoProcessesBase, unittest.TestCase):
     pass
+
+
 
 class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
     def tearDown(self):
@@ -754,6 +784,7 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
                     pass
         return self._onClose()
 
+
     def kill(self, num):
         if self.verbose: print("kill [%d] with SIGTERM" % num)
         p = self.processes[num]
@@ -762,12 +793,14 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         os.kill(p.pid, signal.SIGTERM)
         if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
+
     def test_kill(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=0)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
         return self._onClose()
+
 
     def test_closePty(self):
         if self.verbose: print("starting processes")
@@ -776,12 +809,15 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
+
     def test_killPty(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
         return self._onClose()
+
+
 
 class FDChecker(protocol.ProcessProtocol):
     state = 0
@@ -791,13 +827,16 @@ class FDChecker(protocol.ProcessProtocol):
     def __init__(self, d):
         self.deferred = d
 
+
     def fail(self, why):
         self.failed = why
         self.deferred.callback(None)
 
+
     def connectionMade(self):
         self.transport.writeToChild(0, b"abcd")
         self.state = 1
+
 
     def childDataReceived(self, childFD, data):
         if self.state == 1:
@@ -837,6 +876,7 @@ class FDChecker(protocol.ProcessProtocol):
             self.fail("read '%s' on fd %s during state 4" % (childFD, data))
             return
 
+
     def childConnectionLost(self, childFD):
         if self.state == 1:
             self.fail("got connectionLost(%d) during state 1" % childFD)
@@ -849,6 +889,7 @@ class FDChecker(protocol.ProcessProtocol):
             self.state = 3
             self.transport.closeChildFD(5)
             return
+
 
     def processEnded(self, status):
         rc = status.value.exitCode
@@ -864,6 +905,7 @@ class FDChecker(protocol.ProcessProtocol):
         self.deferred.callback(None)
 
 
+
 class FDTests(unittest.TestCase):
 
     def test_FD(self):
@@ -876,6 +918,7 @@ class FDTests(unittest.TestCase):
                                        3:"w", 4:"r", 5:"w"})
         d.addCallback(lambda x : self.assertFalse(p.failed, p.failed))
         return d
+
 
     def test_linger(self):
         # See what happens when all the pipes close before the process
@@ -905,23 +948,29 @@ class Accumulator(protocol.ProcessProtocol):
         self.outF = BytesIO()
         self.errF = BytesIO()
 
+
     def outReceived(self, d):
         self.outF.write(d)
+
 
     def errReceived(self, d):
         self.errF.write(d)
 
+
     def outConnectionLost(self):
         pass
 
+
     def errConnectionLost(self):
         pass
+
 
     def processEnded(self, reason):
         self.closed = 1
         if self.endedDeferred is not None:
             d, self.endedDeferred = self.endedDeferred, None
             d.callback(None)
+
 
 
 class PosixProcessBase(object):
@@ -1087,7 +1136,6 @@ class PosixProcessBase(object):
             os.execvpe = oldexecvpe
         return d
 
-
     if runtime.platform.isMacOSX():
         test_executionError.skip = (
             "Test is flaky from a Darwin bug. See #8840.")
@@ -1111,6 +1159,7 @@ class PosixProcessBase(object):
             """
             def makeConnection(self, transport):
                 connected.callback(transport)
+
 
             def processEnded(self, reason):
                 reactor.callLater(0, ended.callback, None)
@@ -1151,8 +1200,10 @@ class MockSignal(object):
     def signal(self, sig, action):
         return signal.getsignal(sig)
 
+
     def __getattr__(self, attr):
         return getattr(signal, attr)
+
 
 
 class MockOS(object):
@@ -1577,8 +1628,6 @@ if process is not None:
             Here's the faking: don't do anything here.
             """
 
-
-
     class DumbProcessReader(process.ProcessReader):
         """
         A fake L{process.ProcessReader} used for tests.
@@ -1588,8 +1637,6 @@ if process is not None:
             """
             Here's the faking: don't do anything here.
             """
-
-
 
     class DumbPTYProcess(process.PTYProcess):
         """
@@ -1609,6 +1656,7 @@ class MockProcessTests(unittest.TestCase):
     """
     if process is None:
         skip = "twisted.internet.process is never used on Windows"
+
 
     def setUp(self):
         """
@@ -1764,7 +1812,8 @@ class MockProcessTests(unittest.TestCase):
         before are closed and don't leak.
         """
         self._mockWithForkError()
-        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6, -2, -3, -5]))
+        self.assertEqual(set(self.mockos.closed),
+                         set([-1, -4, -6, -2, -3, -5]))
 
 
     def test_mockForkErrorGivenFDs(self):
@@ -2158,12 +2207,13 @@ class Win32ProcessTests(unittest.TestCase):
     Test process programs that are packaged with twisted.
     """
 
-    def test_stdinReader(self):
-        scriptPath = b"twisted.test.process_stdinreader"
+    def _test_stdinReader(self, pyExe, args, env, path):
+        """
+        Spawn a process, write to stdin, and check the output.
+        """
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
-                             env=properEnv)
+        reactor.spawnProcess(p, pyExe, args, env, path)
         p.transport.write(b"hello, world")
         p.transport.closeStdin()
 
@@ -2171,6 +2221,43 @@ class Win32ProcessTests(unittest.TestCase):
             self.assertEqual(p.errF.getvalue(), b"err\nerr\n")
             self.assertEqual(p.outF.getvalue(), b"out\nhello, world\nout\n")
         return d.addCallback(processEnded)
+
+
+    def test_stdinReader_bytesArgs(self):
+        """
+        Pass L{bytes} args to L{_test_stdinReader}.
+        """
+        import win32api
+
+        pyExe = FilePath(sys.executable)._asBytesPath()
+        args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]
+        env = bytesEnviron()
+        env[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+                                             sys.getfilesystemencoding())
+        path = win32api.GetTempPath()
+        path = path.encode(sys.getfilesystemencoding())
+        d = self._test_stdinReader(pyExe, args, env, path)
+        return d
+
+
+    def test_stdinReader_unicodeArgs(self):
+        """
+        Pass L{unicode} args to L{_test_stdinReader}.
+        """
+        import win32api
+
+        pyExe = FilePath(sys.executable)._asTextPath()
+        args = [pyExe, u"-u", u"-m", u"twisted.test.process_stdinreader"]
+        env = properEnv
+        pythonPath = os.pathsep.join(sys.path)
+        if isinstance(pythonPath, bytes):
+            pythonPath = pythonPath.decode(sys.getfilesystemencoding())
+        env[u"PYTHONPATH"] = pythonPath
+        path = win32api.GetTempPath()
+        if isinstance(path, bytes):
+            path = path.decode(sys.getfilesystemencoding())
+        d = self._test_stdinReader(pyExe, args, env, path)
+        return d
 
 
     def test_badArgs(self):
@@ -2514,11 +2601,14 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
         self.deferred = defer.Deferred()
         self.outOrErr = outOrErr
 
+
     def processEnded(self, reason):
         self.deferred.callback(reason)
 
+
     def outReceived(self, data):
         self.output += data
+
 
     def errReceived(self, data):
         self.errput += data

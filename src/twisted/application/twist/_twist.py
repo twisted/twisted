@@ -84,35 +84,20 @@ class Twist(object):
 
 
     @staticmethod
-    def runnerArguments(twistOptions):
+    def run(twistOptions):
         """
-        Take options obtained from command line and configure arguments to pass
-        to the application runner.
+        Run the application service.
 
         @param twistOptions: Command line options to convert to runner
             arguments.
         @type twistOptions: L{TwistOptions}
-
-        @return: The corresponding runner arguments.
-        @rtype: L{dict}
         """
-        return dict(
+        runner = Runner(
             reactor=twistOptions["reactor"],
             defaultLogLevel=twistOptions["logLevel"],
             logFile=twistOptions["logFile"],
             fileLogObserverFactory=twistOptions["fileLogObserverFactory"],
         )
-
-
-    @staticmethod
-    def run(runnerArguments):
-        """
-        Run the application service.
-
-        @param runnerArguments: Arguments to pass to the runner.
-        @type runnerArguments: L{dict}
-        """
-        runner = Runner(**runnerArguments)
         runner.run()
 
 
@@ -134,4 +119,4 @@ class Twist(object):
         )
 
         cls.startService(reactor, service)
-        cls.run(cls.runnerArguments(options))
+        cls.run(options)

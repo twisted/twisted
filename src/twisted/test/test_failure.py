@@ -13,7 +13,7 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import NativeStringIO, _PY3, _shouldEnableNewStyle
+from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
 from twisted.python import failure
 
@@ -59,27 +59,6 @@ class FailureTests(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_trapRaisesCurrentFailure(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the current
-        L{failure.Failure} ie C{self}.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIs(f, untrapped)
-
-    if _shouldEnableNewStyle:
-        test_trapRaisesCurrentFailure.skip = (
-            "In Python 3, or with new-style classes enabled on Python 2, "
-            "Failure.trap raises the wrapped Exception "
-            "instead of the original Failure instance.")
-
-
     def test_trapRaisesWrappedException(self):
         """
         If the wrapped C{Exception} is not a subclass of one of the
@@ -94,11 +73,6 @@ class FailureTests(SynchronousTestCase):
 
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
-
-    if not _shouldEnableNewStyle:
-        test_trapRaisesWrappedException.skip = (
-            "In Python2 with old-style classes, Failure.trap raises the "
-            "current Failure instance instead of the wrapped Exception.")
 
 
     def test_failureValueFromFailure(self):
@@ -830,16 +804,10 @@ class DebugModeTests(SynchronousTestCase):
         """
         # Make sure any changes we make are reversed:
         post_mortem = pdb.post_mortem
-        if _shouldEnableNewStyle:
-            origInit = failure.Failure.__init__
-        else:
-            origInit = failure.Failure.__dict__['__init__']
+        origInit = failure.Failure.__init__
         def restore():
             pdb.post_mortem = post_mortem
-            if _shouldEnableNewStyle:
-                failure.Failure.__init__ = origInit
-            else:
-                failure.Failure.__dict__['__init__'] = origInit
+            failure.Failure.__init__ = origInit
         self.addCleanup(restore)
 
         self.result = []
@@ -964,14 +932,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         self.assertEqual(len(newFailures), 1)
         self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
-
-    if _PY3:
-        # FIXME: https://twistedmatrix.com/trac/ticket/5949
-        test_findFailureInGenerator.skip = (
-            "Python 3 support to be fixed in #5949")
-        test_failureConstructionFindsOriginalFailure.skip = (
-            "Python 3 support to be fixed in #5949")
-
 
     def test_ambiguousFailureInGenerator(self):
         """

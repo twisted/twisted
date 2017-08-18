@@ -14,11 +14,12 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
+from io import BytesIO
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
-                                   intToBytes, NativeStringIO)
+from twisted.python.compat import (_PY3, iterbytes, long, networkString,
+                                   unicode, intToBytes)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -27,7 +28,7 @@ from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
 from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionLost
+from twisted.internet.error import ConnectionLost, ConnectionDone
 from twisted.protocols import loopback
 from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
 from twisted.test.test_internet import DummyProducer
@@ -394,6 +395,33 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertFalse(transport.disconnected)
 
 
+    def test_connectionLostAfterForceClose(self):
+        """
+        If a timed out transport doesn't close after 15 seconds, the
+        L{HTTPChannel} will forcibly close it.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        factory = http.HTTPFactory()
+        protocol = factory.buildProtocol(None)
+        protocol = parametrizeTimeoutMixin(protocol, clock)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        self.assertFalse(transport.disconnecting)
+        self.assertFalse(transport.disconnected)
+
+        # Force the initial timeout and the follow-on forced closure.
+        clock.advance(60)
+        clock.advance(15)
+        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.disconnected)
+
+        # Now call connectionLost on the protocol. This is done by some
+        # transports, including TCP and TLS. We don't have anything we can
+        # assert on here: this just must not explode.
+        protocol.connectionLost(ConnectionDone)
+
+
     def test_noPipeliningApi(self):
         """
         Test that a L{http.Request} subclass with no queued kwarg works as
@@ -574,6 +602,27 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
 
         value = b.value()
         self.assertResponseEquals(value, self.expectedResponses)
+
+
+    def test_pipeliningReadLimit(self):
+        """
+        When pipelined requests are received, we will optimistically continue
+        receiving data up to a specified limit, then pause the transport.
+
+        @see: L{http.HTTPChannel._optimisticEagerReadSize}
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandlerProxy
+        a.makeConnection(b)
+        underLimit = a._optimisticEagerReadSize // len(self.requests)
+        for x in range(1, underLimit + 1):
+            a.dataReceived(self.requests)
+            self.assertEqual(b.producerState, 'producing',
+                             'state was {state!r} after {x} iterations'
+                             .format(state=b.producerState, x=x))
+        a.dataReceived(self.requests)
+        self.assertEquals(b.producerState, 'paused')
 
 
 
@@ -2152,9 +2201,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(long(1))
-    if _PY3:
-        test_setResponseCodeAcceptsLongIntegers.skip = (
-            "Python 3 has no separate long integer type.")
 
 
     def test_setLastModifiedNeverSet(self):
@@ -2835,7 +2881,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
-        factory.logFile = NativeStringIO()
+        factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
 
         val = [
@@ -2852,7 +2898,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         proto._channel.requests[0].finish()
 
         # A log message should be written out
-        self.assertIn('sometime "GET /path HTTP/1.1"',
+        self.assertIn(b'sometime "GET /path HTTP/1.1"',
                       factory.logFile.getvalue())
 
 
@@ -2890,12 +2936,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
-        factory.logFile = NativeStringIO()
+        factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
+        proto._channel._optimisticEagerReadSize = 0
 
         val = [
             b"GET /path HTTP/1.1\r\n",
-            b"Connection: close\r\n",
             b"\r\n\r\n"
         ]
 
@@ -2907,6 +2953,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
+        proto.dataReceived(b'GET ') # just a few extra bytes to exhaust the
+                                    # optimistic buffer size
         self.assertEqual(trans.producerState, 'paused')
         proto._channel.requests[0].finish()
         self.assertEqual(trans.producerState, 'producing')
@@ -3382,9 +3430,12 @@ class ChannelProductionTests(unittest.TestCase):
         channel, transport = self.buildChannelAndTransport(
             StringTransport(), DelayedHTTPHandler
         )
+        channel._optimisticEagerReadSize = 0
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
+        # A little extra data to pause the transport.
+        channel.dataReceived(b'123')
         request = channel.requests[0].original
 
         # Register a dummy producer.
@@ -3424,8 +3475,12 @@ class ChannelProductionTests(unittest.TestCase):
             StringTransport(), DelayedHTTPHandler
         )
 
+        channel._optimisticEagerReadSize = 0
+
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
+        channel.dataReceived(b'extra') # exceed buffer size to pause the
+                                       # transport.
         request = channel.requests[0].original
 
         # Register a dummy producer.

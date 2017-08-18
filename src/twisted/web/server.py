@@ -3,8 +3,14 @@
 # See LICENSE for details.
 
 """
-This is a web-server which integrates with the twisted.internet
-infrastructure.
+This is a web server which integrates with the twisted.internet infrastructure.
+
+@var NOT_DONE_YET: A token value which L{twisted.web.resource.IResource.render}
+    implementations can return to indicate that the application will later call
+    C{.write} and C{.finish} to complete the request, and that the HTTP
+    connection should be left open.
+@type NOT_DONE_YET: Opaque; do not depend on any particular type for this
+    value.
 """
 
 from __future__ import division, absolute_import
@@ -175,6 +181,11 @@ class Request(Copyable, http.Request, components.Componentized):
         self.prepath = []
         self.postpath = list(map(unquote, self.path[1:].split(b'/')))
 
+        # Short-circuit for requests whose path is '*'.
+        if self.path == b'*':
+            self._handleStar()
+            return
+
         try:
             resrc = self.site.getResourceFor(self)
             if resource._IEncodingResource.providedBy(resrc):
@@ -194,11 +205,20 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
-            # Content-Type header should be supplied.
-            modified = self.code != http.NOT_MODIFIED
+            # Content-Type header should be supplied. We omit it on
+            # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
+            # is a Content-Length header set to 0, as empty bodies don't need
+            # a content-type.
+            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if (modified and contentType is None and
-                self.defaultContentType is not None
+            contentLength = self.responseHeaders.getRawHeaders(
+                b'content-length'
+            )
+            contentLengthZero = contentLength and (contentLength[0] == b'0')
+
+            if (needsCT and contentType is None and
+                self.defaultContentType is not None and
+                not contentLengthZero
                     ):
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])
@@ -499,6 +519,27 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         return self.appRootURL
 
+
+    def _handleStar(self):
+        """
+        Handle receiving a request whose path is '*'.
+
+        RFC 7231 defines an OPTIONS * request as being something that a client
+        can send as a low-effort way to probe server capabilities or readiness.
+        Rather than bother the user with this, we simply fast-path it back to
+        an empty 200 OK. Any non-OPTIONS verb gets a 405 Method Not Allowed
+        telling the client they can only use OPTIONS.
+        """
+        if self.method == b'OPTIONS':
+            self.setResponseCode(http.OK)
+        else:
+            self.setResponseCode(http.NOT_ALLOWED)
+            self.setHeader(b'Allow', b'OPTIONS')
+
+        # RFC 7231 says we MUST set content-length 0 when responding to this
+        # with no body.
+        self.setHeader(b'Content-Length', b'0')
+        self.finish()
 
 
 @implementer(iweb._IRequestEncoderFactory)

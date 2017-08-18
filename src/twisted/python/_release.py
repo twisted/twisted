@@ -19,21 +19,22 @@ from zope.interface import Interface, implementer
 
 from subprocess import check_output, STDOUT, CalledProcessError
 
+from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
 from twisted.python.monkey import MonkeyPatcher
 
-# Types of topfiles.
-TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
+# Types of newsfragments.
+NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
-    "https://docs.python.org/2/objects.inv",
-    "https://docs.python.org/3/objects.inv",
-    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
-    "https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.github.io/constantly/docs/objects.inv",
-    "https://twisted.github.io/incremental/docs/objects.inv",
-    "https://python-hyper.org/h2/en/stable/objects.inv",
-    "https://python-hyper.org/priority/en/stable/objects.inv",
-    "https://docs.zope.org/zope.interface/objects.inv",
+    u"https://docs.python.org/2/objects.inv",
+    u"https://docs.python.org/3/objects.inv",
+    u"https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    u"https://hyperlink.readthedocs.io/en/stable/objects.inv",
+    u"https://twisted.github.io/constantly/docs/objects.inv",
+    u"https://twisted.github.io/incremental/docs/objects.inv",
+    u"https://python-hyper.org/h2/en/stable/objects.inv",
+    u"https://python-hyper.org/priority/en/stable/objects.inv",
+    u"https://docs.zope.org/zope.interface/objects.inv",
 ]
 
 
@@ -43,6 +44,11 @@ def runCommand(args, **kwargs):
     This is a wrapper around L{subprocess.check_output}, so it takes
     the same arguments as L{subprocess.Popen} with one difference: all
     arguments after the vector must be keyword arguments.
+
+    @param args: arguments passed to L{subprocess.check_output}
+    @param kwargs: keyword arguments passed to L{subprocess.check_output}
+    @return: command output
+    @rtype: L{bytes}
     """
     kwargs['stderr'] = STDOUT
     return check_output(args, **kwargs)
@@ -128,7 +134,7 @@ class GitCommand(object):
         """
         status = runCommand(
             ["git", "-C", path.path, "status", "--short"]).strip()
-        return status == ''
+        return status == b''
 
 
     @staticmethod
@@ -195,7 +201,7 @@ class Project(object):
 
     @ivar directory: A L{twisted.python.filepath.FilePath} pointing to the base
         directory of a Twisted-style Python package. The package should contain
-        a C{_version.py} file and a C{topfiles} directory that contains a
+        a C{_version.py} file and a C{newsfragments} directory that contains a
         C{README} file.
     """
 
@@ -235,7 +241,7 @@ def findTwistedProjects(baseDirectory):
     """
     projects = []
     for filePath in baseDirectory.walk():
-        if filePath.basename() == 'topfiles':
+        if filePath.basename() == 'newsfragments':
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
@@ -320,16 +326,17 @@ class APIBuilder(object):
 
         from pydoctor.driver import main
 
-        main(
-            ["--project-name", projectName,
-             "--project-url", projectURL,
-             "--system-class", "twisted.python._pydoctor.TwistedSystem",
-             "--project-base-dir", packagePath.parent().path,
-             "--html-viewsource-base", sourceURL,
-             "--add-package", packagePath.path,
-             "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html",
-            ] + intersphinxes)
+        args = [u"--project-name", projectName,
+                u"--project-url", projectURL,
+                u"--system-class", u"twisted.python._pydoctor.TwistedSystem",
+                u"--project-base-dir", packagePath.parent().path,
+                u"--html-viewsource-base", sourceURL,
+                u"--add-package", packagePath.path,
+                u"--html-output", outputPath.path,
+                u"--html-write-function-pages", u"--quiet", u"--make-html",
+               ] + intersphinxes
+        args = [arg.encode("utf-8") for arg in args]
+        main(args)
 
         monkeyPatch.restore()
 
@@ -362,7 +369,7 @@ class SphinxBuilder(object):
         """
         output = self.build(FilePath(args[0]).child("docs"))
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            sys.stdout.write(u"Unclean build:\n{}\n".format(output))
             raise sys.exit(1)
 
 
@@ -392,7 +399,7 @@ class SphinxBuilder(object):
 
         output = runCommand(['sphinx-build', '-q', '-b', 'html',
                              '-d', doctreeDir.path, docDir.path,
-                             buildDir.path])
+                             buildDir.path]).decode("utf-8")
 
         # Delete the doctrees, as we don't want them after the docs are built
         doctreeDir.remove()
@@ -490,7 +497,7 @@ class BuildAPIDocsScript(object):
 
 
 
-class CheckTopfileScript(object):
+class CheckNewsfragmentScript(object):
     """
     A thing for checking whether a checkout has a newsfragment.
     """
@@ -512,10 +519,10 @@ class CheckTopfileScript(object):
         location = os.path.abspath(args[0])
 
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
-                            cwd=location).strip()
+                            cwd=location).decode(sys.stdout.encoding).strip()
 
         r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).strip()
+                       cwd=location).decode(sys.stdout.encoding).strip()
 
         if not r:
             self._print(
@@ -534,22 +541,22 @@ class CheckTopfileScript(object):
                 self._print("Quotes change only; no newsfragment needed.")
                 sys.exit(0)
 
-        topfiles = []
+        newsfragments = []
 
         for change in files:
             if os.sep + "newsfragments" + os.sep in change:
-                if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
-                    topfiles.append(change)
+                if "." in change and change.rsplit(".", 1)[1] in NEWSFRAGMENT_TYPES:
+                    newsfragments.append(change)
 
         if branch.startswith("release-"):
-            if topfiles:
+            if newsfragments:
                 self._print("No newsfragments should be on the release branch.")
                 sys.exit(1)
             else:
                 self._print("Release branch with no newsfragments, all good.")
                 sys.exit(0)
 
-        for change in topfiles:
+        for change in newsfragments:
             self._print("Found " + change)
             sys.exit(0)
 

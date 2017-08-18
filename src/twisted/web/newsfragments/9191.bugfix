@@ -1,0 +1,1 @@
+twisted.web.server.Request and all web servers that use it now no longer send a default Content-Type header on responses that do not have a body (i.e. that set Content-Length: 0 or that send a 204 status code).
