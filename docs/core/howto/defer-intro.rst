@@ -55,10 +55,12 @@ It can also be written as::
 
 Sometimes it leads us to encode the order when we don't need to, as in this example::
 
+    from __future__ import print_function
+
     total = 0
     for account in accounts:
         total += account.get_balance()
-    print("Total balance $%s" % (total,))
+    print("Total balance ${}".format(total))
 
 But that's normally not such a big deal.
 
