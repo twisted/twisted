@@ -1,1 +1,1 @@
-Python 3.6 is now supported on Windows.
+Python 3.6 is now supported

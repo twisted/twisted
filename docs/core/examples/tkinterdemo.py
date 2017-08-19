@@ -15,7 +15,12 @@ Run this example by typing in:
 
 from __future__ import print_function
 
-from Tkinter import Tk, Frame, Button, LEFT
+import sys
+
+if sys.version_info >= (3,):
+    from tkinter import Tk, Frame, Button, LEFT
+else:
+    from Tkinter import Tk, Frame, Button, LEFT
 from twisted.internet import reactor, tksupport
 
 
