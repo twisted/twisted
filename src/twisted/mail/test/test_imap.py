@@ -38,7 +38,7 @@ from twisted.python.compat import (intToBytes, range, nativeString,
                                    networkString, iterbytes, _PY3)
 from twisted.trial import unittest
 
-from twisted.cred.portal import Portal
+from twisted.cred.portal import Portal, IRealm
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.credentials import (
@@ -1867,13 +1867,14 @@ class Account(imap4.MemoryAccount):
 
 
 
-class SimpleServer(imap4.IMAP4Server):
+class SimpleServer(imap4.IMAP4Server, object):
+    theAccount = Account(b'testuser')
     def __init__(self, *args, **kw):
         imap4.IMAP4Server.__init__(self, *args, **kw)
-        realm = TestRealm()
-        realm.theAccount = Account(b'testuser')
+        realm = TestRealm(accountHolder=self)
         portal = Portal(realm)
         c = InMemoryUsernamePasswordDatabaseDontUse()
+        c.addUser(b'testuser', b'password-test')
         self.checker = c
         self.portal = portal
         portal.registerChecker(c)
@@ -1886,13 +1887,6 @@ class SimpleServer(imap4.IMAP4Server):
             return
 
         imap4.IMAP4Server.lineReceived(self, line)
-
-    _username = b'testuser'
-    _password = b'password-test'
-    def authenticateLogin(self, username, password):
-        if username == self._username and password == self._password:
-            return imap4.IAccount, self.theAccount, lambda: None
-        raise UnauthorizedLogin()
 
 
 
@@ -2064,9 +2058,24 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(self.server.state, 'unauth')
 
 
+    def test_loginWithoutPortal(self):
+        """
+        Attempting to log into a server that has no L{Portal} results
+        in a failed login.
+        """
+        self.server.portal = None
+        def login():
+            d = self.client.login(b'testuser', b'wrong-password')
+            d.addBoth(self._cbStopClient)
+
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
+
+
     def testLoginRequiringQuoting(self):
-        self.server._username = b'{test}user'
-        self.server._password = b'{test}password'
+        self.server.checker.users = {b'{test}user': b'{test}password'}
 
         def login():
             d = self.client.login(b'{test}user', b'{test}password')
@@ -3348,12 +3357,33 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
             self.server.search_SINCE(self.laterQuery, self.seq, self.msg))
 
 
-
+@implementer(IRealm)
 class TestRealm:
+    """
+    A L{IRealm} for tests.
+
+    @cvar theAccount: An C{Account} instance.  Tests can set this to
+        ensure predictable account retrieval.
+    """
     theAccount = None
 
+    def __init__(self, accountHolder=None):
+        """
+        Create a realm for testing.
+
+        @param accountHolder: (optional) An object whose C{theAccount}
+            attribute will be returned instead of
+            L{TestRealm.theAccount}.  Attribute access occurs on every
+            avatar request, so any modifications to
+            C{accountHolder.theAccount} will be reflected here.
+        """
+        if accountHolder:
+            self._getAccount = lambda: accountHolder.theAccount
+        else:
+            self._getAccount = lambda: self.theAccount
+
     def requestAvatar(self, avatarId, mind, *interfaces):
-        return imap4.IAccount, self.theAccount, lambda: None
+        return imap4.IAccount, self._getAccount(), lambda: None
 
 
 
@@ -4147,8 +4177,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
         """
         Empty string literals are parsed.
         """
-        self.server._username = b''
-        self.server._password = b''
+        self.server.checker.users = {b"": b""}
         transport = StringTransport()
         self.server.makeConnection(transport)
 
