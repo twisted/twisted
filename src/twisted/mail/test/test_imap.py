@@ -1853,7 +1853,10 @@ class UncloseableMailbox(object):
 
 
 
-class Account(imap4.MemoryAccount):
+class AccountWithoutNamespaces(imap4.MemoryAccountWithoutNamespaces):
+    """
+    An in-memory account that does not provide L{INamespacePresenter}.
+    """
     mailboxFactory = SimpleMailbox
     def _emptyMailbox(self, name, id):
         return self.mailboxFactory()
@@ -1864,6 +1867,13 @@ class Account(imap4.MemoryAccount):
         if mbox is not None:
             mbox.rw = rw
         return mbox
+
+
+
+class Account(AccountWithoutNamespaces, imap4.MemoryAccount):
+    """
+    An in-memory account that provides L{INamespacePresenter}.
+    """
 
 
 
@@ -2176,6 +2186,31 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             return self.namespaceArgs
 
         d.addCallback(self.assertEqual, [[['', '/']], [], []])
+        return d
+
+
+    def test_mailboxWithoutNamespace(self):
+        """
+        A mailbox that does not provide L{INamespacePresenter} returns
+        empty L{list}s for its personal, shared, and user namespaces.
+        """
+        self.server.theAccount = AccountWithoutNamespaces(b'testuser')
+        self.namespaceArgs = None
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+        def namespace():
+            def gotNamespace(args):
+                self.namespaceArgs = args
+                self._cbStopClient(None)
+            return self.client.namespace().addCallback(gotNamespace)
+
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(namespace))
+        d1.addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _: self.namespaceArgs)
+        d.addCallback(self.assertEqual, [[], [], []])
         return d
 
 

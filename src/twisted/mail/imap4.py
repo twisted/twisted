@@ -5062,8 +5062,8 @@ def collapseNestedLists(items):
 
 
 
-@implementer(IAccount, INamespacePresenter)
-class MemoryAccount(object):
+@implementer(IAccount)
+class MemoryAccountWithoutNamespaces(object):
     mailboxes = None
     subscriptions = None
     top_id = 0
@@ -5188,6 +5188,8 @@ class MemoryAccount(object):
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
 
 
+@implementer(INamespacePresenter)
+class MemoryAccount(MemoryAccountWithoutNamespaces):
     ##
     ## INamespacePresenter
     ##
