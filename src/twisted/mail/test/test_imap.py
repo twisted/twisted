@@ -2097,6 +2097,42 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return d.addCallback(self._cbTestFailedLogin)
 
 
+    def test_loginException(self):
+        """
+        Any exception raised by L{IMAP4Server.authenticateLogin} that
+        is not L{UnauthorizedLogin} is logged results in a C{BAD}
+        response.
+        """
+
+        class UnexpectedException(Exception):
+            """
+            An unexpected exception.
+            """
+
+        def raisesUnexpectedException(user, passwd):
+            raise UnexpectedException("Whoops")
+
+        self.server.authenticateLogin = raisesUnexpectedException
+
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+
+        d1 = self.connected.addCallback(strip(login))
+
+        d1.addErrback(self.assertClientFailureMessage, b"Server error: Whoops")
+
+        @d1.addCallback
+        def assertErrorLogged(_):
+            self.assertTrue(self.flushLoggedErrors(UnexpectedException))
+
+        d1.addErrback(self._ebGeneral)
+        d1.addBoth(self._cbStopClient)
+
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
+
+
     def testLoginRequiringQuoting(self):
         self.server.checker.users = {b'{test}user': b'{test}password'}
 
