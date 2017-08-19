@@ -53,9 +53,6 @@ matrix:
       env: TOXENV=txchecker-travis-all
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
-    - python: 3.5
-      env: TOXENV=py35-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
-      sudo: true
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
       sudo: true
