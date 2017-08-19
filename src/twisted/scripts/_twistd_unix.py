@@ -68,7 +68,7 @@ class ServerOptions(app.ServerOptions):
     def opt_version(self):
         """Print version information and exit.
         """
-        print('twistd (the Twisted daemon) %s' % copyright.version)
+        print('twistd (the Twisted daemon) {}'.format(copyright.version))
         print(copyright.copyright)
         sys.exit()
 
@@ -87,24 +87,25 @@ def checkPID(pidfile):
             with open(pidfile) as f:
                 pid = int(f.read())
         except ValueError:
-            sys.exit('Pidfile %s contains non-numeric value' % pidfile)
+            sys.exit('Pidfile {} contains non-numeric value'.format(pidfile))
         try:
             os.kill(pid, 0)
         except OSError as why:
             if why.errno == errno.ESRCH:
                 # The pid doesn't exist.
-                log.msg('Removing stale pidfile %s' % pidfile, isError=True)
+                log.msg('Removing stale pidfile {}'.format(pidfile), isError=True)
                 os.remove(pidfile)
             else:
-                sys.exit("Can't check status of PID %s from pidfile %s: %s" %
-                         (pid, pidfile, why[1]))
+                sys.exit(
+                    "Can't check status of PID {} from pidfile {}: {}".format(
+                    pid, pidfile, why[1]))
         else:
             sys.exit("""\
-Another twistd server is running, PID %s\n
+Another twistd server is running, PID {}\n
 This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
-""" %  pid)
+""".format(pid))
 
 
 
@@ -221,7 +222,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         exceptionLine = traceback.format_exception_only(exception.__class__,
                                                         exception)[-1]
         # remove the trailing newline
-        formattedMessage = '1 %s' % exceptionLine.strip()
+        formattedMessage = '1 {}'.format(exceptionLine.strip())
         # On Python 3, encode the message the same way Python 2's
         # format_exception_only does
         if _PY3:
@@ -383,8 +384,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
         data = untilConcludes(os.read, readPipe, 100)
         dataRepr = _bytesRepr(data[2:])
         if data != b"0":
-            msg = ("An error has occurred: %s\nPlease look at log "
-                   "file for more information.\n" % (dataRepr,))
+            msg = ("An error has occurred: {}\nPlease look at log "
+                   "file for more information.\n".format(dataRepr))
             untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0
@@ -406,14 +407,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         if uid is not None or gid is not None:
             extra = euid and 'e' or ''
-            desc = '%suid/%sgid %s/%s' % (extra, extra, uid, gid)
+            desc = '{}uid/{}gid {}/{}'.format(extra, extra, uid, gid)
             try:
                 switchUID(uid, gid, euid)
-            except OSError:
-                log.msg('failed to set %s (are you root?) -- exiting.' % desc)
+            except OSError as e:
+                log.msg('failed to set {}: {} (are you root?) -- '
+                        'exiting.'.format(desc, e))
                 sys.exit(1)
             else:
-                log.msg('set %s' % desc)
+                log.msg('set {}'.format(desc))
 
 
     def startApplication(self, application):
