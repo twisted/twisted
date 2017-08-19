@@ -674,11 +674,10 @@ else:
         @type uid: C{int}
         @param uid: The UID for which to look up group information.
 
-        @type primaryGid: C{int} or L{None}
-        @param primaryGid: If provided, an additional GID to include when
-            setting the groups.
+        @type primaryGid: C{int}
+        @param primaryGid: The GID to include when setting the groups.
         """
-        return _initgroups(pwd.getpwuid(uid)[0], primaryGid)
+        return _initgroups(pwd.getpwuid(uid).pw_name, primaryGid)
 
 
 
