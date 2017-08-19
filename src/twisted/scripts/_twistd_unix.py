@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import errno
 import os
+import pwd
 import sys
 import traceback
 
@@ -441,6 +442,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
             uid = process.uid
         if gid is None:
             gid = process.gid
+        if uid is not None and gid is None:
+            gid = pwd.getpwuid(uid).pw_gid
 
         self.shedPrivileges(self.config['euid'], uid, gid)
         app.startApplication(application, not self.config['no_save'])
