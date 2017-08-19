@@ -124,7 +124,10 @@ class RebuildTests(unittest.TestCase):
 
         class Foo:
             def foo(self):
-                pass
+                """
+                Dummy method
+                """
+
         class Buz(Bar, Baz):
             x = 10
 
@@ -163,7 +166,9 @@ class RebuildTests(unittest.TestCase):
 
         class TestSensitive(Sensitive):
             def test_method(self):
-                pass
+                """
+                Dummy method
+                """
 
         testSensitive = TestSensitive()
         testSensitive.rebuildUpToDate()
@@ -188,7 +193,9 @@ class RebuildTests(unittest.TestCase):
             testSensitive.latestVersionOf(TestSensitive))
 
         class Foo:
-            pass
+            """
+            Dummy class
+            """
 
         foo = Foo()
 
@@ -196,7 +203,9 @@ class RebuildTests(unittest.TestCase):
         self.assertEqual(foo, testSensitive.latestVersionOf(foo))
 
         def myFunction():
-            pass
+            """
+            Dummy method
+            """
 
         # Test types.FunctionType
         self.assertEqual(myFunction, testSensitive.latestVersionOf(myFunction))
