@@ -2074,6 +2074,29 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return d.addCallback(self._cbTestFailedLogin)
 
 
+    def test_nonIAccountAvatar(self):
+        """
+        The server responds with a C{BAD} response when its portal
+        attempts to log a user in with checker that claims to support
+        L{IAccount} but returns an an avatar interface that is not
+        L{IAccount}.
+        """
+
+        def brokenRequestAvatar(*_, **__):
+            return ("Not IAccount", "Not an account", lambda: None)
+
+        self.server.portal.realm.requestAvatar = brokenRequestAvatar
+
+        def login():
+            d = self.client.login(b'testuser', b'password-test')
+            d.addBoth(self._cbStopClient)
+
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
+
+
     def testLoginRequiringQuoting(self):
         self.server.checker.users = {b'{test}user': b'{test}password'}
 
