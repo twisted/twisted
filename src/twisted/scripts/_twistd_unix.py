@@ -52,7 +52,10 @@ class ServerOptions(app.ServerOptions):
                      ['chroot', None, None,
                       'Chroot to a supplied directory before running'],
                      ['uid', 'u', None, "The uid to run as.", uidFromString],
-                     ['gid', 'g', None, "The gid to run as.", gidFromString],
+                     ['gid', 'g', None,
+                      "The gid to run as.  If not specified, the default gid "
+                      "associated with the specified --uid is used.",
+                      gidFromString],
                      ['umask', None, None,
                       "The (octal) file creation mask to apply.", _umask],
                     ]
