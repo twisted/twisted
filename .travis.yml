@@ -45,10 +45,11 @@ matrix:
     - python: 3.6
       env: TOXENV=pyflakes3
     # Twistedchecker is running as a separate job so that we can ignore if it
-    # fails.
-    - python: 3.6
+    # fails. This needs to be on Python 3.5 for the moment, due to astroid
+    # changes.
+    - python: 3.5
       env: TOXENV=txchecker-travis-required
-    - python: 3.6
+    - python: 3.5
       env: TOXENV=txchecker-travis-all
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
