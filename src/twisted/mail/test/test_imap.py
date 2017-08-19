@@ -2234,6 +2234,34 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return defer.gatherResults([d1, d2]).addCallback(self._cbTestSelect)
 
 
+    def test_selectWithoutMailbox(self):
+        """
+        A client that selects a mailbox that does not exist receives a
+        C{NO} response.
+        """
+        def login():
+            return self.client.login(b'testuser', b'password-test')
+        def select():
+            return self.client.select('test-mailbox')
+
+        self.connected.addCallback(strip(login))
+        self.connected.addCallback(strip(select))
+        self.connected.addErrback(self.assertClientFailureMessage,
+                                  b"No such mailbox")
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        connectionComplete = defer.gatherResults(
+            [self.connected, self.loopback()]
+        )
+
+        @connectionComplete.addCallback
+        def assertNoMailboxSelected(_):
+            self.assertIsNone(self.server.mbox)
+
+        return connectionComplete
+
+
     def _cbTestSelect(self, ignored):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEqual(self.server.mbox, mbox)

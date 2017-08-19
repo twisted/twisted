@@ -1344,7 +1344,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def _cbSelectWork(self, mbox, cmdName, tag):
         if mbox is None:
-            self.sendNegativeResponse(tag, 'No such mailbox')
+            self.sendNegativeResponse(tag, b'No such mailbox')
             return
         if '\\noselect' in [s.lower() for s in mbox.getFlags()]:
             self.sendNegativeResponse(tag, 'Mailbox cannot be selected')
