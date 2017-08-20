@@ -5764,17 +5764,17 @@ class GetBodyStructureTests(unittest.TestCase):
         minor MIME types of a L{IMessagePart} provider whose headers
         lack a C{Content-Type}, or have an empty value for it.
         """
-        # missing = FakeyMessage({}, (), b'', b'', 123, None)
-        # missingContentTypeStructure = imap4.getBodyStructure(missing)
-        # missingMajor, missingMinor = missingContentTypeStructure[:2]
-        # self.assertIs(None, missingMajor)
-        # self.assertIs(None, missingMinor)
+        missing = FakeyMessage({}, (), b'', b'', 123, None)
+        missingContentTypeStructure = imap4.getBodyStructure(missing)
+        missingMajor, missingMinor = missingContentTypeStructure[:2]
+        self.assertIs(None, missingMajor)
+        self.assertIs(None, missingMinor)
 
-        # empty = FakeyMessage({"content-type": ""}, (), b'', b'', 123, None)
-        # emptyContentTypeStructure = imap4.getBodyStructure(empty)
-        # emptyMajor, emptyMinor = emptyContentTypeStructure[:2]
-        # self.assertIs(None, emptyMajor)
-        # self.assertIs(None, emptyMinor)
+        empty = FakeyMessage({"content-type": ""}, (), b'', b'', 123, None)
+        emptyContentTypeStructure = imap4.getBodyStructure(empty)
+        emptyMajor, emptyMinor = emptyContentTypeStructure[:2]
+        self.assertIs(None, emptyMajor)
+        self.assertIs(None, emptyMinor)
 
         newline = FakeyMessage({"content-type": "\n"}, (), b'', b'', 123, None)
         newlineContentTypeStructure = imap4.getBodyStructure(newline)
