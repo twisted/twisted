@@ -364,12 +364,6 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.internet.glib2reactor",
-    "twisted.internet.gtk2reactor",
-    "twisted.internet.pyuisupport",
-    "twisted.internet.test.process_connectionlost",
-    "twisted.internet.test.process_gireactornocompat",
-    "twisted.internet.tksupport",
     "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
