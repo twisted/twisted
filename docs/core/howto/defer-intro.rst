@@ -55,10 +55,12 @@ It can also be written as::
 
 Sometimes it leads us to encode the order when we don't need to, as in this example::
 
+    from __future__ import print_function
+
     total = 0
     for account in accounts:
         total += account.get_balance()
-    print("Total balance $%s" % (total,))
+    print("Total balance ${}".format(total))
 
 But that's normally not such a big deal.
 
@@ -190,7 +192,7 @@ We often want to write code equivalent to this::
 
     try:
         x.get_names()
-    except Exception, e:
+    except Exception as e:
         report_error(e)
 
 How would we write this with :api:`twisted.internet.defer.Deferred <Deferred>`\s?
@@ -216,7 +218,7 @@ Abandoning our contrived examples and reaching for generic variable names, we ge
 
     try:
         y = f()
-    except Exception, e:
+    except Exception as e:
         g(e)
     else:
         h(y)
@@ -241,7 +243,7 @@ That is, what if we wanted to do the equivalent of this generic code::
 
     try:
         y = f()
-    except Exception, e:
+    except Exception as e:
         y = g(e)
     h(y)
 
@@ -269,7 +271,7 @@ What if we want to wrap up a multi-step operation in one exception handler?
     try:
         y = f()
         z = h(y)
-    except Exception, e:
+    except Exception as e:
         g(e)
 
 With :api:`twisted.internet.defer.Deferred <Deferred>`\s, it would look like this::
