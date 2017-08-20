@@ -31,7 +31,7 @@ from twisted.mail.interfaces import (IChallengeResponse,
                                      IClientAuthentication,
                                      ICloseableMailboxIMAP)
 from twisted.mail.imap4 import MessageSet
-from twisted.protocols import loopback, basic
+from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.python import util, log
 from twisted.python.compat import (intToBytes, range, nativeString,
