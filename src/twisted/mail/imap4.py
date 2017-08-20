@@ -5038,7 +5038,8 @@ def collapseNestedLists(items):
     for i in items:
         if isinstance(i, unicode):
             # anything besides ASCII will have to wait for an RFC 5738
-            # implementation.
+            # implementation.  See
+            # https://twistedmatrix.com/trac/ticket/9258
             i = i.encode("ascii")
         if i is None:
             pieces.extend([b' ', b'NIL'])
