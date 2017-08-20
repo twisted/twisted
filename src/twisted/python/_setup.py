@@ -68,6 +68,7 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
     ],
 )
 
@@ -404,15 +405,10 @@ notPortedModules = [
     "twisted.python._pydoctor",
     "twisted.python.finalize",
     "twisted.python.hook",
-    "twisted.python.rebuild",
     "twisted.python.test.cmodulepullpipe",
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_win32",
-    "twisted.test.crash_test_dummy",
-    "twisted.test.myrebuilder1",
-    "twisted.test.myrebuilder2",
     "twisted.test.test_hook",
-    "twisted.test.test_rebuild",
     "twisted.web.soap",
     "twisted.web.test.test_soap",
 ]
