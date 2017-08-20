@@ -4113,7 +4113,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         # should parse out the charset identifier and use it to decode
         # 8-bit bodies.  Until then, on Python 2 it should continue to
         # return native (byte) strings, while on Python 3 it should
-        # decode bytes to native strings via charmap, ensuring
+        # decode bytes to native strings via charmap, ensuring data
+        # fidelity at the cost of mojibake.
         if _PY3:
             def nativeStringResponse(thing):
                 if isinstance(thing, bytes):
