@@ -30,7 +30,3 @@ Subject: test
         self.assertEqual(mess['To'], 'moshez@example.com')
         self.assertEqual(mess['From'], 'postmaster@example.org')
         self.assertEqual(mess['subject'], 'Returned Mail: see transcript for details')
-
-
-    def testBounceMIME(self):
-        pass
