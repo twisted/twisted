@@ -39,7 +39,7 @@ def generateBounce(message, failedFrom, failedTo, transcript=''):
     """
     Generate a bounce message for an undeliverable email message.
 
-    @type message: L{bytes}
+    @type message: a file-like object
     @param message: The undeliverable message.
 
     @type failedFrom: L{bytes}
