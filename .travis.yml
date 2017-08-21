@@ -25,9 +25,6 @@ matrix:
   include:
     - python: 2.7
       env: TOXENV=py27-alldeps-withcov-posix,codecov-publish
-    # FIXME: https://twistedmatrix.com/trac/ticket/8633
-    # Coverage should also be reported for nomodules tests so that we also
-    # get report for those conditional branches.
     - python: 2.7
       env: TOXENV=py27-nodeps-withcov-posix,codecov-publish
     - python: 3.3
