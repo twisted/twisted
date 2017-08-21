@@ -1,10 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Test cases for bounce message generation
-"""
-
 from twisted.trial import unittest
 from twisted.mail import bounce
 import cStringIO
@@ -13,10 +9,10 @@ import email.parser
 
 class BounceTests(unittest.TestCase):
     """
-    testcases for bounce message generation
+    Bounce message generation
     """
 
-    def testBounceFormat(self):
+    def test_bounceFormat(self):
         from_, to, s = bounce.generateBounce(cStringIO.StringIO('''\
 From: Moshe Zadka <moshez@example.com>
 To: nonexistent@example.org
