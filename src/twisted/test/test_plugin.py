@@ -14,10 +14,10 @@ import functools
 
 from zope.interface import Interface
 
-from twisted.trial import unittest
 from twisted.python.compat import _PY3, _PYPY
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
+from twisted.trial import unittest
 
 from twisted import plugin
 
@@ -261,6 +261,8 @@ class PluginTests(unittest.TestCase):
                 True)
 
     test_detectFilesChanged = _withCacheness(test_detectFilesChanged)
+    if _PYPY:
+        test_detectFilesChanged.skip = "Does not work on PYPY"
 
 
     def test_detectFilesRemoved(self):

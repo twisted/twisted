@@ -5,9 +5,9 @@
 import sys, os
 import types
 
-from twisted.trial import unittest
 from twisted.python import rebuild
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _PYPY
+from twisted.trial import unittest
 
 from . import crash_test_dummy
 f = crash_test_dummy.foo
@@ -79,6 +79,9 @@ class RebuildTests(unittest.TestCase):
         self.assertEqual(b.b(), 'c')
         self.assertEqual(i.a(), 'd')
         self.assertEqual(a.a(), 'b')
+
+    if _PYPY:
+        test_FileRebuild.skip = "Does not work on PYPY"
 
 
     def test_Rebuild(self):
