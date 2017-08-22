@@ -1,0 +1,1 @@
+twisted.mail.imap4.IMAP4Server parses empty string literals even when they are the last argument to a command, such as LOGIN.
