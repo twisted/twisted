@@ -13,10 +13,6 @@ from twisted.python.compat import _PY3, unicode
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
 
 
 class ElementTests(unittest.TestCase):
@@ -196,9 +192,6 @@ class ElementTests(unittest.TestCase):
     if not _PY3:
         test_addContentBytes.skip = (
             "Bytes behavior of addContent only provided on Python 3.")
-    if cryptography is None:
-        test_addContentBytes.skip = (
-            "The package `cryptography` is unavailable.")
 
 
     def test_addContentBytesNonASCII(self):
