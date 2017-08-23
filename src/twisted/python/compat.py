@@ -23,6 +23,7 @@ the latest version of Python directly from your code, if possible.
 
 from __future__ import absolute_import, division
 
+import binascii
 import inspect
 import os
 import platform
@@ -493,8 +494,12 @@ if _PY3:
             yield originalBytes[i:i+1]
 
 
-    def intToBytes(i):
-        return ("%d" % i).encode("ascii")
+    def int_to_bytes(i, length=None):
+        return i.to_bytes(length or (i.bit_length() + 7) // 8 or 1, 'big')
+
+    intToBytes = int_to_bytes
+    int_from_bytes = int.from_bytes
+    intFromBytes = int_from_bytes
 
 
     # Ideally we would use memoryview, but it has a number of differences from
@@ -530,8 +535,24 @@ else:
         return originalBytes
 
 
-    def intToBytes(i):
-        return b"%d" % i
+    def int_to_bytes(integer, length=None):
+        hex_string = '%x' % integer
+        if length is None:
+            n = len(hex_string)
+        else:
+            n = length * 2
+        return binascii.unhexlify(hex_string.zfill(n + (n & 1)))
+
+    intToBytes = int_to_bytes
+
+    def int_from_bytes(data, byteorder, signed=False):
+        assert byteorder == 'big'
+        assert not signed
+
+        # call bytes() on data to allow the use of bytearrays
+        return int(bytes(data).encode('hex'), 16)
+
+    intFromBytes = int_from_bytes
 
     lazyByteSlice = buffer
 
