@@ -14,6 +14,8 @@ from __future__ import division, absolute_import
 
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
+from twisted.python import failure
+from twisted.logger import Logger
 
 
 class FoolishError(Exception):
@@ -49,8 +51,6 @@ class FailureInTearDownMixin(object):
     def test_noop(self):
         pass
 
-
-
 class SynchronousTestFailureInTearDown(
     FailureInTearDownMixin, unittest.SynchronousTestCase):
     pass
@@ -59,6 +59,36 @@ class SynchronousTestFailureInTearDown(
 
 class AsynchronousTestFailureInTearDown(
     FailureInTearDownMixin, unittest.TestCase):
+    pass
+
+
+
+class FailureButTearDownRunsMixin(object):
+    """
+    A test fails, but its L{tearDown} still runs.
+    """
+    tornDown = False
+
+    def tearDown(self):
+        self.tornDown = True
+
+
+    def test_fails(self):
+        """
+        A test that fails.
+        """
+        raise FoolishError("I am a broken test")
+
+
+
+class SynchronousTestFailureButTearDownRuns(
+        FailureButTearDownRunsMixin, unittest.SynchronousTestCase):
+    pass
+
+
+
+class AsynchronousTestFailureButTearDownRuns(
+        FailureButTearDownRunsMixin, unittest.TestCase):
     pass
 
 
