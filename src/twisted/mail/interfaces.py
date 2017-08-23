@@ -12,6 +12,46 @@ from __future__ import absolute_import, division
 from zope.interface import Interface
 
 
+class IChallengeResponse(Interface):
+    """
+    An C{IMAPrev4} authorization challenge mechanism.
+    """
+
+    def getChallenge():
+        """
+        Return a client challenge.
+
+        @return: A challenge.
+        @rtype: L{bytes}
+        """
+
+
+    def setResponse(response):
+        """
+        Extract a username and possibly a password from a response and
+        assign them to C{username} and C{password} instance variables.
+
+        @param response: A decoded response.
+        @type response: L{bytes}
+
+        @see: L{credentials.IUsernamePassword} or
+            L{credentials.IUsernameHashedPassword}
+        """
+
+
+    def moreChallenges():
+        """
+        Are there more challenges than just the first?  If so, callers
+        should challenge clients with the result of L{getChallenge},
+        and check their response with L{setResponse} in a loop until
+        this returns L{False}
+
+        @return: Are there more challenges?
+        @rtype: L{bool}
+        """
+
+
+
 class IClientAuthentication(Interface):
 
     def getName():
@@ -395,7 +435,7 @@ class IMessageIMAPPart(Interface):
         """
         Retrieve a group of message headers.
 
-        @type names: L{tuple} of L{bytes}
+        @type names: L{tuple} of L{str}
         @param names: The names of the headers to retrieve or omit.
 
         @type negate: L{bool}
@@ -596,7 +636,7 @@ class IMailboxIMAPInfo(Interface):
 
         Flags with the \\ prefix are reserved for use as system flags.
 
-        @rtype: L{list} of L{bytes}
+        @rtype: L{list} of L{str}
         @return: A list of the flags that can be set on messages in this
             mailbox.
         """
@@ -788,7 +828,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @type messages: A MessageSet object with the list of messages requested
         @param messages: The identifiers of the messages to set the flags of.
 
-        @type flags: sequence of L{bytes}
+        @type flags: sequence of L{str}
         @param flags: The flags to set, unset, or add.
 
         @type mode: -1, 0, or 1
@@ -803,7 +843,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
 
         @rtype: L{dict} or L{Deferred}
         @return: A L{dict} mapping message sequence numbers to sequences of
-            L{bytes} representing the flags set on the message after this
+            L{str} representing the flags set on the message after this
             operation has been performed, or a L{Deferred} whose callback will
             be invoked with such a L{dict}.
 
