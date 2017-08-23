@@ -13,7 +13,7 @@ from __future__ import division, absolute_import
 
 import sys
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import Deferred, returnValue, inlineCallbacks
 
 
@@ -124,3 +124,24 @@ class NonLocalExitTests(TestCase):
         self.assertMistakenMethodWarning(results)
 
 
+class ForwardTraceBackTests(SynchronousTestCase):
+
+    def test_forwardTracebacks(self):
+        """
+        Test that chained inlineCallbacks are properly forwarding the traceback informations
+        from generator to generator
+        Reproducing #9175
+        """
+
+        @inlineCallbacks
+        def erroring():
+            raise Exception()
+            yield "forcing generator"
+
+        @inlineCallbacks
+        def calling():
+            yield erroring()
+
+        d = calling()
+        f = self.failureResultOf(d)
+        self.assertIn("in erroring", f.getTraceback())

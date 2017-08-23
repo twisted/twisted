@@ -10,6 +10,7 @@ This is mainly useful to compare cdefer.Deferred to defer.Deferred
 from __future__ import print_function
 
 from twisted.internet import defer
+from twisted.python.compat import range
 from timer import timeit
 
 benchmarkFuncs = []
@@ -75,7 +76,7 @@ def instantiateAddCallbacksNoResult(n):
     d = defer.Deferred()
     def f(result):
         return result
-    for i in xrange(n):
+    for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
@@ -90,7 +91,7 @@ def instantiateAddCallbacksBeforeResult(n):
     d = defer.Deferred()
     def f(result):
         return result
-    for i in xrange(n):
+    for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
@@ -108,7 +109,7 @@ def instantiateAddCallbacksAfterResult(n):
     def f(result):
         return result
     d.callback(1)
-    for i in xrange(n):
+    for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
@@ -126,7 +127,7 @@ def pauseUnpause(n):
         return result
     d.callback(1)
     d.pause()
-    for i in xrange(n):
+    for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
