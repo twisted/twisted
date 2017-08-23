@@ -1,0 +1,1 @@
+twisted.conch.client.default.py verifyHostKey now opens /dev/tty with no buffer to be compatible with Python 3.
