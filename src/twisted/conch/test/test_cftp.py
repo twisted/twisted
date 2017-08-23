@@ -20,12 +20,15 @@ unix = requireModule('unix')
 
 _reason = None
 if cryptography and pyasn1:
-    from twisted.conch.scripts import cftp
-    from twisted.conch.scripts.cftp import SSHSession
-    from twisted.conch.ssh import filetransfer
-    from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-    from twisted.conch.test import test_ssh, test_conch
-    from twisted.conch.test.test_conch import FakeStdio
+    try:
+        from twisted.conch.scripts import cftp
+        from twisted.conch.scripts.cftp import SSHSession
+        from twisted.conch.ssh import filetransfer
+        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
+        from twisted.conch.test import test_ssh, test_conch
+        from twisted.conch.test.test_conch import FakeStdio
+    except ImportError:
+        pass
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
