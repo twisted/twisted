@@ -14,8 +14,6 @@ from __future__ import division, absolute_import
 
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
-from twisted.python import failure
-from twisted.logger import Logger
 
 
 class FoolishError(Exception):
