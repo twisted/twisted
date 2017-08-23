@@ -224,6 +224,7 @@ class LogErrorsMixin(object):
 
         self.assertEqual(self.result.errors[1][0], t1)
         self.result.errors[1][1].trap(ZeroDivisionError)
+
         self.assertEqual(1, self.result.successes)
 
 

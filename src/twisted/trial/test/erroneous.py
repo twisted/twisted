@@ -51,6 +51,8 @@ class FailureInTearDownMixin(object):
     def test_noop(self):
         pass
 
+
+
 class SynchronousTestFailureInTearDown(
     FailureInTearDownMixin, unittest.SynchronousTestCase):
     pass
