@@ -8,7 +8,6 @@ Tests for L{twisted.conch.ssh.keys}.
 from __future__ import absolute_import, division
 from twisted.python.reflect import requireModule
 
-from twisted.python.reflect import requireModule
 
 cryptography = requireModule("cryptography")
 if cryptography is None:
