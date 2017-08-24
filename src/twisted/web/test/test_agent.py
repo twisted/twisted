@@ -409,7 +409,7 @@ class DummyFactory(Factory):
     """
     Create C{StubHTTPProtocol} instances.
     """
-    def __init__(self, quiescentCallback):
+    def __init__(self, quiescentCallback, metadata):
         pass
 
     protocol = StubHTTPProtocol
