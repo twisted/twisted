@@ -7,24 +7,23 @@ Tests for L{twisted.conch.ssh.keys}.
 
 from __future__ import absolute_import, division
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+if cryptography is None:
     skipCryptography = 'Cannot run without cryptography.'
 
-try:
+pyasn1 = requireModule("pyasn1")
+
+if requireModule("Crypto"):
     import Crypto.Cipher.DES3
     import Crypto.PublicKey.RSA
     import Crypto.PublicKey.DSA
-except ImportError:
-    # we'll have to skip some tests without PyCypto
+else:
+    # we'll have to skip some tests without PyCrypto
     Crypto = None
     skipPyCrypto = 'Cannot run without PyCrypto.'
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
+
 
 if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
@@ -49,7 +48,9 @@ class ObjectTypeTests(unittest.TestCase):
     if cryptography is None:
         skip = skipCryptography
     if Crypto is None:
-        skip = "Cannot run without PyCrypto."
+        skip = skipPyCrypto
+    if pyasn1 is None:
+        skip = "Cannot run without PyASN1"
     if _PY3:
         skip = "objectType is deprecated and is not being ported to Python 3."
 
