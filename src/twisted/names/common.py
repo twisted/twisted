@@ -67,8 +67,8 @@ class ResolverBase:
         try:
             method = self.typeToMethod[query.type]
         except KeyError:
-            return defer.fail(failure.Failure(NotImplementedError(
-                        str(self.__class__) + " " + str(query.type))))
+            return defer.maybeDeferred(
+                self._lookup, query.name.name, dns.IN, query.type, timeout)
         else:
             return defer.maybeDeferred(method, query.name.name, timeout)
 
