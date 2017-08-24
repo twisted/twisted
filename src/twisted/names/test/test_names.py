@@ -602,8 +602,9 @@ class AuthorityTests(unittest.TestCase):
         """
         testDomain = test_domain_com
         testDomainName = b'nonexistent.prefix-' + testDomain.soa[0]
+        unknownType = max(common.typeToMethod) + 1
         f = self.failureResultOf(
-            testDomain.query(Query(name=testDomainName, type=76)))
+            testDomain.query(Query(name=testDomainName, type=unknownType)))
         self.assertIsInstance(f.value, DomainError)
 
 
@@ -612,8 +613,10 @@ class AuthorityTests(unittest.TestCase):
         Requesting a record of unknown type where other records exist for the
         name in question results in an empty answer set.
         """
+        unknownType = max(common.typeToMethod) + 1
         answer, authority, additional = self.successResultOf(
-            my_domain_com.query(Query(name=u'my-domain.com', type=76)))
+            my_domain_com.query(
+                Query(name=u'my-domain.com', type=unknownType)))
         self.assertEqual(answer, [])
 
 
