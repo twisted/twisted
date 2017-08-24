@@ -18,7 +18,6 @@ from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
 from twisted.names.error import DNSUnknownError
 
 from twisted.internet import defer, error, interfaces
-from twisted.python import failure
 
 # Helpers for indexing the three-tuples that get thrown around by this code a
 # lot.
