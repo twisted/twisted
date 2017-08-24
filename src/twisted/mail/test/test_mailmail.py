@@ -171,7 +171,7 @@ class OptionsTests(TestCase):
 
     def test_run(self):
         """
-        Test run() method.
+        L{twisted.mail.scripts.mailmail.run}
         """
         self.addCleanup(setattr, sys, 'argv', sys.argv)
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
@@ -186,7 +186,7 @@ class OptionsTests(TestCase):
 
     def test_readConfig(self):
         """
-        Test reading the configuration from a file.
+        Reading the configuration from a file.
         """
         self.addCleanup(setattr, sys, 'argv', sys.argv)
 
