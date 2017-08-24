@@ -102,14 +102,16 @@ class OptionsTests(TestCase):
         self.assertEqual(exc.args, ("Unsupported option.",))
 
 
-    def test_Version(self):
+    def test_version(self):
         """
         The I{--version} option displays the version and raises
         L{SystemExit}.
         """
         out = NativeStringIO()
         self.patch(sys, 'stdout', out)
-        self.assertRaises(SystemExit, parseOptions, '--version')
+        systemExitCode = self.assertRaises(SystemExit, parseOptions, '--version')
+        # SystemExit.code is None on success
+        self.assertEqual(systemExitCode.code, None)
         data = out.getvalue()
         self.assertEqual(data, "mailmail version: {}\n".format(version))
 
