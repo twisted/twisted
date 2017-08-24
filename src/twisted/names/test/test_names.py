@@ -20,7 +20,8 @@ from twisted.trial import unittest
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
-from twisted.names.dns import SOA, Message, RRHeader, Record_A, Record_SOA
+from twisted.names.dns import (
+    SOA, Message, RRHeader, Record_A, Record_SOA, Query)
 from twisted.names.error import DomainError
 from twisted.names.client import Resolver
 from twisted.names.secondary import (
@@ -592,6 +593,31 @@ class AuthorityTests(unittest.TestCase):
                     ttl=soa_record.expire, payload=soa_record,
                     auth=True)])
         self.assertEqual(additional, [])
+
+
+    def test_unknownTypeNXDOMAIN(self):
+        """
+        Requesting a record of unknown type where no records exist for the name
+        in question results in L{DomainError}.
+        """
+        testDomain = test_domain_com
+        testDomainName = b'nonexistent.prefix-' + testDomain.soa[0]
+        f = self.failureResultOf(
+            testDomain.query(Query(name=testDomainName, type=76)))
+        self.assertIsInstance(f.value, DomainError)
+
+
+    def test_unknownTypeMissing(self):
+        """
+        Requesting a record of unknown type where other records exist for the
+        name in question results in an empty answer set.
+        """
+        testDomain = test_domain_com
+        testDomainName = b'nonexistent.prefix-' + testDomain.soa[0]
+        result = self.successResultOf(
+            testDomain.query(Query(name=testDomainName, type=76)))
+        answer, authority, additional = result[0]
+        self.assertEqual(answer, [])
 
 
     def _referralTest(self, method):
