@@ -612,11 +612,8 @@ class AuthorityTests(unittest.TestCase):
         Requesting a record of unknown type where other records exist for the
         name in question results in an empty answer set.
         """
-        testDomain = test_domain_com
-        testDomainName = b'nonexistent.prefix-' + testDomain.soa[0]
-        result = self.successResultOf(
-            testDomain.query(Query(name=testDomainName, type=76)))
-        answer, authority, additional = result[0]
+        answer, authority, additional = self.successResultOf(
+            my_domain_com.query(Query(name=u'my-domain.com', type=76)))
         self.assertEqual(answer, [])
 
 
