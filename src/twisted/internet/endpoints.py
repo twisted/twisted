@@ -1354,7 +1354,8 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         kw['method'] = getattr(ssl.SSL, sslmethod)
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
-    privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
+    privateCertificate = ssl.PrivateCertificate.loadPEM(
+        certPEM + b'\n' + keyPEM)
     if extraCertChain is not None:
         matches = re.findall(
             r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',

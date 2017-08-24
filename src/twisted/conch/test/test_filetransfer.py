@@ -12,15 +12,19 @@ import os
 import re
 import struct
 
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
-try:
-    from twisted.conch import unix
-    unix # shut up pyflakes
-except ImportError:
-    unix = None
 
-from twisted.conch import avatar
-from twisted.conch.ssh import common, connection, filetransfer, session
+cryptography = requireModule("cryptography")
+unix = requireModule("twisted.conch.unix")
+
+if cryptography:
+    from twisted.conch import avatar
+    from twisted.conch.ssh import common, connection, filetransfer, session
+else:
+    class avatar:
+        class ConchUser: pass
+
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import components
@@ -601,7 +605,8 @@ class ConstantsTests(unittest.TestCase):
         protocol.  There are more recent drafts of the specification, but this
         one describes version 3, which is what conch (and OpenSSH) implements.
     """
-
+    if not cryptography:
+        skip = "Cannot run without cryptography"
 
     filexferSpecExcerpts = [
         """
@@ -702,6 +707,10 @@ class RawPacketDataTests(unittest.TestCase):
     Tests for L{filetransfer.FileTransferClient} which explicitly craft certain
     less common protocol messages to exercise their handling.
     """
+
+    if not cryptography:
+        skip = "Cannot run without cryptography"
+
     def setUp(self):
         self.ftc = filetransfer.FileTransferClient()
 

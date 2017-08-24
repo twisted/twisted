@@ -7,7 +7,12 @@ Tests for L{twisted.conch.ssh.forwarding}.
 
 from __future__ import division, absolute_import
 
-from twisted.conch.ssh import forwarding
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+if cryptography:
+    from twisted.conch.ssh import forwarding
+
 from twisted.internet.address import IPv6Address
 from twisted.trial import unittest
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
@@ -18,6 +23,9 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
     """
     Unit and integration tests for L{SSHConnectForwardingChannel}.
     """
+
+    if not cryptography:
+        skip = "Cannot run without cryptography"
 
     def makeTCPConnection(self, reactor):
         """
