@@ -37,7 +37,7 @@ class OptionsTests(TestCase):
         # Override the mailmail logger, so we capture stderr output
         from twisted.logger import textFileLogObserver, Logger
         logObserver = textFileLogObserver(self.out)
-        self.patch(mailmail, 'log', Logger(observer=logObserver))
+        self.patch(mailmail, '_log', Logger(observer=logObserver))
 
         # Override mailmail.sendmail, so we don't call reactor.stop()
         def sendmail(host, options, ident):

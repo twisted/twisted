@@ -39,8 +39,8 @@ Subject: Failed Message Delivery
 The Twisted sendmail application.
 """
 
-logObserver = textFileLogObserver(sys.stderr)
-log = Logger(observer=logObserver)
+_logObserver = textFileLogObserver(sys.stderr)
+_log = Logger(observer=_logObserver)
 
 
 
@@ -275,7 +275,7 @@ def loadConfig(path):
                         try:
                             sectionID = int(sectionID)
                         except ValueError:
-                            log.error(
+                            _log.error(
                                 "Illegal {prefix}ID in "
                                 "[{section}] section: {sectionID}",
                                 prefix=section[0].upper(),
@@ -295,7 +295,7 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                log.error("Illegal entry in [identity] section: {section}",
+                _log.error("Illegal entry in [identity] section: {section}",
                           section=up)
                 continue
             p.identities[host] = parts
@@ -379,7 +379,7 @@ def run():
     lConf = loadConfig(LOCAL_CFG)
 
     if deny(gConf) or deny(lConf):
-        log.error("Permission denied")
+        _log.error("Permission denied")
         return
 
     host = lConf.smarthost or gConf.smarthost or SMARTHOST
