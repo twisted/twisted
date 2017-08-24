@@ -1,1 +1,1 @@
-twisted.conch.client.default.py verifyHostKey now opens /dev/tty with no buffer to be compatible with Python 3.
+twisted.conch.client.default verifyHostKey now opens /dev/tty with no buffer to be compatible with Python 3. This lets the conch cli work with Python 3.
