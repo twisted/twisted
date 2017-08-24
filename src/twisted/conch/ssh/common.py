@@ -12,8 +12,7 @@ from __future__ import absolute_import, division
 
 import struct
 
-from twisted.conch.ssh._cryptography_backports import (
-    intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
+from cryptography.utils import int_from_bytes, int_to_bytes
 
 from twisted.python.compat import unicode
 from twisted.python.deprecate import deprecated
