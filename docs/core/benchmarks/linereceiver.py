@@ -1,7 +1,8 @@
-from __future__ import print_function
+from __future__ import division, print_function
 
-import math, time
+import time
 
+from twisted.python.compat import range
 from twisted.protocols import basic
 
 class CollectingLineReceiver(basic.LineReceiver):
@@ -10,15 +11,15 @@ class CollectingLineReceiver(basic.LineReceiver):
         self.lineReceived = self.lines.append
 
 def deliver(proto, chunks):
-    map(proto.dataReceived, chunks)
+    return [proto.dataReceived(chunk) for chunk in chunks]
 
 def benchmark(chunkSize, lineLength, numLines):
-    bytes = ('x' * lineLength + '\r\n') * numLines
-    chunkCount = len(bytes) / chunkSize + 1
+    bytes = (b'x' * lineLength + b'\r\n') * numLines
+    chunkCount = len(bytes) // chunkSize + 1
     chunks = []
-    for n in xrange(chunkCount):
+    for n in range(chunkCount):
         chunks.append(bytes[n*chunkSize:(n+1)*chunkSize])
-    assert ''.join(chunks) == bytes, (chunks, bytes)
+    assert b''.join(chunks) == bytes, (chunks, bytes)
     p = CollectingLineReceiver()
 
     before = time.clock()

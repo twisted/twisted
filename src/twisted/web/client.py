@@ -411,14 +411,21 @@ class HTTPClientFactory(protocol.ClientFactory):
         return result
 
     def gotHeaders(self, headers):
+        """
+        Parse the response HTTP headers.
+
+        @param headers: The response HTTP headers.
+        @type headers: L{dict}
+        """
         self.response_headers = headers
         if b'set-cookie' in headers:
             for cookie in headers[b'set-cookie']:
-                cookparts = cookie.split(b';')
-                cook = cookparts[0]
-                cook.lstrip()
-                k, v = cook.split(b'=', 1)
-                self.cookies[k.lstrip()] = v.lstrip()
+                if b'=' in cookie:
+                    cookparts = cookie.split(b';')
+                    cook = cookparts[0]
+                    cook.lstrip()
+                    k, v = cook.split(b'=', 1)
+                    self.cookies[k.lstrip()] = v.lstrip()
 
     def gotStatus(self, version, status, message):
         """
