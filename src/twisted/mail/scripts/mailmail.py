@@ -298,7 +298,7 @@ def loadConfig(path):
                 _log.error("Illegal entry in [identity] section: {section}",
                           section=up)
                 continue
-            p.identities[host] = parts
+            c.identities[host] = parts
 
     if p.has_section('addresses'):
         if p.has_option('addresses', 'smarthost'):
