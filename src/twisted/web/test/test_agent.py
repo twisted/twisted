@@ -3115,7 +3115,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
 
         hostNPlus1 = u"new1"
 
-        policy.creatorForNetloc(hostNPlus1, 800)
+        policy.creatorForNetloc(hostNPlus1.encode("ascii"), 800)
 
         self.assertNotIn(u"host2", policy._cache)
         self.assertEquals(20, len(policy._cache))
