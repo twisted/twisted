@@ -1137,6 +1137,9 @@ class _HTTP11ClientFactory(protocol.Factory):
     @ivar _quiescentCallback: The quiescent callback to be passed to protocol
         instances, used to return them to the connection pool.
 
+    @ivar _metadata: Metadata about the low-level connection details,
+        used to make the repr more useful.
+
     @since: 11.1
     """
     def __init__(self, quiescentCallback, metadata):
