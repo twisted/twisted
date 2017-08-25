@@ -134,9 +134,9 @@ def _codeStatusSplit(line):
     @rtype: 2-tuple of (0) L{bytes}, (1) L{bytes}
     @return: The status indicator and the rest of the server response.
     """
-    parts = line.split(' ', 1)
+    parts = line.split(b' ', 1)
     if len(parts) == 1:
-        return parts[0], ''
+        return parts[0], b''
     return parts
 
 
@@ -334,7 +334,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return d
 
         if args:
-            self.sendLine(cmd + ' ' + args)
+            self.sendLine(cmd + b' ' + args)
         else:
             self.sendLine(cmd)
         self.state = 'SHORT'
@@ -380,7 +380,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return d
 
         if args:
-            self.sendLine(cmd + ' ' + args)
+            self.sendLine(cmd + b' ' + args)
         else:
             self.sendLine(cmd)
         self.state = 'LONG_INITIAL'
