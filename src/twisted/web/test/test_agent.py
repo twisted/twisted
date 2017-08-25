@@ -3093,7 +3093,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
             hostname = u"host" + unicode(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
-        # Force a, which was the first, to be the most recently used
+        # Force host0, which was the first, to be the most recently used
         host0 = u"host0"
         policy.creatorForNetloc(host0.encode("ascii"), 309)
         self.assertIn(host0, policy._cache)
@@ -3106,6 +3106,21 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         self.assertNotIn(host1, policy._cache)
         self.assertEquals(20, len(policy._cache))
 
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+
+        # Accessing an item repeatedly does not corrupt the LRU.
+        for _ in range(20):
+            policy.creatorForNetloc(host0.encode("ascii"), 8675)
+
+        hostNPlus1 = u"new1"
+
+        policy.creatorForNetloc(hostNPlus1, 800)
+
+        self.assertNotIn(u"host2", policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        self.assertIn(hostNPlus1, policy._cache)
         self.assertIn(hostn, policy._cache)
         self.assertIn(host0, policy._cache)
 
