@@ -691,7 +691,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 "Server does not support secure communication "
                 "via TLS / SSL"))
 
-        d = self.sendShort('STLS', None)
+        d = self.sendShort(b'STLS', None)
         d.addCallback(self._startedTLS, contextFactory, tls)
         d.addCallback(lambda _: self.capabilities())
         return d
@@ -925,7 +925,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort('APOP', username + ' ' + digest)
+        return self.sendShort(b'APOP', username + b' ' + digest)
 
 
     def user(self, username):
@@ -944,7 +944,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort('USER', username)
+        return self.sendShort(b'USER', username)
 
 
     def password(self, password):
@@ -963,7 +963,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort('PASS', password)
+        return self.sendShort(b'PASS', password)
 
 
     def delete(self, index):
@@ -980,7 +980,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort('DELE', str(index + 1))
+        return self.sendShort(b'DELE', str(index + 1))
 
 
     def _consumeOrSetItem(self, cmd, args, consumer, xform):
@@ -1142,7 +1142,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort("NOOP", None)
+        return self.sendShort(b"NOOP", None)
 
 
     def reset(self):
@@ -1205,7 +1205,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             On an ERR response, the deferred fails with a server error
             response failure.
         """
-        return self.sendShort('STAT', None).addCallback(_statXform)
+        return self.sendShort(b'STAT', None).addCallback(_statXform)
 
 
     def listSize(self, consumer=None):
@@ -1257,6 +1257,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort('QUIT', None)
+        return self.sendShort(b'QUIT', None)
 
 __all__ = []

@@ -71,7 +71,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testOkUser(self):
         p, t = setUp()
         d = p.user("username")
-        self.assertEqual(t.value(), "USER username\r\n")
+        self.assertEqual(t.value(), b"USER username\r\n")
         p.dataReceived(b"+OK send password\r\n")
         return d.addCallback(self.assertEqual, "send password")
 
@@ -79,7 +79,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testBadUser(self):
         p, t = setUp()
         d = p.user("username")
-        self.assertEqual(t.value(), "USER username\r\n")
+        self.assertEqual(t.value(), b"USER username\r\n")
         p.dataReceived(b"-ERR account suspended\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -89,7 +89,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testOkPass(self):
         p, t = setUp()
         d = p.password("password")
-        self.assertEqual(t.value(), "PASS password\r\n")
+        self.assertEqual(t.value(), b"PASS password\r\n")
         p.dataReceived(b"+OK you're in!\r\n")
         return d.addCallback(self.assertEqual, "you're in!")
 
@@ -97,7 +97,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testBadPass(self):
         p, t = setUp()
         d = p.password("password")
-        self.assertEqual(t.value(), "PASS password\r\n")
+        self.assertEqual(t.value(), b"PASS password\r\n")
         p.dataReceived(b"-ERR go away\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -108,9 +108,9 @@ class POP3ClientLoginTests(unittest.TestCase):
         p, t = setUp()
         p.allowInsecureLogin = True
         d = p.login("username", "password")
-        self.assertEqual(t.value(), "USER username\r\n")
+        self.assertEqual(t.value(), b"USER username\r\n")
         p.dataReceived(b"+OK go ahead\r\n")
-        self.assertEqual(t.value(), "USER username\r\nPASS password\r\n")
+        self.assertEqual(t.value(), b"USER username\r\nPASS password\r\n")
         p.dataReceived(b"+OK password accepted\r\n")
         return d.addCallback(self.assertEqual, "password accepted")
 
@@ -118,10 +118,10 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testBadPasswordLogin(self):
         p, t = setUp()
         p.allowInsecureLogin = True
-        d = p.login("username", "password")
-        self.assertEqual(t.value(), "USER username\r\n")
+        d = p.login(b"username", b"password")
+        self.assertEqual(t.value(), b"USER username\r\n")
         p.dataReceived(b"+OK waiting on you\r\n")
-        self.assertEqual(t.value(), "USER username\r\nPASS password\r\n")
+        self.assertEqual(t.value(), b"USER username\r\nPASS password\r\n")
         p.dataReceived(b"-ERR bogus login\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -131,8 +131,8 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testBadUsernameLogin(self):
         p, t = setUp()
         p.allowInsecureLogin = True
-        d = p.login("username", "password")
-        self.assertEqual(t.value(), "USER username\r\n")
+        d = p.login(b"username", b"password")
+        self.assertEqual(t.value(), b"USER username\r\n")
         p.dataReceived(b"-ERR bogus login\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -154,8 +154,8 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testAPOP(self):
         p, t = setUp(greet=False)
         p.dataReceived(b"+OK <challenge string goes here>\r\n")
-        d = p.login("username", "password")
-        self.assertEqual(t.value(), "APOP username f34f1e464d0d7927607753129cabe39a\r\n")
+        d = p.login(b"username", b"password")
+        self.assertEqual(t.value(), b"APOP username f34f1e464d0d7927607753129cabe39a\r\n")
         p.dataReceived(b"+OK Welcome!\r\n")
         return d.addCallback(self.assertEqual, "Welcome!")
 
@@ -163,7 +163,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testInsecureLoginRaisesException(self):
         p, t = setUp(greet=False)
         p.dataReceived(b"+OK Howdy\r\n")
-        d = p.login("username", "password")
+        d = p.login(b"username", b"password")
         self.assertFalse(t.value())
         return self.assertFailure(
             d, InsecureAuthenticationDisallowed)
@@ -179,10 +179,10 @@ class POP3ClientLoginTests(unittest.TestCase):
         directlyProvides(t, interfaces.ISSLTransport)
         p.dataReceived(b"+OK Howdy\r\n")
         d = p.login("username", "password")
-        self.assertEqual(t.value(), "USER username\r\n")
+        self.assertEqual(t.value(), b"USER username\r\n")
         t.clear()
         p.dataReceived(b"+OK\r\n")
-        self.assertEqual(t.value(), "PASS password\r\n")
+        self.assertEqual(t.value(), b"PASS password\r\n")
         p.dataReceived(b"+OK\r\n")
         return d
 
@@ -213,7 +213,7 @@ class POP3ClientListTests(unittest.TestCase):
     def testListSize(self):
         p, t = setUp()
         d = p.listSize()
-        self.assertEqual(t.value(), "LIST\r\n")
+        self.assertEqual(t.value(), b"LIST\r\n")
         p.dataReceived(b"+OK Here it comes\r\n")
         p.dataReceived(b"1 3\r\n2 2\r\n3 1\r\n.\r\n")
         return d.addCallback(self.assertEqual, [3, 2, 1])
@@ -224,7 +224,7 @@ class POP3ClientListTests(unittest.TestCase):
         c = ListConsumer()
         f = c.consume
         d = p.listSize(f)
-        self.assertEqual(t.value(), "LIST\r\n")
+        self.assertEqual(t.value(), b"LIST\r\n")
         p.dataReceived(b"+OK Here it comes\r\n")
         p.dataReceived(b"1 3\r\n2 2\r\n3 1\r\n")
         self.assertEqual(c.data, {0: [3], 1: [2], 2: [1]})
@@ -237,7 +237,7 @@ class POP3ClientListTests(unittest.TestCase):
     def testFailedListSize(self):
         p, t = setUp()
         d = p.listSize()
-        self.assertEqual(t.value(), "LIST\r\n")
+        self.assertEqual(t.value(), b"LIST\r\n")
         p.dataReceived(b"-ERR Fatal doom server exploded\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -247,7 +247,7 @@ class POP3ClientListTests(unittest.TestCase):
     def testListUID(self):
         p, t = setUp()
         d = p.listUID()
-        self.assertEqual(t.value(), "UIDL\r\n")
+        self.assertEqual(t.value(), b"UIDL\r\n")
         p.dataReceived(b"+OK Here it comes\r\n")
         p.dataReceived(b"1 abc\r\n2 def\r\n3 ghi\r\n.\r\n")
         return d.addCallback(self.assertEqual, ["abc", "def", "ghi"])
@@ -258,7 +258,7 @@ class POP3ClientListTests(unittest.TestCase):
         c = ListConsumer()
         f = c.consume
         d = p.listUID(f)
-        self.assertEqual(t.value(), "UIDL\r\n")
+        self.assertEqual(t.value(), b"UIDL\r\n")
         p.dataReceived(b"+OK Here it comes\r\n")
         p.dataReceived(b"1 xyz\r\n2 abc\r\n5 mno\r\n")
         self.assertEqual(c.data, {0: ["xyz"], 1: ["abc"], 4: ["mno"]})
@@ -269,7 +269,7 @@ class POP3ClientListTests(unittest.TestCase):
     def testFailedListUID(self):
         p, t = setUp()
         d = p.listUID()
-        self.assertEqual(t.value(), "UIDL\r\n")
+        self.assertEqual(t.value(), b"UIDL\r\n")
         p.dataReceived(b"-ERR Fatal doom server exploded\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -281,7 +281,7 @@ class POP3ClientMessageTests(unittest.TestCase):
     def testRetrieve(self):
         p, t = setUp()
         d = p.retrieve(7)
-        self.assertEqual(t.value(), "RETR 8\r\n")
+        self.assertEqual(t.value(), b"RETR 8\r\n")
         p.dataReceived(b"+OK Message incoming\r\n")
         p.dataReceived(b"La la la here is message text\r\n")
         p.dataReceived(b"..Further message text tra la la\r\n")
@@ -297,7 +297,7 @@ class POP3ClientMessageTests(unittest.TestCase):
         c = MessageConsumer()
         f = c.consume
         d = p.retrieve(7, f)
-        self.assertEqual(t.value(), "RETR 8\r\n")
+        self.assertEqual(t.value(), b"RETR 8\r\n")
         p.dataReceived(b"+OK Message incoming\r\n")
         p.dataReceived(b"La la la here is message text\r\n")
         p.dataReceived(b"..Further message text\r\n.\r\n")
@@ -306,14 +306,14 @@ class POP3ClientMessageTests(unittest.TestCase):
 
     def _cbTestRetrieveWithConsumer(self, result, f, c):
         self.assertIdentical(result, f)
-        self.assertEqual(c.data, ["La la la here is message text",
-                                   ".Further message text"])
+        self.assertEqual(c.data, [b"La la la here is message text",
+                                   b".Further message text"])
 
 
     def testPartialRetrieve(self):
         p, t = setUp()
         d = p.retrieve(7, lines=2)
-        self.assertEqual(t.value(), "TOP 8 2\r\n")
+        self.assertEqual(t.value(), b"TOP 8 2\r\n")
         p.dataReceived(b"+OK 2 lines on the way\r\n")
         p.dataReceived(b"Line the first!  Woop\r\n")
         p.dataReceived(b"Line the last!  Bye\r\n")
@@ -329,7 +329,7 @@ class POP3ClientMessageTests(unittest.TestCase):
         c = MessageConsumer()
         f = c.consume
         d = p.retrieve(7, f, lines=2)
-        self.assertEqual(t.value(), "TOP 8 2\r\n")
+        self.assertEqual(t.value(), b"TOP 8 2\r\n")
         p.dataReceived(b"+OK 2 lines on the way\r\n")
         p.dataReceived(b"Line the first!  Woop\r\n")
         p.dataReceived(b"Line the last!  Bye\r\n")
@@ -346,7 +346,7 @@ class POP3ClientMessageTests(unittest.TestCase):
     def testFailedRetrieve(self):
         p, t = setUp()
         d = p.retrieve(0)
-        self.assertEqual(t.value(), "RETR 1\r\n")
+        self.assertEqual(t.value(), b"RETR 1\r\n")
         p.dataReceived(b"-ERR Fatal doom server exploded\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -368,12 +368,12 @@ class POP3ClientMessageTests(unittest.TestCase):
             in range(3)]
 
         for i in range(1, 4):
-            self.assertEqual(t.value(), "RETR %d\r\n" % (i,))
+            self.assertEqual(t.value(), b"RETR %d\r\n" % (i,))
             t.clear()
             p.dataReceived(b"+OK 2 lines on the way\r\n")
             p.dataReceived(b"First line of %d.\r\n" % (i,))
             p.dataReceived(b"Second line of %d.\r\n" % (i,))
-            self.assertEqual(t.value(), "")
+            self.assertEqual(t.value(), b"")
             p.dataReceived(b".\r\n")
 
         return defer.DeferredList(messages, fireOnOneErrback=True)
@@ -384,7 +384,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testCapability(self):
         p, t = setUp()
         d = p.capabilities(useCache=0)
-        self.assertEqual(t.value(), "CAPA\r\n")
+        self.assertEqual(t.value(), b"CAPA\r\n")
         p.dataReceived(b"+OK Capabilities on the way\r\n")
         p.dataReceived(b"X\r\nY\r\nZ\r\nA 1 2 3\r\nB 1 2\r\nC 1\r\n.\r\n")
         return d.addCallback(
@@ -398,7 +398,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testCapabilityError(self):
         p, t = setUp()
         d = p.capabilities(useCache=0)
-        self.assertEqual(t.value(), "CAPA\r\n")
+        self.assertEqual(t.value(), b"CAPA\r\n")
         p.dataReceived(b"-ERR This server is lame!\r\n")
         return d.addCallback(self.assertEqual, {})
 
@@ -406,7 +406,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testStat(self):
         p, t = setUp()
         d = p.stat()
-        self.assertEqual(t.value(), "STAT\r\n")
+        self.assertEqual(t.value(), b"STAT\r\n")
         p.dataReceived(b"+OK 1 1212\r\n")
         return d.addCallback(self.assertEqual, (1, 1212))
 
@@ -414,17 +414,17 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testStatError(self):
         p, t = setUp()
         d = p.stat()
-        self.assertEqual(t.value(), "STAT\r\n")
+        self.assertEqual(t.value(), b"STAT\r\n")
         p.dataReceived(b"-ERR This server is lame!\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
+            lambda exc: self.assertEqual(exc.args[0], b"This server is lame!"))
 
 
     def testNoop(self):
         p, t = setUp()
         d = p.noop()
-        self.assertEqual(t.value(), "NOOP\r\n")
+        self.assertEqual(t.value(), b"NOOP\r\n")
         p.dataReceived(b"+OK No-op to you too!\r\n")
         return d.addCallback(self.assertEqual, "No-op to you too!")
 
@@ -432,7 +432,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testNoopError(self):
         p, t = setUp()
         d = p.noop()
-        self.assertEqual(t.value(), "NOOP\r\n")
+        self.assertEqual(t.value(), b"NOOP\r\n")
         p.dataReceived(b"-ERR This server is lame!\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -442,7 +442,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testRset(self):
         p, t = setUp()
         d = p.reset()
-        self.assertEqual(t.value(), "RSET\r\n")
+        self.assertEqual(t.value(), b"RSET\r\n")
         p.dataReceived(b"+OK Reset state\r\n")
         return d.addCallback(self.assertEqual, "Reset state")
 
@@ -450,7 +450,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testRsetError(self):
         p, t = setUp()
         d = p.reset()
-        self.assertEqual(t.value(), "RSET\r\n")
+        self.assertEqual(t.value(), b"RSET\r\n")
         p.dataReceived(b"-ERR This server is lame!\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
@@ -460,7 +460,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testDelete(self):
         p, t = setUp()
         d = p.delete(3)
-        self.assertEqual(t.value(), "DELE 4\r\n")
+        self.assertEqual(t.value(), b"DELE 4\r\n")
         p.dataReceived(b"+OK Hasta la vista\r\n")
         return d.addCallback(self.assertEqual, "Hasta la vista")
 
@@ -468,7 +468,7 @@ class POP3ClientMiscTests(unittest.TestCase):
     def testDeleteError(self):
         p, t = setUp()
         d = p.delete(3)
-        self.assertEqual(t.value(), "DELE 4\r\n")
+        self.assertEqual(t.value(), b"DELE 4\r\n")
         p.dataReceived(b"-ERR Winner is not you.\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
