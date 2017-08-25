@@ -3075,7 +3075,6 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         creator = policy.creatorForNetloc(b"foo", 1589)
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
-        self.assertEquals(1, policy._nextCacheId)
         self.assertEquals(1, len(policy._cache))
         connection = creator.clientConnectionForTLS(None)
         self.assertIs(trustRoot.context, connection.get_context())
@@ -3083,31 +3082,6 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         policy.creatorForNetloc(b"foo", 1589)
         self.assertFalse(trustRoot.called)
 
-    def test_cacheIdIncremented(self):
-        """
-        Verify that the cacheId is always incremented for new and existing
-        entries.
-        """
-        policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot())
-        hostname = b"foo"
-        host = hostname.decode("ascii")
-
-        hostname2 = b"bard"
-        host2 = hostname2.decode("ascii")
-
-        policy.creatorForNetloc(hostname, 1589)
-        self.assertIn(host, policy._cache)
-        entry = policy._cache[host]
-        self.assertEquals(0, entry.cacheId)
-
-        policy.creatorForNetloc(hostname2, 1589)
-        self.assertIn(host2, policy._cache)
-        entry = policy._cache[host2]
-        self.assertEquals(1, entry.cacheId)
-
-        policy.creatorForNetloc(hostname, 1589)
-        entry = policy._cache[host]
-        self.assertEquals(2, entry.cacheId)
 
     def test_cacheRemovesOldest(self):
         """
@@ -3119,7 +3093,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
             hostname = u"host" + unicode(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
-        # Force a, which was the first, to be the most recently used
+        # Force host0, which was the first, to be the most recently used
         host0 = u"host0"
         policy.creatorForNetloc(host0.encode("ascii"), 309)
         self.assertIn(host0, policy._cache)
@@ -3134,8 +3108,22 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
 
         self.assertIn(hostn, policy._cache)
         self.assertIn(host0, policy._cache)
-        entry = policy._cache[hostn]
-        self.assertEquals(21, entry.cacheId)
+
+        # Accessing an item repeatedly does not corrupt the LRU.
+        for _ in range(20):
+            policy.creatorForNetloc(host0.encode("ascii"), 8675)
+
+        hostNPlus1 = u"new1"
+
+        policy.creatorForNetloc(hostNPlus1, 800)
+
+        self.assertNotIn(u"host2", policy._cache)
+        self.assertEquals(20, len(policy._cache))
+
+        self.assertIn(hostNPlus1, policy._cache)
+        self.assertIn(hostn, policy._cache)
+        self.assertIn(host0, policy._cache)
+
 
     def test_changeCacheSize(self):
         """
@@ -3159,5 +3147,3 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         self.assertEquals(5, len(policy._cache))
 
         self.assertIn(hostn, policy._cache)
-        entry = policy._cache[hostn]
-        self.assertEquals(5, entry.cacheId)

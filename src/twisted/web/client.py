@@ -9,6 +9,7 @@ HTTP client.
 from __future__ import division, absolute_import
 
 import os
+import collections
 import warnings
 
 try:
@@ -27,7 +28,7 @@ from functools import wraps
 from zope.interface import implementer
 
 from twisted.python import log
-from twisted.python.compat import _PY3, networkString, iteritems
+from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
@@ -955,30 +956,6 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
                           WebClientContextFactory.__name__)
 
 
-class _HostnameCacheEntry(object):
-    """
-    Entry in the L{HostnameCachingHTTPSPolicy} associating a connection
-    creator and a cacheId.
-
-    @ivar creator: See L{__init__}
-    @ivar cacheId: See L{__init__}
-    """
-
-    def __init__(self, creator, cacheId):
-        """
-        @param creator: The connection creator corresponding to the hostname to
-            which this object is mapped.
-        @type creator: L{client connection creator
-            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
-
-        @param cacheId: The id of this entry in the cache
-        @type cacheId: L{int}
-        """
-        self.creator = creator
-        self.cacheId = cacheId
-
-
-
 @implementer(IPolicyForHTTPS)
 class HostnameCachingHTTPSPolicy(object):
     """
@@ -993,9 +970,6 @@ class HostnameCachingHTTPSPolicy(object):
     @type _cache: L{dict}
 
     @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
-    @ivar _nextCacheId: The id to use for the next cache modification,
-        either a hit or a new entry.
-    @type _nextCacheId: L{int}
     """
 
     def __init__(self, trustRoot=None, cacheSize=20):
@@ -1008,24 +982,8 @@ class HostnameCachingHTTPSPolicy(object):
         @type cacheSize: L{int}
         """
         self._trustRoot = trustRoot
-        self._cache = {}
+        self._cache = collections.OrderedDict()
         self._cacheSize = cacheSize
-        self._nextCacheId = 0
-
-
-    def _purgeCache(self):
-        """
-        Purge cache entries if cacheSize is exceeded.
-        """
-        idToRemove = self._nextCacheId - self._cacheSize
-        if idToRemove < 0:
-            return
-
-        for k, v in iteritems(self._cache):
-            if v.cacheId == idToRemove:
-                keyToRemove = k
-
-        del self._cache[keyToRemove]
 
 
     def creatorForNetloc(self, hostname, port):
@@ -1047,19 +1005,15 @@ class HostnameCachingHTTPSPolicy(object):
         """
         host = hostname.decode("ascii")
         try:
-            entry = self._cache[host]
+            creator = self._cache.pop(host)
         except KeyError:
             creator = optionsForClientTLS(host, trustRoot=self._trustRoot)
-            entry = _HostnameCacheEntry(creator, self._nextCacheId)
-            self._cache[host] = entry
-            self._purgeCache()
-            self._nextCacheId += 1
-            return entry.creator
-        else:
-            entry.cacheId = self._nextCacheId
-            self._nextCacheId += 1
-            return entry.creator
 
+        self._cache[host] = creator
+        if len(self._cache) > self._cacheSize:
+            self._cache.popitem(last=False)
+
+        return creator
 
 
 @implementer(IOpenSSLContextFactory)
