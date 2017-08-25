@@ -29,30 +29,30 @@ TIMEOUT_DEFERRED = False
 SLOW_GREETING = False
 
 """Commands"""
-CONNECTION_MADE = "+OK POP3 localhost v2003.83 server ready"
+CONNECTION_MADE = b"+OK POP3 localhost v2003.83 server ready"
 
 CAPABILITIES = [
-"TOP",
-"LOGIN-DELAY 180",
-"USER",
-"SASL LOGIN"
+b"TOP",
+b"LOGIN-DELAY 180",
+b"USER",
+b"SASL LOGIN"
 ]
 
-CAPABILITIES_SSL = "STLS"
-CAPABILITIES_UIDL = "UIDL"
+CAPABILITIES_SSL = b"STLS"
+CAPABILITIES_UIDL = b"UIDL"
 
 
-INVALID_RESPONSE = "-ERR Unknown request"
-VALID_RESPONSE = "+OK Command Completed"
-AUTH_DECLINED = "-ERR LOGIN failed"
-AUTH_ACCEPTED = "+OK Mailbox open, 0 messages"
-TLS_ERROR = "-ERR server side error start TLS handshake"
-LOGOUT_COMPLETE = "+OK quit completed"
-NOT_LOGGED_IN = "-ERR Unknown AUHORIZATION state command"
-STAT = "+OK 0 0"
-UIDL = "+OK Unique-ID listing follows\r\n."
-LIST = "+OK Mailbox scan listing follows\r\n."
-CAP_START = "+OK Capability list follows:"
+INVALID_RESPONSE = b"-ERR Unknown request"
+VALID_RESPONSE = b"+OK Command Completed"
+AUTH_DECLINED = b"-ERR LOGIN failed"
+AUTH_ACCEPTED = b"+OK Mailbox open, 0 messages"
+TLS_ERROR = b"-ERR server side error start TLS handshake"
+LOGOUT_COMPLETE = b"+OK quit completed"
+NOT_LOGGED_IN = b"-ERR Unknown AUHORIZATION state command"
+STAT = b"+OK 0 0"
+UIDL = b"+OK Unique-ID listing follows\r\n."
+LIST = b"+OK Mailbox scan listing follows\r\n."
+CAP_START = b"+OK Capability list follows:"
 
 
 class POP3TestServer(basic.LineReceiver):
