@@ -131,7 +131,7 @@ Let's take this function as an example:
         first = 0
         second = 1
     
-        for i in xrange(TARGET - 1):
+        for i in range(TARGET - 1):
             new = first + second
             first = second
             second = new
@@ -343,7 +343,7 @@ program:
         first = 0
         second = 1
     
-        for i in xrange(TARGET - 1):
+        for i in range(TARGET - 1):
             new = first + second
             first = second
             second = new
