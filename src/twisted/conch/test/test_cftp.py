@@ -11,37 +11,29 @@ import time, sys, os, operator, getpass, struct
 from io import BytesIO
 
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from zope.interface import implementer
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+
+pyasn1 = requireModule('pyasn1')
+cryptography = requireModule('cryptography')
+unix = requireModule('unix')
 
 _reason = None
 if cryptography and pyasn1:
     try:
-        from twisted.conch import unix
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
+        from twisted.conch.ssh import filetransfer
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-    except ImportError as e:
-        unix = None
-        _reason = str(e)
-        del e
-else:
-    unix = None
+        from twisted.conch.test import test_ssh, test_conch
+        from twisted.conch.test.test_conch import FakeStdio
+    except ImportError:
+        pass
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
-from twisted.conch.ssh import filetransfer
-from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
-from twisted.conch.test.test_conch import FakeStdio
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
