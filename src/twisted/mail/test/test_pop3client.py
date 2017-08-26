@@ -527,10 +527,13 @@ class TLSServerFactory(protocol.ServerFactory):
         def connectionMade(self):
             self.factory.input = []
             self.output = self.output[:]
-            map(self.sendLine, self.output.pop(0))
+            for line in self.output.pop(0):
+                self.sendLine(line)
+
+
         def lineReceived(self, line):
             self.factory.input.append(line)
-            map(self.sendLine, self.output.pop(0))
+            [self.sendLine(l) for l in self.output.pop(0)]
             if line == b'STLS':
                 self.transport.startTLS(self.context)
 
