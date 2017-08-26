@@ -7,12 +7,12 @@ Test cases for Ltwisted.mail.pop3} module.
 
 from __future__ import print_function
 
-import StringIO
 import hmac
 import base64
 import itertools
 
 from collections import OrderedDict
+from io import BytesIO
 
 from zope.interface import implementer
 
@@ -172,7 +172,7 @@ class ListMailbox:
         return len(self.list[i])
 
     def getMessage(self, i):
-        return StringIO.StringIO(self.list[i])
+        return BytesIO(self.list[i])
 
     def getUidl(self, i):
         return i
@@ -291,7 +291,7 @@ class DummyMailbox(pop3.Mailbox):
         return len(self.messages[i])
 
     def getMessage(self, i):
-        return StringIO.StringIO(self.messages[i])
+        return BytesIO(self.messages[i])
 
     def getUidl(self, i):
         if i >= len(self.messages):
@@ -446,7 +446,7 @@ class TestMailbox:
 
 class CapabilityTests(unittest.TestCase):
     def setUp(self):
-        s = StringIO.StringIO()
+        s = BytesIO()
         p = pop3.POP3()
         p.factory = TestServerFactory()
         p.transport = internet.protocol.FileWrapper(s)
@@ -456,7 +456,7 @@ class CapabilityTests(unittest.TestCase):
         self.caps = p.listCapabilities()
         self.pcaps = s.getvalue().splitlines()
 
-        s = StringIO.StringIO()
+        s = BytesIO()
         p.mbox = TestMailbox()
         p.transport = internet.protocol.FileWrapper(s)
         p.do_CAPA()
@@ -501,7 +501,7 @@ class CapabilityTests(unittest.TestCase):
 
 class GlobalCapabilitiesTests(unittest.TestCase):
     def setUp(self):
-        s = StringIO.StringIO()
+        s = BytesIO()
         p = pop3.POP3()
         p.factory = TestServerFactory()
         p.factory.pue = p.factory.puld = False
@@ -512,7 +512,7 @@ class GlobalCapabilitiesTests(unittest.TestCase):
         self.caps = p.listCapabilities()
         self.pcaps = s.getvalue().splitlines()
 
-        s = StringIO.StringIO()
+        s = BytesIO()
         p.mbox = TestMailbox()
         p.transport = internet.protocol.FileWrapper(s)
         p.do_CAPA()
@@ -550,7 +550,7 @@ class SASLTests(unittest.TestCase):
         ch.addUser('testuser', 'testpassword')
         p.portal.registerChecker(ch)
 
-        s = StringIO.StringIO()
+        s = BytesIO()
         p.transport = internet.protocol.FileWrapper(s)
         p.connectionMade()
 
@@ -585,14 +585,14 @@ More message text for you.
     def setUp(self):
         """
         Make a POP3 server protocol instance hooked up to a simple mailbox and
-        a transport that buffers output to a StringIO.
+        a transport that buffers output to a BytesIO.
         """
         p = pop3.POP3()
         p.mbox = self.mailboxType(self.exceptionType)
         p.schedule = list
         self.pop3Server = p
 
-        s = StringIO.StringIO()
+        s = BytesIO()
         p.transport = internet.protocol.FileWrapper(s)
         p.connectionMade()
         s.truncate(0)
