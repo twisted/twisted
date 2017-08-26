@@ -593,6 +593,7 @@ More message text for you.
         s = BytesIO()
         p.transport = internet.protocol.FileWrapper(s)
         p.connectionMade()
+        s.seek(0)
         s.truncate(0)
         self.pop3Transport = s
 
@@ -626,6 +627,7 @@ More message text for you.
         p.lineReceived(b"LIST 1")
         self._flush()
         self.assertEqual(s.getvalue(), b"+OK 1 44\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"LIST")
@@ -645,18 +647,21 @@ More message text for you.
         self.assertEqual(
             s.getvalue(),
             b"-ERR Invalid message-number: 'a'\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"LIST 0")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Invalid message-number: 0\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"LIST 2")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Invalid message-number: 2\r\n")
+        s.seek(0)
         s.truncate(0)
 
 
@@ -670,6 +675,7 @@ More message text for you.
 
         p.lineReceived(b"UIDL 1")
         self.assertEqual(s.getvalue(), b"+OK 0\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"UIDL")
@@ -689,18 +695,21 @@ More message text for you.
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"UIDL 0")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"UIDL 2")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
 
@@ -734,6 +743,7 @@ More message text for you.
             b"\r\n"
             b"How are you, friend?\r\n"
             b".\r\n")
+        s.seek(0)
         s.truncate(0)
 
 
@@ -750,18 +760,21 @@ More message text for you.
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"RETR 0")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"RETR 2")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
 
@@ -799,30 +812,35 @@ More message text for you.
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad line count argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP 1 -1")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad line count argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP a 1")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP 0 1")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP 3 1")
         self.assertEqual(
             s.getvalue(),
             b"-ERR Bad message number argument\r\n")
+        s.seek(0)
         s.truncate(0)
 
 
@@ -839,6 +857,7 @@ More message text for you.
         self.assertEqual(
             s.getvalue(),
             b"+OK 0\r\n")
+        s.seek(0)
         s.truncate(0)
 
 
@@ -852,11 +871,13 @@ More message text for you.
 
         p.lineReceived(b'RETR 2')
         self._flush()
+        s.seek(0)
         s.truncate(0)
         p.lineReceived(b'LAST')
         self.assertEqual(
             s.getvalue(),
             b'+OK 2\r\n')
+        s.seek(0)
         s.truncate(0)
 
 
@@ -870,6 +891,7 @@ More message text for you.
 
         p.lineReceived(b'TOP 2 10')
         self._flush()
+        s.seek(0)
         s.truncate(0)
         p.lineReceived(b'LAST')
         self.assertEqual(
@@ -890,6 +912,7 @@ More message text for you.
         self._flush()
         p.lineReceived(b'TOP 1 10')
         self._flush()
+        s.seek(0)
         s.truncate(0)
         p.lineReceived(b'LAST')
         self.assertEqual(
@@ -908,6 +931,7 @@ More message text for you.
         p.lineReceived(b'RETR 2')
         self._flush()
         p.lineReceived(b'RSET')
+        s.seek(0)
         s.truncate(0)
         p.lineReceived(b'LAST')
         self.assertEqual(
