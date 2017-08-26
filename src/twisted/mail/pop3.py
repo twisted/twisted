@@ -280,7 +280,7 @@ def successResponse(response):
     @return: A positive POP3 response string.
     """
     if not isinstance(response, bytes):
-        response = str(response).encode("ascii")
+        response = str(response).encode("utf-8")
     return b'+OK ' + response + b'\r\n'
 
 
@@ -365,7 +365,7 @@ def formatUIDListLines(msgs, getUidl):
         if m is not None:
             uid = getUidl(i)
             if not isinstance(uid, bytes):
-                uid = str(uid).encode("ascii")
+                uid = str(uid).encode("utf-8")
             yield intToBytes(i + 1) + b' ' + uid + b'\r\n'
 
 
@@ -527,7 +527,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             included in the response.
         """
         if not isinstance(message, bytes):
-            message = str(message).encode("ascii")
+            message = str(message).encode("utf-8")
         self.sendLine(b'-ERR ' + message)
 
 
@@ -597,7 +597,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         authCmd = command in self.AUTH_CMDS
         if not self.mbox and not authCmd:
             raise POP3Error(b"not authenticated yet: cannot do " + command)
-        f = getattr(self, 'do_' + command.decode("ascii"), None)
+        f = getattr(self, 'do_' + command.decode("utf-8"), None)
         if f:
             return f(*args)
         raise POP3Error(b"Unknown protocol command: " + command)
@@ -627,7 +627,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             try:
                 v = self.factory.cap_IMPLEMENTATION()
                 if v and not isinstance(v, bytes):
-                    v = str(v).encode("ascii")
+                    v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
             except:
@@ -638,7 +638,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             try:
                 v = self.factory.cap_EXPIRE()
                 if v and not isinstance(v, bytes):
-                    v = str(v).encode("ascii")
+                    v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
             except:
@@ -648,7 +648,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = b"NEVER"
                 if self.factory.perUserExpiration():
                     if self.mbox:
-                        v = str(self.mbox.messageExpiration).encode("ascii")
+                        v = str(self.mbox.messageExpiration).encode("utf-8")
                     else:
                         v = v + b" USER"
                 baseCaps.append(b"EXPIRE " + v)
@@ -656,7 +656,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             try:
                 v = self.factory.cap_LOGIN_DELAY()
                 if v and not isinstance(v, bytes):
-                    v = str(v).encode("ascii")
+                    v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
             except:
@@ -664,7 +664,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             else:
                 if self.factory.perUserLoginDelay():
                     if self.mbox:
-                        v = str(self.mbox.loginDelay).encode("ascii")
+                        v = str(self.mbox.loginDelay).encode("utf-8")
                     else:
                         v = v + b" USER"
                 baseCaps.append(b"LOGIN-DELAY " + v)
@@ -958,7 +958,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     raise ValueError()
             except ValueError:
                 if not isinstance(i, bytes):
-                    i = str(i).encode("ascii")
+                    i = str(i).encode("utf-8")
                 self.failResponse(b"Invalid message-number: " + i)
             else:
                 d = defer.maybeDeferred(self.mbox.listMessages, i - 1)
@@ -978,7 +978,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                                 PendingDeprecationWarning)
                         invalidNum = i
                         if invalidNum and not isinstance(invalidNum, bytes):
-                            invalidNum = str(invalidNum).encode("ascii")
+                            invalidNum = str(invalidNum).encode("utf-8")
                         self.failResponse(b"Invalid message-number: " + invalidNum)
                     else:
                         self.failResponse(err.getErrorMessage())
@@ -1029,7 +1029,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     self.failResponse("Bad message number argument")
                 else:
                     if not isinstance(msg, bytes):
-                        msg = str(msg).encode("ascii")
+                        msg = str(msg).encode("utf-8")
                     self.successResponse(msg)
 
 
@@ -1495,7 +1495,7 @@ class POP3Client(basic.LineOnlyReceiver):
         """
         if params is not None:
             if not isinstance(params, bytes):
-                params = str(params).encode("ascii")
+                params = str(params).encode("utf-8")
             self.sendLine(command + b' ' + params)
         else:
             self.sendLine(command)
@@ -1515,7 +1515,7 @@ class POP3Client(basic.LineOnlyReceiver):
         """
         if params:
             if not isinstance(params, bytes):
-                params = str(params).encode("ascii")
+                params = str(params).encode("utf-8")
             self.sendLine(command + b' ' + params)
         else:
             self.sendLine(command)
@@ -1569,7 +1569,7 @@ class POP3Client(basic.LineOnlyReceiver):
         """
         try:
             if isinstance(command, bytes):
-                command = command.decode("ascii")
+                command = command.decode("utf-8")
             method = getattr(self, 'handle_' + command, default)
             if method is not None:
                 method(*args)
@@ -1620,7 +1620,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type magic: L{bytes}
         @param magic: The challenge provided by the server.
         """
-        digest = md5(magic + password).hexdigest().encode("ascii")
+        digest = md5(magic + password).hexdigest().encode("utf-8")
         self.apop(user, digest)
 
 
