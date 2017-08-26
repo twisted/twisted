@@ -369,7 +369,6 @@ notPortedModules = [
     "twisted.mail.mail",
     "twisted.mail.maildir",
     "twisted.mail.pb",
-    "twisted.mail.relay",
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
     "twisted.mail.scripts.mailmail",
