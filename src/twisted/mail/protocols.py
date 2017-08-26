@@ -14,7 +14,6 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
 from twisted.python import log
-from twisted.python.compat import networkString
 
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
@@ -82,7 +81,7 @@ class DomainDeliveryBase:
         fromUser = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
                  heloStr + authStr)
         by = (b"by " + self.host + b" with " + self.protocolName +
-              b" (" + networkString(longversion) + b")")
+              b" (" + longversion.encode("ascii") + b")")
         forUser = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
                 smtp.rfc822date())
         return (b"Received: " + fromUser + b"\n\t" + by +
