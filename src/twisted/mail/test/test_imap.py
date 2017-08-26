@@ -789,7 +789,7 @@ class IMAP4HelperTests(unittest.TestCase):
         def cbProduced(result):
             self.failUnlessIdentical(result, p)
             self.assertEqual(
-                (b'{%d}\r\n' % len(b))+ b,
+                (b'{' + intToBytes(len(b)) + b'}' + b'\r\n' + b),
                 b''.join(c.buffer))
             return result
 
@@ -970,8 +970,8 @@ class IMAP4HelperTests(unittest.TestCase):
 
 
         check(
-            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' %
-            (len(s), s,),
+            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {' +
+            intToBytes(len(s)) + b'}\r\n' + s + b')',
             [b'BODY.PEEK', [b'HEADER.FIELDS.NOT', [b'subject', b'bcc', b'cc']],
              s],
         )
@@ -3007,12 +3007,12 @@ class IMAP4ServerParsingTests(unittest.SynchronousTestCase):
         self.server.lineReceived(b"001 LOGIN A B C")
         self.assertEqual(
             self.transport.value(),
-            networkString(
-                "001 BAD Illegal syntax:"
-                " Too many arguments for command: %r"
-                "\r\n"
-                % (b"C",)
-            ))
+            (b"001 BAD Illegal syntax:" +
+             b" Too many arguments for command: " +
+             repr(b'C').encode("utf-8") +
+             b"\r\n"
+            )
+        )
 
 
     def assertCommandExceptionResponse(self,
@@ -4649,7 +4649,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         for line in lines:
             self.client.dataReceived(line + b'\r\n')
         self.client.dataReceived(
-            b'0001 OK [READ-ONLY] %s completed\r\n' % (self.command,))
+            b'0001 OK [READ-ONLY] ' + self.command + b' completed\r\n')
 
 
     def test_exists(self):

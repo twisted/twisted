@@ -7,18 +7,17 @@ import inspect
 
 from zope.interface import directlyProvides
 
+from twisted.internet import reactor, defer, error, protocol, interfaces
 from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
 from twisted.mail.pop3 import InsecureAuthenticationDisallowed
 from twisted.mail.pop3 import ServerErrorResponse
-from twisted.protocols import loopback
-from twisted.internet import reactor, defer, error, protocol, interfaces
-from twisted.python import log
-
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-from twisted.protocols import basic
-
 from twisted.mail.test import pop3testserver
+from twisted.protocols import basic, loopback
+from twisted.python import log
+from twisted.python.compat import intToBytes
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
+
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -368,17 +367,17 @@ class POP3ClientMessageTests(unittest.TestCase):
         messages = [
             p.retrieve(i).addCallback(
                 self.assertEqual,
-                [b"First line of %d." % (i + 1,),
-                 b"Second line of %d." % (i + 1,)])
+                [b"First line of " + intToBytes(i + 1) + b".",
+                 b"Second line of " + intToBytes(i + 1) + b"."])
             for i
             in range(3)]
 
         for i in range(1, 4):
-            self.assertEqual(t.value(), b"RETR %d\r\n" % (i,))
+            self.assertEqual(t.value(), b"RETR " + intToBytes(i) + b"\r\n")
             t.clear()
             p.dataReceived(b"+OK 2 lines on the way\r\n")
-            p.dataReceived(b"First line of %d.\r\n" % (i,))
-            p.dataReceived(b"Second line of %d.\r\n" % (i,))
+            p.dataReceived(b"First line of " + intToBytes(i) + b".\r\n")
+            p.dataReceived(b"Second line of " + intToBytes(i) + b".\r\n")
             self.assertEqual(t.value(), b"")
             p.dataReceived(b".\r\n")
 
