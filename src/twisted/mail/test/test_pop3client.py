@@ -65,7 +65,8 @@ class POP3ClientLoginTests(unittest.TestCase):
         p.dataReceived(b'-ERR Offline for maintenance\r\n')
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], b"Offline for maintenance"))
+            lambda exc: self.assertEqual(exc.args[0],
+                b"Offline for maintenance"))
 
 
     def testOkUser(self):
@@ -155,7 +156,8 @@ class POP3ClientLoginTests(unittest.TestCase):
         p, t = setUp(greet=False)
         p.dataReceived(b"+OK <challenge string goes here>\r\n")
         d = p.login(b"username", b"password")
-        self.assertEqual(t.value(), b"APOP username f34f1e464d0d7927607753129cabe39a\r\n")
+        self.assertEqual(t.value(),
+            b"APOP username f34f1e464d0d7927607753129cabe39a\r\n")
         p.dataReceived(b"+OK Welcome!\r\n")
         return d.addCallback(self.assertEqual, b"Welcome!")
 
@@ -229,7 +231,8 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived(b"1 3\r\n2 2\r\n3 1\r\n")
         self.assertEqual(c.data, {0: [3], 1: [2], 2: [1]})
         p.dataReceived(b"5 3\r\n6 2\r\n7 1\r\n")
-        self.assertEqual(c.data, {0: [3], 1: [2], 2: [1], 4: [3], 5: [2], 6: [1]})
+        self.assertEqual(c.data, {0: [3], 1: [2], 2: [1], 4: [3], 5: [2],
+                                  6: [1]})
         p.dataReceived(b".\r\n")
         return d.addCallback(self.assertIdentical, f)
 
@@ -241,7 +244,8 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived(b"-ERR Fatal doom server exploded\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], b"Fatal doom server exploded"))
+            lambda exc: self.assertEqual(exc.args[0],
+                b"Fatal doom server exploded"))
 
 
     def testListUID(self):
@@ -273,7 +277,8 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived(b"-ERR Fatal doom server exploded\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], b"Fatal doom server exploded"))
+            lambda exc: self.assertEqual(exc.args[0],
+                b"Fatal doom server exploded"))
 
 
 
@@ -350,7 +355,8 @@ class POP3ClientMessageTests(unittest.TestCase):
         p.dataReceived(b"-ERR Fatal doom server exploded\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], b"Fatal doom server exploded"))
+            lambda exc: self.assertEqual(exc.args[0],
+                b"Fatal doom server exploded"))
 
 
     def test_concurrentRetrieves(self):
@@ -477,7 +483,7 @@ class POP3ClientMiscTests(unittest.TestCase):
 
 
 class SimpleClient(POP3Client):
-    def __init__(self, deferred, contextFactory = None):
+    def __init__(self, deferred, contextFactory=None):
         self.deferred = deferred
         self.allowInsecureLogin = True
 
@@ -493,7 +499,8 @@ class POP3HelperMixin:
 
     def setUp(self):
         d = defer.Deferred()
-        self.server = pop3testserver.POP3TestServer(contextFactory=self.serverCTX)
+        self.server = pop3testserver.POP3TestServer(contextFactory=
+                                                    self.serverCTX)
         self.client = SimpleClient(d, contextFactory=self.clientCTX)
         self.client.timeout = 30
         self.connected = d
@@ -551,11 +558,11 @@ class POP3TLSTests(unittest.TestCase):
         """
         sf = TLSServerFactory()
         sf.protocol.output = [
-            [b'+OK'], # Server greeting
-            [b'+OK', b'STLS', b'.'], # CAPA response
-            [b'+OK'], # STLS response
-            [b'+OK', b'.'], # Second CAPA response
-            [b'+OK'] # QUIT response
+            [b'+OK'],  # Server greeting
+            [b'+OK', b'STLS', b'.'],  # CAPA response
+            [b'+OK'],  # STLS response
+            [b'+OK', b'.'],  # Second CAPA response
+            [b'+OK']  # QUIT response
             ]
         sf.protocol.context = ServerTLSContext()
         port = reactor.listenTCP(0, sf, interface='127.0.0.1')
@@ -589,7 +596,8 @@ class POP3TLSTests(unittest.TestCase):
                 ['CAPA', 'STLS', 'CAPA', 'QUIT'])
 
         def cleanup(result):
-            log.msg("Asserted correct input; disconnecting client and shutting down server")
+            log.msg("Asserted correct input; disconnecting "
+                    "client and shutting down server")
             conn.disconnect()
             return connLostDeferred
 

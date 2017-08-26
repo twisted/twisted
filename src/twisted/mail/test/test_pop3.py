@@ -50,16 +50,17 @@ class UtilityTests(unittest.TestCase):
         input = iter(itertools.cycle(['012', '345', '6', '7', '8', '9']))
         c = pop3._IteratorBuffer(output.extend, input, 6)
         i = iter(c)
-        self.assertEqual(output, []) # nothing is buffer
+        self.assertEqual(output, [])  # Nothing is buffer
         next(i)
-        self.assertEqual(output, []) # '012' is buffered
+        self.assertEqual(output, [])  # '012' is buffered
         next(i)
-        self.assertEqual(output, []) # '012345' is buffered
+        self.assertEqual(output, [])  # '012345' is buffered
         next(i)
-        self.assertEqual(output, ['012', '345', '6']) # nothing is buffered
+        self.assertEqual(output, ['012', '345', '6'])  # Nothing is buffered
         for n in range(5):
             next(i)
-        self.assertEqual(output, ['012', '345', '6', '7', '8', '9', '012', '345'])
+        self.assertEqual(output, ['012', '345', '6', '7', '8', '9', '012',
+                                  '345'])
 
 
     def test_FinishLineBuffering(self):
@@ -109,8 +110,8 @@ class UtilityTests(unittest.TestCase):
         listLines = list(pop3.formatListResponse([1, 2, 3, 100]))
         self.assertEqual(
             listLines,
-            [b'+OK 4\r\n', b'1 1\r\n', b'2 2\r\n', b'3 3\r\n', b'4 100\r\n', b'.\r\n'])
-
+            [b'+OK 4\r\n', b'1 1\r\n', b'2 2\r\n', b'3 3\r\n', b'4 100\r\n',
+             b'.\r\n'])
 
 
     def test_UIDListLineFormatter(self):
@@ -124,12 +125,14 @@ class UtilityTests(unittest.TestCase):
             listLines,
             [b'+OK \r\n', b'.\r\n'])
 
-        listLines = list(pop3.formatUIDListResponse([123, 431, 591], UIDs.__getitem__))
+        listLines = list(pop3.formatUIDListResponse([123, 431, 591],
+                         UIDs.__getitem__))
         self.assertEqual(
             listLines,
             [b'+OK \r\n', b'1 abc\r\n', b'2 def\r\n', b'3 ghi\r\n', b'.\r\n'])
 
-        listLines = list(pop3.formatUIDListResponse([0, None, 591], UIDs.__getitem__))
+        listLines = list(pop3.formatUIDListResponse([0, None, 591],
+                         UIDs.__getitem__))
         self.assertEqual(
             listLines,
             [b'+OK \r\n', b'1 abc\r\n', b'3 ghi\r\n', b'.\r\n'])
@@ -142,21 +145,28 @@ class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 
     def authenticateUserAPOP(self, user, digest):
         user, domain = self.lookupDomain(user)
-        return self.service.domains[b'baz.com'].authenticateUserAPOP(user, digest, self.magic, domain)
+        return self.service.domains[b'baz.com'].authenticateUserAPOP(
+            user, digest, self.magic, domain)
+
+
 
 class DummyDomain:
 
-   def __init__(self):
-       self.users = {}
+    def __init__(self):
+        self.users = {}
 
-   def addUser(self, name):
-       self.users[name] = []
 
-   def addMessage(self, name, message):
-       self.users[name].append(message)
+    def addUser(self, name):
+        self.users[name] = []
 
-   def authenticateUserAPOP(self, name, digest, magic, domain):
-       return pop3.IMailbox, ListMailbox(self.users[name]), lambda: None
+
+    def addMessage(self, name, message):
+        self.users[name].append(message)
+
+
+    def authenticateUserAPOP(self, name, digest, magic, domain):
+        return pop3.IMailbox, ListMailbox(self.users[name]), lambda: None
+
 
 
 class ListMailbox:
@@ -164,28 +174,36 @@ class ListMailbox:
     def __init__(self, list):
         self.list = list
 
+
     def listMessages(self, i=None):
         if i is None:
             return [len(l) for l in self.list]
         return len(self.list[i])
 
+
     def getMessage(self, i):
         return BytesIO(self.list[i])
+
 
     def getUidl(self, i):
         return i
 
+
     def deleteMessage(self, i):
         self.list[i] = b''
 
+
     def sync(self):
         pass
+
+
 
 class MyPOP3Downloader(pop3.POP3Client):
 
     def handle_WELCOME(self, line):
         pop3.POP3Client.handle_WELCOME(self, line)
         self.apop(b'hello@baz.com', b'world')
+
 
     def handle_APOP(self, line):
         parts = line.split()
@@ -195,16 +213,20 @@ class MyPOP3Downloader(pop3.POP3Client):
         self.lines = []
         self.retr(1)
 
+
     def handle_RETR_continue(self, line):
         self.lines.append(line)
+
 
     def handle_RETR_end(self):
         self.message = b'\n'.join(self.lines) + b'\n'
         self.quit()
 
+
     def handle_QUIT(self, line):
         if line[:3] != b'+OK':
             raise AssertionError(b'code is ' + line)
+
 
 
 class POP3Tests(unittest.TestCase):
@@ -236,6 +258,7 @@ Someone set up us the bomb!\015
         self.factory.domains[b'baz.com'].addUser(b'hello')
         self.factory.domains[b'baz.com'].addMessage(b'hello', self.message)
 
+
     def test_Messages(self):
         client = LineSendingProtocol([
             b'APOP hello@baz.com world',
@@ -243,15 +266,16 @@ Someone set up us the bomb!\015
             b'RETR 1',
             b'QUIT',
         ])
-        server =  MyVirtualPOP3()
+        server = MyVirtualPOP3()
         server.service = self.factory
         def check(ignored):
             output = b'\r\n'.join(client.response) + b'\r\n'
             self.assertEqual(output, self.expectedOutput)
         return loopback.loopbackTCP(server, client).addCallback(check)
 
+
     def test_Loopback(self):
-        protocol =  MyVirtualPOP3()
+        protocol = MyVirtualPOP3()
         protocol.service = self.factory
         clientProtocol = MyPOP3Downloader()
         def check(ignored):
@@ -260,7 +284,8 @@ Someone set up us the bomb!\015
                 failure.Failure(Exception("Test harness disconnect")))
         d = loopback.loopbackAsync(protocol, clientProtocol)
         return d.addCallback(check)
-    testLoopback.suppress = [util.suppress(message="twisted.mail.pop3.POP3Client is deprecated")]
+    testLoopback.suppress = [util.suppress(message=
+        "twisted.mail.pop3.POP3Client is deprecated")]
 
 
 
@@ -281,6 +306,7 @@ class DummyMailbox(pop3.Mailbox):
         self.messages = DummyMailbox.messages[:]
         self.exceptionType = exceptionType
 
+
     def listMessages(self, i=None):
         if i is None:
             return [len(m) for m in self.messages]
@@ -288,16 +314,20 @@ class DummyMailbox(pop3.Mailbox):
             raise self.exceptionType()
         return len(self.messages[i])
 
+
     def getMessage(self, i):
         return BytesIO(self.messages[i])
+
 
     def getUidl(self, i):
         if i >= len(self.messages):
             raise self.exceptionType()
         return intToBytes(i)
 
+
     def deleteMessage(self, i):
         self.messages[i] = b''
+
 
 
 class AnotherPOP3Tests(unittest.TestCase):
@@ -312,7 +342,8 @@ class AnotherPOP3Tests(unittest.TestCase):
     def _cbRunTest(self, ignored, client, dummy, expectedOutput):
         self.assertEqual(b'\r\n'.join(expectedOutput),
                          b'\r\n'.join(client.response))
-        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+        dummy.connectionLost(failure.Failure(
+                             Exception("Test harness disconnect")))
         return ignored
 
 
@@ -371,7 +402,8 @@ class AnotherPOP3Tests(unittest.TestCase):
     def test_AuthListing(self):
         p = DummyPOP3()
         p.factory = internet.protocol.Factory()
-        p.factory.challengers = {b'Auth1': None, b'secondAuth': None, b'authLast': None}
+        p.factory.challengers = {b'Auth1': None, b'secondAuth': None,
+                                 b'authLast': None}
         client = LineSendingProtocol([
             b"AUTH",
             b"QUIT",
@@ -380,11 +412,13 @@ class AnotherPOP3Tests(unittest.TestCase):
         d = loopback.loopbackAsync(p, client)
         return d.addCallback(self._cbTestAuthListing, client)
 
+
     def _cbTestAuthListing(self, ignored, client):
         self.assertTrue(client.response[1].startswith(b'+OK'))
         self.assertEqual(sorted(client.response[2:5]),
                          [b"AUTH1", b"AUTHLAST", b"SECONDAUTH"])
         self.assertEqual(client.response[5], b".")
+
 
     def test_IllegalPASS(self):
         dummy = DummyPOP3()
@@ -395,10 +429,15 @@ class AnotherPOP3Tests(unittest.TestCase):
         d = loopback.loopbackAsync(dummy, client)
         return d.addCallback(self._cbTestIllegalPASS, client, dummy)
 
+
     def _cbTestIllegalPASS(self, ignored, client, dummy):
-        expected_output = b'+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
-        self.assertEqual(expected_output, b'\r\n'.join(client.response) + b'\r\n')
-        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+        expected_output = (
+            b'+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n')
+        self.assertEqual(expected_output,
+                         b'\r\n'.join(client.response) + b'\r\n')
+        dummy.connectionLost(failure.Failure(
+                             Exception("Test harness disconnect")))
+
 
     def test_EmptyPASS(self):
         dummy = DummyPOP3()
@@ -409,16 +448,22 @@ class AnotherPOP3Tests(unittest.TestCase):
         d = loopback.loopbackAsync(dummy, client)
         return d.addCallback(self._cbTestEmptyPASS, client, dummy)
 
+
     def _cbTestEmptyPASS(self, ignored, client, dummy):
-        expected_output = b'+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
-        self.assertEqual(expected_output, b'\r\n'.join(client.response) + b'\r\n')
-        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+        expected_output = (
+            b'+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n')
+        self.assertEqual(expected_output,
+                         b'\r\n'.join(client.response) + b'\r\n')
+        dummy.connectionLost(failure.Failure(
+                             Exception("Test harness disconnect")))
+
 
 
 @implementer(pop3.IServerFactory)
 class TestServerFactory:
     def cap_IMPLEMENTATION(self):
         return "Test Implementation String"
+
 
     def cap_EXPIRE(self):
         return 60
@@ -437,9 +482,11 @@ class TestServerFactory:
         return self.puld
 
 
+
 class TestMailbox:
     loginDelay = 100
     messageExpiration = 25
+
 
 
 class CapabilityTests(unittest.TestCase):
@@ -462,22 +509,28 @@ class CapabilityTests(unittest.TestCase):
         self.lpcaps = s.getvalue().splitlines()
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
+
     def contained(self, s, *caps):
         for c in caps:
             self.assertIn(s, c)
 
+
     def test_UIDL(self):
         self.contained(b"UIDL", self.caps, self.pcaps, self.lpcaps)
+
 
     def test_TOP(self):
         self.contained(b"TOP", self.caps, self.pcaps, self.lpcaps)
 
+
     def test_USER(self):
         self.contained(b"USER", self.caps, self.pcaps, self.lpcaps)
+
 
     def test_EXPIRE(self):
         self.contained(b"EXPIRE 60 USER", self.caps, self.pcaps)
         self.contained(b"EXPIRE 25", self.lpcaps)
+
 
     def test_IMPLEMENTATION(self):
         self.contained(
@@ -485,11 +538,13 @@ class CapabilityTests(unittest.TestCase):
             self.caps, self.pcaps, self.lpcaps
         )
 
+
     def test_SASL(self):
         self.contained(
             b"SASL SCHEME_1 SCHEME_2",
             self.caps, self.pcaps, self.lpcaps
         )
+
 
     def test_LOGIN_DELAY(self):
         self.contained(b"LOGIN-DELAY 120 USER", self.caps, self.pcaps)
@@ -518,12 +573,15 @@ class GlobalCapabilitiesTests(unittest.TestCase):
         self.lpcaps = s.getvalue().splitlines()
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
+
     def contained(self, s, *caps):
         for c in caps:
             self.assertIn(s, c)
 
+
     def test_EXPIRE(self):
         self.contained(b"EXPIRE 60", self.caps, self.pcaps, self.lpcaps)
+
 
     def test_LOGIN_DELAY(self):
         self.contained(b"LOGIN-DELAY 120", self.caps, self.pcaps, self.lpcaps)
@@ -542,7 +600,8 @@ class SASLTests(unittest.TestCase):
     def test_ValidLogin(self):
         p = pop3.POP3()
         p.factory = TestServerFactory()
-        p.factory.challengers = {b'CRAM-MD5': cred.credentials.CramMD5Credentials}
+        p.factory.challengers = {b'CRAM-MD5':
+                                 cred.credentials.CramMD5Credentials}
         p.portal = cred.portal.Portal(TestRealm())
         ch = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
         ch.addUser(b'testuser', b'testpassword')
@@ -560,7 +619,8 @@ class SASLTests(unittest.TestCase):
         chal = base64.decodestring(chal)
         response = hmac.HMAC(b'testpassword', chal).hexdigest().encode("ascii")
 
-        p.lineReceived(base64.encodestring(b'testuser ' + response).rstrip(b'\n'))
+        p.lineReceived(
+            base64.encodestring(b'testuser ' + response).rstrip(b'\n'))
         self.assertTrue(p.mbox)
         self.assertTrue(s.getvalue().splitlines()[-1].find(b"+OK") >= 0)
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
@@ -603,7 +663,8 @@ More message text for you.
         Disconnect the server protocol so it can clean up anything it might
         need to clean up.
         """
-        self.pop3Server.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+        self.pop3Server.connectionLost(failure.Failure(
+                                       Exception("Test harness disconnect")))
 
 
     def _flush(self):
@@ -1046,8 +1107,8 @@ class AsyncDeferredMailbox(DummyMailbox):
 
 class IndexErrorAsyncDeferredCommandTests(IndexErrorCommandTests):
     """
-    Run all of the L{IndexErrorCommandTests} tests with an asynchronous-Deferred
-    returning IMailbox implementation.
+    Run all of the L{IndexErrorCommandTests} tests with an
+    asynchronous-Deferred returning IMailbox implementation.
     """
     mailboxType = AsyncDeferredMailbox
 
@@ -1064,8 +1125,8 @@ class IndexErrorAsyncDeferredCommandTests(IndexErrorCommandTests):
 
 class ValueErrorAsyncDeferredCommandTests(ValueErrorCommandTests):
     """
-    Run all of the L{IndexErrorCommandTests} tests with an asynchronous-Deferred
-    returning IMailbox implementation.
+    Run all of the L{IndexErrorCommandTests} tests with an
+    asynchronous-Deferred returning IMailbox implementation.
     """
     mailboxType = AsyncDeferredMailbox
 
@@ -1077,6 +1138,8 @@ class ValueErrorAsyncDeferredCommandTests(ValueErrorCommandTests):
             d, a = self.pop3Server.mbox.waiting.pop()
             d.callback(a)
         ValueErrorCommandTests._flush(self)
+
+
 
 class POP3MiscTests(unittest.TestCase):
     """
