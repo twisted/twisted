@@ -284,8 +284,8 @@ Someone set up us the bomb!\015
                 failure.Failure(Exception("Test harness disconnect")))
         d = loopback.loopbackAsync(protocol, clientProtocol)
         return d.addCallback(check)
-    test_Loopback.suppress = [util.suppress(message=
-        "twisted.mail.pop3.POP3Client is deprecated")]
+    test_Loopback.suppress = [util.suppress(
+         message="twisted.mail.pop3.POP3Client is deprecated")]
 
 
 
