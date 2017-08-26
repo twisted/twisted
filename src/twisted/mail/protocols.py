@@ -271,9 +271,9 @@ class VirtualPOP3(pop3.POP3):
     """
     service = None
 
-    domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
-                          # to indicate user@host. '@' doesn't work
-                          # with NS, e.g.
+    domainSpecifier = b'@' # Gaagh! I hate POP3. No standardized way
+                           # to indicate user@host. '@' doesn't work
+                           # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
         """
@@ -360,9 +360,9 @@ class VirtualPOP3(pop3.POP3):
         try:
             user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
-            domain = ''
+            domain = b''
         if domain not in self.service.domains:
-             raise pop3.POP3Error("no such domain %s" % domain)
+             raise pop3.POP3Error("no such domain {}".format(domain))
         return user, domain
 
 

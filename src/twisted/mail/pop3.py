@@ -18,6 +18,10 @@ from hashlib import md5
 
 from zope.interface import implementer
 
+from twisted import cred
+from twisted.internet import task
+from twisted.internet import defer
+from twisted.internet import interfaces
 from twisted.mail import smtp
 from twisted.mail.interfaces import (
     IServerFactoryPOP3 as IServerFactory,
@@ -28,12 +32,8 @@ from twisted.mail._except import (
 )
 from twisted.protocols import basic
 from twisted.protocols import policies
-from twisted.internet import task
-from twisted.internet import defer
-from twisted.internet import interfaces
 from twisted.python import log
-
-from twisted import cred
+from twisted.python.compat import _PY3, intToBytes
 
 ##
 ## Authentication
@@ -118,7 +118,7 @@ class _HeadersPlusNLines:
         self.linecount = 0
         self.headers = 1
         self.done = 0
-        self.buf = ''
+        self.buf = b''
 
 
     def read(self, bytes):
@@ -136,14 +136,14 @@ class _HeadersPlusNLines:
             lines, the empty string is returned.
         """
         if self.done:
-            return ''
+            return b''
         data = self.f.read(bytes)
         if not data:
             return data
         if self.headers:
-            df, sz = data.find('\r\n\r\n'), 4
+            df, sz = data.find(b'\r\n\r\n'), 4
             if df == -1:
-                df, sz = data.find('\n\n'), 2
+                df, sz = data.find(b'\n\n'), 2
             if df != -1:
                 df += sz
                 val = data[:df]
@@ -151,15 +151,15 @@ class _HeadersPlusNLines:
                 self.linecount = 1
                 self.headers = 0
         else:
-            val = ''
+            val = b''
         if self.linecount > 0:
-            dsplit = (self.buf+data).split('\n')
+            dsplit = (self.buf + data).split(b'\n')
             self.buf = dsplit[-1]
             for ln in dsplit[:-1]:
                 if self.linecount > self.n:
                     self.done = 1
                     return val
-                val += (ln + '\n')
+                val += (ln + b'\n')
                 self.linecount += 1
             return val
         else:
@@ -217,7 +217,7 @@ class _IteratorBuffer(object):
         return self
 
 
-    def next(self):
+    def __next__(self):
         """
         Get the next string from the container, buffer it, and possibly send
         the buffer to the writer.
@@ -229,7 +229,7 @@ class _IteratorBuffer(object):
         container.
         """
         try:
-            v = self.iterator.next()
+            v = next(self.iterator)
         except StopIteration:
             if self.lines:
                 self.write(self.lines)
@@ -245,6 +245,8 @@ class _IteratorBuffer(object):
                     self.lines = []
                     self.bufSize = 0
 
+    if not _PY3:
+        next = __next__
 
 
 def iterateLineGenerator(proto, gen):
@@ -276,8 +278,9 @@ def successResponse(response):
     @rtype: L{bytes}
     @return: A positive POP3 response string.
     """
-    response = str(response)
-    return '+OK %s\r\n' % (response,)
+    if not isinstance(response, bytes):
+        response = str(response).encode("ascii")
+    return b'+OK ' + response + b'\r\n'
 
 
 
@@ -302,7 +305,7 @@ def formatStatResponse(msgs):
         i += 1
         bytes += size
         yield None
-    yield successResponse('%d %d' % (i, bytes))
+    yield successResponse(intToBytes(i) + b' ' + intToBytes(bytes))
 
 
 
@@ -321,7 +324,7 @@ def formatListLines(msgs):
     i = 0
     for size in msgs:
         i += 1
-        yield '%d %d\r\n' % (i, size)
+        yield intToBytes(i) + b' ' + intToBytes(size) + b'\r\n'
 
 
 
@@ -338,10 +341,10 @@ def formatListResponse(msgs):
     @rtype: L{bytes}
     @return: Yields a series of strings which make up a complete LIST response.
     """
-    yield successResponse(len(msgs))
+    yield successResponse(intToBytes(len(msgs)))
     for ele in formatListLines(msgs):
         yield ele
-    yield '.\r\n'
+    yield b'.\r\n'
 
 
 
@@ -360,7 +363,9 @@ def formatUIDListLines(msgs, getUidl):
     for i, m in enumerate(msgs):
         if m is not None:
             uid = getUidl(i)
-            yield '%d %s\r\n' % (i + 1, uid)
+            if not isinstance(uid, bytes):
+                uid = str(uid).encode("ascii")
+            yield intToBytes(i + 1) + b' ' + uid + b'\r\n'
 
 
 
@@ -380,7 +385,7 @@ def formatUIDListResponse(msgs, getUidl):
     yield successResponse('')
     for ele in formatUIDListLines(msgs, getUidl):
         yield ele
-    yield '.\r\n'
+    yield b'.\r\n'
 
 
 
@@ -444,7 +449,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     _userIs = None
     _onLogout = None
 
-    AUTH_CMDS = ['CAPA', 'USER', 'PASS', 'APOP', 'AUTH', 'RPOP', 'QUIT']
+    AUTH_CMDS = [b'CAPA', b'USER', b'PASS', b'APOP', b'AUTH', b'RPOP', b'QUIT']
 
     portal = None
     factory = None
@@ -512,7 +517,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.transport.write(successResponse(message))
 
 
-    def failResponse(self, message=''):
+    def failResponse(self, message=b''):
         """
         Send a response indicating failure.
 
@@ -520,7 +525,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param message: An object whose string representation should be
             included in the response.
         """
-        self.sendLine('-ERR ' + str(message))
+        if not isinstance(message, bytes):
+            message = str(message).encode("ascii")
+        self.sendLine(b'-ERR ' + message)
 
 
     def lineReceived(self, line):
@@ -562,10 +569,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param line: A received command.
         """
         try:
-            return self.processCommand(*line.split(' '))
+            return self.processCommand(*line.split(b' '))
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
-            self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
+            self.failResponse('bad protocol or server: {}: {}'.format(e.__class__.__name__, e))
 
 
     def processCommand(self, command, *args):
@@ -588,11 +595,11 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         command = command.upper()
         authCmd = command in self.AUTH_CMDS
         if not self.mbox and not authCmd:
-            raise POP3Error("not authenticated yet: cannot do " + command)
-        f = getattr(self, 'do_' + command, None)
+            raise POP3Error(b"not authenticated yet: cannot do " + command)
+        f = getattr(self, 'do_' + command.decode("ascii"), None)
         if f:
             return f(*args)
-        raise POP3Error("Unknown protocol command: " + command)
+        raise POP3Error(b"Unknown protocol command: " + command)
 
 
     def listCapabilities(self):
@@ -604,13 +611,13 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @return: A list of server capabilities.
         """
         baseCaps = [
-            "TOP",
-            "USER",
-            "UIDL",
-            "PIPELINE",
-            "CELERITY",
-            "AUSPEX",
-            "POTENCE",
+            b"TOP",
+            b"USER",
+            b"UIDL",
+            b"PIPELINE",
+            b"CELERITY",
+            b"AUSPEX",
+            b"POTENCE",
         ]
 
         if IServerFactory.providedBy(self.factory):
@@ -618,32 +625,37 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             # each has spectacularly different return value semantics!
             try:
                 v = self.factory.cap_IMPLEMENTATION()
+                if v and not isinstance(v, bytes):
+                    v = str(v).encode("ascii")
             except NotImplementedError:
                 pass
             except:
                 log.err()
             else:
-                baseCaps.append("IMPLEMENTATION " + str(v))
+                baseCaps.append(b"IMPLEMENTATION " + v)
 
             try:
                 v = self.factory.cap_EXPIRE()
+                if v and not isinstance(v, bytes):
+                    v = str(v).encode("ascii")
             except NotImplementedError:
                 pass
             except:
                 log.err()
             else:
                 if v is None:
-                    v = "NEVER"
+                    v = b"NEVER"
                 if self.factory.perUserExpiration():
                     if self.mbox:
-                        v = str(self.mbox.messageExpiration)
+                        v = str(self.mbox.messageExpiration).encode("ascii")
                     else:
-                        v = str(v) + " USER"
-                v = str(v)
-                baseCaps.append("EXPIRE " + v)
+                        v = v + b" USER"
+                baseCaps.append(b"EXPIRE " + v)
 
             try:
                 v = self.factory.cap_LOGIN_DELAY()
+                if v and not isinstance(v, bytes):
+                    v = str(v).encode("ascii")
             except NotImplementedError:
                 pass
             except:
@@ -651,11 +663,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             else:
                 if self.factory.perUserLoginDelay():
                     if self.mbox:
-                        v = str(self.mbox.loginDelay)
+                        v = str(self.mbox.loginDelay).encode("ascii")
                     else:
-                        v = str(v) + " USER"
-                v = str(v)
-                baseCaps.append("LOGIN-DELAY " + v)
+                        v = v + b" USER"
+                baseCaps.append(b"LOGIN-DELAY " + v)
 
             try:
                 v = self.factory.challengers
@@ -664,7 +675,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             except:
                 log.err()
             else:
-                baseCaps.append("SASL " + ' '.join(v.keys()))
+                baseCaps.append(b"SASL " + b' '.join(v.keys()))
         return baseCaps
 
 
@@ -674,10 +685,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         Respond with the server capabilities.
         """
-        self.successResponse("I can do the following:")
+        self.successResponse(b"I can do the following:")
         for cap in self.listCapabilities():
             self.sendLine(cap)
-        self.sendLine(".")
+        self.sendLine(b".")
 
 
     def do_AUTH(self, args=None):
@@ -694,25 +705,25 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param args: The name of an authentication mechanism.
         """
         if not getattr(self.factory, 'challengers', None):
-            self.failResponse("AUTH extension unsupported")
+            self.failResponse(b"AUTH extension unsupported")
             return
 
         if args is None:
             self.successResponse("Supported authentication methods:")
             for a in self.factory.challengers:
                 self.sendLine(a.upper())
-            self.sendLine(".")
+            self.sendLine(b".")
             return
 
         auth = self.factory.challengers.get(args.strip().upper())
         if not self.portal or not auth:
-            self.failResponse("Unsupported SASL selected")
+            self.failResponse(b"Unsupported SASL selected")
             return
 
         self._auth = auth()
         chal = self._auth.getChallenge()
 
-        self.sendLine('+ ' + base64.encodestring(chal).rstrip('\n'))
+        self.sendLine(b'+ ' + base64.encodestring(chal).rstrip(b'\n'))
         self.state = 'AUTH'
 
 
@@ -733,10 +744,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         try:
             parts = base64.decodestring(line).split(None, 1)
         except binascii.Error:
-            self.failResponse("Invalid BASE64 encoding")
+            self.failResponse(b"Invalid BASE64 encoding")
         else:
             if len(parts) != 2:
-                self.failResponse("Invalid AUTH response")
+                self.failResponse(b"Invalid AUTH response")
                 return
             self._auth.username = parts[0]
             self._auth.response = parts[1]
@@ -786,7 +797,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         (interface, avatar, logout) = result
         if interface is not IMailbox:
-            self.failResponse('Authentication failed')
+            self.failResponse(b'Authentication failed')
             log.err("_cbMailbox() called with an interface other than IMailbox")
             return
 
@@ -794,7 +805,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self._onLogout = logout
         self.successResponse('Authentication succeeded')
         if getattr(self.factory, 'noisy', True):
-            log.msg("Authenticated login for " + user)
+            log.msg(b"Authenticated login for " + user)
 
 
     def _ebMailbox(self, failure):
@@ -811,7 +822,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if issubclass(failure, cred.error.LoginDenied):
             self.failResponse("Access denied: " + str(failure))
         elif issubclass(failure, cred.error.LoginFailed):
-            self.failResponse('Authentication failed')
+            self.failResponse(b'Authentication failed')
         if getattr(self.factory, 'noisy', True):
             log.msg("Denied login attempt from " + str(self.transport.getPeer()))
 
@@ -840,7 +851,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param user: A username.
         """
         self._userIs = user
-        self.successResponse('USER accepted, send PASS')
+        self.successResponse(b'USER accepted, send PASS')
 
 
     def do_PASS(self, password):
@@ -857,7 +868,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param password: A password.
         """
         if self._userIs is None:
-            self.failResponse("USER required before PASS")
+            self.failResponse(b"USER required before PASS")
             return
         user = self._userIs
         self._userIs = None
@@ -1098,10 +1109,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             d = s.beginFileTransfer(fp, self.transport, self.transformChunk)
 
             def cbFileTransfer(lastsent):
-                if lastsent != '\n':
-                    line = '\r\n.'
+                if lastsent != b'\n':
+                    line = b'\r\n.'
                 else:
-                    line = '.'
+                    line = b'.'
                 self.sendLine(line)
 
             def ebFileTransfer(err):
@@ -1173,7 +1184,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{bytes}
         @return: The transformed string.
         """
-        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
+        return chunk.replace(b'\n', b'\r\n').replace(b'\r\n.', b'\r\n..')
 
 
     def finishedFileTransfer(self, lastsent):
@@ -1183,10 +1194,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type lastsent: L{bytes}
         @param lastsent: The last character of the file.
         """
-        if lastsent != '\n':
-            line = '\r\n.'
+        if lastsent != b'\n':
+            line = b'\r\n.'
         else:
-            line = '.'
+            line = b'.'
         self.sendLine(line)
 
 
@@ -1451,7 +1462,7 @@ class POP3Client(basic.LineOnlyReceiver):
     mode = SHORT
     command = 'WELCOME'
     import re
-    welcomeRe = re.compile('<(.*)>')
+    welcomeRe = re.compile(b'<(.*)>')
 
     def __init__(self):
         """
@@ -1475,7 +1486,9 @@ class POP3Client(basic.LineOnlyReceiver):
         @param params: Command arguments.
         """
         if params is not None:
-            self.sendLine('%s %s' % (command, params))
+            if not isinstance(params, bytes):
+                params = str(params).encode("ascii")
+            self.sendLine(command + b' ' + params)
         else:
             self.sendLine(command)
         self.command = command
@@ -1493,7 +1506,9 @@ class POP3Client(basic.LineOnlyReceiver):
         @param params: Command arguments.
         """
         if params:
-            self.sendLine('%s %s' % (command, params))
+            if not isinstance(params, bytes):
+                params = str(params).encode("ascii")
+            self.sendLine(command + b' ' + params)
         else:
             self.sendLine(command)
         self.command = command
@@ -1507,7 +1522,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type line: L{bytes}
         @param line: A received line.
         """
-        if line[:-4] == '-ERR':
+        if line[:-4] == b'-ERR':
             self.mode = NONE
 
 
@@ -1518,8 +1533,8 @@ class POP3Client(basic.LineOnlyReceiver):
         @type line: L{bytes}
         @param line: A received line.
         """
-        code, data = line.split(' ', 1)
-        if code != '+OK':
+        code, data = line.split(b' ', 1)
+        if code != b'+OK':
             self.transport.loseConnection()
         else:
             m = self.welcomeRe.match(line)
@@ -1534,7 +1549,7 @@ class POP3Client(basic.LineOnlyReceiver):
         Command X is dispatched to handle_X() if it exists.  If not, it is
         dispatched to the default handler.
 
-        @type command: L{bytes}
+        @type command: L{str}
         @param command: The command.
 
         @type default: callable that takes L{bytes} or
@@ -1545,7 +1560,9 @@ class POP3Client(basic.LineOnlyReceiver):
         @param args: Arguments to the handler function.
         """
         try:
-            method = getattr(self, 'handle_'+command, default)
+            if isinstance(command, bytes):
+                command = command.decode("ascii")
+            method = getattr(self, 'handle_' + command, default)
             if method is not None:
                 method(*args)
         except:
@@ -1573,13 +1590,13 @@ class POP3Client(basic.LineOnlyReceiver):
             self.mode = NEXT[self.mode]
             self._dispatch(self.command, self.handle_default, line)
         elif self.mode == LONG:
-            if line == '.':
+            if line == b'.':
                 self.mode = NEXT[self.mode]
-                self._dispatch(self.command+'_end', None)
+                self._dispatch(self.command + b'_end', None)
                 return
-            if line[:1] == '.':
+            if line[:1] == b'.':
                 line = line[1:]
-            self._dispatch(self.command+"_continue", None, line)
+            self._dispatch(self.command + b"_continue", None, line)
 
 
     def apopAuthenticate(self, user, password, magic):
@@ -1595,7 +1612,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type magic: L{bytes}
         @param magic: The challenge provided by the server.
         """
-        digest = md5(magic + password).hexdigest()
+        digest = md5(magic + password).hexdigest().encode("ascii")
         self.apop(user, digest)
 
 
@@ -1609,7 +1626,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type digest: L{bytes}
         @param digest: The challenge response with which to authenticate.
         """
-        self.sendLong('APOP', ' '.join((user, digest)))
+        self.sendLong(b'APOP', b' '.join((user, digest)))
 
 
     def retr(self, i):
@@ -1619,7 +1636,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type i: L{int} or L{bytes}
         @param i: A 0-based message index.
         """
-        self.sendLong('RETR', i)
+        self.sendLong(b'RETR', i)
 
 
     def dele(self, i):
@@ -1629,7 +1646,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type i: L{int} or L{bytes}
         @param i: A 0-based message index.
         """
-        self.sendShort('DELE', i)
+        self.sendShort(b'DELE', i)
 
 
     def list(self, i=''):
@@ -1641,7 +1658,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @param i: A 0-based message index or the empty string to specify all
             messages.
         """
-        self.sendLong('LIST', i)
+        self.sendLong(b'LIST', i)
 
 
     def uidl(self, i=''):
@@ -1653,7 +1670,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @param i: A 0-based message index or the empty string to specify all
             messages.
         """
-        self.sendLong('UIDL', i)
+        self.sendLong(b'UIDL', i)
 
 
     def user(self, name):
@@ -1663,7 +1680,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type name: L{bytes}
         @param name: The username with which to log in.
         """
-        self.sendShort('USER', name)
+        self.sendShort(b'USER', name)
 
 
     def pass_(self, pass_):
@@ -1673,14 +1690,14 @@ class POP3Client(basic.LineOnlyReceiver):
         @type pass_: L{bytes}
         @param pass_: The plaintext password with which to authenticate.
         """
-        self.sendShort('PASS', pass_)
+        self.sendShort(b'PASS', pass_)
 
 
     def quit(self):
         """
         Send a QUIT command to disconnect from the server.
         """
-        self.sendShort('QUIT')
+        self.sendShort(b'QUIT')
 
 
 from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
