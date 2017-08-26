@@ -19,9 +19,9 @@ To create a TLS client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint 
 TLS provides transport layer security, but it's important to understand what "security" means.
 With respect to TLS it means three things:
 
-1. Identity: TLS servers (and sometimes clients) present a certificate, offering proof of who they are, so that you know who you are talking to.
-2. Confidentiality: once you know who you are talking to, encryption of the connection ensures that the communications can't be understood by any third parties who might be listening in.
-3. Integrity: TLS checks the encrypted messages to ensure that they actually came from the party you originally authenticated to.
+#. Identity: TLS servers (and sometimes clients) present a certificate, offering proof of who they are, so that you know who you are talking to.
+#. Confidentiality: once you know who you are talking to, encryption of the connection ensures that the communications can't be understood by any third parties who might be listening in.
+#. Integrity: TLS checks the encrypted messages to ensure that they actually came from the party you originally authenticated to.
    If the messages fail these checks, then they are discarded and your application does not see them.
 
 Without identity, neither confidentiality nor integrity is possible.
