@@ -87,8 +87,8 @@ class POP3TestServer(basic.LineReceiver):
 
         for cap in CAPABILITIES:
             self.caps.append(cap)
-        resp = '\r\n'.join(self.caps)
-        resp += "\r\n."
+        resp = b'\r\n'.join(self.caps)
+        resp += b'\r\n.'
 
         self.sendLine(resp)
 
@@ -123,16 +123,16 @@ class POP3TestServer(basic.LineReceiver):
             self.disconnect()
             return
 
-        elif find("CAPA"):
+        elif find(b"CAPA"):
             if INVALID_CAPABILITY_RESPONSE:
                 self.sendLine(INVALID_RESPONSE)
             else:
                 self.sendCapabilities()
 
-        elif find("STLS") and SSL_SUPPORT:
+        elif find(b"STLS") and SSL_SUPPORT:
             self.startTLS()
 
-        elif find("USER"):
+        elif find(b"USER"):
             if INVALID_LOGIN_RESPONSE:
                 self.sendLine(INVALID_RESPONSE)
                 return
@@ -146,7 +146,7 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(resp)
 
-        elif find("PASS"):
+        elif find(b"PASS"):
             resp = None
             try:
                 pwd = line.split(" ")[1]
@@ -163,7 +163,7 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(resp)
 
-        elif find("QUIT"):
+        elif find(b"QUIT"):
             self.loggedIn = False
             self.sendLine(LOGOUT_COMPLETE)
             self.disconnect()
@@ -174,20 +174,20 @@ class POP3TestServer(basic.LineReceiver):
         elif not self.loggedIn:
             self.sendLine(NOT_LOGGED_IN)
 
-        elif find("NOOP"):
+        elif find(b"NOOP"):
             self.sendLine(VALID_RESPONSE)
 
-        elif find("STAT"):
+        elif find(b"STAT"):
             if TIMEOUT_DEFERRED:
                 return
             self.sendLine(STAT)
 
-        elif find("LIST"):
+        elif find(b"LIST"):
             if TIMEOUT_DEFERRED:
                 return
             self.sendLine(LIST)
 
-        elif find("UIDL"):
+        elif find(b"UIDL"):
             if TIMEOUT_DEFERRED:
                 return
             elif not UIDL_SUPPORT:
@@ -202,10 +202,10 @@ class POP3TestServer(basic.LineReceiver):
             self.getContext()
 
         if SSL_SUPPORT and self.ctx is not None:
-            self.sendLine('+OK Begin TLS negotiation now')
+            self.sendLine(b'+OK Begin TLS negotiation now')
             self.transport.startTLS(self.ctx)
         else:
-            self.sendLine('-ERR TLS not available')
+            self.sendLine(b'-ERR TLS not available')
 
 
     def disconnect(self):
