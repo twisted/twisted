@@ -426,7 +426,7 @@ class POP3ClientMiscTests(unittest.TestCase):
         d = p.noop()
         self.assertEqual(t.value(), b"NOOP\r\n")
         p.dataReceived(b"+OK No-op to you too!\r\n")
-        return d.addCallback(self.assertEqual, "No-op to you too!")
+        return d.addCallback(self.assertEqual, b"No-op to you too!")
 
 
     def testNoopError(self):
@@ -436,7 +436,7 @@ class POP3ClientMiscTests(unittest.TestCase):
         p.dataReceived(b"-ERR This server is lame!\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
+            lambda exc: self.assertEqual(exc.args[0], b"This server is lame!"))
 
 
     def testRset(self):
@@ -444,7 +444,7 @@ class POP3ClientMiscTests(unittest.TestCase):
         d = p.reset()
         self.assertEqual(t.value(), b"RSET\r\n")
         p.dataReceived(b"+OK Reset state\r\n")
-        return d.addCallback(self.assertEqual, "Reset state")
+        return d.addCallback(self.assertEqual, b"Reset state")
 
 
     def testRsetError(self):
@@ -454,7 +454,7 @@ class POP3ClientMiscTests(unittest.TestCase):
         p.dataReceived(b"-ERR This server is lame!\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
+            lambda exc: self.assertEqual(exc.args[0], b"This server is lame!"))
 
 
     def testDelete(self):
@@ -462,7 +462,7 @@ class POP3ClientMiscTests(unittest.TestCase):
         d = p.delete(3)
         self.assertEqual(t.value(), b"DELE 4\r\n")
         p.dataReceived(b"+OK Hasta la vista\r\n")
-        return d.addCallback(self.assertEqual, "Hasta la vista")
+        return d.addCallback(self.assertEqual, b"Hasta la vista")
 
 
     def testDeleteError(self):
@@ -472,7 +472,7 @@ class POP3ClientMiscTests(unittest.TestCase):
         p.dataReceived(b"-ERR Winner is not you.\r\n")
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
-            lambda exc: self.assertEqual(exc.args[0], "Winner is not you."))
+            lambda exc: self.assertEqual(exc.args[0], b"Winner is not you."))
 
 
 

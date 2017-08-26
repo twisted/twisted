@@ -15,6 +15,7 @@ import re
 from hashlib import md5
 
 from twisted.python import log
+from twisted.python.compat import intToBytes
 from twisted.internet import defer
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -980,7 +981,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort(b'DELE', str(index + 1))
+        return self.sendShort(b'DELE', intToBytes(index + 1))
 
 
     def _consumeOrSetItem(self, cmd, args, consumer, xform):
@@ -1126,7 +1127,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self._capCache = cache
             return cache
 
-        d = self._consumeOrAppend('CAPA', None, consume, None)
+        d = self._consumeOrAppend(b'CAPA', None, consume, None)
         d.addErrback(capaNotSupported).addCallback(gotCapabilities)
         return d
 
@@ -1157,7 +1158,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
-        return self.sendShort("RSET", None)
+        return self.sendShort(b"RSET", None)
 
 
     def retrieve(self, index, consumer=None, lines=None):
@@ -1185,11 +1186,12 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             list of the transformed lines.  Otherwise, it returns the consumer
             itself.
         """
-        idx = str(index + 1)
+        idx = intToBytes(index + 1)
         if lines is None:
-            return self._consumeOrAppend('RETR', idx, consumer, _dotUnquoter)
+            return self._consumeOrAppend(b'RETR', idx, consumer, _dotUnquoter)
 
-        return self._consumeOrAppend('TOP', '%s %d' % (idx, lines), consumer, _dotUnquoter)
+        return self._consumeOrAppend(b'TOP', idx + b' ' + intToBytes(lines),
+                                     consumer, _dotUnquoter)
 
 
     def stat(self):
@@ -1224,7 +1226,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
         """
-        return self._consumeOrSetItem('LIST', None, consumer, _listXform)
+        return self._consumeOrSetItem(b'LIST', None, consumer, _listXform)
 
 
     def listUID(self, consumer=None):
@@ -1243,7 +1245,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
         """
-        return self._consumeOrSetItem('UIDL', None, consumer, _uidXform)
+        return self._consumeOrSetItem(b'UIDL', None, consumer, _uidXform)
 
 
     def quit(self):
