@@ -284,7 +284,7 @@ Someone set up us the bomb!\015
                 failure.Failure(Exception("Test harness disconnect")))
         d = loopback.loopbackAsync(protocol, clientProtocol)
         return d.addCallback(check)
-    testLoopback.suppress = [util.suppress(message=
+    test_Loopback.suppress = [util.suppress(message=
         "twisted.mail.pop3.POP3Client is deprecated")]
 
 
@@ -1027,23 +1027,23 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
     mailboxType = DummyMailbox
 
     def test_LISTWithBadArgument(self):
-        return CommandMixin.testLISTWithBadArgument(self)
-    testLISTWithBadArgument.suppress = [_listMessageSuppression]
+        return CommandMixin.test_LISTWithBadArgument(self)
+    test_LISTWithBadArgument.suppress = [_listMessageSuppression]
 
 
     def test_UIDLWithBadArgument(self):
-        return CommandMixin.testUIDLWithBadArgument(self)
-    testUIDLWithBadArgument.suppress = [_getUidlSuppression]
+        return CommandMixin.test_UIDLWithBadArgument(self)
+    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]
 
 
     def test_TOPWithBadArgument(self):
-        return CommandMixin.testTOPWithBadArgument(self)
-    testTOPWithBadArgument.suppress = [_listMessageSuppression]
+        return CommandMixin.test_TOPWithBadArgument(self)
+    test_TOPWithBadArgument.suppress = [_listMessageSuppression]
 
 
     def test_RETRWithBadArgument(self):
-        return CommandMixin.testRETRWithBadArgument(self)
-    testRETRWithBadArgument.suppress = [_listMessageSuppression]
+        return CommandMixin.test_RETRWithBadArgument(self)
+    test_RETRWithBadArgument.suppress = [_listMessageSuppression]
 
 
 
