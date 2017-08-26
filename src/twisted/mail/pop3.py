@@ -249,6 +249,7 @@ class _IteratorBuffer(object):
         next = __next__
 
 
+
 def iterateLineGenerator(proto, gen):
     """
     Direct the output of an iterator to the transport of a protocol and arrange
