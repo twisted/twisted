@@ -40,7 +40,7 @@ class UtilityTests(unittest.TestCase):
     protocol implementation.
     """
 
-    def testLineBuffering(self):
+    def test_LineBuffering(self):
         """
         Test creating a LineBuffer and feeding it some lines.  The lines should
         build up in its internal buffer for a while and then get spat out to
@@ -62,7 +62,7 @@ class UtilityTests(unittest.TestCase):
         self.assertEqual(output, ['012', '345', '6', '7', '8', '9', '012', '345'])
 
 
-    def testFinishLineBuffering(self):
+    def test_FinishLineBuffering(self):
         """
         Test that a LineBuffer flushes everything when its iterator is
         exhausted, and itself raises StopIteration.
@@ -75,7 +75,7 @@ class UtilityTests(unittest.TestCase):
         self.assertEqual(output, ['a', 'b', 'c'])
 
 
-    def testSuccessResponseFormatter(self):
+    def test_SuccessResponseFormatter(self):
         """
         Test that the thing that spits out POP3 'success responses' works
         right.
@@ -85,7 +85,7 @@ class UtilityTests(unittest.TestCase):
             b'+OK Great.\r\n')
 
 
-    def testStatLineFormatter(self):
+    def test_StatLineFormatter(self):
         """
         Test that the function which formats stat lines does so appropriately.
         """
@@ -96,7 +96,7 @@ class UtilityTests(unittest.TestCase):
         self.assertEqual(statLine, b'+OK 4 10142\r\n')
 
 
-    def testListLineFormatter(self):
+    def test_ListLineFormatter(self):
         """
         Test that the function which formats the lines in response to a LIST
         command does so appropriately.
@@ -113,7 +113,7 @@ class UtilityTests(unittest.TestCase):
 
 
 
-    def testUIDListLineFormatter(self):
+    def test_UIDListLineFormatter(self):
         """
         Test that the function which formats lines in response to a UIDL
         command does so appropriately.
@@ -236,7 +236,7 @@ Someone set up us the bomb!\015
         self.factory.domains[b'baz.com'].addUser(b'hello')
         self.factory.domains[b'baz.com'].addMessage(b'hello', self.message)
 
-    def testMessages(self):
+    def test_Messages(self):
         client = LineSendingProtocol([
             b'APOP hello@baz.com world',
             b'UIDL',
@@ -250,7 +250,7 @@ Someone set up us the bomb!\015
             self.assertEqual(output, self.expectedOutput)
         return loopback.loopbackTCP(server, client).addCallback(check)
 
-    def testLoopback(self):
+    def test_Loopback(self):
         protocol =  MyVirtualPOP3()
         protocol.service = self.factory
         clientProtocol = MyPOP3Downloader()
@@ -368,7 +368,7 @@ class AnotherPOP3Tests(unittest.TestCase):
              b'+OK '])
 
 
-    def testAuthListing(self):
+    def test_AuthListing(self):
         p = DummyPOP3()
         p.factory = internet.protocol.Factory()
         p.factory.challengers = {b'Auth1': None, b'secondAuth': None, b'authLast': None}
@@ -386,7 +386,7 @@ class AnotherPOP3Tests(unittest.TestCase):
                          [b"AUTH1", b"AUTHLAST", b"SECONDAUTH"])
         self.assertEqual(client.response[5], b".")
 
-    def testIllegalPASS(self):
+    def test_IllegalPASS(self):
         dummy = DummyPOP3()
         client = LineSendingProtocol([
             b"PASS fooz",
@@ -400,7 +400,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         self.assertEqual(expected_output, b'\r\n'.join(client.response) + b'\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
-    def testEmptyPASS(self):
+    def test_EmptyPASS(self):
         dummy = DummyPOP3()
         client = LineSendingProtocol([
             b"PASS ",
@@ -466,32 +466,32 @@ class CapabilityTests(unittest.TestCase):
         for c in caps:
             self.assertIn(s, c)
 
-    def testUIDL(self):
+    def test_UIDL(self):
         self.contained(b"UIDL", self.caps, self.pcaps, self.lpcaps)
 
-    def testTOP(self):
+    def test_TOP(self):
         self.contained(b"TOP", self.caps, self.pcaps, self.lpcaps)
 
-    def testUSER(self):
+    def test_USER(self):
         self.contained(b"USER", self.caps, self.pcaps, self.lpcaps)
 
-    def testEXPIRE(self):
+    def test_EXPIRE(self):
         self.contained(b"EXPIRE 60 USER", self.caps, self.pcaps)
         self.contained(b"EXPIRE 25", self.lpcaps)
 
-    def testIMPLEMENTATION(self):
+    def test_IMPLEMENTATION(self):
         self.contained(
             b"IMPLEMENTATION Test Implementation String",
             self.caps, self.pcaps, self.lpcaps
         )
 
-    def testSASL(self):
+    def test_SASL(self):
         self.contained(
             b"SASL SCHEME_1 SCHEME_2",
             self.caps, self.pcaps, self.lpcaps
         )
 
-    def testLOGIN_DELAY(self):
+    def test_LOGIN_DELAY(self):
         self.contained(b"LOGIN-DELAY 120 USER", self.caps, self.pcaps)
         self.assertIn(b"LOGIN-DELAY 100", self.lpcaps)
 
@@ -522,10 +522,10 @@ class GlobalCapabilitiesTests(unittest.TestCase):
         for c in caps:
             self.assertIn(s, c)
 
-    def testEXPIRE(self):
+    def test_EXPIRE(self):
         self.contained(b"EXPIRE 60", self.caps, self.pcaps, self.lpcaps)
 
-    def testLOGIN_DELAY(self):
+    def test_LOGIN_DELAY(self):
         self.contained(b"LOGIN-DELAY 120", self.caps, self.pcaps, self.lpcaps)
 
 
@@ -539,7 +539,7 @@ class TestRealm:
 
 
 class SASLTests(unittest.TestCase):
-    def testValidLogin(self):
+    def test_ValidLogin(self):
         p = pop3.POP3()
         p.factory = TestServerFactory()
         p.factory.challengers = {b'CRAM-MD5': cred.credentials.CramMD5Credentials}
@@ -615,7 +615,7 @@ More message text for you.
         self.pop3Server.transport._checkProducer()
 
 
-    def testLIST(self):
+    def test_LIST(self):
         """
         Test the two forms of list: with a message index number, which should
         return a short-form response, and without a message index number, which
@@ -635,7 +635,7 @@ More message text for you.
         self.assertEqual(s.getvalue(), b"+OK 1\r\n1 44\r\n.\r\n")
 
 
-    def testLISTWithBadArgument(self):
+    def test_LISTWithBadArgument(self):
         """
         Test that non-integers and out-of-bound integers produce appropriate
         error responses.
@@ -665,7 +665,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testUIDL(self):
+    def test_UIDL(self):
         """
         Test the two forms of the UIDL command.  These are just like the two
         forms of the LIST command.
@@ -683,7 +683,7 @@ More message text for you.
         self.assertEqual(s.getvalue(), b"+OK \r\n1 0\r\n.\r\n")
 
 
-    def testUIDLWithBadArgument(self):
+    def test_UIDLWithBadArgument(self):
         """
         Test that UIDL with a non-integer or an out-of-bounds integer produces
         the appropriate error response.
@@ -713,7 +713,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testSTAT(self):
+    def test_STAT(self):
         """
         Test the single form of the STAT command, which returns a short-form
         response of the number of messages in the mailbox and their total size.
@@ -726,7 +726,7 @@ More message text for you.
         self.assertEqual(s.getvalue(), b"+OK 1 44\r\n")
 
 
-    def testRETR(self):
+    def test_RETR(self):
         """
         Test downloading a message.
         """
@@ -747,7 +747,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testRETRWithBadArgument(self):
+    def test_RETRWithBadArgument(self):
         """
         Test that trying to download a message with a bad argument, either not
         an integer or an out-of-bounds integer, fails with the appropriate
@@ -778,7 +778,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testTOP(self):
+    def test_TOP(self):
         """
         Test downloading the headers and part of the body of a message.
         """
@@ -797,7 +797,7 @@ More message text for you.
             b".\r\n")
 
 
-    def testTOPWithBadArgument(self):
+    def test_TOPWithBadArgument(self):
         """
         Test that trying to download a message with a bad argument, either a
         message number which isn't an integer or is an out-of-bounds integer or
@@ -844,7 +844,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testLAST(self):
+    def test_LAST(self):
         """
         Test the exceedingly pointless LAST command, which tells you the
         highest message index which you have already downloaded.
@@ -861,7 +861,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testRetrieveUpdatesHighest(self):
+    def test_RetrieveUpdatesHighest(self):
         """
         Test that issuing a RETR command updates the LAST response.
         """
@@ -881,7 +881,7 @@ More message text for you.
         s.truncate(0)
 
 
-    def testTopUpdatesHighest(self):
+    def test_TopUpdatesHighest(self):
         """
         Test that issuing a TOP command updates the LAST response.
         """
@@ -899,7 +899,7 @@ More message text for you.
             b'+OK 2\r\n')
 
 
-    def testHighestOnlyProgresses(self):
+    def test_HighestOnlyProgresses(self):
         """
         Test that downloading a message with a smaller index than the current
         LAST response doesn't change the LAST response.
@@ -920,7 +920,7 @@ More message text for you.
             b'+OK 2\r\n')
 
 
-    def testResetClearsHighest(self):
+    def test_ResetClearsHighest(self):
         """
         Test that issuing RSET changes the LAST response to 0.
         """
@@ -965,22 +965,22 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
     exceptionType = IndexError
     mailboxType = DummyMailbox
 
-    def testLISTWithBadArgument(self):
+    def test_LISTWithBadArgument(self):
         return CommandMixin.testLISTWithBadArgument(self)
     testLISTWithBadArgument.suppress = [_listMessageSuppression]
 
 
-    def testUIDLWithBadArgument(self):
+    def test_UIDLWithBadArgument(self):
         return CommandMixin.testUIDLWithBadArgument(self)
     testUIDLWithBadArgument.suppress = [_getUidlSuppression]
 
 
-    def testTOPWithBadArgument(self):
+    def test_TOPWithBadArgument(self):
         return CommandMixin.testTOPWithBadArgument(self)
     testTOPWithBadArgument.suppress = [_listMessageSuppression]
 
 
-    def testRETRWithBadArgument(self):
+    def test_RETRWithBadArgument(self):
         return CommandMixin.testRETRWithBadArgument(self)
     testRETRWithBadArgument.suppress = [_listMessageSuppression]
 
