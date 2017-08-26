@@ -3071,7 +3071,8 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
 
         """
         trustRoot = CustomOpenSSLTrustRoot()
-        policy = HostnameCachingHTTPSPolicy(trustRoot=trustRoot)
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         creator = policy.creatorForNetloc(b"foo", 1589)
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
@@ -3088,7 +3089,9 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         Verify that when the cache is full, and a new entry is added,
         the oldest entry is removed.
         """
-        policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot())
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         for i in range(0,20):
             hostname = u"host" + unicode(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)
@@ -3131,8 +3134,9 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         respects the new cache size and not the default.
 
         """
-        policy = HostnameCachingHTTPSPolicy(trustRoot=CustomOpenSSLTrustRoot(),
-                                            cacheSize=5)
+        trustRoot = CustomOpenSSLTrustRoot()
+        wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        policy = HostnameCachingHTTPSPolicy(wrappedPolicy, cacheSize=5)
         for i in range(0, 5):
             hostname = u"host" + unicode(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)

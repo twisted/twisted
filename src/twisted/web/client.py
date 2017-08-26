@@ -959,29 +959,33 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 @implementer(IPolicyForHTTPS)
 class HostnameCachingHTTPSPolicy(object):
     """
-    SSL connection creator for web clients that caches the last cacheSize
-    L{client connection creators <twisted.internet.interfaces.
-    IOpenSSLClientConnectionCreator>} for reuse in subsequent requests.
+    IPolicyForHTTPS that wraps an policy and caches the created
+    L{IOpenSSLClientConnectionCreator}.
 
-    @ivar _trustRoot: See C{trustRoot} parameter of L{__init__}.
+    This policy will cache up to a specified number of
+    L{client connection creators <twisted.internet.interfaces.
+    IOpenSSLClientConnectionCreator>} for reuse in subsequent requests to
+    the same hostname.
+
+    @ivar _policyForHTTPS: See C{policyforHTTPS} parameter of L{__init__}.
 
     @ivar _cache: A cache associating hostnames to their
-        L{_HostnameCacheEntry}.
-    @type _cache: L{dict}
+        L{client connection creators <twisted.internet.interfaces.
+        IOpenSSLClientConnectionCreator>}.
+    @type _cache: L{collections.OrderedDict}
 
     @ivar _cacheSize: See C{cacheSize} parameter of L{__init__}.
     """
 
-    def __init__(self, trustRoot=None, cacheSize=20):
+    def __init__(self, policyforHTTPS, cacheSize=20):
         """
-        @param trustRoot: See the C{trustRoot} parameter of
-            L{optionsForClientTLS}.
-        @type trustRoot: L{IOpenSSLTrustRoot}
+        @param policyforHTTPS: The IPolicyForHTTPS to wrap.
+        @type policyforHTTPS: L{IPolicyForHTTPS}
 
         @param cacheSize: The maximum size of the hostname cache.
         @type cacheSize: L{int}
         """
-        self._trustRoot = trustRoot
+        self._policyForHTTPS = policyforHTTPS
         self._cache = collections.OrderedDict()
         self._cacheSize = cacheSize
 
@@ -1007,13 +1011,14 @@ class HostnameCachingHTTPSPolicy(object):
         try:
             creator = self._cache.pop(host)
         except KeyError:
-            creator = optionsForClientTLS(host, trustRoot=self._trustRoot)
+            creator = self._policyForHTTPS.creatorForNetloc(hostname, port)
 
         self._cache[host] = creator
         if len(self._cache) > self._cacheSize:
             self._cache.popitem(last=False)
 
         return creator
+
 
 
 @implementer(IOpenSSLContextFactory)
