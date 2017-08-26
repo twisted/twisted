@@ -825,7 +825,7 @@ class FileWrapper:
         self.loseConnection()
 
     def writeSequence(self, iovec):
-        self.write("".join(iovec))
+        self.write(b"".join(iovec))
 
     def loseConnection(self):
         self.closed = 1
