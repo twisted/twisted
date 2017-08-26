@@ -646,7 +646,7 @@ More message text for you.
         p.lineReceived(b"LIST a")
         self.assertEqual(
             s.getvalue(),
-            b"-ERR Invalid message-number: 'a'\r\n")
+            b"-ERR Invalid message-number: a\r\n")
         s.seek(0)
         s.truncate(0)
 

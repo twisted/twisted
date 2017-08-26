@@ -956,11 +956,13 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 if i < 1:
                     raise ValueError()
             except ValueError:
-                self.failResponse("Invalid message-number: %r" % (i,))
+                if not isinstance(i, bytes):
+                    i = str(i).encode("ascii")
+                self.failResponse(b"Invalid message-number: " + i)
             else:
                 d = defer.maybeDeferred(self.mbox.listMessages, i - 1)
                 def cbMessage(msg):
-                    self.successResponse('%d %d' % (i, msg))
+                    self.successResponse(intToBytes(i) + b' ' + intToBytes(msg))
                 def ebMessage(err):
                     errcls = err.check(ValueError, IndexError)
                     if errcls is not None:
@@ -973,7 +975,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                                 "raise IndexError for out-of-bounds message numbers: "
                                 "raise ValueError instead.",
                                 PendingDeprecationWarning)
-                        self.failResponse("Invalid message-number: %r" % (i,))
+                        invalidNum = i
+                        if invalidNum and not isinstance(invalidNum, bytes):
+                            invalidNum = str(invalidNum).encode("ascii")
+                        self.failResponse(b"Invalid message-number: " + invalidNum)
                     else:
                         self.failResponse(err.getErrorMessage())
                         log.msg("Unexpected do_LIST failure:")
@@ -1022,7 +1027,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 except ValueError:
                     self.failResponse("Bad message number argument")
                 else:
-                    self.successResponse(str(msg))
+                    if not isinstance(msg, bytes):
+                        msg = str(msg).encode("ascii")
+                    self.successResponse(msg)
 
 
     def _getMessageFile(self, i):
