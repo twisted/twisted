@@ -1192,13 +1192,14 @@ class DefaultAPITests(TestCase):
     point between the code in the rest of conch and L{KnownHostsFile}.
     """
 
-    def patchedOpen(self, fname, mode):
+    def patchedOpen(self, fname, mode, **kwargs):
         """
         The patched version of 'open'; this returns a L{FakeFile} that the
         instantiated L{ConsoleUI} can use.
         """
         self.assertEqual(fname, "/dev/tty")
         self.assertEqual(mode, "r+b")
+        self.assertEqual(kwargs['buffering'], 0)
         return self.fakeFile
 
 
