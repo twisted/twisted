@@ -476,8 +476,6 @@ class AdapterTests(TestCase):
 
 
 
-
-
 class FileWrapperTests(TestCase):
     """
     L{twisted.internet.protocol.FileWrapper}
