@@ -7,19 +7,19 @@ Tests for L{twisted.internet.protocol}.
 
 from __future__ import division, absolute_import
 
-from zope.interface.verify import verifyObject
 from zope.interface import implementer
+from zope.interface.verify import verifyObject
 
-from twisted.python.failure import Failure
+from twisted.internet.defer import CancelledError
 from twisted.internet.interfaces import (
     IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
-from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
     ConsumerToProtocolAdapter)
-from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
+from twisted.python.failure import Failure
+from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.trial.unittest import TestCase
 
 
 
