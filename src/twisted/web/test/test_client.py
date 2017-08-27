@@ -16,8 +16,11 @@ class HTTP11FactoryTest(unittest.TestCase):
 
     def test_repr(self):
         def a_special_name():
-            pass
-        factory = client._HTTP11ClientFactory(a_special_name, 'this_is_kinda_unique')
+            return 1
+        # Call it for coverage
+        self.assertEquals(a_special_name(), 1)
+        factory = client._HTTP11ClientFactory(a_special_name,
+                                              'this_is_kinda_unique')
         result = repr(factory)
         self.assertIn('a_special_name', result)
         self.assertIn('this_is_kinda_unique', result)
