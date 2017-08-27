@@ -85,7 +85,7 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
             transport.factory.options['known-hosts']
             or os.path.expanduser(_KNOWN_HOSTS)
             ))
-    ui = ConsoleUI(lambda : _open("/dev/tty", "r+b"))
+    ui = ConsoleUI(lambda : _open("/dev/tty", "r+b", buffering=0))
     return kh.verifyHostKey(ui, actualHost, host, actualKey)
 
 
