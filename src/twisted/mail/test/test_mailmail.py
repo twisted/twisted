@@ -186,11 +186,12 @@ class OptionsTests(TestCase):
         test_run.skip = "win32 lacks support for getuid()"
 
 
-    def test_readConfig(self):
+    def test_readInvalidConfig(self):
         """
-        Reading the configuration from a file.
+        Read an invalid configuration file.
         """
-        self.addCleanup(setattr, sys, 'argv', sys.argv)
+        stdin = NativeStringIO('\n')
+        self.patch(sys, 'stdin', stdin)
 
         filename = self.mktemp()
         myUid = os.getuid()
@@ -212,10 +213,13 @@ class OptionsTests(TestCase):
                     "smarthost=localhost\n"
                     "default_domain=example.com\n".format(myUid, myGid))
 
-        # Override LOCAL_CFG with the file we just created
+        # The mailmail script looks in
+        # the twisted.mail.scripts.GLOBAL_CFG variable
+        # and then the twisted.mail.scripts.LOCAL_CFG
+        # variable for the path to it's  config file.
+        #
+        # Override twisted.mail.scripts.LOCAL_CFG with the file we just created.
         self.patch(mailmail, "LOCAL_CFG", filename)
-        stdin = NativeStringIO('\n')
-        self.patch(sys, 'stdin', stdin)
 
         argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
         self.patch(sys, 'argv', argv)
@@ -229,3 +233,99 @@ class OptionsTests(TestCase):
 
     if platformType == "win32":
         test_readConfig.skip = "win32 lacks support for getuid()"
+
+
+    def _loadConfig(self, config):
+        """
+        Read a mailmail configuration file.
+        The mailmail script checks
+        the twisted.mail.scripts.GLOBAL_CFG variable
+        and then the twisted.mail.scripts.LOCAL_CFG
+        variable for the path to its  config file.
+
+        @param config: path to config file
+        @type config: L{str}
+
+        @return: A parsed config.
+        @rtype: L{twisted.mail.scripts.mailmail.Configuration}
+        """
+
+        from twisted.mail.scripts.mailmail import loadConfig
+
+        filename = self.mktemp()
+
+        with open(filename, "w") as f:
+            f.write(config)
+
+        return loadConfig(filename)
+
+
+    def test_loadConfig(self):
+        """
+        L{twisted.mail.scripts.mailmail.loadConfig}
+        parses the config file for mailmail.
+        """
+        config = self._loadConfig("""
+                    [addresses]
+                    smarthost=localhost""")
+        self.assertEqual(config.smarthost, "localhost")
+
+        config = self._loadConfig("""
+                    [addresses]
+                    default_domain=example.com""")
+        self.assertEqual(config.domain, "example.com")
+
+        config = self._loadConfig("""
+                    [addresses]
+                    smarthost=localhost
+                    default_domain=example.com""")
+        self.assertEqual(config.smarthost, "localhost")
+        self.assertEqual(config.domain, "example.com")
+
+        config = self._loadConfig("""
+                    [identity]
+                    host1=invalid
+                    host2=username:password""")
+        self.assertNotIn("host1", config.identities)
+        self.assertEqual(config.identities["host2"],
+                         ["username", "password"])
+
+        config = self._loadConfig("""
+                     [useraccess]
+                     allow=invalid1,35
+                     order=allow""")
+        self.assertEqual(config.allowUIDs, [35])
+
+        config = self._loadConfig("""
+                     [useraccess]
+                     deny=35,36
+                     order=deny""")
+        self.assertEqual(config.denyUIDs, [35, 36])
+
+        config = self._loadConfig("""
+                     [useraccess]
+                     allow=35,36
+                     deny=37,38
+                     order=deny""")
+        self.assertEqual(config.allowUIDs, [35, 36])
+        self.assertEqual(config.denyUIDs, [37, 38])
+
+        config = self._loadConfig("""
+                     [groupaccess]
+                     allow=gid1,41
+                     order=allow""")
+        self.assertEqual(config.allowGIDs, [41])
+
+        config = self._loadConfig("""
+                     [groupaccess]
+                     deny=41
+                     order=deny""")
+        self.assertEqual(config.denyGIDs, [41])
+
+        config = self._loadConfig("""
+                     [groupaccess]
+                     allow=41,42
+                     deny=43,44
+                     order=allow,deny""")
+        self.assertEqual(config.allowGIDs, [41, 42])
+        self.assertEqual(config.denyGIDs, [43, 44])
