@@ -9,11 +9,10 @@ from __future__ import division, absolute_import
 
 import pickle, time, weakref, gc, threading
 
-from twisted.python.compat import range
-
-from twisted.trial import unittest
-from twisted.python import threadpool, threadable, failure, context
 from twisted._threads import Team, createMemoryWorker
+from twisted.python import threadpool, threadable, failure, context
+from twisted.python.compat import _PYPY, range
+from twisted.trial import unittest
 
 #
 # See the end of this module for the remainder of the imports.
@@ -226,6 +225,10 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         gc.collect()
         self.assertIsNone(onResultRef())
         self.assertIsNone(resultRef[0]())
+
+    if _PYPY:
+        test_threadCreationArgumentsCallInThreadWithCallback.skip = (
+            "Does not work on PYPY")
 
 
     def test_persistence(self):

@@ -7,8 +7,9 @@ Tests for L{twisted.persisted.styles}.
 
 import pickle
 
-from twisted.trial import unittest
 from twisted.persisted.styles import unpickleMethod, _UniversalPicklingError
+from twisted.python.compat import _PYPY
+from twisted.trial import unittest
 
 
 class Foo:
@@ -91,6 +92,10 @@ class UnpickleMethodTests(unittest.TestCase):
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
 
+    if _PYPY:
+        test_instanceBuildingNamePresent.skip = (
+            "Does not work on PYPY")
+
 
     def test_instanceBuildingNameNotPresent(self):
         """
@@ -102,6 +107,10 @@ class UnpickleMethodTests(unittest.TestCase):
         m = unpickleMethod('method', foo, Bar)
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
+
+    if _PYPY:
+        test_instanceBuildingNameNotPresent.skip = (
+            "Does not work on PYPY")
 
 
     def test_primeDirective(self):
