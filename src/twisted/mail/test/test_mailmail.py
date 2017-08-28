@@ -266,66 +266,66 @@ class OptionsTests(TestCase):
         parses the config file for mailmail.
         """
         config = self._loadConfig("""
-                    [addresses]
-                    smarthost=localhost""")
+[addresses]
+smarthost=localhost""")
         self.assertEqual(config.smarthost, "localhost")
 
         config = self._loadConfig("""
-                    [addresses]
-                    default_domain=example.com""")
+[addresses]
+default_domain=example.com""")
         self.assertEqual(config.domain, "example.com")
 
         config = self._loadConfig("""
-                    [addresses]
-                    smarthost=localhost
-                    default_domain=example.com""")
+[addresses]
+smarthost=localhost
+default_domain=example.com""")
         self.assertEqual(config.smarthost, "localhost")
         self.assertEqual(config.domain, "example.com")
 
         config = self._loadConfig("""
-                    [identity]
-                    host1=invalid
-                    host2=username:password""")
+[identity]
+host1=invalid
+host2=username:password""")
         self.assertNotIn("host1", config.identities)
         self.assertEqual(config.identities["host2"],
-                         ["username", "password"])
+     ["username", "password"])
 
         config = self._loadConfig("""
-                     [useraccess]
-                     allow=invalid1,35
-                     order=allow""")
+[useraccess]
+allow=invalid1,35
+order=allow""")
         self.assertEqual(config.allowUIDs, [35])
 
         config = self._loadConfig("""
-                     [useraccess]
-                     deny=35,36
-                     order=deny""")
+[useraccess]
+deny=35,36
+order=deny""")
         self.assertEqual(config.denyUIDs, [35, 36])
 
         config = self._loadConfig("""
-                     [useraccess]
-                     allow=35,36
-                     deny=37,38
-                     order=deny""")
+[useraccess]
+allow=35,36
+deny=37,38
+order=deny""")
         self.assertEqual(config.allowUIDs, [35, 36])
         self.assertEqual(config.denyUIDs, [37, 38])
 
         config = self._loadConfig("""
-                     [groupaccess]
-                     allow=gid1,41
-                     order=allow""")
+[groupaccess]
+allow=gid1,41
+order=allow""")
         self.assertEqual(config.allowGIDs, [41])
 
         config = self._loadConfig("""
-                     [groupaccess]
-                     deny=41
-                     order=deny""")
+[groupaccess]
+deny=41
+order=deny""")
         self.assertEqual(config.denyGIDs, [41])
 
         config = self._loadConfig("""
-                     [groupaccess]
-                     allow=41,42
-                     deny=43,44
-                     order=allow,deny""")
+[groupaccess]
+allow=41,42
+deny=43,44
+order=allow,deny""")
         self.assertEqual(config.allowGIDs, [41, 42])
         self.assertEqual(config.denyGIDs, [43, 44])
