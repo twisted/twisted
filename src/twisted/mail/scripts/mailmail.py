@@ -8,20 +8,22 @@ Implementation module for the I{mailmail} command.
 
 from __future__ import print_function
 
+import email.utils
 import os
 import sys
-import rfc822
 import getpass
-from ConfigParser import ConfigParser
-
 try:
-    import cStringIO as StringIO
-except:
-    import StringIO
+    # Python 3
+    from configparser import ConfigParser
+except ImportError:
+    # Python 2
+    from ConfigParser import ConfigParser
 
 from twisted.copyright import version
 from twisted.internet import reactor
+from twisted.logger import Logger, textFileLogObserver
 from twisted.mail import smtp
+from twisted.python.compat import NativeStringIO
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
@@ -37,13 +39,15 @@ Subject: Failed Message Delivery
 The Twisted sendmail application.
 """
 
-def log(message, *args):
-    sys.stderr.write(str(message) % args + '\n')
+logObserver = textFileLogObserver(sys.stderr)
+log = Logger(observer=logObserver)
+
 
 
 
 class Options:
     """
+
     @type to: C{list} of C{str}
     @ivar to: The addresses to which to deliver this message.
 
@@ -124,8 +128,9 @@ def parseOptions(argv):
     if '-om' in argv:
         raise _unsupportedOption
 
-    # -t causes us to pick the recipients of the message from the To, Cc, and Bcc
-    # headers, and to remove the Bcc header if present.
+    # -t causes us to pick the recipients of the message from
+    # the To, Cc, and Bcc headers, and to remove the Bcc header
+    # if present.
     if '-t' in argv:
         o.recipientsFromHeaders = True
         o.excludeAddresses = o.to
@@ -142,7 +147,7 @@ def parseOptions(argv):
         'date': [],
     }
 
-    buffer = StringIO.StringIO()
+    buffer = NativeStringIO()
     while 1:
         write = 1
         line = sys.stdin.readline()
@@ -154,12 +159,12 @@ def parseOptions(argv):
         hdr = hdrs[0].lower()
         if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
             o.to.extend([
-                a[1] for a in rfc822.AddressList(hdrs[1]).addresslist
+                email.utils.parseaddr(hdrs[1])[1]
             ])
             if hdr == 'bcc':
                 write = 0
         elif hdr == 'from':
-            o.sender = rfc822.parseaddr(hdrs[1])[1]
+            o.sender = email.utils.parseaddr(hdrs[1])[1]
 
         if hdr in requiredHeaders:
             requiredHeaders[hdr].append(hdrs[1])
@@ -186,13 +191,14 @@ def parseOptions(argv):
                 pass
 
     buffer.seek(0, 0)
-    o.body = StringIO.StringIO(buffer.getvalue() + sys.stdin.read())
+    o.body = NativeStringIO(buffer.getvalue() + sys.stdin.read())
     return o
 
 
 
 class Configuration:
     """
+
     @ivar allowUIDs: A list of UIDs which are allowed to send mail.
     @ivar allowGIDs: A list of GIDs which are allowed to send mail.
     @ivar denyUIDs: A list of UIDs which are not allowed to send mail.
@@ -223,7 +229,7 @@ class Configuration:
         self.allowGIDs = []
         self.denyGIDs = []
         self.useraccess = 'deny'
-        self.groupaccess= 'deny'
+        self.groupaccess = 'deny'
 
         self.identities = {}
         self.smarthost = None
@@ -265,15 +271,21 @@ def loadConfig(path):
         if p.has_section(section):
             for (mode, L) in (('allow', a), ('deny', d)):
                 if p.has_option(section, mode) and p.get(section, mode):
-                    for id in p.get(section, mode).split(','):
+                    for sectionID in p.get(section, mode).split(','):
                         try:
-                            id = int(id)
+                            sectionID = int(sectionID)
                         except ValueError:
-                            log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
+                            log.error(
+                                "Illegal {prefix}ID in "
+                                "[{section}] section: {sectionID}",
+                                prefix=section[0].upper(),
+                                section=section, sectionID=sectionID)
                         else:
-                            L.append(id)
+                            L.append(sectionID)
             order = p.get(section, 'order')
-            order = map(str.split, map(str.lower, order.split(',')))
+            order = [s.split()
+                     for s in [s.lower()
+                               for s in order.split(',')]]
             if order[0] == 'allow':
                 setattr(c, section, 'allow')
             else:
@@ -283,7 +295,8 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                log("Illegal entry in [identity] section: %s", up)
+                log.error("Illegal entry in [identity] section: {section}",
+                          section=up)
                 continue
             p.identities[host] = parts
 
@@ -319,10 +332,11 @@ def sendmail(host, options, ident):
 
 def senderror(failure, options):
     recipient = [options.sender]
-    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (sys.argv[0], smtp.DNSNAME)
-    error = StringIO.StringIO()
+    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (
+             sys.argv[0], smtp.DNSNAME)
+    error = NativeStringIO()
     failure.printTraceback(file=error)
-    body = StringIO.StringIO(ERROR_FMT % error.getvalue())
+    body = NativeStringIO(ERROR_FMT % error.getvalue())
 
     d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
@@ -365,7 +379,7 @@ def run():
     lConf = loadConfig(LOCAL_CFG)
 
     if deny(gConf) or deny(lConf):
-        log("Permission denied")
+        log.error("Permission denied")
         return
 
     host = lConf.smarthost or gConf.smarthost or SMARTHOST
