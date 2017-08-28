@@ -16,7 +16,7 @@ from zope.interface import implementer
 
 pyasn1 = requireModule('pyasn1')
 cryptography = requireModule('cryptography')
-unix = requireModule('unix')
+unix = requireModule('twisted.conch.unix')
 
 _reason = None
 if cryptography and pyasn1:
