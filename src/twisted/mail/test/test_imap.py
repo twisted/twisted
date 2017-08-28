@@ -2810,7 +2810,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
         def checkResponse(ignore):
             failures = self.flushLoggedErrors()
-            self.assertEqual(failures[1].args[0].args[0],
+            self.assertEqual(failures[1].value.args[0],
                              b'SELECT failed: Server error')
 
         self.patch(Account, "select", failSelect)
