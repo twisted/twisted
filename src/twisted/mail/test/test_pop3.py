@@ -288,6 +288,21 @@ Someone set up us the bomb!\015
          message="twisted.mail.pop3.POP3Client is deprecated")]
 
 
+    def test_incorrectDomain(self):
+        """
+        Look up a user in a domain which this server does not support.
+        """
+        factory = internet.protocol.Factory()
+        factory.domains = {}
+        factory.domains[b'twistedmatrix.com'] = DummyDomain()
+
+        server = MyVirtualPOP3()
+        server.service = factory
+        exc = self.assertRaises(pop3.POP3Error,
+            server.authenticateUserAPOP, b'nobody@baz.com', b'password')
+        self.assertEqual(exc.args[0], "no such domain " + repr(b'baz.com'))
+
+
 
 class DummyPOP3(pop3.POP3):
 
