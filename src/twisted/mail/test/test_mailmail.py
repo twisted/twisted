@@ -232,7 +232,7 @@ class OptionsTests(TestCase):
                          'Illegal entry in \[identity\] section: funny')
 
     if platformType == "win32":
-        test_readConfig.skip = "win32 lacks support for getuid()"
+        test_readInvalidConfig.skip = "win32 lacks support for getuid()"
 
 
     def _loadConfig(self, config):
