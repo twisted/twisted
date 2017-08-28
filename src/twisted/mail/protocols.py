@@ -361,7 +361,8 @@ class VirtualPOP3(pop3.POP3):
         except ValueError:
             domain = b''
         if domain not in self.service.domains:
-             raise pop3.POP3Error("no such domain {}".format(domain))
+             raise pop3.POP3Error(
+                 "no such domain {}".format(domain.decode("utf-8")))
         return user, domain
 
 

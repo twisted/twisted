@@ -300,7 +300,7 @@ Someone set up us the bomb!\015
         server.service = factory
         exc = self.assertRaises(pop3.POP3Error,
             server.authenticateUserAPOP, b'nobody@baz.com', b'password')
-        self.assertEqual(exc.args[0], "no such domain " + repr(b'baz.com'))
+        self.assertEqual(exc.args[0], 'no such domain baz.com')
 
 
 
