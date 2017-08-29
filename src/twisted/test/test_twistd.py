@@ -431,9 +431,9 @@ class CheckPIDTests(unittest.TestCase):
         self.assertFalse(os.path.exists(pidfile))
 
 
-    def test_invalid(self):
+    def test_unexpectedOSError(self):
         """
-        Stale PID file is removed without causing a system exit.
+        Raise an unexpected OSError when killing the pid.
         """
         pidfile = self.mktemp()
         with open(pidfile, "w") as f:
