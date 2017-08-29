@@ -104,7 +104,7 @@ def checkPID(pidfile):
             else:
                 sys.exit(
                     "Can't check status of PID {} from pidfile {}: {}".format(
-                    pid, pidfile, why[1]))
+                    pid, pidfile, why))
         else:
             sys.exit("""\
 Another twistd server is running, PID {}\n
