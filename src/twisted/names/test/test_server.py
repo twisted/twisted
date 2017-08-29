@@ -1108,9 +1108,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         If L{server.DNSServerFactory.sendReply} logs a "no answers" message if
         the supplied message has no answers.
         """
-        self.patch(server.time, 'time', lambda: 2)
+        self.patch(server.time, 'time', lambda: 86402)
         m = dns.Message()
-        m.timeReceived = 1
+        m.timeReceived = 86401
         f = server.DNSServerFactory(verbose=2)
         assertLogMessage(
             self,
@@ -1127,12 +1127,12 @@ class DNSServerFactoryTests(unittest.TestCase):
         authority, additional if the supplied a message has records in any of
         those sections.
         """
-        self.patch(server.time, 'time', lambda: 2)
+        self.patch(server.time, 'time', lambda: 86402)
         m = dns.Message()
         m.answers.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
         m.authority.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
         m.additional.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
-        m.timeReceived = 1
+        m.timeReceived = 86401
         f = server.DNSServerFactory(verbose=2)
         assertLogMessage(
             self,

@@ -561,7 +561,7 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         includes C{"%f"}, a L{datetime}-only format specifier for microseconds.
         """
         self.flo.timeFormat = '%f'
-        self.assertEqual("600000", self.flo.formatTime(12345.6))
+        self.assertEqual("600000", self.flo.formatTime(112345.6))
 
 
     def test_loggingAnObjectWithBroken__str__(self):
