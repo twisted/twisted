@@ -31,19 +31,19 @@ from twisted.trial import unittest
 from twisted.test.test_process import MockOS
 
 from twisted import plugin, logger
-from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
-from twisted.scripts import twistd
-from twisted.python.compat import NativeStringIO, _PY3
-from twisted.python.usage import UsageError
-from twisted.python.log import (ILogObserver as LegacyILogObserver,
-                                textFromEventDict)
-from twisted.python.components import Componentized
+from twisted.application.service import IServiceMaker
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize
 from twisted.internet.test.modulehelpers import AlternateReactor
-from twisted.python.fakepwd import UserDatabase
 from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
+from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.components import Componentized
+from twisted.python.log import (ILogObserver as LegacyILogObserver,
+                                textFromEventDict)
+from twisted.python.usage import UsageError
+from twisted.python.fakepwd import UserDatabase
+from twisted.scripts import twistd
 
 try:
     from twisted.scripts import _twistd_unix
@@ -359,6 +359,22 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertNotIn('\n', e.args[0])
 
 
+    def test_version(self):
+        """
+        Print out the version.
+        """
+        from twisted import copyright
+
+        expectedOutput = ('twistd (the Twisted daemon) {}\n{}\n'.format(
+            copyright.version, copyright.copyright))
+
+        out = NativeStringIO()
+        self.patch(sys, 'stdout', out)
+        config = twistd.ServerOptions()
+        e = self.assertRaises(SystemExit, config.parseOptions, ['--version'])
+        self.assertIs(e.code, None)
+        self.assertEqual(out.getvalue(), expectedOutput)
+
 
 class CheckPIDTests(unittest.TestCase):
     """
@@ -401,7 +417,6 @@ class CheckPIDTests(unittest.TestCase):
         self.assertIn("Another twistd server", e.code)
 
 
-
     def test_stale(self):
         """
         Stale PID file is removed without causing a system exit.
@@ -415,6 +430,20 @@ class CheckPIDTests(unittest.TestCase):
         checkPID(pidfile)
         self.assertFalse(os.path.exists(pidfile))
 
+
+    def test_invalid(self):
+        """
+        Stale PID file is removed without causing a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write(str(os.getpid() + 1))
+        def kill(pid, sig):
+            raise OSError(errno.EBADF, "fake")
+        self.patch(os, "kill", kill)
+        e = self.assertRaises(SystemExit, checkPID, pidfile)
+        self.assertIsNot(e.code, None)
+        self.assertTrue(e.args[0].startswith("Can't check status of PID"))
 
 
 class TapFileTests(unittest.TestCase):
