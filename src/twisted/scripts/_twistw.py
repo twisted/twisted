@@ -18,9 +18,10 @@ class ServerOptions(app.ServerOptions):
                 ]
 
     def opt_version(self):
-        """Print version information and exit.
         """
-        print('twistd (the Twisted Windows runner) %s' % copyright.version)
+        Print version information and exit.
+        """
+        print('twistd (the Twisted Windows runner) {}'.format(copyright.version))
         print(copyright.copyright)
         sys.exit()
 
