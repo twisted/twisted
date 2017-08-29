@@ -69,8 +69,10 @@ class ServerOptions(app.ServerOptions):
                     },
         )
 
+
     def opt_version(self):
-        """Print version information and exit.
+        """
+        Print version information and exit.
         """
         print('twistd (the Twisted daemon) {}'.format(copyright.version))
         print(copyright.copyright)
