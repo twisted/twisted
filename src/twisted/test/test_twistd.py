@@ -374,10 +374,11 @@ class ServerOptionsTests(unittest.TestCase):
             name, copyright.version, copyright.copyright))
 
         out = NativeStringIO()
-        self.patch(sys, 'stdout', out)
+        stdout = self.patch(sys, 'stdout', out)
         config = twistd.ServerOptions()
         e = self.assertRaises(SystemExit, config.parseOptions, ['--version'])
         self.assertIs(e.code, None)
+        stdout.restore()
         self.assertEqual(out.getvalue(), expectedOutput)
 
 
