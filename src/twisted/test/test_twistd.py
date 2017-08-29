@@ -41,6 +41,7 @@ from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.components import Componentized
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
                                 textFromEventDict)
+from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
 from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
@@ -365,8 +366,12 @@ class ServerOptionsTests(unittest.TestCase):
         """
         from twisted import copyright
 
-        expectedOutput = ('twistd (the Twisted daemon) {}\n{}\n'.format(
-            copyright.version, copyright.copyright))
+        if platformType == "win32":
+            name = "(the Twisted Windows runner)"
+        else:
+            name = "(the Twisted daemon)"
+        expectedOutput = ('twistd {} {}\n{}\n'.format(
+            name, copyright.version, copyright.copyright))
 
         out = NativeStringIO()
         self.patch(sys, 'stdout', out)
