@@ -111,7 +111,7 @@ def patchUserDatabase(patch, user, uid, group, gid):
 
     database = UserDatabase()
     database.addUser(
-        user, pwent.pw_passwd, uid, pwent.pw_gid,
+        user, pwent.pw_passwd, uid, gid,
         pwent.pw_gecos, pwent.pw_dir, pwent.pw_shell)
 
     def getgrnam(name):
@@ -123,6 +123,7 @@ def patchUserDatabase(patch, user, uid, group, gid):
 
     patch(pwd, "getpwnam", database.getpwnam)
     patch(grp, "getgrnam", getgrnam)
+    patch(pwd, "getpwuid", database.getpwuid)
 
 
 
@@ -439,11 +440,12 @@ class CheckPIDTests(unittest.TestCase):
 
     def test_unexpectedOSError(self):
         """
-        Raise an unexpected OSError when killing the pid.
+        An unexpected L{OSError} when checking the validity of a
+        PID in a C{pidfile} terminates the process via L{SystemExit}.
         """
         pidfile = self.mktemp()
         with open(pidfile, "w") as f:
-            f.write(str(os.getpid() + 1))
+            f.write("3581")
         def kill(pid, sig):
             raise OSError(errno.EBADF, "fake")
         self.patch(os, "kill", kill)
@@ -899,46 +901,90 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
             ['/foo/chroot', '/foo/rundir', True, 56, '/foo/pidfile'])
 
 
-    def test_shedPrivilegesError(self):
+    def test_shedPrivileges(self):
         """
-        Handle errors when calling
-         L{twisted.scripts._twistd_unix.shedPrivileges}
         """
-        def switchUIDFail(euid, uid, gid):
-            raise OSError(errno.EBADF, "fake")
-
         def switchUIDPass(euid, uid, gid):
             """
             Ignore everything and pass
             """
+        self.patch(_twistd_unix, 'switchUID', switchUIDPass)
+        runner = UnixApplicationRunner({})
+        runner.shedPrivileges(35, 200, None)
+
+
+    def test_shedPrivilegesError(self):
+        """
+        An unexpected L{OSError} when calling
+        L{twisted.scripts._twistd_unix.shedPrivileges}
+        terminates the process via L{SystemExit}.
+        """
+        def switchUIDFail(euid, uid, gid):
+            raise OSError(errno.EBADF, "fake")
 
         runner = UnixApplicationRunner({})
-        switchUID = self.patch(_twistd_unix, 'switchUID', switchUIDFail)
+        self.patch(_twistd_unix, 'switchUID', switchUIDFail)
         exc = self.assertRaises(SystemExit, runner.shedPrivileges, 35,
                                 200, None)
         self.assertEqual(exc.code, 1)
-        switchUID.restore()
-        switchUID = self.patch(_twistd_unix, 'switchUID', switchUIDPass)
-        runner.shedPrivileges(35, 200, None)
-        switchUID.restore()
 
 
-    def test_uidWithoutGid(self):
+    def _setUID(self, wantedUser, wantedUid, wantedGroup, wantedGid):
         """
-        Set the uid without settig the gid and then call
-        L{UnixApplicationRunner.startApplication}.
+        Common code for tests which try to pass the the UID to
+        L{UnixApplicationRunner}.
         """
+        patchUserDatabase(self.patch, wantedUser, wantedUid, wantedGroup,
+                          wantedGid)
+
+        def initgroups(uid, gid):
+            self.assertEqual(uid, wantedUid)
+            self.assertEqual(gid, wantedGid)
+
+        def setuid(uid):
+            self.assertEqual(uid, wantedUid)
+
+        def setgid(gid):
+            self.assertEqual(gid, wantedGid)
+
+        from twisted.python import util
+        self.patch(util, "initgroups", initgroups)
+        self.patch(os, "setuid", setuid)
+        self.patch(os, "setgid", setgid)
+
         options = twistd.ServerOptions()
         options.parseOptions([
             '--nodaemon',
-            '--uid', os.getuid()])
+            '--uid', str(wantedUid)])
         application = service.Application("test_setupEnvironment")
         self.runner = UnixApplicationRunner(options)
         runner = UnixApplicationRunner(options)
         runner.startApplication(application)
+
+
+    def test_setUidWithoutGid(self):
+        """
+        Starting an application with L{UnixApplicationRunner} configured
+        with a UID and no GUID, will result in the GUID being
+        set to the default GUID for that UID.
+        """
+        self._setUID("foo", 5151, "bar", 4242)
+
+
+    def test_setUidSameAsCurrentUid(self):
+        """
+        If the specified UID is the same as the current UID of the process,
+        then a warning is displayed.
+        """
+        currentUid = os.getuid()
+        self._setUID("morefoo", currentUid, "morebar", 4343)
+
         warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
-
+        expectedWarning = (
+            'tried to drop privileges and setuid {} but uid is already {}; '
+            'should we be root? Continuing.'.format(currentUid, currentUid))
+        self.assertEqual(expectedWarning, warningsShown[0]["message"])
 
 
 class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
