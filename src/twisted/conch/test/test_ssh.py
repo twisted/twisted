@@ -9,18 +9,18 @@ from __future__ import division, absolute_import
 
 import struct
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+from twisted.python.reflect import requireModule
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
+cryptography = requireModule("cryptography")
+pyasn1 = requireModule("pyasn1")
 
-from twisted.conch.ssh import common, session, forwarding, _kex
-from twisted.conch import avatar, error
+if cryptography:
+    from twisted.conch.ssh import common, forwarding, session, _kex
+    from twisted.conch import avatar, error
+else:
+    class avatar:
+        class  ConchUser: pass
+
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 from twisted.cred import portal
@@ -72,6 +72,9 @@ class ConchTestAvatar(avatar.ConchUser):
     @ivar loggedOut: A flag indicating whether the avatar logout method has been
         called.
     """
+    if not cryptography:
+        skip = "cannot run without cryptography"
+
     loggedOut = False
 
     def __init__(self):
@@ -196,7 +199,10 @@ class ConchSessionForTestAvatar(object):
         self.onClose.callback(None)
 
 from twisted.python import components
-components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar, session.ISession)
+
+if cryptography:
+    components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar,
+                               session.ISession)
 
 class CrazySubsystem(protocol.Protocol):
 
@@ -912,14 +918,14 @@ class MPTests(unittest.TestCase):
     @cvar getMP: a method providing a MP parser.
     @type getMP: C{callable}
     """
-    getMP = staticmethod(common.getMP)
-
     if not cryptography:
         skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
 
+    if cryptography:
+        getMP = staticmethod(common.getMP)
 
     def test_getMP(self):
         """
@@ -974,6 +980,9 @@ class GMPYInstallDeprecationTests(unittest.TestCase):
     """
     Tests for the deprecation of former GMPY accidental public API.
     """
+
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
     def test_deprecated(self):
         """

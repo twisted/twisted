@@ -21,6 +21,8 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
+    from twisted.internet import ssl
+
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
@@ -2990,6 +2992,15 @@ class KeyPairTests(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 15, 0, 0), "a real persistence system"),
             sslverify.KeyPair(self.sKey).__setstate__, state)
+
+
+    def test_noTrailingNewlinePemCert(self):
+        noTrailingNewlineKeyPemPath = getModule(
+            "twisted.test").filePath.sibling(
+            "cert.pem.no_trailing_newline")
+
+        certPEM = noTrailingNewlineKeyPemPath.getContent()
+        ssl.Certificate.loadPEM(certPEM)
 
 
 
