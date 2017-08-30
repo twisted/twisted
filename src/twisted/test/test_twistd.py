@@ -923,6 +923,23 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         switchUID.restore()
 
 
+    def test_uidWithoutGid(self):
+        """
+        Set the uid without settig the gid and then call
+        L{UnixApplicationRunner.startApplication}.
+        """
+        options = twistd.ServerOptions()
+        options.parseOptions([
+            '--nodaemon',
+            '--uid', os.getuid()])
+        application = service.Application("test_setupEnvironment")
+        self.runner = UnixApplicationRunner(options)
+        runner = UnixApplicationRunner(options)
+        runner.startApplication(application)
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+
+
 
 class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
     """
