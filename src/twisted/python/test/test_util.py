@@ -854,7 +854,9 @@ class InitGroupsTests(unittest.TestCase):
         """
         calls = []
 
-        mockInitgroups = lambda x, y: calls.append((x, y))
+        def mockInitgroups(x, y):
+            calls.append((x, y))
+
         self.patch(util, "_initgroups", mockInitgroups)
         setgroupsCalls = []
         self.patch(util, "setgroups", setgroupsCalls.append)
