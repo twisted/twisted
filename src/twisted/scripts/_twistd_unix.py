@@ -150,8 +150,6 @@ class UnixAppLogger(app.AppLogger):
         @return: An object suitable to be passed to C{log.addObserver}.
         """
         if self._syslog:
-            # FIXME: Requires twisted.python.syslog to be ported to Py3
-            # https://twistedmatrix.com/trac/ticket/7957
             from twisted.python import syslog
             return syslog.SyslogObserver(self._syslogPrefix).emit
 
