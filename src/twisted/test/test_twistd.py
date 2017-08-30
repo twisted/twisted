@@ -837,7 +837,6 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.assertEqual(self.mask, 0o077)
 
 
-
 class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
     """
     Tests for L{UnixApplicationRunner.startApplication}.
@@ -898,6 +897,30 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         self.assertEqual(
             args,
             ['/foo/chroot', '/foo/rundir', True, 56, '/foo/pidfile'])
+
+
+    def test_shedPrivilegesError(self):
+        """
+        Handle errors when calling
+         L{twisted.scripts._twistd_unix.shedPrivileges}
+        """
+        def switchUIDFail(euid, uid, gid):
+            raise OSError(errno.EBADF, "fake")
+
+        def switchUIDPass(euid, uid, gid):
+            """
+            Ignore everything and pass
+            """
+
+        runner = UnixApplicationRunner({})
+        switchUID = self.patch(_twistd_unix, 'switchUID', switchUIDFail)
+        exc = self.assertRaises(SystemExit, runner.shedPrivileges, 35,
+                                200, None)
+        self.assertEqual(exc.code, 1)
+        switchUID.restore()
+        switchUID = self.patch(_twistd_unix, 'switchUID', switchUIDPass)
+        runner.shedPrivileges(35, 200, None)
+        switchUID.restore()
 
 
 
