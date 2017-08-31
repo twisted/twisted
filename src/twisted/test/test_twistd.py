@@ -375,13 +375,12 @@ class ServerOptionsTests(unittest.TestCase):
         expectedOutput = ('twistd {} {}\n{}\n'.format(
             name, copyright.version, copyright.copyright))
 
-        out = NativeStringIO()
-        stdout = self.patch(sys, 'stdout', out)
-        config = twistd.ServerOptions()
+        stdout = NativeStringIO()
+        config = twistd.ServerOptions(stdout=stdout)
         e = self.assertRaises(SystemExit, config.parseOptions, ['--version'])
         self.assertIs(e.code, None)
-        stdout.restore()
-        self.assertEqual(out.getvalue(), expectedOutput)
+        self.assertEqual(stdout.getvalue(), expectedOutput)
+
 
 
 class CheckPIDTests(unittest.TestCase):

@@ -74,8 +74,9 @@ class ServerOptions(app.ServerOptions):
         """
         Print version information and exit.
         """
-        print('twistd (the Twisted daemon) {}'.format(copyright.version))
-        print(copyright.copyright)
+        print('twistd (the Twisted daemon) {}'.format(copyright.version),
+              file=self.stdout)
+        print(copyright.copyright, file=self.stdout)
         sys.exit()
 
 
