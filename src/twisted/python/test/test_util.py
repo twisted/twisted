@@ -868,7 +868,7 @@ class InitGroupsTests(unittest.TestCase):
 
     def test_initgroupsNoneGid(self):
         """
-        Call L{util.initgroups} with None for gid gives an error.
+        Calling L{util.initgroups} with None for gid gives an error.
         """
         self.assertRaises(TypeError, util.initgroups, os.getuid(), None)
 
