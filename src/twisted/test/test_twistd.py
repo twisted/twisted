@@ -39,6 +39,7 @@ from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
 from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.components import Componentized
+from twisted.python import util
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
                                 textFromEventDict)
 from twisted.python.runtime import platformType
@@ -363,7 +364,7 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_version(self):
         """
-        Print out the version.
+        C{--version} prints the version.
         """
         from twisted import copyright
 
@@ -903,14 +904,17 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
 
     def test_shedPrivileges(self):
         """
+        L{UnixApplicationRunner.shedPrivileges} switches the user ID
+        of the process.
         """
-        def switchUIDPass(euid, uid, gid):
-            """
-            Ignore everything and pass
-            """
+        def switchUIDPass(uid, gid, euid):
+            self.assertEqual(uid, 200)
+            self.assertEqual(gid, 54)
+            self.assertEqual(euid, 35)
+
         self.patch(_twistd_unix, 'switchUID', switchUIDPass)
         runner = UnixApplicationRunner({})
-        runner.shedPrivileges(35, 200, None)
+        runner.shedPrivileges(35, 200, 54)
 
 
     def test_shedPrivilegesError(self):
@@ -919,7 +923,7 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         L{twisted.scripts._twistd_unix.shedPrivileges}
         terminates the process via L{SystemExit}.
         """
-        def switchUIDFail(euid, uid, gid):
+        def switchUIDFail(uid, gid, euid):
             raise OSError(errno.EBADF, "fake")
 
         runner = UnixApplicationRunner({})
@@ -947,7 +951,6 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         def setgid(gid):
             self.assertEqual(gid, wantedGid)
 
-        from twisted.python import util
         self.patch(util, "initgroups", initgroups)
         self.patch(os, "setuid", setuid)
         self.patch(os, "setgid", setgid)
@@ -965,7 +968,7 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
     def test_setUidWithoutGid(self):
         """
         Starting an application with L{UnixApplicationRunner} configured
-        with a UID and no GUID, will result in the GUID being
+        with a UID and no GUID will result in the GUID being
         set to the default GUID for that UID.
         """
         self._setUID("foo", 5151, "bar", 4242)
