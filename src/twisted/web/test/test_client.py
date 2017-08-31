@@ -4,13 +4,17 @@
 """
 Tests for various parts of L{twisted.web}.
 """
+from zope.interface import implementer, verify
 
-from twisted.internet import defer
+from twisted.internet import defer, interfaces
 from twisted.trial import unittest
 
 from twisted.web import client
 
+@implementer(interfaces.IStreamClientEndpoint)
 class DummyEndPoint(object):
+
+    """An endpoint that does not connect anywhere"""
 
     def __init__(self, someString):
         self.someString = someString
@@ -21,17 +25,21 @@ class DummyEndPoint(object):
     def connect(self, factory):
         return defer.succeed(dict(factory=factory))
 
-class HTTPConnectionPool(unittest.TestCase):
+class HTTPConnectionPoolTests(unittest.TestCase):
     """
-    Unit tests for L{client._HTTP11ClientFactory}.
+    Unit tests for L{client.HTTPConnectionPoolTest}.
     """
 
+    def test_implements(self):
+        """DummyEndPoints implements interfaces.IStreamClientEndpoint"""
+        ep = DummyEndPoint("something")
+        verify.verifyObject(interfaces.IStreamClientEndpoint, ep)
+
     def test_repr(self):
+        """connection repr() includes endpoint's repr()"""
         pool = client.HTTPConnectionPool(reactor=None)
         ep = DummyEndPoint("this_is_probably_unique")
         d = pool.getConnection('someplace', ep)
-        l = []
-        d.addCallback(l.append)
-        result, = l
+        result = self.successResultOf(d)
         representation = repr(result)
-        self.assertIn("this_is_probably_unique", representation)
+        self.assertIn(repr(ep), representation)
