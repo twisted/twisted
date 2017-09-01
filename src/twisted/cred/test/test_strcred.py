@@ -192,6 +192,11 @@ class UnixCheckerTests(unittest.TestCase):
         self.badPass = credentials.UsernamePassword('alice', 'foobar')
         self.badUser = credentials.UsernamePassword('x', 'yz')
         self.checker = strcred.makeChecker('unix')
+        self.adminBytes = credentials.UsernamePassword(b'admin', b'asdf')
+        self.aliceBytes = credentials.UsernamePassword(b'alice', b'foo')
+        self.badPassBytes = credentials.UsernamePassword(b'alice', b'foobar')
+        self.badUserBytes = credentials.UsernamePassword(b'x', b'yz')
+        self.checkerBytes = strcred.makeChecker('unix')
 
         # Hack around the pwd and spwd modules, since we can't really
         # go about reading your /etc/passwd or /etc/shadow files
@@ -214,6 +219,10 @@ class UnixCheckerTests(unittest.TestCase):
         self.assertTrue(checkers.ICredentialsChecker.providedBy(self.checker))
         self.assertIn(credentials.IUsernamePassword,
                       self.checker.credentialInterfaces)
+        self.assertTrue(checkers.ICredentialsChecker.providedBy(
+                        self.checkerBytes))
+        self.assertIn(credentials.IUsernamePassword,
+                      self.checkerBytes.credentialInterfaces)
 
 
     def test_unixCheckerSucceeds(self):
@@ -227,12 +236,32 @@ class UnixCheckerTests(unittest.TestCase):
                 .addCallback(_gotAvatar))
 
 
+    def test_unixCheckerSucceedsBytes(self):
+        """
+        The checker works with valid L{bytes} credentials.
+        """
+        def _gotAvatar(username):
+            self.assertEqual(username,
+                             self.adminBytes.username.decode("utf-8"))
+        return (self.checkerBytes
+                .requestAvatarId(self.adminBytes)
+                .addCallback(_gotAvatar))
+
+
     def test_unixCheckerFailsUsername(self):
         """
         The checker fails with an invalid username.
         """
         return self.assertFailure(self.checker.requestAvatarId(self.badUser),
                                   error.UnauthorizedLogin)
+
+
+    def test_unixCheckerFailsUsernameBytes(self):
+        """
+        The checker fails with an invalid L{bytes} username.
+        """
+        return self.assertFailure(self.checkerBytes.requestAvatarId(
+            self.badUserBytes), error.UnauthorizedLogin)
 
 
     def test_unixCheckerFailsPassword(self):
@@ -243,6 +272,12 @@ class UnixCheckerTests(unittest.TestCase):
                                   error.UnauthorizedLogin)
 
 
+    def test_unixCheckerFailsPasswordBytes(self):
+        """
+        The checker fails with an invalid L{bytes} password.
+        """
+        return self.assertFailure(self.checkerBytes.requestAvatarId(
+            self.badPassBytes), error.UnauthorizedLogin)
 
 
     if None in (pwd, spwd, crypt):
