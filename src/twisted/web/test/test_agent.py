@@ -348,7 +348,9 @@ class FakeReactorAndConnectMixin:
         def __init__(self, endpoint, testCase):
             self.endpoint = endpoint
             self.testCase = testCase
-            self.factory = _HTTP11ClientFactory(lambda p: None,
+            def nothing():
+                """this function does nothing"""
+            self.factory = _HTTP11ClientFactory(nothing,
                                                 repr(self.endpoint))
             self.protocol = StubHTTPProtocol()
             self.factory.buildProtocol = lambda addr: self.protocol
