@@ -34,7 +34,7 @@ intersphinxURLs = [
     u"https://twisted.github.io/incremental/docs/objects.inv",
     u"https://python-hyper.org/h2/en/stable/objects.inv",
     u"https://python-hyper.org/priority/en/stable/objects.inv",
-    u"https://docs.zope.org/zope.interface/objects.inv",
+    u"http://zopeinterface.readthedocs.io/en/latest/objects.inv",
 ]
 
 
