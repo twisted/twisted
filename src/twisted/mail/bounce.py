@@ -10,7 +10,7 @@ Support for bounce message generation.
 import email.utils
 import time
 import os
-from io import StringIO
+from io import StringIO, SEEK_SET, SEEK_END
 
 from twisted.mail import smtp
 
@@ -91,15 +91,15 @@ I've given up, and I will not retry the message again.
     fp = StringIO()
     fp.write(BOUNCE_FORMAT.format(**data))
     orig = message.tell()
-    message.seek(2, 0)
+    message.seek(0, SEEK_END)
     sz = message.tell()
-    message.seek(0, orig)
+    message.seek(orig, SEEK_SET)
     if sz > 10000:
         while 1:
             line = message.readline()
             if isinstance(line, bytes):
                 line = line.decode(encoding)
-            if len(line) <= 1:
+            if len(line) <= 0:
                 break
             fp.write(line)
     else:
