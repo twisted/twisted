@@ -30,6 +30,7 @@ from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import components, log
 from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 try:
     import utmp
@@ -75,7 +76,7 @@ class UnixConchUser(ConchUser):
 
 
     def getHomeDir(self):
-        return self.pwdData[5]
+        return FilePath(self.pwdData[5])
 
 
     def getShell(self):
@@ -372,6 +373,7 @@ class SFTPServerForUnixConchUser:
     def _absPath(self, path):
         home = self.avatar.getHomeDir()
         return os.path.join(nativeString(home.path), nativeString(path))
+
 
 
     def gotVersion(self, otherVersion, extData):
