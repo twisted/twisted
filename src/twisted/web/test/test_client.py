@@ -31,12 +31,12 @@ class HTTPConnectionPoolTests(unittest.TestCase):
     """
 
     def test_implements(self):
-        """DummyEndPoints implements interfaces.IStreamClientEndpoint"""
+        """L{DummyEndPoint}s implements L{interfaces.IStreamClientEndpoint}"""
         ep = DummyEndPoint("something")
         verify.verifyObject(interfaces.IStreamClientEndpoint, ep)
 
     def test_repr(self):
-        """connection repr() includes endpoint's repr()"""
+        """connection L{repr()} includes endpoint's L{repr()}"""
         pool = client.HTTPConnectionPool(reactor=None)
         ep = DummyEndPoint("this_is_probably_unique")
         d = pool.getConnection('someplace', ep)
