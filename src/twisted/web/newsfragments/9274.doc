@@ -1,0 +1,1 @@
+Correct reactor docstrings for Agent and _StandardEndpointFactory to communicate interface requirements since 17.1.
