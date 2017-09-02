@@ -15,21 +15,21 @@ from io import StringIO
 from twisted.mail import smtp
 
 BOUNCE_FORMAT = u"""\
-From: postmaster@%(failedDomain)s
-To: %(failedFrom)s
+From: postmaster@{failedDomain}
+To: {failedFrom}
 Subject: Returned Mail: see transcript for details
-Message-ID: %(messageID)s
+Message-ID: {messageID}
 Content-Type: multipart/report; report-type=delivery-status;
-    boundary="%(boundary)s"
+    boundary="{boundary}"
 
---%(boundary)s
+--{boundary}
 
-%(transcript)s
+{transcript}
 
---%(boundary)s
+--{boundary}
 Content-Type: message/delivery-status
-Arrival-Date: %(ctime)s
-Final-Recipient: RFC822; %(failedTo)s
+Arrival-Date: {ctime}
+Final-Recipient: RFC822; {failedTo}
 """
 
 
@@ -71,9 +71,9 @@ def generateBounce(message, failedFrom, failedTo, transcript='',
 
     if not transcript:
         transcript = u'''\
-I'm sorry, the following address has permanent errors: %(failedTo)s.
+I'm sorry, the following address has permanent errors: {failedTo}.
 I've given up, and I will not retry the message again.
-''' % {'failedTo': failedTo}
+'''.format(failedTo=failedTo)
 
     failedAddress = email.utils.parseaddr(failedTo)[1]
     data = {
@@ -89,7 +89,7 @@ I've given up, and I will not retry the message again.
         }
 
     fp = StringIO()
-    fp.write(BOUNCE_FORMAT % data)
+    fp.write(BOUNCE_FORMAT.format(**data))
     orig = message.tell()
     message.seek(2, 0)
     sz = message.tell()
