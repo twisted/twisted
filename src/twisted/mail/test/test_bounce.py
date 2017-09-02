@@ -71,3 +71,42 @@ Subject: test
         self.assertEqual(mess['From'], 'postmaster@example.org')
         self.assertEqual(mess['subject'],
                          'Returned Mail: see transcript for details')
+        self.assertTrue(mess.is_multipart())
+        parts = mess.get_payload()
+        self.assertEqual(parts[0].get_payload(), 'Custom transcript\n')
+
+
+    def _bounceBigMessage(self, header, message, ioType):
+        """
+        Pass a really big message to L{twisted.mail.bounce.generateBounce}.
+        """
+        fromAddress, to, s = bounce.generateBounce(ioType(header + message),
+            u'moshez@example.com', u'nonexistent@example.org')
+        emailParser = email.parser.Parser()
+        mess = emailParser.parse(StringIO(s.decode("utf-8")))
+        self.assertEqual(mess['To'], 'moshez@example.com')
+        self.assertEqual(mess['From'], 'postmaster@example.org')
+        self.assertEqual(mess['subject'],
+                         'Returned Mail: see transcript for details')
+        self.assertTrue(mess.is_multipart())
+        parts = mess.get_payload()
+        innerMessage = parts[1].get_payload()
+        if isinstance(message, bytes):
+            message = message.decode("utf-8")
+        self.assertEqual(innerMessage[0].get_payload() + "\n", message)
+
+
+    def test_bounceBigMessage(self):
+        """
+        L{twisted.mail.bounce.generateBounce} with big L{unicode} and
+        L{bytes} messages.
+        """
+        header = b'''\
+From: Moshe Zadka <moshez@example.com>
+To: nonexistent@example.org
+Subject: test
+
+'''
+        self._bounceBigMessage(header, b"Test test\n" * 10000, BytesIO)
+        self._bounceBigMessage(header.decode("utf-8"), u"More test\n" * 10000,
+                               StringIO)
