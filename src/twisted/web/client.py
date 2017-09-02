@@ -1526,12 +1526,10 @@ class Agent(_AgentBase):
         """
         Create an L{Agent}.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: L{IReactorTCP} and
+            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
@@ -1571,8 +1569,10 @@ class Agent(_AgentBase):
         Create a new L{Agent} that will use the endpoint factory to figure
         out how to connect to the server.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: L{IReactorTCP} and
+            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
@@ -1594,8 +1594,10 @@ class Agent(_AgentBase):
         """
         Initialize a new L{Agent}.
 
-        @param reactor: A provider of relevant reactor interfaces, at a minimum
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: L{IReactorTCP} and
+            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
