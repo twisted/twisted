@@ -1447,12 +1447,9 @@ class _StandardEndpointFactory(object):
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A provider to use to create endpoints.
+        @type reactor: L{IReactorTCP} and
+            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.
