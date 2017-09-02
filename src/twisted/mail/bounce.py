@@ -60,9 +60,6 @@ def generateBounce(message, failedFrom, failedTo, transcript='',
         the undeliverable message.
     """
 
-    if isinstance(message, bytes):
-        message = message.decode(encoding)
-
     if isinstance(failedFrom, bytes):
         failedFrom = failedFrom.decode(encoding)
 
