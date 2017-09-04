@@ -270,7 +270,7 @@ class CryptTests(unittest.TestCase):
         """
         password = "sample password ^%$"
 
-        for salt in (None, "$1"):
+        for salt in (None, "ab"):
             try:
                 cryptedCorrect = crypt.crypt(password, salt)
             except TypeError:
