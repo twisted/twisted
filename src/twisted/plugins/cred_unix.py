@@ -33,6 +33,8 @@ def verifyCryptedPassword(crypted, pw):
 
     if crypt is None:
         raise NotImplementedError("cred_unix not supported on this platform")
+    if not isinstance(pw, StringType):
+        pw = pw.decode('utf-8')
     return crypt.crypt(pw, salt) == crypted
 
 
