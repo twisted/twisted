@@ -286,8 +286,11 @@ class UnixCheckerTests(unittest.TestCase):
             if module is None:
                 availability += [name]
         for method in (test_unixCheckerSucceeds,
+                       test_unixCheckerSucceedsBytes,
                        test_unixCheckerFailsUsername,
-                       test_unixCheckerFailsPassword):
+                       test_unixCheckerFailsUsernameBytes,
+                       test_unixCheckerFailsPassword,
+                       test_unixCheckerFailsPasswordBytes):
             method.skip = ("Required module(s) are unavailable: " +
                            ", ".join(availability))
 
