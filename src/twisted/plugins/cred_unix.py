@@ -70,7 +70,12 @@ class UNIXChecker(object):
         try:
             if not isinstance(username, StringType):
                 username = username.decode('utf-8')
-            cryptedPass = spwd.getspnam(username).sp_pwdp
+            if getattr(spwd.struct_spwd, "sp_pwdp", None):
+                # Python 3
+                cryptedPass = spwd.getspnam(username).sp_pwdp
+            else:
+                # Python 2
+                cryptedPass = spwd.getspnam(username).sp_pwd
         except KeyError:
             return defer.fail(UnauthorizedLogin())
         else:
