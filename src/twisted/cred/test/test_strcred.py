@@ -14,7 +14,7 @@ from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous, cred_unix
 from twisted.python import usage
-from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
