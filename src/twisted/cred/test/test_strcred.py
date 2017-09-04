@@ -270,7 +270,7 @@ class CryptTests(unittest.TestCase):
         """
         password = "sample password ^%$"
 
-        cryptedCorrect = crypt.crypt(password, None)
+        cryptedCorrect = crypt.crypt(password, 'badsalt')
         cryptedIncorrect = "$1x1234"
         self.assertTrue(cred_unix.verifyCryptedPassword(cryptedCorrect,
                                                         password))
