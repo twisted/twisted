@@ -17,6 +17,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer
+from twisted.python.compat import StringType
 
 
 
@@ -52,6 +53,8 @@ class UNIXChecker(object):
 
     def checkPwd(self, pwd, username, password):
         try:
+            if not isinstance(username, StringType):
+                username = username.decode('utf-8')
             cryptedPass = pwd.getpwnam(username).pw_passwd
         except KeyError:
             return defer.fail(UnauthorizedLogin())
@@ -65,6 +68,8 @@ class UNIXChecker(object):
 
     def checkSpwd(self, spwd, username, password):
         try:
+            if not isinstance(username, StringType):
+                username = username.decode('utf-8')
             cryptedPass = spwd.getspnam(username).sp_pwdp
         except KeyError:
             return defer.fail(UnauthorizedLogin())
