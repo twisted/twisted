@@ -52,7 +52,7 @@ class UNIXChecker(object):
 
     def checkPwd(self, pwd, username, password):
         try:
-            cryptedPass = pwd.getpwnam(username)[1]
+            cryptedPass = pwd.getpwnam(username).pw_passwd
         except KeyError:
             return defer.fail(UnauthorizedLogin())
         else:
@@ -65,7 +65,7 @@ class UNIXChecker(object):
 
     def checkSpwd(self, spwd, username, password):
         try:
-            cryptedPass = spwd.getspnam(username)[1]
+            cryptedPass = spwd.getspnam(username).sp_pwdp
         except KeyError:
             return defer.fail(UnauthorizedLogin())
         else:
