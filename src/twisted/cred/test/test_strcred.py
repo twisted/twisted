@@ -661,10 +661,3 @@ class LimitingInterfacesTests(unittest.TestCase):
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])
         self.assertIn(strcred.notSupportedWarning, newStdout.getvalue())
-
-
-__all__ = [
-    "CheckerOptionsTests", "FileDBCheckerTests", "LimitingInterfacesTests",
-    "SSHCheckerTests", "UnixCheckerTests", "AnonymousCheckerTests",
-    "MemoryCheckerTests", "StrcredFunctionsTests", "PublicAPITests"
-]
