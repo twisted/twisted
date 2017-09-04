@@ -12,9 +12,9 @@ import os
 from twisted import plugin
 from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
-from twisted.plugins import cred_file, cred_anonymous
+from twisted.plugins import cred_file, cred_anonymous, cred_unix
 from twisted.python import usage
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
@@ -248,6 +248,8 @@ class UnixCheckerTests(unittest.TestCase):
                                   error.UnauthorizedLogin)
 
 
+
+
     if None in (pwd, spwd, crypt):
         availability = []
         for module, name in ((pwd, "pwd"), (spwd, "spwd"), (crypt, "crypt")):
@@ -258,6 +260,53 @@ class UnixCheckerTests(unittest.TestCase):
                        test_unixCheckerFailsPassword):
             method.skip = ("Required module(s) are unavailable: " +
                            ", ".join(availability))
+
+
+class CryptTests(unittest.TestCase):
+    """
+    L{crypt} has functions for encrypting password.
+    """
+    if not crypt:
+        skip = "Required module is unavailable: crypt"
+
+    def test_verifyCryptedPassword(self):
+        """
+        L{cred_unix.verifyCryptedPassword}
+        """
+        password = "sample password ^%$"
+
+        # Use MD5 method to encrypt password
+        # The correct string was manually generated with crypt.crypt()
+        cryptMd5Correct = '$1NZEcnLLqFwo'
+        cryptMd5Incorrect = '$1NZEcnwo'
+        # Use traditional crypt method to encrypt password
+        # The correct string was manually generated with crypt.crypt()
+        cryptCryptCorrect = 'SSYv0E4TgOn8U'
+        cryptCryptIncorrect = 'SSYv04ETOgn8U'
+        self.assertTrue(cred_unix.verifyCryptedPassword(cryptMd5Correct,
+                                                        password))
+        self.assertFalse(cred_unix.verifyCryptedPassword(cryptMd5Incorrect,
+                                                        password))
+        self.assertTrue(cred_unix.verifyCryptedPassword(cryptCryptCorrect,
+                                                        password))
+        self.assertFalse(cred_unix.verifyCryptedPassword(cryptCryptIncorrect,
+                                                        password))
+
+
+        # Python 3.3+ has crypt.METHOD_*, but not all
+        # platforms implement all methods.
+        for method in ("METHOD_SHA512", "METHOD_SHA256", "METHOD_MD5",
+                       "METHOD_CRYPT"):
+            cryptMethod = getattr(crypt, method, None)
+            if not cryptMethod:
+                continue
+            password = "interesting password xyz"
+            crypted = crypt.crypt(password, cryptMethod)
+            result = cred_unix.verifyCryptedPassword(crypted, password)
+            self.assertTrue(result)
+            # Try to pass in bytes
+            result = cred_unix.verifyCryptedPassword(crypted.encode("utf-8"),
+                                                     password.encode("utf-8"))
 
 
 
