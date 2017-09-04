@@ -287,11 +287,19 @@ class CryptTests(unittest.TestCase):
                 continue
             password = "interesting password xyz"
             crypted = crypt.crypt(password, cryptMethod)
+            incorrectCrypted = crypted + "blahfooincorrect"
             result = cred_unix.verifyCryptedPassword(crypted, password)
             self.assertTrue(result)
             # Try to pass in bytes
             result = cred_unix.verifyCryptedPassword(crypted.encode("utf-8"),
                                                      password.encode("utf-8"))
+            self.assertTrue(result)
+            result = cred_unix.verifyCryptedPassword(incorrectCrypted, password)
+            self.assertFalse(result)
+            # Try to pass in bytes
+            result = cred_unix.verifyCryptedPassword(incorrectCrypted.encode("utf-8"),
+                                                     password.encode("utf-8"))
+            self.assertFalse(result)
 
 
 
