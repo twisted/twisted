@@ -13,15 +13,11 @@ from twisted import plugin
 from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous
-from twisted.python import usage, compat
+from twisted.python import usage
+from twisted.python.compat import NativeStringIO
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
-
-if compat._PY3:
-    from io import StringIO
-else:
-    from io import BytesIO as StringIO
 
 try:
     import crypt
@@ -338,7 +334,7 @@ class FileDBCheckerTests(unittest.TestCase):
         should produce a warning.
         """
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
-        newOutput = StringIO()
+        newOutput = NativeStringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
         strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
@@ -462,7 +458,7 @@ class CheckerOptionsTests(unittest.TestCase):
         Test that the --help-auth argument correctly displays all
         available authentication plugins, then exits.
         """
-        newStdout = StringIO()
+        newStdout = NativeStringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions, ['--help-auth'])
@@ -475,7 +471,7 @@ class CheckerOptionsTests(unittest.TestCase):
         Test that the --help-auth-for argument will correctly display
         the help file for a particular authentication plugin.
         """
-        newStdout = StringIO()
+        newStdout = NativeStringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(
@@ -660,7 +656,7 @@ class LimitingInterfacesTests(unittest.TestCase):
                 break
         self.assertNotIdentical(invalidFactory, None)
         # Capture output and make sure the warning is there
-        newStdout = StringIO()
+        newStdout = NativeStringIO()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])
