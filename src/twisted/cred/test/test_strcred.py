@@ -270,21 +270,11 @@ class CryptTests(unittest.TestCase):
         """
         password = "sample password ^%$"
 
-        # Use MD5 method to encrypt password
-        # The correct string was manually generated with crypt.crypt()
-        cryptMd5Correct = '$1NZEcnLLqFwo'
-        cryptMd5Incorrect = '$1NZEcnwo'
-        # Use traditional crypt method to encrypt password
-        # The correct string was manually generated with crypt.crypt()
-        cryptCryptCorrect = 'SSYv0E4TgOn8U'
-        cryptCryptIncorrect = 'SSYv04ETOgn8U'
-        self.assertTrue(cred_unix.verifyCryptedPassword(cryptMd5Correct,
+        cryptedCorrect = crypt.crypt(password, None)
+        cryptedIncorrect = "$1x1234"
+        self.assertTrue(cred_unix.verifyCryptedPassword(cryptedCorrect,
                                                         password))
-        self.assertFalse(cred_unix.verifyCryptedPassword(cryptMd5Incorrect,
-                                                        password))
-        self.assertTrue(cred_unix.verifyCryptedPassword(cryptCryptCorrect,
-                                                        password))
-        self.assertFalse(cred_unix.verifyCryptedPassword(cryptCryptIncorrect,
+        self.assertFalse(cred_unix.verifyCryptedPassword(cryptedIncorrect,
                                                         password))
 
 
