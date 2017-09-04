@@ -180,9 +180,10 @@ class UnixCheckerTests(unittest.TestCase):
         }
 
 
-    def _spwd(self, username):
-        return (username, crypt.crypt(self.users[username], 'F/'),
-                0, 0, 99999, 7, -1, -1, -1)
+    def _spwd_getspnam(self, username):
+        return spwd.struct_spwd((username,
+                                 crypt.crypt(self.users[username], 'F/'),
+                                 0, 0, 99999, 7, -1, -1, -1))
 
 
     def setUp(self):
@@ -202,13 +203,7 @@ class UnixCheckerTests(unittest.TestCase):
                     1000, 1000, username, '/home/' + username, '/bin/sh')
             self.patch(pwd, 'getpwnam', database.getpwnam)
         if spwd:
-            self._spwd_getspnam = spwd.getspnam
-            spwd.getspnam = self._spwd
-
-
-    def tearDown(self):
-        if spwd:
-            spwd.getspnam = self._spwd_getspnam
+            self.patch(spwd, 'getspnam', self._spwd_getspnam)
 
 
     def test_isChecker(self):
