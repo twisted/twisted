@@ -22,10 +22,6 @@ from twisted.python.compat import StringType
 
 
 def verifyCryptedPassword(crypted, pw):
-    if crypted[0] == '$': # md5_crypt encrypted
-        salt = '$1$' + crypted.split('$')[2]
-    else:
-        salt = crypted[:2]
     try:
         import crypt
     except ImportError:
@@ -35,7 +31,9 @@ def verifyCryptedPassword(crypted, pw):
         raise NotImplementedError("cred_unix not supported on this platform")
     if not isinstance(pw, StringType):
         pw = pw.decode('utf-8')
-    return crypt.crypt(pw, salt) == crypted
+    if not isinstance(crypted, StringType):
+        crypted = crypted.decode('utf-8')
+    return crypt.crypt(pw, crypted) == crypted
 
 
 
