@@ -270,12 +270,19 @@ class CryptTests(unittest.TestCase):
         """
         password = "sample password ^%$"
 
-        cryptedCorrect = crypt.crypt(password, None)
-        cryptedIncorrect = "$1x1234"
-        self.assertTrue(cred_unix.verifyCryptedPassword(cryptedCorrect,
-                                                        password))
-        self.assertFalse(cred_unix.verifyCryptedPassword(cryptedIncorrect,
-                                                        password))
+        for salt in (None, ""):
+            try:
+                cryptedCorrect = crypt.crypt(password, salt)
+            except TypeError:
+                # Older Python versions would throw a TypeError if
+                # a value of None was is used for the salt.
+                # Newer Python versions allow it.
+                continue
+            cryptedIncorrect = "$1x1234"
+            self.assertTrue(cred_unix.verifyCryptedPassword(cryptedCorrect,
+                                                            password))
+            self.assertFalse(cred_unix.verifyCryptedPassword(cryptedIncorrect,
+                                                             password))
 
 
         # Python 3.3+ has crypt.METHOD_*, but not all
