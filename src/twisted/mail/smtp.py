@@ -268,7 +268,7 @@ class Address:
         self.domain = u''.join(domain)
         if self.local != u'' and self.domain == u'':
             if defaultDomain is None:
-                defaultDomain = DNSNAME
+                defaultDomain = DNSNAME.decode("utf-8")
             self.domain = defaultDomain
         self.local = self.local.encode("utf-8")
         self.domain = self.domain.encode("utf-8")
