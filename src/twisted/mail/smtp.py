@@ -179,7 +179,7 @@ def quoteaddr(addr):
 
     res = parseaddr(addr)
 
-    if res == (None, None):
+    if res == ('', ''):
         # It didn't parse, use it as-is
         return  b'<' + bytes(addr) + b'>'
     else:
