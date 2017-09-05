@@ -273,7 +273,7 @@ class Address:
         self.local = self.local.encode("utf-8")
         self.domain = self.domain.encode("utf-8")
 
-    dequotebs = re.compile(br'\\(.)')
+    dequotebs = re.compile(r'\\(.)')
 
 
     def dequote(self, addr):
