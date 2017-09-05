@@ -34,9 +34,9 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (_PY3, range, long, unicode, networkString,
-                                   nativeString, iteritems, _keys, _bytesChr,
-                                   iterbytes, unicode)
+from twisted.python.compat import (range, long, networkString, nativeString,
+                                   iteritems, _keys, _bytesChr, iterbytes,
+                                   unicode)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -188,8 +188,15 @@ def quoteaddr(addr):
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
 
-# Character classes for parsing addresses
-atom = u"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~\u00a0-\U001000ff]"
+# The list of valid characters in an address are specified in RFC 6531 and
+# RFC 6532.
+# This document lists regular expressions which
+# which implements the rules specified in RFC 6531/6532:
+#  https://tools.ietf.org/html/draft-seantek-mail-regexen-02#section-3.1.3
+#
+# The following regular expression is taken from the 'atext' regular
+# expression specified in the above document.
+atom = u"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~\u00a0-\U0010ffff]"
 
 class Address:
     """
@@ -278,7 +285,7 @@ class Address:
 
     def dequote(self, addr):
         """
-        Remove RFC-2821 quotes from address.
+        Remove RFC 6531 quotes from address.
         """
         res = []
 
@@ -670,7 +677,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
         # Ideally, if we (rather than the other side) lose the connection,
         # we should be able to tell the other side that we are going away.
-        # RFC-2821 requires that we try.
+        # RFC 6531 requires that we try.
         if self.mode is DATA:
             try:
                 for message in self.__messages:
@@ -1870,10 +1877,10 @@ class SMTPSenderFactory(protocol.ClientFactory):
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):
         """
-        @param fromEmail: The RFC 2821 address from which to send this
+        @param fromEmail: The RFC 6531 address from which to send this
         message.
 
-        @param toEmail: A sequence of RFC 2821 addresses to which to
+        @param toEmail: A sequence of RFC 6531 addresses to which to
         send this message.
 
         @param file: A file-like object containing the message to send.
