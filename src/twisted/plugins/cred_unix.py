@@ -22,6 +22,17 @@ from twisted.python.compat import StringType
 
 
 def verifyCryptedPassword(crypted, pw):
+    """
+    Use L{crypt.crypt} to Verify that an unencrypted
+    password matches the encrypted password.
+
+    @param crypted: The encrypted password, obtained from
+                    the Unix password database or Unix shadow
+                    password database.
+    @param pw: The unencrypted password.
+    @return: L{True} if there is successful match, else L{False}.
+    @rtype: L{bool}
+    """
     try:
         import crypt
     except ImportError:
@@ -52,6 +63,19 @@ class UNIXChecker(object):
 
 
     def checkPwd(self, pwd, username, password):
+        """
+        Obtain the encrypted password for C{username} from the Unix password
+        database using L{pwd.getpwnam}, and see if it it matches it matches
+        C{password}.
+
+        @param pwd: Module which provides functions which
+                    access to the Unix password database.
+        @type pwd: C{module}
+        @param username: The user to look up in the Unix password database.
+        @type username: L{unicode}/L{str} or L{bytes}
+        @param password: The password to compare.
+        @type username: L{unicode}/L{str} or L{bytes}
+        """
         try:
             if not isinstance(username, StringType):
                 username = username.decode('utf-8')
@@ -67,6 +91,19 @@ class UNIXChecker(object):
 
 
     def checkSpwd(self, spwd, username, password):
+        """
+        Obtain the encrypted password for C{username} from the
+        Unix shadow password database using L{spwd.getspnam},
+        and see if it it matches it matches C{password}.
+
+        @param spwd: Module which provides functions which
+                    access to the Unix shadow password database.
+        @type pwd: C{module}
+        @param username: The user to look up in the Unix password database.
+        @type username: L{unicode}/L{str} or L{bytes}
+        @param password: The password to compare.
+        @type username: L{unicode}/L{str} or L{bytes}
+        """
         try:
             if not isinstance(username, StringType):
                 username = username.decode('utf-8')
