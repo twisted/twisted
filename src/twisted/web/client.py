@@ -411,14 +411,21 @@ class HTTPClientFactory(protocol.ClientFactory):
         return result
 
     def gotHeaders(self, headers):
+        """
+        Parse the response HTTP headers.
+
+        @param headers: The response HTTP headers.
+        @type headers: L{dict}
+        """
         self.response_headers = headers
         if b'set-cookie' in headers:
             for cookie in headers[b'set-cookie']:
-                cookparts = cookie.split(b';')
-                cook = cookparts[0]
-                cook.lstrip()
-                k, v = cook.split(b'=', 1)
-                self.cookies[k.lstrip()] = v.lstrip()
+                if b'=' in cookie:
+                    cookparts = cookie.split(b';')
+                    cook = cookparts[0]
+                    cook.lstrip()
+                    k, v = cook.split(b'=', 1)
+                    self.cookies[k.lstrip()] = v.lstrip()
 
     def gotStatus(self, version, status, message):
         """
@@ -1137,11 +1144,20 @@ class _HTTP11ClientFactory(protocol.Factory):
     @ivar _quiescentCallback: The quiescent callback to be passed to protocol
         instances, used to return them to the connection pool.
 
+    @ivar _metadata: Metadata about the low-level connection details,
+        used to make the repr more useful.
+
     @since: 11.1
     """
-    def __init__(self, quiescentCallback):
+    def __init__(self, quiescentCallback, metadata):
         self._quiescentCallback = quiescentCallback
+        self._metadata = metadata
 
+
+    def __repr__(self):
+        return '_HTTP11ClientFactory({}, {})'.format(
+            self._quiescentCallback,
+            self._metadata)
 
     def buildProtocol(self, addr):
         return HTTP11ClientProtocol(self._quiescentCallback)
@@ -1310,7 +1326,7 @@ class HTTPConnectionPool(object):
         """
         def quiescentCallback(protocol):
             self._putConnection(key, protocol)
-        factory = self._factory(quiescentCallback)
+        factory = self._factory(quiescentCallback, repr(endpoint))
         return endpoint.connect(factory)
 
 

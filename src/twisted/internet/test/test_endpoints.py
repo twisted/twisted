@@ -49,9 +49,17 @@ from twisted.python.components import proxyForInterface
 from twisted.internet.abstract import isIPv6Address
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
+noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
+    "key.pem.no_trailing_newline")
+noTrailingNewlineCertPemPath = getModule("twisted.test").filePath.sibling(
+    "cert.pem.no_trailing_newline")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
 chainPath = casPath.child("chain.pem")
 escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
+escapedNoTrailingNewlineKeyPEMPathName = endpoints.quoteStringArgument(
+    noTrailingNewlineKeyPemPath.path)
+escapedNoTrailingNewlineCertPEMPathName = endpoints.quoteStringArgument(
+    noTrailingNewlineCertPemPath.path)
 escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
 escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
@@ -3114,11 +3122,37 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
+    def test_sslNoTrailingNewlinePem(self):
+        """
+        Lack of a trailing newline in key and cert .pem files should not
+        generate an exception.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:1234:backlog=12:privateKey=%s:"
+            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            % (
+                escapedNoTrailingNewlineKeyPEMPathName,
+                escapedNoTrailingNewlineCertPEMPathName,
+            )
+        )
+        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+        self.assertIs(server._reactor, reactor)
+        self.assertEqual(server._port, 1234)
+        self.assertEqual(server._backlog, 12)
+        self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
     if skipSSL:
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
+        test_sslNoTrailingNewlinePem.skip = skipSSL
 
 
     def test_unix(self):
