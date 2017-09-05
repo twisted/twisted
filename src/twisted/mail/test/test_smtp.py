@@ -1939,3 +1939,69 @@ class SendmailTests(unittest.TestCase):
         self.assertEqual(transport.disconnecting, True)
         failure = self.failureResultOf(d)
         failure.trap(defer.CancelledError)
+
+
+
+class AddressTests(unittest.TestCase):
+    """
+    L{smtp.Address} parses and holds an RFC 6531 address.
+    """
+
+    def test_repr(self):
+        """
+        repr(), str() on L{smtp.Address} should return
+        a properly formatted address.
+        """
+        addr = smtp.Address(b'<user@host.name>')
+        self.assertEqual(repr(addr),
+                         "twisted.mail.smtp.Address('user@host.name')")
+        self.assertEqual(str(addr), "user@host.name")
+        self.assertEqual(addr.__bytes__(), b"user@host.name")
+
+
+    def test_unbalancedParens(self):
+        """
+        '<foo@bar.com>' is a valid address, but
+        '<foo@bar.com' will raise a L{smtp.ParseError}.
+        """
+        exc = self.assertRaises(smtp.AddressError, smtp.Address,
+                                b'<user@host.name')
+        self.assertEqual(str(exc), "Unbalanced <>")
+        exc = self.assertRaises(smtp.AddressError, smtp.Address,
+                                b'"User Name" <user@host.name')
+        self.assertTrue(str(exc).startswith("Parse error at"))
+
+
+    def test_tooManyAtSigns(self):
+        """
+        'foo@foo@foo.com' is an invalid address
+        """
+        exc = self.assertRaises(smtp.AddressError, smtp.Address,
+                                b'user@user@host.name')
+        self.assertEqual(str(exc), "Too many @")
+
+
+    def test_noDomain(self):
+        """
+        'foo' with no domain specified is a valid address.
+        """
+        addr = smtp.Address(b"<user>")
+        self.assertEqual(str(addr), u"user@" + smtp.DNSNAME.decode("utf-8"))
+        addr = smtp.Address(b"<user2>", defaultDomain="example.com")
+        self.assertEqual(str(addr), u"user2@example.com")
+
+
+    def test_dequote(self):
+        """
+        L{smtp.Address.dequote} removes RFC 2821 style quotes
+        such as "" and \
+        """
+        addr = smtp.Address("")
+        self.assertEqual(addr.dequote(u'"user@example.com"'),
+                                      b'user@example.com')
+        self.assertEqual(addr.dequote(b'"user@example.com"'),
+                                      b'user@example.com')
+        self.assertEqual(addr.dequote('"user@example.com"'),
+                                      b'user@example.com')
+        self.assertEqual(addr.dequote(u"Moshe\\\",Zadka <moshe@example.com>"),
+                                      b"Moshe\\,Zadka <moshe@example.com>")
