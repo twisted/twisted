@@ -181,7 +181,7 @@ def quoteaddr(addr):
 
     if res == ('', ''):
         # It didn't parse, use it as-is
-        return  b'<' + bytes(addr) + b'>'
+        return  b'<' + str(addr).encode('utf-8') + b'>'
     else:
         return  b'<' + res[1].encode('utf-8') + b'>'
 
