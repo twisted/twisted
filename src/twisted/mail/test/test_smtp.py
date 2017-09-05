@@ -608,7 +608,7 @@ class AuthTests(unittest.TestCase, LoopbackMixin):
 
 
 class SMTPHelperTests(unittest.TestCase):
-    def testMessageID(self):
+    def test_messageID(self):
         d = {}
         for i in range(1000):
             m = smtp.messageid('testcase')
@@ -616,7 +616,7 @@ class SMTPHelperTests(unittest.TestCase):
             d[m] = None
 
 
-    def testQuoteAddr(self):
+    def test_quoteAddr(self):
         cases = [
             [b'user@host.name', b'<user@host.name>'],
             [b'"User Name" <user@host.name>', b'<user@host.name>'],
@@ -629,12 +629,12 @@ class SMTPHelperTests(unittest.TestCase):
             self.assertEqual(smtp.quoteaddr(c), e)
 
 
-    def testUser(self):
+    def test_user(self):
         u = smtp.User(b'user@host', b'helo.host.name', None, None)
         self.assertEqual(str(u), 'user@host')
 
 
-    def testXtextEncoding(self):
+    def test_xtextEncoding(self):
         cases = [
             (u'Hello world', b'Hello+20world'),
             (u'Hello+world', b'Hello+2Bworld'),
@@ -694,7 +694,7 @@ class TLSTests(unittest.TestCase, LoopbackMixin):
         skip = sslSkip
 
 
-    def testTLS(self):
+    def test_TLS(self):
         clientCTX = ClientTLSContext()
         serverCTX = ServerTLSContext()
 
@@ -1052,7 +1052,7 @@ class SMTPServerTests(unittest.TestCase):
     Test various behaviors of L{twisted.mail.smtp.SMTP} and
     L{twisted.mail.smtp.ESMTP}.
     """
-    def testSMTPGreetingHost(self, serverClass=smtp.SMTP):
+    def test_SMTPGreetingHost(self, serverClass=smtp.SMTP):
         """
         Test that the specified hostname shows up in the SMTP server's
         greeting.
@@ -1065,7 +1065,7 @@ class SMTPServerTests(unittest.TestCase):
         self.assertIn(b"example.com", t.value())
 
 
-    def testSMTPGreetingNotExtended(self):
+    def test_SMTPGreetingNotExtended(self):
         """
         Test that the string "ESMTP" does not appear in the SMTP server's
         greeting since that string strongly suggests the presence of support
@@ -1078,14 +1078,14 @@ class SMTPServerTests(unittest.TestCase):
         self.assertNotIn(b"ESMTP", t.value())
 
 
-    def testESMTPGreetingHost(self):
+    def test_ESMTPGreetingHost(self):
         """
         Similar to testSMTPGreetingHost, but for the L{smtp.ESMTP} class.
         """
-        self.testSMTPGreetingHost(smtp.ESMTP)
+        self.test_SMTPGreetingHost(smtp.ESMTP)
 
 
-    def testESMTPGreetingExtended(self):
+    def test_ESMTPGreetingExtended(self):
         """
         Test that the string "ESMTP" does appear in the ESMTP server's
         greeting since L{smtp.ESMTP} does support the SMTP extensions which
