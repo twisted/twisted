@@ -619,6 +619,7 @@ class SMTPHelperTests(unittest.TestCase):
     def test_quoteAddr(self):
         cases = [
             [b'user@host.name', b'<user@host.name>'],
+            [u'user@host.name', b'<user@host.name>'],
             [b'"User Name" <user@host.name>', b'<user@host.name>'],
             [smtp.Address(b'someguy@someplace'), b'<someguy@someplace>'],
             [b'', b'<>'],
