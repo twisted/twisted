@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Words (IRC, XMPP)
-=========================
+Twisted Words (IRC and XMPP)
+============================
 
 .. toctree::
    :hidden:
