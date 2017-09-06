@@ -959,10 +959,10 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 @implementer(IPolicyForHTTPS)
 class HostnameCachingHTTPSPolicy(object):
     """
-    IPolicyForHTTPS that wraps an policy and caches the created
+    IPolicyForHTTPS that wraps a L{IPolicyForHTTPS} and caches the created
     L{IOpenSSLClientConnectionCreator}.
 
-    This policy will cache up to a specified number of
+    This policy will cache up to C{cacheSize}
     L{client connection creators <twisted.internet.interfaces.
     IOpenSSLClientConnectionCreator>} for reuse in subsequent requests to
     the same hostname.
