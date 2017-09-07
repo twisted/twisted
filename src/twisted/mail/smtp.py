@@ -393,6 +393,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # Cred cleanup function.
     _onLogout = None
 
+    _encoding = 'ascii'
+
     def __init__(self, delivery=None, deliveryFactory=None):
         self.mode = COMMAND
         self._from = None
@@ -543,7 +545,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # Clear old recipient list
         self._to = []
 
-        m = self.mail_re.match(rest.decode("utf-8"))
+        m = self.mail_re.match(rest.decode(self._encoding))
         if not m:
             self.sendCode(501, b"Syntax error")
             return
@@ -1605,6 +1607,8 @@ class ESMTP(SMTP):
     startedTLS = False
 
     authenticated = False
+
+    _encoding = 'utf-8'
 
     def __init__(self, chal=None, contextFactory=None):
         SMTP.__init__(self)
