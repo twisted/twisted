@@ -1653,7 +1653,7 @@ class ESMTP(SMTP):
 
     def listExtensions(self):
         r = []
-        for (c, v) in iteritems(self.extensions()):
+        for (c, v) in sorted(iteritems(self.extensions())):
             if v is not None:
                 if v:
                     # Intentionally omit extensions with empty argument lists
