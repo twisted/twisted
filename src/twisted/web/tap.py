@@ -12,7 +12,7 @@ import os
 
 from twisted.application import internet, service, strports
 from twisted.internet import interfaces, reactor
-from twisted.python import usage, reflect, threadpool
+from twisted.python import usage, reflect, threadpool, logfile
 from twisted.spread import pb
 from twisted.web import distrib
 from twisted.web import resource, server, static, script, demo, wsgi
@@ -250,10 +250,12 @@ def makeService(config):
     if config['extraHeaders']:
         root = _AddHeadersResource(root, config['extraHeaders'])
 
+    site = server.makeServer(root)
+
     if config['logfile']:
-        site = server.Site(root, logPath=config['logfile'])
-    else:
-        site = server.Site(root)
+        f = logfile.LogFile(os.path.basename(config['logfile']),
+                            os.path.dirname(config['logfile']))
+        server.makeCombinedLogFormatFileForServer(site, f)
 
     site.displayTracebacks = not config["notracebacks"]
 

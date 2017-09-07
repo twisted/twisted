@@ -1363,6 +1363,19 @@ class Request:
         @rtype: C{str}
         """
         if isinstance(self.client, address.IPv4Address):
+            try:
+                trustedIPs = self.site._getTrustedReverseProxyIPs()
+            except AttributeError:
+                pass
+            else:
+                if self.client.host in trustedIPs:
+                    ip = self.requestHeaders.getRawHeaders(
+                        b"x-forwarded-for", [b""])[0].split(b",")[0].strip()
+
+                    # Is it a thing?
+                    if ip != b'':
+                        return nativeString(ip)
+
             return self.client.host
         else:
             return None
@@ -2779,7 +2792,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel._networkProducer.unregisterProducer()
 
                 transport = self._channel.transport
-                self._channel = H2Connection()
+                reactor = None
+                try:
+                    reactor = self._channel.transport.reactor
+                except AttributeError:
+                    pass
+
+                self._channel = H2Connection(reactor)
                 self._channel.requestFactory = self._requestFactory
                 self._channel.site = self._site
                 self._channel.factory = self._factory
