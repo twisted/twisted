@@ -1340,8 +1340,11 @@ class ESMTPAuthenticationTests(unittest.TestCase):
             b"250-localhost Hello 127.0.0.1, nice to meet you")
         self.assertEqual(
             responseLines[1],
-            b"250 AUTH LOGIN")
-        self.assertEqual(len(responseLines), 2)
+            b"250-AUTH LOGIN")
+        self.assertEqual(
+            responseLines[2],
+            b"250 SMTPUTF8")
+        self.assertEqual(len(responseLines), 3)
 
 
     def test_plainAuthentication(self):

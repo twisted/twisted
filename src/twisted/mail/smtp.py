@@ -1633,7 +1633,10 @@ class ESMTP(SMTP):
         @rtype: L{dict} with L{bytes} keys and a value of either L{None} or a
             L{list} of L{bytes}.
         """
-        ext = {b'AUTH': _keys(self.challengers)}
+        ext = {
+            b'AUTH': _keys(self.challengers),
+            b'SMTPUTF8': None
+        }
         if self.canStartTLS and not self.startedTLS:
             ext[b'STARTTLS'] = None
         return ext
