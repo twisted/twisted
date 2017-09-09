@@ -11,12 +11,12 @@ from __future__ import division, absolute_import
 import sys
 import twisted
 
-from types import ModuleType, FunctionType
+from types import ModuleType
 
 from twisted import _checkRequirements
 from twisted.python.compat import _PY3
 from twisted.python import reflect
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import TestCase
 
 
 # This is somewhat generally useful and should probably be part of a public API
