@@ -19,6 +19,12 @@ class Logger(object):
     A L{Logger} emits log messages to an observer.  You should instantiate it
     as a class or module attribute, as documented in L{this module's
     documentation <twisted.logger>}.
+
+    @ivar namespace: See L{__init__}
+
+    @ivar source: See L{__init__}
+
+    @ivar observer: See L{__init__}
     """
 
     @staticmethod
