@@ -222,15 +222,15 @@ def getSetupArgs(extensions=_EXTENSIONS):
     }
 
     if sys.version_info[0] >= 3:
-        requirements = ["zope.interface >= 4.0.2"]
         command_classes['build_py'] = BuildPy3
-    else:
-        requirements = ["zope.interface >= 3.6.0"]
 
-    requirements.append("constantly >= 15.1")
-    requirements.append("incremental >= 16.10.1")
-    requirements.append("Automat >= 0.3.0")
-    requirements.append("hyperlink >= 17.1.1")
+    requirements = [
+        "zope.interface >= 4.4.2",
+        "constantly >= 15.1",
+        "incremental >= 16.10.1",
+        "Automat >= 0.3.0",
+        "hyperlink >= 17.1.1",
+    ]
 
     arguments.update(dict(
         packages=find_packages("src"),
