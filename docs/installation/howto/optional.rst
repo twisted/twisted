@@ -39,7 +39,7 @@ The following optional dependencies are supported:
 
 * **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
 
-* **osx_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
+* **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 
 * **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
 
