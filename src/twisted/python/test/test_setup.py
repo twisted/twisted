@@ -112,7 +112,7 @@ class OptionalDependenciesTests(TestCase):
         """
         L{_EXTRAS_REQUIRE} contains options for all documented extras: C{dev},
         C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform},
-        C{osx_platform}, and C{windows_platform}.
+        C{macos_platform}, and C{windows_platform}.
         """
         self.assertIn('dev', _EXTRAS_REQUIRE)
         self.assertIn('tls', _EXTRAS_REQUIRE)
@@ -120,7 +120,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('soap', _EXTRAS_REQUIRE)
         self.assertIn('serial', _EXTRAS_REQUIRE)
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
-        self.assertIn('osx_platform', _EXTRAS_REQUIRE)
+        self.assertIn('macos_platform', _EXTRAS_REQUIRE)
+        self.assertIn('osx_platform', _EXTRAS_REQUIRE) # compat for macos
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
 
@@ -215,13 +216,13 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
-    def test_extrasRequiresOsxPlatformDeps(self):
+    def test_extrasRequiresMacosPlatformDeps(self):
         """
-        L{_EXTRAS_REQUIRE}'s C{osx_platform} extra contains setuptools
+        L{_EXTRAS_REQUIRE}'s C{macos_platform} extra contains setuptools
         requirements for all of Twisted's optional dependencies usable on the
-        Mac OS X platform.
+        macOS platform.
         """
-        deps = _EXTRAS_REQUIRE['osx_platform']
+        deps = _EXTRAS_REQUIRE['macos_platform']
         self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6, != 2.3', deps)
@@ -232,6 +233,14 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 3.0, < 4.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc-core', deps)
+
+
+    def test_extrasRequireMacOSXPlatformDeps(self):
+        """
+        L{_EXTRAS_REQUIRE}'s C{osx_platform} is an alias to C{macos_platform}.
+        """
+        self.assertEqual(_EXTRAS_REQUIRE['macos_platform'],
+                         _EXTRAS_REQUIRE['osx_platform'])
 
 
     def test_extrasRequiresWindowsPlatformDeps(self):
