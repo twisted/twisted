@@ -1880,6 +1880,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
     domain = DNSNAME
     protocol = SMTPSender
+    _encoding = "ascii"
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
                  timeout=None):
@@ -1905,14 +1906,14 @@ class SMTPSenderFactory(protocol.ClientFactory):
         assert isinstance(retries, (int, long))
 
         if isinstance(toEmail, unicode):
-            toEmail = [toEmail.encode('utf-8')]
+            toEmail = [toEmail.encode(self._encoding)]
         elif isinstance(toEmail, bytes):
             toEmail = [toEmail]
         else:
             toEmailFinal = []
             for _email in toEmail:
-                if not isinstance(_email, bytes):
-                    _email = _email.encode('utf-8')
+                if isinstance(_email, unicode):
+                    _email = _email.encode(self._encoding)
 
                 toEmailFinal.append(_email)
             toEmail = toEmailFinal
@@ -2068,6 +2069,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         L{buildProtocol}.
     """
     protocol = ESMTPSender
+    _encoding = "utf-8"
 
     def __init__(self, username, password, fromEmail, toEmail, file,
                  deferred, retries=5, timeout=None,
