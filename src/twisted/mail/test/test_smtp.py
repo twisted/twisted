@@ -1644,6 +1644,59 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
 
 
+class SMTPUTF8Option(unittest.TestCase):
+    """
+    The RFC 6521 "SMTPUTF8" option on the server specifies support for
+    UTF-8 encoded mail headers.  The client should not send
+    UTF-8 encoded bytes to a server which does not advertise the "SMTPUTF8"
+    option.
+    """
+    def setUp(self):
+        self.clientProtocol = smtp.ESMTPClient(
+            b"testpassword", None, b"testuser")
+        transport = StringTransport()
+        self.clientProtocol.requireAuthentication = False
+        self.clientProtocol.requireTransportSecurity = True
+        self.clientProtocol.heloFallback = True
+        self.clientProtocol.makeConnection(transport)
+        self.clientProtocol.dataReceived(b"220 localhost\r\n")
+        transport.clear()
+
+
+    def test_serverLacksSMTPUTF8(self):
+        """
+        If there is no SMTPUTF8 option offered by the server,
+        the client switches encoding to ASCII.
+        """
+        self.clientProtocol.dataReceived(
+            b"250-AUTH LOGIN\r\n"
+            b"250 STARTTLS\r\n")
+        self.assertEqual(self.clientProtocol._encoding, "ascii")
+
+        # Try to send UTF-8 text when client encoding is ascii
+        # will result in an error which causes the transport to disconnect.
+        self.clientProtocol.sendLine(u"RCPT TO:<прив@example.com>".encode("utf-8"))
+        self.assertTrue(self.clientProtocol.transport.disconnecting)
+
+
+    def test_serverHasSMTPUTF8(self):
+        """
+        If the SMTPUTF8 option offered by the server,
+        the client encoding should be UTF-8.
+        """
+        self.clientProtocol.dataReceived(
+            b"250-AUTH LOGIN\r\n"
+            b"250-STARTTLS\r\n"
+            b"250 SMTPUTF8\r\n")
+        self.assertEqual(self.clientProtocol._encoding, "utf-8")
+        self.clientProtocol.sendLine(u"RCPT TO:<прив@example.com>".encode("utf-8"))
+
+        # Try to send UTF-8 text when client encoding is utf-8 will work.
+        # The transport will not disconnect.
+        self.assertFalse(self.clientProtocol.transport.disconnecting)
+
+
+
 class SSLTestCase(unittest.TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
