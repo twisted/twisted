@@ -1445,6 +1445,11 @@ class ESMTPClient(SMTPClient):
             else:
                 items[e[0]] = None
 
+        if b'SMTPUTF8' not in items:
+            self._encoding = "ascii"
+            log.msg("Server does not support SMTPUTF8 option, "
+                    "switching encoding from utf-8 to ascii")
+
         self.tryTLS(code, resp, items)
 
 
