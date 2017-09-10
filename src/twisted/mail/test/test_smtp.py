@@ -15,7 +15,6 @@ from io import BytesIO
 
 from zope.interface import implementer, directlyProvides
 
-from twisted.python.util import LineLog
 from twisted.trial import unittest
 from twisted.protocols import basic, loopback
 from twisted.internet import defer, protocol, reactor, interfaces
@@ -35,6 +34,8 @@ from twisted.cred.error import UnauthorizedLogin
 
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
+from twisted.python.compat import unicode
+from twisted.python.util import LineLog
 
 
 try:
@@ -1516,6 +1517,8 @@ class SMTPClientErrorTests(unittest.TestCase):
         """
         err = smtp.SMTPClientError(-1, b"foo bar")
         self.assertEqual(str(err), "foo bar")
+        err = smtp.SMTPClientError(-1, u"\N{SNOWMAN} smiling")
+        self.assertEqual(unicode(err), u"\N{SNOWMAN} smiling")
 
 
     def test_strWithLog(self):
