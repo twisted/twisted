@@ -951,6 +951,16 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         if self.debug:
             self.log.append(b'>>> ' + line)
 
+        try:
+            line.decode(self._encoding)
+        except UnicodeDecodeError:
+            self.sendError(
+                SMTPProtocolError(-1,
+                    "Server supports {} encoding, invalid "
+                    "characters detected in sent line:\n{} .".format(
+                        self._encoding, repr(line)),
+                    self.log.str()))
+            return
         basic.LineReceiver.sendLine(self,line)
 
 
