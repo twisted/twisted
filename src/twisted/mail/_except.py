@@ -7,7 +7,7 @@ Exceptions in L{twisted.mail}.
 
 from __future__ import absolute_import, division
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, unicode
 
 
 class IMAP4Exception(Exception):
@@ -148,7 +148,10 @@ class SMTPClientError(SMTPError):
         if self.code > 0:
             res = [u"{:03d} {}".format(self.code, self.resp).encode("utf-8")]
         else:
-            res = [self.resp]
+            if isinstance(self.resp, unicode):
+                res = [self.resp.encode("utf-8")]
+            else:
+                res = [self.resp]
         if self.log:
             res.append(self.log)
             res.append(b'')
