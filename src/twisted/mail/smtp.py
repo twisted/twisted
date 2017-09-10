@@ -931,6 +931,8 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     # None, perform no timeout checking.
     timeout = None
 
+    _encoding = "ascii"
+
     def __init__(self, identity, logsize=10):
         if isinstance(identity, unicode):
             identity = identity.encode('ascii')
@@ -1218,6 +1220,7 @@ class ESMTPClient(SMTPClient):
     requireTransportSecurity = False
     context = None
     _tlsMode = False
+    _encoding = "utf-8"
 
     def __init__(self, secret, contextFactory=None, *args, **kw):
         SMTPClient.__init__(self, *args, **kw)
