@@ -31,22 +31,24 @@ from twisted.trial import unittest
 from twisted.test.test_process import MockOS
 
 from twisted import plugin, logger, internet
-from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
-from twisted.scripts import twistd
-from twisted.python.compat import NativeStringIO, _PY3
-from twisted.python.usage import UsageError
-from twisted.python.log import (ILogObserver as LegacyILogObserver,
-                                textFromEventDict)
-from twisted.python.components import Componentized
+from twisted.application.service import IServiceMaker
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (IReactorDaemonize,
                                          _ISupportsExitSignalCapturing)
 from twisted.internet.test.modulehelpers import AlternateReactor
-from twisted.python.fakepwd import UserDatabase
 from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
 from twisted.internet.base import ReactorBase
 from twisted.test.proto_helpers import MemoryReactor
+from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.components import Componentized
+from twisted.python import util
+from twisted.python.log import (ILogObserver as LegacyILogObserver,
+                                textFromEventDict)
+from twisted.python.runtime import platformType
+from twisted.python.usage import UsageError
+from twisted.python.fakepwd import UserDatabase
+from twisted.scripts import twistd
 
 try:
     from twisted.scripts import _twistd_unix
@@ -113,7 +115,7 @@ def patchUserDatabase(patch, user, uid, group, gid):
 
     database = UserDatabase()
     database.addUser(
-        user, pwent.pw_passwd, uid, pwent.pw_gid,
+        user, pwent.pw_passwd, uid, gid,
         pwent.pw_gecos, pwent.pw_dir, pwent.pw_shell)
 
     def getgrnam(name):
@@ -125,6 +127,7 @@ def patchUserDatabase(patch, user, uid, group, gid):
 
     patch(pwd, "getpwnam", database.getpwnam)
     patch(grp, "getgrnam", getgrnam)
+    patch(pwd, "getpwuid", database.getpwuid)
 
 
 
@@ -362,6 +365,26 @@ class ServerOptionsTests(unittest.TestCase):
         self.assertNotIn('\n', e.args[0])
 
 
+    def test_version(self):
+        """
+        C{--version} prints the version.
+        """
+        from twisted import copyright
+
+        if platformType == "win32":
+            name = "(the Twisted Windows runner)"
+        else:
+            name = "(the Twisted daemon)"
+        expectedOutput = ('twistd {} {}\n{}\n'.format(
+            name, copyright.version, copyright.copyright))
+
+        stdout = NativeStringIO()
+        config = twistd.ServerOptions(stdout=stdout)
+        e = self.assertRaises(SystemExit, config.parseOptions, ['--version'])
+        self.assertIs(e.code, None)
+        self.assertEqual(stdout.getvalue(), expectedOutput)
+
+
 
 class CheckPIDTests(unittest.TestCase):
     """
@@ -404,7 +427,6 @@ class CheckPIDTests(unittest.TestCase):
         self.assertIn("Another twistd server", e.code)
 
 
-
     def test_stale(self):
         """
         Stale PID file is removed without causing a system exit.
@@ -418,6 +440,21 @@ class CheckPIDTests(unittest.TestCase):
         checkPID(pidfile)
         self.assertFalse(os.path.exists(pidfile))
 
+
+    def test_unexpectedOSError(self):
+        """
+        An unexpected L{OSError} when checking the validity of a
+        PID in a C{pidfile} terminates the process via L{SystemExit}.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write("3581")
+        def kill(pid, sig):
+            raise OSError(errno.EBADF, "fake")
+        self.patch(os, "kill", kill)
+        e = self.assertRaises(SystemExit, checkPID, pidfile)
+        self.assertIsNot(e.code, None)
+        self.assertTrue(e.args[0].startswith("Can't check status of PID"))
 
 
 class TapFileTests(unittest.TestCase):
@@ -879,7 +916,6 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.assertEqual(self.mask, 0o077)
 
 
-
 class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
     """
     Tests for L{UnixApplicationRunner.startApplication}.
@@ -941,6 +977,93 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
             args,
             ['/foo/chroot', '/foo/rundir', True, 56, '/foo/pidfile'])
 
+
+    def test_shedPrivileges(self):
+        """
+        L{UnixApplicationRunner.shedPrivileges} switches the user ID
+        of the process.
+        """
+        def switchUIDPass(uid, gid, euid):
+            self.assertEqual(uid, 200)
+            self.assertEqual(gid, 54)
+            self.assertEqual(euid, 35)
+
+        self.patch(_twistd_unix, 'switchUID', switchUIDPass)
+        runner = UnixApplicationRunner({})
+        runner.shedPrivileges(35, 200, 54)
+
+
+    def test_shedPrivilegesError(self):
+        """
+        An unexpected L{OSError} when calling
+        L{twisted.scripts._twistd_unix.shedPrivileges}
+        terminates the process via L{SystemExit}.
+        """
+        def switchUIDFail(uid, gid, euid):
+            raise OSError(errno.EBADF, "fake")
+
+        runner = UnixApplicationRunner({})
+        self.patch(_twistd_unix, 'switchUID', switchUIDFail)
+        exc = self.assertRaises(SystemExit, runner.shedPrivileges, 35,
+                                200, None)
+        self.assertEqual(exc.code, 1)
+
+
+    def _setUID(self, wantedUser, wantedUid, wantedGroup, wantedGid):
+        """
+        Common code for tests which try to pass the the UID to
+        L{UnixApplicationRunner}.
+        """
+        patchUserDatabase(self.patch, wantedUser, wantedUid, wantedGroup,
+                          wantedGid)
+
+        def initgroups(uid, gid):
+            self.assertEqual(uid, wantedUid)
+            self.assertEqual(gid, wantedGid)
+
+        def setuid(uid):
+            self.assertEqual(uid, wantedUid)
+
+        def setgid(gid):
+            self.assertEqual(gid, wantedGid)
+
+        self.patch(util, "initgroups", initgroups)
+        self.patch(os, "setuid", setuid)
+        self.patch(os, "setgid", setgid)
+
+        options = twistd.ServerOptions()
+        options.parseOptions([
+            '--nodaemon',
+            '--uid', str(wantedUid)])
+        application = service.Application("test_setupEnvironment")
+        self.runner = UnixApplicationRunner(options)
+        runner = UnixApplicationRunner(options)
+        runner.startApplication(application)
+
+
+    def test_setUidWithoutGid(self):
+        """
+        Starting an application with L{UnixApplicationRunner} configured
+        with a UID and no GUID will result in the GUID being
+        set to the default GUID for that UID.
+        """
+        self._setUID("foo", 5151, "bar", 4242)
+
+
+    def test_setUidSameAsCurrentUid(self):
+        """
+        If the specified UID is the same as the current UID of the process,
+        then a warning is displayed.
+        """
+        currentUid = os.getuid()
+        self._setUID("morefoo", currentUid, "morebar", 4343)
+
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        expectedWarning = (
+            'tried to drop privileges and setuid {} but uid is already {}; '
+            'should we be root? Continuing.'.format(currentUid, currentUid))
+        self.assertEqual(expectedWarning, warningsShown[0]["message"])
 
 
 class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
