@@ -1826,7 +1826,7 @@ class SenderMixin:
     def getMailFrom(self):
         if not self.done:
             self.done = 1
-            return str(self.factory.fromEmail)
+            return unicode(self.factory.fromEmail)
         else:
             return None
 
