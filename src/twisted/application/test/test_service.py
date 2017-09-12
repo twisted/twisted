@@ -15,7 +15,6 @@ from twisted.persisted.sob import IPersistable
 from twisted.application.service import Application, IProcess
 from twisted.application.service import IService, IServiceCollection
 from twisted.application.service import Service
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
 
