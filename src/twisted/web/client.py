@@ -45,6 +45,7 @@ from twisted.python.components import proxyForInterface
 from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
+from twisted.logger import Logger
 
 
 class PartialDownloadError(error.Error):
@@ -1272,6 +1273,7 @@ class HTTPConnectionPool(object):
     maxPersistentPerHost = 2
     cachedConnectionTimeout = 240
     retryAutomatically = True
+    _log = Logger()
 
     def __init__(self, reactor, persistent=True):
         self._reactor = reactor
@@ -1350,7 +1352,8 @@ class HTTPConnectionPool(object):
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool.")
             except:
-                log.err()
+                self._log.failure(
+                    "BUG: Non-quiescent protocol added to connection pool.")
             return
         connections = self._connections.setdefault(key, [])
         if len(connections) == self.maxPersistentPerHost:
