@@ -93,7 +93,6 @@ Miscellaneous
 
 - :download:`shaper.py` - example of rate-limiting your web server
 - :download:`stdiodemo.py` - example using stdio, Deferreds, LineReceiver and twisted.web.client.
-- :download:`mouse.py` - example using MouseMan protocol with the SerialPort transport
 - :download:`ptyserv.py` - serve shells in pseudo-terminals over TCP
 - :download:`courier.py` - example of interfacing to Courier's mail filter interface
 - :download:`longex.py` - example of doing arbitrarily long calculations nicely in Twisted
@@ -102,7 +101,6 @@ Miscellaneous
 - :download:`streaming.py` - example of a push producer/consumer system
 - :download:`filewatch.py` - write the content of a file to standard out one line at a time
 - :download:`shoutcast.py` - example Shoutcast client
-- :download:`gpsfix.py` - example using the SerialPort transport and GPS protocols to display fix data as it is received from the device
 - :download:`wxacceptance.py` - acceptance tests for wxreactor
 - :download:`postfix.py` - test application for PostfixTCPMapServer
 - :download:`udpbroadcast.py` - broadcasting using UDP

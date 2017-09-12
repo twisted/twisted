@@ -32,6 +32,7 @@ import h2.events
 import h2.exceptions
 
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
@@ -39,6 +40,7 @@ from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
+from twisted.python.failure import Failure
 
 
 # This API is currently considered private.
@@ -172,7 +174,7 @@ class H2Connection(Protocol, TimeoutMixin):
             dataToSend = self.conn.data_to_send()
             self.transport.write(dataToSend)
             self.transport.loseConnection()
-            self.connectionLost("Protocol error from peer.")
+            self.connectionLost(Failure())
             return
 
         for event in events:
@@ -190,7 +192,7 @@ class H2Connection(Protocol, TimeoutMixin):
                 self._handlePriorityUpdate(event)
             elif isinstance(event, h2.events.ConnectionTerminated):
                 self.transport.loseConnection()
-                self.connectionLost("Shutdown by remote peer")
+                self.connectionLost(ConnectionLost("Remote peer sent GOAWAY"))
 
         dataToSend = self.conn.data_to_send()
         if dataToSend:
@@ -251,6 +253,9 @@ class H2Connection(Protocol, TimeoutMixin):
             "Forcibly timing out client: {client}",
             client=self.transport.getPeer()
         )
+        # We want to lose track of the _abortingCall so that no-one tries to
+        # cancel it.
+        self._abortingCall = None
         self.transport.abortConnection()
 
 
@@ -327,7 +332,7 @@ class H2Connection(Protocol, TimeoutMixin):
         This tells the L{H2Connection} that its consumer has died, so it must
         stop producing data for good.
         """
-        self.connectionLost("stopProducing")
+        self.connectionLost(ConnectionLost("Producing stopped"))
 
 
     def pauseProducing(self):
@@ -497,7 +502,9 @@ class H2Connection(Protocol, TimeoutMixin):
         @type event: L{h2.events.StreamReset}
         """
         stream = self.streams[event.stream_id]
-        stream.connectionLost("Stream reset")
+        stream.connectionLost(
+            ConnectionLost("Stream reset with code %s" % event.error_code)
+        )
         self._requestDone(event.stream_id)
 
 
@@ -785,7 +792,7 @@ class H2Connection(Protocol, TimeoutMixin):
         self.transport.write(self.conn.data_to_send())
 
         stream = self.streams[streamID]
-        stream.connectionLost("Stream reset")
+        stream.connectionLost(ConnectionLost("Invalid request"))
         self._requestDone(streamID)
 
 

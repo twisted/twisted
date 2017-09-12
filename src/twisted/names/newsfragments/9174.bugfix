@@ -1,0 +1,1 @@
+Failed TCP connections for AFXR queries no longer raise an AttributeError.

@@ -2,15 +2,16 @@
 # See LICENSE for details.
 from __future__ import print_function
 
-from twisted.test import proto_helpers, test_protocols
+from twisted.protocols.test import test_basic
+from twisted.python.compat import range, raw_input
+from twisted.test import proto_helpers
 import math
 import time
 import sys
 import os
 import gc
 
-NETSTRING_PREFIX_TEMPLATE ="%d:"
-NETSTRING_POSTFIX = ","
+NETSTRING_POSTFIX = b","
 USAGE = """\
 Usage: %s <number> <filename>
 
@@ -57,7 +58,7 @@ class PerformanceTester(object):
         @param number: Defines the number of test runs to be performed.
         @type number: C{int}
         """
-        for iteration in xrange(number):
+        for iteration in range(number):
             self.performTest(iteration)
 
 
@@ -114,7 +115,7 @@ class PerformanceTester(object):
         """
         Writes one line for each item in C{self.performanceData}.
         """
-        for combination, elapsed in sorted(self.performanceData.iteritems()):
+        for combination, elapsed in sorted(self.performanceData.items()):
             totalSize, chunkSize, numberOfChunks = combination
             self.outputFile.write(self.lineFormat %
                                   (totalSize, chunkSize, numberOfChunks,
@@ -147,7 +148,7 @@ class NetstringPerformanceTester(PerformanceTester):
         """
         PerformanceTester.__init__(self, filename)
         transport = proto_helpers.StringTransport()
-        self.netstringReceiver = test_protocols.TestNetstring()
+        self.netstringReceiver = test_basic.TestNetstring()
         self.netstringReceiver.makeConnection(transport)
 
 
@@ -205,7 +206,7 @@ class NetstringPerformanceTester(PerformanceTester):
         @return: A tuple consisting of string of C{chunkSize} 'a'
         characters and the size of the netstring data portion.
         """
-        chunk = "a" * chunkSize
+        chunk = b"a" * chunkSize
         dataSize = chunkSize * numberOfChunks
         self.netstringReceiver.MAX_LENGTH = dataSize
         numberOfDigits = math.ceil(math.log10(dataSize)) + 1
@@ -215,8 +216,8 @@ class NetstringPerformanceTester(PerformanceTester):
     def receiveData(self, chunk, numberOfChunks, dataSize):
         dr = self.netstringReceiver.dataReceived
         now = time.time()
-        dr(NETSTRING_PREFIX_TEMPLATE % (dataSize,))
-        for idx in xrange(numberOfChunks):
+        dr("{}:".format(dataSize).encode("ascii"))
+        for idx in range(numberOfChunks):
             dr(chunk)
         dr(NETSTRING_POSTFIX)
         elapsed = time.time() - now

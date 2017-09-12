@@ -1336,16 +1336,12 @@ class Key(object):
         """
         keyType = self.type()
         if keyType == 'RSA':
-            signer = self._keyObject.signer(
-                padding.PKCS1v15(), hashes.SHA1())
-            signer.update(data)
-            ret = common.NS(signer.finalize())
+            sig = self._keyObject.sign(data, padding.PKCS1v15(), hashes.SHA1())
+            ret = common.NS(sig)
 
         elif keyType == 'DSA':
-            signer = self._keyObject.signer(hashes.SHA1())
-            signer.update(data)
-            signature = signer.finalize()
-            (r, s) = decode_dss_signature(signature)
+            sig = self._keyObject.sign(data, hashes.SHA1())
+            (r, s) = decode_dss_signature(sig)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
@@ -1361,9 +1357,7 @@ class Key(object):
                 hashSize = hashes.SHA384()
             else:
                 hashSize = hashes.SHA512()
-            signer = self._keyObject.signer(ec.ECDSA(hashSize))
-            signer.update(data)
-            signature = signer.finalize()
+            signature = self._keyObject.sign(data, ec.ECDSA(hashSize))
             (r, s) = decode_dss_signature(signature)
 
             rb = int_to_bytes(r)
@@ -1418,8 +1412,9 @@ class Key(object):
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
-            verifier = k.verifier(
+            args = (
                 common.getNS(signature)[0],
+                data,
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
@@ -1431,8 +1426,7 @@ class Key(object):
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
-            verifier = k.verifier(
-                signature, hashes.SHA1())
+            args = (signature, data, hashes.SHA1())
 
         elif keyType == 'EC':  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
@@ -1452,11 +1446,10 @@ class Key(object):
                 hashSize = hashes.SHA384()
             else:
                 hashSize = hashes.SHA512()
-            verifier = k.verifier(signature, ec.ECDSA(hashSize))
+            args = (signature, data, ec.ECDSA(hashSize))
 
-        verifier.update(data)
         try:
-            verifier.verify()
+            k.verify(*args)
         except InvalidSignature:
             return False
         else:

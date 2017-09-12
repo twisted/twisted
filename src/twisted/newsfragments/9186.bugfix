@@ -1,0 +1,1 @@
+twisted.internet._win32serialport now uses serial.serialutil.to_bytes() to provide bytes in Python 3.
