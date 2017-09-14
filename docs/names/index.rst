@@ -2,8 +2,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Names
-=============
+Twisted Names (DNS)
+===================
 
 .. toctree::
    :hidden:
