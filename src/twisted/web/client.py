@@ -1457,8 +1457,8 @@ class _StandardEndpointFactory(object):
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
         @param reactor: A provider to use to create endpoints.
-        @type reactor: L{IReactorTCP} and
-            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.
@@ -1534,8 +1534,8 @@ class Agent(_AgentBase):
 
         @param reactor: A reactor for this L{Agent} to place outgoing
             connections.
-        @type reactor: L{IReactorTCP} and
-            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
@@ -1577,8 +1577,8 @@ class Agent(_AgentBase):
 
         @param reactor: A reactor for this L{Agent} to place outgoing
             connections.
-        @type reactor: L{IReactorTCP} and
-            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
@@ -1602,8 +1602,8 @@ class Agent(_AgentBase):
 
         @param reactor: A reactor for this L{Agent} to place outgoing
             connections.
-        @type reactor: L{IReactorTCP} and
-            L{IReactorPluggableNameResolver} or L{IReactorPluggableResolver}.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
