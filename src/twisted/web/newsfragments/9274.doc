@@ -1,0 +1,1 @@
+Correct reactor docstrings for twisted.web.client.Agent and twisted.web.client._StandardEndpointFactory to communicate interface requirements since 17.1.
