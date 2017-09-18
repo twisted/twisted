@@ -624,8 +624,9 @@ def getHostByName(name, timeout=None, effort=10):
     """
     Resolve a name to a valid ipv4 or ipv6 address.
 
-    Will errback with C{DNSQueryTimeoutError} on a timeout, C{DomainError} or
-    C{AuthoritativeDomainError} (or subclasses) on other errors.
+    Will errback with C{twisted.internet.defer.TimeoutError} on a timeout,
+    C{DomainError} or C{AuthoritativeDomainError} (or subclasses) on other
+    errors.
 
     @type name: C{str}
     @param name: DNS name to resolve.
