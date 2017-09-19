@@ -165,7 +165,7 @@ def messageid(uniq=None, N=lambda: next(_gen)):
 
 
 
-def quoteaddr(addr):
+def quoteaddr(addr, encoding='utf-8'):
     """
     Turn an email address, possibly with realname part etc, into
     a form suitable for and SMTP envelope.
@@ -175,15 +175,15 @@ def quoteaddr(addr):
         return b'<' + bytes(addr) + b'>'
 
     if isinstance(addr, bytes):
-        addr = addr.decode('utf-8')
+        addr = addr.decode(encoding)
 
     res = parseaddr(addr)
 
     if res == ('', ''):
         # It didn't parse, use it as-is
-        return  b'<' + str(addr).encode('utf-8') + b'>'
+        return  b'<' + str(addr).encode(encoding) + b'>'
     else:
-        return  b'<' + res[1].encode('utf-8') + b'>'
+        return  b'<' + res[1].encode(encoding) + b'>'
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
@@ -570,8 +570,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if failure.check(SMTPBadSender):
             self.sendCode(failure.value.code,
                           (b'Cannot receive from specified address ' +
-                            quoteaddr(failure.value.addr) + b': ' +
-                            networkString(failure.value.resp)))
+                           quoteaddr(failure.value.addr, self._encoding) +
+                           b': ' + networkString(failure.value.resp)))
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code,
                           networkString(failure.value.resp))
@@ -1047,7 +1047,8 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self._from = self.getMailFrom()
         self._failresponse = self.smtpTransferFailed
         if self._from is not None:
-            self.sendLine(b'MAIL FROM:' + quoteaddr(self._from))
+            self.sendLine(b'MAIL FROM:' + quoteaddr(self._from,
+                                                    self._encoding))
             self._expected = [250]
             self._okresponse = self.smtpState_to
         else:
@@ -1084,7 +1085,8 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 return self.smtpState_msgSent(code,'No recipients accepted')
         else:
-            self.sendLine(b'RCPT TO:' + quoteaddr(self.lastAddress))
+            self.sendLine(b'RCPT TO:' + quoteaddr(self.lastAddress,
+                                                  self._encoding))
 
 
     def smtpState_data(self, code, resp):
