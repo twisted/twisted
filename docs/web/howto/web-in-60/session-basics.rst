@@ -68,7 +68,7 @@ then getting the session object's uid attribute:
     
     class ShowSession(Resource):
         def render_GET(self, request):
-            return 'Your session id is: ' + request.getSession().uid
+            return b'Your session id is: ' + request.getSession().uid
 
 
 
@@ -88,7 +88,7 @@ method:
     class ExpireSession(Resource):
         def render_GET(self, request):
             request.getSession().expire()
-            return 'Your session has been expired.'
+            return b'Your session has been expired.'
 
 
 
@@ -133,7 +133,7 @@ Here's the complete source for the example:
     
     class ShowSession(Resource):
         def render_GET(self, request):
-            return 'Your session id is: ' + request.getSession().uid
+            return b'Your session id is: ' + request.getSession().uid
     
     class ExpireSession(Resource):
         def render_GET(self, request):
