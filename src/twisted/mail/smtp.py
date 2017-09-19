@@ -34,9 +34,8 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python.compat import (range, long, networkString, nativeString,
-                                   iteritems, _keys, _bytesChr, iterbytes,
-                                   unicode)
+from twisted.python.compat import (range, long, networkString, iteritems,
+                                   _keys, _bytesChr, iterbytes, unicode)
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (IClientAuthentication,
@@ -220,18 +219,19 @@ class Address:
     atomre = re.compile(atom) # match any one atom character
 
 
-    def __init__(self, addr, defaultDomain=None):
+    def __init__(self, addr, defaultDomain=None, encoding='utf-8'):
+        self._encoding = encoding
         if isinstance(addr, User):
             addr = addr.dest
         if isinstance(addr, Address):
             self.__dict__ = addr.__dict__.copy()
             return
         elif isinstance(addr, bytes):
-            addr = addr.decode('utf-8')
+            addr = addr.decode(self._encoding)
         elif addr is None:
             addr = u""
 
-        self.addrstr = addr.encode("utf-8")
+        self.addrstr = addr.encode(self._encoding)
 
         # Tokenize
         atl = [addrComponent
@@ -275,10 +275,10 @@ class Address:
         self.domain = u''.join(domain)
         if self.local != u'' and self.domain == u'':
             if defaultDomain is None:
-                defaultDomain = DNSNAME.decode("utf-8")
+                defaultDomain = DNSNAME.decode(self._encoding)
             self.domain = defaultDomain
-        self.local = self.local.encode("utf-8")
-        self.domain = self.domain.encode("utf-8")
+        self.local = self.local.encode(self._encoding)
+        self.domain = self.domain.encode(self._encoding)
 
     dequotebs = re.compile(r'\\(.)')
 
@@ -290,7 +290,7 @@ class Address:
         res = []
 
         if isinstance(addr, bytes):
-            addr = addr.decode('utf-8')
+            addr = addr.decode(self._encoding)
 
         for t in [addrComponent
                   for addrComponent in self.tstring.split(addr)
@@ -302,18 +302,20 @@ class Address:
             else:
                 res.append(t)
 
-        return b''.join([r.encode("utf-8") for r in res])
+        return b''.join([r.encode(self._encoding) for r in res])
+
 
     def __str__(self):
         if self.local or self.domain:
-            return u'@'.join((self.local.decode("utf-8"),
-                              self.domain.decode("utf-8")))
+            return u'@'.join((self.local.decode(self._encoding),
+                              self.domain.decode(self._encoding)))
         else:
             return u''
 
 
     def __bytes__(self):
-        return self.__str__().encode("utf-8")
+        return self.__str__().encode(self._encoding)
+
 
     def __repr__(self):
         return u"{}.{}({})".format(self.__module__, self.__class__.__name__,
@@ -326,18 +328,19 @@ class User:
     Hold information about and SMTP message recipient,
     including information on where the message came from
     """
-    def __init__(self, destination, helo, protocol, orig):
+    def __init__(self, destination, helo, protocol, orig, encoding='utf-8'):
+        self._encoding = encoding
         try:
             host = protocol.host
         except AttributeError:
             host = None
-        self.dest = Address(destination, host)
+        self.dest = Address(destination, host, encoding=self._encoding)
         self.helo = helo
         self.protocol = protocol
         if isinstance(orig, Address):
             self.orig = orig
         else:
-            self.orig = Address(orig, host)
+            self.orig = Address(orig, host, encoding=self._encoding)
 
 
     def __getstate__(self):
@@ -354,11 +357,11 @@ class User:
 
 
     def __str__(self):
-        return nativeString(bytes(self.dest))
+        return str(self.dest)
 
 
     def __bytes__(self):
-        return bytes(self.dest)
+        return self.__str__().encode(self._encoding)
 
 
 
@@ -485,7 +488,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @return: The function which executes this command.
         """
         if not isinstance(command, str):
-            command = nativeString(command)
+            command = command.decode(self._encoding)
 
         return getattr(self, 'do_' + command.upper(), None)
 
@@ -551,7 +554,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return
 
         try:
-            addr = Address(m.group('path'), self.host)
+            addr = Address(m.group('path'), self.host, encoding=self._encoding)
         except AddressError as e:
             self.sendCode(553, networkString(str(e)))
             return
@@ -586,13 +589,14 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if not self._from:
             self.sendCode(503, b"Must have sender before recipient")
             return
-        m = self.rcpt_re.match(rest.decode("utf-8"))
+        m = self.rcpt_re.match(rest.decode(self._encoding))
         if not m:
             self.sendCode(501, b"Syntax error")
             return
 
         try:
-            user = User(m.group('path'), self._helo, self, self._from)
+            user = User(m.group('path'), self._helo, self, self._from,
+                        encoding=self._encoding)
         except AddressError as e:
             self.sendCode(553, networkString(str(e)))
             return
@@ -935,7 +939,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
     def __init__(self, identity, logsize=10):
         if isinstance(identity, unicode):
-            identity = identity.encode('ascii')
+            identity = identity.encode(self._encoding)
 
         self.identity = identity or b''
         self.toAddressesResult = []
@@ -1667,7 +1671,8 @@ class ESMTP(SMTP):
 
 
     def lookupMethod(self, command):
-        command = nativeString(command)
+        if isinstance(command, bytes):
+            command = command.decode(self._encoding)
 
         m = SMTP.lookupMethod(self, command)
         if m is None:
@@ -1938,7 +1943,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
                 toEmailFinal.append(_email)
             toEmail = toEmailFinal
 
-        self.fromEmail = Address(fromEmail)
+        self.fromEmail = Address(fromEmail, encoding=self._encoding)
         self.nEmails = len(toEmail)
         self.toEmail = toEmail
         self.file = file
