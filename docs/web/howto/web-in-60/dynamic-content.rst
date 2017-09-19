@@ -85,7 +85,8 @@ time:
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html><body>%s</body></html>" % (time.ctime(),)
+            return (b"<html><body>" + time.ctime().encode("utf-8") +
+                    b"</body></html>")
 
 
 
@@ -155,7 +156,8 @@ Here's the code with no interruptions:
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html><body>%s</body></html>" % (time.ctime(),)
+            return (b"<html><body>" + time.ctime().encode("utf-8") +
+                    b"</body></html>")
 
     resource = ClockPage()
     factory = Site(resource)

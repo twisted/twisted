@@ -105,7 +105,7 @@ of ``ExpireSession`` as a child using :api:`twisted.web.resource.Resource.putChi
 
     
     resource = ShowSession()
-    resource.putChild("expire", ExpireSession())
+    resource.putChild(b"expire", ExpireSession())
 
 
 
@@ -138,10 +138,10 @@ Here's the complete source for the example:
     class ExpireSession(Resource):
         def render_GET(self, request):
             request.getSession().expire()
-            return 'Your session has been expired.'
+            return b'Your session has been expired.'
     
     resource = ShowSession()
-    resource.putChild("expire", ExpireSession())
+    resource.putChild(b"expire", ExpireSession())
 
 
 

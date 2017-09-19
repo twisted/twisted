@@ -35,7 +35,11 @@ directly:
 
     ...
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.content.read()),)
+            content = request.content.read().decode("utf-8")
+            escapedContent = cgi.escape(content)
+            return (b'<html><body>You submitted: ' +
+                    escapedContent.encode("utf-8") +
+                    b'</body></html>')
 
 
 
@@ -67,13 +71,17 @@ only ``render_POST`` changed:
 
     class FormPage(Resource):
         def render_GET(self, request):
-            return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
 
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.content.read()),)
+            content = request.content.read().decode("utf-8")
+            escapedContent = cgi.escape(content)
+            return (b'<html><body>You submitted: ' +
+                    escapedContent.encode("utf-8") +
+                    b'</body></html>')
 
     root = Resource()
-    root.putChild("form", FormPage())
+    root.putChild(b"form", FormPage())
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)

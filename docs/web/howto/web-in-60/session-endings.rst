@@ -143,7 +143,7 @@ session expires, and uses sessions which last for 5 seconds:
             self.sessions.remove(uid)
 
     rootResource = Resource()
-    rootResource.putChild("logme", ExpirationLogger())
+    rootResource.putChild(b"logme", ExpirationLogger())
     factory = Site(rootResource)
     factory.sessionFactory = ShortSession
 

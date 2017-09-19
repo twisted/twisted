@@ -60,7 +60,7 @@ respond to ``GET`` requests with a static HTML form:
 
     class FormPage(Resource):
         def render_GET(self, request):
-            return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
 
 
 
@@ -78,7 +78,9 @@ method will allow it to accept ``POST`` requests:
 
     ...
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
+            args = request.args[b"the-field"][0].decode("utf-8")
+            escapedArgs = cgi.escape(args)
+            return b'<html><body>You submitted: ' + escapedArgs.encode("utf-8") + b'</body></html>'
 
 
 
@@ -109,7 +111,7 @@ Finally, the example just needs the usual site creation and port setup:
 
 
     root = Resource()
-    root.putChild("form", FormPage())
+    root.putChild(b"form", FormPage())
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
@@ -143,13 +145,15 @@ Here's the complete source for the example:
 
     class FormPage(Resource):
         def render_GET(self, request):
-            return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
 
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
+            args = request.args[b"the-field"][0].decode("utf-8")
+            escapedArgs = cgi.escape(args)
+            return b'<html><body>You submitted: ' + escapedArgs.encode("utf-8") + b'</body></html>'
 
     root = Resource()
-    root.putChild("form", FormPage())
+    root.putChild(b"form", FormPage())
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
