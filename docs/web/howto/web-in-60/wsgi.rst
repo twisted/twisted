@@ -68,7 +68,7 @@ simple one just to get things going:
     
     def application(environ, start_response):
         start_response('200 OK', [('Content-type', 'text/plain')])
-        return ['Hello, world!']
+        return [b'Hello, world!']
 
 
 
