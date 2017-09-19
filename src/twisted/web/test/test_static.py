@@ -331,7 +331,7 @@ class StaticFileTests(TestCase):
             b"resource = Data(b'dynamic world', 'text/plain')\n")
 
         file = static.File(base.path)
-        file.processors = {b'.bar': script.ResourceScript}
+        file.processors = {'.bar': script.ResourceScript}
         request = DummyRequest([b"foo.bar"])
         child = resource.getChildForRequest(file, request)
 

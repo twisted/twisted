@@ -297,12 +297,15 @@ class File(resource.Resource, filepath.FilePath):
             if fpath is None:
                 return self.childNotFound
 
+        extension = fpath.splitext()[1]
+        if not isinstance(extension, str):
+            extension = extension.decode("utf-8")
         if platformType == "win32":
             # don't want .RPY to be different than .rpy, since that would allow
             # source disclosure.
-            processor = InsensitiveDict(self.processors).get(fpath.splitext()[1])
+            processor = InsensitiveDict(self.processors).get(extension)
         else:
-            processor = self.processors.get(fpath.splitext()[1])
+            processor = self.processors.get(extension)
         if processor:
             return resource.IResource(processor(fpath.path, self.registry))
         return self.createSimilarFile(fpath.path)
