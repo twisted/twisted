@@ -1,0 +1,1 @@
+oscardemo.py, which illustrates the use of twisted.words.protocols.oscar, as been removed.  twisted.words.protocols.oscar was removed in Twisted 17.5.0.

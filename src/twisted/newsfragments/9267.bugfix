@@ -1,0 +1,1 @@
+twisted.trial.unittest.SynchronousTestCase and twisted.trial.unittest.TestCase now always run their tearDown methods, even when a test method fails with an exception.  They also flush all errors logged by a test method before running another, ensuring the logged errors are associated with their originating test method.
