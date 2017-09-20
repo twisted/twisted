@@ -23,13 +23,36 @@ class AlmostService(object):
     """
     Implement IService except for the attributes.
     """
+
+    def __init__(self, name, parent, running):
+        self.name = name
+        self.parent = parent
+        self.running = running
+
+    def makeInvalidByDeletingName(self):
+        """
+        Probably not a wise method to call.
+        """
+        del self.name
+
+    def makeInvalidByDeletingParent(self):
+        """
+        Probably not a wise method to call.
+        """
+        del self.parent
+
+    def makeInvalidByDeletingRunning(self):
+        """
+        Probably not a wise method to call.
+        """
+        del self.running
+
     def setName(self, name):
         """
         See L{twisted.application.service.IService}.
 
         @param name: ignored
         """
-        pass
 
 
     def setServiceParent(self, parent):
@@ -38,35 +61,30 @@ class AlmostService(object):
 
         @param parent: ignored
         """
-        pass
 
 
     def disownServiceParent(self):
         """
         See L{twisted.application.service.IService}.
         """
-        pass
 
 
     def privilegedStartService(self):
         """
         See L{twisted.application.service.IService}.
         """
-        pass
 
 
     def startService(self):
         """
         See L{twisted.application.service.IService}.
         """
-        pass
 
 
     def stopService(self):
         """
         See L{twisted.application.service.IService}.
         """
-        pass
 
 
 
@@ -78,10 +96,8 @@ class ServiceInterfaceTests(TestCase):
         """
         Build something that implements IService.
         """
-        self.almostService = AlmostService()
-        self.almostService.parent = None
-        self.almostService.running = False
-        self.almostService.name = None
+        self.almostService = AlmostService(parent=None, running=False,
+                                           name=None)
 
 
     def test_realService(self):
@@ -103,7 +119,7 @@ class ServiceInterfaceTests(TestCase):
         """
         AlmostService with no name does not implement IService.
         """
-        del self.almostService.name
+        self.almostService.makeInvalidByDeletingName()
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
 
@@ -112,7 +128,7 @@ class ServiceInterfaceTests(TestCase):
         """
         AlmostService with no parent does not implement IService.
         """
-        del self.almostService.parent
+        self.almostService.makeInvalidByDeletingParent()
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
 
@@ -121,7 +137,7 @@ class ServiceInterfaceTests(TestCase):
         """
         AlmostService with no running does not implement IService.
         """
-        del self.almostService.running
+        self.almostService.makeInvalidByDeletingRunning()
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
 

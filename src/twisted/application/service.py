@@ -95,13 +95,13 @@ class IService(Interface):
     """
 
     name = Attribute(
-        "A C{string} which is the name of the service or c{None}.")
+        "A C{str} which is the name of the service or C{None}.")
 
     running = Attribute(
         "A C{boolean} which indicates whether the service is running.")
 
     parent = Attribute(
-        "An C{IServiceCollection} which is the parent or c{None}.")
+        "An C{IServiceCollection} which is the parent or C{None}.")
 
     def setName(name):
         """
