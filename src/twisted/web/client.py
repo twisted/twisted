@@ -1456,12 +1456,9 @@ class _StandardEndpointFactory(object):
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A provider to use to create endpoints.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.
@@ -1535,12 +1532,10 @@ class Agent(_AgentBase):
         """
         Create an L{Agent}.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
@@ -1580,8 +1575,10 @@ class Agent(_AgentBase):
         Create a new L{Agent} that will use the endpoint factory to figure
         out how to connect to the server.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
@@ -1603,8 +1600,10 @@ class Agent(_AgentBase):
         """
         Initialize a new L{Agent}.
 
-        @param reactor: A provider of relevant reactor interfaces, at a minimum
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
