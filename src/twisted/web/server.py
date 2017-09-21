@@ -339,6 +339,16 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
     def processingFailed(self, reason):
+        """
+        Finish this request with an indication that processing failed and
+        possibly display a traceback.
+
+        @param reason: Reason this request has failed.
+        @type reason: L{twisted.python.failure.Failure}
+
+        @return: The reason passed to this method.
+        @rtype: L{twisted.python.failure.Failure}
+        """
         self._log.failure('', failure=reason)
         if self.site.displayTracebacks:
             body = (b"<html><head><title>web.Server Traceback"
