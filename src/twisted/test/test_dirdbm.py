@@ -10,6 +10,7 @@ from base64 import b64decode
 
 from twisted.trial import unittest
 from twisted.persisted import dirdbm
+from twisted.python import rebuild
 from twisted.python.filepath import FilePath
 
 
@@ -30,9 +31,6 @@ class DirDbmTests(unittest.TestCase):
 
 
     def testRebuildInteraction(self):
-        from twisted.persisted import dirdbm
-        from twisted.python import rebuild
-
         s = dirdbm.Shelf('dirdbm.rebuild.test')
         s[b'key'] = b'value'
         rebuild.rebuild(dirdbm)
