@@ -1,0 +1,2 @@
+Logger.__init__ sets the namespace to "<unknown>" instead of raising KeyError
+when unable to determine the namespace from the calling context.

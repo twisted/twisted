@@ -1,0 +1,1 @@
+gpsfix.py has been removed from the examples.  It uses twisted.protocols.gps which was removed in Twisted 16.5.0.

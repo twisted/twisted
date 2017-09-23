@@ -1,0 +1,1 @@
+twisted.python.logfile.BaseLogFile and subclasses now always open the file in binary mode, and will process text as UTF-8.
