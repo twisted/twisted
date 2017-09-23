@@ -1,1 +1,0 @@
-twisted.web.static.File.contentTypes is now documented.
