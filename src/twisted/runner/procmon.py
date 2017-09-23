@@ -5,10 +5,43 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
-from twisted.python import log
+import attr
+import incremental
+
+from twisted.python import log, deprecate
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
+
+@attr.s(frozen=True)
+class _Process(object):
+
+    _PSEUDO_TUPLE_METHODS = ['__contains__', '__getitem__',
+                             '__len__', '__reversed__',
+                             'count', 'index']
+
+    args = attr.ib()
+    uid = attr.ib(default=None)
+    gid = attr.ib(default=None)
+    env = attr.ib(default=attr.Factory(dict))
+    cwd = attr.ib(default=None)
+    _contents = attr.ib(init=False, hash=False, default=attr.Factory(list))
+
+    def __attrs_post_init__(self):
+        self._contents[:] = [self.args, self.uid, self.gid, self.env]
+
+    @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
+    def __iter__(self):
+        return iter(self._contents)
+
+    @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
+    def __getattr__(self, name):
+        if name not in self._PSEUDO_TUPLE_METHODS:
+            raise AttributeError("object does not have attribute",
+                                 self.__class__,
+                                 name)
+        return getattr(self._tuple, name)
+
 
 class DummyTransport:
 
@@ -111,6 +144,7 @@ class ProcessMonitor(service.Service):
         self.restart = {}
 
 
+    @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
         del dct['_reactor']
@@ -119,10 +153,13 @@ class ProcessMonitor(service.Service):
         dct['timeStarted'] = {}
         dct['murder'] = {}
         dct['restart'] = {}
+        processes = dct.pop('processes')
+        dct['processes'] = {name: tuple(process) 
+                                  for name, process in processes.items()}
         return dct
 
 
-    def addProcess(self, name, args, uid=None, gid=None, env={}):
+    def addProcess(self, name, args, uid=None, gid=None, env={}, cwd=None):
         """
         Add a new monitored process and start it immediately if the
         L{ProcessMonitor} service is running.
@@ -149,7 +186,7 @@ class ProcessMonitor(service.Service):
         """
         if name in self.processes:
             raise KeyError("remove %s first" % (name,))
-        self.processes[name] = args, uid, gid, env
+        self.processes[name] = _Process(args, uid, gid, env, cwd)
         self.delay[name] = self.minRestartDelay
         if self.running:
             self.startProcess(name)
@@ -243,15 +280,16 @@ class ProcessMonitor(service.Service):
         if name in self.protocols:
             return
 
-        args, uid, gid, env = self.processes[name]
+        process = self.processes[name]
 
         proto = LoggingProtocol()
         proto.service = self
         proto.name = name
         self.protocols[name] = proto
         self.timeStarted[name] = self._reactor.seconds()
-        self._reactor.spawnProcess(proto, args[0], args, uid=uid,
-                                          gid=gid, env=env)
+        self._reactor.spawnProcess(proto, process.args[0], process.args, 
+                                          uid=process.uid, gid=process.gid,
+                                          env=process.env, path=process.cwd)
 
 
     def _forceStopProcess(self, proc):
@@ -299,14 +337,14 @@ class ProcessMonitor(service.Service):
         l = []
         for name, proc in self.processes.items():
             uidgid = ''
-            if proc[1] is not None:
-                uidgid = str(proc[1])
-            if proc[2] is not None:
-                uidgid += ':'+str(proc[2])
+            if proc.uid is not None:
+                uidgid = str(proc.uid)
+            if proc.gid is not None:
+                uidgid += ':'+str(proc.gid)
 
             if uidgid:
                 uidgid = '(' + uidgid + ')'
-            l.append('%r%s: %r' % (name, uidgid, proc[0]))
+            l.append('%r%s: %r' % (name, uidgid, proc.args))
         return ('<' + self.__class__.__name__ + ' '
                 + ' '.join(l)
                 + '>')
