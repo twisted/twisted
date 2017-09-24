@@ -186,6 +186,17 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual(
             self.reactor.spawnedProcesses[0]._environment, fakeEnv)
 
+    def test_addProcessCwd(self):
+        """
+        L{ProcessMonitor.addProcess} takes an C{cwd} parameter that is passed to
+        L{IReactorProcess.spawnProcess}.
+        """
+        fakeEnv = {"KEY": "value"}
+        self.pm.startService()
+        self.pm.addProcess("foo", ["foo"], cwd='/mnt/lala')
+        self.reactor.advance(0)
+        self.assertEqual(
+            self.reactor.spawnedProcesses[0]._path, '/mnt/lala')
 
     def test_removeProcess(self):
         """
