@@ -34,6 +34,7 @@ from zope.interface import implementer
 from twisted.python.compat import networkString, nativeString, intToBytes
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
 from twisted.python import log, reflect, failure, components
@@ -453,6 +454,14 @@ class Request(Copyable, http.Request, components.Componentized):
 
         session = getattr(self, sessionAttribute)
 
+        if session:
+            try:
+                # Refresh the session, to keep it alive.
+                session.touch()
+            except (AlreadyCalled, AlreadyCancelled):
+                # Session has already expired.
+                session = None
+
         # Session management
         if not session:
             cookiename = b"_".join([cookieString] + self.sitepath)
@@ -468,7 +477,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 self.addCookie(cookiename, session.uid, path=b"/",
                                secure=secure)
 
-        session.touch()
+
         setattr(self, sessionAttribute, session)
 
         if sessionInterface:

@@ -734,8 +734,8 @@ class RequestTests(unittest.TestCase):
 
     def test_retrieveNonExistentSession(self):
         """
-        L{Request.getSession} generates a new session if the relevant cookie is
-        set in the incoming request.
+        L{Request.getSession} generates a new session if the session ID
+        advertised in the cookie from the incoming request is not found.
         """
         site = server.Site(resource.Resource())
         d = DummyChannel()
@@ -749,6 +749,41 @@ class RequestTests(unittest.TestCase):
         self.assertTrue(request.cookies[0].startswith(b'TWISTED_SESSION='))
         # It should be a new session ID.
         self.assertNotIn(b"does-not-exist", request.cookies[0])
+
+
+    def test_getSessionExpired(self):
+        """
+        L{Request.getSession} generates a new session when the previous
+        session has expired.
+        """
+        clock = Clock()
+        site = server.Site(resource.Resource())
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = site
+        request.sitepath = []
+
+        def SessionFactoryWithClock(site, uid):
+            """
+            Forward to normal session factory, but inject the clock.
+            """
+            session = OriginalSessionFactory(site, uid)
+            session._reactor = clock
+            return session
+
+        # The site is patch to allow injecting a clock to the session.
+        OriginalSessionFactory = site.sessionFactory
+        site.sessionFactory = SessionFactoryWithClock
+
+        initialSession = request.getSession()
+
+        # When the session is requested after the session timeout,
+        # no error is raised and a new session is returned.
+        clock.advance(OriginalSessionFactory.sessionTimeout )
+        newSession = request.getSession()
+
+        self.assertIsNot(initialSession, newSession)
+        self.addCleanup(newSession.expire)
 
 
     def test_OPTIONSStar(self):
