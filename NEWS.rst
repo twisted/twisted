@@ -3,6 +3,211 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 17.9.0 (2017-09-23)
+===========================
+
+Features
+--------
+
+- twisted.python.failure.Failure is now a new-style class which subclasses
+  BaseException. (#5519)
+- twisted.internet.posixbase.PosixReactorBase.adoptStreamPort and
+  twisted.internet.posixbase.PosixReactorBase.adoptStreamConnection now support
+  AF_UNIX SOCK_STREAM sockets. (#5573)
+-  (#8940)
+- t.protocol.policies.TimeoutMixin.setTimeout and
+  t.protocol.policies.TimeoutProtocol.cancelTimeout (used in
+  t.protocol.policies.TimeoutFactory) no longer raise a
+  t.internet.error.AlreadyCancelled exception when calling them for an already
+  cancelled timeout. (#9131)
+- twisted.web.template.flatten now supports coroutines that yield Deferreds.
+  (#9199)
+- twisted.web.client.HTTPConnectionPool passes the repr() of the endpoint to
+  the client protocol factory, and the protocol factory adds that to its own
+  repr(). This makes logs more useful. (#9235)
+- Python 3.6 is now supported (#9240)
+
+
+Bugfixes
+--------
+
+- twisted.python.logfile.BaseLogFile and subclasses now always open the file in
+  binary mode, and will process text as UTF-8. (#6938)
+- The `ssl:` endpoint now accepts `certKey` PEM files without trailing
+  newlines. (#7530)
+- Logger.__init__ sets the namespace to "<unknown>" instead of raising KeyError
+  when unable to determine the namespace from the calling context. (#7930)
+- twisted.internet._win32serialport updated to support pySerial 3.x and dropped
+  pySerial 2.x support. (#8159)
+- twisted.python.rebuild now works on Python 3. (#8213)
+- twisted.web.server.Request.notifyFinish will now once again promptly notify
+  applications of client disconnection (assuming that the client doesn't send a
+  large amount of pipelined request data) rather than waiting for the timeout;
+  this fixes a bug introduced in Twisted 16.3.0. (#8692)
+- twisted.web.guard.HTTPAuthSessionWrapper configured with
+  DigestCredentialFactory now works on both Python 2 and 3. (#9127)
+- Detect when we’re being run using “-m twisted” or “-m twisted.trial” and use
+  it to build an accurate usage message. (#9133)
+- twisted.protocols.tls.TLSMemoryBIOProtocol now allows unregisterProducer to
+  be called when no producer is registered, bringing it in line with other
+  transports. (#9156)
+- twisted.web web servers no longer print tracebacks when they timeout clients
+  that do not respond to TLS CLOSE_NOTIFY messages. (#9157)
+- twisted.mail.imap4 now works on Python 3. (#9161)
+- twisted.python.shortcut now works on Python 3 in Windows. (#9170)
+- Fix traceback forwarding with inlineCallbacks on python 3. (#9175)
+- twisted.mail.imap4.MessageSet now treats * as larger than every message ID,
+  leading to more consistent and robust behavior. (#9177)
+- The following plugins can now be used on Python 3 with twistd: dns, inetd,
+  portforward, procmon, socks, and words. (#9184)
+- twisted.internet._win32serialport now uses serial.serialutil.to_bytes() to
+  provide bytes in Python 3. (#9186)
+- twisted.internet.reactor.spawnProcess() now does not fail on Python 3 in
+  Windows if passed a bytes-encoded path argument. (#9200)
+- twisted.protocols.ident now works on Python 3. (#9221)
+- Ignore PyPy's implementation differences in base object class. (#9225)
+- twisted.python.test.test_setup now passes with setuptools 36.2.1 (#9231)
+- twisted.internet._win32serialport SerialPort._clearCommError() no longer
+  raises AttributeError (#9252)
+- twisted.trial.unittest.SynchronousTestCase and
+  twisted.trial.unittest.TestCase now always run their tearDown methods, even
+  when a test method fails with an exception. They also flush all errors logged
+  by a test method before running another, ensuring the logged errors are
+  associated with their originating test method. (#9267)
+
+
+Improved Documentation
+----------------------
+
+- Trial's documentation now directly mentions the preferred way of running
+  Trial, via "python -m twisted.trial". (#9052)
+- twisted.internet.endpoints.HostnameEndpoint and
+  twisted.internet.endpoints.TCP4Client endpoint documentation updated to
+  correctly reflect that the timeout argument takes a float as well as an int.
+  (#9151)
+- Badges at top of README now correctly render as links to respective result
+  pages on GitHub. (#9216)
+- The example code for the trial tutorial is now compatible with Python3 and
+  the current version of Twisted. (#9223)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.protocols.dict is deprecated. (#9141)
+- gpsfix.py has been removed from the examples. It uses twisted.protocols.gps
+  which was removed in Twisted 16.5.0. (#9253)
+- oscardemo.py, which illustrates the use of twisted.words.protocols.oscar, as
+  been removed. twisted.words.protocols.oscar was removed in Twisted 17.5.0.
+  (#9255)
+
+
+Misc
+----
+
+- #5949, #8566, #8650, #8944, #9159, #9160, #9162, #9196, #9219, #9228, #9229,
+  #9230, #9247, #9248, #9249, #9251, #9254, #9262, #9276, #9308
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.ssh.userauth.SSHUserAuthServer now gracefully handles
+  unsupported authentication key types. (#9139)
+- twisted.conch.client.default verifyHostKey now opens /dev/tty with no buffer
+  to be compatible with Python 3. This lets the conch cli work with Python 3.
+  (#9265)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.conch.ssh._cryptography_backports has been removed in favor of using
+  int_to_bytes() and int_from_bytes() from cryptography.utils. (#9263)
+
+
+Misc
+~~~~
+
+- #9158, #9272
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.static.File.contentTypes is now documented. (#5739)
+- twisted.web.server.Request and any Twisted web server using it now support
+  automatic fast responses to HTTP/1.1 and HTTP/2 OPTIONS * requests, and
+  reject any other verb using the * URL form. (#9190)
+- --add-header "HeaderName: Value" can be passed to twist web in order to set
+  extra headers on all responses (#9241)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.client.HTTPClientFactory(...).gotHeaders(...) now handles a wrong
+  Set-Cookie header without a traceback. (#9136)
+- twisted.python.web.http.HTTPFactory now always opens logFile in binary mode
+  and writes access logs in UTF-8, to avoid encoding issues and newline
+  differences on Windows. (#9143)
+- The code examples in "Using the Twisted Web Client" now work on Python 3.
+  (#9172)
+- twisted.web.server.Request and all web servers that use it now no longer send
+  a default Content-Type header on responses that do not have a body (i.e. that
+  set Content-Length: 0 or that send a 204 status code). (#9191)
+- twisted.web.http.Request and all subclasses now correctly fire Deferreds
+  returned from notifyFinish with errbacks when errors are encountered in
+  HTTP/2 streams. (#9208)
+- twisted.web.microdom, twisted.web.domhelpers, and twisted.web.sux now work on
+  Python 3. (#9222)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- Sending a list of recipients with twisted.smtp.SenderFactory has been fixed.
+  This fixes a problem found when running buildbot. (#9180)
+- twisted.mail.imap4.IMAP4Server parses empty string literals even when they
+  are the last argument to a command, such as LOGIN. (#9207)
+
+
+Words
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.words.tap has been ported to Python 3 (#9169)
+
+
+Misc
+~~~~
+
+- #9246
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- Queries for unknown record types no longer incorrectly result in a server
+  error. (#9095)
+- Failed TCP connections for AFXR queries no longer raise an AttributeError.
+  (#9174)
+
+
 Twisted 17.5.0 (2017-06-04)
 ===========================
 
