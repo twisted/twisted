@@ -96,7 +96,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
     # the conditional checks until then is that the compiler objects
     # are not yet set up when this code is executed.
     arguments["ext_modules"] = extensions
-    # Use custome class to build the extensions.
+    # Use custom class to build the extensions.
     class my_build_ext(build_ext_twisted):
         conditionalExtensions = extensions
     command_classes = {
