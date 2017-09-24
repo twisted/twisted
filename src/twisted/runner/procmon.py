@@ -16,32 +16,15 @@ from twisted.protocols import basic
 @attr.s(frozen=True)
 class _Process(object):
 
-    _PSEUDO_TUPLE_METHODS = ['__contains__', '__getitem__',
-                             '__len__', '__reversed__',
-                             'count', 'index']
-
     args = attr.ib()
     uid = attr.ib(default=None)
     gid = attr.ib(default=None)
     env = attr.ib(default=attr.Factory(dict))
     cwd = attr.ib(default=None)
-    _contents = attr.ib(init=False, hash=False, default=attr.Factory(list))
-
-    def __attrs_post_init__(self):
-        self._contents[:] = [self.args, self.uid, self.gid, self.env]
 
     @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
-    def __iter__(self):
-        return iter(self._contents)
-
-    @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
-    def __getattr__(self, name):
-        if name not in self._PSEUDO_TUPLE_METHODS:
-            raise AttributeError("object does not have attribute",
-                                 self.__class__,
-                                 name)
-        return getattr(self._tuple, name)
-
+    def toTuple(self):
+        return (self.args, self.uid, self.gid, self.env)
 
 class DummyTransport:
 
@@ -136,12 +119,17 @@ class ProcessMonitor(service.Service):
     def __init__(self, reactor=_reactor):
         self._reactor = reactor
 
-        self.processes = {}
+        self._processes = {}
         self.protocols = {}
         self.delay = {}
         self.timeStarted = {}
         self.murder = {}
         self.restart = {}
+
+    @deprecate.deprecatedProperty(incremental.Version("Twisted", 17, 10, 0))
+    def processes(self):
+        return {name: process.toTuple()
+                for name, process in self._processes.items()}
 
 
     @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
@@ -153,9 +141,8 @@ class ProcessMonitor(service.Service):
         dct['timeStarted'] = {}
         dct['murder'] = {}
         dct['restart'] = {}
-        processes = dct.pop('processes')
-        dct['processes'] = {name: tuple(process) 
-                                  for name, process in processes.items()}
+        del dct['_processes']
+        dct['processes'] = self.processes
         return dct
 
 
@@ -184,9 +171,9 @@ class ProcessMonitor(service.Service):
         @raises: C{KeyError} if a process with the given name already
             exists
         """
-        if name in self.processes:
+        if name in self._processes:
             raise KeyError("remove %s first" % (name,))
-        self.processes[name] = _Process(args, uid, gid, env, cwd)
+        self._processes[name] = _Process(args, uid, gid, env, cwd)
         self.delay[name] = self.minRestartDelay
         if self.running:
             self.startProcess(name)
@@ -201,7 +188,7 @@ class ProcessMonitor(service.Service):
         @param name: A string that uniquely identifies the process.
         """
         self.stopProcess(name)
-        del self.processes[name]
+        del self._processes[name]
 
 
     def startService(self):
@@ -209,7 +196,7 @@ class ProcessMonitor(service.Service):
         Start all monitored processes.
         """
         service.Service.startService(self)
-        for name in self.processes:
+        for name in self._processes:
             self.startProcess(name)
 
 
@@ -224,7 +211,7 @@ class ProcessMonitor(service.Service):
             if delayedCall.active():
                 delayedCall.cancel()
 
-        for name in self.processes:
+        for name in self._processes:
             self.stopProcess(name)
 
 
@@ -265,7 +252,7 @@ class ProcessMonitor(service.Service):
             self.delay[name] = self.minRestartDelay
 
         # Schedule a process restart if the service is running
-        if self.running and name in self.processes:
+        if self.running and name in self._processes:
             self.restart[name] = self._reactor.callLater(nextDelay,
                                                          self.startProcess,
                                                          name)
@@ -280,7 +267,7 @@ class ProcessMonitor(service.Service):
         if name in self.protocols:
             return
 
-        process = self.processes[name]
+        process = self._processes[name]
 
         proto = LoggingProtocol()
         proto.service = self
@@ -306,7 +293,7 @@ class ProcessMonitor(service.Service):
         """
         @param name: The name of the process to be stopped
         """
-        if name not in self.processes:
+        if name not in self._processes:
             raise KeyError('Unrecognized process name: %s' % (name,))
 
         proto = self.protocols.get(name, None)
@@ -329,13 +316,13 @@ class ProcessMonitor(service.Service):
         in circumstances -- for example, a new version of a library is
         installed.
         """
-        for name in self.processes:
+        for name in self._processes:
             self.stopProcess(name)
 
 
     def __repr__(self):
         l = []
-        for name, proc in self.processes.items():
+        for name, proc in self._processes.items():
             uidgid = ''
             if proc.uid is not None:
                 uidgid = str(proc.uid)
