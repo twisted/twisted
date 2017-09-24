@@ -14,7 +14,7 @@ from twisted.application import service
 from twisted.protocols import basic
 
 @attr.s(frozen=True)
-class _Process(object):
+class Process(object):
 
     args = attr.ib()
     uid = attr.ib(default=None)
@@ -173,7 +173,7 @@ class ProcessMonitor(service.Service):
         """
         if name in self._processes:
             raise KeyError("remove %s first" % (name,))
-        self._processes[name] = _Process(args, uid, gid, env, cwd)
+        self._processes[name] = Process(args, uid, gid, env, cwd)
         self.delay[name] = self.minRestartDelay
         if self.running:
             self.startProcess(name)

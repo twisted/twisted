@@ -4,9 +4,11 @@
 """
 Tests for L{twisted.runner.procmon}.
 """
+import exceptions
+import pickle
 
 from twisted.trial import unittest
-from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
+from twisted.runner.procmon import LoggingProtocol, ProcessMonitor, Process
 from twisted.internet.error import (ProcessDone, ProcessTerminated,
                                     ProcessExitedAlready)
 from twisted.internet.task import Clock
@@ -558,3 +560,29 @@ class ProcmonTests(unittest.TestCase):
         # all pending process restarts.
         self.assertEqual(self.pm.protocols, {})
 
+class DeprecationTests(unittest.SynchronousTestCase):
+
+    def test_toTuple(self):
+        process = Process([])
+        process.toTuple()
+        warnings = self.flushWarnings()
+        first = warnings.pop(0)
+        self.assertIs(first['category'], exceptions.DeprecationWarning)
+        self.assertEquals(warnings, [])
+
+    def test_processes(self):
+        reactor = DummyProcessReactor()
+        pm = ProcessMonitor(reactor=reactor)
+        myprocesses = pm.processes
+        warnings = self.flushWarnings()
+        first = warnings.pop(0)
+        self.assertIs(first['category'], exceptions.DeprecationWarning)
+        self.assertEquals(warnings, [])
+
+    def test_getstate(self):
+        reactor = DummyProcessReactor()
+        pm = ProcessMonitor(reactor=reactor)
+        pickle.dumps(pm)
+        warnings = self.flushWarnings()
+        for warning in warnings:
+            self.assertIs(warning['category'], exceptions.DeprecationWarning)
