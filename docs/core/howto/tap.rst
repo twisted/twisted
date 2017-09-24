@@ -354,7 +354,7 @@ of the package. You would have to extend the layout of your files like this:
         name='MyApplication',
         version='0.1dev',
         packages=['myproject', 'twisted.plugins'],
-        license='Creative Commons Attribution-Noncommercial-Share Alike license',
+        license='MIT License',
         long_description="Insert your long description here",
         install_requires=[
             'twisted',
