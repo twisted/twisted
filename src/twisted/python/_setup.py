@@ -81,7 +81,8 @@ _dev = [
     'twisted-dev-tools >= 0.0.2',
     'python-subunit',
     'sphinx >= 1.3.1',
-    'towncrier >= 17.4.0'
+    'towncrier >= 17.4.0',
+    "twistedcextensions == " + twistedVersion,
 ]
 
 if not _PY3:
