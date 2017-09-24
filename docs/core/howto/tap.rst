@@ -353,7 +353,10 @@ of the package. You would have to extend the layout of your files like this:
     setup(
         name='MyApplication',
         version='0.1dev',
-        packages=['myproject', 'twisted.plugins'],
+        # it is neccesary to extend the found package list with the twisted.plugin
+        # directory. It cannot be automatically detected, because it should not
+        # contain a __init__.py file.
+        packages= find_packages().append('twisted.plugins'),
         license='MIT License',
         long_description="Insert your long description here",
         install_requires=[
@@ -426,6 +429,7 @@ You should now be able to
 - Incorporate authentication into your plugin
 - Use it from your development environment
 - Install it correctly and use it in deployment
+
 
 
 
