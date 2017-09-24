@@ -1,1 +1,1 @@
-documentation now explains how to deploy twistd plugins using python packaging and pip
+The "Writing a twistd plugin" howto now explains how to deploy twistd plugins using python packaging and pip
