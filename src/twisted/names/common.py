@@ -18,7 +18,8 @@ from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
 from twisted.names.error import DNSUnknownError
 
 from twisted.internet import defer, error, interfaces
-from twisted.python import failure
+
+from twisted.logger import Logger
 
 # Helpers for indexing the three-tuples that get thrown around by this code a
 # lot.
@@ -38,6 +39,7 @@ class ResolverBase:
     @cvar _errormap: A C{dict} mapping DNS protocol failure response codes
         to exception classes which will be used to represent those failures.
     """
+    _log = Logger()
     _errormap = {
         dns.EFORMAT: DNSFormatError,
         dns.ESERVER: DNSServerError,
@@ -67,8 +69,11 @@ class ResolverBase:
         try:
             method = self.typeToMethod[query.type]
         except KeyError:
-            return defer.fail(failure.Failure(NotImplementedError(
-                        str(self.__class__) + " " + str(query.type))))
+            self._log.debug(
+                'Query of unknown type {query.type} for {query.name.name!r}',
+                query=query)
+            return defer.maybeDeferred(
+                self._lookup, query.name.name, dns.IN, query.type, timeout)
         else:
             return defer.maybeDeferred(method, query.name.name, timeout)
 

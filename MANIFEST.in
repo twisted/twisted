@@ -39,6 +39,7 @@ recursive-exclude cext *
 
 # Some tests stuff
 recursive-include src/twisted *.pem
+recursive-include src/twisted/test *.pem.*
 include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 

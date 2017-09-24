@@ -13,10 +13,18 @@ import os, signal, sys, struct
 
 from zope.interface import implementer
 
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
+if cryptography:
+    from twisted.conch.ssh import common, session, connection
+else:
+    class session:
+        from twisted.conch.interfaces import ISession
+
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ProcessTerminated, ProcessDone
 from twisted.python.failure import Failure
-from twisted.conch.ssh import common, session, connection
 from twisted.internet import defer, protocol, error
 from twisted.python import components, failure
 from twisted.trial import unittest
@@ -159,8 +167,8 @@ class StubSessionForStubAvatar(object):
         self.gotClosed = True
 
 
-
-components.registerAdapter(StubSessionForStubAvatar, StubAvatar,
+if cryptography:
+    components.registerAdapter(StubSessionForStubAvatar, StubAvatar,
         session.ISession)
 
 
@@ -428,6 +436,8 @@ class SessionInterfaceTests(unittest.TestCase):
     Tests for the SSHSession class interface.  This interface is not ideal, but
     it is tested in order to maintain backwards compatibility.
     """
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
 
     def setUp(self):
@@ -757,6 +767,8 @@ class SessionWithNoAvatarTests(unittest.TestCase):
     were called.
     """
 
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
     def setUp(self):
         self.session = session.SSHSession()
@@ -819,6 +831,8 @@ class WrappersTests(unittest.TestCase):
     """
     A test for the wrapProtocol and wrapProcessProtocol functions.
     """
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
     def test_wrapProtocol(self):
         """
@@ -862,6 +876,8 @@ class HelpersTests(unittest.TestCase):
     Tests for the 4 helper functions: parseRequest_* and packRequest_*.
     """
 
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
     def test_parseRequest_pty_req(self):
         """
@@ -938,6 +954,8 @@ class SSHSessionProcessProtocolTests(unittest.TestCase):
     """
     Tests for L{SSHSessionProcessProtocol}.
     """
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
     def setUp(self):
         self.transport = StubTransport()
@@ -1169,7 +1187,8 @@ class SSHSessionClientTests(unittest.TestCase):
     SSHSessionClient is an obsolete class used to connect standard IO to
     an SSHSession.
     """
-
+    if not cryptography:
+        skip = "cannot run without cryptography"
 
     def test_dataReceived(self):
         """

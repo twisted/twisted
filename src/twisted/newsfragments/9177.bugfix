@@ -1,1 +1,0 @@
-twisted.mail.imap4.MessageSet now treats * as larger than every message ID, leading to more consistent and robust behavior.

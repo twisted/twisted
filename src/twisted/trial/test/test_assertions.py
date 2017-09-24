@@ -1283,7 +1283,8 @@ class CallDeprecatedTests(unittest.SynchronousTestCase):
         # by callDeprecated.  Flush it now to make sure it did happen and to
         # prevent it from showing up on stdout.
         warningsShown = self.flushWarnings()
-        self.assertEqual(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1,
+            "Unexpected warnings: {}".format(warningsShown))
 
 
     def test_callDeprecationWithMessage(self):
