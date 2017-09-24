@@ -156,10 +156,8 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["arg1", "arg2"],
                            uid=1, gid=2, env={})
         self.assertEqual(self.pm.protocols, {})
-        processes = self.pm.processes.copy()
-        self.assertEquals(tuple(processes.pop('foo')), 
-                          (["arg1", "arg2"], 1, 2, {}))
-        self.assertEqual(processes, {})
+        self.assertEqual(self.pm.processes,
+                          {"foo": (["arg1", "arg2"], 1, 2, {})})
         self.pm.startService()
         self.reactor.advance(0)
         self.assertEqual(list(self.pm.protocols.keys()), ["foo"])
