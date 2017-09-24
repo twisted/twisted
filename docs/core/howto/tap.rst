@@ -339,7 +339,7 @@ of the package. You would have to extend the layout of your files like this:
 
     - **plugins**
 
-      - ``myplugin.py`` - Plugin file
+      - ``myplugin.py`` - Dropin file containing the actual plugin
 
 
 
