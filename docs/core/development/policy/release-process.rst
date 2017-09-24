@@ -112,6 +112,7 @@ How to do a release candidate
 #. In your Git repo, fetch and check out the new release branch.
 #. Run ``python -m incremental.update Twisted --rc`` to update Twisted's version and update the constant in ``src/twisted/python/setup.py`` to match.
 #. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/ --rc`` to update the C extension version. Change back into the main parent dir.
+#. Edit ``twistedVersion`` in ``src/twisted/python/_setup.py`` to match.
 #. Commit the changes made by Incremental.
 #. Run ``towncrier``.
 #. Commit the changes made by towncrier - this automatically removes the newsfragments.
@@ -180,6 +181,7 @@ Prepare the branch
 #. Have the release branch, previously used to generate a release candidate, checked out
 #. Run ``python -m incremental.update Twisted`` to update Twisted's version, and update the constant in ``src/twisted/python/setup.py`` to match.
 #. Run ``python -m incremental.update twistedcextensions --path=cext/src/_twistedcextensions/`` to update the C extension version.
+#. Edit ``twistedVersion`` in ``src/twisted/python/_setup.py`` to match.
 #. Commit the changes done by Incremental.
 #. Revert the release candidate newsfile changes, in order.
 #. Run ``towncrier`` to make the final newsfile and commit it.
@@ -291,6 +293,8 @@ Announce
    - ``#twisted`` topic on IRC (you'll need ops)
 
 #. Run ``python -m incremental Twisted --patch && python -m incremental Twisted --dev`` to add a `.1dev0` postfix.
+#. Run ``python -m incremental.update twistedcextensions --patch  --path=cext/src/_twistedcextensions/ && python -m incremental.update twistedcextensions --patch  --path=cext/src/_twistedcextensions/ --dev`` to add a `.1dev0` postfix.
+#. Edit ``twistedVersion`` in ``src/twisted/python/_setup.py`` to match.
 #. Commit the dev0 update change.
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 #. Close the release milestone (which should have no tickets in it).

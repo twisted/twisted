@@ -73,7 +73,7 @@ on event-based network programming and multiprotocol integration.
 )
 
 # THIS MUST REMAIN IN SYNC!
-twistedVersion = "17.5.0"
+twistedVersion = "17.9.1dev0"
 
 
 _dev = [
