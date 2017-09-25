@@ -763,27 +763,40 @@ class RequestTests(unittest.TestCase):
         request.site = site
         request.sitepath = []
 
-        def SessionFactoryWithClock(site, uid):
+        def sessionFactoryWithClock(site, uid):
             """
             Forward to normal session factory, but inject the clock.
+
+            @param site: The site on which the session is created.
+            @type site: L{server.Site}
+
+            @param uid: A unique identifier for the session.
+            @type uid: C{bytes}
+
+            @param site: The site on which the session is created.
+            @type site: L{server.Site}
+
+            @return: A newly created session.
+            @rtype: L{server.Session}
             """
-            session = OriginalSessionFactory(site, uid)
+            session = sessionFactory(site, uid)
             session._reactor = clock
             return session
 
         # The site is patch to allow injecting a clock to the session.
-        OriginalSessionFactory = site.sessionFactory
-        site.sessionFactory = SessionFactoryWithClock
+        sessionFactory = site.sessionFactory
+        site.sessionFactory = sessionFactoryWithClock
 
         initialSession = request.getSession()
 
         # When the session is requested after the session timeout,
         # no error is raised and a new session is returned.
-        clock.advance(OriginalSessionFactory.sessionTimeout )
+        clock.advance(sessionFactory.sessionTimeout)
         newSession = request.getSession()
+        self.addCleanup(newSession.expire)
 
         self.assertIsNot(initialSession, newSession)
-        self.addCleanup(newSession.expire)
+        self.assertNotEqual(initialSession.uid, newSession.uid)
 
 
     def test_OPTIONSStar(self):

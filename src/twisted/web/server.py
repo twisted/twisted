@@ -454,7 +454,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
         session = getattr(self, sessionAttribute)
 
-        if session:
+        if session is not None:
+            # We have a previously created session.
             try:
                 # Refresh the session, to keep it alive.
                 session.touch()
@@ -462,8 +463,8 @@ class Request(Copyable, http.Request, components.Componentized):
                 # Session has already expired.
                 session = None
 
-        # Session management
-        if not session:
+        if session is None:
+            # No session was created yet for this request.
             cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
@@ -476,7 +477,6 @@ class Request(Copyable, http.Request, components.Componentized):
                 session = self.site.makeSession()
                 self.addCookie(cookiename, session.uid, path=b"/",
                                secure=secure)
-
 
         setattr(self, sessionAttribute, session)
 
