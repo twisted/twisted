@@ -348,7 +348,10 @@ class FakeReactorAndConnectMixin:
         def __init__(self, endpoint, testCase):
             self.endpoint = endpoint
             self.testCase = testCase
-            self.factory = _HTTP11ClientFactory(lambda p: None)
+            def nothing():
+                """this function does nothing"""
+            self.factory = _HTTP11ClientFactory(nothing,
+                                                repr(self.endpoint))
             self.protocol = StubHTTPProtocol()
             self.factory.buildProtocol = lambda addr: self.protocol
 
@@ -408,7 +411,7 @@ class DummyFactory(Factory):
     """
     Create C{StubHTTPProtocol} instances.
     """
-    def __init__(self, quiescentCallback):
+    def __init__(self, quiescentCallback, metadata):
         pass
 
     protocol = StubHTTPProtocol
@@ -1425,7 +1428,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         WebClientContextFactory} to do it.
         """
         def warnMe():
-            client.Agent(MemoryReactorClock(),
+            client.Agent(deterministicResolvingReactor(MemoryReactorClock()),
                          "does-not-provide-IPolicyForHTTPS")
         warnMe()
         warnings = self.flushWarnings([warnMe])

@@ -124,29 +124,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
         )
 
 
-    def test_runnerArguments(self):
-        """
-        L{Twist.runnerArguments} translates L{TwistOptions} to runner
-        arguments.
-        """
-        options = Twist.options([
-            "twist", "--reactor=default", "--log-format=json", "web"
-        ])
-
-        self.assertEqual(
-            Twist.runnerArguments(options),
-            dict(
-                reactor=self.installedReactors["default"],
-                defaultLogLevel=LogLevel.info,
-                logFile=stdout,
-                fileLogObserverFactory=jsonFileLogObserver,
-            )
-        )
-
-
     def test_run(self):
         """
-        L{Twist.run} runs the runner with the given options.
+        L{Twist.run} runs the runner with arguments corresponding to the given
+        options.
         """
         argsSeen = []
 
@@ -157,18 +138,27 @@ class TwistTests(twisted.trial.unittest.TestCase):
             Runner, "run", lambda self: None
         )
 
-        twistOptions = Twist.options(["twist", "web"])
-        runnerArguments = Twist.runnerArguments(twistOptions)
-        Twist.run(runnerArguments)
+        twistOptions = Twist.options([
+            "twist", "--reactor=default", "--log-format=json", "web"
+        ])
+        Twist.run(twistOptions)
 
         self.assertEqual(len(argsSeen), 1)
-        self.assertEqual(argsSeen[0], runnerArguments)
+        self.assertEqual(
+            argsSeen[0],
+            dict(
+                reactor=self.installedReactors["default"],
+                defaultLogLevel=LogLevel.info,
+                logFile=stdout,
+                fileLogObserverFactory=jsonFileLogObserver,
+            )
+        )
 
 
     def test_main(self):
         """
-        L{Twist.run} runs the runner with options corresponding to the given
-        arguments.
+        L{Twist.main} runs the runner with arguments corresponding to the given
+        command line arguments.
         """
         self.patchStartService()
 

@@ -10,19 +10,14 @@ from __future__ import absolute_import, division
 import struct
 import binascii
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
+from twisted.python.reflect import requireModule
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+pyasn1 = requireModule("pyasn1")
+cryptography = requireModule("cryptography")
 
 if pyasn1 is not None and cryptography is not None:
     dependencySkip = None
-    from twisted.conch.ssh import transport, keys, factory
+    from twisted.conch.ssh import common, transport, keys, factory
     from twisted.conch.test import keydata
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -44,15 +39,18 @@ else:
         class SSHFactory:
             pass
 
-from hashlib import md5, sha1, sha256, sha384, sha512
+    class common:
+        @classmethod
+        def NS(self, arg): return b''
 
+from hashlib import md5, sha1, sha256, sha384, sha512
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
 from twisted.python.compat import iterbytes, _bytesChr as chr
-from twisted.conch.ssh import address, service, common, _kex
+from twisted.conch.ssh import address, service, _kex
 from twisted.test import proto_helpers
 
 from twisted.conch.error import ConchError
@@ -438,6 +436,8 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     Test TransportBase. It implements the non-server/client specific
     parts of the SSH transport protocol.
     """
+    if dependencySkip:
+        skip = dependencySkip
 
     _A_KEXINIT_MESSAGE = (
         b"\xAA" * 16 +

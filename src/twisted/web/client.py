@@ -411,14 +411,21 @@ class HTTPClientFactory(protocol.ClientFactory):
         return result
 
     def gotHeaders(self, headers):
+        """
+        Parse the response HTTP headers.
+
+        @param headers: The response HTTP headers.
+        @type headers: L{dict}
+        """
         self.response_headers = headers
         if b'set-cookie' in headers:
             for cookie in headers[b'set-cookie']:
-                cookparts = cookie.split(b';')
-                cook = cookparts[0]
-                cook.lstrip()
-                k, v = cook.split(b'=', 1)
-                self.cookies[k.lstrip()] = v.lstrip()
+                if b'=' in cookie:
+                    cookparts = cookie.split(b';')
+                    cook = cookparts[0]
+                    cook.lstrip()
+                    k, v = cook.split(b'=', 1)
+                    self.cookies[k.lstrip()] = v.lstrip()
 
     def gotStatus(self, version, status, message):
         """
@@ -1137,11 +1144,20 @@ class _HTTP11ClientFactory(protocol.Factory):
     @ivar _quiescentCallback: The quiescent callback to be passed to protocol
         instances, used to return them to the connection pool.
 
+    @ivar _metadata: Metadata about the low-level connection details,
+        used to make the repr more useful.
+
     @since: 11.1
     """
-    def __init__(self, quiescentCallback):
+    def __init__(self, quiescentCallback, metadata):
         self._quiescentCallback = quiescentCallback
+        self._metadata = metadata
 
+
+    def __repr__(self):
+        return '_HTTP11ClientFactory({}, {})'.format(
+            self._quiescentCallback,
+            self._metadata)
 
     def buildProtocol(self, addr):
         return HTTP11ClientProtocol(self._quiescentCallback)
@@ -1310,7 +1326,7 @@ class HTTPConnectionPool(object):
         """
         def quiescentCallback(protocol):
             self._putConnection(key, protocol)
-        factory = self._factory(quiescentCallback)
+        factory = self._factory(quiescentCallback, repr(endpoint))
         return endpoint.connect(factory)
 
 
@@ -1440,12 +1456,9 @@ class _StandardEndpointFactory(object):
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A provider to use to create endpoints.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.
@@ -1519,12 +1532,10 @@ class Agent(_AgentBase):
         """
         Create an L{Agent}.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
@@ -1564,8 +1575,10 @@ class Agent(_AgentBase):
         Create a new L{Agent} that will use the endpoint factory to figure
         out how to connect to the server.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
@@ -1587,8 +1600,10 @@ class Agent(_AgentBase):
         """
         Initialize a new L{Agent}.
 
-        @param reactor: A provider of relevant reactor interfaces, at a minimum
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.

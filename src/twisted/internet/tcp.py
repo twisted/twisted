@@ -18,7 +18,7 @@ import struct
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, lazyByteSlice
+from twisted.python.compat import lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -94,10 +94,7 @@ _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 
 
 # The type for service names passed to socket.getservbyname:
-if _PY3:
-    _portNameType = str
-else:
-    _portNameType = (str, unicode)
+_portNameType = (str, unicode)
 
 
 

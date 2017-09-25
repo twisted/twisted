@@ -16,22 +16,25 @@ For a deeper explanation of what optional dependencies are and how they are decl
 The following optional dependencies are supported:
 
 * **dev** - packages that aid in the development of Twisted itself.
-    * `pyflakes`_
-    * `twisted-dev-tools`_
-    * `python-subunit`_
-    * `Sphinx`_
-    * `TwistedChecker`_, only available on python2
-    * `pydoctor`_, only available on python2
+
+  * `pyflakes`_
+  * `twisted-dev-tools`_
+  * `python-subunit`_
+  * `Sphinx`_
+  * `TwistedChecker`_, only available on python2
+  * `pydoctor`_, only available on python2
 
 
 * **tls** - packages that are needed to work with TLS.
-    * `pyOpenSSL`_
-    * `service_identity`_
-    * `idna`_
+
+  * `pyOpenSSL`_
+  * `service_identity`_
+  * `idna`_
 
 * **conch** - packages for working with conch/SSH.
-    * `pyasn1`_
-    * `cryptography`_
+
+  * `pyasn1`_
+  * `cryptography`_
 
 * **soap** - the `SOAPpy`_ package to work with SOAP.
 
@@ -44,8 +47,9 @@ The following optional dependencies are supported:
 * **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
 
 * **http2** - packages needed for http2 support.
-     * `h2`_
-     * `priority`_
+
+  * `h2`_
+  * `priority`_
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker

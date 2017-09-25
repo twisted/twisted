@@ -1,16 +1,17 @@
-Twisted 17.1.0
+Twisted 17.9.0
 ==============
 
-|pypi|
-|coverage|
-|travis|
-|appveyor|
+|pypi|_
+|coverage|_
+|travis|_
+|appveyor|_
 
 .. code::
 
-    <hawkowl> we have always been at war with 16.7
+    <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
+    <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
 
-For information on what's new in Twisted 17.1.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -106,7 +107,7 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 .. _pypi: https://pypi.python.org/pypi/twisted
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
-.. _travis https://travis-ci.org/twisted/twisted
+.. _travis: https://travis-ci.org/twisted/twisted
 
 .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
-.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted
+.. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted
