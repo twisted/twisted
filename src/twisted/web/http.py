@@ -1014,7 +1014,7 @@ class Request:
             if ((version == b"HTTP/1.1") and
                 (self.responseHeaders.getRawHeaders(b'content-length') is None) and
                 self.method != b"HEAD" and self.code not in NO_BODY_CODES and
-                (self.method != b"CONNECT" and self.code/100 == 2)):
+                (self.method != b"CONNECT" and self.code//100 == 2)):
                 headers.append((b'Transfer-Encoding', b'chunked'))
                 self.chunked = 1
 
