@@ -1039,7 +1039,8 @@ class Request:
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
                         value = networkString('%s' % (value,))
-                    if self.method == b"CONNECT" and name == b"Content-Length":
+                    if (self.method == b"CONNECT" and self.code//100 == 2 and
+                        name == b"Content-Length"):
                         log.msg("Warning: Removing Content-Length header in"
                                 " response to CONNECT request")
                         continue
