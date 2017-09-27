@@ -109,7 +109,8 @@ class OptionsTests(TestCase):
         """
         out = NativeStringIO()
         self.patch(sys, 'stdout', out)
-        systemExitCode = self.assertRaises(SystemExit, parseOptions, '--version')
+        systemExitCode = self.assertRaises(SystemExit, parseOptions,
+                                           '--version')
         # SystemExit.code is None on success
         self.assertEqual(systemExitCode.code, None)
         data = out.getvalue()
@@ -218,7 +219,8 @@ class OptionsTests(TestCase):
         # and then the twisted.mail.scripts.LOCAL_CFG
         # variable for the path to it's  config file.
         #
-        # Override twisted.mail.scripts.LOCAL_CFG with the file we just created.
+        # Override twisted.mail.scripts.LOCAL_CFG with the file we just
+        # created.
         self.patch(mailmail, "LOCAL_CFG", filename)
 
         argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
