@@ -332,12 +332,11 @@ def sendmail(host, options, ident):
 
 def senderror(failure, options):
     recipient = [options.sender]
-    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (
-             sys.argv[0], smtp.DNSNAME)
+    sender = '"Internally Generated Message ({})"<postmaster@{}>'.format(
+             sys.argv[0], smtp.DNSNAME.decode("ascii"))
     error = NativeStringIO()
     failure.printTraceback(file=error)
     body = NativeStringIO(ERROR_FMT % error.getvalue())
-
     d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
 

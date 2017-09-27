@@ -11,10 +11,12 @@ import os
 import sys
 
 from twisted.copyright import version
+from twisted.internet.defer import Deferred
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
 from twisted.python.compat import NativeStringIO
+from twisted.python.failure import Failure
 from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial.unittest import TestCase
@@ -331,3 +333,21 @@ deny=43,44
 order=allow,deny""")
         self.assertEqual(config.allowGIDs, [41, 42])
         self.assertEqual(config.denyGIDs, [43, 44])
+
+
+    def test_senderror(self):
+        """
+        L{twisted.mail.scripts.mailmail.senderror} sends mail back to the
+        sender if an error occurs while sending mail to the recipient.
+        """
+        def sendmail(host, sender, recipient, body):
+            self.assertRegex(sender, "postmaster@")
+            self.assertEqual(recipient, ["testsender"])
+            self.assertRegex(body.getvalue(), "ValueError")
+            return Deferred()
+
+        self.patch(smtp, "sendmail", sendmail)
+        opts = mailmail.Options()
+        opts.sender = "testsender"
+        fail = Failure(ValueError())
+        mailmail.senderror(fail, opts)
