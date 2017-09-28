@@ -11,7 +11,7 @@ Twisted 17.9.0
     <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
     <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
 
-For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
