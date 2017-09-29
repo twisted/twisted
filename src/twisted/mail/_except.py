@@ -152,7 +152,7 @@ class SMTPClientError(SMTPError):
         if self.log:
             res.append(self.log)
             res.append(b'')
-        return b'\n'.join(res)
+        return b'\n'.join([i.encode() for i in res])
 
 
 
