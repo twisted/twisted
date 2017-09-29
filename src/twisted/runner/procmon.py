@@ -126,6 +126,7 @@ class ProcessMonitor(service.Service):
         self.murder = {}
         self.restart = {}
 
+
     @deprecate.deprecatedProperty(incremental.Version("Twisted", 17, 10, 0))
     def processes(self):
         return {name: process.toTuple()
@@ -274,7 +275,7 @@ class ProcessMonitor(service.Service):
         proto.name = name
         self.protocols[name] = proto
         self.timeStarted[name] = self._reactor.seconds()
-        self._reactor.spawnProcess(proto, process.args[0], process.args, 
+        self._reactor.spawnProcess(proto, process.args[0], process.args,
                                           uid=process.uid, gid=process.gid,
                                           env=process.env, path=process.cwd)
 
