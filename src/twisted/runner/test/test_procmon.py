@@ -4,7 +4,6 @@
 """
 Tests for L{twisted.runner.procmon}.
 """
-import exceptions
 import pickle
 
 from twisted.trial import unittest
@@ -567,7 +566,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         process.toTuple()
         warnings = self.flushWarnings()
         first = warnings.pop(0)
-        self.assertIs(first['category'], exceptions.DeprecationWarning)
+        self.assertIs(first['category'], DeprecationWarning)
         self.assertEquals(warnings, [])
 
     def test_processes(self):
@@ -576,7 +575,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         myprocesses = pm.processes
         warnings = self.flushWarnings()
         first = warnings.pop(0)
-        self.assertIs(first['category'], exceptions.DeprecationWarning)
+        self.assertIs(first['category'], DeprecationWarning)
         self.assertEquals(warnings, [])
 
     def test_getstate(self):
@@ -585,4 +584,4 @@ class DeprecationTests(unittest.SynchronousTestCase):
         pickle.dumps(pm)
         warnings = self.flushWarnings()
         for warning in warnings:
-            self.assertIs(warning['category'], exceptions.DeprecationWarning)
+            self.assertIs(warning['category'], DeprecationWarning)
