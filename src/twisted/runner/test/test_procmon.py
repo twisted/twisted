@@ -187,6 +187,7 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual(
             self.reactor.spawnedProcesses[0]._environment, fakeEnv)
 
+
     def test_addProcessCwd(self):
         """
         L{ProcessMonitor.addProcess} takes an C{cwd} parameter that is passed
@@ -197,6 +198,7 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(0)
         self.assertEqual(
             self.reactor.spawnedProcesses[0]._path, '/mnt/lala')
+
 
     def test_removeProcess(self):
         """
@@ -558,9 +560,13 @@ class ProcmonTests(unittest.TestCase):
         # all pending process restarts.
         self.assertEqual(self.pm.protocols, {})
 
+
+
 class DeprecationTests(unittest.SynchronousTestCase):
 
-    """Tests that check functionality that should be deprecated is"""
+    """
+    Tests that check functionality that should be deprecated is deprecated.
+    """
 
     def test_toTuple(self):
         process = Process([])
@@ -572,8 +578,9 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
 
     def test_processes(self):
-        """Accessing L{ProcessMonitor.processes} results in
-        deprecation warning"""
+        """
+        Accessing L{ProcessMonitor.processes} results in deprecation warning
+        """
         reactor = DummyProcessReactor()
         pm = ProcessMonitor(reactor=reactor)
         myProcesses = pm.processes
@@ -585,7 +592,9 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
 
     def test_getstate(self):
-        """Pickling an L{ProcessMonitor} results in deprecation warnings"""
+        """
+        Pickling an L{ProcessMonitor} results in deprecation warnings
+        """
         reactor = DummyProcessReactor()
         pm = ProcessMonitor(reactor=reactor)
         pickle.dumps(pm)
