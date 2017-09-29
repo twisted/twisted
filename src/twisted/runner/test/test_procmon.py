@@ -192,7 +192,6 @@ class ProcmonTests(unittest.TestCase):
         L{ProcessMonitor.addProcess} takes an C{cwd} parameter that is passed to
         L{IReactorProcess.spawnProcess}.
         """
-        fakeEnv = {"KEY": "value"}
         self.pm.startService()
         self.pm.addProcess("foo", ["foo"], cwd='/mnt/lala')
         self.reactor.advance(0)
@@ -572,7 +571,8 @@ class DeprecationTests(unittest.SynchronousTestCase):
     def test_processes(self):
         reactor = DummyProcessReactor()
         pm = ProcessMonitor(reactor=reactor)
-        myprocesses = pm.processes
+        myProcesses = pm.processes
+        self.assertEquals(myProcesses, {})
         warnings = self.flushWarnings()
         first = warnings.pop(0)
         self.assertIs(first['category'], DeprecationWarning)
