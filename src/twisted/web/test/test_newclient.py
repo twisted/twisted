@@ -17,8 +17,13 @@ from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, succeed, fail, CancelledError
 from twisted.internet.protocol import Protocol
+from twisted.protocols.basic import LineReceiver
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import StringTransport, AccumulatingProtocol
+from twisted.test.proto_helpers import (
+    AccumulatingProtocol,
+    StringTransport,
+    StringTransportWithDisconnection,
+    )
 from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
 from twisted.web._newclient import HTTPParser, HTTPClientParser
 from twisted.web._newclient import BadResponseVersion, ParseError
@@ -1272,6 +1277,34 @@ class HTTP11ClientProtocolTests(TestCase):
         d.addCallback(cbAllResponse)
         return d
 
+    def test_receiveResponseHeadersTooLong(self):
+        """
+        The connection is closed when the server respond with a header which
+        is above the maximum line.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = HTTP11ClientProtocol()
+        transport.protocol = protocol
+        protocol.makeConnection(transport)
+
+        longLine = b'a' * LineReceiver.MAX_LENGTH
+        d = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
+
+        def cbRequest(result):
+            raise AssertionError('This should not succeed! Got: %r' % result)
+        d.addCallback(cbRequest)
+
+        protocol.dataReceived(
+            b"HTTP/1.1 200 OK\r\n"
+            b"X-Foo: " + longLine + "\r\n"
+            b"X-Foo: baz\r\n"
+            b"\r\n")
+
+        # FIXME
+        # For now, there is no signal that something went wrong, just a
+        # connection which is closed in what looks like a clean way.
+        # But I think that this should be fixed in this patch.
+        return assertResponseFailed(self, d, [ConnectionDone])
 
     def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
         """
@@ -2620,6 +2653,46 @@ class TransportProxyProducerTests(TestCase):
         # The transport should not have been stopped.
         self.assertEqual(transport.producerState, u'producing')
 
+
+    def test_loseConnectionWhileProxying(self):
+        """
+        L{TransportProxyProducer.loseConnection} calls the wrapped transport's
+        C{loseConnection}.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = AccumulatingProtocol()
+        protocol.makeConnection(transport)
+        transport.protocol = protocol
+        proxy = TransportProxyProducer(transport)
+        # Transport is connected and production.
+        self.assertTrue(transport.connected)
+        self.assertEqual(transport.producerState, u'producing')
+
+        proxy.loseConnection()
+
+        # The transport is not explicitly stopped, but requested to
+        # disconnect.
+        self.assertEqual(transport.producerState, u'producing')
+        self.assertFalse(transport.connected)
+
+
+    def test_loseConnectionWhileProxying(self):
+        """
+        L{TransportProxyProducer.loseConnection} does nothing when the
+        proxy is not active.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = AccumulatingProtocol()
+        protocol.makeConnection(transport)
+        transport.protocol = protocol
+        proxy = TransportProxyProducer(transport)
+        proxy._stopProxying()
+        self.assertTrue(transport.connected)
+
+        proxy.loseConnection()
+
+        # The transport is not touched, when not proxying.
+        self.assertTrue(transport.connected)
 
 
 class ResponseTests(TestCase):
