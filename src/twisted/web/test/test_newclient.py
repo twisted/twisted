@@ -1277,6 +1277,7 @@ class HTTP11ClientProtocolTests(TestCase):
         d.addCallback(cbAllResponse)
         return d
 
+
     def test_receiveResponseHeadersTooLong(self):
         """
         The connection is closed when the server respond with a header which
@@ -1290,8 +1291,14 @@ class HTTP11ClientProtocolTests(TestCase):
         longLine = b'a' * LineReceiver.MAX_LENGTH
         d = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
 
-        def cbRequest(result):
-            raise AssertionError('This should not succeed! Got: %r' % result)
+        def cbRequest(result):  # Pragma: no cover
+            """
+            This is called only when the test should fail.
+
+            @param result: The result from the request.
+            """
+            raise AssertionError(
+                'This should not succeed! Got: %r' % (result,))
         d.addCallback(cbRequest)
 
         protocol.dataReceived(
@@ -1306,6 +1313,7 @@ class HTTP11ClientProtocolTests(TestCase):
         # L{LineReceiver.lineLengthExceeded} just calls loseConnection
         # without giving any reason.
         return assertResponseFailed(self, d, [ConnectionDone])
+
 
     def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
         """
@@ -2677,7 +2685,7 @@ class TransportProxyProducerTests(TestCase):
         self.assertFalse(transport.connected)
 
 
-    def test_loseConnectionWhileProxying(self):
+    def test_loseConnectionNotProxying(self):
         """
         L{TransportProxyProducer.loseConnection} does nothing when the
         proxy is not active.
