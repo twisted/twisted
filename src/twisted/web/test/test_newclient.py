@@ -1297,13 +1297,14 @@ class HTTP11ClientProtocolTests(TestCase):
         protocol.dataReceived(
             b"HTTP/1.1 200 OK\r\n"
             b"X-Foo: " + longLine + "\r\n"
-            b"X-Foo: baz\r\n"
-            b"\r\n")
+            b"X-Ignored: ignored\r\n"
+            b"\r\n"
+            )
 
-        # FIXME
         # For now, there is no signal that something went wrong, just a
         # connection which is closed in what looks like a clean way.
-        # But I think that this should be fixed in this patch.
+        # L{LineReceiver.lineLengthExceeded} just calls loseConnection
+        # without giving any reason.
         return assertResponseFailed(self, d, [ConnectionDone])
 
     def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
