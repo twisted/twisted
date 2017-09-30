@@ -44,24 +44,6 @@ from twisted.web.iweb import IBodyProducer, IResponse
 
 
 
-class StringTransport(StringTransport):
-    """
-    A version of C{StringTransport} that supports C{abortConnection}.
-    """
-    aborting = False
-
-
-    def abortConnection(self):
-        """
-        A testable version of the C{ITCPTransport.abortConnection} method.
-
-        Since this is a special case of closing the connection,
-        C{loseConnection} is also called.
-        """
-        self.aborting = True
-        self.loseConnection()
-
-
 
 class ArbitraryException(Exception):
     """
@@ -1816,7 +1798,7 @@ class HTTP11ClientProtocolTests(TestCase):
         protocol.makeConnection(transport)
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
         result.cancel()
-        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnected)
         return assertWrapperExceptionTypes(
             self, result, ResponseNeverReceived, [CancelledError])
 
@@ -1834,7 +1816,7 @@ class HTTP11ClientProtocolTests(TestCase):
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
         protocol.dataReceived(b"HTTP/1.1 200 OK\r\n")
         result.cancel()
-        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnected)
         return assertResponseFailed(self, result, [CancelledError])
 
 
@@ -1863,7 +1845,7 @@ class HTTP11ClientProtocolTests(TestCase):
                                           producer))
         producer.consumer.write(b'x' * 5)
         result.cancel()
-        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnected)
         self.assertTrue(nonLocal['cancelled'])
         return assertRequestGenerationFailed(self, result, [CancelledError])
 
