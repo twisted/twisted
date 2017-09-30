@@ -1291,16 +1291,6 @@ class HTTP11ClientProtocolTests(TestCase):
         longLine = b'a' * LineReceiver.MAX_LENGTH
         d = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
 
-        def cbRequest(result):  # Pragma: no cover
-            """
-            This is called only when the test should fail.
-
-            @param result: The result from the request.
-            """
-            raise AssertionError(
-                'This should not succeed! Got: %r' % (result,))
-        d.addCallback(cbRequest)
-
         protocol.dataReceived(
             b"HTTP/1.1 200 OK\r\n"
             b"X-Foo: " + longLine + b"\r\n"
