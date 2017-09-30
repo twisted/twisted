@@ -2578,13 +2578,13 @@ class TransportProxyProducerTests(TestCase):
 
     def test_stopProxyingUnreferencesProducer(self):
         """
-        L{TransportProxyProducer._stopProxying} drops the reference to the
+        L{TransportProxyProducer.stopProxying} drops the reference to the
         wrapped L{IPushProducer} provider.
         """
         transport = StringTransport()
         proxy = TransportProxyProducer(transport)
         self.assertIdentical(proxy._producer, transport)
-        proxy._stopProxying()
+        proxy.stopProxying()
         self.assertIdentical(proxy._producer, None)
 
 
@@ -2604,7 +2604,7 @@ class TransportProxyProducerTests(TestCase):
         self.assertEqual(transport.producerState, u'producing')
 
         transport.pauseProducing()
-        proxy._stopProxying()
+        proxy.stopProxying()
 
         # The proxy should no longer do anything to the transport.
         proxy.resumeProducing()
@@ -2626,7 +2626,7 @@ class TransportProxyProducerTests(TestCase):
         self.assertEqual(transport.producerState, u'paused')
 
         transport.resumeProducing()
-        proxy._stopProxying()
+        proxy.stopProxying()
 
         # The proxy should no longer do anything to the transport.
         proxy.pauseProducing()
@@ -2648,7 +2648,7 @@ class TransportProxyProducerTests(TestCase):
 
         transport = StringTransport()
         proxy = TransportProxyProducer(transport)
-        proxy._stopProxying()
+        proxy.stopProxying()
         proxy.stopProducing()
         # The transport should not have been stopped.
         self.assertEqual(transport.producerState, u'producing')
@@ -2686,7 +2686,7 @@ class TransportProxyProducerTests(TestCase):
         protocol.makeConnection(transport)
         transport.protocol = protocol
         proxy = TransportProxyProducer(transport)
-        proxy._stopProxying()
+        proxy.stopProxying()
         self.assertTrue(transport.connected)
 
         proxy.loseConnection()
