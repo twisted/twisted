@@ -1356,6 +1356,13 @@ class TransportProxyProducer:
         if self._producer is not None:
             self._producer.pauseProducing()
 
+    def loseConnection(self):
+        """
+        Proxy the request to lose the connection to the underlying producer,
+        unless this proxy has been stopped.
+        """
+        if self._producer is not None:
+            self._producer.loseConnection()
 
     def loseConnection(self):
         """
