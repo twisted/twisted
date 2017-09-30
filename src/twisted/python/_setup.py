@@ -68,6 +68,7 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
     ],
 )
 
@@ -98,7 +99,7 @@ _EXTRA_OPTIONS = dict(
     ],
     conch=[
         'pyasn1',
-        'cryptography >= 0.9.1',
+        'cryptography >= 1.5',
         'appdirs >= 1.4.0',
     ],
     soap=['soappy'],
@@ -220,15 +221,15 @@ def getSetupArgs(extensions=_EXTENSIONS):
     }
 
     if sys.version_info[0] >= 3:
-        requirements = ["zope.interface >= 4.0.2"]
         command_classes['build_py'] = BuildPy3
-    else:
-        requirements = ["zope.interface >= 3.6.0"]
 
-    requirements.append("constantly >= 15.1")
-    requirements.append("incremental >= 16.10.1")
-    requirements.append("Automat >= 0.3.0")
-    requirements.append("hyperlink >= 17.1.1")
+    requirements = [
+        "zope.interface >= 4.4.2",
+        "constantly >= 15.1",
+        "incremental >= 16.10.1",
+        "Automat >= 0.3.0",
+        "hyperlink >= 17.1.1",
+    ]
 
     arguments.update(dict(
         packages=find_packages("src"),
@@ -366,7 +367,6 @@ notPortedModules = [
     "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
-    "twisted.mail.imap4",
     "twisted.mail.mail",
     "twisted.mail.maildir",
     "twisted.mail.pb",
@@ -380,7 +380,6 @@ notPortedModules = [
     "twisted.mail.tap",
     "twisted.mail.test.pop3testserver",
     "twisted.mail.test.test_bounce",
-    "twisted.mail.test.test_imap",
     "twisted.mail.test.test_mail",
     "twisted.mail.test.test_mailmail",
     "twisted.mail.test.test_options",
@@ -404,17 +403,10 @@ notPortedModules = [
     "twisted.python._pydoctor",
     "twisted.python.finalize",
     "twisted.python.hook",
-    "twisted.python.rebuild",
-    "twisted.python.shortcut",
     "twisted.python.test.cmodulepullpipe",
     "twisted.python.test.test_pydoctor",
     "twisted.python.test.test_win32",
-    "twisted.test.crash_test_dummy",
-    "twisted.test.myrebuilder1",
-    "twisted.test.myrebuilder2",
     "twisted.test.test_hook",
-    "twisted.test.test_rebuild",
-    "twisted.test.test_shortcut",
     "twisted.web.soap",
     "twisted.web.test.test_soap",
 ]

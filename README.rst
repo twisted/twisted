@@ -1,4 +1,4 @@
-Twisted 17.5.0
+Twisted 17.9.0
 ==============
 
 |pypi|_
@@ -8,11 +8,10 @@ Twisted 17.5.0
 
 .. code::
 
-    <lukasa> Shhh
-    <lukasa> Don't think about it
-    <lukasa> Just let the asynchrony wash over you
+    <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
+    <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
 
-For information on what's new in Twisted 17.5.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?

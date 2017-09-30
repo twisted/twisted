@@ -10,7 +10,7 @@ from base64 import b64decode
 
 from twisted.trial import unittest
 from twisted.persisted import dirdbm
-from twisted.python.compat import _PY3
+from twisted.python import rebuild
 from twisted.python.filepath import FilePath
 
 
@@ -23,27 +23,20 @@ class DirDbmTests(unittest.TestCase):
         self.items = ((b'abc', b'foo'), (b'/lalal', b'\000\001'), (b'\000\012', b'baz'))
 
 
-    def testAll(self):
+    def test_all(self):
         k = b64decode("//==")
         self.dbm[k] = b"a"
         self.dbm[k] = b"a"
         self.assertEqual(self.dbm[k], b"a")
 
 
-    def testRebuildInteraction(self):
-        from twisted.persisted import dirdbm
-        from twisted.python import rebuild
-
+    def test_rebuildInteraction(self):
         s = dirdbm.Shelf('dirdbm.rebuild.test')
         s[b'key'] = b'value'
         rebuild.rebuild(dirdbm)
-        # print s['key']
-    if _PY3:
-        testRebuildInteraction.skip=(
-            "Does not work on Python 3 (https://tm.tl/8887)")
 
 
-    def testDbm(self):
+    def test_dbm(self):
         d = self.dbm
 
         # Insert keys
@@ -118,7 +111,7 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(len(d), 0, "database has items")
 
 
-    def testModificationTime(self):
+    def test_modificationTime(self):
         import time
         # The mtime value for files comes from a different place than the
         # gettimeofday() system call. On linux, gettimeofday() can be
@@ -134,7 +127,7 @@ class DirDbmTests(unittest.TestCase):
         self.assertRaises(KeyError, self.dbm.getModificationTime, b"nokey")
 
 
-    def testRecovery(self):
+    def test_recovery(self):
         """
         DirDBM: test recovery from directory after a faked crash
         """
