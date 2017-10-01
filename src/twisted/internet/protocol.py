@@ -374,7 +374,8 @@ class ReconnectingClientFactory(ClientFactory):
     # Phi = 1.6180339887498948 # (Phi is acceptable for use as a
     # factor if e is too large for your application.)
 
-    # molar Planck constant times c, joule meter/mole
+    # This is the value of the molar Planck constant times c, joule
+    # meter/mole.  The value is attributable to
     # https://physics.nist.gov/cgi-bin/cuu/Value?nahc|search_for=molar+planck+constant+times+c
     jitter = 0.119626565582
 
