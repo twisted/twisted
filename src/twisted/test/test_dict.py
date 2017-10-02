@@ -30,7 +30,7 @@ class DictDeprecationTests(SynchronousTestCase):
     """
     def test_dictDeprecation(self):
         """
-        L{twisted.protocols.dict} is deprecated since Twisted NEXT.
+        L{twisted.protocols.dict} is deprecated since Twisted 17.9.0.
         """
         from twisted.protocols import dict
         dict
@@ -38,6 +38,6 @@ class DictDeprecationTests(SynchronousTestCase):
         warningsShown = self.flushWarnings([self.test_dictDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
-            ("twisted.protocols.dict was deprecated in Twisted NEXT:"
+            ("twisted.protocols.dict was deprecated in Twisted 17.9.0:"
              " There is no replacement for this module."),
             warningsShown[0]['message'])

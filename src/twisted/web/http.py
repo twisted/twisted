@@ -1908,7 +1908,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         C{_optimisticEagerReadSize} is the number of bytes we will accept from
         the client and buffer before pausing the transport.
 
-        This behavior has been in place since Twisted NEXT .
+        This behavior has been in place since Twisted 17.9.0 .
 
     @type _optimisticEagerReadSize: L{int}
     """
