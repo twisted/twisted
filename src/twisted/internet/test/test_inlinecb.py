@@ -147,6 +147,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         f = self.failureResultOf(d)
         tb = f.getTraceback()
         self.assertIn("in erroring", tb)
+        self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
 
@@ -157,7 +158,16 @@ class ForwardTraceBackTests(SynchronousTestCase):
         A wider test with a 4 chained inline callbacks.
 
         Application stack-trace should be reported, and implementation details
-        like "throwExceptionIntoGenerator" symbols are omitted from the stack
+        like "throwExceptionIntoGenerator" symbols are omitted from the stack.
+
+        Note that the previous test is testing the simple case, and this one is
+        testing the deep recursion case.
+
+        That case needs specific code in failure.py to accomodate to stack
+        breakage introduced by throwExceptionIntoGenerator.
+
+        Hence we keep the two tests in order to sort out which code we
+        might have regression in.
         """
 
         @inlineCallbacks

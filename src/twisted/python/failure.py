@@ -238,12 +238,22 @@ class Failure(BaseException):
             self.type = exc_type
             self.value = exc_value
         if isinstance(self.value, Failure):
+            # copy all infos from that failure (including self.frames).
             self.__dict__ = self.value.__dict__
+
+            # If we are re-throwing a Failure, we merge the stack-trace stored
+            # in the failure with the current exception's stack.
+            # This integrated with throwExceptionIntoGenerator and allows
+            # to provide full stack trace, even if we go through several layers
+            # of inlineCallbacks.
             _, _, tb = sys.exc_info()
             frames = []
             while tb is not None:
                 f = tb.tb_frame
                 if f.f_code is self.throwExceptionIntoGenerator.__code__:
+                    # we just drop everything above throwExceptionIntoGenerator
+                    # as this is just implementation details, and only add
+                    # noise to those stack traces.
                     frames = []
                 else:
                     frames.append((
@@ -252,6 +262,7 @@ class Failure(BaseException):
                         tb.tb_lineno, (), ()
                         ))
                 tb = tb.tb_next
+            # merging current stack with stack stored in the Failure.
             frames.extend(self.frames)
             self.frames = frames
             return
