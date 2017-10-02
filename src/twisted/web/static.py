@@ -22,7 +22,8 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import networkString, intToBytes, nativeString, _PY3
+from twisted.python.compat import (_PY3, StringType, intToBytes, nativeString,
+    networkString)
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -298,7 +299,7 @@ class File(resource.Resource, filepath.FilePath):
                 return self.childNotFound
 
         extension = fpath.splitext()[1]
-        if not isinstance(extension, str):
+        if not isinstance(extension, StringType):
             extension = extension.decode("utf-8")
         if platformType == "win32":
             # don't want .RPY to be different than .rpy, since that would allow
