@@ -29,7 +29,7 @@ class _Process(object):
     @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
     def toTuple(self):
         """
-        Return tuple representation of process for historical reasons.
+        @return tuple representation of process
         """
         return (self.args, self.uid, self.gid, self.env)
 

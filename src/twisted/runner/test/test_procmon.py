@@ -575,6 +575,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         self.reactor = DummyProcessReactor()
         self.pm = ProcessMonitor(reactor=self.reactor)
 
+
     def test_toTuple(self):
         """
         _Process.toTuple is deprecated
@@ -589,7 +590,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
             if 'toTuple' in warning['message']:
                 foundToTuple = True
         self.assertTrue(foundToTuple,
-                        "no toTuple deprecation found:{}".format(repr(warnings)))
+                        "no tuple deprecation found:{}".format(repr(warnings)))
 
 
     def test_processes(self):
