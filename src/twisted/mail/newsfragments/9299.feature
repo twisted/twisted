@@ -1,0 +1,1 @@
+twisted.mail improved bytes vs str handling for python3
