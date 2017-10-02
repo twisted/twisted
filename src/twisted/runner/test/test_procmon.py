@@ -7,7 +7,7 @@ Tests for L{twisted.runner.procmon}.
 import pickle
 
 from twisted.trial import unittest
-from twisted.runner.procmon import LoggingProtocol, ProcessMonitor, Process
+from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
 from twisted.internet.error import (ProcessDone, ProcessTerminated,
                                     ProcessExitedAlready)
 from twisted.internet.task import Clock
@@ -583,16 +583,20 @@ class DeprecationTests(unittest.SynchronousTestCase):
         myprocesses = self.pm.processes
         self.assertEquals(len(myprocesses), 1)
         warnings = self.flushWarnings()
-        raise ValueError(warnings)
+        foundToTuple = False
+        for warning in warnings:
+            self.assertIs(warning['category'], DeprecationWarning)
+            if 'toTuple' in warning['message']:
+                foundToTuple = True
+        self.assertTrue(foundToTuple,
+                        "no toTuple deprecation found:{}".format(repr(warnings)))
 
 
     def test_processes(self):
         """
         Accessing L{ProcessMonitor.processes} results in deprecation warning
         """
-        reactor = DummyProcessReactor()
-        pm = ProcessMonitor(reactor=reactor)
-        myProcesses = pm.processes
+        myProcesses = self.pm.processes
         self.assertEquals(myProcesses, {})
         warnings = self.flushWarnings()
         first = warnings.pop(0)
@@ -604,7 +608,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         Pickling an L{ProcessMonitor} results in deprecation warnings
         """
-        pickle.dumps(pm)
+        pickle.dumps(self.pm)
         warnings = self.flushWarnings()
         for warning in warnings:
             self.assertIs(warning['category'], DeprecationWarning)
