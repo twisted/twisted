@@ -568,13 +568,22 @@ class DeprecationTests(unittest.SynchronousTestCase):
     Tests that check functionality that should be deprecated is deprecated.
     """
 
+    def setUp(self):
+        """
+        Create reactor and process monitor
+        """
+        self.reactor = DummyProcessReactor()
+        self.pm = ProcessMonitor(reactor=self.reactor)
+
     def test_toTuple(self):
-        process = Process([])
-        process.toTuple()
+        """
+        _Process.toTuple is deprecated
+        """
+        self.pm.addProcess("foo", ["foo"])
+        myprocesses = self.pm.processes
+        self.assertEquals(len(myprocesses), 1)
         warnings = self.flushWarnings()
-        first = warnings.pop(0)
-        self.assertIs(first['category'], DeprecationWarning)
-        self.assertEquals(warnings, [])
+        raise ValueError(warnings)
 
 
     def test_processes(self):
@@ -595,8 +604,6 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         Pickling an L{ProcessMonitor} results in deprecation warnings
         """
-        reactor = DummyProcessReactor()
-        pm = ProcessMonitor(reactor=reactor)
         pickle.dumps(pm)
         warnings = self.flushWarnings()
         for warning in warnings:

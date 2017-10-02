@@ -14,7 +14,11 @@ from twisted.application import service
 from twisted.protocols import basic
 
 @attr.s(frozen=True)
-class Process(object):
+class _Process(object):
+
+    """
+    The details of a process to be restarted.
+    """
 
     args = attr.ib()
     uid = attr.ib(default=None)
@@ -24,6 +28,9 @@ class Process(object):
 
     @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
     def toTuple(self):
+        """
+        Return tuple representation of process for historical reasons.
+        """
         return (self.args, self.uid, self.gid, self.env)
 
 class DummyTransport:
