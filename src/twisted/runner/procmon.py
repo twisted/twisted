@@ -29,7 +29,7 @@ class _Process(object):
     @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
     def toTuple(self):
         """
-        @return tuple representation of process
+        @return: tuple representation of process
         """
         return (self.args, self.uid, self.gid, self.env)
 
@@ -136,6 +136,9 @@ class ProcessMonitor(service.Service):
 
     @deprecate.deprecatedProperty(incremental.Version("Twisted", 17, 10, 0))
     def processes(self):
+        """
+        @return: List of monitored processes as tuples
+        """
         return {name: process.toTuple()
                 for name, process in self._processes.items()}
 
