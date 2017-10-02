@@ -57,7 +57,7 @@ put this code in it:
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return b"<html><body>" + time.ctime().encode("utf-8") + b"</body></html>"
+            return b"<html><body>" + time.ctime().encode("ascii") + b"</body></html>"
 
     resource = ClockPage()
 

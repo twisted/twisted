@@ -78,9 +78,9 @@ method will allow it to accept ``POST`` requests:
 
     ...
         def render_POST(self, request):
-            args = request.args[b"the-field"][0].decode("utf-8")
+            args = request.args[b"the-field"][0].decode("ascii")
             escapedArgs = cgi.escape(args)
-            return b'<html><body>You submitted: ' + escapedArgs.encode("utf-8") + b'</body></html>'
+            return b'<html><body>You submitted: ' + escapedArgs.encode("ascii") + b'</body></html>'
 
 
 
@@ -148,9 +148,9 @@ Here's the complete source for the example:
             return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
 
         def render_POST(self, request):
-            args = request.args[b"the-field"][0].decode("utf-8")
+            args = request.args[b"the-field"][0].decode("ascii")
             escapedArgs = cgi.escape(args)
-            return b'<html><body>You submitted: ' + escapedArgs.encode("utf-8") + b'</body></html>'
+            return b'<html><body>You submitted: ' + escapedArgs.encode("ascii") + b'</body></html>'
 
     root = Resource()
     root.putChild(b"form", FormPage())

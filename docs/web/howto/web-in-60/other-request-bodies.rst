@@ -35,10 +35,10 @@ directly:
 
     ...
         def render_POST(self, request):
-            content = request.content.read().decode("utf-8")
+            content = request.content.read().decode("ascii")
             escapedContent = cgi.escape(content)
             return (b'<html><body>You submitted: ' +
-                    escapedContent.encode("utf-8") +
+                    escapedContent.encode("ascii") +
                     b'</body></html>')
 
 
@@ -74,10 +74,10 @@ only ``render_POST`` changed:
             return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
 
         def render_POST(self, request):
-            content = request.content.read().decode("utf-8")
+            content = request.content.read().decode("ascii")
             escapedContent = cgi.escape(content)
             return (b'<html><body>You submitted: ' +
-                    escapedContent.encode("utf-8") +
+                    escapedContent.encode("ascii") +
                     b'</body></html>')
 
     root = Resource()
