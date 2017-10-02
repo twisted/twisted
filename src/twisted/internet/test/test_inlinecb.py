@@ -128,7 +128,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
 
     def test_forwardTracebacks(self):
         """
-        Chained inlineCallbacks are forwarding the traceback informations
+        Chained inlineCallbacks are forwarding the traceback information
         from generator to generator.
 
         A first simple test with a couple of inline callbacks.
