@@ -8,12 +8,13 @@ Static resources for L{twisted.web}.
 
 from __future__ import division, absolute_import
 
-import os
-import warnings
-import itertools
-import time
 import errno
+import itertools
 import mimetypes
+import os
+import sys
+import time
+import warnings
 
 from zope.interface import implementer
 
@@ -300,7 +301,7 @@ class File(resource.Resource, filepath.FilePath):
 
         extension = fpath.splitext()[1]
         if not isinstance(extension, StringType):
-            extension = extension.decode("utf-8")
+            extension = extension.decode(sys.getfilesystemencoding())
         if platformType == "win32":
             # don't want .RPY to be different than .rpy, since that would allow
             # source disclosure.
