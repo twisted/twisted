@@ -16,6 +16,7 @@ import threading
 from twisted._threads import pool as _pool
 from twisted.python import log, context
 from twisted.python.failure import Failure
+from twisted.python.threadable import getThreadID
 from twisted.python._oldstyle import _oldStyle
 
 
@@ -69,7 +70,9 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads = []
+        self.threads = [ ]
+        self.running_lock = threading.Lock()
+        self.running = { }
 
         def trackingThreadFactory(*a, **kw):
             thread = self.threadFactory(*a, name=self._generateName(), **kw)
@@ -246,19 +249,27 @@ class ThreadPool:
         ctx = context.theContextTracker.currentContext().contexts[-1]
 
         def inContext():
-            try:
-                result = inContext.theWork()
-                ok = True
-            except:
-                result = Failure()
-                ok = False
+            with self.running_lock:
+                self.running[getThreadID()] = func
 
-            inContext.theWork = None
-            if inContext.onResult is not None:
-                inContext.onResult(ok, result)
-                inContext.onResult = None
-            elif not ok:
-                log.err(result)
+            try:
+                try:
+                    result = inContext.theWork()
+                    ok = True
+                except:
+                    result = Failure()
+                    ok = False
+
+                inContext.theWork = None
+                if inContext.onResult is not None:
+                    inContext.onResult(ok, result)
+                    inContext.onResult = None
+                elif not ok:
+                    log.err(result)
+            finally:
+                with self.running_lock:
+                    del self.running[getThreadID()]
+
 
         # Avoid closing over func, ctx, args, kw so that we can carefully
         # manage their lifecycle.  See
@@ -268,6 +279,9 @@ class ThreadPool:
 
         self._team.do(inContext)
 
+    def get_running_funcs(self):
+        with self.running_lock:
+            return list(self.running.values())
 
     def stop(self):
         """

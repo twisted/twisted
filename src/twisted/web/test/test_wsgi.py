@@ -11,6 +11,7 @@ from sys import exc_info
 import tempfile
 import traceback
 import warnings
+import time
 
 from zope.interface.verify import verifyObject
 
@@ -19,7 +20,7 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.defer import Deferred, gatherResults, inlineCallbacks
 from twisted.internet import reactor
 from twisted.internet.error import ConnectionLost
 from twisted.trial.unittest import TestCase, SkipTest
@@ -29,6 +30,16 @@ from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 
+class deferred_sleep(Deferred):
+    def __init__(self, t):
+        from twisted.internet import reactor
+        self.reactor = reactor
+
+        Deferred.__init__(self)
+        self.c = self.reactor.callLater(t, Deferred.callback, self, None)
+
+    def cancel(self):
+        self.c.cancel()
 
 
 class SynchronousThreadPool:
@@ -68,7 +79,6 @@ class SynchronousReactorThreads:
         thread.
         """
         f(*a, **kw)
-
 
 
 class WSGIResourceTests(TestCase):
@@ -1847,6 +1857,88 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         return d
 
+    @inlineCallbacks
+    def test_pendingRequestOperationsRespectConnectionLoss(self):
+        delay = 0.5
+        import threading
+
+        class DelayedReactor:
+            lock = threading.Lock()
+            n_pending = 0
+
+            def callFromThread(self, f, *args, **kwargs):
+                with self.lock:
+                    self.n_pending += 1
+
+                try:
+                    time.sleep(delay)
+                    return reactor.callFromThread(f, *args, **kwargs)
+                finally:
+                    with self.lock:
+                        self.n_pending -= 1
+
+            def NumPending(self):
+                with self.lock:
+                    return self.n_pending
+
+        r = DelayedReactor()
+
+        @inlineCallbacks
+        def wait_for_empty():
+            while True:
+                n = r.NumPending()
+                running = self.threadpool.get_running_funcs()
+
+                if n == 0 and len(running) == 0:
+                    return
+
+                yield deferred_sleep(0.1)
+
+        self.enableThreads()
+        self.reactor = r
+
+        try:
+            def loseConnection(request):
+                request.connectionLost(Failure(ConnectionLost("No more connection")))
+
+            class SillyRequest(Request):
+                def __init__(self, *args, **kwargs):
+                    Request.__init__(self, *args, **kwargs)
+                    self._am_i_disconnected = False
+
+                def write(self, bytes):
+                    if bytes == b'disconnect' and not self._am_i_disconnected:
+                        self._am_i_disconnected = True
+                        # disconnect without delay
+                        r.callFromThread(loseConnection, self)
+
+                    return Request.write(self, bytes)
+
+            def applicationFactory():
+                def application(environ, startResponse):
+                    startResponse('200 OK', [])
+
+                    for i in xrange(1000):
+                        yield b'1-some bytes'
+                        yield b'disconnect'
+                        yield b'3-here'
+                        time.sleep(delay)
+
+                    yield b'you wont see this'
+
+                return application
+
+            request = self.lowLevelRender(
+                SillyRequest, applicationFactory, DummyChannel,
+                'GET', '1.1', [], [''])
+
+            try:
+                yield request.notifyFinish()
+                self.fail('we should not be here')
+            except ConnectionLost:
+                pass
+        finally:
+            yield wait_for_empty()
 
     def test_writeCalledFromThread(self):
         """

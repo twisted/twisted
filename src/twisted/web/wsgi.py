@@ -446,9 +446,10 @@ class _WSGIResponse:
         # Thing at some point in the future.
 
         def wsgiWrite(started):
-            if not started:
-                self._sendResponseHeaders()
-            self.request.write(data)
+            if not self._requestFinished:
+                if not started:
+                    self._sendResponseHeaders()
+                self.request.write(data)
 
         try:
             return blockingCallFromThread(
@@ -496,6 +497,7 @@ class _WSGIResponse:
         try:
             appIterator = self.application(self.environ, self.startResponse)
             for elem in appIterator:
+
                 if elem:
                     self.write(elem)
                 if self._requestFinished:
@@ -503,14 +505,16 @@ class _WSGIResponse:
             close = getattr(appIterator, 'close', None)
             if close is not None:
                 close()
-        except:
+        except Exception:
             def wsgiError(started, type, value, traceback):
                 err(Failure(value, type, traceback), "WSGI application error")
-                if started:
-                    self.request.loseConnection()
-                else:
-                    self.request.setResponseCode(INTERNAL_SERVER_ERROR)
-                    self.request.finish()
+                if not self._requestFinished:
+                    if started:
+                        self.request.loseConnection()
+                    else:
+                        self.request.setResponseCode(INTERNAL_SERVER_ERROR)
+                        self.request.finish()
+
             self.reactor.callFromThread(wsgiError, self.started, *exc_info())
         else:
             def wsgiFinish(started):
