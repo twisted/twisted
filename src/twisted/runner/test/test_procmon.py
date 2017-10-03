@@ -130,6 +130,16 @@ class ProcmonTests(unittest.TestCase):
         self.pm.maxRestartDelay = 10
         self.pm.threshold = 10
 
+    def test_reprLooksGood(self):
+        """
+        Repr includes all details
+        """
+        self.pm.addProcess("foo", ["arg1", "arg2"],
+                           uid=1, gid=2, env={})
+        representation = repr(self.pm)
+        self.assertIn('foo', representation)
+        self.assertIn('1', representation)
+        self.assertIn('2', representation)
 
     def test_getStateIncludesProcesses(self):
         """
