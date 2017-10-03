@@ -525,6 +525,21 @@ class ProcmonTests(unittest.TestCase):
         # The processes shouldn't be restarted
         self.assertEqual({}, self.pm.protocols)
 
+    def test_restartAllRestartsOneProcess(self):
+        """
+        L{ProcessMonitor.restartAll} succeeds when there are no processes
+        """
+        self.pm.addProcess("foo", ["foo"])
+        self.pm.startService()
+        self.reactor.advance(1)
+        self.pm.restartAll()
+        # Just enough time for the process to die,
+        # not enough time to start a new one.
+        self.reactor.advance(1)
+        processes = list(self.reactor.spawnedProcesses)
+        myProcess = processes.pop()
+        self.assertEquals(processes, [])
+        self.assertIsNone(myProcess.pid)
 
     def test_stopServiceCancelRestarts(self):
         """
