@@ -14,6 +14,7 @@ See L{Failure}.
 from __future__ import division, absolute_import, print_function
 
 # System Imports
+import copy
 import sys
 import linecache
 import inspect
@@ -239,7 +240,7 @@ class Failure(BaseException):
             self.value = exc_value
         if isinstance(self.value, Failure):
             # Copy all infos from that failure (including self.frames).
-            self.__dict__ = self.value.__dict__
+            self.__dict__ = copy.copy(self.value.__dict__)
 
             # If we are re-throwing a Failure, we merge the stack-trace stored
             # in the failure with the current exception's stack.

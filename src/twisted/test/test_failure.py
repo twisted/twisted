@@ -916,6 +916,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         f.cleanFailure()
+        original_failure_str = f.getTraceback()
 
         newFailures = []
 
@@ -931,7 +932,14 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self._throwIntoGenerator(f, g)
 
         self.assertEqual(len(newFailures), 1)
-        self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
+
+        # The original failure should not be changed.
+        self.assertEqual(original_failure_str, f.getTraceback())
+
+        # The new failure should be different and contain stack info for our generator.
+        self.assertNotEqual(newFailures[0].getTraceback(), f.getTraceback())
+        self.assertIn("generator", newFailures[0].getTraceback())
+        self.assertNotIn("generator", f.getTraceback())
 
     def test_ambiguousFailureInGenerator(self):
         """
