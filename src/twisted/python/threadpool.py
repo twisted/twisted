@@ -74,7 +74,6 @@ class ThreadPool:
         self.running_lock = threading.Lock()
         self.running = { }
 
-
         def trackingThreadFactory(*a, **kw):
             thread = self.threadFactory(*a, name=self._generateName(), **kw)
             self.threads.append(thread)
