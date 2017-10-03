@@ -130,6 +130,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.maxRestartDelay = 10
         self.pm.threshold = 10
 
+
     def test_reprLooksGood(self):
         """
         Repr includes all details
@@ -524,6 +525,7 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.killTime + 1)
         # The processes shouldn't be restarted
         self.assertEqual({}, self.pm.protocols)
+
 
     def test_restartAllRestartsOneProcess(self):
         """
