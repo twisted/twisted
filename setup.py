@@ -7,7 +7,6 @@
 Setuptools installer for Twisted.
 """
 
-import os
 import sys
 import setuptools
 
