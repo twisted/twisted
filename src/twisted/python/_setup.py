@@ -241,6 +241,9 @@ def getSetupArgs(extensions=_EXTENSIONS):
         },
         cmdclass=command_classes,
         include_package_data=True,
+        exclude_package_data={
+            "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
+        },
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
         package_dir={"": "src"},
