@@ -82,6 +82,7 @@ class SynchronousReactorThreads:
         f(*a, **kw)
 
 
+
 class WSGIResourceTests(TestCase):
     def setUp(self):
         """

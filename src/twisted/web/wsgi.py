@@ -497,7 +497,6 @@ class _WSGIResponse:
         try:
             appIterator = self.application(self.environ, self.startResponse)
             for elem in appIterator:
-
                 if elem:
                     self.write(elem)
                 if self._requestFinished:
