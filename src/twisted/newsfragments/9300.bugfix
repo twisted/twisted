@@ -1,0 +1,1 @@
+There is no longer a race condition in _WSGIResponse where pending writes would fail on already closed transports.
