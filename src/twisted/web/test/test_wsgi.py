@@ -31,17 +31,6 @@ from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 
-class deferred_sleep(Deferred):
-    def __init__(self, t):
-        from twisted.internet import reactor
-        self.reactor = reactor
-
-        Deferred.__init__(self)
-        self.c = self.reactor.callLater(t, Deferred.callback, self, None)
-
-    def cancel(self):
-        self.c.cancel()
-
 
 class SynchronousThreadPool:
     """
