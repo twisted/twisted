@@ -142,6 +142,17 @@ class ProcmonTests(unittest.TestCase):
         self.assertIn('1', representation)
         self.assertIn('2', representation)
 
+
+    def test_simpleReprLooksGood(self):
+        """
+        Repr does not include unneeded details
+        """
+        self.pm.addProcess("foo", ["arg1", "arg2"], env={})
+        representation = repr(self.pm)
+        self.assertNotIn('(', representation)
+        self.assertNotIn(')', representation)
+
+
     def test_getStateIncludesProcesses(self):
         """
         The list of monitored processes must be included in the pickle state.
