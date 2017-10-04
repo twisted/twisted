@@ -21,7 +21,8 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.defer import Deferred, gatherResults, inlineCallbacks, succeed
+from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.defer import inlineCallbacks, succeed
 from twisted.internet import reactor
 from twisted.internet.error import ConnectionLost
 from twisted.trial.unittest import TestCase, SkipTest
@@ -1848,6 +1849,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         return d
 
+
     @inlineCallbacks
     def test_pendingRequestOperationsRespectConnectionLoss(self):
         delay = 0.5
@@ -1857,7 +1859,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             _count = 0
             _waiters = []
 
-            def wait_for_zero(self):
+            def waitForZero(self):
                 with self._lock:
                     if self._count == 0:
                         return succeed(None)
@@ -1874,9 +1876,9 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                     self._count -= 1
 
                     if self._count == 0:
-                        self._signal_waiters()
+                        self._signalWaiters()
 
-            def _signal_waiters(self):
+            def _signalWaiters(self):
                 w = self._waiters[:]
                 self._waiters[:] = []
 
@@ -1896,14 +1898,14 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                     self._refcount.dec()
 
             def drain(self):
-                return self._refcount.wait_for_zero()
+                return self._refcount.waitForZero()
 
         class DrainableThreadpool:
             _pool = ThreadPool()
             _refcount = RefCount()
 
             def drain(self):
-                return self._refcount.wait_for_zero()
+                return self._refcount.waitForZero()
 
             def callInThread(self, *args, **kwargs):
                 self._refcount.inc()
@@ -1920,16 +1922,18 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         self.addCleanup(self.threadpool._pool.stop)
 
         def loseConnection(request):
-            request.connectionLost(Failure(ConnectionLost("No more connection")))
+            f = Failure(ConnectionLost("No more connection"))
+            request.connectionLost(f)
 
-        class SillyRequest(Request):
+        class DisconnectingRequest(Request):
             def __init__(self, *args, **kwargs):
                 Request.__init__(self, *args, **kwargs)
-                self._am_i_disconnected = False
+                # Request._disconnected is already taken
+                self._silly_disconnected = False
 
             def write(self, bytes):
-                if bytes == b'disconnect' and not self._am_i_disconnected:
-                    self._am_i_disconnected = True
+                if bytes == b'disconnect' and not self._silly_disconnected:
+                    self._silly_disconnected = True
                     reactor.callFromThread(loseConnection, self)
 
                 return Request.write(self, bytes)
@@ -1949,7 +1953,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return application
 
         request = self.lowLevelRender(
-            SillyRequest, applicationFactory, DummyChannel,
+            DisconnectingRequest, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
         try:
