@@ -69,7 +69,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads = [ ]
+        self.threads = []
 
         def trackingThreadFactory(*a, **kw):
             thread = self.threadFactory(*a, name=self._generateName(), **kw)
@@ -260,7 +260,6 @@ class ThreadPool:
             elif not ok:
                 log.err(result)
 
-
         # Avoid closing over func, ctx, args, kw so that we can carefully
         # manage their lifecycle.  See
         # test_threadCreationArgumentsCallInThreadWithCallback.
@@ -268,6 +267,7 @@ class ThreadPool:
         inContext.onResult = onResult
 
         self._team.do(inContext)
+
 
     def stop(self):
         """
