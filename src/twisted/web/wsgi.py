@@ -504,7 +504,7 @@ class _WSGIResponse:
             close = getattr(appIterator, 'close', None)
             if close is not None:
                 close()
-        except Exception:
+        except:
             def wsgiError(started, type, value, traceback):
                 err(Failure(value, type, traceback), "WSGI application error")
                 if not self._requestFinished:
