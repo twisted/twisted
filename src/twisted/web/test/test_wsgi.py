@@ -1929,11 +1929,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def __init__(self, *args, **kwargs):
                 Request.__init__(self, *args, **kwargs)
                 # Request._disconnected is already taken
-                self._silly_disconnected = False
+                self._gotdisconnected = False
 
             def write(self, bytes):
-                if bytes == b'disconnect' and not self._silly_disconnected:
-                    self._silly_disconnected = True
+                if bytes == b'disconnect' and not self._gotdisconnected:
+                    self._gotdisconnected = True
                     reactor.callFromThread(loseConnection, self)
 
                 return Request.write(self, bytes)
