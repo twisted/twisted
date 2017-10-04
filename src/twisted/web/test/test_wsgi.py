@@ -12,6 +12,7 @@ import tempfile
 import traceback
 import warnings
 import time
+import threading
 
 from zope.interface.verify import verifyObject
 
@@ -20,7 +21,7 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.defer import Deferred, gatherResults, inlineCallbacks
+from twisted.internet.defer import Deferred, gatherResults, inlineCallbacks, succeed
 from twisted.internet import reactor
 from twisted.internet.error import ConnectionLost
 from twisted.trial.unittest import TestCase, SkipTest
@@ -1860,85 +1861,115 @@ class ApplicationTests(WSGITestsMixin, TestCase):
     @inlineCallbacks
     def test_pendingRequestOperationsRespectConnectionLoss(self):
         delay = 0.5
-        import threading
 
-        class DelayedReactor:
-            lock = threading.Lock()
-            n_pending = 0
+        class RefCount:
+            _lock = threading.Lock()
+            _count = 0
+            _waiters = []
+
+            def wait_for_zero(self):
+                with self._lock:
+                    if self._count == 0:
+                        return succeed(None)
+
+                    self._waiters.append(Deferred())
+                    return self._waiters[-1]
+
+            def inc(self):
+                with self._lock:
+                    self._count += 1
+
+            def dec(self):
+                with self._lock:
+                    self._count -= 1
+
+                    if self._count == 0:
+                        self._signal_waiters()
+
+            def _signal_waiters(self):
+                w = self._waiters[:]
+                self._waiters[:] = []
+
+                for waiter in w:
+                    reactor.callFromThread(waiter.callback, None)
+
+        class DrainableDelayedReactor:
+            _refcount = RefCount()
 
             def callFromThread(self, f, *args, **kwargs):
-                with self.lock:
-                    self.n_pending += 1
+                self._refcount.inc()
 
                 try:
                     time.sleep(delay)
                     return reactor.callFromThread(f, *args, **kwargs)
                 finally:
-                    with self.lock:
-                        self.n_pending -= 1
+                    self._refcount.dec()
 
-            def NumPending(self):
-                with self.lock:
-                    return self.n_pending
+            def drain(self):
+                return self._refcount.wait_for_zero()
 
-        r = DelayedReactor()
+        class DrainableThreadpool:
+            _pool = ThreadPool()
+            _refcount = RefCount()
 
-        @inlineCallbacks
-        def wait_for_empty():
-            while True:
-                n = r.NumPending()
-                running = self.threadpool.get_running_funcs()
+            def drain(self):
+                return self._refcount.wait_for_zero()
 
-                if n == 0 and len(running) == 0:
-                    return
+            def callInThread(self, *args, **kwargs):
+                self._refcount.inc()
 
-                yield deferred_sleep(0.1)
+                try:
+                    return self._pool.callInThread(*args, **kwargs)
+                finally:
+                    self._refcount.dec()
 
-        self.enableThreads()
+        r = DrainableDelayedReactor()
         self.reactor = r
+        self.threadpool = DrainableThreadpool()
+        self.threadpool._pool.start()
+        self.addCleanup(self.threadpool._pool.stop)
+
+        def loseConnection(request):
+            request.connectionLost(Failure(ConnectionLost("No more connection")))
+
+        class SillyRequest(Request):
+            def __init__(self, *args, **kwargs):
+                Request.__init__(self, *args, **kwargs)
+                self._am_i_disconnected = False
+
+            def write(self, bytes):
+                if bytes == b'disconnect' and not self._am_i_disconnected:
+                    self._am_i_disconnected = True
+                    reactor.callFromThread(loseConnection, self)
+
+                return Request.write(self, bytes)
+
+        def applicationFactory():
+            def application(environ, startResponse):
+                startResponse('200 OK', [])
+
+                for i in xrange(1000):
+                    yield b'1-some bytes'
+                    yield b'disconnect'
+                    yield b'3-here'
+                    time.sleep(delay)
+
+                yield b'you wont see this'
+
+            return application
+
+        request = self.lowLevelRender(
+            SillyRequest, applicationFactory, DummyChannel,
+            'GET', '1.1', [], [''])
 
         try:
-            def loseConnection(request):
-                request.connectionLost(Failure(ConnectionLost("No more connection")))
+            yield request.notifyFinish()
+            self.fail('we should not be here')
+        except ConnectionLost:
+            pass
 
-            class SillyRequest(Request):
-                def __init__(self, *args, **kwargs):
-                    Request.__init__(self, *args, **kwargs)
-                    self._am_i_disconnected = False
-
-                def write(self, bytes):
-                    if bytes == b'disconnect' and not self._am_i_disconnected:
-                        self._am_i_disconnected = True
-                        # disconnect without delay
-                        r.callFromThread(loseConnection, self)
-
-                    return Request.write(self, bytes)
-
-            def applicationFactory():
-                def application(environ, startResponse):
-                    startResponse('200 OK', [])
-
-                    for i in xrange(1000):
-                        yield b'1-some bytes'
-                        yield b'disconnect'
-                        yield b'3-here'
-                        time.sleep(delay)
-
-                    yield b'you wont see this'
-
-                return application
-
-            request = self.lowLevelRender(
-                SillyRequest, applicationFactory, DummyChannel,
-                'GET', '1.1', [], [''])
-
-            try:
-                yield request.notifyFinish()
-                self.fail('we should not be here')
-            except ConnectionLost:
-                pass
-        finally:
-            yield wait_for_empty()
+        yield self.reactor.drain()
+        yield self.threadpool.drain()
 
     def test_writeCalledFromThread(self):
         """
