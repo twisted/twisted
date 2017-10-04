@@ -1949,7 +1949,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def application(environ, startResponse):
                 startResponse('200 OK', [])
 
-                for i in xrange(1000):
+                for i in range(1000):
                     yield b'1-some bytes'
                     yield b'disconnect'
                     yield b'3-here'
