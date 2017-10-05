@@ -90,30 +90,41 @@ class NoCurrentExceptionError(Exception):
 
 
 
-class _Traceback(object):
+def _Traceback(frames):
+    """
+    Construct a fake traceback object using a list of frames. Note that
+    although frames generally include locals and globals, this information
+    is not kept by this method, since locals and globals are not used in
+    standard tracebacks.
+
+    @param frames: [(methodname, filename, lineno, locals, globals), ...]
+    """
+    assert len(frames) > 0, "Must pass some frames"
+    # we deliberately avoid using recursion here, as the frames list may be
+    # long.
+    tb = None
+    for frame in reversed(frames):
+        tb = _TracebackFrame(frame, tb)
+    return tb
+
+
+
+class _TracebackFrame(object):
     """
     Fake traceback object which can be passed to functions in the standard
     library L{traceback} module.
     """
 
-    def __init__(self, frames):
+    def __init__(self, frame, tb_next):
         """
-        Construct a fake traceback object using a list of frames. Note that
-        although frames generally include locals and globals, this information
-        is not kept by this object, since locals and globals are not used in
-        standard tracebacks.
-
-        @param frames: [(methodname, filename, lineno, locals, globals), ...]
+        @param frame: (methodname, filename, lineno, locals, globals)
+        @param tb_next: next inner _TracebackFrame object, or None if this
+           is the innermost frame.
         """
-        assert len(frames) > 0, "Must pass some frames"
-        head, frames = frames[0], frames[1:]
-        name, filename, lineno, localz, globalz = head
+        name, filename, lineno, localz, globalz = frame
         self.tb_frame = _Frame(name, filename)
         self.tb_lineno = lineno
-        if len(frames) == 0:
-            self.tb_next = None
-        else:
-            self.tb_next = _Traceback(frames)
+        self.tb_next = tb_next
 
 
 
