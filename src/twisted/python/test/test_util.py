@@ -847,29 +847,33 @@ class InitGroupsTests(unittest.TestCase):
     """
     Tests for L{util.initgroups}.
     """
-    def setUp(self):
-        self.addCleanup(setattr, util, "_initgroups", util._initgroups)
-        self.addCleanup(setattr, util, "setgroups", util.setgroups)
-
-
     def test_initgroupsInStdlib(self):
         """
         Calling L{util.initgroups} will call the underlying stdlib
         implmentation.
         """
         calls = []
-        util._initgroups = lambda x, y: calls.append((x, y))
+
+        def mockInitgroups(x, y):
+            calls.append((x, y))
+
+        self.patch(util, "_initgroups", mockInitgroups)
         setgroupsCalls = []
-        util.setgroups = setgroupsCalls.append
+        self.patch(util, "setgroups", setgroupsCalls.append)
 
         util.initgroups(os.getuid(), 4)
-        self.assertEqual(calls, [(pwd.getpwuid(os.getuid())[0], 4)])
+        self.assertEqual(calls, [(pwd.getpwuid(os.getuid()).pw_name, 4)])
         self.assertFalse(setgroupsCalls)
 
 
+    def test_initgroupsNoneGid(self):
+        """
+        Calling L{util.initgroups} with None for gid gives an error.
+        """
+        self.assertRaises(TypeError, util.initgroups, os.getuid(), None)
+
     if util._initgroups is None:
-        test_initgroupsInStdlib.skip = ("stdlib support for initgroups is not "
-                                        "available")
+        skip = "stdlib support for initgroups is not available"
 
 
 

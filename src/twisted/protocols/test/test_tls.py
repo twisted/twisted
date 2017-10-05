@@ -520,7 +520,7 @@ class TLSMemoryBIOTests(TestCase):
             self.assertEqual(
                 cert.digest('sha1'),
                 # openssl x509 -noout -sha1 -fingerprint -in server.pem
-                b'45:DD:FD:E2:BD:BF:8B:D0:00:B7:D2:7A:BB:20:F5:34:05:4B:15:80')
+                b'23:4B:72:99:2E:5D:5E:2B:02:C3:BC:1B:7C:50:67:05:4F:60:FF:C9')
         handshakeDeferred.addCallback(cbHandshook)
         return handshakeDeferred
 
@@ -1180,6 +1180,18 @@ class TLSProducerTests(TestCase):
         Unregistering a streaming producer removes it, reverting to initial state.
         """
         clientProtocol, tlsProtocol, producer = self.setupStreamingProducer()
+        clientProtocol.transport.unregisterProducer()
+        self.assertIsNone(tlsProtocol._producer)
+        self.assertIsNone(tlsProtocol.transport.producer)
+
+
+    def test_streamingProducerUnregisterTwice(self):
+        """
+        Unregistering a streaming producer when no producer is registered is
+        safe.
+        """
+        clientProtocol, tlsProtocol, producer = self.setupStreamingProducer()
+        clientProtocol.transport.unregisterProducer()
         clientProtocol.transport.unregisterProducer()
         self.assertIsNone(tlsProtocol._producer)
         self.assertIsNone(tlsProtocol.transport.producer)

@@ -1345,25 +1345,23 @@ class SynchronousTestCase(_Assertions):
 
             todo = self.getTodo()
             method = getattr(self, self._testMethodName)
-            if self._run(suppress, todo, method, result):
-                return
+            failed = self._run(suppress, todo, method, result)
         finally:
             self._runCleanups(result)
 
-        if todo:
+        if todo and not failed:
             result.addUnexpectedSuccess(self, todo)
 
         if self._run(suppress, None, self.tearDown, result):
-            return
+            failed = True
 
-        passed = True
         for error in self._observer.getErrors():
             result.addError(self, error)
-            passed = False
+            failed = True
         self._observer.flushErrors()
         self._removeObserver()
 
-        if passed and not todo:
+        if not (failed or todo):
             result.addSuccess(self)
 
 

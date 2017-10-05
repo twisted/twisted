@@ -7,7 +7,7 @@ UNIX sockets.  This client connects to a server listening on a UNIX socket and
 waits for one file descriptor to arrive over the connection.  It displays the
 name of the file and the first 80 bytes it contains, then exits.
 
-To runb this example, run this program with one argument: a path giving the UNIX
+To run this example, run this program with one argument: a path giving the UNIX
 socket the server side of this example is already listening on.  For example:
 
     $ python recvfd.py /tmp/sendfd.sock
@@ -49,14 +49,14 @@ class ReceiveFDProtocol(LineOnlyReceiver):
 
     def lineReceived(self, line):
         if self.descriptor is None:
-            print("Received %r without receiving descriptor!" % (line,))
+            print("Received {} without receiving descriptor!".format(line))
         else:
             # Use the previously received descriptor, along with the newly
             # provided information about which file it is, to present some
             # information to the user.
             data = os.read(self.descriptor, 80)
-            print("Received %r from the server." % (line,))
-            print("First 80 bytes are:\n%r\n" % (data,))
+            print("Received {} from the server.".format(line))
+            print("First 80 bytes are:\n{}\n".format(data))
         os.close(self.descriptor)
         self.transport.loseConnection()
 

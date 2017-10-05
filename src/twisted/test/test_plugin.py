@@ -15,7 +15,7 @@ import functools
 from zope.interface import Interface
 
 from twisted.trial import unittest
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _PYPY
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
 
@@ -569,6 +569,10 @@ class DeveloperSetupTests(unittest.TestCase):
         mypath.setContent(pluginFileContents('two'))
         self.failIfIn('one', self.getAllPlugins())
         self.assertIn('two', self.getAllPlugins())
+
+    if _PYPY and not _PY3:
+        test_freshPyReplacesStalePyc.skip = (
+            "PyPy2 will not normally import lone .pyc files.")
 
 
     def test_newPluginsOnReadOnlyPath(self):

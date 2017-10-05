@@ -674,11 +674,10 @@ else:
         @type uid: C{int}
         @param uid: The UID for which to look up group information.
 
-        @type primaryGid: C{int} or L{None}
-        @param primaryGid: If provided, an additional GID to include when
-            setting the groups.
+        @type primaryGid: C{int}
+        @param primaryGid: The GID to include when setting the groups.
         """
-        return _initgroups(pwd.getpwuid(uid)[0], primaryGid)
+        return _initgroups(pwd.getpwuid(uid).pw_name, primaryGid)
 
 
 
@@ -717,10 +716,11 @@ def switchUID(uid, gid, euid=False):
     if uid is not None:
         if uid == getuid():
             uidText = (euid and "euid" or "uid")
-            actionText = "tried to drop privileges and set%s %s" % (uidText, uid)
-            problemText = "%s is already %s" % (uidText, getuid())
-            warnings.warn("%s but %s; should we be root? Continuing."
-                          % (actionText, problemText))
+            actionText = "tried to drop privileges and set{} {}".format(
+                uidText, uid)
+            problemText = "{} is already {}".format(uidText, getuid())
+            warnings.warn("{} but {}; should we be root? Continuing.".format(
+                          actionText, problemText))
         else:
             initgroups(uid, gid)
             setuid(uid)

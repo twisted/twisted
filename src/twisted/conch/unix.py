@@ -29,7 +29,7 @@ from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import components, log
-from twisted.python.compat import nativeString
+from twisted.python.compat import _bytesChr as chr, nativeString
 
 try:
     import utmp

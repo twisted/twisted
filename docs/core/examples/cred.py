@@ -55,8 +55,8 @@ class Protocol(basic.LineReceiver):
     logout = None
 
     def connectionMade(self):
-        self.sendLine("Login with USER <name> followed by PASS <password> or ANON")
-        self.sendLine("Check privileges with PRIVS")
+        self.sendLine(b"Login with USER <name> followed by PASS <password> or ANON")
+        self.sendLine(b"Check privileges with PRIVS")
 
     def connectionLost(self, reason):
         if self.logout:
@@ -65,14 +65,14 @@ class Protocol(basic.LineReceiver):
             self.logout = None
     
     def lineReceived(self, line):
-        f = getattr(self, 'cmd_' + line.upper().split()[0])
+        f = getattr(self, 'cmd_' + line.decode("ascii").upper().split()[0])
         if f:
             try:
                 f(*line.split()[1:])
             except TypeError:
-                self.sendLine("Wrong number of arguments.")
+                self.sendLine(b"Wrong number of arguments.")
             except:
-                self.sendLine("Server error (probably your fault)")
+                self.sendLine(b"Server error (probably your fault)")
 
     def cmd_ANON(self):
         if self.portal:
@@ -80,15 +80,15 @@ class Protocol(basic.LineReceiver):
                 ).addCallbacks(self._cbLogin, self._ebLogin
                 )
         else:
-            self.sendLine("DENIED")
+            self.sendLine(b"DENIED")
     
     def cmd_USER(self, name):
         self.user = name
-        self.sendLine("Alright.  Now PASS?")
+        self.sendLine(b"Alright.  Now PASS?")
     
     def cmd_PASS(self, password):
         if not self.user:
-            self.sendLine("USER required before PASS")
+            self.sendLine(b"USER required before PASS")
         else:
             if self.portal:
                 self.portal.login(
@@ -98,22 +98,22 @@ class Protocol(basic.LineReceiver):
                 ).addCallbacks(self._cbLogin, self._ebLogin
                 )
             else:
-                self.sendLine("DENIED")
+                self.sendLine(b"DENIED")
 
     def cmd_PRIVS(self):
-        self.sendLine("You have the following privileges: ")
-        self.sendLine(" ".join(map(str, self.avatar.getPrivileges())))
+        self.sendLine(b"You have the following privileges: ")
+        self.sendLine(b" ".join([str(priv).encode("ascii") for priv in self.avatar.getPrivileges()]))
 
     def _cbLogin(self, result):
         (interface, avatar, logout) = result
         assert interface is IProtocolUser
         self.avatar = avatar
         self.logout = logout
-        self.sendLine("Login successful.  Available commands: PRIVS")
+        self.sendLine(b"Login successful.  Available commands: PRIVS")
     
     def _ebLogin(self, failure):
         failure.trap(error.UnauthorizedLogin)
-        self.sendLine("Login denied!  Go away.")
+        self.sendLine(b"Login denied!  Go away.")
 
 class ServerFactory(protocol.ServerFactory):
     protocol = Protocol
@@ -144,8 +144,8 @@ def main():
     r = Realm()
     p = portal.Portal(r)
     c = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-    c.addUser("auser", "thepass")
-    c.addUser("SECONDUSER", "secret")
+    c.addUser(b"auser", b"thepass")
+    c.addUser(b"SECONDUSER", b"secret")
     p.registerChecker(c)
     p.registerChecker(checkers.AllowAnonymousAccess())
     
