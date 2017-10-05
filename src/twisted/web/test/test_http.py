@@ -3212,6 +3212,7 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
               b"'''\n3\nabc'''\n")])
 
 
+
 class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
     """
     Test correct RFC 7231 handling for CONNECT requests. Responses to these
