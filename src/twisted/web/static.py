@@ -23,7 +23,7 @@ from twisted.web import http
 from twisted.web.util import redirectTo
 
 from twisted.python.compat import (_PY3, intToBytes, nativeString,
-                                   networkString, unicode)
+                                   networkString)
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -290,7 +290,7 @@ class File(resource.Resource, filepath.FilePath):
             accessed.
         @rtype: An object that provides L{resource.IResource}.
         """
-        if isinstance(self.path, unicode):
+        if isinstance(path, bytes):
             try:
                 # Request calls urllib.unquote on each path segment,
                 # leaving us with raw bytes.
