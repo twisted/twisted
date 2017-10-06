@@ -21,7 +21,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.python.compat import intToBytes, networkString, _PY3
+from twisted.python.compat import intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -204,7 +204,7 @@ class StaticFileTests(TestCase):
         found response, and the failure is logged.
         """
         path = self.mktemp()
-        if not _PY3:
+        if isinstance(path, bytes):
             path = path.decode('ascii')
         base = FilePath(path)
         base.makedirs()
@@ -1801,7 +1801,7 @@ class LoadMimeTypesTests(TestCase):
         # Checking mimetypes.inited doesn't always work, because
         # something, somewhere, calls mimetypes.init. Yay global
         # mutable state :)
-        if _PY3:
+        if getattr(inspect, "signature", None):
             signature = inspect.signature(static.loadMimeTypes)
             self.assertIs(signature.parameters["init"].default,
                           mimetypes.init)
