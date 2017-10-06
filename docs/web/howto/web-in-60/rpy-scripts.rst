@@ -54,10 +54,12 @@ put this code in it:
 
     from twisted.web.resource import Resource
 
+
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return b"<html><body>" + time.ctime().encode("ascii") + b"</body></html>"
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>" + time.ctime().encode('utf-8'))
 
     resource = ClockPage()
 

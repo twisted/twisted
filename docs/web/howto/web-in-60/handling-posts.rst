@@ -3,8 +3,9 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Handling POSTs
-==============
+================
+ Handling POSTs
+================
 
 
 
@@ -60,7 +61,9 @@ respond to ``GET`` requests with a static HTML form:
 
     class FormPage(Resource):
         def render_GET(self, request):
-            return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"<form><input name='the-field' type='text'></form>")
 
 
 
@@ -78,9 +81,11 @@ method will allow it to accept ``POST`` requests:
 
     ...
         def render_POST(self, request):
-            args = request.args[b"the-field"][0].decode("ascii")
+            args = request.args[b"the-field"][0].decode("utf-8")
             escapedArgs = cgi.escape(args)
-            return b'<html><body>You submitted: ' + escapedArgs.encode("ascii") + b'</body></html>'
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"You submitted: " + escapedArgs.encode('utf-8'))
 
 
 
@@ -89,7 +94,7 @@ The main thing to note here is the use
 of ``request.args`` . This is a dictionary-like object that
 provides access to the contents of the form. The keys in this
 dictionary are the names of inputs in the form. Each value is a list
-containing strings (since there can be multiple inputs with the same
+containing bytes objects (since there can be multiple inputs with the same
 name), which is why we had to extract the first element to pass
 to ``cgi.escape`` . ``request.args`` will be
 populated from form contents whenever a ``POST`` request is
@@ -145,12 +150,16 @@ Here's the complete source for the example:
 
     class FormPage(Resource):
         def render_GET(self, request):
-            return b'<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"<form method='POST'><input name='the-field'></form>")
 
         def render_POST(self, request):
-            args = request.args[b"the-field"][0].decode("ascii")
+            args = request.args[b"the-field"][0].decode("utf-8")
             escapedArgs = cgi.escape(args)
-            return b'<html><body>You submitted: ' + escapedArgs.encode("ascii") + b'</body></html>'
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"You submitted: " + escapedArgs.encode('utf-8'))
 
     root = Resource()
     root.putChild(b"form", FormPage())
