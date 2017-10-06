@@ -50,7 +50,7 @@ class IResource(Interface):
             a request for I{http://example.com/foo/bar} will result in calls to
             this method with C{b"foo"} and C{b"bar"} as values for this
             argument.
-        @type name: C{bytes}
+        @type name: L{bytes}
 
         @param request: A representation of all of the information about the
             request that is being made for this child.
@@ -67,7 +67,7 @@ class IResource(Interface):
             For example, if resource A can be found at I{http://example.com/foo}
             then a call like C{A.putChild(b"bar", B)} will make resource B
             available at I{http://example.com/foo/bar}.
-        @type path: C{bytes}
+        @type path: L{bytes}
         """
 
 
@@ -76,7 +76,7 @@ class IResource(Interface):
         Render a request. This is called on the leaf resource for a request.
 
         @return: Either C{server.NOT_DONE_YET} to indicate an asynchronous or a
-            C{bytes} instance to write as the response to the request.  If
+            L{bytes} instance to write as the response to the request.  If
             C{NOT_DONE_YET} is returned, at some point later (for example, in a
             Deferred callback) call C{request.write(b"<html>")} to write data to
             the request, and C{request.finish()} to send the data to the
