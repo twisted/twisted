@@ -100,7 +100,7 @@ def _Traceback(frames):
     @param frames: [(methodname, filename, lineno, locals, globals), ...]
     """
     assert len(frames) > 0, "Must pass some frames"
-    # we deliberately avoid using recursion here, as the frames list may be
+    # We deliberately avoid using recursion here, as the frames list may be
     # long.
     tb = None
     for frame in reversed(frames):
