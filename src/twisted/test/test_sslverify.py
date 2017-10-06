@@ -3052,7 +3052,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             in self.flushWarnings()
             if warning["category"] == UserWarning)
 
-        importErrors =[
+        importErrors = [
             # Python 3.6.3
             "'import of service_identity halted; None in sys.modules'",
             # Python 3
