@@ -12,7 +12,6 @@ import errno
 import itertools
 import mimetypes
 import os
-import sys
 import time
 import warnings
 
@@ -23,8 +22,8 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import (_PY3, StringType, intToBytes, nativeString,
-    networkString)
+from twisted.python.compat import (_PY3, intToBytes, nativeString,
+                                   networkString, unicode)
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -246,7 +245,7 @@ class File(resource.Resource, filepath.FilePath):
         if ignoredExts in (0, 1) or allowExt:
             warnings.warn("ignoredExts should receive a list, not a boolean")
             if ignoredExts or allowExt:
-                self.ignoredExts = [b'*']
+                self.ignoredExts = ['*']
             else:
                 self.ignoredExts = []
         else:
@@ -274,11 +273,33 @@ class File(resource.Resource, filepath.FilePath):
 
     def getChild(self, path, request):
         """
-        If this L{File}'s path refers to a directory, return a L{File}
+        If this L{File}"s path refers to a directory, return a L{File}
         referring to the file named C{path} in that directory.
 
-        If C{path} is the empty string, return a L{DirectoryLister} instead.
+        If C{path} is the empty string, return a L{DirectoryLister}
+        instead.
+
+        @param path: The current path segment.
+        @type path: L{bytes}
+
+        @param request: The incoming request.
+        @type request: An that provides L{twisted.web.iweb.IRequest}.
+
+        @return: A resource representing the requested file or
+            directory, or L{NoResource} if the path cannot be
+            accessed.
+        @rtype: An object that provides L{resource.IResource}.
         """
+        if isinstance(self.path, unicode):
+            try:
+                # Request calls urllib.unquote on each path segment,
+                # leaving us with raw bytes.
+                path = path.decode('utf-8')
+            except UnicodeDecodeError:
+                log.err(None,
+                        "Could not decode path segment as utf-8: %r" % (path,))
+                return self.childNotFound
+
         self.restat(reraise=False)
 
         if not self.isdir():
@@ -300,8 +321,6 @@ class File(resource.Resource, filepath.FilePath):
                 return self.childNotFound
 
         extension = fpath.splitext()[1]
-        if not isinstance(extension, StringType):
-            extension = extension.decode(sys.getfilesystemencoding())
         if platformType == "win32":
             # don't want .RPY to be different than .rpy, since that would allow
             # source disclosure.
@@ -334,7 +353,7 @@ class File(resource.Resource, filepath.FilePath):
         @return: A list C{[(start, stop)]} of pairs of length at least one.
 
         @raise ValueError: if the header is syntactically invalid or if the
-            Bytes-Unit is anything other than 'bytes'.
+            Bytes-Unit is anything other than "bytes'.
         """
         try:
             kind, value = range.split(b'=', 1)
