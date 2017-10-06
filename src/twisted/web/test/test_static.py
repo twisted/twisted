@@ -67,6 +67,7 @@ class StaticFileTests(TestCase):
     def _render(self, resource, request):
         return _render(resource, request)
 
+
     def test_ignoredExtTrue(self):
         """
         Passing C{1} as the value to L{File}'s C{ignoredExts} argument
