@@ -3052,28 +3052,33 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             in self.flushWarnings()
             if warning["category"] == UserWarning)
 
-        if _PY3:
-            importError = (
-                "'import of 'service_identity' halted; None in sys.modules'")
-        else:
-            importError = "'No module named service_identity'"
+        importErrors =[
+            # Python 3.6.3
+            "'import of service_identity halted; None in sys.modules'",
+            # Python 3
+            "'import of 'service_identity' halted; None in sys.modules'",
+            # Python 2
+            "'No module named service_identity'"
+        ]
 
-        expectedMessage = (
-            "You do not have a working installation of the "
-            "service_identity module: {message}.  Please install it from "
-            "<https://pypi.python.org/pypi/service_identity> "
-            "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module, Twisted can perform only "
-            "rudimentary TLS client hostname verification.  Many valid "
-            "certificate/hostname mappings may be rejected.").format(
-                message=importError)
+        expectedMessages = []
+        for importError in importErrors:
+            expectedMessages.append(
+                "You do not have a working installation of the "
+                "service_identity module: {message}.  Please install it from "
+                "<https://pypi.python.org/pypi/service_identity> "
+                "and make sure all of its dependencies are satisfied.  "
+                "Without the service_identity module, Twisted can perform only"
+                " rudimentary TLS client hostname verification.  Many valid "
+                "certificate/hostname mappings may be rejected.".format(
+                message=importError))
 
-        self.assertEqual(
-            (warning["message"], warning["filename"], warning["lineno"]),
+        self.assertIn(warning["message"], expectedMessages)
 
-            # Make sure we're abusing the warning system to a sufficient
-            # degree: there is no filename or line number that makes sense for
-            # this warning to "blame" for the problem.  It is a system
-            # misconfiguration.  So the location information should be blank
-            # (or as blank as we can make it).
-            (expectedMessage, "", 0))
+        # Make sure we're abusing the warning system to a sufficient
+        # degree: there is no filename or line number that makes sense for
+        # this warning to "blame" for the problem.  It is a system
+        # misconfiguration.  So the location information should be blank
+        # (or as blank as we can make it).
+        self.assertEqual(warning["filename"], "")
+        self.assertEqual(warning["lineno"], 0)
