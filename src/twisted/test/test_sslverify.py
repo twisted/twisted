@@ -59,7 +59,7 @@ from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
 
 from twisted.internet.error import ConnectionClosed
-from twisted.python.compat import nativeString, _PY3
+from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 
