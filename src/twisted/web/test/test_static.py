@@ -21,7 +21,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.python.compat import intToBytes, networkString
+from twisted.python.compat import intToBytes
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -330,7 +330,7 @@ class StaticFileTests(TestCase):
             self.assertEqual(b''.join(request.written), content)
             self.assertEqual(
                 request.responseHeaders.getRawHeaders(b'content-length')[0],
-                networkString(str(len(content))))
+                str(len(content)).encode("utf-8"))
         d.addCallback(cbRendered)
         return d
     if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
@@ -618,16 +618,17 @@ class StaticMakeProducerTests(TestCase):
         for the response.
         """
         length = 123
-        contentType = "text/plain"
-        contentEncoding = 'gzip'
+        contentType = b"text/plain"
+        contentEncoding = b'gzip'
         resource = self.makeResourceWithContent(
             b'a'*length, type=contentType, encoding=contentEncoding)
         request = DummyRequest([])
         with resource.openForReading() as file:
             resource.makeProducer(request, file)
             self.assertEqual(
-                {b'content-type': networkString(contentType), b'content-length': intToBytes(length),
-                 b'content-encoding': networkString(contentEncoding)},
+                {b'content-type': contentType,
+                 b'content-length': intToBytes(length),
+                 b'content-encoding': contentEncoding},
                 self.contentHeaders(request))
 
 
@@ -665,14 +666,14 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.requestHeaders.addRawHeader(b'range', b'bytes=1-3')
-        contentType = "text/plain"
-        contentEncoding = 'gzip'
+        contentType = b"text/plain"
+        contentEncoding = b'gzip'
         resource = self.makeResourceWithContent(b'abcdef', type=contentType, encoding=contentEncoding)
         with resource.openForReading() as file:
             resource.makeProducer(request, file)
             self.assertEqual(
-                {b'content-type': networkString(contentType),
-                 b'content-encoding': networkString(contentEncoding),
+                {b'content-type': contentType,
+                 b'content-encoding': contentEncoding,
                  b'content-range': b'bytes 1-3/6', b'content-length': b'3'},
                 self.contentHeaders(request))
 
@@ -1330,7 +1331,8 @@ class RangeTests(TestCase):
         multipart response.
         """
         startEnds = [(0, 2), (20, 30), (40, 50)]
-        rangeHeaderValue = b','.join([networkString("%s-%s" % (s,e)) for (s, e) in startEnds])
+        rangeHeaderValue = b','.join(
+            [u"{}-{}".format(s, e).encode("ascii") for (s, e) in startEnds])
         self.request.requestHeaders.addRawHeader(b'range',
                                                  b'bytes=' + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1341,7 +1343,7 @@ class RangeTests(TestCase):
         parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(networkString(self.resource.type),
+            self.assertEqual(self.resource.type.encode("ascii"),
                              part[b'contentType'])
             start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
@@ -1357,7 +1359,8 @@ class RangeTests(TestCase):
         the resource.
         """
         startEnds = [(0, 2), (40, len(self.payload) + 10)]
-        rangeHeaderValue = b','.join([networkString("%s-%s" % (s,e)) for (s, e) in startEnds])
+        rangeHeaderValue = b','.join(
+            [u"{}-{}".format(s, e).encode("ascii") for (s, e) in startEnds])
         self.request.requestHeaders.addRawHeader(b'range',
                                                  b'bytes=' + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1368,7 +1371,7 @@ class RangeTests(TestCase):
         parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(networkString(self.resource.type),
+            self.assertEqual(self.resource.type.encode("ascii"),
                              part[b'contentType'])
             start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
@@ -1486,7 +1489,7 @@ class RangeTests(TestCase):
         # Sections 10.4.17 and 14.16
         self.assertEqual(
             self.request.responseHeaders.getRawHeaders(b'content-range')[0],
-            networkString('bytes */%d' % (len(self.payload),)))
+            u'bytes */{}'.format(len(self.payload)).encode("ascii"))
 
 
 
