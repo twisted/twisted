@@ -119,11 +119,16 @@ class ResourceScriptDirectory(resource.Resource):
     """
     def __init__(self, pathname, registry=None):
         resource.Resource.__init__(self)
+        if isinstance(pathname, bytes):
+            pathname = pathname.decode("utf-8")
         self.path = pathname
         self.registry = registry or static.Registry()
 
     def getChild(self, path, request):
-        fn = os.path.join(self.path, path)
+        if not isinstance(path, bytes):
+            raise TypeError(
+                "{} is type: {}, not bytes".format(path, type(path)))
+        fn = os.path.join(self.path, path.decode("utf-8"))
 
         if os.path.isdir(fn):
             return ResourceScriptDirectory(fn, self.registry)
