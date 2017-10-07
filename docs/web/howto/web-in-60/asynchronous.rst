@@ -52,7 +52,7 @@ example:
     
     class DelayedResource(Resource):
         def _delayedRender(self, request):
-            request.write("<html><body>Sorry to keep you waiting.</body></html>")
+            request.write(b"<html><body>Sorry to keep you waiting.</body></html>")
             request.finish()
     
         def render_GET(self, request):
@@ -99,7 +99,7 @@ scripts):
     
     class DelayedResource(Resource):
         def _delayedRender(self, request):
-            request.write("<html><body>Sorry to keep you waiting.</body></html>")
+            request.write(b"<html><body>Sorry to keep you waiting.</body></html>")
             request.finish()
     
         def render_GET(self, request):
