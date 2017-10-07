@@ -366,7 +366,7 @@ class UserDirectoryTests(unittest.TestCase):
         response when passed a string which does not correspond to any known
         user.
         """
-        return self._404Test('carol')
+        return self._404Test(b'carol')
 
 
     def test_getUserWithoutResource(self):
@@ -375,7 +375,7 @@ class UserDirectoryTests(unittest.TestCase):
         response when passed a string which corresponds to a known user who has
         neither a user directory nor a user distrib socket.
         """
-        return self._404Test('alice')
+        return self._404Test(b'alice')
 
 
     def test_getPublicHTMLChild(self):
@@ -388,7 +388,7 @@ class UserDirectoryTests(unittest.TestCase):
         public_html = home.child('public_html')
         public_html.makedirs()
         request = DummyRequest(['bob'])
-        result = self.directory.getChild('bob', request)
+        result = self.directory.getChild(b'bob', request)
         self.assertIsInstance(result, static.File)
         self.assertEqual(result.path, public_html.path)
 
@@ -403,10 +403,20 @@ class UserDirectoryTests(unittest.TestCase):
         home.makedirs()
         web = home.child('.twistd-web-pb')
         request = DummyRequest(['bob'])
-        result = self.directory.getChild('bob.twistd', request)
+        result = self.directory.getChild(b'bob.twistd', request)
         self.assertIsInstance(result, distrib.ResourceSubscription)
         self.assertEqual(result.host, 'unix')
         self.assertEqual(abspath(result.port), web.path)
+
+
+    def test_getChildWrongType(self):
+        """
+        L{distrib.UserDirectory.getChild} should raise L{TypeError}
+        if the path is not L{bytes}.
+        """
+        request = DummyRequest([b'foo.bar'])
+        self.assertRaises(TypeError,
+            self.directory.getChild, u'bob.twistd', request)
 
 
     def test_invalidMethod(self):

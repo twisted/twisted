@@ -349,10 +349,13 @@ class UserDirectory(resource.Resource):
 
 
     def getChild(self, name, request):
-        if name == '':
+        if not isinstance(name, bytes):
+            raise TypeError(
+                "{} is type: {}, not bytes".format(name, type(name)))
+        if name == b'':
             return self
 
-        td = '.twistd'
+        td = b'.twistd'
 
         if name[-len(td):] == td:
             username = name[:-len(td)]
@@ -362,7 +365,7 @@ class UserDirectory(resource.Resource):
             sub = 0
         try:
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
-                     = self._pwd.getpwnam(username)
+                     = self._pwd.getpwnam(username.decode("utf-8"))
         except KeyError:
             return resource.NoResource()
         if sub:

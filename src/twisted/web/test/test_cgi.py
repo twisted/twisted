@@ -423,7 +423,7 @@ class CGIDirectoryTests(unittest.TestCase):
         os.makedirs(path)
         resource = twcgi.CGIDirectory(path)
         request = DummyRequest(['foo'])
-        child = resource.getChild("foo", request)
+        child = resource.getChild(b"foo", request)
         d = _render(child, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)

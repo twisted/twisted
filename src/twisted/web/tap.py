@@ -96,10 +96,10 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         """
         self['root'] = static.File(os.path.abspath(path))
         self['root'].processors = {
-            '.epy': script.PythonScript,
-            '.rpy': script.ResourceScript,
+            b'.epy': script.PythonScript,
+            b'.rpy': script.ResourceScript,
         }
-        self['root'].processors['.cgi'] = twcgi.CGIScript
+        self['root'].processors[b'.cgi'] = twcgi.CGIScript
 
 
     def opt_processor(self, proc):

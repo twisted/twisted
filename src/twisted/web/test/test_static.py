@@ -350,6 +350,17 @@ class StaticFileTests(TestCase):
         self.assertEqual(child, staticFile.childNotFound)
 
 
+    def test_getChildWrongType(self):
+        """
+        L{static.File.getChild} should raise L{TypeError}
+        if the path is not L{bytes}.
+        """
+        staticFile = static.File(self.mktemp())
+        request = DummyRequest([b'foo.bar'])
+        self.assertRaises(TypeError,
+            staticFile.getChild, u"foo.bar", request)
+
+
     def test_staticFileDeletedRender(self):
         """
         A L{static.File} created for a file which does not exist should render

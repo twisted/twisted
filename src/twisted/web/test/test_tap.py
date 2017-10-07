@@ -87,6 +87,16 @@ class ServiceTests(TestCase):
             "The reactor does not support UNIX domain sockets")
 
 
+    def test_staticFileGetChildWrongType(self):
+        """
+        L{static.File.getChild} should raise L{TypeError}
+        if the path is not L{bytes}.
+        """
+        path, root = self._pathOption()
+        request = DummyRequest([b'foo.bar'])
+        self.assertRaises(TypeError, root.getChild, u"foo.cgi", request)
+
+
     def test_cgiProcessor(self):
         """
         The I{--path} option creates a root resource which serves a
@@ -94,7 +104,7 @@ class ServiceTests(TestCase):
         """
         path, root = self._pathOption()
         path.child("foo.cgi").setContent(b"")
-        self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
+        self.assertIsInstance(root.getChild(b"foo.cgi", None), CGIScript)
 
 
     def test_epyProcessor(self):
@@ -104,7 +114,7 @@ class ServiceTests(TestCase):
         """
         path, root = self._pathOption()
         path.child("foo.epy").setContent(b"")
-        self.assertIsInstance(root.getChild("foo.epy", None), PythonScript)
+        self.assertIsInstance(root.getChild(b"foo.epy", None), PythonScript)
 
 
     def test_rpyProcessor(self):
@@ -117,7 +127,7 @@ class ServiceTests(TestCase):
         path.child("foo.rpy").setContent(
             b"from twisted.web.static import Data\n"
             b"resource = Data('content', 'major/minor')\n")
-        child = root.getChild("foo.rpy", None)
+        child = root.getChild(b"foo.rpy", None)
         self.assertIsInstance(child, Data)
         self.assertEqual(child.data, 'content')
         self.assertEqual(child.type, 'major/minor')
