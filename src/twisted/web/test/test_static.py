@@ -13,7 +13,7 @@ import sys
 import warnings
 
 
-from io import BytesIO as StringIO
+from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
@@ -509,14 +509,14 @@ class StaticFileTests(TestCase):
                          [b"http://dummy/folder/#baz?foo=bar"])
 
 
-    def _makeFilePathWithStringIO(self):
+    def _makeFilePathWithBytesIO(self):
         """
-        Create a L{File} that when opened for reading, returns a L{StringIO}.
+        Create a L{File} that when opened for reading, returns a L{BytesIO}.
 
         @return: 2-tuple of the opened "file" and the L{File}.
         @rtype: L{tuple}
         """
-        fakeFile = StringIO()
+        fakeFile = BytesIO()
         path = FilePath(self.mktemp())
         path.touch()
         file = static.File(path.path)
@@ -530,7 +530,7 @@ class StaticFileTests(TestCase):
         A HEAD request opens the file, gets the size, and then closes it after
         the request.
         """
-        fakeFile, file = self._makeFilePathWithStringIO()
+        fakeFile, file = self._makeFilePathWithBytesIO()
         request = DummyRequest([''])
         request.method = b'HEAD'
         self.successResultOf(_render(file, request))
@@ -542,7 +542,7 @@ class StaticFileTests(TestCase):
         """
         A GET request that is cached closes the file after the request.
         """
-        fakeFile, file = self._makeFilePathWithStringIO()
+        fakeFile, file = self._makeFilePathWithBytesIO()
         request = DummyRequest([''])
         request.method = b'GET'
         # This request will always return saying that it is cached
@@ -876,7 +876,7 @@ class StaticProducerTests(TestCase):
         L{StaticProducer.stopProducing} closes the file object the producer is
         producing data from.
         """
-        fileObject = StringIO()
+        fileObject = BytesIO()
         producer = static.StaticProducer(None, fileObject)
         producer.stopProducing()
         self.assertTrue(fileObject.closed)
@@ -888,7 +888,7 @@ class StaticProducerTests(TestCase):
         None, which indicates to subclasses' resumeProducing methods that no
         more data should be produced.
         """
-        fileObject = StringIO()
+        fileObject = BytesIO()
         producer = static.StaticProducer(DummyRequest([]), fileObject)
         producer.stopProducing()
         self.assertIdentical(None, producer.request)
@@ -917,7 +917,7 @@ class NoRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'abcdef'
         producer = static.NoRangeStaticProducer(
-            request, StringIO(content))
+            request, BytesIO(content))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -934,7 +934,7 @@ class NoRangeStaticProducerTests(TestCase):
         bufferSize = abstract.FileDescriptor.bufferSize
         content = b'a' * (2*bufferSize + 1)
         producer = static.NoRangeStaticProducer(
-            request, StringIO(content))
+            request, BytesIO(content))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -956,7 +956,7 @@ class NoRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.NoRangeStaticProducer(
-            request, StringIO(b'abcdef'))
+            request, BytesIO(b'abcdef'))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -987,7 +987,7 @@ class SingleRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'abcdef'
         producer = static.SingleRangeStaticProducer(
-            request, StringIO(content), 1, 3)
+            request, BytesIO(content), 1, 3)
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
@@ -1004,7 +1004,7 @@ class SingleRangeStaticProducerTests(TestCase):
         bufferSize = abstract.FileDescriptor.bufferSize
         content = b'abc' * bufferSize
         producer = static.SingleRangeStaticProducer(
-            request, StringIO(content), 1, bufferSize+10)
+            request, BytesIO(content), 1, bufferSize+10)
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
@@ -1025,7 +1025,7 @@ class SingleRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.SingleRangeStaticProducer(
-            request, StringIO(b'abcdef'), 1, 1)
+            request, BytesIO(b'abcdef'), 1, 1)
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -1056,7 +1056,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'abcdef'
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO(content), [(b'1', 1, 3), (b'2', 5, 1)])
+            request, BytesIO(content), [(b'1', 1, 3), (b'2', 5, 1)])
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
@@ -1080,7 +1080,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'0123456789' * 2
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO(content),
+            request, BytesIO(content),
             [(b'a', 0, 2), (b'b', 5, 10), (b'c', 0, 0)])
         producer.bufferSize = 10
         # DummyRequest.registerProducer pulls all output from the producer, so
@@ -1103,7 +1103,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO(b'abcdef'), [(b'', 1, 2)])
+            request, BytesIO(b'abcdef'), [(b'', 1, 2)])
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
