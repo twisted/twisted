@@ -22,8 +22,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import (_PY3, intToBytes, nativeString,
-                                   networkString)
+from twisted.python.compat import _PY3, intToBytes, unicode
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -42,7 +41,7 @@ else:
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
 def isDangerous(path):
-    return path == b'..' or b'/' in path or networkString(os.sep) in path
+    return path == b'..' or b'/' in path or os.sep.encode("utf-8") in path
 
 
 class Data(resource.Resource):
@@ -57,7 +56,7 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        request.setHeader(b"content-type", networkString(self.type))
+        request.setHeader(b"content-type", self.type.encode("utf-8"))
         request.setHeader(b"content-length", intToBytes(len(self.data)))
         if request.method == b"HEAD":
             return b''
@@ -445,8 +444,8 @@ class File(resource.Resource, filepath.FilePath):
         @return: The value as appropriate for the value of a Content-Range
             header.
         """
-        return networkString('bytes %d-%d/%d' % (
-            offset, offset + size - 1, self.getFileSize()))
+        return u'bytes {}-{}/{}'.format(
+            offset, offset + size - 1, self.getFileSize()).encode("utf-8")
 
 
     def _doSingleRangeRequest(self, request, startAndEnd):
@@ -471,7 +470,8 @@ class File(resource.Resource, filepath.FilePath):
             # request is unsatisfiable.
             request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
             request.setHeader(
-                b'content-range', networkString('bytes */%d' % (self.getFileSize(),)))
+                b'content-range',
+                u'bytes */{}'.format(self.getFileSize()).encode("utf-8"))
         else:
             request.setResponseCode(http.PARTIAL_CONTENT)
             request.setHeader(
@@ -509,9 +509,10 @@ class File(resource.Resource, filepath.FilePath):
         matchingRangeFound = False
         rangeInfo = []
         contentLength = 0
-        boundary = networkString("%x%x" % (int(time.time()*1000000), os.getpid()))
+        boundary = u"{:x}{:x}".format(
+            int(time.time()*1000000), os.getpid()).encode("utf-8")
         if self.type:
-            contentType = self.type
+            contentType = self.type.encode("utf-8")
         else:
             contentType = b'bytes' # It's what Apache does...
         for start, end in byteRanges:
@@ -521,12 +522,12 @@ class File(resource.Resource, filepath.FilePath):
             contentLength += partSize
             matchingRangeFound = True
             partContentRange = self._contentRange(partOffset, partSize)
-            partSeparator = networkString((
-                "\r\n"
-                "--%s\r\n"
-                "Content-type: %s\r\n"
-                "Content-range: %s\r\n"
-                "\r\n") % (nativeString(boundary), nativeString(contentType), nativeString(partContentRange)))
+            partSeparator = (
+                b"\r\n" +
+                b"--" + boundary + b"\r\n" +
+                b"Content-type: " + contentType + b"\r\n" +
+                b"Content-range: " + partContentRange + b"\r\n" +
+                b"\r\n")
             contentLength += len(partSeparator)
             rangeInfo.append((partSeparator, partOffset, partSize))
         if not matchingRangeFound:
@@ -534,13 +535,15 @@ class File(resource.Resource, filepath.FilePath):
             request.setHeader(
                 b'content-length', b'0')
             request.setHeader(
-                b'content-range', networkString('bytes */%d' % (self.getFileSize(),)))
+                b'content-range',
+                u'bytes */{}'.format(self.getFileSize()).encode("utf-8"))
             return [], b''
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
-            b'content-type', networkString('multipart/byteranges; boundary="%s"' % (nativeString(boundary),)))
+            b'content-type',
+            b'multipart/byteranges; boundary="' + boundary + b'"')
         request.setHeader(
             b'content-length', intToBytes(contentLength + len(finalBoundary)))
         return rangeInfo
@@ -561,9 +564,15 @@ class File(resource.Resource, filepath.FilePath):
             size = self.getFileSize()
         request.setHeader(b'content-length', intToBytes(size))
         if self.type:
-            request.setHeader(b'content-type', networkString(self.type))
+            contentType = self.type
+            if isinstance(contentType, unicode):
+                contentType = contentType.encode("utf-8")
+            request.setHeader(b'content-type', contentType)
         if self.encoding:
-            request.setHeader(b'content-encoding', networkString(self.encoding))
+            contentEncoding = self.encoding
+            if isinstance(contentEncoding, unicode):
+                contentEncoding = contentEncoding.encode("utf-8")
+            request.setHeader(b'content-encoding', contentEncoding)
 
 
     def makeProducer(self, request, fileForReading):
@@ -995,9 +1004,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         dirs = []
 
         for path in directory:
-            if _PY3:
-                if isinstance(path, bytes):
-                    path = path.decode("utf8")
+            if isinstance(path, bytes):
+                path = path.decode("utf-8")
 
             url = quote(path, "/")
             escapedPath = escape(path)
@@ -1051,13 +1059,11 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 
         tableContent = "".join(self._buildTableContent(dirs + files))
 
-        header = "Directory listing for %s" % (
-            escape(unquote(nativeString(request.uri))),)
+        header = u"Directory listing for {}".format(
+            escape(unquote(request.uri.decode("utf-8"))))
 
         done = self.template % {"header": header, "tableContent": tableContent}
-        if _PY3:
-            done = done.encode("utf8")
-
+        done = done.encode("utf-8")
         return done
 
 
