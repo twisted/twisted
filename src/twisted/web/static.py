@@ -290,15 +290,9 @@ class File(resource.Resource, filepath.FilePath):
             accessed.
         @rtype: An object that provides L{resource.IResource}.
         """
-        if isinstance(path, bytes):
-            try:
-                # Request calls urllib.unquote on each path segment,
-                # leaving us with raw bytes.
-                path = path.decode('utf-8')
-            except UnicodeDecodeError:
-                log.err(None,
-                        "Could not decode path segment as utf-8: %r" % (path,))
-                return self.childNotFound
+        if not isinstance(path, bytes):
+            raise TypeError(
+                "{} is type: {}, not bytes".format(path, type(path)))
 
         self.restat(reraise=False)
 

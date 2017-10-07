@@ -216,6 +216,9 @@ class Resource:
 
         @see: L{IResource.putChild}
         """
+        if not isinstance(path, bytes):
+            raise TypeError(
+                "{} is type: {}, not bytes".format(path, type(path)))
         self.children[path] = child
         child.server = self.server
 
