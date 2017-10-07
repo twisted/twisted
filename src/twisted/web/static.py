@@ -292,6 +292,12 @@ class File(resource.Resource, filepath.FilePath):
         if not isinstance(path, bytes):
             raise TypeError(
                 "{} is type: {}, not bytes".format(path, type(path)))
+        try:
+            path.decode('utf-8')
+        except UnicodeDecodeError:
+             log.err(None,
+                    "Could not decode path segment as utf-8: {!r}".format(path))
+             return self.childNotFound
 
         self.restat(reraise=False)
 
