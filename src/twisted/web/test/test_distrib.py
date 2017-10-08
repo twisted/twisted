@@ -89,7 +89,7 @@ class DistribTests(unittest.TestCase):
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        url = "http://127.0.0.1:{}/here/there".format(
+        url = u"http://127.0.0.1:{}/here/there".format(
             self.port2.getHost().port)
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
@@ -140,7 +140,7 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
-        url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        url = u"http://{}:{}/child".format(mainAddr.host, mainAddr.port)
         url = url.encode("ascii")
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)
@@ -162,7 +162,7 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = u"http://{}:{}/child".format(mainAddr.host, mainAddr.port)
         url = url.encode("ascii")
         d = client.Agent(reactor).request(b"GET", url, **kwargs)
 
@@ -417,6 +417,16 @@ class UserDirectoryTests(unittest.TestCase):
         request = DummyRequest([b'foo.bar'])
         self.assertRaises(TypeError,
             self.directory.getChild, u'bob.twistd', request)
+
+
+    def test_getChildEmptyName(self):
+        """
+        L{distrib.UserDirectory.getChild} will return the same instance of
+        L{distrib.UserDirectory} if passed name of b"".
+        """
+        request = DummyRequest([b'foo.bar'])
+        child = self.directory.getChild(b"", request)
+        self.assertIs(child, self.directory)
 
 
     def test_invalidMethod(self):
