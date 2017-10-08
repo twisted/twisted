@@ -12,7 +12,7 @@ import os, traceback
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
+from twisted.python.compat import execfile, networkString, NativeStringIO
 from twisted.web import http, server, static, resource, util
 
 
@@ -180,7 +180,7 @@ class PythonScript(resource.Resource):
             io = NativeStringIO()
             traceback.print_exc(file=io)
             output = util._PRE(io.getvalue())
-            if _PY3:
+            if not isinstance(output, bytes):
                 output = output.encode("utf8")
             request.write(output)
         request.finish()
