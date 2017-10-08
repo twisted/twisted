@@ -13,8 +13,8 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import
 
-from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
-from twisted.python.compat import unicode
+from twisted.python.compat import (_PY3, intToBytes,
+    nativeString, unicode, urllib_parse)
 
 # System Imports
 import base64
@@ -185,13 +185,12 @@ class XMLRPC(resource.Resource):
             result = (result,)
         try:
             try:
-                content = xmlrpclib.dumps(
-                    result, methodresponse=True,
-                    allow_none=self.allowNone)
+                content = xmlrpclib.dumps( result, methodresponse=True,
+                    allow_none=self.allowNone, encoding="utf-8")
             except Exception as e:
                 f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
                 content = xmlrpclib.dumps(f, methodresponse=True,
-                                          allow_none=self.allowNone)
+                    allow_none=self.allowNone, encode="utf-8")
 
             if isinstance(content, unicode):
                 content = content.encode('utf8')
@@ -232,7 +231,7 @@ class XMLRPC(resource.Resource):
         """
         if procedurePath.find(self.separator) != -1:
             prefix, procedurePath = procedurePath.split(self.separator, 1)
-            handler = self.getSubHandler(prefix)
+            handler = self.getSubHandler(prefix.encode("utf-8"))
             if handler is None:
                 raise NoSuchFunction(self.NOT_FOUND,
                     "no such subHandler %s" % prefix)
@@ -290,7 +289,7 @@ class XMLRPCIntrospection(XMLRPC):
             obj, prefix = todo.pop(0)
             functions.extend([prefix + name for name in obj.listProcedures()])
             todo.extend([ (obj.getSubHandler(name),
-                           prefix + name + obj.separator)
+                           prefix + name.decode("utf-8") + obj.separator)
                           for name in obj.getSubHandlerPrefixes() ])
         return functions
 
@@ -329,7 +328,7 @@ def addIntrospection(xmlrpc):
     @param parent: the XMLRPC server to add Introspection support to.
     @type parent: L{XMLRPC}
     """
-    xmlrpc.putSubHandler('system', XMLRPCIntrospection(xmlrpc))
+    xmlrpc.putSubHandler(b'system', XMLRPCIntrospection(xmlrpc))
 
 
 class QueryProtocol(http.HTTPClient):
@@ -377,7 +376,7 @@ class QueryProtocol(http.HTTPClient):
             self.factory.parseResponse(response)
 
 
-payloadTemplate = """<?xml version="1.0"?>
+payloadTemplate = u"""<?xml version="1.0"?>
 <methodCall>
 <methodName>%s</methodName>
 %s
@@ -432,10 +431,11 @@ class _QueryFactory(protocol.ClientFactory):
         """
         self.path, self.host = path, host
         self.user, self.password = user, password
-        self.payload = payloadTemplate % (method,
-            xmlrpclib.dumps(args, allow_none=allowNone))
-        if isinstance(self.payload, unicode):
-            self.payload = self.payload.encode('utf8')
+        xmlRPC = xmlrpclib.dumps(args, allow_none=allowNone, encoding="utf-8")
+        if not isinstance(xmlRPC, unicode):
+            xmlRPC = xmlRPC.decode("utf-8")
+        self.payload = payloadTemplate % (method, xmlRPC)
+        self.payload = self.payload.encode('utf-8')
         self.deferred = defer.Deferred(canceller)
         self.useDateTime = useDateTime
 
