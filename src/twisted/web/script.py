@@ -182,7 +182,7 @@ class PythonScript(resource.Resource):
             traceback.print_exc(file=io)
             output = util._PRE(io.getvalue())
             if not isinstance(output, bytes):
-                output = output.encode("utf8")
+                output = output.encode("utf-8")
             request.write(output)
         request.finish()
         return server.NOT_DONE_YET
