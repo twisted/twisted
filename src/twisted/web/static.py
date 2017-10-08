@@ -200,7 +200,7 @@ class File(resource.Resource, filepath.FilePath):
     contentTypes = loadMimeTypes()
 
     contentEncodings = {
-        u".gz" : u"gzip",
+        u".gz": u"gzip",
         u".bz2": u"bzip2"
         }
 
