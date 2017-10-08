@@ -1684,10 +1684,10 @@ class DirectoryListerTests(TestCase):
         directory.sort()
 
         contentTypes = {
-            ".txt": "text/plain",
-            ".py": "text/python",
-            ".conf": "text/configuration",
-            ".diff": "text/diff"
+            u".txt": u"text/plain",
+            u".py": u"text/python",
+            u".conf": u"text/configuration",
+            u".diff": u"text/diff"
         }
 
         lister = static.DirectoryLister(path.path, contentTypes=contentTypes)

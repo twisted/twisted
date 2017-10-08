@@ -156,7 +156,7 @@ def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
     p, ext = filepath.FilePath(filename).splitext()
-    ext = filepath._coerceToFilesystemEncoding('', ext.lower())
+    ext = filepath._coerceToFilesystemEncoding(u'', ext.lower())
     if ext in encodings:
         enc = encodings[ext]
         ext = os.path.splitext(p)[1].lower()
@@ -200,8 +200,8 @@ class File(resource.Resource, filepath.FilePath):
     contentTypes = loadMimeTypes()
 
     contentEncodings = {
-        ".gz" : "gzip",
-        ".bz2": "bzip2"
+        u".gz" : u"gzip",
+        u".bz2": u"bzip2"
         }
 
     processors = {}
