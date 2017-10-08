@@ -424,8 +424,8 @@ class UserDirectoryTests(unittest.TestCase):
         L{UserDirectory.render} raises L{UnsupportedMethod} in response to a
         non-I{GET} request.
         """
-        request = DummyRequest([''])
-        request.method = 'POST'
+        request = DummyRequest([b''])
+        request.method = b'POST'
         self.assertRaises(
             server.UnsupportedMethod, self.directory.render, request)
 
