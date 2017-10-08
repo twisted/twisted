@@ -11,7 +11,7 @@ from __future__ import division, absolute_import
 import linecache
 
 from twisted.python import urlpath
-from twisted.python.compat import _PY3, unicode, nativeString, escape
+from twisted.python.compat import unicode, escape
 from twisted.python.reflect import fullyQualifiedName
 
 from twisted.web import resource
@@ -61,18 +61,17 @@ def redirectTo(URL, request):
         raise TypeError("Unicode object not allowed as URL")
     request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
     request.redirect(URL)
-    content =  """
+    content =  u"""
 <html>
     <head>
         <meta http-equiv=\"refresh\" content=\"0;URL=%(url)s\">
     </head>
     <body bgcolor=\"#FFFFFF\" text=\"#000000\">
-    <a href=\"%(url)s\">click here</a>
+    <a href=\"{url}\">click here</a>
     </body>
 </html>
-""" % {'url': nativeString(URL)}
-    if _PY3:
-        content = content.encode("utf8")
+""".format(url=URL.decode("utf-8"))
+    content = content.encode("utf-8")
     return content
 
 
@@ -403,7 +402,7 @@ class FailureElement(Element):
         """
         Render the exception value as a child of C{tag}.
         """
-        return tag(unicode(self.failure.value).encode('utf8'))
+        return tag(unicode(self.failure.value).encode('utf-8'))
 
 
     @renderer
