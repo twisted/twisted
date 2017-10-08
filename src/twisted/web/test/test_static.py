@@ -59,6 +59,18 @@ class StaticDataTests(TestCase):
         self.assertRaises(UnsupportedMethod, data.render, request)
 
 
+    def test_isDangerous(self):
+        """
+        L{static.isDangerous} returns L{True} if path
+        contains b'..', b'/' or L{os.sep}.
+        """
+        self.assertTrue(static.isDangerous(b".."))
+        self.assertTrue(static.isDangerous(b"foo/bar"))
+        self.assertTrue(static.isDangerous(
+            b"foo" + os.sep.encode("utf-8") + b"bar"))
+        self.assertFalse(static.isDangerous(b"ok_path"))
+
+
 
 class StaticFileTests(TestCase):
     """
