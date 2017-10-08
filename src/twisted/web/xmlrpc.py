@@ -185,7 +185,7 @@ class XMLRPC(resource.Resource):
             result = (result,)
         try:
             try:
-                content = xmlrpclib.dumps( result, methodresponse=True,
+                content = xmlrpclib.dumps(result, methodresponse=True,
                     allow_none=self.allowNone, encoding="utf-8")
             except Exception as e:
                 f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
