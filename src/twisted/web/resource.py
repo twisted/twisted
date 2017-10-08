@@ -17,7 +17,7 @@ import warnings
 
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.compat import nativeString, unicode
+from twisted.python.compat import unicode
 from twisted.python.reflect import prefixedMethodNames
 from twisted.python.components import proxyForInterface
 
@@ -243,7 +243,7 @@ class Resource:
 
         @see: L{IResource.render}
         """
-        m = getattr(self, 'render_' + nativeString(request.method), None)
+        m = getattr(self, u'render_' + request.method.decode("ascii"), None)
         if not m:
             try:
                 allowedMethods = self.allowedMethods
