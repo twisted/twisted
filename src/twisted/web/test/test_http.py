@@ -3220,6 +3220,12 @@ class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
     """
 
     def test_headers(self):
+        """
+        A HTTP connection is opened and a CONNECT request is received, which
+        should return a 200 response with the HTTP version header, the host and
+        port as well as the CONNECT command but not a Transfer-Encoding or
+        Content-Length header, which both are not allowed in a 200 response.
+        """
         transport = StringTransport()
         channel = http.HTTPChannel()
         channel.requestFactory = DummyHTTPHandlerProxy
