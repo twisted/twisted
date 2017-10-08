@@ -295,9 +295,9 @@ class File(resource.Resource, filepath.FilePath):
         try:
             path.decode('utf-8')
         except UnicodeDecodeError:
-             log.err(None,
-                    "Could not decode path segment as utf-8: {!r}".format(path))
-             return self.childNotFound
+            log.err(None,
+               "Could not decode path segment as utf-8: {!r}".format(path))
+            return self.childNotFound
 
         self.restat(reraise=False)
 
