@@ -580,7 +580,7 @@ class StaticMakeProducerTests(TestCase):
         """
         fileName = FilePath(self.mktemp())
         fileName.setContent(content)
-        resource = static.File(fileName._asBytesPath())
+        resource = static.File(fileName.asBytesMode().path)
         resource.encoding = encoding
         resource.type = type
         return resource
@@ -624,24 +624,43 @@ class StaticMakeProducerTests(TestCase):
             self.assertEqual(http.OK, request.responseCode)
 
 
-    def test_noRangeHeaderSetsContentHeaders(self):
+    def _noRangeHeaderSetsContentHeaders(self, contentTypeIn,
+        contentEncodingIn, contentTypeOut, contentEncodingOut):
         """
         makeProducer when no Range header is set sets the Content-* headers
         for the response.
         """
         length = 123
-        contentType = b"text/plain"
-        contentEncoding = b'gzip'
         resource = self.makeResourceWithContent(
-            b'a'*length, type=contentType, encoding=contentEncoding)
+            b'a'*length, type=contentTypeIn, encoding=contentEncodingIn)
         request = DummyRequest([])
         with resource.openForReading() as file:
             resource.makeProducer(request, file)
             self.assertEqual(
-                {b'content-type': contentType,
+                {b'content-type': contentTypeOut,
                  b'content-length': intToBytes(length),
-                 b'content-encoding': contentEncoding},
+                 b'content-encoding': contentEncodingOut},
                 self.contentHeaders(request))
+
+
+    def test_noRangeHeaderSetsContentHeadersBytes(self):
+        """
+        If we call C{_noRangeHeaderSetsContentHeaders} with L{bytes} values
+        for content-type and content-encoding, the values will be of type
+        L{bytes} in the header.
+        """
+        return self._noRangeHeaderSetsContentHeaders(b"text/plain", b"gzip",
+            b"text/plain", b"gzip")
+
+
+    def test_noRangeHeaderSetsContentHeadersUnicode(self):
+        """
+        If we call C{_noRangeHeaderSetsContentHeaders} with L{unicode} values
+        for content-type and content-encoding, the values will be of type
+        L{bytes} in the header.
+        """
+        return self._noRangeHeaderSetsContentHeaders(u"text/plain", u"gzip",
+            b"text/plain", b"gzip")
 
 
     def test_singleRangeGivesSingleRangeStaticProducer(self):
