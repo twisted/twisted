@@ -218,6 +218,15 @@ class ResourceTests(TestCase):
         self.assertEqual(expected, set(exc.allowedMethods))
 
 
+    def test_putChildWrongType(self):
+        """
+        L{Resource.putChild} should raise L{TypeError} if the path is not
+        L{bytes}.
+        """
+        resource = Resource()
+        child = Resource()
+        self.assertRaises(TypeError, resource.putChild, u"foo", child)
+
 
 
 class GetChildForRequestTests(TestCase):
