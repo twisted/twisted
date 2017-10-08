@@ -12,7 +12,7 @@ import os, traceback
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString, NativeStringIO
+from twisted.python.compat import execfile, NativeStringIO
 from twisted.web import http, server, static, resource, util
 
 
@@ -166,7 +166,8 @@ class PythonScript(resource.Resource):
         will NOT be handled with print - standard output goes to the log - but
         with request.write.
         """
-        request.setHeader(b"x-powered-by", networkString("Twisted/%s" % copyright.version))
+        request.setHeader(b"x-powered-by",
+            u"Twisted/{}".format(copyright.version).encode("utf-8"))
         namespace = {'request': request,
                      '__file__': _coerceToFilesystemEncoding("", self.filename),
                      'registry': self.registry}
