@@ -28,6 +28,7 @@ from twisted.web.tap import makePersonalServerFactory, _AddHeadersResource
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.twcgi import CGIScript
 from twisted.web.wsgi import WSGIResource
+from twisted.application import strports
 
 
 application = object()
@@ -167,9 +168,8 @@ class ServiceTests(TestCase):
         options.parseOptions(['--personal'])
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
-        self.assertEqual(
-            strports.parse(options['ports'][0], None)[:2],
-            ('UNIX', (path, None)))
+        self.assertEqual(options['ports'][0],
+                         'unix:{}'.format(path))
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
