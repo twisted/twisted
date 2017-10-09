@@ -203,13 +203,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         If no server port was supplied, select a default appropriate for the
         other options supplied.
         """
-        if len(self['ports']) == 0:
-            if self['personal']:
-                path = os.path.expanduser(
-                    os.path.join('~', distrib.UserDirectory.userSocketName))
-                self['ports'].append('unix:' + path)
-            else:
-                self['ports'].append('tcp:8080')
         if self['https']:
             ## TODO: Deprecate it?
             try:
@@ -222,6 +215,13 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                              self['certificate'],
                          )
             self['ports'].append(sslStrport)
+        if len(self['ports']) == 0:
+            if self['personal']:
+                path = os.path.expanduser(
+                    os.path.join('~', distrib.UserDirectory.userSocketName))
+                self['ports'].append('unix:' + path)
+            else:
+                self['ports'].append('tcp:8080')
 
 
 
