@@ -209,7 +209,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         other options supplied.
         """
         if self['https']:
-            ## TODO: Deprecate it?
+            # TODO: Deprecate it?
             try:
                 reflect.namedModule('OpenSSL.SSL')
             except ImportError:
