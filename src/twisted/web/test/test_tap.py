@@ -188,6 +188,17 @@ class ServiceTests(TestCase):
             ('TCP', (8080, None)))
 
 
+    def test_twoPorts(self):
+        """
+        If the I{--port} option is not specified, L{Options} defaults the port
+        to C{8080}.
+        """
+        options = Options()
+        options.parseOptions(['--port', 'tcp:8001', '--port', 'tcp:8002'])
+        self.assertIn('8001', options['ports'][0])
+        self.assertIn('8002', options['ports'][1])
+
+
     def test_wsgi(self):
         """
         The I{--wsgi} option takes the fully-qualifed Python name of a WSGI
@@ -229,8 +240,6 @@ class ServiceTests(TestCase):
         An L{UsageError} is raised when C{https} is requested but there is no
         support for SSL.
         """
-        return True # Changing behavior here.
-                    # Do we want to guarantee early failure here?
         options = Options()
 
         exception = self.assertRaises(
@@ -250,7 +259,8 @@ class ServiceTests(TestCase):
 
         options.parseOptions(['--https=443'])
 
-        self.assertEqual('443', options['https'])
+        self.assertIn('ssl', options['ports'][0])
+        self.assertIn('443', options['ports'][0])
 
     if requireModule('OpenSSL.SSL') is None:
         test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
