@@ -751,7 +751,7 @@ class FormattableTracebackTests(SynchronousTestCase):
         to be passed to L{traceback.extract_tb}, and we should get a singleton
         list containing a (filename, lineno, methodname, line) tuple.
         """
-        tb = failure._Traceback([['method', 'filename.py', 123, {}, {}]])
+        tb = failure._Traceback([], [['method', 'filename.py', 123, {}, {}]])
         # Note that we don't need to test that extract_tb correctly extracts
         # the line's contents. In this case, since filename.py doesn't exist,
         # it will just use None.
@@ -766,12 +766,22 @@ class FormattableTracebackTests(SynchronousTestCase):
         containing a tuple for each frame.
         """
         tb = failure._Traceback([
+            ['caller1', 'filename.py', 7, {}, {}],
+            ['caller2', 'filename.py', 8, {}, {}],
+        ], [
             ['method1', 'filename.py', 123, {}, {}],
-            ['method2', 'filename.py', 235, {}, {}]])
+            ['method2', 'filename.py', 235, {}, {}],
+        ])
         self.assertEqual(traceback.extract_tb(tb),
                          [_tb('filename.py', 123, 'method1', None),
                           _tb('filename.py', 235, 'method2', None)])
 
+        # we should also be able to extract_stack on it
+        self.assertEqual(traceback.extract_stack(tb.tb_frame),
+                         [_tb('filename.py', 7, 'caller1', None),
+                          _tb('filename.py', 8, 'caller2', None),
+                          _tb('filename.py', 123, 'method1', None),
+                          ])
 
 
 class FrameAttributesTests(SynchronousTestCase):
