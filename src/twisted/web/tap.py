@@ -71,8 +71,13 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         """
         Strports description of port to start the server on.
         [default: tcp:8080]
+
+        @param port: the strport description
         """
         self['ports'].append(port)
+
+    # See https://github.com/twisted/twistedchecker/issues/134
+    opt_port.__doc__ = opt_port.__doc__.split('@param')[0]
 
     opt_p = opt_port
 
