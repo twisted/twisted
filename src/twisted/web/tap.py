@@ -10,7 +10,7 @@ from __future__ import absolute_import, division
 
 import os
 
-from twisted.application import internet, service, strports
+from twisted.application import service, strports
 from twisted.internet import interfaces, reactor
 from twisted.python import usage, reflect, threadpool
 from twisted.spread import pb

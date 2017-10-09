@@ -28,7 +28,6 @@ from twisted.web.tap import makePersonalServerFactory, _AddHeadersResource
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.twcgi import CGIScript
 from twisted.web.wsgi import WSGIResource
-from twisted.application import strports
 
 
 application = object()
