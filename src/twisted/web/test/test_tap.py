@@ -193,7 +193,7 @@ class ServiceTests(TestCase):
         to C{8080}.
         """
         options = Options()
-        options.parseOptions(['--port', 'tcp:8001', '--port', 'tcp:8002'])
+        options.parseOptions(['--http', 'tcp:8001', '--http', 'tcp:8002'])
         self.assertIn('8001', options['ports'][0])
         self.assertIn('8002', options['ports'][1])
 

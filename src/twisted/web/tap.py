@@ -9,10 +9,13 @@ Support for creating a service which runs a web server.
 from __future__ import absolute_import, division
 
 import os
+import warnings
+
+import incremental
 
 from twisted.application import service, strports
 from twisted.internet import interfaces, reactor
-from twisted.python import usage, reflect, threadpool
+from twisted.python import usage, reflect, threadpool, deprecate
 from twisted.spread import pb
 from twisted.web import distrib
 from twisted.web import resource, server, static, script, demo, wsgi
@@ -216,7 +219,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                 Dummy function to deprecate about
                 """
             msg = deprecate.getDeprecationWarningString(opt_port,
-                                versions.Version('Twisted', 17, 10, 0))
+                                incremental.Version('Twisted', 17, 10, 0))
             warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             self['ports'].append(self['port'])
         if self['https']:
@@ -225,7 +228,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                 Dummy function to deprecate about
                 """
             msg = deprecate.getDeprecationWarningString(opt_https,
-                                versions.Version('Twisted', 17, 10, 0))
+                                incremental.Version('Twisted', 17, 10, 0))
             warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             try:
                 reflect.namedModule('OpenSSL.SSL')
