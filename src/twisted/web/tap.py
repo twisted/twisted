@@ -69,8 +69,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['root'] = None
         self['extraHeaders'] = []
         self['ports'] = []
+        self['port'] = self['https'] = None
 
-    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
     def opt_port(self, port):
         """
         (DEPRECATED: use --http)
@@ -79,6 +79,9 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
         @param port: the strport description
         """
+        msg = deprecate.getDeprecationWarningString(
+            self.opt_port, incremental.Version("Twisted", "NEXT", 0, 0))
+        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['port'] = port
 
     # See https://github.com/twisted/twistedchecker/issues/134
@@ -86,7 +89,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     opt_p = opt_port
 
-    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
     def opt_https(self, port):
         """
         Port to listen on for Secure HTTP.
@@ -94,6 +96,9 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
         @param port: the strport description
         """
+        msg = deprecate.getDeprecationWarningString(
+            self.opt_https, incremental.Version("Twisted", "NEXT", 0, 0))
+        warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['https'] = port
 
     opt_https.__doc__ = opt_https.__doc__.split('@param')[0]
@@ -237,9 +242,9 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         If no server port was supplied, select a default appropriate for the
         other options supplied.
         """
-        if self['port']:
+        if self['port'] is not None:
             self['ports'].append(self['port'])
-        if self['https']:
+        if self['https'] is not None:
             try:
                 reflect.namedModule('OpenSSL.SSL')
             except ImportError:
