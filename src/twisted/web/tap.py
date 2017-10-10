@@ -75,7 +75,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         """
         self['indexes'].append(indexName)
 
-
     opt_i = opt_index
 
 
@@ -85,7 +84,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         users.
         """
         self['root'] = distrib.UserDirectory()
-
 
     opt_u = opt_user
 
