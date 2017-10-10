@@ -21,7 +21,22 @@ from twisted.trial.unittest import TestCase
 @implementer(IService)
 class AlmostService(object):
     """
-    Implement IService except for the attributes.
+    Implement IService in a way that can fail.
+
+    In general, classes should maintain invariants that adhere
+    to the interfaces that they claim to implement --
+    otherwise, it is a bug.
+
+    This is a buggy class -- the IService implementation is fragile,
+    and several methods will break it. These bugs are intentional,
+    as the tests trigger them -- and then check that the class,
+    indeed, no longer complies with the interface (IService)
+    that it claims to comply with.
+
+    Since the verification will, by definition, only fail on buggy classes --
+    in other words, those which do not actually support the interface they
+    claim to support, we have to write a buggy class to properly verify
+    the interface.
     """
 
     def __init__(self, name, parent, running):
@@ -32,18 +47,27 @@ class AlmostService(object):
     def makeInvalidByDeletingName(self):
         """
         Probably not a wise method to call.
+
+        This method removes the :code:`name` attribute,
+        which has to exist in IService classes.
         """
         del self.name
 
     def makeInvalidByDeletingParent(self):
         """
         Probably not a wise method to call.
+
+        This method removes the :code:`parent` attribute,
+        which has to exist in IService classes.
         """
         del self.parent
 
     def makeInvalidByDeletingRunning(self):
         """
         Probably not a wise method to call.
+
+        This method removes the :code:`running` attribute,
+        which has to exist in IService classes.
         """
         del self.running
 
