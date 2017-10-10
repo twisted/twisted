@@ -44,6 +44,7 @@ class AlmostService(object):
         self.parent = parent
         self.running = running
 
+
     def makeInvalidByDeletingName(self):
         """
         Probably not a wise method to call.
@@ -52,6 +53,7 @@ class AlmostService(object):
         which has to exist in IService classes.
         """
         del self.name
+
 
     def makeInvalidByDeletingParent(self):
         """
@@ -62,6 +64,7 @@ class AlmostService(object):
         """
         del self.parent
 
+
     def makeInvalidByDeletingRunning(self):
         """
         Probably not a wise method to call.
@@ -70,6 +73,7 @@ class AlmostService(object):
         which has to exist in IService classes.
         """
         del self.running
+
 
     def setName(self, name):
         """
