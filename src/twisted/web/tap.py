@@ -18,8 +18,6 @@ from twisted.web import distrib
 from twisted.web import resource, server, static, script, demo, wsgi
 from twisted.web import twcgi
 
-
-
 class Options(usage.Options):
     """
     Define the options accepted by the I{twistd web} plugin.
@@ -28,11 +26,17 @@ class Options(usage.Options):
 
     optParameters = [["logfile", "l", None,
                       "Path to web CLF (Combined Log Format) log file."],
+                     ["port", "p", None,
+                      "(DEPRECATED: use --http) "
+                      "Strports description of port to start the server on."],
                      ["https", None, None,
+                      "(DEPRECATED: use --http) "
                       "Port to listen on for Secure HTTP."],
                      ["certificate", "c", "server.pem",
+                      "(DEPRECATED: use --http) "
                       "SSL certificate to use for HTTPS. "],
                      ["privkey", "k", "server.pem",
+                      "(DEPRECATED: use --http) "
                       "SSL certificate to use for HTTPS."],
                      ]
 
@@ -67,9 +71,9 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['ports'] = []
 
 
-    def opt_port(self, port):
+    def opt_http(self, port):
         """
-        Strports description of port to start the server on.
+        Add an strports description of port to start the server on.
         [default: tcp:8080]
 
         @param port: the strport description
@@ -77,9 +81,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['ports'].append(port)
 
     # See https://github.com/twisted/twistedchecker/issues/134
-    opt_port.__doc__ = opt_port.__doc__.split('@param')[0]
-
-    opt_p = opt_port
+    opt_http.__doc__ = opt_http.__doc__.split('@param')[0]
 
 
     def opt_index(self, indexName):
@@ -208,8 +210,23 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         If no server port was supplied, select a default appropriate for the
         other options supplied.
         """
+        if self['port']:
+            def opt_port(dummy):
+                """
+                Dummy function to deprecate about
+                """
+            msg = deprecate.getDeprecationWarningString(opt_port,
+                                versions.Version('Twisted', 17, 10, 0))
+            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
+            self['ports'].append(self['port'])
         if self['https']:
-            # TODO: Deprecate it?
+            def opt_https(dummy):
+                """
+                Dummy function to deprecate about
+                """
+            msg = deprecate.getDeprecationWarningString(opt_https,
+                                versions.Version('Twisted', 17, 10, 0))
+            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             try:
                 reflect.namedModule('OpenSSL.SSL')
             except ImportError:
