@@ -189,8 +189,7 @@ class ServiceTests(TestCase):
 
     def test_twoPorts(self):
         """
-        If the I{--port} option is not specified, L{Options} defaults the port
-        to C{8080}.
+        If the I{--http} option is given twice, there are two listeners
         """
         options = Options()
         options.parseOptions(['--http', 'tcp:8001', '--http', 'tcp:8002'])

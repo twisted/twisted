@@ -29,9 +29,6 @@ class Options(usage.Options):
 
     optParameters = [["logfile", "l", None,
                       "Path to web CLF (Combined Log Format) log file."],
-                     ["port", "p", None,
-                      "(DEPRECATED: use --http) "
-                      "Strports description of port to start the server on."],
                      ["https", None, None,
                       "(DEPRECATED: use --http) "
                       "Port to listen on for Secure HTTP."],
@@ -53,8 +50,8 @@ class Options(usage.Options):
         "personal", "",
         "Instead of generating a webserver, generate a "
         "ResourcePublisher which listens on  the port given by "
-        "--port, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
-        "if --port is not specified."])
+        "--http, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
+        "if --http is not specified."])
 
     compData = usage.Completions(
                    optActions={"logfile" : usage.CompleteFiles("*.log"),
@@ -73,6 +70,33 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['extraHeaders'] = []
         self['ports'] = []
 
+    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
+    def opt_port(self, port):
+        """
+        (DEPRECATED: use --http)
+        Strports description of port to start the server on
+                     ["port", "p", None,
+
+        @param port: the strport description
+        """
+        self['port'] = port
+
+    # See https://github.com/twisted/twistedchecker/issues/134
+    opt_port.__doc__ = opt_port.__doc__.split('@param')[0]
+
+    opt_p = opt_port
+
+    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
+    def opt_https(self, port):
+        """
+        Port to listen on for Secure HTTP.
+        (DEPRECATED: use --http)
+
+        @param port: the strport description
+        """
+        self['https'] = port
+
+    opt_https.__doc__ = opt_https.__doc__.split('@param')[0]
 
     def opt_http(self, port):
         """
@@ -214,22 +238,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         other options supplied.
         """
         if self['port']:
-            def opt_port():
-                """
-                Dummy function to deprecate about
-                """
-            msg = deprecate.getDeprecationWarningString(opt_port,
-                                incremental.Version('Twisted', 17, 10, 0))
-            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             self['ports'].append(self['port'])
         if self['https']:
-            def opt_https():
-                """
-                Dummy function to deprecate about
-                """
-            msg = deprecate.getDeprecationWarningString(opt_https,
-                                incremental.Version('Twisted', 17, 10, 0))
-            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             try:
                 reflect.namedModule('OpenSSL.SSL')
             except ImportError:
