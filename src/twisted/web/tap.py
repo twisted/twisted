@@ -214,7 +214,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         other options supplied.
         """
         if self['port']:
-            def opt_port(dummy):
+            def opt_port():
                 """
                 Dummy function to deprecate about
                 """
@@ -223,7 +223,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
             self['ports'].append(self['port'])
         if self['https']:
-            def opt_https(dummy):
+            def opt_https():
                 """
                 Dummy function to deprecate about
                 """
