@@ -90,42 +90,42 @@ class NoCurrentExceptionError(Exception):
 
 
 
-def _Traceback(stack_frames, tb_frames):
+def _Traceback(stackFrames, tbFrames):
     """
     Construct a fake traceback object using a list of frames. Note that
     although frames generally include locals and globals, this information
     is not kept by this method, since locals and globals are not used in
     standard tracebacks.
 
-    @param stack_frames: [(methodname, filename, lineno, locals, globals), ...]
-    @param tb_frames: [(methodname, filename, lineno, locals, globals), ...]
+    @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
+    @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
     """
-    assert len(tb_frames) > 0, "Must pass some frames"
+    assert len(tbFrames) > 0, "Must pass some frames"
     # We deliberately avoid using recursion here, as the frames list may be
     # long.
 
-    # 'stack_frames' is a list of frames above (ie, older than) the point the
+    # 'stackFrames' is a list of frames above (ie, older than) the point the
     # exception was caught, with oldest at the start. Start by building these
     # into a linked list of _Frame objects (with the f_back links pointing back
     # towards the oldest frame).
     stack = None
-    for sf in stack_frames:
+    for sf in stackFrames:
         stack = _Frame(sf, stack)
 
-    # 'tb_frames' is a list of frames from the point the exception was caught,
+    # 'tbFrames' is a list of frames from the point the exception was caught,
     # down to where it was thrown, with the oldest at the start. Add these to
     # the linked list of _Frames, but also wrap each one with a _Traceback
     # frame which is linked in the opposite direction (towards the newest
     # frame).
-    stack = _Frame(tb_frames[0], stack)
-    first_tb = tb = _TracebackFrame(stack)
-    for sf in tb_frames[1:]:
+    stack = _Frame(tbFrames[0], stack)
+    firstTb = tb = _TracebackFrame(stack)
+    for sf in tbFrames[1:]:
         stack = _Frame(sf, stack)
         tb.tb_next = _TracebackFrame(stack)
         tb = tb.tb_next
 
-    # return the first _TracebackFrame.
-    return first_tb
+    # Return the first _TracebackFrame.
+    return firstTb
 
 
 

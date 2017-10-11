@@ -776,7 +776,7 @@ class FormattableTracebackTests(SynchronousTestCase):
                          [_tb('filename.py', 123, 'method1', None),
                           _tb('filename.py', 235, 'method2', None)])
 
-        # we should also be able to extract_stack on it
+        # We should also be able to extract_stack on it
         self.assertEqual(traceback.extract_stack(tb.tb_frame),
                          [_tb('filename.py', 7, 'caller1', None),
                           _tb('filename.py', 8, 'caller2', None),
