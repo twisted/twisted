@@ -1468,7 +1468,7 @@ class POP3Client(basic.LineOnlyReceiver):
     @ivar welcomeCode: The APOP challenge passed in the server greeting.
     """
     mode = SHORT
-    command = 'WELCOME'
+    command = b'WELCOME'
     import re
     welcomeRe = re.compile(b'<(.*)>')
 
