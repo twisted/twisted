@@ -57,6 +57,7 @@ def strip(f):
     return lambda result, f=f: f()
 
 
+
 class IMAP4UTF7Tests(unittest.TestCase):
     tests = [
         [u'Hello world', b'Hello world'],
@@ -3503,6 +3504,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
             self.server.search_SINCE(self.laterQuery, self.seq, self.msg))
 
 
+
 @implementer(IRealm)
 class TestRealm:
     """
@@ -3527,6 +3529,7 @@ class TestRealm:
             self._getAccount = lambda: accountHolder.theAccount
         else:
             self._getAccount = lambda: self.theAccount
+
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         return imap4.IAccount, self._getAccount(), lambda: None
@@ -5625,6 +5628,7 @@ class FakeyServer(imap4.IMAP4Server):
 
     def sendServerGreeting(self):
         pass
+
 
 
 @implementer(imap4.IMessage)
