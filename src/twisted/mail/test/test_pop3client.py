@@ -592,7 +592,7 @@ class POP3TLSTests(unittest.TestCase):
             log.msg("Disconnected; asserting correct input received")
             self.assertEqual(
                 sf.input,
-                ['CAPA', 'STLS', 'CAPA', 'QUIT'])
+                [b'CAPA', b'STLS', b'CAPA', b'QUIT'])
 
         def cleanup(result):
             log.msg("Asserted correct input; disconnecting "
