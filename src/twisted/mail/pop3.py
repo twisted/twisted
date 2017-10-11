@@ -1619,7 +1619,7 @@ class POP3Client(basic.LineOnlyReceiver):
         @type magic: L{bytes}
         @param magic: The challenge provided by the server.
         """
-        digest = md5(magic + password).hexdigest().encode("utf-8")
+        digest = md5(magic + password).hexdigest().encode("ascii")
         self.apop(user, digest)
 
 
