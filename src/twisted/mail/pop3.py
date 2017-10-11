@@ -1557,7 +1557,7 @@ class POP3Client(basic.LineOnlyReceiver):
         Command X is dispatched to handle_X() if it exists.  If not, it is
         dispatched to the default handler.
 
-        @type command: L{str}
+        @type command: L{bytes}
         @param command: The command.
 
         @type default: callable that takes L{bytes} or
@@ -1568,9 +1568,8 @@ class POP3Client(basic.LineOnlyReceiver):
         @param args: Arguments to the handler function.
         """
         try:
-            if isinstance(command, bytes):
-                command = command.decode("utf-8")
-            method = getattr(self, 'handle_' + command, default)
+            method = getattr(self, 'handle_' + command.decode("utf-8"),
+                             default)
             if method is not None:
                 method(*args)
         except:
