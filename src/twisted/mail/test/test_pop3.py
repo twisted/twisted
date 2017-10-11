@@ -632,7 +632,7 @@ class SASLTests(unittest.TestCase):
         p.lineReceived(b"AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
         chal = base64.decodestring(chal)
-        response = hmac.HMAC(b'testpassword', chal).hexdigest().encode("utf-8")
+        response = hmac.HMAC(b'testpassword', chal).hexdigest().encode("ascii")
 
         p.lineReceived(
             base64.encodestring(b'testuser ' + response).rstrip(b'\n'))
