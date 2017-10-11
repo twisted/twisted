@@ -2776,7 +2776,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
 
-    def _test_check(self):
+    def _testCheck(self):
         SimpleServer.theAccount.addMailbox(b'root/subthing')
         def login():
             return self.client.login(b'testuser', b'password-test')
@@ -2797,7 +2797,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         Trigger the L{imap.IMAP4Server._cbSelectWork} callback
         by selecting an mbox.
         """
-        return self._test_check()
+        return self._testCheck()
 
 
     def test_checkFail(self):
@@ -2814,7 +2814,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
                              b'SELECT failed: Server error')
 
         self.patch(Account, "select", failSelect)
-        d = self._test_check()
+        d = self._testCheck()
         return d.addCallback(checkResponse)
 
 
