@@ -796,7 +796,9 @@ class FrameAttributesTests(SynchronousTestCase):
         bound to C{dict} instance.  They also have the C{f_code} attribute
         bound to something like a code object.
         """
-        frame = failure._Frame("dummyname", "dummyfilename")
+        frame = failure._Frame(
+            ("dummyname", "dummyfilename", None, None, None), None
+        )
         self.assertIsInstance(frame.f_globals, dict)
         self.assertIsInstance(frame.f_locals, dict)
         self.assertIsInstance(frame.f_code, failure._Code)
