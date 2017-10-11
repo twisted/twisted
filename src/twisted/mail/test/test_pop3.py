@@ -465,9 +465,9 @@ class AnotherPOP3Tests(unittest.TestCase):
 
 
     def _cbTestEmptyPASS(self, ignored, client, dummy):
-        expected_output = (
+        expectedOutput = (
             b'+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n')
-        self.assertEqual(expected_output,
+        self.assertEqual(expectedOutput,
                          b'\r\n'.join(client.response) + b'\r\n')
         dummy.connectionLost(failure.Failure(
                              Exception("Test harness disconnect")))
