@@ -498,8 +498,8 @@ class POP3HelperMixin:
 
     def setUp(self):
         d = defer.Deferred()
-        self.server = pop3testserver.POP3TestServer(contextFactory=
-                                                    self.serverCTX)
+        self.server = pop3testserver.POP3TestServer(
+            contextFactory=self.serverCTX)
         self.client = SimpleClient(d, contextFactory=self.clientCTX)
         self.client.timeout = 30
         self.connected = d

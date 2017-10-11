@@ -573,7 +573,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.processCommand(*line.split(b' '))
         except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
-            self.failResponse('bad protocol or server: {}: {}'.format(e.__class__.__name__, e))
+            self.failResponse('bad protocol or server: {}: {}'.format(
+                e.__class__.__name__, e))
 
 
     def processCommand(self, command, *args):
@@ -963,7 +964,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             else:
                 d = defer.maybeDeferred(self.mbox.listMessages, i - 1)
                 def cbMessage(msg):
-                    self.successResponse(intToBytes(i) + b' ' + intToBytes(msg))
+                    self.successResponse(intToBytes(i) + b' ' +
+                                         intToBytes(msg))
                 def ebMessage(err):
                     errcls = err.check(ValueError, IndexError)
                     if errcls is not None:
@@ -979,7 +981,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                         invalidNum = i
                         if invalidNum and not isinstance(invalidNum, bytes):
                             invalidNum = str(invalidNum).encode("utf-8")
-                        self.failResponse(b"Invalid message-number: " + invalidNum)
+                        self.failResponse(b"Invalid message-number: " +
+                                          invalidNum)
                     else:
                         self.failResponse(err.getErrorMessage())
                         log.msg("Unexpected do_LIST failure:")
