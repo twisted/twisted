@@ -473,6 +473,26 @@ class AnotherPOP3Tests(unittest.TestCase):
                              Exception("Test harness disconnect")))
 
 
+    def test_badUTF8CharactersInCommand(self):
+        """
+        Sending a command with invalid UTF-8 characters
+        will raise a L{pop3.POP3Error}.
+        """
+        error = str(b'not authenticated yet: cannot do \x81PASS')
+        if not isinstance(error, bytes):
+            error = error.encode("utf-8")
+        d = self.runTest(
+            [b'\x81PASS',
+             b'QUIT'],
+            [b'+OK <moshez>',
+             b"-ERR bad protocol or server: POP3Error: " +
+             error,
+             b'+OK '])
+        errors = self.flushLoggedErrors(pop3.POP3Error)
+        self.assertEqual(len(errors), 1)
+        return d
+
+
 
 @implementer(pop3.IServerFactory)
 class TestServerFactory:
