@@ -84,9 +84,9 @@ URLs ``/foo`` , ``/bar`` , and ``/baz`` :
 .. code-block:: python
 
 
-    root.putChild("foo", File("/tmp"))
-    root.putChild("bar", File("/lost+found"))
-    root.putChild("baz", File("/opt"))
+    root.putChild(b"foo", File("/tmp"))
+    root.putChild(b"bar", File("/lost+found"))
+    root.putChild(b"baz", File("/opt"))
 
 
 
@@ -134,9 +134,9 @@ Here's the whole example uninterrupted:
     from twisted.web.static import File
 
     root = Resource()
-    root.putChild("foo", File("/tmp"))
-    root.putChild("bar", File("/lost+found"))
-    root.putChild("baz", File("/opt"))
+    root.putChild(b"foo", File("/tmp"))
+    root.putChild(b"bar", File("/lost+found"))
+    root.putChild(b"baz", File("/opt"))
 
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)

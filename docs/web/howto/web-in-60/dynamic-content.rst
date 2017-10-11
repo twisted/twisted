@@ -85,7 +85,8 @@ time:
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html><body>%s</body></html>" % (time.ctime(),)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>" + time.ctime().encode('utf-8'))
 
 
 
@@ -99,7 +100,8 @@ children.
 
 The ``render_GET`` method here will be called whenever the URI we
 hook this resource up to is requested with the ``GET`` method. The byte
-string it returns is what will be sent to the browser.
+string it returns is what will be sent to the browser.  In this case, that
+byte string is an HTML 5 web page encoded as UTF-8.
 
 
 
@@ -155,7 +157,8 @@ Here's the code with no interruptions:
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html><body>%s</body></html>" % (time.ctime(),)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>" + time.ctime().encode('utf-8'))
 
     resource = ClockPage()
     factory = Site(resource)
