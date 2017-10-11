@@ -900,7 +900,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             On a successful login, it returns the server response minus
             the status indicator.
         """
-        digest = md5(challenge + password).hexdigest().encode("utf-8")
+        digest = md5(challenge + password).hexdigest().encode("ascii")
         return self.apop(username, digest)
 
 
