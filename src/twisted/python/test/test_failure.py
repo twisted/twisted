@@ -1,4 +1,3 @@
-# -*- t-case-name: twisted.python.test.test_failure -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -18,7 +17,7 @@ class TestFailure(SynchronousTestCase):
 
     def test_trapCatchException(self):
         """
-        c{trap} returns the wrapped exception if the type given as as argument.
+        c{trap} returns the wrapped exception type if it is matched.
         """
         failure = Failure(ValueError())
         caught = failure.trap(ValueError)
@@ -27,7 +26,7 @@ class TestFailure(SynchronousTestCase):
 
     def test_trapRaiseWrappedException(self):
         """
-        c{trap} raises the wrapped exception on Python 3.
+        c{trap} raises the wrapped exception if there is no match on Python 3.
         """
         if not _PY3:
             raise SkipTest("Wrapped exceptions are only raised on Python 3.")
@@ -37,7 +36,7 @@ class TestFailure(SynchronousTestCase):
 
     def test_trapRaiseSelf(self):
         """
-        c{trap} raises self (Failure) on Python 2.
+        c{trap} raises self (Failure) if there is no match on Python 2.
         """
         if _PY3:
             raise SkipTest("Self only raised on Python 2.")
