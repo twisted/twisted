@@ -13,11 +13,11 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python import reflect
 from twisted.python import failure
 
-from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 
 try:
@@ -65,6 +65,9 @@ class FailureTests(SynchronousTestCase):
         expected types, L{failure.Failure.trap} raises the wrapped
         C{Exception}.
         """
+        if not _PY3:
+            raise SkipTest('Only relevant on Python 3.')
+
         exception = ValueError()
         try:
             raise exception
@@ -73,6 +76,24 @@ class FailureTests(SynchronousTestCase):
 
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
+
+
+    def test_trapRaisesSelf(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises itself.
+        """
+        if _PY3:
+            raise SkipTest("Only relevant on Python 2.")
+
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+
+        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
+        self.assertIs(f, untrapped)
 
 
     def test_failureValueFromFailure(self):
