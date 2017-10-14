@@ -66,7 +66,10 @@ class FailureTests(SynchronousTestCase):
         C{Exception}.
         """
         if not _PY3:
-            raise SkipTest('Only relevant on Python 3.')
+            raise SkipTest("""
+                Only expected behaviour on Python 3.
+                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
+            """)
 
         exception = ValueError()
         try:
@@ -84,7 +87,10 @@ class FailureTests(SynchronousTestCase):
         expected types, L{failure.Failure.trap} raises itself.
         """
         if _PY3:
-            raise SkipTest("Only relevant on Python 2.")
+            raise SkipTest("""
+                Only expected behaviour on Python 2.
+                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
+            """)
 
         exception = ValueError()
         try:
