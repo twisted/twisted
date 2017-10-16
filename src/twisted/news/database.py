@@ -24,7 +24,7 @@ from zope.interface import implementer, Interface
 from twisted.enterprise import adbapi
 from twisted.internet import defer
 from twisted.mail import smtp
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, unicode
 from twisted.news.nntp import NNTPError
 from twisted.persisted import dirdbm
 
@@ -423,7 +423,8 @@ class PickleStorage(_ModerationMixin):
             else:
                 num = low = high = 0
             flags = 'y'
-            return defer.succeed((group, num, high, low, flags))
+            return defer.succeed((group.decode("utf-8"), num, high, low,
+                                  flags))
         else:
             return defer.fail(ERR_NOGROUP)
 
@@ -547,13 +548,15 @@ class NewsShelf(_ModerationMixin):
         self.dbm[b'groups'] = dirdbm.Shelf(path)
 
         # A dictionary of group name/email address
-        self.dbm[b'moderators'] = dirdbm.Shelf(os.path.join(self.path, 'moderators').encode("utf-8"))
+        self.dbm[b'moderators'] = dirdbm.Shelf(
+            os.path.join(self.path, 'moderators').encode("utf-8"))
 
         # A list of group names
         self.dbm[b'subscriptions'] = []
 
         # A dictionary of MessageID strings/xref lists
-        self.dbm[b'Message-IDs'] = dirdbm.Shelf(os.path.join(self.path, 'Message-IDs').encode("utf-8"))
+        self.dbm[b'Message-IDs'] = dirdbm.Shelf(
+            os.path.join(self.path, 'Message-IDs').encode("utf-8"))
 
 
     def addGroup(self, name, flags):
@@ -615,22 +618,28 @@ class NewsShelf(_ModerationMixin):
             return self.notifyModerators([moderator], article)
 
         for group in groups:
+            if isinstance(group, unicode):
+                group = group.encode("utf-8")
             try:
-                g = self.dbm[b'groups'][group.encode("utf-8")]
+                g = self.dbm[b'groups'][group]
             except KeyError:
                 pass
             else:
                 index = g.maxArticle + 1
                 g.maxArticle += 1
                 g.articles[index] = article
-                xref.append((group, str(index)))
-                self.dbm[b'groups'][group.encode("utf-8")] = g
+                xref.append((group.decode("utf-8"), str(index)))
+                self.dbm[b'groups'][group] = g
 
         if not xref:
-            return defer.fail(NewsServerError("No groups carried: " + ' '.join(groups)))
+            return defer.fail(NewsServerError("No groups carried: " +
+                                              ' '.join(groups)))
 
-        article.putHeader(u'Xref', u'{} {}'.format(socket.gethostname().split()[0], u' '.join([':'.join(x) for x in xref])))
-        self.dbm[b'Message-IDs'][article.getHeader(u'Message-ID').encode("utf-8")] = xref
+        article.putHeader(u'Xref', u'{} {}'.format(
+            socket.gethostname().split()[0],
+            u' '.join([':'.join(x) for x in xref])))
+        self.dbm[b'Message-IDs'][
+            article.getHeader(u'Message-ID').encode("utf-8")] = xref
         return defer.succeed(None)
 
 
@@ -649,12 +658,15 @@ class NewsShelf(_ModerationMixin):
         r = []
         for i in range(low, high + 1):
             if i in self.dbm[b'groups'][group].articles:
-                r.append([str(i)] + self.dbm[b'groups'][group].articles[i].overview())
+                r.append([str(i)] +
+                    self.dbm[b'groups'][group].articles[i].overview())
         return defer.succeed(r)
 
 
     def xhdrRequest(self, group, low, high, header):
-        if group.encode("utf-8") not in self.dbm[b'groups']:
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
+        if group not in self.dbm[b'groups']:
             return defer.succeed([])
 
         if low is None:
@@ -663,88 +675,112 @@ class NewsShelf(_ModerationMixin):
             high = self.dbm[b'groups'][group].maxArticle
         r = []
         for i in range(low, high + 1):
-            if i in self.dbm[b'groups'][group.encode("utf-8")].articles:
-                r.append((i, self.dbm[b'groups'][group.encode("utf-8")].articles[i].getHeader(header)))
+            if i in self.dbm[b'groups'][group].articles:
+                r.append((i,
+                    self.dbm[b'groups'][group].articles[i].getHeader(header)))
         return defer.succeed(r)
 
 
     def listGroupRequest(self, group):
-        if group.encode("utf-8") in self.dbm[b'groups']:
-            return defer.succeed((group, list(self.dbm[b'groups'][group.encode("utf-8")].articles.keys())))
-        return defer.fail(NewsServerError("No such group: " + group))
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
+        if group in self.dbm[b'groups']:
+            return defer.succeed((group.decode("utf-8"),
+                list(self.dbm[b'groups'][group].articles.keys())))
+        return defer.fail(NewsServerError(u"No such group: " +
+                          group.decode("utf-8")))
 
 
     def groupRequest(self, group):
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
         try:
-            g = self.dbm[b'groups'][group.encode("utf-8")]
+            g = self.dbm[b'groups'][group]
         except KeyError:
-            return defer.fail(NewsServerError("No such group: " + group))
+            return defer.fail(NewsServerError(u"No such group: " +
+                                              group.decode("utf-8")))
         else:
             flags = g.flags
             low = g.minArticle
             high = g.maxArticle
             num = high - low + 1
-            return defer.succeed((group, num, high, low, flags))
+            return defer.succeed((group.decode("utf-8"), num, high, low,
+                                  flags))
 
 
     def articleExistsRequest(self, id):
-        return defer.succeed(id.encode("utf-8") in self.dbm[b'Message-IDs'])
+        if isinstance(id, unicode):
+            id = id.encode("utf-8")
+        return defer.succeed(id in self.dbm[b'Message-IDs'])
 
 
-    def articleRequest(self, group, index, id = None):
+    def articleRequest(self, group, index, id=None):
+        if isinstance(id, unicode):
+            id = id.encode("utf-8")
         if id is not None:
             try:
-                xref = self.dbm[b'Message-IDs'][id.encode("utf-8")]
+                xref = self.dbm[b'Message-IDs'][id]
             except KeyError:
-                return defer.fail(NewsServerError("No such article: " + id))
+                return defer.fail(NewsServerError(b"No such article: " + id))
             else:
                 group, index = xref[0]
                 index = int(index)
 
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
         try:
-            a = self.dbm[b'groups'][group.encode("utf-8")].articles[index]
+            a = self.dbm[b'groups'][group].articles[index]
         except KeyError:
-            return defer.fail(NewsServerError("No such group: " + group))
+            return defer.fail(NewsServerError(b"No such group: " + group))
         else:
             return defer.succeed((
                 index,
                 a.getHeader(u'Message-ID'),
-                BytesIO((a.textHeaders() + '\r\n' + a.body).encode("utf-8"))
+                BytesIO((a.textHeaders() + u'\r\n' + a.body).encode("utf-8"))
             ))
 
 
     def headRequest(self, group, index, id = None):
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
+        if isinstance(id, unicode):
+            id = id.encode("utf-8")
         if id is not None:
             try:
                 xref = self.dbm[b'Message-IDs'][id]
             except KeyError:
-                return defer.fail(NewsServerError("No such article: " + id))
+                return defer.fail(NewsServerError(b"No such article: " + id))
             else:
                 group, index = xref[0]
                 index = int(index)
 
         try:
-            a = self.dbm[b'groups'][group.encode("utf-8")].articles[index]
+            a = self.dbm[b'groups'][group].articles[index]
         except KeyError:
-            return defer.fail(NewsServerError("No such group: " + group))
+            return defer.fail(NewsServerError(b"No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader(u'Message-ID'), a.textHeaders()))
+            return defer.succeed((index, a.getHeader(u'Message-ID'),
+                                  a.textHeaders()))
 
 
     def bodyRequest(self, group, index, id = None):
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
+        if isinstance(id, unicode):
+            id = id.encode("utf-8")
         if id is not None:
             try:
                 xref = self.dbm[b'Message-IDs'][id]
             except KeyError:
-                return defer.fail(NewsServerError("No such article: " + id))
+                return defer.fail(NewsServerError(b"No such article: " + id))
             else:
                 group, index = xref[0]
                 index = int(index)
 
         try:
-            a = self.dbm[b'groups'][group.encode("utf-8")].articles[index]
+            a = self.dbm[b'groups'][group].articles[index]
         except KeyError:
-            return defer.fail(NewsServerError("No such group: " + group))
+            return defer.fail(NewsServerError(b"No such group: " + group))
         else:
             return defer.succeed((index, a.getHeader(u'Message-ID'), BytesIO(a.body.encode("utf-8"))))
 
@@ -801,7 +837,8 @@ class NewsStorageAugmentation:
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self.info['password'] = getpass.getpass('Database password for {}: '.format(self.info['user']))
+        self.info['password'] = getpass.getpass(
+            'Database password for {}: '.format(self.info['user']))
         self.dbpool = adbapi.ConnectionPool(**self.info)
         del self.info['password']
 
@@ -809,7 +846,8 @@ class NewsStorageAugmentation:
     def listRequest(self):
         # COALESCE may not be totally portable
         # it is shorthand for
-        # CASE WHEN (first parameter) IS NOT NULL then (first parameter) ELSE (second parameter) END
+        # CASE WHEN (first parameter) IS NOT NULL then
+        # (first parameter) ELSE (second parameter) END
         sql = """
             SELECT groups.name,
                 COALESCE(MAX(postings.article_index), 0),
@@ -846,7 +884,8 @@ class NewsStorageAugmentation:
         sql = """
             SELECT name, group_id FROM groups
             WHERE name IN ({})
-        """.format(', '.join([("'{}'".format(adbapi.safe(group))) for group in groups]))
+        """.format(', '.join([("'{}'".format(adbapi.safe(group)))
+                              for group in groups]))
 
         transaction.execute(sql)
         result = transaction.fetchall()
@@ -880,7 +919,8 @@ class NewsStorageAugmentation:
 
         # Build xrefs
         xrefs = socket.gethostname().split()[0]
-        xrefs = xrefs + ' ' + ' '.join([('{}:{}'.format(group, id)) for (group, id) in nameIndex])
+        xrefs = xrefs + ' ' + ' '.join([('{}:{}'.format(group, id))
+                                        for (group, id) in nameIndex])
         article.putHeader('Xref', xrefs)
 
         # Hey!  The article is ready to be posted!  God damn f'in finally.
@@ -962,7 +1002,7 @@ class NewsStorageAugmentation:
         """.format(adbapi.safe(group))
 
         return self.dbpool.runQuery(sql).addCallback(
-            lambda results, group = group: (group, [res[0] for res in results])
+            lambda results, group=group: (group, [res[0] for res in results])
         )
 
 

@@ -44,7 +44,6 @@ class ModerationTestsMixin:
                 smtphost, from_addr, to_addrs, msg, senderDomainName, port))
         return succeed(None)
 
-
     _messageTemplate = u"""\
 From: some dude
 To: another person
@@ -86,8 +85,8 @@ Body of the message is such.
         @param groups: A L{list} of L{str} naming the groups which should exist
             in the resulting storage object.
 
-        @param moderators: A L{dict} mapping L{str} each group name to a L{list}
-            of L{str} giving moderator email (RFC 2821) addresses.
+        @param moderators: A L{dict} mapping L{str} each group name to a
+            L{list} of L{str} giving moderator email (RFC 2821) addresses.
         """
         raise NotImplementedError()
 
@@ -147,7 +146,8 @@ Body of the message is such.
         return result
 
 
-    def _checkModeratorMessage(self, messageText, sender, moderator, group, postingText):
+    def _checkModeratorMessage(self, messageText, sender, moderator, group,
+                               postingText):
         p = Parser()
         msg = p.parsestr(messageText)
         headers = dict(msg.items())
@@ -156,7 +156,8 @@ Body of the message is such.
             headers,
             {'From': sender,
              'To': moderator,
-             'Subject': 'Moderate new {} message: activities etc'.format(group),
+             'Subject': 'Moderate new {} message: activities etc'.format(
+             group),
              'Content-Type': 'message/rfc822'})
 
         posting = p.parsestr(postingText)
