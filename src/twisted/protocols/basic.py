@@ -32,9 +32,9 @@ else:
     def _formatNetstring(data):
         return b'%d:%s,' % (len(data), data)
 _formatNetstring.__doc__ = """
-Convert some C{bytes} into netstring format.
+Convert some L{bytes} into netstring format.
 
-@param data: C{bytes} that will be reformatted.
+@param data: L{bytes} that will be reformatted.
 """
 
 
@@ -75,7 +75,7 @@ class NetstringReceiver(protocol.Protocol):
 
     @ivar MAX_LENGTH: Defines the maximum length of netstrings that can be
         received.
-    @type MAX_LENGTH: C{int}
+    @type MAX_LENGTH: L{int}
 
     @ivar _LENGTH: A pattern describing all strings that contain a netstring
         length specification. Examples for length specifications are C{b'0:'},
@@ -92,19 +92,19 @@ class NetstringReceiver(protocol.Protocol):
 
     @ivar _PARSING_LENGTH: Indicates that the C{NetstringReceiver} is in
         the state of parsing the length portion of a netstring.
-    @type _PARSING_LENGTH: C{int}
+    @type _PARSING_LENGTH: L{int}
 
     @ivar _PARSING_PAYLOAD: Indicates that the C{NetstringReceiver} is in
         the state of parsing the payload portion (data and trailing comma)
         of a netstring.
-    @type _PARSING_PAYLOAD: C{int}
+    @type _PARSING_PAYLOAD: L{int}
 
     @ivar brokenPeer: Indicates if the connection is still functional
-    @type brokenPeer: C{int}
+    @type brokenPeer: L{int}
 
     @ivar _state: Indicates if the protocol is consuming the length portion
         (C{PARSING_LENGTH}) or the payload (C{PARSING_PAYLOAD}) of a netstring
-    @type _state: C{int}
+    @type _state: L{int}
 
     @ivar _remainingData: Holds the chunk of data that has not yet been consumed
     @type _remainingData: C{string}
@@ -115,7 +115,7 @@ class NetstringReceiver(protocol.Protocol):
 
     @ivar _expectedPayloadSize: Holds the payload size plus one for the trailing
         comma.
-    @type _expectedPayloadSize: C{int}
+    @type _expectedPayloadSize: L{int}
     """
     MAX_LENGTH = 99999
     _LENGTH = re.compile(b'(0|[1-9]\d*)(:)')
@@ -158,7 +158,7 @@ class NetstringReceiver(protocol.Protocol):
 
         @param string: The string to send.  The necessary framing (length
             prefix, etc) will be added.
-        @type string: C{bytes}
+        @type string: L{bytes}
         """
         self.transport.write(_formatNetstring(string))
 
@@ -172,7 +172,7 @@ class NetstringReceiver(protocol.Protocol):
 
         @param data: A chunk of data representing a (possibly partial)
             netstring
-        @type data: C{bytes}
+        @type data: L{bytes}
         """
         self._remainingData += data
         while self._remainingData:
@@ -191,7 +191,7 @@ class NetstringReceiver(protocol.Protocol):
 
         @param string: The complete string which was received with all
             framing (length prefix, etc) removed.
-        @type string: C{bytes}
+        @type string: L{bytes}
 
         @raise NotImplementedError: because the method has to be implemented
             by the child class.
@@ -291,9 +291,9 @@ class NetstringReceiver(protocol.Protocol):
             C{self.MAX_LENGTH}.
         @param lengthAsString: A chunk of data starting with a length
             specification
-        @type lengthAsString: C{bytes}
+        @type lengthAsString: L{bytes}
         @return: The length of the netstring
-        @rtype: C{int}
+        @rtype: L{int}
         """
         self._checkStringSize(lengthAsString)
         length = int(lengthAsString)
@@ -461,7 +461,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Override this for when each line is received.
 
         @param line: The line which was received with the delimiter removed.
-        @type line: C{bytes}
+        @type line: L{bytes}
         """
         raise NotImplementedError
 
@@ -471,7 +471,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Sends a line to the other end of the connection.
 
         @param line: The line to send, not including the delimiter.
-        @type line: C{bytes}
+        @type line: L{bytes}
         """
         return self.transport.writeSequence((line, self.delimiter))
 
@@ -533,7 +533,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Clear buffered data.
 
         @return: All of the cleared buffered data.
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         b, self._buffer = self._buffer, b""
         return b
@@ -620,7 +620,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Override this for when each line is received.
 
         @param line: The line which was received with the delimiter removed.
-        @type line: C{bytes}
+        @type line: L{bytes}
         """
         raise NotImplementedError
 
@@ -630,7 +630,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         Sends a line to the other end of the connection.
 
         @param line: The line to send, not including the delimiter.
-        @type line: C{bytes}
+        @type line: L{bytes}
         """
         return self.transport.write(line + self.delimiter)
 
@@ -686,19 +686,19 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         sent to stringReceived.  _compatibilityOffset must be updated when this
         value is updated so that the C{recvd} attribute can be generated
         correctly.
-    @type _unprocessed: C{bytes}
+    @type _unprocessed: L{bytes}
 
     @ivar structFormat: format used for struct packing/unpacking. Define it in
         subclass.
-    @type structFormat: C{str}
+    @type structFormat: L{str}
 
     @ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
         using C{struct.calcsize(structFormat)}
-    @type prefixLength: C{int}
+    @type prefixLength: L{int}
 
     @ivar _compatibilityOffset: the offset within C{_unprocessed} to the next
         message to be parsed. (used to generate the recvd attribute)
-    @type _compatibilityOffset: C{int}
+    @type _compatibilityOffset: L{int}
     """
 
     MAX_LENGTH = 99999
@@ -715,7 +715,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
 
         @param string: The complete string which was received with all
             framing (length prefix, etc) removed.
-        @type string: C{bytes}
+        @type string: L{bytes}
         """
         raise NotImplementedError
 
@@ -727,7 +727,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         Override this.
 
         @param length: The length prefix which was received.
-        @type length: C{int}
+        @type length: L{int}
         """
         self.transport.loseConnection()
 
@@ -788,7 +788,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
 
         @param string: The string to send.  The necessary framing (length
             prefix, etc) will be added.
-        @type string: C{bytes}
+        @type string: L{bytes}
         """
         if len(string) >= 2 ** (8 * self.prefixLength):
             raise StringTooLongError(
@@ -853,7 +853,7 @@ class StatefulStringProtocol:
     connection will be closed immediately.
 
     @ivar state: Current state of the protocol. Defaults to C{'init'}.
-    @type state: C{str}
+    @type state: L{str}
     """
 
     state = 'init'
@@ -909,7 +909,7 @@ class FileSender:
         the same.  All bytes read from the file are passed through this before
         being written to the consumer.
 
-        @rtype: C{Deferred}
+        @rtype: L{defer.Deferred}
         @return: A deferred whose callback will be invoked when the file has
         been completely written to the consumer. The last byte written to the
         consumer is passed to the callback.
