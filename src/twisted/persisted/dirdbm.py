@@ -230,7 +230,7 @@ class DirDBM:
         @return: A true value if this dirdbm has the specified key, a false
         value otherwise.
         """
-        if not type(key) == bytes:
+        if not isinstance(key, bytes):
             raise TypeError("DirDBM key must be bytes")
         key = self._encode(key)
         return self._dnamePath.child(key).isfile()
@@ -350,7 +350,7 @@ class Shelf(DirDBM):
         C{shelf[foo] = bar}
         Create or modify a textfile in this directory.
 
-        @type k: str
+        @type k: L{bytes}
         @param k: The key to set
 
         @param v: The value to associate with C{key}
