@@ -18,19 +18,12 @@ import math
 from zope.interface import implementer
 
 # Twisted imports
-from twisted.python.compat import _PY3
 from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log
 
 
-# Unfortunately we cannot use regular string formatting on Python 3; see
-# http://bugs.python.org/issue3982 for details.
-if _PY3:
-    def _formatNetstring(data):
-        return b''.join([str(len(data)).encode("ascii"), b':', data, b','])
-else:
-    def _formatNetstring(data):
-        return b'%d:%s,' % (len(data), data)
+def _formatNetstring(data):
+    return b''.join([str(len(data)).encode("ascii"), b':', data, b','])
 _formatNetstring.__doc__ = """
 Convert some L{bytes} into netstring format.
 
