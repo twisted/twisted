@@ -591,7 +591,10 @@ class NNTPServer(basic.LineReceiver):
     def _gotList(self, list):
         self.sendLine(b'215 newsgroups in form "group high low flags"')
         for i in list:
-            line = u'{} {} {} {}'.format(*i)
+            decodedList = [val.decode("utf-8") if isinstance(val, bytes)
+                           else val
+                           for val in i]
+            line = u'{} {} {} {}'.format(*decodedList)
             self.sendLine(line.encode("utf-8"))
         self.sendLine(b'.')
 
