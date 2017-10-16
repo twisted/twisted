@@ -8,7 +8,6 @@ News server backend implementations.
 
 import getpass, pickle, time, socket
 import os
-import StringIO
 from hashlib import md5
 try:
     # Python 3
@@ -19,53 +18,55 @@ except ImportError:
     from email.Message import Message
     from email.Generator import Generator
 
+from io import BytesIO, StringIO
 from zope.interface import implementer, Interface
 
-from twisted.news.nntp import NNTPError
-from twisted.mail import smtp
-from twisted.internet import defer
 from twisted.enterprise import adbapi
+from twisted.internet import defer
+from twisted.mail import smtp
+from twisted.python.compat import _PY3
+from twisted.news.nntp import NNTPError
 from twisted.persisted import dirdbm
 
 
 
-ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
+ERR_NOGROUP, ERR_NOARTICLE = [2, 3]  # XXX - put NNTP values here (I guess?)
 
 OVERVIEW_FMT = [
     'Subject', 'From', 'Date', 'Message-ID', 'References',
     'Bytes', 'Lines', 'Xref'
 ]
 
-def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
-    return ''.join(map(lambda x: hex(ord(x))[2:], md5.digest()))
+def hexdigest(md5):
+    return md5.hexdigest()
 
 class Article:
     def __init__(self, head, body):
         self.body = body
         self.headers = {}
         header = None
-        for line in head.split('\r\n'):
-            if line[0] in ' \t':
+        for line in head.split(u'\r\n'):
+            if line[0:1] in u' \t':
                 i = list(self.headers[header])
-                i[1] += '\r\n' + line
+                i[1] += u'\r\n' + line
             else:
-                i = line.split(': ', 1)
+                i = line.split(u': ', 1)
                 header = i[0].lower()
             self.headers[header] = tuple(i)
 
-        if not self.getHeader('Message-ID'):
-            s = str(time.time()) + self.body
-            id = hexdigest(md5(s)) + '@' + socket.gethostname()
-            self.putHeader('Message-ID', '<%s>' % id)
+        if not self.getHeader(u'Message-ID'):
+            s = u"" + str(time.time()) + self.body
+            id = hexdigest(md5(s.encode("utf-8"))) + '@' + socket.gethostname()
+            self.putHeader(u'Message-ID', '<{}>'.format(id))
 
-        if not self.getHeader('Bytes'):
-            self.putHeader('Bytes', str(len(self.body)))
+        if not self.getHeader(u'Bytes'):
+            self.putHeader(u'Bytes', str(len(self.body)))
 
-        if not self.getHeader('Lines'):
-            self.putHeader('Lines', str(self.body.count('\n')))
+        if not self.getHeader(u'Lines'):
+            self.putHeader(u'Lines', str(self.body.count(u'\n')))
 
-        if not self.getHeader('Date'):
-            self.putHeader('Date', time.ctime(time.time()))
+        if not self.getHeader(u'Date'):
+            self.putHeader(u'Date', time.ctime(time.time()))
 
 
     def getHeader(self, header):
@@ -83,8 +84,8 @@ class Article:
     def textHeaders(self):
         headers = []
         for i in self.headers.values():
-            headers.append('%s: %s' % i)
-        return '\r\n'.join(headers) + '\r\n'
+            headers.append(u'{}: {}'.format(*i))
+        return u'\r\n'.join(headers) + u'\r\n'
 
     def overview(self):
         xover = []
@@ -254,8 +255,8 @@ class _ModerationMixin:
         """
         # Moderated postings go through as long as they have an Approved
         # header, regardless of what the value is
-        group = article.getHeader('Newsgroups')
-        subject = article.getHeader('Subject')
+        group = article.getHeader(u'Newsgroups')
+        subject = article.getHeader(u'Subject')
 
         if self._sender is None:
             # This case should really go away.  This isn't a good default.
@@ -267,7 +268,7 @@ class _ModerationMixin:
         msg['Message-ID'] = smtp.messageid()
         msg['From'] = sender
         msg['To'] = ', '.join(moderators)
-        msg['Subject'] = 'Moderate new %s message: %s' % (group, subject)
+        msg['Subject'] = 'Moderate new {} message: {}'.format(group, subject)
         msg['Content-Type'] = 'message/rfc822'
 
         payload = Message()
@@ -277,10 +278,18 @@ class _ModerationMixin:
 
         msg.attach(payload)
 
-        out = StringIO.StringIO()
+        if _PY3:
+            out = StringIO()
+        else:
+            out = BytesIO()
         gen = Generator(out, False)
-        gen.flatten(msg)
+        if _PY3:
+            gen.flatten(msg, linesep=u"\r\n")
+        else:
+            gen.flatten(msg)
         msg = out.getvalue()
+        if isinstance(msg, bytes):
+            msg = msg.decode("utf-8")
 
         return self.sendmail(self._mailhost, sender, moderators, msg)
 
@@ -318,7 +327,7 @@ class PickleStorage(_ModerationMixin):
         moderators = []
         for group in groups:
             moderators.extend(self.db['moderators'].get(group, None))
-        return filter(None, moderators)
+        return [moderator for moderator in moderators if moderator]
 
 
     def listRequest(self):
@@ -342,22 +351,22 @@ class PickleStorage(_ModerationMixin):
         return defer.succeed(['alt.test'])
 
     def postRequest(self, message):
-        cleave = message.find('\r\n\r\n')
+        cleave = message.find(u'\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
 
         a = Article(headers, article)
-        groups = a.getHeader('Newsgroups').split()
+        groups = a.getHeader(u'Newsgroups').split()
         xref = []
 
         # Check moderated status
         moderators = self.getModerators(groups)
-        if moderators and not a.getHeader('Approved'):
+        if moderators and not a.getHeader(u'Approved'):
             return self.notifyModerators(moderators, a)
 
         for group in groups:
             if group in self.db:
-                if len(self.db[group].keys()):
-                    index = max(self.db[group].keys()) + 1
+                if len(list(self.db[group].keys())):
+                    index = max(list(self.db[group].keys())) + 1
                 else:
                     index = 1
                 xref.append((group, str(index)))
@@ -366,9 +375,9 @@ class PickleStorage(_ModerationMixin):
         if len(xref) == 0:
             return defer.fail(None)
 
-        a.putHeader('Xref', '%s %s' % (
+        a.putHeader(u'Xref', u'{} {}'.format(
             socket.gethostname().split()[0],
-            ''.join(map(lambda x: ':'.join(x), xref))
+            u''.join(map(lambda x: u':'.join(x), xref))
         ))
 
         self.flush()
@@ -422,7 +431,7 @@ class PickleStorage(_ModerationMixin):
     def articleExistsRequest(self, id):
         for group in self.db['groups']:
             for a in self.db[group].values():
-                if a.getHeader('Message-ID') == id:
+                if a.getHeader(u'Message-ID') == id:
                     return defer.succeed(1)
         return defer.succeed(0)
 
@@ -436,8 +445,9 @@ class PickleStorage(_ModerationMixin):
                 a = self.db[group][index]
                 return defer.succeed((
                     index,
-                    a.getHeader('Message-ID'),
-                    StringIO.StringIO(a.textHeaders() + '\r\n' + a.body)
+                    a.getHeader(u'Message-ID'),
+                    BytesIO((a.textHeaders() + u'\r\n' +
+                             a.body).encode("utf-8"))
                 ))
             else:
                 return defer.fail(ERR_NOARTICLE)
@@ -449,7 +459,7 @@ class PickleStorage(_ModerationMixin):
         if group in self.db:
             if index in self.db[group]:
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders()))
+                return defer.succeed((index, a.getHeader(u'Message-ID'), a.textHeaders()))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -460,7 +470,7 @@ class PickleStorage(_ModerationMixin):
         if group in self.db:
             if index in self.db[group]:
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
+                return defer.succeed((index, a.getHeader(u'Message-ID'), BytesIO(a.body.encode("utf-8"))))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -468,7 +478,7 @@ class PickleStorage(_ModerationMixin):
 
 
     def flush(self):
-        with open(self.datafile, 'w') as f:
+        with open(self.datafile, 'wb') as f:
             pickle.dump(self.db, f)
 
 
@@ -531,39 +541,39 @@ class NewsShelf(_ModerationMixin):
 
     def initialize(self):
         # A dictionary of group name/Group instance items
-        self.dbm['groups'] = dirdbm.Shelf(os.path.join(self.path, 'groups'))
+        self.dbm[b'groups'] = dirdbm.Shelf(os.path.join(self.path, 'groups').encode("utf-8"))
 
         # A dictionary of group name/email address
-        self.dbm['moderators'] = dirdbm.Shelf(os.path.join(self.path, 'moderators'))
+        self.dbm[b'moderators'] = dirdbm.Shelf(os.path.join(self.path, 'moderators').encode("utf-8"))
 
         # A list of group names
-        self.dbm['subscriptions'] = []
+        self.dbm[b'subscriptions'] = []
 
         # A dictionary of MessageID strings/xref lists
-        self.dbm['Message-IDs'] = dirdbm.Shelf(os.path.join(self.path, 'Message-IDs'))
+        self.dbm[b'Message-IDs'] = dirdbm.Shelf(os.path.join(self.path, 'Message-IDs').encode("utf-8"))
 
 
     def addGroup(self, name, flags):
-        self.dbm['groups'][name] = Group(name, flags)
+        self.dbm[b'groups'][name.encode("utf-8")] = Group(name, flags)
 
 
     def addSubscription(self, name):
-        self.dbm['subscriptions'] = self.dbm['subscriptions'] + [name]
+        self.dbm[b'subscriptions'] = self.dbm[b'subscriptions'] + [name]
 
 
     def addModerator(self, group, email):
-        self.dbm['moderators'][group] = email
+        self.dbm[b'moderators'][group.encode("utf-8")] = email
 
 
     def listRequest(self):
         result = []
-        for g in self.dbm['groups'].values():
+        for g in self.dbm[b'groups'].values():
             result.append((g.name, g.maxArticle, g.minArticle, g.flags))
         return defer.succeed(result)
 
 
     def subscriptionRequest(self):
-        return defer.succeed(self.dbm['subscriptions'])
+        return defer.succeed(self.dbm[b'subscriptions'])
 
 
     def getModerator(self, groups):
@@ -571,7 +581,7 @@ class NewsShelf(_ModerationMixin):
         # but the whole messages gets forwarded to the moderator address
         for group in groups:
             try:
-                return self.dbm['moderators'][group]
+                return self.dbm[b'moderators'][group.encode("utf-8")]
             except KeyError:
                 pass
         return None
@@ -587,22 +597,21 @@ class NewsShelf(_ModerationMixin):
 
 
     def postRequest(self, message):
-        cleave = message.find('\r\n\r\n')
+        cleave = message.find(u'\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
 
         article = Article(headers, article)
-        groups = article.getHeader('Newsgroups').split()
+        groups = article.getHeader(u'Newsgroups').split()
         xref = []
 
         # Check for moderated status
         moderator = self.getModerator(groups)
-        if moderator and not article.getHeader('Approved'):
+        if moderator and not article.getHeader(u'Approved'):
             return self.notifyModerators([moderator], article)
-
 
         for group in groups:
             try:
-                g = self.dbm['groups'][group]
+                g = self.dbm[b'groups'][group.encode("utf-8")]
             except KeyError:
                 pass
             else:
@@ -610,13 +619,13 @@ class NewsShelf(_ModerationMixin):
                 g.maxArticle += 1
                 g.articles[index] = article
                 xref.append((group, str(index)))
-                self.dbm['groups'][group] = g
+                self.dbm[b'groups'][group.encode("utf-8")] = g
 
         if not xref:
             return defer.fail(NewsServerError("No groups carried: " + ' '.join(groups)))
 
-        article.putHeader('Xref', '%s %s' % (socket.gethostname().split()[0], ' '.join(map(lambda x: ':'.join(x), xref))))
-        self.dbm['Message-IDs'][article.getHeader('Message-ID')] = xref
+        article.putHeader(u'Xref', u'{} {}'.format(socket.gethostname().split()[0], u' '.join([':'.join(x) for x in xref])))
+        self.dbm[b'Message-IDs'][article.getHeader(u'Message-ID').encode("utf-8")] = xref
         return defer.succeed(None)
 
 
@@ -625,44 +634,44 @@ class NewsShelf(_ModerationMixin):
 
 
     def xoverRequest(self, group, low, high):
-        if group not in self.dbm['groups']:
+        if group.encode("utf-8") not in self.dbm[b'groups']:
             return defer.succeed([])
 
         if low is None:
             low = 0
         if high is None:
-            high = self.dbm['groups'][group].maxArticle
+            high = self.dbm[b'groups'][group].maxArticle
         r = []
         for i in range(low, high + 1):
-            if i in self.dbm['groups'][group].articles:
-                r.append([str(i)] + self.dbm['groups'][group].articles[i].overview())
+            if i in self.dbm[b'groups'][group].articles:
+                r.append([str(i)] + self.dbm[b'groups'][group].articles[i].overview())
         return defer.succeed(r)
 
 
     def xhdrRequest(self, group, low, high, header):
-        if group not in self.dbm['groups']:
+        if group.encode("utf-8") not in self.dbm[b'groups']:
             return defer.succeed([])
 
         if low is None:
             low = 0
         if high is None:
-            high = self.dbm['groups'][group].maxArticle
+            high = self.dbm[b'groups'][group].maxArticle
         r = []
         for i in range(low, high + 1):
-            if i in self.dbm['groups'][group].articles:
-                r.append((i, self.dbm['groups'][group].articles[i].getHeader(header)))
+            if i in self.dbm[b'groups'][group.encode("utf-8")].articles:
+                r.append((i, self.dbm[b'groups'][group.encode("utf-8")].articles[i].getHeader(header)))
         return defer.succeed(r)
 
 
     def listGroupRequest(self, group):
-        if group in self.dbm['groups']:
-            return defer.succeed((group, self.dbm['groups'][group].articles.keys()))
+        if group.encode("utf-8") in self.dbm[b'groups']:
+            return defer.succeed((group, list(self.dbm[b'groups'][group.encode("utf-8")].articles.keys())))
         return defer.fail(NewsServerError("No such group: " + group))
 
 
     def groupRequest(self, group):
         try:
-            g = self.dbm['groups'][group]
+            g = self.dbm[b'groups'][group.encode("utf-8")]
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
@@ -674,13 +683,13 @@ class NewsShelf(_ModerationMixin):
 
 
     def articleExistsRequest(self, id):
-        return defer.succeed(id in self.dbm['Message-IDs'])
+        return defer.succeed(id.encode("utf-8") in self.dbm[b'Message-IDs'])
 
 
     def articleRequest(self, group, index, id = None):
         if id is not None:
             try:
-                xref = self.dbm['Message-IDs'][id]
+                xref = self.dbm[b'Message-IDs'][id.encode("utf-8")]
             except KeyError:
                 return defer.fail(NewsServerError("No such article: " + id))
             else:
@@ -688,21 +697,21 @@ class NewsShelf(_ModerationMixin):
                 index = int(index)
 
         try:
-            a = self.dbm['groups'][group].articles[index]
+            a = self.dbm[b'groups'][group.encode("utf-8")].articles[index]
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
             return defer.succeed((
                 index,
-                a.getHeader('Message-ID'),
-                StringIO.StringIO(a.textHeaders() + '\r\n' + a.body)
+                a.getHeader(u'Message-ID'),
+                BytesIO((a.textHeaders() + '\r\n' + a.body).encode("utf-8"))
             ))
 
 
     def headRequest(self, group, index, id = None):
         if id is not None:
             try:
-                xref = self.dbm['Message-IDs'][id]
+                xref = self.dbm[b'Message-IDs'][id]
             except KeyError:
                 return defer.fail(NewsServerError("No such article: " + id))
             else:
@@ -710,17 +719,17 @@ class NewsShelf(_ModerationMixin):
                 index = int(index)
 
         try:
-            a = self.dbm['groups'][group].articles[index]
+            a = self.dbm[b'groups'][group.encode("utf-8")].articles[index]
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders()))
+            return defer.succeed((index, a.getHeader(u'Message-ID'), a.textHeaders()))
 
 
     def bodyRequest(self, group, index, id = None):
         if id is not None:
             try:
-                xref = self.dbm['Message-IDs'][id]
+                xref = self.dbm[b'Message-IDs'][id]
             except KeyError:
                 return defer.fail(NewsServerError("No such article: " + id))
             else:
@@ -728,11 +737,11 @@ class NewsShelf(_ModerationMixin):
                 index = int(index)
 
         try:
-            a = self.dbm['groups'][group].articles[index]
+            a = self.dbm[b'groups'][group.encode("utf-8")].articles[index]
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
+            return defer.succeed((index, a.getHeader(u'Message-ID'), BytesIO(a.body.encode("utf-8"))))
 
 
 @implementer(INewsStorage)
@@ -787,7 +796,7 @@ class NewsStorageAugmentation:
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self.info['password'] = getpass.getpass('Database password for %s: ' % (self.info['user'],))
+        self.info['password'] = getpass.getpass('Database password for {}: '.format(self.info['user']))
         self.dbpool = adbapi.ConnectionPool(**self.info)
         del self.info['password']
 
@@ -817,7 +826,7 @@ class NewsStorageAugmentation:
 
 
     def postRequest(self, message):
-        cleave = message.find('\r\n\r\n')
+        cleave = message.find(b'\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
         article = Article(headers, article)
         return self.dbpool.runInteraction(self._doPost, article)
@@ -825,14 +834,14 @@ class NewsStorageAugmentation:
 
     def _doPost(self, transaction, article):
         # Get the group ids
-        groups = article.getHeader('Newsgroups').split()
+        groups = article.getHeader(u'Newsgroups').split()
         if not len(groups):
             raise NNTPError('Missing Newsgroups header')
 
         sql = """
             SELECT name, group_id FROM groups
-            WHERE name IN (%s)
-        """ % (', '.join([("'%s'" % (adbapi.safe(group),)) for group in groups]),)
+            WHERE name IN ({})
+        """.format(', '.join([("'{}'".format(adbapi.safe(group))) for group in groups]))
 
         transaction.execute(sql)
         result = transaction.fetchall()
@@ -846,9 +855,9 @@ class NewsStorageAugmentation:
             SELECT groups.group_id, COALESCE(MAX(postings.article_index), 0) + 1
             FROM groups LEFT OUTER JOIN postings
             ON postings.group_id = groups.group_id
-            WHERE groups.group_id IN (%s)
+            WHERE groups.group_id IN ({})
             GROUP BY groups.group_id
-        """ % (', '.join([("%d" % (id,)) for (group, id) in result]),)
+        """.format(', '.join([("{}".format(id)) for (group, id) in result]))
 
         transaction.execute(sql)
         indices = transaction.fetchall()
@@ -866,15 +875,15 @@ class NewsStorageAugmentation:
 
         # Build xrefs
         xrefs = socket.gethostname().split()[0]
-        xrefs = xrefs + ' ' + ' '.join([('%s:%d' % (group, id)) for (group, id) in nameIndex])
+        xrefs = xrefs + ' ' + ' '.join([('{}:{}'.format(group, id)) for (group, id) in nameIndex])
         article.putHeader('Xref', xrefs)
 
         # Hey!  The article is ready to be posted!  God damn f'in finally.
         sql = """
             INSERT INTO articles (message_id, header, body)
-            VALUES ('%s', '%s', '%s')
-        """ % (
-            adbapi.safe(article.getHeader('Message-ID')),
+            VALUES ('{}', '{}', '{}')
+        """.format(
+            adbapi.safe(article.getHeader(u'Message-ID')),
             adbapi.safe(article.textHeaders()),
             adbapi.safe(article.body)
         )
@@ -885,8 +894,8 @@ class NewsStorageAugmentation:
         for gid in gidToName:
             sql = """
                 INSERT INTO postings (group_id, article_id, article_index)
-                VALUES (%d, (SELECT last_value FROM articles_article_id_seq), %d)
-            """ % (gid, gidToIndex[gid])
+                VALUES ({}, (SELECT last_value FROM articles_article_id_seq), {})
+            """.formatl(gid, gidToIndex[gid])
             transaction.execute(sql)
 
         return len(nameIndex)
@@ -904,14 +913,14 @@ class NewsStorageAugmentation:
             SELECT postings.article_index, articles.header
             FROM articles,postings,groups
             WHERE postings.group_id = groups.group_id
-            AND groups.name = '%s'
+            AND groups.name = '{}'
             AND postings.article_id = articles.article_id
-            %s
-            %s
-        """ % (
+            {}
+            {}
+        """.format(
             adbapi.safe(group),
-            low is not None and "AND postings.article_index >= %d" % (low,) or "",
-            high is not None and "AND postings.article_index <= %d" % (high,) or ""
+            low is not None and "AND postings.article_index >= {}".format(low) or "",
+            high is not None and "AND postings.article_index <= {}".format(high) or ""
         )
 
         return self.dbpool.runQuery(sql).addCallback(
@@ -925,10 +934,10 @@ class NewsStorageAugmentation:
         sql = """
             SELECT articles.header
             FROM groups,postings,articles
-            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
-            AND postings.article_index >= %d
-            AND postings.article_index <= %d
-        """ % (adbapi.safe(group), low, high)
+            WHERE groups.name = '{}' AND postings.group_id = groups.group_id
+            AND postings.article_index >= {}
+            AND postings.article_index <= {}
+        """.format(adbapi.safe(group), low, high)
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda results: [
@@ -941,8 +950,8 @@ class NewsStorageAugmentation:
         sql = """
             SELECT postings.article_index FROM postings,groups
             WHERE postings.group_id = groups.group_id
-            AND groups.name = '%s'
-        """ % (adbapi.safe(group),)
+            AND groups.name = '{}'
+        """.format(adbapi.safe(group))
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda results, group = group: (group, [res[0] for res in results])
@@ -958,9 +967,9 @@ class NewsStorageAugmentation:
                 groups.flags
             FROM groups LEFT OUTER JOIN postings
             ON postings.group_id = groups.group_id
-            WHERE groups.name = '%s'
+            WHERE groups.name = '{}'
             GROUP BY groups.name, groups.flags
-        """ % (adbapi.safe(group),)
+        """.format(adbapi.safe(group))
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda results: tuple(results[0])
@@ -970,8 +979,8 @@ class NewsStorageAugmentation:
     def articleExistsRequest(self, id):
         sql = """
             SELECT COUNT(message_id) FROM articles
-            WHERE message_id = '%s'
-        """ % (adbapi.safe(id),)
+            WHERE message_id = '{}'
+        """.format(adbapi.safe(id))
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: bool(result[0][0])
@@ -983,25 +992,25 @@ class NewsStorageAugmentation:
             sql = """
                 SELECT postings.article_index, articles.message_id, articles.header, articles.body
                 FROM groups,postings LEFT OUTER JOIN articles
-                ON articles.message_id = '%s'
-                WHERE groups.name = '%s'
+                ON articles.message_id = '{}'
+                WHERE groups.name = '{}'
                 AND groups.group_id = postings.group_id
-            """ % (adbapi.safe(id), adbapi.safe(group))
+            """.format(adbapi.safe(id), adbapi.safe(group))
         else:
             sql = """
                 SELECT postings.article_index, articles.message_id, articles.header, articles.body
                 FROM groups,articles LEFT OUTER JOIN postings
                 ON postings.article_id = articles.article_id
-                WHERE postings.article_index = %d
+                WHERE postings.article_index = {}
                 AND postings.group_id = groups.group_id
-                AND groups.name = '%s'
-            """ % (index, adbapi.safe(group))
+                AND groups.name = '{}'
+            """.format(index, adbapi.safe(group))
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: (
                 result[0][0],
                 result[0][1],
-                StringIO.StringIO(result[0][2] + '\r\n' + result[0][3])
+                StringIO(result[0][2] + u'\r\n' + result[0][3])
             )
         )
 
@@ -1011,10 +1020,10 @@ class NewsStorageAugmentation:
             SELECT postings.article_index, articles.message_id, articles.header
             FROM groups,articles LEFT OUTER JOIN postings
             ON postings.article_id = articles.article_id
-            WHERE postings.article_index = %d
+            WHERE postings.article_index = {}
             AND postings.group_id = groups.group_id
-            AND groups.name = '%s'
-        """ % (index, adbapi.safe(group))
+            AND groups.name = '{}'
+        """.format(index, adbapi.safe(group))
 
         return self.dbpool.runQuery(sql).addCallback(lambda result: result[0])
 
@@ -1024,16 +1033,16 @@ class NewsStorageAugmentation:
             SELECT postings.article_index, articles.message_id, articles.body
             FROM groups,articles LEFT OUTER JOIN postings
             ON postings.article_id = articles.article_id
-            WHERE postings.article_index = %d
+            WHERE postings.article_index = {}
             AND postings.group_id = groups.group_id
-            AND groups.name = '%s'
-        """ % (index, adbapi.safe(group))
+            AND groups.name = '{}'
+        """.format(index, adbapi.safe(group))
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: result[0]
         ).addCallback(
             # result is a tuple of (index, id, body)
-            lambda result: (result[0], result[1], StringIO.StringIO(result[2]))
+            lambda result: (result[0], result[1], StringIO(result[2]))
         )
 
 ####
@@ -1042,12 +1051,12 @@ class NewsStorageAugmentation:
 def makeGroupSQL(groups):
     res = ''
     for g in groups:
-        res = res + """\n    INSERT INTO groups (name) VALUES ('%s');\n""" % (adbapi.safe(g),)
+        res = res + """\n    INSERT INTO groups (name) VALUES ('{}');\n""".format(adbapi.safe(g))
     return res
 
 
 def makeOverviewSQL():
     res = ''
     for o in OVERVIEW_FMT:
-        res = res + """\n    INSERT INTO overview (header) VALUES ('%s');\n""" % (adbapi.safe(o),)
+        res = res + """\n    INSERT INTO overview (header) VALUES ('{}');\n""".format(adbapi.safe(o))
     return res

@@ -59,7 +59,7 @@ def parseRange(text):
 
 
 def extractCode(line):
-    line = line.split(' ', 1)
+    line = line.split(u' ', 1)
     if len(line) != 2:
         return None
     try:
@@ -194,7 +194,7 @@ class NNTPClient(basic.LineReceiver):
         Request a list of all news groups from the server.  gotAllGroups()
         is called on success, getGroupsFailed() on failure
         """
-        self.sendLine('LIST')
+        self.sendLine(b'LIST')
         self._newState(self._stateList, self.getAllGroupsFailed)
 
 
@@ -203,7 +203,7 @@ class NNTPClient(basic.LineReceiver):
         Request the overview format from the server.  gotOverview() is called
         on success, getOverviewFailed() on failure
         """
-        self.sendLine('LIST OVERVIEW.FMT')
+        self.sendLine(b'LIST OVERVIEW.FMT')
         self._newState(self._stateOverview, self.getOverviewFailed)
 
 
@@ -213,7 +213,7 @@ class NNTPClient(basic.LineReceiver):
         gotSubscriptions() is called on success, getSubscriptionsFailed() on
         failure
         """
-        self.sendLine('LIST SUBSCRIPTIONS')
+        self.sendLine(b'LIST SUBSCRIPTIONS')
         self._newState(self._stateSubscriptions, self.getSubscriptionsFailed)
 
 
@@ -222,7 +222,8 @@ class NNTPClient(basic.LineReceiver):
         Get group information for the specified group from the server.  gotGroup()
         is called on success, getGroupFailed() on failure.
         """
-        self.sendLine('GROUP %s' % (group,))
+        cmd = u'GROUP {}'.format(group)
+        self.sendLine(cmd.encode("utf-8"))
         self._newState(None, self.getGroupFailed, self._headerGroup)
 
 
@@ -232,7 +233,8 @@ class NNTPClient(basic.LineReceiver):
         article if index is '') from the server.  gotHead() is called on
         success, getHeadFailed() on failure
         """
-        self.sendLine('HEAD %s' % (index,))
+        cmd = u'HEAD {}'.format(index)
+        self.sendLine(cmd.encode(utf-8))
         self._newState(self._stateHead, self.getHeadFailed)
 
 
@@ -242,17 +244,19 @@ class NNTPClient(basic.LineReceiver):
         article if index is '') from the server.  gotBody() is called on
         success, getBodyFailed() on failure
         """
-        self.sendLine('BODY %s' % (index,))
+        cmd = u'BODY {}'.format(index)
+        self.sendLine(cmd.encode("utf-8"))
         self._newState(self._stateBody, self.getBodyFailed)
 
 
-    def fetchArticle(self, index = ''):
+    def fetchArticle(self, index = u''):
         """
         Get the complete article with the specified index (or the currently
         selected article if index is '') or Message-ID from the server.
         gotArticle() is called on success, getArticleFailed() on failure.
         """
-        self.sendLine('ARTICLE %s' % (index,))
+        cmd = u"ARTICLE {}".format(index)
+        self.sendLine(cmd.encode("utf-8"))
         self._newState(self._stateArticle, self.getArticleFailed)
 
 
@@ -263,7 +267,7 @@ class NNTPClient(basic.LineReceiver):
         article is posted successfully, postedOk() is called, otherwise postFailed()
         is called.
         """
-        self.sendLine('POST')
+        self.sendLine(b'POST')
         self._newState(None, self.postFailed, self._headerPost)
         self._postText.append(text)
 
@@ -285,7 +289,8 @@ class NNTPClient(basic.LineReceiver):
             group = groups.pop()
             groupPart = groupPart + ',' + group
 
-        self.sendLine(line % (groupPart,))
+        cmd = line % (groupPart,)
+        self.sendLine(line.encode("utf-8"))
         self._newState(self._stateNewNews, self.getNewNewsFailed)
 
         if len(groups):
@@ -300,7 +305,8 @@ class NNTPClient(basic.LineReceiver):
         on success, getNewGroupsFailed() on failure.
         """
         date, timeStr = time.strftime('%y%m%d %H%M%S', time.gmtime(date)).split()
-        self.sendLine('NEWGROUPS %s %s %s' % (date, timeStr, distributions))
+        line = u'NEWGROUPS {} {} {}'.format(date, timeStr, distributions)
+        self.sendLine(line.encode("utf-8"))
         self._newState(self._stateNewGroups, self.getNewGroupsFailed)
 
 
@@ -316,16 +322,17 @@ class NNTPClient(basic.LineReceiver):
         article index will be substituted, as appropriate.
         """
         if id is not None:
-            r = header + ' <%s>' % (id,)
+            r = header + u' <{}>'.format(id)
         elif low is high is None:
             r = header
         elif high is None:
-            r = header + ' %d-' % (low,)
+            r = header + u' {}-'.format(low)
         elif low is None:
-            r = header + ' -%d' % (high,)
+            r = header + u' -{}'.format(high)
         else:
-            r = header + ' %d-%d' % (low, high)
-        self.sendLine('XHDR ' + r)
+            r = header + u' {}-{}'.format(low, high)
+        line = u'XHDR ' + r
+        self.sendLine(line.encode("utf-8"))
         self._newState(self._stateXHDR, self.getXHeaderFailed)
 
 
@@ -335,12 +342,12 @@ class NNTPClient(basic.LineReceiver):
         communications.  setStreamSuccess() is called on success,
         setStreamFailed() on failure.
         """
-        self.sendLine('MODE STREAM')
+        self.sendLine(b'MODE STREAM')
         self._newState(None, self.setStreamFailed, self._headerMode)
 
 
     def quit(self):
-        self.sendLine('QUIT')
+        self.sendLine(b'QUIT')
         self.transport.loseConnection()
 
 
@@ -363,7 +370,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def _newLine(self, line, check = 1):
-        if check and line and line[0] == '.':
+        if check and line and line[0] == u'.':
             line = line[1:]
         self._inputBuffers[0].append(line)
 
@@ -377,6 +384,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def lineReceived(self, line):
+        line = line.decode("utf-8")
         if not len(self._state):
             self._statePassive(line)
         elif self._getResponseCode() is None:
@@ -393,11 +401,11 @@ class NNTPClient(basic.LineReceiver):
 
 
     def _statePassive(self, line):
-        log.msg('Server said: %s' % line)
+        log.msg(u'Server said: {}'.format(line))
 
 
     def _passiveError(self, error):
-        log.err('Passive Error: %s' % (error,))
+        log.err(u'Passive Error: {}'.format(error))
 
 
     def _headerInitial(self, response):
@@ -410,22 +418,22 @@ class NNTPClient(basic.LineReceiver):
 
 
     def _stateList(self, line):
-        if line != '.':
-            data = filter(None, line.strip().split())
+        if line != u'.':
+            data = [state for state in line.strip().split() if state]
             self._newLine((data[0], int(data[1]), int(data[2]), data[3]), 0)
         else:
             self.gotAllGroups(self._endState())
 
 
     def _stateOverview(self, line):
-        if line != '.':
-            self._newLine(filter(None, line.strip().split()), 0)
+        if line != u'.':
+            self._newLine([state for state in line.strip().split() if state], 0)
         else:
             self.gotOverview(self._endState())
 
 
     def _stateSubscriptions(self, line):
-        if line != '.':
+        if line != u'.':
             self._newLine(line.strip(), 0)
         else:
             self.gotSubscriptions(self._endState())
@@ -438,41 +446,42 @@ class NNTPClient(basic.LineReceiver):
 
 
     def _stateArticle(self, line):
-        if line != '.':
-            if line.startswith('.'):
+        if line != u'.':
+            if line.startswith(u'.'):
                 line = line[1:]
             self._newLine(line, 0)
         else:
-            self.gotArticle('\n'.join(self._endState())+'\n')
+            self.gotArticle(u'\n'.join(self._endState()) + u'\n')
 
 
     def _stateHead(self, line):
-        if line != '.':
+        if line != u'.':
             self._newLine(line, 0)
         else:
-            self.gotHead('\n'.join(self._endState()))
+            self.gotHead(u'\n'.join(self._endState()))
 
 
     def _stateBody(self, line):
-        if line != '.':
-            if line.startswith('.'):
+        if line != u'.':
+            if line.startswith(u'.'):
                 line = line[1:]
             self._newLine(line, 0)
         else:
-            self.gotBody('\n'.join(self._endState())+'\n')
+            self.gotBody(u'\n'.join(self._endState()) + u'\n')
 
 
     def _headerPost(self, response):
         (code, message) = response
         if code == 340:
-            self.transport.write(self._postText[0].replace('\n', '\r\n').replace('\r\n.', '\r\n..'))
-            if self._postText[0][-1:] != '\n':
-                self.sendLine('')
-            self.sendLine('.')
+            text = self._postText[0].replace(u'\n', u'\r\n').replace(u'\r\n.', u'\r\n..')
+            self.transport.write(text.encode("utf-8"))
+            if self._postText[0][-1:] != u'\n':
+                self.sendLine(b'')
+            self.sendLine(b'.')
             del self._postText[0]
             self._newState(None, self.postFailed, self._headerPosted)
         else:
-            self.postFailed('%d %s' % (code, message))
+            self.postFailed(u'{} {}'.format(code, message))
         self._endState()
 
 
@@ -481,26 +490,26 @@ class NNTPClient(basic.LineReceiver):
         if code == 240:
             self.postedOk()
         else:
-            self.postFailed('%d %s' % (code, message))
+            self.postFailed(u'{} {}'.format(code, message))
         self._endState()
 
 
     def _stateXHDR(self, line):
-        if line != '.':
+        if line != u'.':
             self._newLine(line.split(), 0)
         else:
             self._gotXHeader(self._endState())
 
 
     def _stateNewNews(self, line):
-        if line != '.':
+        if line != u'.':
             self._newLine(line, 0)
         else:
             self.gotNewNews(self._endState())
 
 
     def _stateNewGroups(self, line):
-        if line != '.':
+        if line != u'.':
             self._newLine(line, 0)
         else:
             self.gotNewGroups(self._endState())
@@ -517,9 +526,9 @@ class NNTPClient(basic.LineReceiver):
 
 class NNTPServer(basic.LineReceiver):
     COMMANDS = [
-        'LIST', 'GROUP', 'ARTICLE', 'STAT', 'MODE', 'LISTGROUP', 'XOVER',
-        'XHDR', 'HEAD', 'BODY', 'NEXT', 'LAST', 'POST', 'QUIT', 'IHAVE',
-        'HELP', 'SLAVE', 'XPATH', 'XINDEX', 'XROVER', 'TAKETHIS', 'CHECK'
+        u'LIST', u'GROUP', u'ARTICLE', u'STAT', u'MODE', u'LISTGROUP', u'XOVER',
+        u'XHDR', u'HEAD', u'BODY', u'NEXT', u'LAST', u'POST', u'QUIT', u'IHAVE',
+        u'HELP', u'SLAVE', u'XPATH', u'XINDEX', u'XROVER', u'TAKETHIS', u'CHECK'
     ]
 
     def __init__(self):
@@ -530,9 +539,10 @@ class NNTPServer(basic.LineReceiver):
         self.inputHandler = None
         self.currentGroup = None
         self.currentIndex = None
-        self.sendLine('200 server ready - posting allowed')
+        self.sendLine(b'200 server ready - posting allowed')
 
     def lineReceived(self, line):
+        line = line.decode("utf-8")
         if self.inputHandler is not None:
             self.inputHandler(line)
         else:
@@ -540,84 +550,86 @@ class NNTPServer(basic.LineReceiver):
             if len(parts):
                 cmd, parts = parts[0].upper(), parts[1:]
                 if cmd in NNTPServer.COMMANDS:
-                    func = getattr(self, 'do_%s' % cmd)
+                    func = getattr(self, u'do_' + cmd)
                     try:
                         func(*parts)
                     except TypeError:
-                        self.sendLine('501 command syntax error')
-                        log.msg("501 command syntax error")
-                        log.msg("command was", line)
+                        self.sendLine(b'501 command syntax error')
+                        log.msg(u"501 command syntax error")
+                        log.msg(u"command was", line)
                         log.deferr()
                     except:
-                        self.sendLine('503 program fault - command not performed')
-                        log.msg("503 program fault")
-                        log.msg("command was", line)
+                        self.sendLine(b'503 program fault - command not performed')
+                        log.msg(u"503 program fault")
+                        log.msg(u"command was", line)
                         log.deferr()
                 else:
-                    self.sendLine('500 command not recognized')
+                    self.sendLine(b'500 command not recognized')
 
 
-    def do_LIST(self, subcmd = '', *dummy):
+    def do_LIST(self, subcmd = u'', *dummy):
         subcmd = subcmd.strip().lower()
-        if subcmd == 'newsgroups':
+        if subcmd == u'newsgroups':
             # XXX - this could use a real implementation, eh?
-            self.sendLine('215 Descriptions in form "group description"')
-            self.sendLine('.')
-        elif subcmd == 'overview.fmt':
+            self.sendLine(b'215 Descriptions in form "group description"')
+            self.sendLine(b'.')
+        elif subcmd == u'overview.fmt':
             defer = self.factory.backend.overviewRequest()
             defer.addCallbacks(self._gotOverview, self._errOverview)
             log.msg('overview')
-        elif subcmd == 'subscriptions':
+        elif subcmd == u'subscriptions':
             defer = self.factory.backend.subscriptionRequest()
             defer.addCallbacks(self._gotSubscription, self._errSubscription)
             log.msg('subscriptions')
-        elif subcmd == '':
+        elif subcmd == u'':
             defer = self.factory.backend.listRequest()
             defer.addCallbacks(self._gotList, self._errList)
         else:
-            self.sendLine('500 command not recognized')
+            self.sendLine(b'500 command not recognized')
 
 
     def _gotList(self, list):
-        self.sendLine('215 newsgroups in form "group high low flags"')
+        self.sendLine(b'215 newsgroups in form "group high low flags"')
         for i in list:
-            self.sendLine('%s %d %d %s' % tuple(i))
-        self.sendLine('.')
+            line = u'{} {} {} {}'.format(*i)
+            self.sendLine(line.encode("utf-8"))
+        self.sendLine(b'.')
 
 
     def _errList(self, failure):
-        print('LIST failed: ', failure)
-        self.sendLine('503 program fault - command not performed')
+        print(u'LIST failed: ', failure)
+        self.sendLine(b'503 program fault - command not performed')
 
 
     def _gotSubscription(self, parts):
-        self.sendLine('215 information follows')
+        self.sendLine(b'215 information follows')
         for i in parts:
-            self.sendLine(i)
-        self.sendLine('.')
+            self.sendLine(i.encode("utf-8"))
+        self.sendLine(b'.')
 
 
     def _errSubscription(self, failure):
         print('SUBSCRIPTIONS failed: ', failure)
-        self.sendLine('503 program fault - comand not performed')
+        self.sendLine(b'503 program fault - comand not performed')
 
 
     def _gotOverview(self, parts):
-        self.sendLine('215 Order of fields in overview database.')
+        self.sendLine(b'215 Order of fields in overview database.')
         for i in parts:
-            self.sendLine(i + ':')
-        self.sendLine('.')
+            line = i + ':'
+            self.sendLine(line.encode("utf-8"))
+        self.sendLine(b'.')
 
 
     def _errOverview(self, failure):
         print('LIST OVERVIEW.FMT failed: ', failure)
-        self.sendLine('503 program fault - command not performed')
+        self.sendLine(b'503 program fault - command not performed')
 
 
     def do_LISTGROUP(self, group = None):
         group = group or self.currentGroup
         if group is None:
-            self.sendLine('412 Not currently in newsgroup')
+            self.sendLine(b'412 Not currently in newsgroup')
         else:
             defer = self.factory.backend.listGroupRequest(group)
             defer.addCallbacks(self._gotListGroup, self._errListGroup)
@@ -631,20 +643,20 @@ class NNTPServer(basic.LineReceiver):
         else:
             self.currentIndex = None
 
-        self.sendLine('211 list of article numbers follow')
+        self.sendLine(b'211 list of article numbers follow')
         for i in articles:
-            self.sendLine(str(i))
-        self.sendLine('.')
+            self.sendLine(str(i).encode("utf-8"))
+        self.sendLine(b'.')
 
 
     def _errListGroup(self, failure):
         print('LISTGROUP failed: ', failure)
-        self.sendLine('502 no permission')
+        self.sendLine(b'502 no permission')
 
 
     def do_XOVER(self, range):
         if self.currentGroup is None:
-            self.sendLine('412 No news group currently selected')
+            self.sendLine(b'412 No news group currently selected')
         else:
             l, h = parseRange(range)
             defer = self.factory.backend.xoverRequest(self.currentGroup, l, h)
@@ -652,24 +664,26 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _gotXOver(self, parts):
-        self.sendLine('224 Overview information follows')
+        self.sendLine(b'224 Overview information follows')
         for i in parts:
-            self.sendLine('\t'.join(map(str, i)))
-        self.sendLine('.')
+            line = u'\t'.join(map(str, i))
+            line = line.encode("utf-8")
+            self.sendLine(line)
+        self.sendLine(b'.')
 
 
     def _errXOver(self, failure):
         print('XOVER failed: ', failure)
-        self.sendLine('420 No article(s) selected')
+        self.sendLine(b'420 No article(s) selected')
 
 
     def xhdrWork(self, header, range):
         if self.currentGroup is None:
-            self.sendLine('412 No news group currently selected')
+            self.sendLine(b'412 No news group currently selected')
         else:
             if range is None:
                 if self.currentIndex is None:
-                    self.sendLine('420 No current article selected')
+                    self.sendLine(b'420 No current article selected')
                     return
                 else:
                     l = h = self.currentIndex
@@ -678,7 +692,7 @@ class NNTPServer(basic.LineReceiver):
                 l, h = parseRange(range)
 
             if l is h is None:
-                self.sendLine('430 no such article')
+                self.sendLine(b'430 no such article')
             else:
                 return self.factory.backend.xhdrRequest(self.currentGroup, l, h, header)
 
@@ -690,41 +704,42 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _gotXHDR(self, parts):
-        self.sendLine('221 Header follows')
+        self.sendLine(b'221 Header follows')
         for i in parts:
-            self.sendLine('%d %s' % i)
-        self.sendLine('.')
+            line =  u'%d %s' % (i)
+            self.sendLine(line.encode("utf-8"))
+        self.sendLine(b'.')
 
     def _errXHDR(self, failure):
         print('XHDR failed: ', failure)
-        self.sendLine('502 no permission')
+        self.sendLine(b'502 no permission')
 
 
     def do_POST(self):
         self.inputHandler = self._doingPost
-        self.message = ''
-        self.sendLine('340 send article to be posted.  End with <CR-LF>.<CR-LF>')
+        self.message = u''
+        self.sendLine(b'340 send article to be posted.  End with <CR-LF>.<CR-LF>')
 
 
     def _doingPost(self, line):
-        if line == '.':
+        if line == u'.':
             self.inputHandler = None
             article = self.message
-            self.message = ''
+            self.message = u''
 
             defer = self.factory.backend.postRequest(article)
             defer.addCallbacks(self._gotPost, self._errPost)
         else:
-            self.message = self.message + line + '\r\n'
+            self.message = self.message + line + u'\r\n'
 
 
     def _gotPost(self, parts):
-        self.sendLine('240 article posted ok')
+        self.sendLine(b'240 article posted ok')
 
 
     def _errPost(self, failure):
         print('POST failed: ', failure)
-        self.sendLine('441 posting failed')
+        self.sendLine(b'441 posting failed')
 
 
     def do_CHECK(self, id):
@@ -734,39 +749,39 @@ class NNTPServer(basic.LineReceiver):
 
     def _gotCheck(self, result):
         if result:
-            self.sendLine("438 already have it, please don't send it to me")
+            self.sendLine(b"438 already have it, please don't send it to me")
         else:
-            self.sendLine('238 no such article found, please send it to me')
+            self.sendLine(b'238 no such article found, please send it to me')
 
 
     def _errCheck(self, failure):
         print('CHECK failed: ', failure)
-        self.sendLine('431 try sending it again later')
+        self.sendLine(b'431 try sending it again later')
 
 
     def do_TAKETHIS(self, id):
         self.inputHandler = self._doingTakeThis
-        self.message = ''
+        self.message = u''
 
 
     def _doingTakeThis(self, line):
-        if line == '.':
+        if line == u'.':
             self.inputHandler = None
             article = self.message
-            self.message = ''
+            self.message = u''
             d = self.factory.backend.postRequest(article)
             d.addCallbacks(self._didTakeThis, self._errTakeThis)
         else:
-            self.message = self.message + line + '\r\n'
+            self.message = self.message + line + u'\r\n'
 
 
     def _didTakeThis(self, result):
-        self.sendLine('239 article transferred ok')
+        self.sendLine(b'239 article transferred ok')
 
 
     def _errTakeThis(self, failure):
         print('TAKETHIS failed: ', failure)
-        self.sendLine('439 article transfer failed')
+        self.sendLine(b'439 article transfer failed')
 
 
     def do_GROUP(self, group):
@@ -778,21 +793,22 @@ class NNTPServer(basic.LineReceiver):
         (name, num, high, low, flags) = result
         self.currentGroup = name
         self.currentIndex = low
-        self.sendLine('211 %d %d %d %s group selected' % (num, low, high, name))
+        line = u'211 {} {} {} {} group selected'.format(num, low, high, name)
+        self.sendLine(line.encode("utf-8"))
 
 
     def _errGroup(self, failure):
         print('GROUP failed: ', failure)
-        self.sendLine('411 no such group')
+        self.sendLine(b'411 no such group')
 
 
     def articleWork(self, article, cmd, func):
         if self.currentGroup is None:
-            self.sendLine('412 no newsgroup has been selected')
+            self.sendLine(b'412 no newsgroup has been selected')
         else:
             if not article:
                 if self.currentIndex is None:
-                    self.sendLine('420 no current article has been selected')
+                    self.sendLine(b'420 no current article has been selected')
                 else:
                     article = self.currentIndex
             else:
@@ -803,7 +819,7 @@ class NNTPServer(basic.LineReceiver):
                         article = int(article)
                         return func(self.currentGroup, article)
                     except ValueError:
-                        self.sendLine('501 command syntax error')
+                        self.sendLine(b'501 command syntax error')
 
 
     def do_ARTICLE(self, article = None):
@@ -815,7 +831,8 @@ class NNTPServer(basic.LineReceiver):
     def _gotArticle(self, result):
         (index, id, article) = result
         self.currentIndex = index
-        self.sendLine('220 %d %s article' % (index, id))
+        line = u'220 {} {} article'.format(index, id)
+        self.sendLine(line.encode("utf-8"))
         s = basic.FileSender()
         d = s.beginFileTransfer(article, self.transport)
         d.addCallback(self.finishedFileTransfer)
@@ -824,16 +841,16 @@ class NNTPServer(basic.LineReceiver):
     ## Helper for FileSender
     ##
     def finishedFileTransfer(self, lastsent):
-        if lastsent != '\n':
-            line = '\r\n.'
+        if lastsent != b'\n':
+            line = b'\r\n.'
         else:
-            line = '.'
+            line = b'.'
         self.sendLine(line)
     ##
 
     def _errArticle(self, failure):
         print('ARTICLE failed: ', failure)
-        self.sendLine('423 bad article number')
+        self.sendLine(b'423 bad article number')
 
 
     def do_STAT(self, article = None):
@@ -845,12 +862,14 @@ class NNTPServer(basic.LineReceiver):
     def _gotStat(self, result):
         (index, id, article) = result
         self.currentIndex = index
-        self.sendLine('223 %d %s article retreived - request text separately' % (index, id))
+        line = '223 {} {} article retreived - request text separately'.format(index, id)
+        line = line.encode("utf-8") 
+        self.sendLine(line)
 
 
     def _errStat(self, failure):
         print('STAT failed: ', failure)
-        self.sendLine('423 bad article number')
+        self.sendLine(b'423 bad article number')
 
 
     def do_HEAD(self, article = None):
@@ -862,14 +881,16 @@ class NNTPServer(basic.LineReceiver):
     def _gotHead(self, result):
         (index, id, head) = result
         self.currentIndex = index
-        self.sendLine('221 %d %s article retrieved' % (index, id))
-        self.transport.write(head + '\r\n')
-        self.sendLine('.')
+        line = '221 {} {} article retrieved'.format(index, id)
+        line = line.encode("utf-8")
+        self.sendLine(line)
+        self.transport.write(head + b'\r\n')
+        self.sendLine(b'.')
 
 
     def _errHead(self, failure):
         print('HEAD failed: ', failure)
-        self.sendLine('423 no such article number in this group')
+        self.sendLine(b'423 no such article number in this group')
 
 
     def do_BODY(self, article):
@@ -881,7 +902,9 @@ class NNTPServer(basic.LineReceiver):
     def _gotBody(self, result):
         (index, id, body) = result
         self.currentIndex = index
-        self.sendLine('221 %d %s article retrieved' % (index, id))
+        line = '221 {} {} article retrieved'.format(index, id)
+        line = line.encode("utf-8")
+        self.sendLine(line)
         self.lastsent = ''
         s = basic.FileSender()
         d = s.beginFileTransfer(body, self.transport)
@@ -889,7 +912,7 @@ class NNTPServer(basic.LineReceiver):
 
     def _errBody(self, failure):
         print('BODY failed: ', failure)
-        self.sendLine('423 no such article number in this group')
+        self.sendLine(b'423 no such article number in this group')
 
 
     # NEXT and LAST are just STATs that increment currentIndex first.
@@ -908,29 +931,29 @@ class NNTPServer(basic.LineReceiver):
 
     def do_MODE(self, cmd):
         cmd = cmd.strip().upper()
-        if cmd == 'READER':
+        if cmd == b'READER':
             self.servingSlave = 0
-            self.sendLine('200 Hello, you can post')
-        elif cmd == 'STREAM':
-            self.sendLine('500 Command not understood')
+            self.sendLine(b'200 Hello, you can post')
+        elif cmd == b'STREAM':
+            self.sendLine(b'500 Command not understood')
         else:
             # This is not a mistake
-            self.sendLine('500 Command not understood')
+            self.sendLine(b'500 Command not understood')
 
 
     def do_QUIT(self):
-        self.sendLine('205 goodbye')
+        self.sendLine(b'205 goodbye')
         self.transport.loseConnection()
 
 
     def do_HELP(self):
-        self.sendLine('100 help text follows')
-        self.sendLine('Read the RFC.')
-        self.sendLine('.')
+        self.sendLine(b'100 help text follows')
+        self.sendLine(b'Read the RFC.')
+        self.sendLine(b'.')
 
 
     def do_SLAVE(self):
-        self.sendLine('202 slave status noted')
+        self.sendLine(b'202 slave status noted')
         self.servingeSlave = 1
 
 
@@ -938,13 +961,13 @@ class NNTPServer(basic.LineReceiver):
         # XPATH is a silly thing to have.  No client has the right to ask
         # for this piece of information from me, and so that is what I'll
         # tell them.
-        self.sendLine('502 access restriction or permission denied')
+        self.sendLine(b'502 access restriction or permission denied')
 
 
     def do_XINDEX(self, article):
         # XINDEX is another silly command.  The RFC suggests it be relegated
         # to the history books, and who am I to disagree?
-        self.sendLine('502 access restriction or permission denied')
+        self.sendLine(b'502 access restriction or permission denied')
 
 
     def do_XROVER(self, range=None):
@@ -964,32 +987,32 @@ class NNTPServer(basic.LineReceiver):
 
     def _foundArticle(self, result):
         if result:
-            self.sendLine('437 article rejected - do not try again')
+            self.sendLine(b'437 article rejected - do not try again')
         else:
-            self.sendLine('335 send article to be transferred.  End with <CR-LF>.<CR-LF>')
+            self.sendLine(b'335 send article to be transferred.  End with <CR-LF>.<CR-LF>')
             self.inputHandler = self._handleIHAVE
-            self.message = ''
+            self.message = u''
 
 
     def _handleIHAVE(self, line):
-        if line == '.':
+        if line == b'.':
             self.inputHandler = None
             self.factory.backend.postRequest(
                 self.message
             ).addCallbacks(self._gotIHAVE, self._errIHAVE)
 
-            self.message = ''
+            self.message = u''
         else:
             self.message = self.message + line + '\r\n'
 
 
     def _gotIHAVE(self, result):
-        self.sendLine('235 article transferred ok')
+        self.sendLine(b'235 article transferred ok')
 
 
     def _errIHAVE(self, failure):
         print('IHAVE failed: ', failure)
-        self.sendLine('436 transfer failed - try again later')
+        self.sendLine(b'436 transfer failed - try again later')
 
 
 class UsenetClientProtocol(NNTPClient):

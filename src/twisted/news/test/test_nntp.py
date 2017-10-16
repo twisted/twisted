@@ -7,11 +7,11 @@ from twisted.news import nntp
 from twisted.protocols import loopback
 from twisted.test import proto_helpers
 
-ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
-GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')
-SUBSCRIPTIONS = ['alt.test.nntp', 'news.testgroup']
+ALL_GROUPS = (u'alt.test.nntp', 0, 1, u'y'),
+GROUP = (u'0', u'1', u'0', u'alt.test.nntp', u'group', u'selected')
+SUBSCRIPTIONS = [u'alt.test.nntp', u'news.testgroup']
 
-POST_STRING = """Path: not-for-mail
+POST_STRING = u"""Path: not-for-mail
 From: <exarkun@somehost.domain.com>
 Subject: a test
 Newsgroups: alt.test.nntp
@@ -38,7 +38,8 @@ class TestNNTPClient(nntp.NNTPClient):
         nntp.NNTPClient.__init__(self)
 
     def assertEqual(self, foo, bar):
-        if foo != bar: raise AssertionError("%r != %r!" % (foo, bar))
+        if foo != bar:
+            raise AssertionError("%r != %r!" % (foo, bar))
 
     def connectionMade(self):
         nntp.NNTPClient.connectionMade(self)
@@ -87,8 +88,8 @@ class TestNNTPClient(nntp.NNTPClient):
 
 
     def gotArticle(self, info):
-        origBody = POST_STRING.split('\n\n')[1]
-        newBody = info.split('\n\n', 1)[1]
+        origBody = POST_STRING.split(u'\n\n')[1]
+        newBody = info.split(u'\n\n', 1)[1]
 
         self.assertEqual(origBody, newBody)
 
@@ -132,9 +133,9 @@ class NNTPTests(unittest.TestCase):
         client.
         """
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '200 server ready - posting allowed',
-                ''])
+            self.transport.value().split(b'\r\n'), [
+                b'200 server ready - posting allowed',
+                b''])
 
 
     def test_LIST(self):
@@ -145,11 +146,11 @@ class NNTPTests(unittest.TestCase):
         self.transport.clear()
         self.server.do_LIST()
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '215 newsgroups in form "group high low flags"',
-                'alt.test.nntp 0 1 y',
-                '.',
-                ''])
+            self.transport.value().split(b'\r\n'), [
+                b'215 newsgroups in form "group high low flags"',
+                b'alt.test.nntp 0 1 y',
+                b'.',
+                b''])
 
 
     def test_GROUP(self):
@@ -160,9 +161,9 @@ class NNTPTests(unittest.TestCase):
         self.transport.clear()
         self.server.do_GROUP('alt.test.nntp')
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '211 0 1 0 alt.test.nntp group selected',
-                ''])
+            self.transport.value().split(b'\r\n'), [
+                b'211 0 1 0 alt.test.nntp group selected',
+                b''])
 
 
     def test_LISTGROUP(self):
@@ -174,10 +175,10 @@ class NNTPTests(unittest.TestCase):
         self.transport.clear()
         self.server.do_LISTGROUP('alt.test.nntp')
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '211 list of article numbers follow',
-                '.',
-                ''])
+            self.transport.value().split(b'\r\n'), [
+                b'211 list of article numbers follow',
+                b'.',
+                b''])
 
 
     def test_XROVER(self):
@@ -191,7 +192,7 @@ class NNTPTests(unittest.TestCase):
 
         self.server.do_XROVER()
         self.assertEqual(
-            self.transport.value().split('\r\n'), [
-                '221 Header follows',
-                '.',
-                ''])
+            self.transport.value().split(b'\r\n'), [
+                b'221 Header follows',
+                b'.',
+                b''])

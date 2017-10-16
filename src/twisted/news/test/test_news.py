@@ -55,7 +55,7 @@ class NewsTests(unittest.TestCase):
                               "callback result Message-Id doesn't match: %s vs %s" %
                               (MESSAGE_ID, result[1]))
             body = result[2].read()
-            self.assertNotEqual(body.find('\r\n\r\n'), -1,
+            self.assertNotEqual(body.find(b'\r\n\r\n'), -1,
                              "Can't find \\r\\n\\r\\n between header and body")
             return result
 
@@ -97,7 +97,7 @@ class NewsTests(unittest.TestCase):
 
         def cbBody(result):
             body = result[2].read()
-            self.assertEqual(body[0:4], 'this',
+            self.assertEqual(body[0:4], b'this',
                               "message body has been altered: " +
                               pformat(body[0:4]))
 

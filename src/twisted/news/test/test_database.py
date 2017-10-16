@@ -45,7 +45,7 @@ class ModerationTestsMixin:
         return succeed(None)
 
 
-    _messageTemplate = """\
+    _messageTemplate = u"""\
 From: some dude
 To: another person
 Subject: activities etc
@@ -53,12 +53,12 @@ Message-ID: %(articleID)s
 Newsgroups: %(newsgroup)s
 %(approved)s
 Body of the message is such.
-""".replace('\n', '\r\n')
+""".replace(u'\n', u'\r\n')
 
 
     def getApprovedMessage(self, articleID, group):
         """
-        Return a C{str} containing an RFC 2822 formatted message including an
+        Return a L{str} containing an RFC 2822 formatted message including an
         I{Approved} header indicating it has passed through moderation.
         """
         return self._messageTemplate % {
@@ -69,7 +69,7 @@ Body of the message is such.
 
     def getUnapprovedMessage(self, articleID, group):
         """
-        Return a C{str} containing an RFC 2822 formatted message with no
+        Return a L{str} containing an RFC 2822 formatted message with no
         I{Approved} header indicating it may require moderation.
         """
         return self._messageTemplate % {
@@ -83,11 +83,11 @@ Body of the message is such.
         Override in a subclass to return a L{INewsStorage} provider to test for
         correct moderation behavior.
 
-        @param groups: A C{list} of C{str} naming the groups which should exist
+        @param groups: A L{list} of L{str} naming the groups which should exist
             in the resulting storage object.
 
-        @param moderators: A C{dict} mapping C{str} each group name to a C{list}
-            of C{str} giving moderator email (RFC 2821) addresses.
+        @param moderators: A L{dict} mapping L{str} each group name to a L{list}
+            of L{str} giving moderator email (RFC 2821) addresses.
         """
         raise NotImplementedError()
 
@@ -156,7 +156,7 @@ Body of the message is such.
             headers,
             {'From': sender,
              'To': moderator,
-             'Subject': 'Moderate new %s message: activities etc' % (group,),
+             'Subject': 'Moderate new {} message: activities etc'.format(group),
              'Content-Type': 'message/rfc822'})
 
         posting = p.parsestr(postingText)
