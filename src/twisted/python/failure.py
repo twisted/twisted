@@ -367,7 +367,10 @@ class Failure(BaseException):
         """
         error = self.check(*errorTypes)
         if not error:
-            self.raiseException()
+            if _PY3:
+                self.raiseException()
+            else:
+                raise self
         return error
 
 
