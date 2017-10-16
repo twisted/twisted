@@ -39,7 +39,7 @@ class TestNNTPClient(nntp.NNTPClient):
 
     def assertEqual(self, foo, bar):
         if foo != bar:
-            raise AssertionError("%r != %r!" % (foo, bar))
+            raise AssertionError("{!r} != {!r}!".format(foo, bar))
 
     def connectionMade(self):
         nntp.NNTPClient.connectionMade(self)
@@ -61,7 +61,7 @@ class TestNNTPClient(nntp.NNTPClient):
 
 
     def getAllGroupsFailed(self, error):
-        raise AssertionError("fetchGroups() failed: %s" % (error,))
+        raise AssertionError("fetchGroups() failed: {}".format(error))
 
 
     def gotGroup(self, info):
@@ -72,15 +72,15 @@ class TestNNTPClient(nntp.NNTPClient):
 
 
     def getSubscriptionsFailed(self, error):
-        raise AssertionError("fetchSubscriptions() failed: %s" % (error,))
+        raise AssertionError("fetchSubscriptions() failed: {}".format(error))
 
 
     def getGroupFailed(self, error):
-        raise AssertionError("fetchGroup() failed: %s" % (error,))
+        raise AssertionError("fetchGroup() failed: {}".format(error))
 
 
     def postFailed(self, error):
-        raise AssertionError("postArticle() failed: %s" % (error,))
+        raise AssertionError("postArticle() failed: {}".format(error))
 
 
     def postedOk(self):
@@ -98,7 +98,7 @@ class TestNNTPClient(nntp.NNTPClient):
 
 
     def getArticleFailed(self, error):
-        raise AssertionError("fetchArticle() failed: %s" % (error,))
+        raise AssertionError("fetchArticle() failed: {}".format(error))
 
 
 class NNTPTests(unittest.TestCase):
