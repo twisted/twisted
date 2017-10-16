@@ -459,7 +459,8 @@ class PickleStorage(_ModerationMixin):
         if group in self.db:
             if index in self.db[group]:
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader(u'Message-ID'), a.textHeaders()))
+                return defer.succeed((index, a.getHeader(u'Message-ID'),
+                                      a.textHeaders()))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -470,7 +471,8 @@ class PickleStorage(_ModerationMixin):
         if group in self.db:
             if index in self.db[group]:
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader(u'Message-ID'), BytesIO(a.body.encode("utf-8"))))
+                return defer.succeed((index, a.getHeader(u'Message-ID'),
+                                      BytesIO(a.body.encode("utf-8"))))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -541,7 +543,8 @@ class NewsShelf(_ModerationMixin):
 
     def initialize(self):
         # A dictionary of group name/Group instance items
-        self.dbm[b'groups'] = dirdbm.Shelf(os.path.join(self.path, 'groups').encode("utf-8"))
+        path = os.path.join(self.path, 'groups').encode("utf-8")
+        self.dbm[b'groups'] = dirdbm.Shelf(path)
 
         # A dictionary of group name/email address
         self.dbm[b'moderators'] = dirdbm.Shelf(os.path.join(self.path, 'moderators').encode("utf-8"))
@@ -554,7 +557,9 @@ class NewsShelf(_ModerationMixin):
 
 
     def addGroup(self, name, flags):
-        self.dbm[b'groups'][name.encode("utf-8")] = Group(name, flags)
+        if isinstance(name, unicode):
+            name = name.encode("utf-8")
+        self.dbm[b'groups'][name] = Group(name, flags)
 
 
     def addSubscription(self, name):
@@ -919,13 +924,16 @@ class NewsStorageAugmentation:
             {}
         """.format(
             adbapi.safe(group),
-            low is not None and "AND postings.article_index >= {}".format(low) or "",
-            high is not None and "AND postings.article_index <= {}".format(high) or ""
+            low is not None and
+            "AND postings.article_index >= {}".format(low) or "",
+            high is not None and
+            "AND postings.article_index <= {}".format(high) or ""
         )
 
         return self.dbpool.runQuery(sql).addCallback(
             lambda results: [
-                [id] + Article(header, None).overview() for (id, header) in results
+                [id] + Article(header, None).overview()
+                for (id, header) in results
             ]
         )
 
@@ -1051,12 +1059,17 @@ class NewsStorageAugmentation:
 def makeGroupSQL(groups):
     res = ''
     for g in groups:
-        res = res + """\n    INSERT INTO groups (name) VALUES ('{}');\n""".format(adbapi.safe(g))
+        res = (res +
+            """\n    INSERT INTO groups (name) VALUES ('{}');\n""".format(
+            adbapi.safe(g)))
     return res
+
 
 
 def makeOverviewSQL():
     res = ''
     for o in OVERVIEW_FMT:
-        res = res + """\n    INSERT INTO overview (header) VALUES ('{}');\n""".format(adbapi.safe(o))
+        res = (res +
+            """\n    INSERT INTO overview (header) VALUES ('{}');\n""".format(
+            adbapi.safe(o)))
     return res
