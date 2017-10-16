@@ -892,7 +892,7 @@ class FileSender:
 
     CHUNK_SIZE = 2 ** 14
 
-    lastSent = ''
+    lastSent = b''
     deferred = None
 
     def beginFileTransfer(self, file, consumer, transform=None):
@@ -924,7 +924,7 @@ class FileSender:
 
 
     def resumeProducing(self):
-        chunk = ''
+        chunk = b''
         if self.file:
             chunk = self.file.read(self.CHUNK_SIZE)
         if not chunk:
