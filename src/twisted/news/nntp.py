@@ -234,7 +234,7 @@ class NNTPClient(basic.LineReceiver):
         success, getHeadFailed() on failure
         """
         cmd = u'HEAD {}'.format(index)
-        self.sendLine(cmd.encode(utf-8))
+        self.sendLine(cmd.encode("utf-8"))
         self._newState(self._stateHead, self.getHeadFailed)
 
 
