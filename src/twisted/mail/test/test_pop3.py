@@ -242,8 +242,7 @@ class ListMailbox:
 
     def getUidl(self, i):
         """
-        Construct a UID which is simply the string representation of the given
-        index.
+        Construct a UID by using the given index value.
 
         @param i: See L{pop3.IMailbox.getUidl}.
         @return: See L{pop3.IMailbox.getUidl}.
@@ -263,6 +262,8 @@ class ListMailbox:
     def sync(self):
         """
         No-op.
+
+        @see: L{pop3.IMailbox.sync}
         """
 
 
@@ -325,7 +326,7 @@ class MyPOP3Downloader(pop3.POP3Client):
 
 class POP3Tests(unittest.TestCase):
     """
-    Some tests for L{pop3.POP3}.
+    Tests for L{pop3.POP3}.
     """
 
     message = b'''\
@@ -350,7 +351,7 @@ Someone set up us the bomb!\015
 
     def setUp(self):
         """
-        Set up a POP3 server with some virtual domains.
+        Set up a POP3 server with virtual domain support.
         """
         self.factory = internet.protocol.Factory()
         self.factory.domains = {}
@@ -361,7 +362,7 @@ Someone set up us the bomb!\015
 
     def test_messages(self):
         """
-        Some messages can be downloaded over a loopback TCP connection.
+        Messages can be downloaded over a loopback TCP connection.
         """
         client = LineSendingProtocol([
             b'APOP hello@baz.com world',
@@ -379,7 +380,7 @@ Someone set up us the bomb!\015
 
     def test_loopback(self):
         """
-        Some messages can be downloaded over a loopback connection.
+        Messages can be downloaded over a loopback connection.
         """
         protocol = MyVirtualPOP3()
         protocol.service = self.factory
@@ -432,7 +433,7 @@ class DummyPOP3(pop3.POP3):
 
 class DummyMailbox(pop3.Mailbox):
     """
-    A simple L{pop3.IMailbox} implementation.
+    An in-memory L{pop3.IMailbox} implementation.
 
     @ivar messages: A sequence of L{bytes} defining the messages in this
         mailbox.
@@ -673,8 +674,10 @@ class AnotherPOP3Tests(unittest.TestCase):
 @implementer(pop3.IServerFactory)
 class TestServerFactory:
     """
-    A L{pop3.IServerFactory} implementation with some hard-coded and
-    easily-controlled values for use by the test suite.
+    A L{pop3.IServerFactory} implementation, for use by the test suite, with
+    some behavior controlled by the values of (settable) public attributes and
+    other behavior based on values hard-coded both here and in some test
+    methods.
     """
     def cap_IMPLEMENTATION(self):
         """
@@ -725,8 +728,9 @@ class TestServerFactory:
 
 class TestMailbox:
     """
-    An incomplete L{IMailbox} implementation with certain well-known values
-    for a couple per-user capabilities.
+    An incomplete L{IMailbox} implementation with certain per-user values
+    hard-coded and known by tests in this module.
+
 
     This is useful for testing the server's per-user capability
     implementation.
@@ -897,6 +901,9 @@ class TestRealm:
         @param avatarId: See L{IRealm.requestAvatar}.
         @param mind: See L{IRealm.requestAvatar}.
         @param interfaces: See L{IRealm.requestAvatar}.
+
+        @raises: L{AssertionError} when requesting an C{avatarId} other than
+            I{testuser}.
         """
         if avatarId == b'testuser':
             return pop3.IMailbox, DummyMailbox(ValueError), lambda: None
