@@ -1,0 +1,1 @@
+twisted.python.failure.Failure now raises the wrapped exception in Python3, and self (Failure) n Python2 when trap() is called without a matching exception
