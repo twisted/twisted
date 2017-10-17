@@ -33,6 +33,7 @@ from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 
 
+
 class SynchronousThreadPool:
     """
     A single-threaded implementation of part of the L{ThreadPool} interface.
