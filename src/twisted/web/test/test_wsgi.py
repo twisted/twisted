@@ -1942,12 +1942,9 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [])
-
-                for i in range(1000):
-                    yield b'1-some bytes'
-                    yield b'disconnect'
-                    yield b'3-here'   #pragma: no cover
-                    time.sleep(delay) #pragma: no cover
+                yield b'some bytes'
+                yield b'disconnect'
+                time.sleep(delay)
 
             return application
 
@@ -1957,7 +1954,6 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         try:
             yield request.notifyFinish()
-            self.fail('we should not be here') #pragma: no cover
         except ConnectionLost:
             pass
 
