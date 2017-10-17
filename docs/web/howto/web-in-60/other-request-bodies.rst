@@ -35,15 +35,20 @@ directly:
 
     ...
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.content.read()),)
+            content = request.content.read().decode("utf-8")
+            escapedContent = cgi.escape(content)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"You submitted: " +
+                    escapedContent.encode("utf-8"))
 
 
 
 
 ``request.content`` is a file-like object, so the
 body is read from it.  The exact type may vary, so avoid relying on non-file
-methods you may find (such as ``getvalue`` when happens
-to be a ``StringIO`` instance).
+methods you may find (such as ``getvalue`` when ``request.content`` happens
+to be a ``BytesIO`` instance).
 
 
 
@@ -67,13 +72,20 @@ only ``render_POST`` changed:
 
     class FormPage(Resource):
         def render_GET(self, request):
-            return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"<form method='POST'><input name='the-field'></form>")
 
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.content.read()),)
+            content = request.content.read().decode("utf-8")
+            escapedContent = cgi.escape(content)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"You submitted: " +
+                    escapedContent.encode("utf-8"))
 
     root = Resource()
-    root.putChild("form", FormPage())
+    root.putChild(b"form", FormPage())
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
