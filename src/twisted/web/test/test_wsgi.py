@@ -1945,10 +1945,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 for i in range(1000):
                     yield b'1-some bytes'
                     yield b'disconnect'
-                    yield b'3-here'
-                    time.sleep(delay)
-
-                yield b'you wont see this'
+                    yield b'3-here'   #pragma: no cover
+                    time.sleep(delay) #pragma: no cover
 
             return application
 
@@ -1958,7 +1956,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         try:
             yield request.notifyFinish()
-            self.fail('we should not be here')
+            self.fail('we should not be here') #pragma: no cover
         except ConnectionLost:
             pass
 
