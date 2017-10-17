@@ -119,20 +119,20 @@ class UtilityTests(unittest.TestCase):
         Test that the function which formats lines in response to a UIDL
         command does so appropriately.
         """
-        UIDs = ['abc', 'def', 'ghi']
-        listLines = list(pop3.formatUIDListResponse([], UIDs.__getitem__))
+        uids = ['abc', 'def', 'ghi']
+        listLines = list(pop3.formatUIDListResponse([], uids.__getitem__))
         self.assertEqual(
             listLines,
             [b'+OK \r\n', b'.\r\n'])
 
         listLines = list(pop3.formatUIDListResponse([123, 431, 591],
-                         UIDs.__getitem__))
+                         uids.__getitem__))
         self.assertEqual(
             listLines,
             [b'+OK \r\n', b'1 abc\r\n', b'2 def\r\n', b'3 ghi\r\n', b'.\r\n'])
 
         listLines = list(pop3.formatUIDListResponse([0, None, 591],
-                         UIDs.__getitem__))
+                         uids.__getitem__))
         self.assertEqual(
             listLines,
             [b'+OK \r\n', b'1 abc\r\n', b'3 ghi\r\n', b'.\r\n'])
@@ -140,10 +140,22 @@ class UtilityTests(unittest.TestCase):
 
 
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
-
+    """
+    A virtual-domain-supporting POP3 server.
+    """
     magic = b'<moshez>'
 
     def authenticateUserAPOP(self, user, digest):
+        """
+        Authenticate against a user against a virtual domain.
+
+        @param user: The username.
+        @param digest: The digested password.
+
+        @return: A three-tuple like the one returned by
+            L{IRealm.requestAvatar}.  The mailbox will be for the user given
+            by C{user}.
+        """
         user, domain = self.lookupDomain(user)
         return self.service.domains[b'baz.com'].authenticateUserAPOP(
             user, digest, self.magic, domain)
@@ -151,61 +163,130 @@ class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 
 
 class DummyDomain:
+    """
+    A virtual domain for a POP3 server.
+    """
 
     def __init__(self):
         self.users = {}
 
 
     def addUser(self, name):
+        """
+        Create a mailbox for a new user.
+
+        @param name: The username.
+        """
         self.users[name] = []
 
 
     def addMessage(self, name, message):
+        """
+        Add a message to the mailbox of the named user.
+
+        @param name: The username.
+        @param message: The contents of the message.
+        """
         self.users[name].append(message)
 
 
     def authenticateUserAPOP(self, name, digest, magic, domain):
+        """
+        Succeed with a L{ListMailbox}.
+
+        @param name: The name of the user authenticating.
+        @param digest: ignored
+        @param magic: ignored
+        @param domain: ignored
+
+        @return: A three-tuple like the one returned by
+            L{IRealm.requestAvatar}.  The mailbox will be for the user given
+            by C{name}.
+        """
         return pop3.IMailbox, ListMailbox(self.users[name]), lambda: None
 
 
 
 class ListMailbox:
-
+    """
+    A simple in-memory list implementation of L{IMailbox}.
+    """
     def __init__(self, list):
+        """
+        @param list: The messages.
+        """
         self.list = list
 
 
     def listMessages(self, i=None):
+        """
+        Get some message information.
+
+        @param i: See L{pop3.IMailbox.listMessages}.
+        @return: See L{pop3.IMailbox.listMessages}.
+        """
         if i is None:
             return [len(l) for l in self.list]
         return len(self.list[i])
 
 
     def getMessage(self, i):
+        """
+        Get the message content.
+
+        @param i: See L{pop3.IMailbox.getMessage}.
+        @return: See L{pop3.IMailbox.getMessage}.
+        """
         return BytesIO(self.list[i])
 
 
     def getUidl(self, i):
+        """
+        Construct a UID which is simply the string representation of the given
+        index.
+
+        @param i: See L{pop3.IMailbox.getUidl}.
+        @return: See L{pop3.IMailbox.getUidl}.
+        """
         return i
 
 
     def deleteMessage(self, i):
+        """
+        Wipe the message at the given index.
+
+        @param i: See L{pop3.IMailbox.deleteMessage}.
+        """
         self.list[i] = b''
 
 
     def sync(self):
-        pass
+        """
+        No-op.
+        """
 
 
 
 class MyPOP3Downloader(pop3.POP3Client):
-
+    """
+    A POP3 client which downloads all messages from the server.
+    """
     def handle_WELCOME(self, line):
+        """
+        Authenticate.
+
+        @param line: The welcome response.
+        """
         pop3.POP3Client.handle_WELCOME(self, line)
         self.apop(b'hello@baz.com', b'world')
 
 
     def handle_APOP(self, line):
+        """
+        Require an I{OK} response to I{APOP}.
+
+        @param line: The I{APOP} response.
+        """
         parts = line.split()
         code = parts[0]
         if code != b'+OK':
@@ -215,15 +296,28 @@ class MyPOP3Downloader(pop3.POP3Client):
 
 
     def handle_RETR_continue(self, line):
+        """
+        Record one line of message information.
+
+        @param line: A I{RETR} response line.
+        """
         self.lines.append(line)
 
 
     def handle_RETR_end(self):
+        """
+        Record the received message information.
+        """
         self.message = b'\n'.join(self.lines) + b'\n'
         self.quit()
 
 
     def handle_QUIT(self, line):
+        """
+        Require an I{OK} response to I{QUIT}.
+
+        @param line: The I{QUIT} response.
+        """
         if line[:3] != b'+OK':
             raise AssertionError(b'code is ' + line)
 
@@ -358,7 +452,7 @@ class DummyMailbox(pop3.Mailbox):
         Get some message information.
 
         @param i: See L{pop3.IMailbox.listMessages}.
-        @return: See  L{pop3.IMailbox.listMessages}.
+        @return: See L{pop3.IMailbox.listMessages}.
         """
         if i is None:
             return [len(m) for m in self.messages]
@@ -372,7 +466,7 @@ class DummyMailbox(pop3.Mailbox):
         Get the message content.
 
         @param i: See L{pop3.IMailbox.getMessage}.
-        @return: See  L{pop3.IMailbox.getMessage}.
+        @return: See L{pop3.IMailbox.getMessage}.
         """
         return BytesIO(self.messages[i])
 
@@ -406,8 +500,8 @@ class AnotherPOP3Tests(unittest.TestCase):
     """
     def runTest(self, lines, expectedOutput):
         """
-        Assert that when C{lines} are delivered to L{pop3.POP3} it responds with
-        C{expectedOutput}.
+        Assert that when C{lines} are delivered to L{pop3.POP3} it responds
+        with C{expectedOutput}.
 
         @param lines: A sequence of L{bytes} representing lines to deliver to
             the server.
@@ -534,8 +628,8 @@ class AnotherPOP3Tests(unittest.TestCase):
 
     def test_emptyPASS(self):
         """
-        L{pop3.POP3} handles a I{PASS} command with a password equal to C{""} as
-        it would any other value.
+        L{pop3.POP3} handles a I{PASS} command with a password equal to C{""}
+        as it would any other value.
         """
         dummy = DummyPOP3()
         client = LineSendingProtocol([
@@ -741,7 +835,8 @@ class CapabilityTests(unittest.TestCase):
 
     def test_LOGIN_DELAY(self):
         """
-        The can advertise a per-user login delay as well as a global login delay.
+        The can advertise a per-user login delay as well as a global login
+        delay.
         """
         contained(self, b"LOGIN-DELAY 120 USER", self.caps, self.pcaps)
         self.assertIn(b"LOGIN-DELAY 100", self.lpcaps)
@@ -815,8 +910,8 @@ class SASLTests(unittest.TestCase):
     """
     def test_ValidLogin(self):
         """
-        A CRAM-MD5-based SASL login attempt succeeds if it uses a username and a
-        hashed password known to the server's credentials checker.
+        A CRAM-MD5-based SASL login attempt succeeds if it uses a username and
+        a hashed password known to the server's credentials checker.
         """
         p = pop3.POP3()
         p.factory = TestServerFactory()
@@ -1248,8 +1343,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
 
     def test_LISTWithBadArgument(self):
         """
-        An attempt to get metadata about a message with a bad argument fails with
-        an I{ERR} response even if the mailbox implementation raises
+        An attempt to get metadata about a message with a bad argument fails
+        with an I{ERR} response even if the mailbox implementation raises
         L{IndexError}.
         """
         return CommandMixin.test_LISTWithBadArgument(self)
@@ -1258,8 +1353,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
 
     def test_UIDLWithBadArgument(self):
         """
-        An attempt to look up the UID of a message with a bad argument fails with
-        an I{ERR} response even if the mailbox implementation raises
+        An attempt to look up the UID of a message with a bad argument fails
+        with an I{ERR} response even if the mailbox implementation raises
         L{IndexError}.
         """
         return CommandMixin.test_UIDLWithBadArgument(self)
@@ -1268,8 +1363,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
 
     def test_TOPWithBadArgument(self):
         """
-        An attempt to download some of a message with a bad argument fails with an
-        I{ERR} response even if the mailbox implementation raises
+        An attempt to download some of a message with a bad argument fails with
+        an I{ERR} response even if the mailbox implementation raises
         L{IndexError}.
         """
         return CommandMixin.test_TOPWithBadArgument(self)
@@ -1278,8 +1373,9 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
 
     def test_RETRWithBadArgument(self):
         """
-        An attempt to download a message with a bad argument fails with an I{ERR}
-        response even if the mailbox implementation raises L{IndexError}.
+        An attempt to download a message with a bad argument fails with an
+        I{ERR} response even if the mailbox implementation raises
+        L{IndexError}.
         """
         return CommandMixin.test_RETRWithBadArgument(self)
     test_RETRWithBadArgument.suppress = [_listMessageSuppression]
