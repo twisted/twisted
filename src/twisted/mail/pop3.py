@@ -35,9 +35,7 @@ from twisted.protocols import policies
 from twisted.python import log
 from twisted.python.compat import _PY3, intToBytes
 
-##
-## Authentication
-##
+# Authentication
 @implementer(cred.credentials.IUsernamePassword)
 class APOPCredentials:
     """
@@ -87,8 +85,8 @@ class _HeadersPlusNLines:
     A utility class to retrieve the header and some lines of the body of a mail
     message.
 
-    @ivar f: See L{__init__}
-    @ivar n: See L{__init__}
+    @ivar _file: See L{__init__}
+    @ivar _extraLines: See L{__init__}
 
     @type linecount: L{int}
     @ivar linecount: The number of full lines of the message body scanned.
@@ -105,16 +103,16 @@ class _HeadersPlusNLines:
     @ivar buf: The portion of the message body that has been scanned, up to
         C{n} lines.
     """
-    def __init__(self, f, n):
+    def __init__(self, file, extraLines):
         """
-        @type f: file-like object
-        @param f: A file containing a mail message.
+        @type file: file-like object
+        @param file: A file containing a mail message.
 
-        @type n: L{int}
-        @param n: The number of lines of the message body to retrieve.
+        @type extraLines: L{int}
+        @param extraLines: The number of lines of the message body to retrieve.
         """
-        self.f = f
-        self.n = n
+        self._file = file
+        self._extraLines = extraLines
         self.linecount = 0
         self.headers = 1
         self.done = 0
@@ -137,7 +135,7 @@ class _HeadersPlusNLines:
         """
         if self.done:
             return b''
-        data = self.f.read(bytes)
+        data = self._file.read(bytes)
         if not data:
             return data
         if self.headers:
@@ -156,7 +154,7 @@ class _HeadersPlusNLines:
             dsplit = (self.buf + data).split(b'\n')
             self.buf = dsplit[-1]
             for ln in dsplit[:-1]:
-                if self.linecount > self.n:
+                if self.linecount > self._extraLines:
                     self.done = 1
                     return val
                 val += (ln + b'\n')
@@ -353,8 +351,8 @@ def formatUIDListLines(msgs, getUidl):
     """
     Format a list of message sizes for use in a UIDL response.
 
-    @type msgs: L{list} of L{int}
-    @param msgs: A list of message sizes.
+    @param msgs: See L{formatUIDListResponse}
+    @param getUidl: See L{formatUIDListResponse}
 
     @rtype: L{bytes}
     @return: Yields a series of strings that are suitable for use as unique-id
@@ -379,6 +377,10 @@ def formatUIDListResponse(msgs, getUidl):
 
     @type msgs: L{list} of L{int}
     @param msgs: A list of message sizes.
+
+    @type getUidl: one-argument callable returning bytes
+    @param getUidl: A callable which takes a message index number and returns
+        the UID of the corresponding message in the mailbox.
 
     @rtype: L{bytes}
     @return: Yields a series of strings which make up a complete UIDL response.
@@ -800,7 +802,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         (interface, avatar, logout) = result
         if interface is not IMailbox:
             self.failResponse(b'Authentication failed')
-            log.err("_cbMailbox() called with an interface other than IMailbox")
+            log.err(
+                "_cbMailbox() called with an interface other than IMailbox"
+            )
             return
 
         self.mbox = avatar
@@ -826,7 +830,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         elif issubclass(failure, cred.error.LoginFailed):
             self.failResponse(b'Authentication failed')
         if getattr(self.factory, 'noisy', True):
-            log.msg("Denied login attempt from " + str(self.transport.getPeer()))
+            log.msg(
+                "Denied login attempt from " + str(self.transport.getPeer())
+            )
 
 
     def _ebUnexpected(self, failure):
@@ -911,7 +917,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>}
         @return: A deferred which fires when the iterator finishes.
         """
-        return self.schedule(_IteratorBuffer(self.transport.writeSequence, gen))
+        return self.schedule(
+            _IteratorBuffer(self.transport.writeSequence, gen)
+        )
 
 
     def do_STAT(self):
@@ -974,9 +982,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                             # shouldn't be.  One error condition, one exception
                             # type.  See ticket #6669.
                             warnings.warn(
-                                "twisted.mail.pop3.IMailbox.listMessages may not "
-                                "raise IndexError for out-of-bounds message numbers: "
-                                "raise ValueError instead.",
+                                "twisted.mail.pop3.IMailbox.listMessages may "
+                                "not raise IndexError for out-of-bounds "
+                                "message numbers: raise ValueError instead.",
                                 PendingDeprecationWarning)
                         invalidNum = i
                         if invalidNum and not isinstance(invalidNum, bytes):
@@ -987,7 +995,8 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                         self.failResponse(err.getErrorMessage())
                         log.msg("Unexpected do_LIST failure:")
                         log.err(err)
-                return self._longOperation(d.addCallbacks(cbMessage, ebMessage))
+                d.addCallbacks(cbMessage, ebMessage)
+                return self._longOperation(d)
 
 
     def do_UIDL(self, i=None):
@@ -1004,7 +1013,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if i is None:
             d = defer.maybeDeferred(self.mbox.listMessages)
             def cbMessages(msgs):
-                return self._coiterate(formatUIDListResponse(msgs, self.mbox.getUidl))
+                return self._coiterate(
+                    formatUIDListResponse(msgs, self.mbox.getUidl),
+                )
             def ebMessages(err):
                 self.failResponse(err.getErrorMessage())
                 log.msg("Unexpected do_UIDL failure:")
@@ -1693,15 +1704,16 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort(b'USER', name)
 
 
-    def pass_(self, pass_):
+    def password(self, password):
         """
         Perform the second half of a plaintext login.
 
-        @type pass_: L{bytes}
-        @param pass_: The plaintext password with which to authenticate.
+        @type password: L{bytes}
+        @param password: The plaintext password with which to authenticate.
         """
-        self.sendShort(b'PASS', pass_)
+        self.sendShort(b'PASS', password)
 
+    pass_ = password
 
     def quit(self):
         """
