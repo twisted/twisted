@@ -718,7 +718,9 @@ class ApplicationRunnerTests(unittest.TestCase):
             """
 
             def installWaker(self):
-                """Dummy method, does nothing."""
+                """
+                Dummy method, does nothing.
+                """
 
             def run(self):
                 """
@@ -734,6 +736,7 @@ class ApplicationRunnerTests(unittest.TestCase):
         runner.startReactor(reactor, None, None)
         self.assertEquals(2, runner._exitSignal)
 
+
     def test_applicationRunnerIgnoresNoSignal(self):
         """
         The runner sets its _exitSignal instance attribute to None if
@@ -747,7 +750,9 @@ class ApplicationRunnerTests(unittest.TestCase):
             """
 
             def installWaker(self):
-                """Dummy method, does nothing."""
+                """
+                Dummy method, does nothing.
+                """
 
             def run(self):
                 """
