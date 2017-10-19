@@ -76,45 +76,32 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         """
         (DEPRECATED: use --http)
         Strports description of port to start the server on
-                     ["port", "p", None,
-
-        @param port: the strport description
         """
         msg = deprecate.getDeprecationWarningString(
             self.opt_port, incremental.Version("Twisted", "NEXT", 0, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['port'] = port
 
-    # See https://github.com/twisted/twistedchecker/issues/134
-    opt_port.__doc__ = opt_port.__doc__.split('@param')[0]
 
     opt_p = opt_port
 
     def opt_https(self, port):
         """
-        Port to listen on for Secure HTTP.
         (DEPRECATED: use --http)
-
-        @param port: the strport description
+        Port to listen on for Secure HTTP.
         """
         msg = deprecate.getDeprecationWarningString(
             self.opt_https, incremental.Version("Twisted", "NEXT", 0, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['https'] = port
 
-    opt_https.__doc__ = opt_https.__doc__.split('@param')[0]
 
     def opt_http(self, port):
         """
         Add an strports description of port to start the server on.
         [default: tcp:8080]
-
-        @param port: the strport description
         """
         self['ports'].append(port)
-
-    # See https://github.com/twisted/twistedchecker/issues/134
-    opt_http.__doc__ = opt_http.__doc__.split('@param')[0]
 
 
     def opt_index(self, indexName):
