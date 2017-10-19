@@ -3062,7 +3062,7 @@ class ReadBodyTests(TestCase):
 
 
 
-class TestHostnameCachingHTTPSPolicy(TestCase):
+class HostnameCachingHTTPSPolicyTests(TestCase):
 
     skip = skipWhenNoSSL
 
@@ -3095,7 +3095,7 @@ class TestHostnameCachingHTTPSPolicy(TestCase):
         trustRoot = CustomOpenSSLTrustRoot()
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
-        for i in range(0,20):
+        for i in range(0, 20):
             hostname = u"host" + unicode(i)
             policy.creatorForNetloc(hostname.encode("ascii"), 8675)
 
