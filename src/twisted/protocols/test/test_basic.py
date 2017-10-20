@@ -151,24 +151,6 @@ class LineOnlyTester(basic.LineOnlyReceiver):
 
 
 
-class BasicLineTester(basic.LineReceiver):
-    """
-    A line receiver that stores received lines in self.received.
-    """
-    def connectionMade(self):
-        """
-        Create/clean data received on connection.
-        """
-        self.received = []
-
-    def lineReceived(self, line):
-        """
-        Receive line and store it.
-        """
-        self.received.append(line)
-
-
-
 class LineReceiverTestCase(unittest.SynchronousTestCase):
     """
     Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
@@ -343,7 +325,7 @@ a'''
         delimiter, and that packet causes the total input to exceed
         C{MAX_LENGTH} + len(delimiter).
         """
-        proto = BasicLineTester()
+        proto = LineTester()
         proto.MAX_LENGTH = 4
         t = proto_helpers.StringTransport()
         proto.makeConnection(t)
