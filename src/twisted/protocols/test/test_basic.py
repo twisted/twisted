@@ -353,7 +353,8 @@ a'''
         proto.dataReceived(proto.delimiter[:-1])
         proto.dataReceived(proto.delimiter[-1:] + line)
         self.assertFalse(t.disconnecting)
-        self.assertEqual(line, proto.received and proto.received[0])
+        self.assertEqual(len(proto.received), 1)
+        self.assertEqual(line, proto.received[0])
 
 
     def test_notQuiteMaximumLineLengthUnfinished(self):
