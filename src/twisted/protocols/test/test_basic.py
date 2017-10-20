@@ -365,11 +365,13 @@ a'''
         exceeds the max is the beginning of the delimiter.)
         """
         proto = basic.LineReceiver()
-        # '\r\n' is the default, but we set it just to be explicit in this test.
+        # '\r\n' is the default, but we set it just to be explicit in
+        # this test.
         proto.delimiter = '\r\n'
         transport = proto_helpers.StringTransport()
         proto.makeConnection(transport)
-        proto.dataReceived((b'x' * proto.MAX_LENGTH) + proto.delimiter[:len(proto.delimiter)-1])
+        proto.dataReceived((b'x' * proto.MAX_LENGTH)
+                           + proto.delimiter[:len(proto.delimiter)-1])
         self.assertFalse(transport.disconnecting)
 
 
