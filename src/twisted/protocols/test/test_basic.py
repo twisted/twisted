@@ -513,7 +513,7 @@ class LineReceiverLineLengthExceededTests(unittest.SynchronousTestCase):
         proto = basic.LineReceiver()
         transport = proto_helpers.StringTransport()
         proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + len(proto.delimiter)))
         self.assertTrue(transport.disconnecting)
 
 
