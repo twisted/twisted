@@ -478,7 +478,8 @@ class LineOnlyReceiverTests(unittest.SynchronousTestCase):
         proto = LineOnlyTester()
         transport = proto_helpers.StringTransport()
         proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + len(proto.delimiter) + 1) + b'\r\nr')
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH
+                                   + len(proto.delimiter) + 1) + b'\r\nr')
         self.assertTrue(transport.disconnecting)
 
 
