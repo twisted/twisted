@@ -19,7 +19,7 @@ from zope.interface import implementer
 
 # Twisted imports
 from twisted.python.compat import _PY3
-from twisted.internet import protocol, defer, interfaces, error
+from twisted.internet import protocol, defer, interfaces
 from twisted.python import log
 
 

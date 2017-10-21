@@ -17,7 +17,7 @@ from twisted.python.compat import _PY3, iterbytes
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.python import reflect
-from twisted.internet import protocol, error, task
+from twisted.internet import protocol, task
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
 
