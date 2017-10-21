@@ -151,7 +151,7 @@ class LineOnlyTester(basic.LineOnlyReceiver):
 
 
 
-class LineReceiverTestCase(unittest.SynchronousTestCase):
+class LineReceiverTests(unittest.SynchronousTestCase):
     """
     Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
     wrapper.
