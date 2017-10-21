@@ -47,12 +47,14 @@ from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
 from twisted.web.http import _IdentityTransferDecoder, _ChunkedTransferDecoder
+from twisted.logger import Logger
 
 # States HTTPParser can be in
 STATUS = u'STATUS'
 HEADER = u'HEADER'
 BODY = u'BODY'
 DONE = u'DONE'
+_moduleLog = Logger()
 
 
 class BadHeaders(Exception):
@@ -193,8 +195,10 @@ def _callAppFunction(function):
     try:
         function()
     except:
-        log.err(None, u"Unexpected exception from %s" % (
-                fullyQualifiedName(function),))
+        _moduleLog.failure(
+            u"Unexpected exception from {name}",
+            name=fullyQualifiedName(function)
+        )
 
 
 
