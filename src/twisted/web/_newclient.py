@@ -593,6 +593,7 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or L{None}.
     @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
+    _log = Logger()
 
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         """
@@ -758,10 +759,13 @@ class Request:
                     # Deferred fired.  This really shouldn't ever happen.
                     # If it does, I goofed.  Log the error anyway, just so
                     # there's a chance someone might notice and complain.
-                    log.err(
-                        err,
-                        u"Buggy state machine in %r/[%d]: "
-                        u"ebConsuming called" % (self, state[0]))
+                    self._log.failure(
+                        u"Buggy state machine in {request}/[{state}]: "
+                        u"ebConsuming called",
+                        failure=err,
+                        request=repr(self),
+                        state=state[0]
+                    )
 
             def cbProducing(result):
                 if state == [None]:
@@ -799,7 +803,7 @@ class Request:
                     # Deferred failed.  It shouldn't have, so it's buggy.
                     # Log the exception in case anyone who can fix the code
                     # is watching.
-                    log.err(err, u"Producer is buggy")
+                    self._log.failure(u"Producer is buggy", failure=err)
 
             consuming.addErrback(ebConsuming)
             producing.addCallbacks(cbProducing, ebProducing)

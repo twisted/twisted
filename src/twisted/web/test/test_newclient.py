@@ -2205,8 +2205,17 @@ class RequestTests(TestCase):
         L{Deferred} returned by L{Request.writeTo} fires with a L{Failure}
         wrapping a L{WrongBodyLength} exception.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         def finisher(producer):
             producer.finished.errback(ArbitraryException())
+            event = logObserver[0]
+            self.assertIn("log_failure", event)
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, ArbitraryException)
             errors = self.flushLoggedErrors(ArbitraryException)
             self.assertEqual(len(errors), 1)
         return self._sendRequestBodyWithTooManyBytesTest(finisher)
@@ -2222,6 +2231,10 @@ class RequestTests(TestCase):
 
         This is a whitebox test.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         producer = StringProducer(3)
         request = Request(b'POST', b'/bar', _boringHeaders, producer)
         request.writeTo(self.transport)
@@ -2232,6 +2245,10 @@ class RequestTests(TestCase):
         producer.finished.callback(None)
 
         finishedConsuming.errback(ArbitraryException())
+        event = logObserver[0]
+        self.assertIn("log_failure", event)
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryException)
         self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
 
 
