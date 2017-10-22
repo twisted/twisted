@@ -28,6 +28,8 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
+from twisted.logger import globalLogPublisher
+from twisted.test.proto_helpers import EventLoggingObserver
 
 
 
@@ -2026,6 +2028,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
     def _connectionClosedTest(self, application, responseContent):
         channel = DummyChannel()
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         def applicationFactory():
             return application
 
@@ -2038,8 +2045,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return requests[-1]
 
         def ebRendered(ignored):
-            errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEqual(len(errors), 1)
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, RuntimeError)
+            self.flushLoggedErrors(RuntimeError)
 
             response = channel.transport.written.getvalue()
             self.assertTrue(response.startswith(b'HTTP/1.1 200 OK'))

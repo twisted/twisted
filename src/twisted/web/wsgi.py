@@ -16,11 +16,12 @@ from zope.interface import implementer
 
 from twisted.internet.threads import blockingCallFromThread
 from twisted.python.compat import reraise
-from twisted.python.log import msg, err
+from twisted.python.log import msg
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.http import INTERNAL_SERVER_ERROR
+from twisted.logger import Logger
 
 
 
@@ -262,6 +263,7 @@ class _WSGIResponse:
     """
 
     _requestFinished = False
+    _log = Logger()
 
     def __init__(self, reactor, threadpool, application, request):
         self.started = False
@@ -505,7 +507,10 @@ class _WSGIResponse:
                 close()
         except:
             def wsgiError(started, type, value, traceback):
-                err(Failure(value, type, traceback), "WSGI application error")
+                self._log.failure(
+                    "WSGI application error",
+                    failure=Failure(value, type, traceback)
+                )
                 if started:
                     self.request.loseConnection()
                 else:
