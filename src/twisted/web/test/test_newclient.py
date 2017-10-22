@@ -1190,15 +1190,19 @@ class HTTP11ClientProtocolTests(TestCase):
         lost, an error is logged that gives a non-confusing hint to user on what
         went wrong.
         """
-        errors = []
-        log.addObserver(errors.append)
-        self.addCleanup(log.removeObserver, errors.append)
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
 
         def check(ignore):
-            error = errors[0]
-            self.assertEqual(error[u'why'],
-                              u'Error writing request, but not in valid state '
-                              u'to finalize request: CONNECTION_LOST')
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            self.assertIn("log_failure", event)
+            self.assertEqual(event["log_format"],
+                             u'Error writing request, but not in valid state '
+                             u'to finalize request: {state}')
+            self.assertEqual(event["state"], 'CONNECTION_LOST')
 
         return self.test_connectionLostDuringRequestGeneration(
             'errback').addCallback(check)
@@ -1783,6 +1787,11 @@ class HTTP11ClientProtocolTests(TestCase):
         def callback(p):
             raise ZeroDivisionError()
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         transport = StringTransport()
         protocol = HTTP11ClientProtocol(callback)
         protocol.makeConnection(transport)
@@ -1801,8 +1810,12 @@ class HTTP11ClientProtocolTests(TestCase):
         response.deliverBody(bodyProtocol)
         bodyProtocol.closedReason.trap(ResponseDone)
 
-        errors = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertEqual(len(errors), 1)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ZeroDivisionError)
+
+        self.flushLoggedErrors(ZeroDivisionError)
         self.assertTrue(transport.disconnecting)
 
 

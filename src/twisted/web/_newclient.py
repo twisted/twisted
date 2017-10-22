@@ -1423,6 +1423,7 @@ class HTTP11ClientProtocol(Protocol):
     _currentRequest = None
     _transportProxy = None
     _responseDeferred = None
+    _log = Logger()
 
 
     def __init__(self, quiescentCallback=lambda c: None):
@@ -1492,8 +1493,12 @@ class HTTP11ClientProtocol(Protocol):
                 self._finishedRequest.errback(
                     Failure(RequestGenerationFailed([err])))
             else:
-                log.err(err, u'Error writing request, but not in valid state '
-                             u'to finalize request: %s' % self._state)
+                self._log.failure(
+                    u'Error writing request, but not in valid state '
+                    u'to finalize request: {state}',
+                    failure=err,
+                    state=self._state
+                )
 
         _requestDeferred.addCallbacks(cbRequestWritten, ebRequestWriting)
 
@@ -1550,7 +1555,7 @@ class HTTP11ClientProtocol(Protocol):
             except:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
-                log.err()
+                self._log.failure('')
                 self.transport.loseConnection()
             self._disconnectParser(reason)
 
