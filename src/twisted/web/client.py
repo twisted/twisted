@@ -26,7 +26,6 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
@@ -473,6 +472,7 @@ class HTTPDownloader(HTTPClientFactory):
     """
     protocol = HTTPPageDownloader
     value = None
+    _log = Logger()
 
     def __init__(self, url, fileOrName,
                  method=b'GET', postdata=None, headers=None,
@@ -558,7 +558,7 @@ class HTTPDownloader(HTTPClientFactory):
                 try:
                     self.file.close()
                 except:
-                    log.err(None, "Error closing HTTPDownloader file")
+                    self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
 
