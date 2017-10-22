@@ -11,7 +11,6 @@ __metaclass__ = type
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
@@ -810,6 +809,10 @@ class HTTPClientParserTests(TestCase):
         L{HTTPClientParser.connectionLost} raises an exception, the exception
         is logged and not re-raised.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         transport = StringTransport()
         protocol = HTTPClientParser(Request(b'GET', b'/', _boringHeaders, None),
                                     None)
@@ -829,8 +832,11 @@ class HTTPClientParserTests(TestCase):
         response._bodyDataFinished = fakeBodyDataFinished
 
         protocol.connectionLost(None)
-
-        self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryException)
+        self.flushLoggedErrors(ArbitraryException)
 
 
     def test_noResponseAtAll(self):
@@ -973,6 +979,10 @@ class HTTPClientParserTests(TestCase):
         """
         When a 1XX response is ignored, Twisted emits a log.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         sample103Response = (
             b'HTTP/1.1 103 Early Hints\r\n'
             b'Server: socketserver/1.0.0\r\n'
@@ -981,11 +991,6 @@ class HTTPClientParserTests(TestCase):
             b'\r\n'
         )
 
-        # Catch the logs.
-        logs = []
-        log.addObserver(logs.append)
-        self.addCleanup(log.removeObserver, logs.append)
-
         protocol = HTTPClientParser(
             Request(b'GET', b'/', _boringHeaders, None),
             lambda ign: None
@@ -993,9 +998,13 @@ class HTTPClientParserTests(TestCase):
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(sample103Response)
 
-        self.assertEqual(
-            logs[0]['message'][0], 'Ignoring unexpected 103 response'
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertEquals(
+            event['log_format'],
+            "Ignoring unexpected {code} response"
         )
+        self.assertEquals(event['code'], 103)
 
 
 

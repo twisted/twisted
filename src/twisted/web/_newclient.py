@@ -31,7 +31,6 @@ __metaclass__ = type
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
@@ -373,6 +372,7 @@ class HTTPClientParser(HTTPParser):
         }
 
     bodyDecoder = None
+    _log = Logger()
 
     def __init__(self, request, finisher):
         self.request = request
@@ -475,8 +475,9 @@ class HTTPClientParser(HTTPParser):
             # going to do. We reset the parser here, but we leave
             # _everReceivedData in its True state because we have, in fact,
             # received data.
-            log.msg(
-                "Ignoring unexpected {} response".format(self.response.code)
+            self._log.info(
+                "Ignoring unexpected {code} response",
+                code=self.response.code
             )
             self.connectionMade()
             del self.response
@@ -567,7 +568,7 @@ class HTTPClientParser(HTTPParser):
                 # suite.  Those functions really shouldn't raise exceptions,
                 # but maybe there's some buggy application code somewhere
                 # making things difficult.
-                log.err()
+                self._log.failure('')
         elif self.state != DONE:
             if self._everReceivedData:
                 exceptionClass = ResponseFailed
