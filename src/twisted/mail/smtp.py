@@ -161,7 +161,8 @@ def messageid(uniq=None, N=lambda: next(_gen)):
     else:
         uniq = '.' + uniq
 
-    return '<%s.%s.%s%s.%s@%s>' % (datetime, pid, rand, uniq, N(), DNSNAME)
+    return '<{}.{}.{}{}.{}@{}>'.format(datetime, pid, rand, uniq, N(),
+        DNSNAME.decode("ascii"))
 
 
 
