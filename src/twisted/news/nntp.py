@@ -291,7 +291,7 @@ class NNTPClient(basic.LineReceiver):
             groupPart = groupPart + ',' + group
 
         cmd = line % (groupPart,)
-        self.sendLine(line.encode("utf-8"))
+        self.sendLine(cmd.encode("utf-8"))
         self._newState(self._stateNewNews, self.getNewNewsFailed)
 
         if len(groups):
