@@ -782,7 +782,8 @@ class NewsShelf(_ModerationMixin):
         except KeyError:
             return defer.fail(NewsServerError(b"No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader(u'Message-ID'), BytesIO(a.body.encode("utf-8"))))
+            return defer.succeed((index, a.getHeader(u'Message-ID'),
+                BytesIO(a.body.encode("utf-8"))))
 
 
 @implementer(INewsStorage)

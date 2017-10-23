@@ -565,7 +565,8 @@ class NNTPServer(basic.LineReceiver):
                         log.msg(u"command was", line)
                         log.deferr()
                     except:
-                        self.sendLine(b'503 program fault - command not performed')
+                        self.sendLine(
+                            b'503 program fault - command not performed')
                         log.msg(u"503 program fault")
                         log.msg(u"command was", line)
                         log.deferr()
