@@ -27,7 +27,7 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
-from twisted.logger import globalLogPublisher
+from twisted.logger import globalLogPublisher, Logger
 from twisted.test.proto_helpers import EventLoggingObserver
 
 
@@ -39,6 +39,8 @@ class SynchronousThreadPool:
     them in a thread pool.  It is used to make the tests which are not
     directly for thread-related behavior deterministic.
     """
+    _log = Logger()
+
     def callInThread(self, f, *a, **kw):
         """
         Call C{f(*a, **kw)} in this thread rather than scheduling it to be
@@ -50,7 +52,9 @@ class SynchronousThreadPool:
             # callInThread doesn't let exceptions propagate to the caller.
             # None is always returned and any exception raised gets logged
             # later on.
-            err(None, "Callable passed to SynchronousThreadPool.callInThread failed")
+            self._log.failure(
+                "Callable passed to SynchronousThreadPool.callInThread failed"
+            )
 
 
 
