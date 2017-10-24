@@ -15,7 +15,6 @@ import warnings
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import intToBytes, urlquote, _PY3
-from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
