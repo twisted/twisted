@@ -104,7 +104,7 @@ class _ErrorStream:
     C{'wsgi.errors'} key in the C{environ} dictionary passed to the application
     object.
 
-    This simply passes writes on to L{logging<twisted.python.log>} system as
+    This simply passes writes on to L{logging<twisted.logger>} system as
     error events from the C{'wsgi'} system.  In the future, it may be desirable
     to expose more information in the events it logs, such as the application
     object which generated the message.
