@@ -768,9 +768,10 @@ class EnvironTests(WSGITestsMixin, TestCase):
         section of PEP 333) which converts bytes written to it into events for
         the logging system.
         """
-        events = []
-        addObserver(events.append)
-        self.addCleanup(removeObserver, events.append)
+        events = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
 
         errors = self.render('GET', '1.1', [], [''])
         def cbErrors(result):

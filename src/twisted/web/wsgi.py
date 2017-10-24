@@ -16,7 +16,6 @@ from zope.interface import implementer
 
 from twisted.internet.threads import blockingCallFromThread
 from twisted.python.compat import reraise
-from twisted.python.log import msg
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
@@ -110,6 +109,7 @@ class _ErrorStream:
     to expose more information in the events it logs, such as the application
     object which generated the message.
     """
+    _log = Logger()
 
     def write(self, data):
         """
@@ -132,7 +132,14 @@ class _ErrorStream:
                     "write() argument must be str, not %r (%s)"
                     % (data, type(data).__name__))
 
-        msg(data, system='wsgi', isError=True)
+        # Note that in old style, message was a tuple.  logger._legacy
+        # will overwrite this value if it is not properly formatted here.
+        self._log.error(
+            data,
+            system='wsgi',
+            isError=True,
+            message=(data,)
+        )
 
 
     def writelines(self, iovec):
