@@ -17,7 +17,7 @@ from twisted.python.compat import _PY3, iterbytes
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.python import reflect
-from twisted.internet import protocol, error, task
+from twisted.internet import protocol, task
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
 
@@ -470,15 +470,17 @@ class LineOnlyReceiverTests(unittest.SynchronousTestCase):
         self.assertEqual(a.received, self.buffer.split(b'\n')[:-1])
 
 
-    def test_lineTooLong(self):
+    def test_greaterThanMaximumLineLength(self):
         """
-        Test sending a line too long: it should close the connection.
+        C{LineOnlyReceiver} disconnects the transport if it receives a
+        line longer than its C{MAX_LENGTH} + len(delimiter).
         """
-        t = proto_helpers.StringTransport()
-        a = LineOnlyTester()
-        a.makeConnection(t)
-        res = a.dataReceived(b'x' * 200)
-        self.assertIsInstance(res, error.ConnectionLost)
+        proto = LineOnlyTester()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH
+                                   + len(proto.delimiter) + 1) + b'\r\nr')
+        self.assertTrue(transport.disconnecting)
 
 
     def test_lineReceivedNotImplemented(self):
