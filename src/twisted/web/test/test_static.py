@@ -342,13 +342,13 @@ class StaticFileTests(TestCase):
             self.assertEqual(b''.join(request.written), content)
             self.assertEqual(
                 request.responseHeaders.getRawHeaders(b'content-length')[0],
-                str(len(content)).encode("utf-8"))
+                str(len(content)).encode("ascii"))
         d.addCallback(cbRendered)
         return d
     if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
         test_staticFileUnicodeFileName.skip = (
             "Cannot write unicode filenames with file system encoding of"
-            " %s" % (sys.getfilesystemencoding(),))
+            " {}".format(sys.getfilesystemencoding()))
 
 
     def test_staticFileDeletedGetChild(self):
