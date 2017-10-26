@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.logger import Logger
@@ -225,10 +225,10 @@ def datetimeToString(msSinceEpoch=None):
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = networkString("%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
+    s = u"{}, {:02d} {:3} {:4d} {:02d}:{:02d}:{:02d} GMT".format(
             weekdayname[wd],
             day, monthname[month], year,
-            hh, mm, ss))
+            hh, mm, ss).encode("ascii")
     return s
 
 
@@ -242,7 +242,7 @@ def datetimeToLogString(msSinceEpoch=None):
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+    s = "[{:02d}/{:3}/{:4d}:{:02d}:{:02d}:{:02d} +0000]".format(
         day, monthname[month], year,
         hh, mm, ss)
     return s
