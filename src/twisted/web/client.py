@@ -491,7 +491,8 @@ class HTTPDownloader(HTTPClientFactory):
                     if headers == None:
                         headers = {}
                     headers[b"range"] = (b"bytes=" +
-                                         str(fileLength).encode("ascii") + b"-")
+                                         str(fileLength).encode("ascii") +
+                                         b"-")
         else:
             self.file = fileOrName
         HTTPClientFactory.__init__(
