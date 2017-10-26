@@ -243,7 +243,10 @@ class Resource:
 
         @see: L{IResource.render}
         """
-        m = getattr(self, u'render_' + request.method.decode("ascii"), None)
+        method = u'render_' + request.method.decode("ascii")
+        if not isinstance(method, str):
+            method = method.encode("ascii")
+        m = getattr(self, method, None)
         if not m:
             try:
                 allowedMethods = self.allowedMethods
