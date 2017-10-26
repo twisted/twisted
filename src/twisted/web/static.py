@@ -12,6 +12,7 @@ import errno
 import itertools
 import mimetypes
 import os
+import sys
 import time
 import warnings
 
@@ -22,7 +23,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import _PY3, intToBytes, unicode
+from twisted.python.compat import _PY3, unicode
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -41,7 +42,8 @@ else:
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
 def isDangerous(path):
-    return path == b'..' or b'/' in path or os.sep.encode("utf-8") in path
+    return (path == b'..' or b'/' in path or
+            os.sep.encode(sys.getfilesystemencoding()) in path)
 
 
 class Data(resource.Resource):
@@ -56,8 +58,9 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        request.setHeader(b"content-type", self.type.encode("utf-8"))
-        request.setHeader(b"content-length", intToBytes(len(self.data)))
+        request.setHeader(b"content-type", self.type.encode("ascii"))
+        request.setHeader(b"content-length",
+                          str(len(self.data)).encode("ascii"))
         if request.method == b"HEAD":
             return b''
         return self.data
@@ -451,7 +454,7 @@ class File(resource.Resource, filepath.FilePath):
             header.
         """
         return u'bytes {}-{}/{}'.format(
-            offset, offset + size - 1, self.getFileSize()).encode("utf-8")
+            offset, offset + size - 1, self.getFileSize()).encode("ascii")
 
 
     def _doSingleRangeRequest(self, request, startAndEnd):
@@ -477,7 +480,7 @@ class File(resource.Resource, filepath.FilePath):
             request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
             request.setHeader(
                 b'content-range',
-                u'bytes */{}'.format(self.getFileSize()).encode("utf-8"))
+                u'bytes */{}'.format(self.getFileSize()).encode("ascii"))
         else:
             request.setResponseCode(http.PARTIAL_CONTENT)
             request.setHeader(
@@ -516,9 +519,9 @@ class File(resource.Resource, filepath.FilePath):
         rangeInfo = []
         contentLength = 0
         boundary = u"{:x}{:x}".format(
-            int(time.time()*1000000), os.getpid()).encode("utf-8")
+            int(time.time()*1000000), os.getpid()).encode("ascii")
         if self.type:
-            contentType = self.type.encode("utf-8")
+            contentType = self.type.encode("ascii")
         else:
             contentType = b'bytes' # It's what Apache does...
         for start, end in byteRanges:
@@ -542,7 +545,7 @@ class File(resource.Resource, filepath.FilePath):
                 b'content-length', b'0')
             request.setHeader(
                 b'content-range',
-                u'bytes */{}'.format(self.getFileSize()).encode("utf-8"))
+                u'bytes */{}'.format(self.getFileSize()).encode("ascii"))
             return [], b''
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
@@ -551,7 +554,8 @@ class File(resource.Resource, filepath.FilePath):
             b'content-type',
             b'multipart/byteranges; boundary="' + boundary + b'"')
         request.setHeader(
-            b'content-length', intToBytes(contentLength + len(finalBoundary)))
+            b'content-length',
+            str(contentLength + len(finalBoundary)).encode("ascii"))
         return rangeInfo
 
 
@@ -568,16 +572,16 @@ class File(resource.Resource, filepath.FilePath):
         """
         if size is None:
             size = self.getFileSize()
-        request.setHeader(b'content-length', intToBytes(size))
+        request.setHeader(b'content-length', str(size).encode("ascii"))
         if self.type:
             contentType = self.type
             if isinstance(contentType, unicode):
-                contentType = contentType.encode("utf-8")
+                contentType = contentType.encode("ascii")
             request.setHeader(b'content-type', contentType)
         if self.encoding:
             contentEncoding = self.encoding
             if isinstance(contentEncoding, unicode):
-                contentEncoding = contentEncoding.encode("utf-8")
+                contentEncoding = contentEncoding.encode("ascii")
             request.setHeader(b'content-encoding', contentEncoding)
 
 

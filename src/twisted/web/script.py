@@ -8,7 +8,9 @@ I contain PythonScript, which is a very simple python script resource.
 
 from __future__ import division, absolute_import
 
-import os, traceback
+import os
+import sys
+import traceback
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
@@ -120,7 +122,7 @@ class ResourceScriptDirectory(resource.Resource):
     def __init__(self, pathname, registry=None):
         resource.Resource.__init__(self)
         if isinstance(pathname, bytes):
-            pathname = pathname.decode("utf-8")
+            pathname = pathname.decode(sys.getfilesystemencoding())
         self.path = pathname
         self.registry = registry or static.Registry()
 
@@ -144,6 +146,7 @@ class ResourceScriptDirectory(resource.Resource):
 class PythonScript(resource.Resource):
     """
     I am an extremely simple dynamic resource; an embedded python script.
+    The script must consist of valid UTF-8 characters.
 
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
@@ -167,7 +170,7 @@ class PythonScript(resource.Resource):
         with request.write.
         """
         request.setHeader(b"x-powered-by",
-            u"Twisted/{}".format(copyright.version).encode("utf-8"))
+            u"Twisted/{}".format(copyright.version).encode("ascii"))
         namespace = {'request': request,
                      '__file__': _coerceToFilesystemEncoding("", self.filename),
                      'registry': self.registry}
