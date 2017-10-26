@@ -12,7 +12,7 @@ import gc
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet import defer
-from twisted.python.compat import _PY3, intToBytes, networkString
+from twisted.python.compat import _PY3, networkString
 from twisted.web import resource, util
 from twisted.web.error import FlattenerError
 from twisted.web.http import FOUND
@@ -173,8 +173,8 @@ class FailureElementTests(TestCase):
             TagLoader(tags.span(render="lineNumber")),
             self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
+        d.addCallback(self.assertEqual,
+            b"<span>" + str(self.base + 1).encode("ascii") + b"</span>")
         return d
 
 

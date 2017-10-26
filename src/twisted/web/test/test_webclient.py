@@ -15,7 +15,7 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urljoin
 
-from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.python.compat import networkString, nativeString
 from twisted.trial import unittest, util
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data
@@ -433,7 +433,8 @@ class WebClientTests(unittest.TestCase):
         # it should extract from url
         return defer.gatherResults([
             client.getPage(self.getURL("host")).addCallback(
-                    self.assertEqual, b"127.0.0.1:" + intToBytes(self.portno)),
+                    self.assertEqual,
+                    b"127.0.0.1:" + str(self.portno).encode("ascii")),
             client.getPage(self.getURL("host"),
                            headers={b"Host": b"www.example.com"}).addCallback(
                     self.assertEqual, b"www.example.com")])

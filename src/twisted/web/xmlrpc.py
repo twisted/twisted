@@ -13,7 +13,7 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import
 
-from twisted.python.compat import (_PY3, intToBytes,
+from twisted.python.compat import (_PY3,
     nativeString, unicode, urllib_parse)
 
 # System Imports
@@ -195,7 +195,7 @@ class XMLRPC(resource.Resource):
             if isinstance(content, unicode):
                 content = content.encode('utf8')
             request.setHeader(
-                b"content-length", intToBytes(len(content)))
+                b"content-length", str(len(content)).encode("ascii"))
             request.write(content)
         except:
             log.err()
@@ -339,7 +339,7 @@ class QueryProtocol(http.HTTPClient):
         self.sendHeader(b'Host', self.factory.host)
         self.sendHeader(b'Content-type', b'text/xml; charset=utf-8')
         payload = self.factory.payload
-        self.sendHeader(b'Content-length', intToBytes(len(payload)))
+        self.sendHeader(b'Content-length', str(len(payload)).encode("ascii"))
 
         if self.factory.user:
             auth = b':'.join([self.factory.user, self.factory.password])

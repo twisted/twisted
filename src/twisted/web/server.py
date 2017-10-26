@@ -31,7 +31,7 @@ from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.python.compat import networkString, nativeString
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
@@ -271,7 +271,8 @@ class Request(Copyable, http.Request, components.Componentized):
                             "it got away from me." % resrc)
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader(b'content-length', intToBytes(len(body)))
+                    self.setHeader(b'content-length',
+                                   str(len(body)).encode("ascii"))
 
                 self._inFakeHead = False
                 self.method = b"HEAD"
@@ -321,11 +322,11 @@ class Request(Copyable, http.Request, components.Componentized):
                         "  I think I'll eat it."
                         % (self, resrc))
                 self.setHeader(b'content-length',
-                               intToBytes(len(body)))
+                               str(len(body)).encode("ascii"))
             self.write(b'')
         else:
             self.setHeader(b'content-length',
-                           intToBytes(len(body)))
+                           str(len(body)).encode("ascii"))
             self.write(body)
         self.finish()
 
@@ -346,7 +347,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
         self.setHeader(b'content-type', b"text/html")
-        self.setHeader(b'content-length', intToBytes(len(body)))
+        self.setHeader(b'content-length', str(len(body)).encode("ascii"))
         self.write(body)
         self.finish()
         return reason

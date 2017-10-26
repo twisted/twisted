@@ -22,7 +22,7 @@ __all__ = [
 from collections import Sequence
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes
+from twisted.python.compat import unicode, nativeString
 
 
 def _codeToMessage(code):
@@ -79,7 +79,7 @@ class Error(Exception):
             # If we're given an int, convert it to a bytestring
             # downloadPage gives a bytes, Agent gives an int, and it worked by
             # accident previously, so just make it keep working.
-            code = intToBytes(code)
+            code = str(code).encode("ascii")
 
         self.status = code
         self.message = message

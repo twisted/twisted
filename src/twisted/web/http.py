@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from incremental import Version
@@ -1027,7 +1027,7 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            code = intToBytes(self.code)
+            code = str(self.code).encode("ascii")
             reason = self.code_message
             headers = []
 
@@ -1350,7 +1350,7 @@ class Request:
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = host + b":" + str(port).encode("ascii")
         self.requestHeaders.setRawHeaders(b"host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 

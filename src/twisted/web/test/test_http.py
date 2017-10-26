@@ -19,7 +19,7 @@ from zope.interface import provider
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import (_PY3, iterbytes, long, networkString,
-                                   unicode, intToBytes)
+                                   unicode)
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -133,7 +133,7 @@ class DummyHTTPHandler(http.Request):
         self.setHeader(b"Request", self.uri)
         self.setHeader(b"Command", self.method)
         self.setHeader(b"Version", self.clientproto)
-        self.setHeader(b"Content-Length", intToBytes(len(request)))
+        self.setHeader(b"Content-Length", str(len(request)).encode("ascii"))
         self.write(request)
         self.finish()
 
