@@ -41,7 +41,7 @@ class AsyncXMLRPCTests(unittest.TestCase):
         self.request = DummyRequest([''])
         self.request.method = b'POST'
         payload = payloadTemplate % ('async', xmlrpclib.dumps(()))
-        self.request.content = BytesIO(payload.encode("utf-8"))
+        self.request.content = BytesIO(payload.encode("ascii"))
 
         result = self.result = defer.Deferred()
         class AsyncResource(XMLRPC):
@@ -168,7 +168,7 @@ class Test(XMLRPC):
             # as a proof that request is a request
             request.method +
             # plus proof other arguments are still passed along
-            b' ' + other.encode("utf-8"))
+            b' ' + other.encode("ascii"))
 
 
     def lookupProcedure(self, procedurePath):
@@ -306,7 +306,7 @@ class XMLRPCTests(unittest.TestCase):
         setUp(), using the given factory as the queryFactory, or
         self.queryFactory if no factory is provided.
         """
-        p = xmlrpc.Proxy(u"http://127.0.0.1:{}/".format(self.port).encode("utf-8"))
+        p = xmlrpc.Proxy(u"http://127.0.0.1:{}/".format(self.port).encode("ascii"))
         if factory is None:
             p.queryFactory = self.queryFactory
         else:
@@ -425,7 +425,7 @@ class XMLRPCTests(unittest.TestCase):
         """
         agent = client.Agent(reactor)
         d = agent.request(
-            b"GET", u"http://127.0.0.1:{}/".format(self.port).encode("utf-8"))
+            b"GET", u"http://127.0.0.1:{}/".format(self.port).encode("ascii"))
         def checkResponse(response):
             self.assertEqual(response.code, http.NOT_ALLOWED)
         d.addCallback(checkResponse)
@@ -437,7 +437,7 @@ class XMLRPCTests(unittest.TestCase):
         """
         agent = client.Agent(reactor)
         d = agent.request(
-            uri=u"http://127.0.0.1:{}/".format(self.port).encode("utf-8"),
+            uri=u"http://127.0.0.1:{}/".format(self.port).encode("ascii"),
             method=b"POST",
             bodyProducer=client.FileBodyProducer(BytesIO(b"foo")))
         d.addCallback(client.readBody)
@@ -545,7 +545,7 @@ class XMLRPCProxyWithoutSlashTests(XMLRPCTests):
 
     def proxy(self, factory=None):
         p = xmlrpc.Proxy(
-            u"http://127.0.0.1:{}".format(self.port).encode("utf-8"))
+            u"http://127.0.0.1:{}".format(self.port).encode("ascii"))
         if factory is None:
             p.queryFactory = self.queryFactory
         else:
@@ -566,7 +566,7 @@ class XMLRPCPublicLookupProcedureTests(unittest.TestCase):
         self.addCleanup(self.p.stopListening)
         self.port = self.p.getHost().port
         self.proxy = xmlrpc.Proxy(
-            u'http://127.0.0.1:{}'.format(self.port).encode("utf-8"))
+            u'http://127.0.0.1:{}'.format(self.port).encode("ascii"))
 
 
     def test_lookupProcedure(self):
@@ -696,9 +696,9 @@ class XMLRPCAuthenticatedTests(XMLRPCTests):
 
     def test_authInfoInURL(self):
         url = u"http://{}:{}@127.0.0.1:{}/".format(
-            self.user.decode("utf-8"), self.password.decode("utf-8"),
+            self.user.decode("ascii"), self.password.decode("ascii"),
             self.port)
-        p = xmlrpc.Proxy(url.encode("utf-8"))
+        p = xmlrpc.Proxy(url.encode("ascii"))
         d = p.callRemote("authinfo")
         d.addCallback(self.assertEqual, [self.user, self.password])
         return d
@@ -706,7 +706,7 @@ class XMLRPCAuthenticatedTests(XMLRPCTests):
 
     def test_explicitAuthInfo(self):
         p = xmlrpc.Proxy(u"http://127.0.0.1:{}/".format(
-            self.port).encode("utf-8"), self.user, self.password)
+            self.port).encode("ascii"), self.user, self.password)
         d = p.callRemote("authinfo")
         d.addCallback(self.assertEqual, [self.user, self.password])
         return d
@@ -720,7 +720,7 @@ class XMLRPCAuthenticatedTests(XMLRPCTests):
         """
         longPassword = self.password * 40
         p = xmlrpc.Proxy(u"http://127.0.0.1:{}/".format(
-            self.port).encode("utf-8"), self.user, longPassword)
+            self.port).encode("ascii"), self.user, longPassword)
         d = p.callRemote("authinfo")
         d.addCallback(self.assertEqual, [self.user, longPassword])
         return d
@@ -728,7 +728,7 @@ class XMLRPCAuthenticatedTests(XMLRPCTests):
 
     def test_explicitAuthInfoOverride(self):
         p = xmlrpc.Proxy(u"http://wrong:info@127.0.0.1:{}/".format(
-            self.port).encode("utf-8"), self.user, self.password)
+            self.port).encode("ascii"), self.user, self.password)
         d = p.callRemote("authinfo")
         d.addCallback(self.assertEqual, [self.user, self.password])
         return d
@@ -809,7 +809,7 @@ class XMLRPCClientErrorHandlingTests(unittest.TestCase):
         an exception.
         """
         proxy = xmlrpc.Proxy(u"http://127.0.0.1:{}/".format(
-            self.port.getHost().port).encode("utf-8"))
+            self.port.getHost().port).encode("ascii"))
         return self.assertFailure(proxy.callRemote("someMethod"), ValueError)
 
 
@@ -826,7 +826,7 @@ class QueryFactoryParseResponseTests(unittest.TestCase):
             path=None, host=None, method='POST', user=None, password=None,
             allowNone=False, args=())
         # An XML-RPC response that will parse without raising an error.
-        self.goodContents = xmlrpclib.dumps(('',)).encode("utf-8")
+        self.goodContents = xmlrpclib.dumps(('',)).encode("ascii")
         # An 'XML-RPC response' that will raise a parsing error.
         self.badContents = b'invalid xml'
         # A dummy 'reason' to pass to clientConnectionLost. We don't care
@@ -909,10 +909,10 @@ class XMLRPCWithRequestTests(unittest.TestCase):
         request = DummyRequest(b'/RPC2')
         request.method = b"POST"
         xmlRPC = xmlrpclib.dumps(("foo",), 'withRequest')
-        request.content = BytesIO(xmlRPC.encode("utf-8"))
+        request.content = BytesIO(xmlRPC.encode("ascii"))
 
         def valid(n, request):
-            data = xmlrpclib.loads(request.written[0].decode("utf-8"))
+            data = xmlrpclib.loads(request.written[0].decode("ascii"))
             self.assertEqual(data, ((b'POST foo',), None))
         d = request.notifyFinish().addCallback(valid, request)
         self.resource.render_POST(request)

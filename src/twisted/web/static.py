@@ -58,7 +58,10 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        request.setHeader(b"content-type", self.type.encode("ascii"))
+        contentType = self.type
+        if isinstance(contentType, unicode):
+            contentType = contentType.encode("ascii")
+        request.setHeader(b"content-type", contentType)
         request.setHeader(b"content-length",
                           str(len(self.data)).encode("ascii"))
         if request.method == b"HEAD":
@@ -521,7 +524,9 @@ class File(resource.Resource, filepath.FilePath):
         boundary = u"{:x}{:x}".format(
             int(time.time()*1000000), os.getpid()).encode("ascii")
         if self.type:
-            contentType = self.type.encode("ascii")
+            contentType = self.type
+            if isinstance(contentType, unicode):
+                contentType = contentType.encode("ascii")
         else:
             contentType = b'bytes' # It's what Apache does...
         for start, end in byteRanges:
@@ -1073,7 +1078,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
             escape(unquote(request.uri.decode("utf-8"))))
 
         done = self.template % {"header": header, "tableContent": tableContent}
-        done = done.encode("utf-8")
+        if isinstance(done, unicode):
+            done = done.encode("utf-8")
         return done
 
 
