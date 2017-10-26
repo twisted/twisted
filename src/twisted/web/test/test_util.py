@@ -8,6 +8,7 @@ Tests for L{twisted.web.util}.
 from __future__ import absolute_import, division
 
 import gc
+import sys
 
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
