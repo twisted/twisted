@@ -1736,11 +1736,17 @@ class _FakeUrllib2Request(object):
 
 
     def has_header(self, header):
-        return self.headers.hasHeader(networkString(header))
+        if isinstance(header, unicode):
+            header = header.encode("ascii")
+        return self.headers.hasHeader(header)
 
 
     def add_unredirected_header(self, name, value):
-        self.headers.addRawHeader(networkString(name), networkString(value))
+        if isinstance(name, unicode):
+            name = name.encode("ascii")
+        if isinstance(value, unicode):
+            value = value.encode("ascii")
+        self.headers.addRawHeader(name, value)
 
 
     def get_full_url(self):
@@ -1748,7 +1754,9 @@ class _FakeUrllib2Request(object):
 
 
     def get_header(self, name, default=None):
-        headers = self.headers.getRawHeaders(networkString(name), default)
+        if isinstance(name, unicode):
+            name = name.encode("ascii")
+        headers = self.headers.getRawHeaders(name, default)
         if headers is not None:
             headers = [nativeString(x) for x in headers]
             return headers[0]
@@ -1790,8 +1798,10 @@ class _FakeUrllib2Response(object):
                 return headers
             def get_all(zelf, name, default):
                 # PY3
+                if isinstance(name, unicode):
+                    name = name.encode("ascii")
                 headers = self.response.headers.getRawHeaders(
-                    networkString(name), default)
+                    name, default)
                 h = [nativeString(x) for x in headers]
                 return h
         return _Meta()
@@ -1844,8 +1854,10 @@ class CookieAgent(object):
             self.cookieJar.add_cookie_header(lastRequest)
             cookieHeader = lastRequest.get_header('Cookie', None)
             if cookieHeader is not None:
+                if isinstance(cookieHeader, unicode):
+                    cookieHeader = cookieHeader.encode("ascii")
                 headers = headers.copy()
-                headers.addRawHeader(b'cookie', networkString(cookieHeader))
+                headers.addRawHeader(b'cookie', cookieHeader)
 
         d = self._agent.request(method, uri, headers, bodyProducer)
         d.addCallback(self._extractCookies, lastRequest)

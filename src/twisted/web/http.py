@@ -334,7 +334,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString('%x' % (len(data),)), b"\r\n", data, b"\r\n")
+    return (u'{:x}'.format(len(data)).encode("ascii"), b"\r\n", data, b"\r\n")
 
 
 
@@ -527,7 +527,7 @@ class HTTPClient(basic.LineReceiver):
     def sendHeader(self, name, value):
         if not isinstance(value, bytes):
             # XXX Deprecate this case
-            value = networkString(str(value))
+            value = str(value).encode("ascii")
         self.transport.writeSequence([name, b': ', value, b'\r\n'])
 
     def endHeaders(self):
@@ -1084,7 +1084,7 @@ class Request:
                             "since Twisted 12.3. Pass only bytes instead.",
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
-                        value = networkString('%s' % (value,))
+                        value = u'{}'.format(value).encode("ascii")
                     headers.append((name, value))
 
             for cookie in self.cookies:
@@ -1331,7 +1331,10 @@ class Request:
         host = self.getHeader(b'host')
         if host:
             return host.split(b':', 1)[0]
-        return networkString(self.getHost().host)
+        gotHost = self.getHost().host
+        if isinstance(gotHost, unicode):
+            gotHost = gotHost.encode("ascii")
+        return gotHost
 
 
     def getHost(self):
