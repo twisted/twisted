@@ -21,7 +21,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test.requesthelper import DummyRequest
@@ -212,8 +212,8 @@ class StaticFileTests(TestCase):
 
     def test_undecodablePath(self):
         """
-        A request whose path cannot be decoded as UTF-8 receives a not
-        found response, and the failure is logged.
+        A request whose path cannot be decoded using the default file system
+        encoding receives a not found response, and the failure is logged.
         """
         path = self.mktemp()
         if isinstance(path, bytes):
@@ -222,7 +222,17 @@ class StaticFileTests(TestCase):
         base.makedirs()
 
         file = static.File(base.path)
-        request = DummyRequest([b"\xff"])
+        undecodablePath = b"\xff"
+        fsEncoding = sys.getfilesystemencoding()
+        try:
+            undecodablePath.decode(fsEncoding)
+        except UnicodeDecodeError:
+            pass
+        else:
+            raise SkipTest("Skipping test for file system encoding: {}".format(
+                fsEncoding))
+
+        request = DummyRequest([undecodablePath])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
