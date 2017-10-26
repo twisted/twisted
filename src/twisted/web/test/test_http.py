@@ -18,8 +18,7 @@ from io import BytesIO
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, long, networkString,
-                                   unicode)
+from twisted.python.compat import _PY3, iterbytes, long, unicode
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -127,7 +126,7 @@ class DummyHTTPHandler(http.Request):
         data = self.content.read()
         length = self.getHeader(b'content-length')
         if length is None:
-            length = networkString(str(length))
+            length = str(length).encode("ascii")
         request = b"'''\n" + length + b"\n" + data + b"'''\n"
         self.setResponseCode(200)
         self.setHeader(b"Request", self.uri)
@@ -952,7 +951,11 @@ def _prequest(**headers):
     """
     request = http.Request(DummyChannel(), False)
     for headerName, v in headers.items():
-        request.requestHeaders.setRawHeaders(networkString(headerName), v)
+        if isinstance(headerName, unicode):
+            headerName = headerName.encode("ascii")
+        if isinstance(v, unicode):
+            v = v.encode("ascii")
+        request.requestHeaders.setRawHeaders(headerName, v)
     return request
 
 
@@ -1465,7 +1468,7 @@ class ParsingTests(unittest.TestCase):
 
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("%s: foo" % (i,)))
+            requestLines.append(u"{}: foo".format(i).encode("ascii"))
         requestLines.extend([b"", b""])
 
         channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
@@ -1740,13 +1743,13 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
         request object.  The original bytes of the request may still be read
         from the C{content} attribute.
         """
-        query = 'key=value&multiple=two+words&multiple=more%20words&empty='
-        httpRequest = networkString('''\
+        query = u'key=value&multiple=two+words&multiple=more%20words&empty='
+        httpRequest = u'''\
 POST / HTTP/1.0
-Content-Length: %d
+Content-Length: {}
 Content-Type: application/x-www-form-urlencoded
 
-%s''' % (len(query), query))
+{}'''.format(len(query), query).encode("ascii")
 
         method = []
         args = []
@@ -1768,7 +1771,7 @@ Content-Type: application/x-www-form-urlencoded
             args, [[b"value"], [b""], [b"two words", b"more words"]])
         # Reading from the content file-like must produce the entire request
         # body.
-        self.assertEqual(content, [networkString(query)])
+        self.assertEqual(content, [query.encode("ascii")])
 
 
     def test_missingContentDisposition(self):
@@ -1962,7 +1965,7 @@ class QueryArgumentsTests(unittest.TestCase):
                     for port in (None, 100):
                         for path in (b'', b'path'):
                             if port is not None:
-                                host = host + b':' + networkString(str(port))
+                                host = host + b':' + str(port).encode("ascii")
                                 yield urlunsplit((scheme, host, path, b'', b''))
 
 
@@ -2249,10 +2252,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         header, L{http.Request.setLastModified} returns L{http.CACHED}.
         """
         req = http.Request(DummyChannel(), False)
-        req.requestHeaders.setRawHeaders(
-            networkString('if-modified-since'),
-                          [b'02 Jan 1970 00:00:00 GMT']
-            )
+        req.requestHeaders.setRawHeaders(b'if-modified-since',
+            [b'02 Jan 1970 00:00:00 GMT'])
 
         result = req.setLastModified(42)
 
@@ -2265,10 +2266,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         header, L{http.Request.setLastModified} returns None
         """
         req = http.Request(DummyChannel(), False)
-        req.requestHeaders.setRawHeaders(
-            networkString('if-modified-since'),
-                          [b'01 Jan 1970 00:00:00 GMT']
-            )
+        req.requestHeaders.setRawHeaders(b'if-modified-since',
+            [b'01 Jan 1970 00:00:00 GMT'])
 
         result = req.setLastModified(1000000)
 
@@ -2282,10 +2281,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         if-modified-since date in the request header, the method returns None.
         """
         req = http.Request(DummyChannel(), False)
-        req.requestHeaders.setRawHeaders(
-            networkString('if-modified-since'),
-                          [b'01 Jan 1970 00:00:01 GMT']
-            )
+        req.requestHeaders.setRawHeaders(b'if-modified-since',
+            [b'01 Jan 1970 00:00:01 GMT'])
         req.setLastModified(1000000)
 
         result = req.setLastModified(0)
@@ -2301,10 +2298,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.CACHED}.
         """
         req = http.Request(DummyChannel(), False)
-        req.requestHeaders.setRawHeaders(
-            networkString('if-modified-since'),
-                          [b'01 Jan 1999 00:00:01 GMT']
-            )
+        req.requestHeaders.setRawHeaders(b'if-modified-since',
+            [b'01 Jan 1999 00:00:01 GMT'])
         req.setLastModified(1)
 
         result = req.setLastModified(0)
