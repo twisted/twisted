@@ -12,7 +12,7 @@ import gc
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet import defer
-from twisted.python.compat import _PY3, intToBytes, networkString
+from twisted.python.compat import _PY3, intToBytes
 from twisted.web import resource, util
 from twisted.web.error import FlattenerError
 from twisted.web.http import FOUND
@@ -159,7 +159,9 @@ class FailureElementTests(TestCase):
             # __file__ differs depending on whether an up-to-date .pyc file
             # already existed.
             self.assertEqual,
-            b"<span>" + networkString(__file__.rstrip('c')) + b"</span>")
+            b"<span>" +
+            __file__.rstrip('c').encode(sys.getfilesystemencoding()) +
+            b"</span>")
         return d
 
 
