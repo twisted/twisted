@@ -959,13 +959,14 @@ class _Win32Colorizer(object):
         try:
             from pywincffi.core import dist
             from pywincffi.exceptions import WindowsAPIError
-            from pywincffi.kernel32 import GetStdHandle
+            from pywincffi.kernel32 import GetStdHandle, SetConsoleTextAttribute
             _, _library = dist.load()
             screenBuffer = GetStdHandle(_library.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
         try:
-            screenBuffer.SetConsoleTextAttribute(
+            SetConsoleTextAttribute(
+                screenBuffer,
                 _library.FOREGROUND_RED |
                 _library.FOREGROUND_GREEN |
                 _library.FOREGROUND_BLUE)
@@ -977,10 +978,11 @@ class _Win32Colorizer(object):
 
 
     def write(self, text, color):
+        from pywincffi.kernel32 import SetConsoleTextAttribute
         color = self._colors[color]
-        self.screenBuffer.SetConsoleTextAttribute(color)
+        SetConsoleTextAttribute(self.screenBuffer, color)
         self.stream.write(text)
-        self.screenBuffer.SetConsoleTextAttribute(self._colors['normal'])
+        SetConsoleTextAttribute(self.screenBuffer, self._colors['normal'])
 
 
 
