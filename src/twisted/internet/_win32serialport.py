@@ -54,9 +54,9 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
         self.protocol = protocol
         self._overlappedRead = OVERLAPPED()
-        self._overlappedRead.hEvent = CreateEvent(None, 1, 0, None)
+        self._overlappedRead.hEvent = CreateEvent(None, True, False, None)
         self._overlappedWrite = OVERLAPPED()
-        self._overlappedWrite.hEvent = CreateEvent(None, 0, 0, None)
+        self._overlappedWrite.hEvent = CreateEvent(None, False, False, None)
 
         self.reactor.addEvent(self._overlappedRead.hEvent, self, 'serialReadEvent')
         self.reactor.addEvent(self._overlappedWrite.hEvent, self, 'serialWriteEvent')

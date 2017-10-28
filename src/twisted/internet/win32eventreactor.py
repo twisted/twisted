@@ -111,7 +111,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
         will also forget about it.
     @type _closedAndNotReading: C{WeakKeyDictionary}
     """
-    dummyEvent = CreateEvent(None, 0, 0, None)
+    dummyEvent = CreateEvent(None, False, False, None)
 
     def __init__(self):
         self._reads = {}
@@ -126,7 +126,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         Make a win32 event object for a socket.
         """
-        event = CreateEvent(None, 0, 0, None)
+        event = CreateEvent(None, False, False, None)
         WSAEventSelect(fd, event, why)
         self._events[event] = (fd, action)
         return event
