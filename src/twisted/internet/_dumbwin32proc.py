@@ -12,18 +12,18 @@ import os
 import sys
 
 # Win32 imports
-import win32api
-import win32con
-import win32event
-import win32file
-import win32pipe
-import win32process
-import win32security
+from pywincffi.core import dist
+from pywincffi.exceptions import WindowsAPIError
+from pywincffi.kernel32 import (
+    CreatePipe, CreateProcess, DuplicateHandle, CloseHandle,
+    GetExitCodeProcess, GetCurrentProcess, SetNamedPipeHandleState,
+    TerminateProcess, WaitForSingleObject
+)
+from pywincffi.wintypes import SECURITY_ATTRIBUTES, STARTUPINFO
 
-import pywintypes
 
 # Security attributes for pipes
-PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
+PIPE_ATTRS_INHERITABLE = SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
 from zope.interface import implementer
@@ -36,6 +36,8 @@ from twisted.internet import error
 
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
+
+_, _library = dist.load()
 
 
 
@@ -52,9 +54,9 @@ class _Reaper(_pollingfile._PollableResource):
 
 
     def checkWork(self):
-        if win32event.WaitForSingleObject(self.proc.hProcess, 0) != win32event.WAIT_OBJECT_0:
+        if WaitForSingleObject(self.proc.hProcess, 0) != _library.WAIT_OBJECT_0:
             return 0
-        exitCode = win32process.GetExitCodeProcess(self.proc.hProcess)
+        exitCode = GetExitCodeProcess(self.proc.hProcess)
         self.deactivate()
         self.proc.processEnded(exitCode)
         return 0
@@ -91,19 +93,14 @@ def _findShebang(filename):
 
 def _invalidWin32App(pywinerr):
     """
-    Determine if a pywintypes.error is telling us that the given process is
+    Determine if a C{WindowsAPIError} is telling us that the given process is
     'not a valid win32 application', i.e. not a PE format executable.
 
-    @param pywinerr: a pywintypes.error instance raised by CreateProcess
+    @param pywinerr: a C{WindowsAPIError} instance raised by C{CreateProcess}
 
     @return: a boolean
     """
-
-    # Let's do this better in the future, but I have no idea what this error
-    # is; MSDN doesn't mention it, and there is no symbolic constant in
-    # win32process module that represents 193.
-
-    return pywinerr.args[0] == 193
+    return pywinerr.args[0] == _library.ERROR_BAD_EXE_FORMAT
 
 
 
@@ -137,42 +134,42 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         BaseProcess.__init__(self, protocol)
 
         # security attributes for pipes
-        sAttrs = win32security.SECURITY_ATTRIBUTES()
+        sAttrs = SECURITY_ATTRIBUTES()
         sAttrs.bInheritHandle = 1
 
         # create the pipes which will connect to the secondary process
-        self.hStdoutR, hStdoutW = win32pipe.CreatePipe(sAttrs, 0)
-        self.hStderrR, hStderrW = win32pipe.CreatePipe(sAttrs, 0)
-        hStdinR, self.hStdinW  = win32pipe.CreatePipe(sAttrs, 0)
+        self.hStdoutR, hStdoutW = CreatePipe(sAttrs, 0)
+        self.hStderrR, hStderrW = CreatePipe(sAttrs, 0)
+        hStdinR, self.hStdinW  = CreatePipe(sAttrs, 0)
 
-        win32pipe.SetNamedPipeHandleState(self.hStdinW,
-                                          win32pipe.PIPE_NOWAIT,
-                                          None,
-                                          None)
+        SetNamedPipeHandleState(self.hStdinW,
+                                _library.PIPE_NOWAIT,
+                                None,
+                                None)
 
         # set the info structure for the new process.
-        StartupInfo = win32process.STARTUPINFO()
+        StartupInfo = STARTUPINFO()
         StartupInfo.hStdOutput = hStdoutW
         StartupInfo.hStdError  = hStderrW
         StartupInfo.hStdInput  = hStdinR
-        StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
+        StartupInfo.dwFlags = _library.STARTF_USESTDHANDLES
 
         # Create new handles whose inheritance property is false
-        currentPid = win32api.GetCurrentProcess()
+        currentPid = GetCurrentProcess()
 
-        tmp = win32api.DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
-        win32file.CloseHandle(self.hStdoutR)
+        tmp = DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0, 0,
+                              _library.DUPLICATE_SAME_ACCESS)
+        CloseHandle(self.hStdoutR)
         self.hStdoutR = tmp
 
-        tmp = win32api.DuplicateHandle(currentPid, self.hStderrR, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
-        win32file.CloseHandle(self.hStderrR)
+        tmp = DuplicateHandle(currentPid, self.hStderrR, currentPid, 0, 0,
+                              _library.DUPLICATE_SAME_ACCESS)
+        CloseHandle(self.hStderrR)
         self.hStderrR = tmp
 
-        tmp = win32api.DuplicateHandle(currentPid, self.hStdinW, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
-        win32file.CloseHandle(self.hStdinW)
+        tmp = DuplicateHandle(currentPid, self.hStdinW, currentPid, 0, 0,
+                              _library.DUPLICATE_SAME_ACCESS)
+        CloseHandle(self.hStdinW)
         self.hStdinW = tmp
 
         # Add the specified environment to the current environment - this is
@@ -202,12 +199,12 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
-            flags = win32con.CREATE_NO_WINDOW
-            self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
+            flags = _library.CREATE_NO_WINDOW
+            self.hProcess, self.hThread, self.pid, dwTid = CreateProcess(
                 command, cmdline, None, None, 1, flags, env, path, StartupInfo)
         try:
             doCreate()
-        except pywintypes.error as pwte:
+        except WindowsAPIError as pwte:
             if not _invalidWin32App(pwte):
                 # This behavior isn't _really_ documented, but let's make it
                 # consistent with the behavior that is documented.
@@ -229,7 +226,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     try:
                         # Let's try again.
                         doCreate()
-                    except pywintypes.error as pwte2:
+                    except WindowsAPIError as pwte2:
                         # d'oh, failed again!
                         if _invalidWin32App(pwte2):
                             raise OSError(
@@ -239,9 +236,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                         raise OSError(pwte2)
 
         # close handles which only the child will use
-        win32file.CloseHandle(hStderrW)
-        win32file.CloseHandle(hStdoutW)
-        win32file.CloseHandle(hStdinR)
+        CloseHandle(hStderrW)
+        CloseHandle(hStdoutW)
+        CloseHandle(hStdinR)
 
         # set up everything
         self.stdout = _pollingfile._PollableReadPipe(
@@ -270,7 +267,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         if self.pid is None:
             raise error.ProcessExitedAlready()
         if signalID in ("INT", "TERM", "KILL"):
-            win32process.TerminateProcess(self.hProcess, 1)
+            TerminateProcess(self.hProcess, 1)
 
 
     def _getReason(self, status):
@@ -381,8 +378,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
     def maybeCallProcessEnded(self):
         if self.closedNotifies == 3 and self.lostProcess:
-            win32file.CloseHandle(self.hProcess)
-            win32file.CloseHandle(self.hThread)
+            CloseHandle(self.hProcess)
+            CloseHandle(self.hThread)
             self.hProcess = None
             self.hThread = None
             BaseProcess.maybeCallProcessEnded(self)

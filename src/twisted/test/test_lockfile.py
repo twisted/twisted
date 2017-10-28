@@ -18,11 +18,9 @@ from twisted.python.runtime import platform
 
 skipKill = None
 if platform.isWindows():
-    if(requireModule('win32api.OpenProcess') is None and
-        requireModule('pywintypes') is None
-            ):
+    if requireModule('pywincffi.kernel32.OpenProcess') is None:
         skipKill = ("On windows, lockfile.kill is not implemented in the "
-                    "absence of win32api and/or pywintypes.")
+                    "absence of pywincffi.")
 
 class UtilTests(unittest.TestCase):
     """

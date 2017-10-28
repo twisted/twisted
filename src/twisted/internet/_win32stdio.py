@@ -6,9 +6,11 @@ Windows-specific implementation of the L{twisted.internet.stdio} interface.
 
 from __future__ import absolute_import, division
 
-import win32api
 import os
 import msvcrt
+
+from pywincffi.core import dist
+from pywincffi.kernel32 import GetStdHandle
 
 from zope.interface import implementer
 
@@ -18,9 +20,15 @@ from twisted.internet.interfaces import (IHalfCloseableProtocol, ITransport,
 from twisted.internet import _pollingfile, main
 from twisted.python.failure import Failure
 
+
+_, _library = dist.load()
+
+
+
 @implementer(IAddress)
 class Win32PipeAddress(object):
     pass
+
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
@@ -44,8 +52,8 @@ class StandardIO(_pollingfile._PollingTimer):
         _pollingfile._PollingTimer.__init__(self, reactor)
         self.proto = proto
 
-        hstdin = win32api.GetStdHandle(win32api.STD_INPUT_HANDLE)
-        hstdout = win32api.GetStdHandle(win32api.STD_OUTPUT_HANDLE)
+        hstdin = GetStdHandle(_library.STD_INPUT_HANDLE)
+        hstdout = GetStdHandle(_library.STD_OUTPUT_HANDLE)
 
         self.stdin = _pollingfile._PollableReadPipe(
             hstdin, self.dataReceived, self.readConnectionLost)

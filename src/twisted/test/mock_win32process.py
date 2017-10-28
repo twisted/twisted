@@ -9,11 +9,17 @@ The purpose of this module is mock process creation for the PID test.
 CreateProcess(...) will spawn a process, and always return a PID of 42.
 """
 
-import win32process
-GetExitCodeProcess = win32process.GetExitCodeProcess
-STARTUPINFO = win32process.STARTUPINFO
+import pywincffi.kernel32
 
-STARTF_USESTDHANDLES = win32process.STARTF_USESTDHANDLES
+from pywincffi.core import dist
+
+_, _library = dist.load()
+
+GetExitCodeProcess = pywincffi.kernel32.GetExitCodeProcess
+
+STARTUPINFO = _library.STARTUPINFO
+
+STARTF_USESTDHANDLES = _library.STARTF_USESTDHANDLES
 
 
 def CreateProcess(appName,
@@ -34,7 +40,7 @@ def CreateProcess(appName,
         function except for the pid, the returned pid is hardcoded to 42
     """
 
-    hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(
+    hProcess, hThread, dwPid, dwTid = pywincffi.kernel32.CreateProcess(
                       appName,
                       cmdline,
                       procSecurity,

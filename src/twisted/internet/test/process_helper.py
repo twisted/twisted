@@ -12,15 +12,19 @@ def grandchild():
 def main():
     if sys.argv[1] == 'child':
         if sys.argv[2] == 'windows':
-            import win32api as api, win32process as proc
-            info = proc.STARTUPINFO()
-            info.hStdInput = api.GetStdHandle(api.STD_INPUT_HANDLE)
-            info.hStdOutput = api.GetStdHandle(api.STD_OUTPUT_HANDLE)
-            info.hStdError = api.GetStdHandle(api.STD_ERROR_HANDLE)
+            from pywincffi.core import dist
+            from pywincffi.kernel32 import CreateProcess, GetStdHandle
+            from pywincffi.wintypes import STARTUPINFO
+
+            _, _library = dist.load()
+            info = STARTUPINFO()
+            info.hStdInput = GetStdHandle(_library.STD_INPUT_HANDLE)
+            info.hStdOutput = GetStdHandle(_library.STD_OUTPUT_HANDLE)
+            info.hStdError = GetStdHandle(_library.STD_ERROR_HANDLE)
             python = sys.executable
             scriptDir = os.path.dirname(__file__)
             scriptName = os.path.basename(__file__)
-            proc.CreateProcess(
+            CreateProcess(
                 None, " ".join((python, scriptName, "grandchild")), None,
                 None, 1, 0, os.environ, scriptDir, info)
         else:

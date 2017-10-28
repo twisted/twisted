@@ -100,10 +100,14 @@ class _PollingTimer:
 # If we ever (let's hope not) need the above functionality on UNIX, this could
 # be factored into a different module.
 
-import win32pipe
-import win32file
-import win32api
-import pywintypes
+from pywincffi.core import dist
+from pywincffi.exceptions import WindowsAPIError
+from pywincffi.kernel32 import (
+    CloseHandle, PeekNamedPipe, ReadFile, SetNamedPipeHandleState, WriteFile
+)
+
+_, _library = dist.load()
+
 
 @implementer(IPushProducer)
 class _PollableReadPipe(_PollableResource):
@@ -120,13 +124,13 @@ class _PollableReadPipe(_PollableResource):
 
         while 1:
             try:
-                buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.pipe, 1)
+                buffer, bytesToRead, result = PeekNamedPipe(self.pipe, 1)
                 # finished = (result == -1)
                 if not bytesToRead:
                     break
-                hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
+                hr, data = ReadFile(self.pipe, bytesToRead, None)
                 fullDataRead.append(data)
-            except win32api.error:
+            except WindowsAPIError:
                 finished = 1
                 break
 
@@ -143,8 +147,8 @@ class _PollableReadPipe(_PollableResource):
 
     def close(self):
         try:
-            win32api.CloseHandle(self.pipe)
-        except pywintypes.error:
+            CloseHandle(self.pipe)
+        except WindowsAPIError:
             # You can't close std handles...?
             pass
 
@@ -172,11 +176,11 @@ class _PollableWritePipe(_PollableResource):
         self.writePipe = writePipe
         self.lostCallback = lostCallback
         try:
-            win32pipe.SetNamedPipeHandleState(writePipe,
-                                              win32pipe.PIPE_NOWAIT,
-                                              None,
-                                              None)
-        except pywintypes.error:
+            SetNamedPipeHandleState(writePipe,
+                                    _library.PIPE_NOWAIT,
+                                    None,
+                                    None)
+        except WindowsAPIError:
             # Maybe it's an invalid handle.  Who knows.
             pass
 
@@ -228,8 +232,8 @@ class _PollableWritePipe(_PollableResource):
     def writeConnectionLost(self):
         self.deactivate()
         try:
-            win32api.CloseHandle(self.writePipe)
-        except pywintypes.error:
+            CloseHandle(self.writePipe)
+        except WindowsAPIError:
             # OMG what
             pass
         self.lostCallback()
@@ -274,17 +278,17 @@ class _PollableWritePipe(_PollableResource):
                 self.writeConnectionLost()
                 return 0
             try:
-                win32file.WriteFile(self.writePipe, b'', None)
-            except pywintypes.error:
+                WriteFile(self.writePipe, b'', None)
+            except WindowsAPIError:
                 self.writeConnectionLost()
                 return numBytesWritten
         while self.outQueue:
             data = self.outQueue.pop(0)
             errCode = 0
             try:
-                errCode, nBytesWritten = win32file.WriteFile(self.writePipe,
-                                                             data, None)
-            except win32api.error:
+                errCode, nBytesWritten = WriteFile(self.writePipe,
+                                                   data, None)
+            except WindowsAPIError:
                 self.writeConnectionLost()
                 break
             else:

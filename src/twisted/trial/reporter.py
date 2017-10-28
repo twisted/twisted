@@ -933,13 +933,16 @@ class _Win32Colorizer(object):
     See _AnsiColorizer docstring.
     """
     def __init__(self, stream):
-        from win32console import GetStdHandle, STD_OUTPUT_HANDLE, \
-             FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
-             FOREGROUND_INTENSITY
-        red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
-                                  FOREGROUND_BLUE, FOREGROUND_INTENSITY)
+        from pywincffi.core import dist
+        from pywincffi.kernel32 import GetStdHandle
+
+        _, _library = dist.load()
+        red, green, blue, bold = (_library.FOREGROUND_RED,
+                                  _library.FOREGROUND_GREEN,
+                                  _library.FOREGROUND_BLUE,
+                                  _library.FOREGROUND_INTENSITY)
         self.stream = stream
-        self.screenBuffer = GetStdHandle(STD_OUTPUT_HANDLE)
+        self.screenBuffer = GetStdHandle(_library.STD_OUTPUT_HANDLE)
         self._colors = {
             'normal': red | green | blue,
             'red': red | bold,
@@ -954,18 +957,19 @@ class _Win32Colorizer(object):
 
     def supported(cls, stream=sys.stdout):
         try:
-            import win32console
-            screenBuffer = win32console.GetStdHandle(
-                win32console.STD_OUTPUT_HANDLE)
+            from pywincffi.core import dist
+            from pywincffi.exceptions import WindowsAPIError
+            from pywincffi.kernel32 import GetStdHandle
+            _, _library = dist.load()
+            screenBuffer = GetStdHandle(_library.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
-        import pywintypes
         try:
             screenBuffer.SetConsoleTextAttribute(
-                win32console.FOREGROUND_RED |
-                win32console.FOREGROUND_GREEN |
-                win32console.FOREGROUND_BLUE)
-        except pywintypes.error:
+                _library.FOREGROUND_RED |
+                _library.FOREGROUND_GREEN |
+                _library.FOREGROUND_BLUE)
+        except WindowsAPIError:
             return False
         else:
             return True

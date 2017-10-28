@@ -42,8 +42,11 @@ else:
     # race-conditions duty. - hawkie
 
     try:
-        from win32api import OpenProcess
-        import pywintypes
+        from pywincffi.core import dist
+        from pywincffi.kernel32 import OpenProcess
+        from pywincffi.exceptions import WindowsAPIError
+
+        _, _library = dist.load()
     except ImportError:
         kill = None
     else:
@@ -53,10 +56,10 @@ else:
         def kill(pid, signal):
             try:
                 OpenProcess(0, 0, pid)
-            except pywintypes.error as e:
-                if e.args[0] == ERROR_ACCESS_DENIED:
+            except WindowsAPIError as e:
+                if e.args[0] == _library.ERROR_ACCESS_DENIED:
                     return
-                elif e.args[0] == ERROR_INVALID_PARAMETER:
+                elif e.args[0] == _library.ERROR_INVALID_PARAMETER:
                     raise OSError(errno.ESRCH, None)
                 raise
             else:

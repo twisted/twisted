@@ -53,20 +53,12 @@ from weakref import WeakKeyDictionary
 from zope.interface import implementer
 
 # Win32 imports
-from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
-try:
-    # WSAEnumNetworkEvents was added in pywin32 215
-    from win32file import WSAEnumNetworkEvents
-except ImportError:
-    import warnings
-    warnings.warn(
-        'Reliable disconnection notification requires pywin32 215 or later',
-        category=UserWarning)
-    def WSAEnumNetworkEvents(fd, event):
-        return set([FD_READ])
+from pywincffi.core import dist
+from pywincffi.kernel32 import CreateEvent
+from pywincffi.user32 import MsgWaitForMultipleObjects
+from pywincffi.ws2_32 import WSAEnumNetworkEvents, WSAEventSelect
 
-from win32event import CreateEvent, MsgWaitForMultipleObjects
-from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
+_, _library = dist.load()
 
 import win32gui
 
@@ -160,7 +152,9 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         if reader not in self._reads:
             self._reads[reader] = self._makeSocketEvent(
-                reader, 'doRead', FD_READ | FD_ACCEPT | FD_CONNECT | FD_CLOSE)
+                reader, 'doRead',
+                _library.FD_READ | _library.FD_ACCEPT | _library.FD_CONNECT |
+                _library.FD_CLOSE)
             # If the reader is closed, move it over to the dictionary of reading
             # descriptors.
             if reader in self._closedAndNotReading:
@@ -247,16 +241,16 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         handles = list(self._events.keys()) or [self.dummyEvent]
         timeout = int(timeout * 1000)
-        val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
-        if val == WAIT_TIMEOUT:
+        val = MsgWaitForMultipleObjects(handles, 0, timeout, _library.QS_ALLINPUT)
+        if val == _library.WAIT_TIMEOUT:
             return
-        elif val == WAIT_OBJECT_0 + len(handles):
+        elif val == _library.WAIT_OBJECT_0 + len(handles):
             exit = win32gui.PumpWaitingMessages()
             if exit:
                 self.callLater(0, self.stop)
                 return
-        elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
-            event = handles[val - WAIT_OBJECT_0]
+        elif val >= _library.WAIT_OBJECT_0 and val < _library.WAIT_OBJECT_0 + len(handles):
+            event = handles[val - _library.WAIT_OBJECT_0]
             fd, action = self._events[event]
 
             if fd in self._reads:
@@ -272,7 +266,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
                 # it only gets delivered once.  If we miss it, it's gone forever
                 # and we'll never know that the connection is closed.
                 events = WSAEnumNetworkEvents(fileno, event)
-                if FD_CLOSE in events:
+                if _library.FD_CLOSE in events:
                     self._closedAndReading[fd] = True
             log.callWithLogger(fd, self._runAction, action, fd)
 

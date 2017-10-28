@@ -50,11 +50,7 @@ if unixEnabled:
 
 
 if platform.isWindows():
-    try:
-        import win32process
-        processEnabled = True
-    except ImportError:
-        win32process = None
+    processEnabled = True
 
 
 class _SocketWaker(log.Logger):
@@ -348,12 +344,12 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             if childFDs:
                 raise ValueError("Customizing childFDs is not supported on Windows.")
 
-            if win32process:
+            try:
                 from twisted.internet._dumbwin32proc import Process
                 return Process(self, processProtocol, executable, args, env, path)
-            else:
+            except ImportError:
                 raise NotImplementedError(
-                    "spawnProcess not available since pywin32 is not installed.")
+                    "spawnProcess not available since pywincffi is not installed.")
         else:
             raise NotImplementedError(
                 "spawnProcess only available on Windows or POSIX.")

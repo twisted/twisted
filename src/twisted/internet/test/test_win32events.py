@@ -5,6 +5,7 @@
 Tests for implementations of L{IReactorWin32Events}.
 """
 
+from pywincffi.kernel32 import CreateEvent
 try:
     import win32event
 except ImportError:
@@ -95,7 +96,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         """
         reactorThreadID = getThreadID()
         reactor = self.buildReactor()
-        event = win32event.CreateEvent(None, False, False, None)
+        event = CreateEvent(None, False, False, None)
         finished = Deferred()
         finished.addCallback(lambda ignored: reactor.stop())
         listener = Listener(finished)
@@ -117,7 +118,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
             results.append(isInIOThread())
             reactor.stop()
         reactor = self.buildReactor()
-        event = win32event.CreateEvent(None, False, False, None)
+        event = CreateEvent(None, False, False, None)
         finished = Deferred()
         listener = Listener(finished)
         finished.addCallback(check)
@@ -136,7 +137,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         """
         reactorThreadID = getThreadID()
         reactor = self.buildReactor()
-        event = win32event.CreateEvent(None, False, False, None)
+        event = CreateEvent(None, False, False, None)
 
         result = []
         finished = Deferred()
@@ -163,7 +164,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         """
         reactorThreadID = getThreadID()
         reactor = self.buildReactor()
-        event = win32event.CreateEvent(None, False, False, None)
+        event = CreateEvent(None, False, False, None)
 
         result = []
         finished = Deferred()
@@ -188,7 +189,7 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor shuts down.
         """
         reactor = self.buildReactor()
-        event = win32event.CreateEvent(None, False, False, None)
+        event = CreateEvent(None, False, False, None)
         finished = Deferred()
         listener = Listener(finished)
         reactor.addEvent(event, listener, 'occurred')
