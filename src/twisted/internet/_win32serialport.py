@@ -83,7 +83,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     def serialReadEvent(self):
         #get that character we set up
-        n = GetOverlappedResult(self._serial._port_handle, self._overlappedRead, 0)
+        n = GetOverlappedResult(self._serial._port_handle,
+                                self._overlappedRead, 0)
         first = to_bytes(self.read_buf[:n])
         #now we should get everything that is already in the buffer
         flags, comstat = self._clearCommError()
@@ -92,7 +93,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             rc, buf = ReadFile(self._serial._port_handle,
                                win32file.AllocateReadBuffer(comstat.cbInQue),
                                self._overlappedRead)
-            n = GetOverlappedResult(self._serial._port_handle, self._overlappedRead, 1)
+            n = GetOverlappedResult(self._serial._port_handle,
+                                    self._overlappedRead, 1)
             #handle all the received data:
             self.protocol.dataReceived(first + to_bytes(buf[:n]))
         else:
@@ -102,8 +104,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         #set up next one
         ResetEvent(self._overlappedRead.hEvent)
         rc, self.read_buf = ReadFile(self._serial._port_handle,
-                                               win32file.AllocateReadBuffer(1),
-                                               self._overlappedRead)
+                                     win32file.AllocateReadBuffer(1),
+                                     self._overlappedRead)
 
 
     def write(self, data):
@@ -112,7 +114,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
                 self.outQueue.append(data)
             else:
                 self.writeInProgress = 1
-                WriteFile(self._serial._port_handle, data, self._overlappedWrite)
+                WriteFile(self._serial._port_handle, data,
+                          self._overlappedWrite)
 
 
     def serialWriteEvent(self):
@@ -122,7 +125,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             self.writeInProgress = 0
             return
         else:
-            WriteFile(self._serial._port_handle, dataToWrite, self._overlappedWrite)
+            WriteFile(self._serial._port_handle, dataToWrite,
+                      self._overlappedWrite)
 
 
     def connectionLost(self, reason):

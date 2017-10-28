@@ -54,7 +54,8 @@ class _Reaper(_pollingfile._PollableResource):
 
 
     def checkWork(self):
-        if WaitForSingleObject(self.proc.hProcess, 0) != _library.WAIT_OBJECT_0:
+        if WaitForSingleObject(self.proc.hProcess, 0) !=
+            _library.WAIT_OBJECT_0:
             return 0
         exitCode = GetExitCodeProcess(self.proc.hProcess)
         self.deactivate()
@@ -140,7 +141,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         # create the pipes which will connect to the secondary process
         self.hStdoutR, hStdoutW = CreatePipe(sAttrs, 0)
         self.hStderrR, hStderrW = CreatePipe(sAttrs, 0)
-        hStdinR, self.hStdinW  = CreatePipe(sAttrs, 0)
+        hStdinR, self.hStdinW = CreatePipe(sAttrs, 0)
 
         SetNamedPipeHandleState(self.hStdinW,
                                 _library.PIPE_NOWAIT,

@@ -249,7 +249,8 @@ class Win32Reactor(posixbase.PosixReactorBase):
             if exit:
                 self.callLater(0, self.stop)
                 return
-        elif val >= _library.WAIT_OBJECT_0 and val < _library.WAIT_OBJECT_0 + len(handles):
+        elif (val >= _library.WAIT_OBJECT_0 and
+              val < _library.WAIT_OBJECT_0 + len(handles)):
             event = handles[val - _library.WAIT_OBJECT_0]
             fd, action = self._events[event]
 

@@ -349,7 +349,8 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
                 return Process(self, processProtocol, executable, args, env, path)
             except ImportError:
                 raise NotImplementedError(
-                    "spawnProcess not available since pywincffi is not installed.")
+                    "spawnProcess not available since pywincffi "
+                    "is not installed.")
         else:
             raise NotImplementedError(
                 "spawnProcess only available on Windows or POSIX.")
