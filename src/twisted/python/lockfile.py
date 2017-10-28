@@ -55,7 +55,7 @@ else:
 
         def kill(pid, signal):
             try:
-                OpenProcess(0, 0, pid)
+                OpenProcess(0, False, pid)
             except WindowsAPIError as e:
                 if e.args[0] == _library.ERROR_ACCESS_DENIED:
                     return
