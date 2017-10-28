@@ -2313,7 +2313,8 @@ class Win32ProcessTests(unittest.TestCase):
         """
         The win32 handles should be properly closed when the process exits.
         """
-        import win32api
+        from pywincffi.exceptions import WindowsAPIError
+        from pywincffi.kernel32 import GetHandleInformation
 
         connected = defer.Deferred()
         ended = defer.Deferred()
@@ -2335,8 +2336,8 @@ class Win32ProcessTests(unittest.TestCase):
         def cbConnected(transport):
             self.assertIs(transport, proc)
             # perform a basic validity test on the handles
-            win32api.GetHandleInformation(proc.hProcess)
-            win32api.GetHandleInformation(proc.hThread)
+            GetHandleInformation(proc.hProcess)
+            GetHandleInformation(proc.hThread)
             # And save their values for later
             self.hProcess = proc.hProcess
             self.hThread = proc.hThread
@@ -2348,10 +2349,10 @@ class Win32ProcessTests(unittest.TestCase):
             self.assertIsNone(proc.hProcess)
             self.assertIsNone(proc.hThread)
             # ...and the handles must be closed.
-            self.assertRaises(win32api.error,
-                              win32api.GetHandleInformation, self.hProcess)
-            self.assertRaises(win32api.error,
-                              win32api.GetHandleInformation, self.hThread)
+            self.assertRaises(WindowsAPIError,
+                              GetHandleInformation, self.hProcess)
+            self.assertRaises(WindowsAPIError,
+                              GetHandleInformation, self.hThread)
         ended.addCallback(checkTerminated)
 
         return defer.gatherResults([connected, ended])
