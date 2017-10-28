@@ -50,16 +50,13 @@ else:
     except ImportError:
         kill = None
     else:
-        ERROR_ACCESS_DENIED = 5
-        ERROR_INVALID_PARAMETER = 87
-
         def kill(pid, signal):
             try:
                 OpenProcess(0, False, pid)
             except WindowsAPIError as e:
-                if e.args[0] == _library.ERROR_ACCESS_DENIED:
+                if e.errno == _library.ERROR_ACCESS_DENIED:
                     return
-                elif e.args[0] == _library.ERROR_INVALID_PARAMETER:
+                elif e.errno == _library.ERROR_INVALID_PARAMETER:
                     raise OSError(errno.ESRCH, None)
                 raise
             else:
