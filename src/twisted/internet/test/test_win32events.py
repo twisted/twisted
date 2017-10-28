@@ -5,9 +5,10 @@
 Tests for implementations of L{IReactorWin32Events}.
 """
 
-from pywincffi.kernel32 import CreateEvent
 try:
     import win32event
+
+    from pywincffi.kernel32 import CreateEvent
 except ImportError:
     win32event = None
 
