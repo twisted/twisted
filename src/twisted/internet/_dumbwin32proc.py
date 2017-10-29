@@ -158,18 +158,18 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         # Create new handles whose inheritance property is false
         currentPid = GetCurrentProcess()
 
-        tmp = DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0, 0,
-                              _library.DUPLICATE_SAME_ACCESS)
+        tmp = DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0,
+                              False, _library.DUPLICATE_SAME_ACCESS)
         CloseHandle(self.hStdoutR)
         self.hStdoutR = tmp
 
-        tmp = DuplicateHandle(currentPid, self.hStderrR, currentPid, 0, 0,
-                              _library.DUPLICATE_SAME_ACCESS)
+        tmp = DuplicateHandle(currentPid, self.hStderrR, currentPid, 0,
+                              False, _library.DUPLICATE_SAME_ACCESS)
         CloseHandle(self.hStderrR)
         self.hStderrR = tmp
 
-        tmp = DuplicateHandle(currentPid, self.hStdinW, currentPid, 0, 0,
-                              _library.DUPLICATE_SAME_ACCESS)
+        tmp = DuplicateHandle(currentPid, self.hStdinW, currentPid, 0,
+                              False, _library.DUPLICATE_SAME_ACCESS)
         CloseHandle(self.hStdinW)
         self.hStdinW = tmp
 
