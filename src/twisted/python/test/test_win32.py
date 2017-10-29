@@ -6,7 +6,6 @@ Tests for L{twisted.python.win32}.
 """
 
 from twisted.trial import unittest
-from twisted.python.runtime import platform
 from twisted.python import win32
 
 

@@ -16,13 +16,6 @@ from __future__ import division, absolute_import
 import re
 import os
 
-try:
-    import win32api
-except ImportError:
-    pass
-
-from twisted.python.runtime import platform
-from incremental import Version
 
 # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
 ERROR_FILE_NOT_FOUND = 2
