@@ -30,11 +30,13 @@ from twisted.web.http import _IdentityTransferDecoder
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost, ConnectionDone
 from twisted.protocols import loopback
-from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
+from twisted.test.proto_helpers import (StringTransport, NonStreamingProducer,
+                                        EventLoggingObserver)
 from twisted.test.test_internet import DummyProducer
 from twisted.web.test.requesthelper import DummyChannel
 
 from zope.interface import directlyProvides, providedBy
+from twisted.logger import globalLogPublisher
 
 
 
@@ -1935,6 +1937,36 @@ Hello,
         self.assertTrue(channel.transport.disconnecting)
 
 
+    def test_basicAuthException(self):
+        """
+        A L{Request} that throws an exception processing basic authorization
+        logs an error and uses an empty username and password.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        requests = []
+        class Request(http.Request):
+            def process(self):
+                self.credentials = (self.getUser(), self.getPassword())
+                requests.append(self)
+
+        u = b"foo"
+        p = b"bar"
+        s = base64.encodestring(b":".join((u, p))).strip()
+        f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
+        self.patch(base64, 'decodestring', lambda x: [])
+        self.runRequest(f, Request, 0)
+        req = requests.pop()
+        self.assertEqual(('', ''), req.credentials)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, AttributeError)
+        self.flushLoggedErrors(AttributeError)
+
+
 
 class QueryArgumentsTests(unittest.TestCase):
     def testParseqs(self):
@@ -3024,6 +3056,25 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         self.assertNotEqual(req, _NotARequest())
         self.assertEqual(eqCalls, [req])
+
+
+    def test_finishProducerStillRegistered(self):
+        """
+        A RuntimeError is logged if a producer is still registered
+        when an L{http.Request} is finished.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        request = http.Request(DummyChannel(), False)
+        request.registerProducer(DummyProducer(), True)
+        request.finish()
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, RuntimeError)
+        self.flushLoggedErrors(RuntimeError)
 
 
 

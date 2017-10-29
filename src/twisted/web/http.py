@@ -93,6 +93,8 @@ from twisted.python.compat import (
     _PY3, long, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
+from twisted.logger import Logger
+from twisted.python.failure import Failure
 from incremental import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, protocol, address
@@ -696,6 +698,7 @@ class Request:
     content = None
     _forceSSL = 0
     _disconnected = False
+    _log = Logger()
 
     def __init__(self, channel, queued=_QUEUED_SENTINEL):
         """
@@ -722,7 +725,14 @@ class Request:
         Called when have finished responding and are no longer queued.
         """
         if self.producer:
-            log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
+            self._log.failure(
+                '',
+                Failure(
+                    RuntimeError(
+                        "Producer was not unregistered for %s" % self.uri
+                    )
+                )
+            )
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
@@ -1404,7 +1414,7 @@ class Request:
         except (binascii.Error, ValueError):
             self.user = self.password = ""
         except:
-            log.err()
+            self._log.failure('')
             self.user = self.password = ""
 
 
