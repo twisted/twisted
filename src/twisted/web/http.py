@@ -729,7 +729,7 @@ class Request:
                 '',
                 Failure(
                     RuntimeError(
-                        "Producer was not unregistered for %s" % self.uri
+                        "Producer was not unregistered for %s" % (self.uri,)
                     )
                 )
             )
