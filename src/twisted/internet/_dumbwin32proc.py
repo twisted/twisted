@@ -203,7 +203,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         def doCreate():
             flags = _library.CREATE_NO_WINDOW
             self.hProcess, self.hThread, self.pid, dwTid = CreateProcess(
-                command, cmdline, None, None, 1, flags, env, path, StartupInfo)
+                command, cmdline, None, None, True, flags, env, path,
+                StartupInfo)
         try:
             doCreate()
         except WindowsAPIError as pwte:
