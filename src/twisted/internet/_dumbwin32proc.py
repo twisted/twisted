@@ -101,7 +101,8 @@ def _invalidWin32App(pywinerr):
 
     @return: a boolean
     """
-    return pywinerr.args[0] == _library.ERROR_BAD_EXE_FORMAT
+    ERROR_BAD_EXE_FORMAT = 193
+    return pywinerr.errno == ERROR_BAD_EXE_FORMAT
 
 
 
