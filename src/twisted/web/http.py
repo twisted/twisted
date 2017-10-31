@@ -1052,8 +1052,10 @@ class Request:
 
             if self.lastModified is not None:
                 if self.responseHeaders.hasHeader(b'last-modified'):
-                    log.msg("Warning: last-modified specified both in"
-                            " header list and lastModified attribute.")
+                    self._log.info(
+                        "Warning: last-modified specified both in"
+                        " header list and lastModified attribute."
+                    )
                 else:
                     self.responseHeaders.setRawHeaders(
                         b'last-modified',
@@ -1944,6 +1946,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _waitingForTransport = False
     _abortingCall = None
     _optimisticEagerReadSize = 0x4000
+    _log = Logger()
 
     def __init__(self):
         # the request queue
@@ -2228,7 +2231,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def timeoutConnection(self):
-        log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        self._log.info(
+            "Timing out client: {peer}",
+            peer=str(self.transport.getPeer())
+        )
         if self.abortTimeout is not None:
             # We use self.callLater because that's what TimeoutMixin does.
             self._abortingCall = self.callLater(
@@ -2244,8 +2250,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         on extremely bad connections or when clients are maliciously attempting
         to keep connections open.
         """
-        log.msg(
-            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
+        self._log.info(
+            "Forcibly timing out client: {peer}",
+            peer=str(self.transport.getPeer())
         )
         # We want to lose track of the _abortingCall so that no-one tries to
         # cancel it.
