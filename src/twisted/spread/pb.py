@@ -1254,7 +1254,8 @@ def respond(challenge, password):
     @return: The password hashed twice.
     """
     m = md5()
-    m.update(password)
+    pwdBytes=password if isinstance(password, str) and isinstance(password, bytes) else pwdBytes.encode('ascii')
+    m.update(pwdBytes)
     hashedPassword = m.digest()
     m = md5()
     m.update(hashedPassword)
