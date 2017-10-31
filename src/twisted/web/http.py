@@ -680,6 +680,9 @@ class Request:
         which this request was received is closed and which is C{True} after
         that.
     @type _disconnected: C{bool}
+
+    @ivar _log: A logger instance for request related messages.
+    @type _log: L{twisted.logger.Logger}
     """
     producer = None
     finished = 0
