@@ -22,7 +22,6 @@ from twisted.web.static import Data
 from twisted.web.util import Redirect
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
-from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import (
     StringTransport, waitUntilAllDisconnected, EventLoggingObserver)
@@ -34,7 +33,7 @@ except:
 
 from twisted import test
 from twisted.logger import (globalLogPublisher, FilteringLogObserver,
-                            LogLevelFilterPredicate, LogLevel)
+                            LogLevelFilterPredicate, LogLevel, Logger)
 
 
 serverPEM = FilePath(test.__file__).sibling('server.pem')
@@ -301,6 +300,7 @@ class HTTPPageGetterTests(unittest.TestCase):
 
 class WebClientTests(unittest.TestCase):
     suppress = [util.suppress(category=DeprecationWarning)]
+    _log = Logger()
 
 
     def _listen(self, site):
@@ -355,7 +355,7 @@ class WebClientTests(unittest.TestCase):
         # the connection and cleaned up after themselves.
         for n in range(min(len(connections), self.cleanupServerConnections)):
             proto = connections.pop()
-            msg("Closing %r" % (proto,))
+            self._log.info("Closing {proto}", proto=proto)
             proto.transport.abortConnection()
         d = self.port.stopListening()
 
