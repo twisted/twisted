@@ -390,14 +390,15 @@ class XMLRPCTests(unittest.TestCase):
                 self.assertEqual(factory.headers[b'content-type'],
                                   b'text/xml; charset=utf-8')
             self.assertEquals(2, len(logObserver))
-            self.assertIsInstance(
-                logObserver[0]["log_failure"].value,
-                TestRuntimeError
-            )
-            self.assertIsInstance(
-                logObserver[1]["log_failure"].value,
-                TestValueError
-            )
+            f1 = logObserver[0]["log_failure"].value
+            f2 = logObserver[1]["log_failure"].value
+
+            if isinstance(f1, TestValueError):
+                self.assertIsInstance(f2, TestRuntimeError)
+            else:
+                self.assertIsInstance(f1, TestRuntimeError)
+                self.assertIsInstance(f2, TestValueError)
+
             self.flushLoggedErrors(TestRuntimeError, TestValueError)
         d.addCallback(cb)
         return d
