@@ -1516,6 +1516,9 @@ class Request:
         return NotImplemented
 
 
+    def __hash__(self):
+        return id(self)
+
 
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
