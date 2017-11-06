@@ -499,6 +499,18 @@ class RequestTests(unittest.TestCase):
             verifyObject(iweb.IRequest, server.Request(DummyChannel(), True)))
 
 
+    def test_hashable(self):
+        """
+        L{server.Request} instances are hashable, thus can be put in a mapping.
+        """
+        request = server.Request(DummyChannel(), True)
+
+        try:
+            hash(request)
+        except TypeError as e:
+            self.fail("server.Request is not hashable: {}".format(e))
+
+
     def testChildLink(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
