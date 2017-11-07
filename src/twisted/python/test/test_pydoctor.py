@@ -4,12 +4,16 @@
 """
 Tests for L{twisted.python._pydoctor}.
 """
+import inspect
+
 from collections import namedtuple
 
-from twisted.python.compat import _PY3
-from twisted.python.reflect import requireModule
+from textwrap import dedent
 
-from twisted.trial.unittest import TestCase
+from twisted.python.compat import _PY3
+from twisted.python.reflect import requireModule, namedModule
+
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 model = requireModule('pydoctor.model')
 pydoctorSkip = None
@@ -22,6 +26,7 @@ elif _PY3:
 else:
     # We have a valid pydoctor.
     from twisted.python._pydoctor import TwistedSphinxInventory, TwistedSystem
+    from pydoctor import astbuilder
 
 
 class TwistedSystemTests(TestCase):
@@ -269,3 +274,96 @@ class TwistedSphinxInventoryTests(TestCase):
         result = sut.getLink('win32api.FormatMessage')
 
         self.assertIsNone(result)
+
+
+
+def pydoctorModuleFromText(moduleName, text):
+    """
+    Create a L{pydoctor.model.Module} instance from the given source
+    code.
+
+    @param moduleName: The return module's name.
+    @type moduleName: L{str}
+
+    @param text: The source code for the module.
+    @type text: L{str}
+
+    @return: The parsed module.
+    @rtype: L{pydoctor.model.Module}
+    """
+    system = model.System()
+    builder = system.defaultBuilder(system)
+    mod = builder.pushModule(moduleName, None)
+    builder.popModule()
+    ast = astbuilder.parse(dedent(text))
+    builder.processModuleAST(ast, mod)
+    mod = system.allobjects[moduleName]
+    mod.ast = ast
+    mod.state = model.PROCESSED
+    return mod
+
+
+
+class PydoctorModuleFromTextTests(SynchronousTestCase):
+    """
+    Internal tests for L{pydoctorModuleFromText}.
+    """
+    skip = pydoctorSkip
+
+    def test_parsesSource(self):
+        """
+        L{pydoctorModuleFromText} parses source into a
+        L{pydoctor.model.Module.}
+        """
+        source = '''\
+        def function():
+            """
+            This is the docstring.
+            """
+        '''
+
+        module = pydoctorModuleFromText("<test>", source)
+
+        self.assertEqual(list(module.contents), ["function"])
+
+        function = module.contents["function"]
+
+        self.assertEqual(function.docstring.strip(), "This is the docstring.")
+
+
+
+class ActuallyTests(SynchronousTestCase):
+    """
+    Tests for L{_actually}.
+    """
+    skip = pydoctorSkip
+
+    def setUp(self):
+        self.testModule = namedModule("twisted.python.test._actually_test")
+
+
+    def test_argumentReturned(self):
+        """
+        The L{_actually} decorator returns its argument instead of the
+        object it decorates.
+        """
+        self.assertIs(self.testModule.theAlias, self.testModule.theFunction)
+
+
+    def test_pydoctorUsesDocstring(self):
+        """
+        Pydoctor creates documentation for the object decorated by
+        L{_actually}.
+        """
+        source = inspect.getsource(self.testModule)
+        pydoctorModule = pydoctorModuleFromText(self.testModule.__name__,
+                                                source)
+
+        self.assertEqual(
+            list(pydoctorModule.contents),
+            ["theFunction", "theAlias"]
+        )
+        self.assertNotEqual(
+            pydoctorModule.contents["theAlias"].docstring,
+            pydoctorModule.contents["theFunction"].docstring,
+        )

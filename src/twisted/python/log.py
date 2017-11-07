@@ -291,25 +291,7 @@ synchronize(LogPublisher)
 
 
 if 'theLogPublisher' not in globals():
-    def _actually(something):
-        """
-        A decorator that returns its argument rather than the thing it is
-        decorating.
-
-        This allows the documentation generator to see an alias for a method or
-        constant as an object with a docstring and thereby document it and
-        allow references to it statically.
-
-        @param something: An object to create an alias for.
-        @type something: L{object}
-
-        @return: a 1-argument callable that returns C{something}
-        @rtype: L{object}
-        """
-        def decorate(thingWithADocstring):
-            return something
-        return decorate
-
+    from twisted.python._pydoctor import _actually
     theLogPublisher = LogPublisher(
         observerPublisher=newGlobalLogPublisher,
         publishPublisher=newGlobalLogPublisher,
