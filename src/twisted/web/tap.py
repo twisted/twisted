@@ -29,9 +29,6 @@ class Options(usage.Options):
 
     optParameters = [["logfile", "l", None,
                       "Path to web CLF (Combined Log Format) log file."],
-                     ["https", None, None,
-                      "(DEPRECATED: use --http) "
-                      "Port to listen on for Secure HTTP."],
                      ["certificate", "c", "server.pem",
                       "(DEPRECATED: use --http) "
                       "SSL certificate to use for HTTPS. "],
@@ -95,7 +92,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['https'] = port
 
 
-    def opt_http(self, port):
+    def opt_listen(self, port):
         """
         Add an strports description of port to start the server on.
         [default: tcp:8080]
