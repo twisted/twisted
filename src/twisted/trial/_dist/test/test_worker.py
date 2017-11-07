@@ -284,7 +284,7 @@ class FakeAMProtocol(AMP):
     A fake implementation of L{AMP} for testing.
     """
     id = 0
-    dataString = ""
+    dataString = b""
 
     def dataReceived(self, data):
         self.dataString += data
@@ -299,12 +299,10 @@ class FakeTransport(object):
     """
     A fake process transport implementation for testing.
     """
-    dataString = ""
+    dataString = b""
     calls = 0
 
     def writeToChild(self, fd, data):
-        if isinstance(self.dataString, unicode) and isinstance(data, bytes):
-            data = data.decode("utf-8")
         self.dataString += data
 
 
@@ -343,7 +341,7 @@ class LocalWorkerTests(TestCase):
         localWorker = LocalWorker(FakeAMProtocol(), '.', 'test.log')
         localWorker.makeConnection(fakeTransport)
         localWorker._outLog = BytesIO()
-        data = "The quick brown fox jumps over the lazy dog"
+        data = b"The quick brown fox jumps over the lazy dog"
         localWorker.outReceived(data)
         self.assertEqual(data, localWorker._outLog.getvalue())
 
