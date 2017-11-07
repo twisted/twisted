@@ -7,6 +7,8 @@ Test for distributed trial worker side.
 
 import os
 
+from io import BytesIO
+
 from zope.interface.verify import verifyObject
 
 from twisted.trial.reporter import TestResult
@@ -22,7 +24,7 @@ from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import fail, succeed
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone
-from twisted.python.compat import NativeStringIO as StringIO, unicode
+from twisted.python.compat import unicode
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
@@ -237,16 +239,18 @@ class LocalWorkerAMPTests(TestCase):
         stream.
         """
         results = []
-        stream = StringIO()
+        stream = BytesIO()
         self.managerAMP.setTestStream(stream)
 
-
-        d = self.worker.callRemote(managercommands.TestWrite,
+        command = managercommands.TestWrite
+        if isinstance(command, unicode):
+            command = command.encode("utf-8")
+        d = self.worker.callRemote(command,
                                    out=b"Some output")
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
-        self.assertEqual("Some output\n", stream.getvalue())
+        self.assertEqual(b"Some output\n", stream.getvalue())
         self.assertTrue(results)
 
 
@@ -280,7 +284,7 @@ class FakeAMProtocol(AMP):
     A fake implementation of L{AMP} for testing.
     """
     id = 0
-    dataString = ""
+    dataString = b""
 
     def dataReceived(self, data):
         self.dataString += data
@@ -295,12 +299,10 @@ class FakeTransport(object):
     """
     A fake process transport implementation for testing.
     """
-    dataString = ""
+    dataString = b""
     calls = 0
 
     def writeToChild(self, fd, data):
-        if isinstance(self.dataString, unicode) and isinstance(data, bytes):
-            data = data.decode("utf-8")
         self.dataString += data
 
 
@@ -323,11 +325,11 @@ class LocalWorkerTests(TestCase):
         fakeTransport = FakeTransport()
         localWorker = LocalWorker(FakeAMProtocol(), '.', 'test.log')
         localWorker.makeConnection(fakeTransport)
-        localWorker._outLog = StringIO()
-        localWorker.childDataReceived(4, "foo")
-        localWorker.childDataReceived(1, "bar")
-        self.assertEqual("foo", localWorker._ampProtocol.dataString)
-        self.assertEqual("bar", localWorker._outLog.getvalue())
+        localWorker._outLog = BytesIO()
+        localWorker.childDataReceived(4, b"foo")
+        localWorker.childDataReceived(1, b"bar")
+        self.assertEqual(b"foo", localWorker._ampProtocol.dataString)
+        self.assertEqual(b"bar", localWorker._outLog.getvalue())
 
 
     def test_outReceived(self):
@@ -338,8 +340,8 @@ class LocalWorkerTests(TestCase):
         fakeTransport = FakeTransport()
         localWorker = LocalWorker(FakeAMProtocol(), '.', 'test.log')
         localWorker.makeConnection(fakeTransport)
-        localWorker._outLog = StringIO()
-        data = "The quick brown fox jumps over the lazy dog"
+        localWorker._outLog = BytesIO()
+        data = b"The quick brown fox jumps over the lazy dog"
         localWorker.outReceived(data)
         self.assertEqual(data, localWorker._outLog.getvalue())
 
@@ -352,8 +354,8 @@ class LocalWorkerTests(TestCase):
         fakeTransport = FakeTransport()
         localWorker = LocalWorker(FakeAMProtocol(), '.', 'test.log')
         localWorker.makeConnection(fakeTransport)
-        localWorker._errLog = StringIO()
-        data = "The quick brown fox jumps over the lazy dog"
+        localWorker._errLog = BytesIO()
+        data = b"The quick brown fox jumps over the lazy dog"
         localWorker.errReceived(data)
         self.assertEqual(data, localWorker._errLog.getvalue())
 
@@ -365,7 +367,7 @@ class LocalWorkerTests(TestCase):
         """
         transport = FakeTransport()
         localTransport = LocalWorkerTransport(transport)
-        data = "The quick brown fox jumps over the lazy dog"
+        data = b"The quick brown fox jumps over the lazy dog"
         localTransport.write(data)
         self.assertEqual(data, transport.dataString)
 
@@ -377,9 +379,9 @@ class LocalWorkerTests(TestCase):
         """
         transport = FakeTransport()
         localTransport = LocalWorkerTransport(transport)
-        data = ("The quick ", "brown fox jumps ", "over the lazy dog")
+        data = (b"The quick ", b"brown fox jumps ", b"over the lazy dog")
         localTransport.writeSequence(data)
-        self.assertEqual("".join(data), transport.dataString)
+        self.assertEqual(b"".join(data), transport.dataString)
 
 
     def test_loseConnection(self):
