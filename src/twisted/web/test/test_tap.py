@@ -192,7 +192,7 @@ class ServiceTests(TestCase):
         If the I{--http} option is given twice, there are two listeners
         """
         options = Options()
-        options.parseOptions(['--http', 'tcp:8001', '--http', 'tcp:8002'])
+        options.parseOptions(['--listen', 'tcp:8001', '--listen', 'tcp:8002'])
         self.assertIn('8001', options['ports'][0])
         self.assertIn('8002', options['ports'][1])
 
