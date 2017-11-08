@@ -17,6 +17,8 @@ from twisted.python.compat import unicode, lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
+import sys
+
 try:
     # Python 2
     from __builtin__ import buffer
@@ -26,13 +28,15 @@ try:
         # in the result.
         return buffer(bObj, offset) + b"".join(bArray)
 except ImportError:
-    # Python 3
-    def _concatenate(bObj, offset, bArray):
-        # Python 3 lacks the buffer() builtin and the other primitives don't
-        # help in this case.  Just do the copy.  Perhaps later these buffers can
-        # be joined and FileDescriptor can use writev().  Or perhaps bytearrays
-        # would help.
-        return bObj[offset:] + b"".join(bArray)
+    if (sys.version_info.major, sys.version_info.minor) == (3, 3):
+        # Python 3.3 cannot join bytes and memoryviews
+        def _concatenate(bObj, offset, bArray):
+            return bObj[offset:] + b"".join(bArray)
+    else:
+        # Python 3.4+ can join bytes and memoryviews; using a
+        # memoryview prevents the slice from copying
+        def _concatenate(bObj, offset, bArray):
+            return b''.join([memoryview(bObj)[offset:]] + bArray)
 
 
 class _ConsumerMixin(object):
