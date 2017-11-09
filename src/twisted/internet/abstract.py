@@ -30,6 +30,8 @@ if _PY3:
         def _concatenate(bObj, offset, bArray):
             return b''.join([memoryview(bObj)[offset:]] + bArray)
 else:
+    from __builtin__ import buffer
+
     def _concatenate(bObj, offset, bArray):
         # Avoid one extra string copy by using a buffer to limit what
         # we include in the result.
