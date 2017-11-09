@@ -13,21 +13,13 @@ from socket import AF_INET, AF_INET6, inet_pton, error
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, lazyByteSlice
+from twisted.python.compat import unicode, lazyByteSlice, _PY3
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
 import sys
 
-try:
-    # Python 2
-    from __builtin__ import buffer
-
-    def _concatenate(bObj, offset, bArray):
-        # Avoid one extra string copy by using a buffer to limit what we include
-        # in the result.
-        return buffer(bObj, offset) + b"".join(bArray)
-except ImportError:
+if _PY3:
     if (sys.version_info.major, sys.version_info.minor) == (3, 3):
         # Python 3.3 cannot join bytes and memoryviews
         def _concatenate(bObj, offset, bArray):
@@ -37,6 +29,12 @@ except ImportError:
         # memoryview prevents the slice from copying
         def _concatenate(bObj, offset, bArray):
             return b''.join([memoryview(bObj)[offset:]] + bArray)
+else:
+    def _concatenate(bObj, offset, bArray):
+        # Avoid one extra string copy by using a buffer to limit what
+        # we include in the result.
+        return buffer(bObj, offset) + b"".join(bArray)
+
 
 
 class _ConsumerMixin(object):
