@@ -19,7 +19,7 @@ from zope.interface import implementer
 
 # Twisted imports
 from twisted.python.compat import _PY3
-from twisted.internet import protocol, defer, interfaces, error
+from twisted.internet import protocol, defer, interfaces
 from twisted.python import log
 
 
@@ -481,7 +481,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Called when the maximum line length has been reached.
         Override if it needs to be dealt with in some special way.
         """
-        return error.ConnectionLost('Line length exceeded')
+        return self.transport.loseConnection()
 
 
 
