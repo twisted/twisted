@@ -939,7 +939,7 @@ class EventLoggingObserver(Sequence):
     observer implements the sequence protocol to ease iteration of the events.
 
     @ivar _events: The events captured by this observer
-    @type _events: C{list}
+    @type _events: L{list}
     """
     def __init__(self):
         self._events = []
