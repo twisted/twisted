@@ -29,7 +29,7 @@ from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 from twisted.logger import globalLogPublisher, Logger
 from twisted.test.proto_helpers import EventLoggingObserver
-
+from twisted.internet.address import IPv4Address
 
 
 class SynchronousThreadPool:
@@ -109,6 +109,93 @@ class WSGIResourceTests(TestCase):
             RuntimeError,
             self.resource.putChild,
             b"foo", Resource())
+
+
+    def test_applicationAndRequestThrow(self):
+        """
+        If an exception is thrown by the application, and then in the
+        exception handling code, verify it should be propagated to the
+        provided L{ThreadPool}.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        class ArbitraryError(Exception):
+            """
+            An arbitrary error for this class
+            """
+
+        class FinishThrowingRequest(Request):
+            """
+            An L{IRequest} request whose finish method throws.
+            """
+            def __init__(self, *args, **kwargs):
+                Request.__init__(self, *args, **kwargs)
+                self.prepath = ''
+                self.postpath = ''
+                self.uri = b'www.example.com/stuff'
+
+
+            def getClientIP(self):
+                """
+                Return loopback address.
+
+                @return: loopback ip address.
+                """
+                return '127.0.0.1'
+
+
+            def getHost(self):
+                """
+                Return a fake Address
+
+                @return: A fake address
+                """
+                return IPv4Address('TCP', '127.0.0.1', 30000)
+
+
+        def application(environ, startResponse):
+            """
+            An application object that throws an exception.
+
+            @param environ: unused
+
+            @param startResponse: unused
+            """
+            raise ArbitraryError()
+
+
+        class ThrowingReactorThreads:
+            """
+            An L{IReactorThreads} implementation whose callFromThread raises
+            an exception.
+            """
+            def callFromThread(self, f, *a, **kw):
+                """
+                Raise an exception to the caller.
+
+                @param f: unused
+
+                @param a: unused
+
+                @param kw: unused
+                """
+                raise ArbitraryError()
+
+        self.resource = WSGIResource(
+            ThrowingReactorThreads(),
+            SynchronousThreadPool(),
+            application
+        )
+
+        self.resource.render(FinishThrowingRequest(DummyChannel(), False))
+        self.assertEquals(1, len(logObserver))
+        f = logObserver[0]["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryError)
+        self.flushLoggedErrors(ArbitraryError)
+
 
 
 class WSGITestsMixin:
