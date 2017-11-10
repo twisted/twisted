@@ -953,10 +953,6 @@ class EventLoggingObserver(Sequence):
         return self._events[index]
 
 
-    def __contains__(self, value):
-        return value in self._events
-
-
     def __iter__(self):
         return iter(self._events)
 
