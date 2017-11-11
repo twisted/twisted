@@ -23,6 +23,7 @@ exclude appveyor.yml
 prune bin
 prune admin
 prune .travis
+prune .github
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc

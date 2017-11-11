@@ -1,1 +1,0 @@
-Queries for unknown record types no longer incorrectly result in a server error.
