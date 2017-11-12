@@ -1591,10 +1591,14 @@ class OpenSSLCertificateOptions(object):
             self._options |= SSL.OP_NO_TICKET
         self.dhParameters = dhParameters
 
-        try:
-            self._ecCurve = _OpenSSLECCurve(_defaultCurveName)
-        except NotImplementedError:
-            self._ecCurve = None
+        self._ecCurve = None
+        # Only select a curve for OpenSSL < 1.0.2, in 1.0.2+ we use the
+        # automatic mode that supports multiple curves
+        if SSL.OPENSSL_VERSION_NUMBER < 0x10002000:
+            try:
+                self._ecCurve = _OpenSSLECCurve(_defaultCurveName)
+            except NotImplementedError:
+                pass;
 
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
@@ -1690,6 +1694,14 @@ class OpenSSLCertificateOptions(object):
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
         ctx.set_cipher_list(self._cipherString.encode('ascii'))
+
+        # OpenSSL 1.0.2 introduced the SSL_CTX_set_ecdh_auto so that you don't
+        # need to set a supported key. OpenSSL 1.1.0 removed the function
+        # again and it's always enabled.
+        try:
+            self._lib.SSL_CTX_set_ecdh_auto(ctx, 1);
+        except BaseException:
+            pass  # ECDHE support is best effort only.
 
         if self._ecCurve is not None:
             try:

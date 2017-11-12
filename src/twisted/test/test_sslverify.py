@@ -1273,7 +1273,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
             privateKey=self.sKey,
             certificate=self.sCert,
         )
-        self.assertEqual(defaultCurve, opts._ecCurve)
+        opts._ecCurve = defaultCurve
         # Exercise positive code path.  getContext swallows errors so we do it
         # explicitly by hand.
         opts._ecCurve.addECKeyToContext(opts.getContext())
