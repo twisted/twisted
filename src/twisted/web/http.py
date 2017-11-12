@@ -470,6 +470,15 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
+    def __hash__():
+        """
+        Generate a hash value for the request.
+
+        @return: The request's hash value.
+        @rtype: L{int}
+        """
+
+
 
 class StringTransport:
     """
