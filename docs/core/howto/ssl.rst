@@ -53,7 +53,7 @@ You may obtain an object suitable to pass as the ``trustRoot=`` parameter with a
 
    Currently, Twisted only supports loading of OpenSSL's default trust roots.
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
-   If you're using the OpenSSL shipped as part of Mac OS X 10.5-10.9, this behavior will also be correct.
+   If you're using the OpenSSL shipped as part of macOS 10.5-10.9, this behavior will also be correct.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
    Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` uses by default --- more robust.
    For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
