@@ -14,7 +14,6 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
 from twisted.python import log
-from twisted.python.compat import networkString
 
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
@@ -82,7 +81,7 @@ class DomainDeliveryBase:
         fromUser = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
                  heloStr + authStr)
         by = (b"by " + self.host + b" with " + self.protocolName +
-              b" (" + networkString(longversion) + b")")
+              b" (" + longversion.encode("ascii") + b")")
         forUser = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
                 smtp.rfc822date())
         return (b"Received: " + fromUser + b"\n\t" + by +
@@ -271,9 +270,9 @@ class VirtualPOP3(pop3.POP3):
     """
     service = None
 
-    domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
-                          # to indicate user@host. '@' doesn't work
-                          # with NS, e.g.
+    domainSpecifier = b'@'  # Gaagh! I hate POP3. No standardized way
+                            # to indicate user@host. '@' doesn't work
+                            # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
         """
@@ -360,9 +359,10 @@ class VirtualPOP3(pop3.POP3):
         try:
             user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
-            domain = ''
+            domain = b''
         if domain not in self.service.domains:
-             raise pop3.POP3Error("no such domain %s" % domain)
+            raise pop3.POP3Error(
+                "no such domain {}".format(domain.decode("utf-8")))
         return user, domain
 
 

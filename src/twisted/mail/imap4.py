@@ -1073,7 +1073,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def sendServerGreeting(self):
-        #msg = '[CAPABILITY %s] %s' % (' '.join(self.listCapabilities()), self.IDENT)
         msg = (b'[CAPABILITY ' + b' '.join(self.listCapabilities()) + b'] ' +
               self.IDENT)
         self.sendPositiveResponse(message=msg)
@@ -1338,7 +1337,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _ebSelectWork(self, failure, cmdName, tag):
-        self.sendBadResponse(tag, b"%s failed: Server error" % (cmdName,))
+        self.sendBadResponse(tag, cmdName + b" failed: Server error")
         log.err(failure)
 
 
@@ -2329,7 +2328,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         write = wbuf.write
         flush = wbuf.flush
         def start():
-            write(b'* %d FETCH (' % (id,))
+            write(b'* ' + intToBytes(id) + b' FETCH (')
         def finish():
             write(b')\r\n')
         def space():
@@ -4955,7 +4954,7 @@ def _quote(s):
 
 
 def _literal(s):
-    return b'{%d}\r\n%s' % (len(s), s)
+    return b'{' + intToBytes(len(s)) + b'}\r\n' + s
 
 
 
@@ -5902,7 +5901,8 @@ class _FetchParser:
 #            if self.peek:
 #                base += '.PEEK'
             if self.header:
-                base += b'[%s%s%s]' % (part, separator, self.header,)
+                base += (b'[' + part + separator +
+                         str(self.header).encode("ascii") + b']')
             elif self.text:
                 base += b'[' + part + separator + b'TEXT]'
             elif self.mime:

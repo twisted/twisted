@@ -591,7 +591,11 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
     def __init__(self, *a, **kw):
         self['debug'] = False
-        usage.Options.__init__(self, *a, **kw)
+        if 'stdout' in kw:
+            self.stdout = kw['stdout']
+        else:
+            self.stdout = sys.stdout
+        usage.Options.__init__(self)
 
 
     def opt_debug(self):

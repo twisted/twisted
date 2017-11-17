@@ -26,7 +26,6 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.compat import _PY3, networkString
 from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
@@ -45,6 +44,7 @@ from twisted.python.components import proxyForInterface
 from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
+from twisted.logger import Logger
 
 
 class PartialDownloadError(error.Error):
@@ -472,6 +472,7 @@ class HTTPDownloader(HTTPClientFactory):
     """
     protocol = HTTPPageDownloader
     value = None
+    _log = Logger()
 
     def __init__(self, url, fileOrName,
                  method=b'GET', postdata=None, headers=None,
@@ -557,7 +558,7 @@ class HTTPDownloader(HTTPClientFactory):
                 try:
                     self.file.close()
                 except:
-                    log.err(None, "Error closing HTTPDownloader file")
+                    self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
 
@@ -1272,6 +1273,7 @@ class HTTPConnectionPool(object):
     maxPersistentPerHost = 2
     cachedConnectionTimeout = 240
     retryAutomatically = True
+    _log = Logger()
 
     def __init__(self, reactor, persistent=True):
         self._reactor = reactor
@@ -1350,7 +1352,8 @@ class HTTPConnectionPool(object):
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool.")
             except:
-                log.err()
+                self._log.failure(
+                    "BUG: Non-quiescent protocol added to connection pool.")
             return
         connections = self._connections.setdefault(key, [])
         if len(connections) == self.maxPersistentPerHost:
@@ -1456,12 +1459,9 @@ class _StandardEndpointFactory(object):
     """
     def __init__(self, reactor, contextFactory, connectTimeout, bindAddress):
         """
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A provider to use to create endpoints.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.
@@ -1535,12 +1535,10 @@ class Agent(_AgentBase):
         """
         Create an L{Agent}.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
-            place outgoing connections.
-        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
-            L{twisted.internet.interfaces.IReactorSSL}
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param contextFactory: A factory for TLS contexts, to control the
             verification parameters of OpenSSL.  The default is to use a
@@ -1580,8 +1578,10 @@ class Agent(_AgentBase):
         Create a new L{Agent} that will use the endpoint factory to figure
         out how to connect to the server.
 
-        @param reactor: A provider of
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
@@ -1603,8 +1603,10 @@ class Agent(_AgentBase):
         """
         Initialize a new L{Agent}.
 
-        @param reactor: A provider of relevant reactor interfaces, at a minimum
-            L{twisted.internet.interfaces.IReactorTime}.
+        @param reactor: A reactor for this L{Agent} to place outgoing
+            connections.
+        @type reactor: see L{HostnameEndpoint.__init__} for acceptable reactor
+            types.
 
         @param endpointFactory: Used to construct endpoints which the
             HTTP client will connect with.
