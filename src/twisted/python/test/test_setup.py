@@ -121,7 +121,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('serial', _EXTRAS_REQUIRE)
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
         self.assertIn('macos_platform', _EXTRAS_REQUIRE)
-        self.assertIn('osx_platform', _EXTRAS_REQUIRE) # compat for macos
+        self.assertIn('osx_platform', _EXTRAS_REQUIRE)  # Compat for macOS
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
         self.assertIn('http2', _EXTRAS_REQUIRE)
 
