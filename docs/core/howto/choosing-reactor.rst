@@ -41,8 +41,8 @@ Platform-specific reactor implementations exist for:
 - :ref:`Epoll for Linux 2.6 <core-howto-choosing-reactor-epoll>` 
 - :ref:`WaitForMultipleObjects (WFMO) for Win32 <core-howto-choosing-reactor-win32_wfmo>` 
 - :ref:`Input/Output Completion Port (IOCP) for Win32 <core-howto-choosing-reactor-win32_iocp>` 
-- :ref:`KQueue for FreeBSD and Mac OS X <core-howto-choosing-reactor-kqueue>` 
-- :ref:`CoreFoundation for Mac OS X <core-howto-choosing-reactor-cfreactor>` 
+- :ref:`KQueue for FreeBSD and macOS <core-howto-choosing-reactor-kqueue>`
+- :ref:`CoreFoundation for macOS <core-howto-choosing-reactor-cfreactor>`
 
 
     
@@ -114,7 +114,7 @@ Reactor Functionality
 +-----------------------------------------------+--------------+-----+-----+-----+-----------+-----------+------------+-------------+
 | Input/Output Completion Port (IOCP) for Win32 | Experimental | Y   | Y   | Y   | Y         | Y         | Y          | Win32       |
 +-----------------------------------------------+--------------+-----+-----+-----+-----------+-----------+------------+-------------+
-| CoreFoundation                                | Unmaintained | Y   | Y   | Y   | Y         | Y         | Y          | Mac OS X    |
+| CoreFoundation                                | Unmaintained | Y   | Y   | Y   | Y         | Y         | Y          | macOS       |
 +-----------------------------------------------+--------------+-----+-----+-----+-----------+-----------+------------+-------------+
 | epoll                                         | Stable       | Y   | Y   | Y   | Y         | Y         | Y          | Linux 2.6   |
 +-----------------------------------------------+--------------+-----+-----+-----+-----------+-----------+------------+-------------+
