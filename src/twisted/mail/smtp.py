@@ -80,7 +80,7 @@ __all__ = [
 
 # Cache the hostname (XXX Yes - this is broken)
 if platform.isMacOSX():
-    # On OS X, getfqdn() is ridiculously slow - use the
+    # On macOS, getfqdn() is ridiculously slow - use the
     # probably-identical-but-sometimes-not gethostname() there.
     DNSNAME = socket.gethostname()
 else:
