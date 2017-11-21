@@ -1630,7 +1630,7 @@ class OpenSSLCertificateOptions(object):
 
     def _getEllipticCurve(self, name):
         """
-        A patchable wrapper for L{crypto.get_elliptic_curve}
+        A patchable wrapper for L{OpenSSL.crypto.get_elliptic_curve}
 
         @param name: The name of the elliptic curve to look up.
         @type name: L{unicode}
