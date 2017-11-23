@@ -1079,8 +1079,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
             escape(unquote(request.uri.decode("utf-8"))))
 
         done = self.template % {"header": header, "tableContent": tableContent}
-        if isinstance(done, unicode):
-            done = done.encode("utf-8")
+        done = done.encode("utf-8")
         return done
 
 
