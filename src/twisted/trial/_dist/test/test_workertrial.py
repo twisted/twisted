@@ -45,9 +45,9 @@ class WorkerLogObserverTests(TestCase):
                 calls.append((method, kwargs))
 
         observer = WorkerLogObserver(FakeClient())
-        observer.emit({'message': ['Some log']})
+        observer.emit({'message': [b'Some log']})
         self.assertEqual(
-            calls, [(managercommands.TestWrite, {'out': 'Some log'})])
+            calls, [(managercommands.TestWrite, {'out': b'Some log'})])
 
 
 
@@ -71,10 +71,10 @@ class MainTests(TestCase):
         the stdin fd and C{self.writeStream} for the stdout fd.
         """
         if fd == _WORKER_AMP_STDIN:
-            self.assertIdentical(None, mode)
+            self.assertIdentical('rb', mode)
             return self.readStream
         elif fd == _WORKER_AMP_STDOUT:
-            self.assertEqual('w', mode)
+            self.assertEqual('wb', mode)
             return self.writeStream
         else:
             raise AssertionError("Unexpected fd %r" % (fd,))
@@ -127,7 +127,7 @@ class MainTests(TestCase):
                     raise IOError(errno.EINTR)
                 else:
                     excInfos.append(sys.exc_info())
-                return ''
+                return b''
 
         self.readStream = FakeStream()
         main(self.fdopen)

@@ -104,7 +104,7 @@ _EXTRA_OPTIONS = dict(
     ],
     soap=['soappy'],
     serial=['pyserial >= 3.0'],
-    osx=['pyobjc-core',
+    macos=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
@@ -128,13 +128,14 @@ _EXTRAS_REQUIRE = {
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
-    'osx_platform': (
-        _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
+    'macos_platform': (
+        _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
     ),
     'windows_platform': (
         _EXTRA_OPTIONS['windows'] + _PLATFORM_INDEPENDENT
     ),
 }
+_EXTRAS_REQUIRE['osx_platform'] = _EXTRAS_REQUIRE['macos_platform']
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [

@@ -78,9 +78,9 @@ class Platform:
 
     def isMacOSX(self):
         """
-        Check if current platform is Mac OS X.
+        Check if current platform is macOS.
 
-        @return: C{True} if the current platform has been detected as OS X.
+        @return: C{True} if the current platform has been detected as macOS.
         @rtype: C{bool}
         """
         return self._platform == "darwin"

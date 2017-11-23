@@ -421,7 +421,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         #   Ancillary data is obtained calling ancillaryPacker with
         #   the two FDs associated to two temp files (using the socket
         #   FDs for this fails the device/inode verification tests on
-        #   Mac OS X 10.10, so temp files are used instead).
+        #   macOS 10.10, so temp files are used instead).
         # - Call doRead in the FakeReceiver.
         # - Verify results on FakeProtocol.
         #   Using known device/inodes to verify correct order.

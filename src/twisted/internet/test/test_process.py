@@ -862,7 +862,7 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
 
         skippedReactors = {
             "twisted.internet.pollreactor.PollReactor":
-                "OS X's poll() does not support PTYs"}
+                "macOS's poll() does not support PTYs"}
 globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
 
 

@@ -26,8 +26,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.python.compat import _PY3, nativeString, unicode, itervalues
+from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
@@ -44,6 +43,7 @@ from twisted.python.components import proxyForInterface
 from twisted.web import error
 from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
+from twisted.logger import Logger
 
 
 class PartialDownloadError(error.Error):
@@ -473,6 +473,7 @@ class HTTPDownloader(HTTPClientFactory):
     """
     protocol = HTTPPageDownloader
     value = None
+    _log = Logger()
 
     def __init__(self, url, fileOrName,
                  method=b'GET', postdata=None, headers=None,
@@ -560,7 +561,7 @@ class HTTPDownloader(HTTPClientFactory):
                 try:
                     self.file.close()
                 except:
-                    log.err(None, "Error closing HTTPDownloader file")
+                    self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
 
@@ -1275,6 +1276,7 @@ class HTTPConnectionPool(object):
     maxPersistentPerHost = 2
     cachedConnectionTimeout = 240
     retryAutomatically = True
+    _log = Logger()
 
     def __init__(self, reactor, persistent=True):
         self._reactor = reactor
@@ -1353,7 +1355,8 @@ class HTTPConnectionPool(object):
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool.")
             except:
-                log.err()
+                self._log.failure(
+                    "BUG: Non-quiescent protocol added to connection pool.")
             return
         connections = self._connections.setdefault(key, [])
         if len(connections) == self.maxPersistentPerHost:
