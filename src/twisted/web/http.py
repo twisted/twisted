@@ -472,6 +472,15 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
+    def __hash__():
+        """
+        Generate a hash value for the request.
+
+        @return: The request's hash value.
+        @rtype: L{int}
+        """
+
+
 
 class StringTransport:
     """
@@ -1529,6 +1538,15 @@ class Request:
         if isinstance(other, Request):
             return self is not other
         return NotImplemented
+
+
+    def __hash__(self):
+        """
+        A C{Request} is hashable so that it can be used as a mapping key.
+
+        @return A C{int} based on the instance's identity.
+        """
+        return id(self)
 
 
 
