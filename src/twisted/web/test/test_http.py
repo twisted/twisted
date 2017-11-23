@@ -2991,10 +2991,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         A L{http.Request} is hashable.
         """
         req = http.Request(DummyChannel(), False)
-        try:
-            hash(req)
-        except TypeError as e:
-            self.fail("http.Request must be hashable: {}".format(e))
+        hash(req)
 
 
     def test_eqWithNonRequest(self):

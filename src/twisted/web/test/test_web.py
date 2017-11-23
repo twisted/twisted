@@ -504,11 +504,7 @@ class RequestTests(unittest.TestCase):
         L{server.Request} instances are hashable, thus can be put in a mapping.
         """
         request = server.Request(DummyChannel(), True)
-
-        try:
-            hash(request)
-        except TypeError as e:
-            self.fail("server.Request is not hashable: {}".format(e))
+        hash(request)
 
 
     def testChildLink(self):
