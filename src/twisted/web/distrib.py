@@ -374,7 +374,7 @@ class UserDirectory(resource.Resource):
             sub = 0
         try:
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
-                     = self._pwd.getpwnam(username.decode("utf-8"))
+                     = self._pwd.getpwnam(username.decode("ascii"))
         except KeyError:
             return resource.NoResource()
         if sub:
