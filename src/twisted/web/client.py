@@ -26,8 +26,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import (_PY3, nativeString, intToBytes, unicode,
-                                   itervalues)
+from twisted.python.compat import _PY3, nativeString, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
 from incremental import Version
