@@ -962,8 +962,8 @@ Some other configuration options are available as well:
 
 
 
-- ``--port`` : Specify the port for the web
-  server to listen on.  This defaults to 8080.
+- ``--listen`` : Specify the port for the web
+  server to listen on.  This defaults to tcp:8080.
 - ``--logfile`` : Specify the path to the
   log file.
 - ``--add-header``: Specify additional headers to be served with every response.
@@ -1152,15 +1152,15 @@ Once you're running both of these instances, go to ``http://localhost:8080/your_
 
 
 By default, a personal server listens on a UNIX socket in the owner's home
-directory.  The ``--port`` option can be used to make
+directory.  The ``--listen`` option can be used to make
 it listen on a different address, such as a TCP or SSL server or on a UNIX
 server in a different location.  If you use this option to make a personal
 server listen on a different address, the central (User) server won't be
 able to find it, but a custom server which uses the same APIs as the central
-server might.  Another use of the ``--port`` option
+server might.  Another use of the ``--listen`` option
 is to make the UNIX server robust against system crashes.  If the server
 crashes and the UNIX socket is left on the filesystem, the personal server
-will not be able to restart until it is removed.  However, if ``--port unix:/home/username/.twistd-web-pb:wantPID=1`` is
+will not be able to restart until it is removed.  However, if ``--listen unix:/home/username/.twistd-web-pb:wantPID=1`` is
 supplied when creating the personal server, then a lockfile will be used to
 keep track of whether the server socket is in use and automatically delete
 it when it is not.
