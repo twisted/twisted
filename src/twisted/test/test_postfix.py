@@ -82,7 +82,7 @@ class PostfixTCPMapServerTestCase(object):
             protocol.lineReceived(input)
             self.assertEqual(
                 transport.value(), expected_output,
-                'For %r, expected %r but got %r' % (
+                'For {!r}, expected {!r} but got {!r}'.format(
                     input, expected_output, transport.value()))
             transport.clear()
         protocol.setTimeout(None)
