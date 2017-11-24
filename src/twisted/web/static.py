@@ -216,7 +216,8 @@ class File(resource.Resource, filepath.FilePath):
 
     type = None
 
-    def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
+    def __init__(self, path, defaultType="text/html", ignoredExts=(),
+                 registry=None, allowExt=0):
         """
         Create a file with the given path.
 
@@ -367,36 +368,39 @@ class File(resource.Resource, filepath.FilePath):
             raise ValueError("Missing '=' separator")
         kind = kind.strip()
         if kind != b'bytes':
-            raise ValueError("Unsupported Bytes-Unit: %r" % (kind,))
+            raise ValueError("Unsupported Bytes-Unit: {!r}".format(kind))
         unparsedRanges = list(filter(None, map(bytes.strip, value.split(b','))))
         parsedRanges = []
         for byteRange in unparsedRanges:
             try:
                 start, end = byteRange.split(b'-', 1)
             except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                raise ValueError("Invalid Byte-Range: {!r}".format(byteRange))
             if start:
                 try:
                     start = int(start)
                 except ValueError:
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError("Invalid Byte-Range: {!r}".format(
+                        byteRange))
             else:
                 start = None
             if end:
                 try:
                     end = int(end)
                 except ValueError:
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError("Invalid Byte-Range: {!r}".format(
+                        byteRange))
             else:
                 end = None
             if start is not None:
                 if end is not None and start > end:
                     # Start must be less than or equal to end or it is invalid.
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError("Invalid Byte-Range: {!r}".format(
+                        byteRange))
             elif end is None:
                 # One or both of start and end must be specified.  Omitting
                 # both is invalid.
-                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                raise ValueError("Invalid Byte-Range: {!r}".format(byteRange))
             parsedRanges.append((start, end))
         return parsedRanges
 
@@ -610,7 +614,8 @@ class File(resource.Resource, filepath.FilePath):
         try:
             parsedRanges = self._parseRangeHeader(byteRange)
         except ValueError:
-            log.msg("Ignoring malformed Range header %r" % (byteRange.decode(),))
+            log.msg("Ignoring malformed Range header {!r}".format(
+                byteRange.decode()))
             self._setContentHeaders(request)
             request.setResponseCode(http.OK)
             return NoRangeStaticProducer(request, fileForReading)
@@ -695,8 +700,10 @@ class File(resource.Resource, filepath.FilePath):
 
 
     def createSimilarFile(self, path):
-        f = self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
-        # refactoring by steps, here - constructor should almost certainly take these
+        f = self.__class__(path, self.defaultType, self.ignoredExts,
+            self.registry)
+        # Refactoring by steps, here - constructor should almost certainly
+        # take these
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
         f.childNotFound = self.childNotFound
@@ -1041,8 +1048,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
                     continue
                 files.append({
                     'text': escapedPath, "href": url,
-                    'type': '[%s]' % mimetype,
-                    'encoding': (encoding and '[%s]' % encoding or ''),
+                    'type': '[{}]'.format(mimetype),
+                    'encoding': (encoding and '[{}]'.format(encoding) or ''),
                     'size': formatFileSize(size)})
         return dirs, files
 
@@ -1084,6 +1091,6 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 
 
     def __repr__(self):
-        return '<DirectoryLister of %r>' % self.path
+        return '<DirectoryLister of {!r}>'.format(self.path)
 
     __str__ = __repr__
