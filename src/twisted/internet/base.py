@@ -20,7 +20,7 @@ import traceback
 from twisted.internet.interfaces import (
     IReactorCore, IReactorTime, IReactorThreads, IResolverSimple,
     IReactorPluggableResolver, IReactorPluggableNameResolver, IConnector,
-    IDelayedCall,
+    IDelayedCall, _ISupportsExitSignalCapturing
 )
 
 from twisted.internet import fdesc, main, error, abstract, defer, threads
@@ -445,7 +445,7 @@ class _ThreePhaseEvent(object):
 
 
 @implementer(IReactorCore, IReactorTime, IReactorPluggableResolver,
-             IReactorPluggableNameResolver)
+             IReactorPluggableNameResolver, _ISupportsExitSignalCapturing)
 class ReactorBase(object):
     """
     Default base class for Reactors.
@@ -473,6 +473,8 @@ class ReactorBase(object):
     @ivar _registerAsIOThread: A flag controlling whether the reactor will
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
+
+    @ivar _exitSignal: See L{_ISupportsExitSignalCapturing._exitSignal}
     """
 
     _registerAsIOThread = True
@@ -481,6 +483,7 @@ class ReactorBase(object):
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
+    _exitSignal = None
 
     __name__ = "twisted.internet.reactor"
 
@@ -644,22 +647,37 @@ class ReactorBase(object):
             'during', 'startup', self._reallyStartRunning)
 
     def sigInt(self, *args):
-        """Handle a SIGINT interrupt.
+        """
+        Handle a SIGINT interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
+        self._exitSignal = args[0]
+
 
     def sigBreak(self, *args):
-        """Handle a SIGBREAK interrupt.
+        """
+        Handle a SIGBREAK interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
+        self._exitSignal = args[0]
+
 
     def sigTerm(self, *args):
-        """Handle a SIGTERM interrupt.
+        """
+        Handle a SIGTERM interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
+        self._exitSignal = args[0]
+
 
     def disconnectAll(self):
         """Disconnect every reader, and writer in the system.

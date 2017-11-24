@@ -21,7 +21,7 @@ from twisted.internet._resolver import FirstOneWins
 from twisted.internet.defer import Deferred
 from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
 from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -369,3 +369,72 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
             "traceback at creation:".format(id(dc)))
         self.assertRegex(
             str(dc), expectedRegexp)
+
+
+
+class TestSpySignalCapturingReactor(ReactorBase):
+
+    """
+    Subclass of ReactorBase to capture signals delivered to the
+    reactor for inspection.
+    """
+
+    def installWaker(self):
+        """
+        Required method, unused.
+        """
+
+
+
+class ReactorBaseSignalTests(TestCase):
+
+    """
+    Tests to exercise ReactorBase's signal exit reporting path.
+    """
+
+    def test_exitSignalDefaultsToNone(self):
+        """
+        The default value of the _exitSignal attribute is None.
+        """
+        reactor = TestSpySignalCapturingReactor()
+        self.assertIs(None, reactor._exitSignal)
+
+
+    def test_captureSIGINT(self):
+        """
+        ReactorBase's SIGINT handler saves the value of SIGINT to the
+        _exitSignal attribute.
+        """
+        reactor = TestSpySignalCapturingReactor()
+        reactor.sigInt(signal.SIGINT, None)
+        self.assertEquals(signal.SIGINT, reactor._exitSignal)
+
+
+    def test_captureSIGTERM(self):
+        """
+        ReactorBase's SIGTERM handler saves the value of SIGTERM to the
+        _exitSignal attribute.
+        """
+        reactor = TestSpySignalCapturingReactor()
+        reactor.sigTerm(signal.SIGTERM, None)
+        self.assertEquals(signal.SIGTERM, reactor._exitSignal)
+
+
+    def test_captureSIGBREAK(self):
+        """
+        ReactorBase's SIGBREAK handler saves the value of SIGBREAK to the
+        _exitSignal attribute.
+        """
+        if not hasattr(signal, "SIGBREAK"):
+            raise SkipTest("signal module does not have SIGBREAK")
+
+        reactor = TestSpySignalCapturingReactor()
+        reactor.sigBreak(signal.SIGBREAK, None)
+        self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
+
+
+
+try:
+    import signal
+except ImportError:
+    ReactorBaseSignalTests.skip = "signal module not available"
