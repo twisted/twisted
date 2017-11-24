@@ -46,7 +46,8 @@ def unquote(s):
 
 
 class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
-    """Postfix mail transport agent TCP map protocol implementation.
+    """
+    Postfix mail transport agent TCP map protocol implementation.
 
     Receive requests for data matching given key via lineReceived,
     asks it's factory for the data with self.factory.get(key), and
@@ -133,7 +134,9 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
 
 class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
-    """An in-memory dictionary factory for PostfixTCPMapServer."""
+    """
+    An in-memory dictionary factory for PostfixTCPMapServer.
+    """
 
     protocol = PostfixTCPMapServer
 
