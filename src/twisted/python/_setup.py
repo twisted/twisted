@@ -365,19 +365,9 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.mail.alias",
-    "twisted.mail.bounce",
-    "twisted.mail.mail",
-    "twisted.mail.maildir",
-    "twisted.mail.pb",
-    "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
     "twisted.mail.scripts.mailmail",
-    "twisted.mail.tap",
-    "twisted.mail.test.test_bounce",
-    "twisted.mail.test.test_mail",
     "twisted.mail.test.test_mailmail",
-    "twisted.mail.test.test_options",
     "twisted.mail.test.test_scripts",
     "twisted.news.__init__",
     "twisted.news.database",
@@ -388,7 +378,6 @@ notPortedModules = [
     "twisted.news.test.test_database",
     "twisted.news.test.test_news",
     "twisted.news.test.test_nntp",
-    "twisted.plugins.twisted_mail",
     "twisted.plugins.twisted_news",
     "twisted.protocols.mice.__init__",
     "twisted.protocols.mice.mouseman",
