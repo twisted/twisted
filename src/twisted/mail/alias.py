@@ -40,14 +40,15 @@ def handle(result, line, filename, lineNo):
     @type lineNo: L{int}
     @param lineNo: The position of the line within the aliases file.
     """
-    parts = [p.strip() for p in line.split(':', 1)]
+    parts = [p.strip() for p in line.split(b':', 1)]
     if len(parts) != 2:
         fmt = "Invalid format on line %d of alias file %s."
         arg = (lineNo, filename)
         log.err(fmt % arg)
     else:
         user, alias = parts
-        result.setdefault(user.strip(), []).extend(map(str.strip, alias.split(',')))
+        result.setdefault(user.strip(), []).extend(
+            [a.strip() for a in alias.split(b',')])
 
 
 
@@ -95,19 +96,19 @@ def loadAliasFile(domains, filename=None, fp=None):
     result = {}
     close = False
     if fp is None:
-        fp = open(filename)
+        fp = open(filename, "rb")
         close = True
     else:
         filename = getattr(fp, 'name', '<unknown>')
     i = 0
-    prev = ''
+    prev = b''
     try:
         for line in fp:
             i += 1
             line = line.rstrip()
-            if line.lstrip().startswith('#'):
+            if line.lstrip().startswith(b'#'):
                 continue
-            elif line.startswith(' ') or line.startswith('\t'):
+            elif line.startswith(b' ') or line.startswith(b'\t'):
                 prev = prev + line
             else:
                 if prev:
@@ -206,10 +207,10 @@ class AddressAlias(AliasBase):
         """
         Build a string representation of this L{AddressAlias} instance.
 
-        @rtype: L{bytes}
+        @rtype: L{str}
         @return: A string containing the destination address.
         """
-        return '<Address %s>' % (self.alias,)
+        return '<Address {}>'.format(self.alias)
 
 
     def createMessageReceiver(self):
@@ -220,7 +221,7 @@ class AddressAlias(AliasBase):
         @rtype: L{IMessage <smtp.IMessage>} provider
         @return: A message receiver.
         """
-        return self.domain().exists(str(self.alias))
+        return self.domain().exists(str(self.alias).encode("ascii"))
 
 
     def resolve(self, aliasmap, memo=None):
@@ -283,7 +284,7 @@ class FileWrapper:
         @type line: L{bytes}
         @param line: A received line of the message.
         """
-        self.fp.write(line + '\n')
+        self.fp.write(line + b'\n')
 
 
     def eomReceived(self):
@@ -298,7 +299,7 @@ class FileWrapper:
         """
         self.fp.seek(0, 0)
         try:
-            f = open(self.finalname, 'a')
+            f = open(self.finalname, 'ab')
         except:
             return defer.fail(failure.Failure())
 
@@ -469,7 +470,7 @@ class MessageWrapper:
         """
         if self.done:
             return
-        self.protocol.transport.write(line + '\n')
+        self.protocol.transport.write(line + b'\n')
 
 
     def eomReceived(self):
@@ -723,18 +724,18 @@ class AliasGroup(AliasBase):
         self.aliases = []
         while items:
             addr = items.pop().strip()
-            if addr.startswith(':'):
+            if addr.startswith(b':'):
                 try:
-                    f = open(addr[1:])
+                    f = open(addr[1:], "rb")
                 except:
                     log.err("Invalid filename in alias file %r" % (addr[1:],))
                 else:
                     with f:
-                        addr = ' '.join([l.strip() for l in f])
+                        addr = b' '.join([l.strip() for l in f])
                     items.extend(addr.split(','))
-            elif addr.startswith('|'):
+            elif addr.startswith(b'|'):
                 self.aliases.append(self.processAliasFactory(addr[1:], *args))
-            elif addr.startswith('/'):
+            elif addr.startswith(b'/'):
                 if os.path.isdir(addr):
                     log.err("Directory delivery not supported")
                 else:
@@ -796,4 +797,4 @@ class AliasGroup(AliasBase):
         r = []
         for a in self.aliases:
             r.append(a.resolve(aliasmap, memo))
-        return MultiWrapper(filter(None, r))
+        return MultiWrapper([alias for alias in r if alias])

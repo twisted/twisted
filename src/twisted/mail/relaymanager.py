@@ -20,15 +20,17 @@ try:
 except ImportError:
     import pickle
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.mail import relay
-from twisted.mail import bounce
+from twisted.application import internet
 from twisted.internet import protocol
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
+from twisted.mail import bounce
+from twisted.mail import relay
 from twisted.mail import smtp
-from twisted.application import internet
+from twisted.python import log
+from twisted.python.compat import iteritems
+from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 
 
 
@@ -339,9 +341,9 @@ class Queue:
         """
         Scan the message directory for new messages.
         """
-        for message in os.listdir(self.directory):
+        for message in FilePath(self.directory).asBytesMode().listdir():
             # Skip non data files
-            if message[-2:] != '-D':
+            if message[-2:] != b'-D':
                 continue
             self.addMessage(message[:-2])
 
@@ -353,7 +355,7 @@ class Queue:
         @rtype: L{list} of L{bytes}
         @return: The base filenames of messages waiting to be relayed.
         """
-        return self.waiting.keys()
+        return list(self.waiting.keys())
 
 
     def hasWaiting(self):
@@ -376,7 +378,7 @@ class Queue:
         @return: The base filenames of messages in the process of being
             relayed.
         """
-        return self.relayed.keys()
+        return list(self.relayed.keys())
 
 
     def setRelaying(self, message):
@@ -412,7 +414,7 @@ class Queue:
         if message not in self.relayed:
             self.waiting[message] = 1
             if self.noisy:
-                log.msg('Set ' + message + ' waiting')
+                log.msg(b'Set ' + message + b' waiting')
 
 
     def done(self, message):
@@ -423,8 +425,8 @@ class Queue:
         @param message: The base filename of a message.
         """
         message = os.path.basename(message)
-        os.remove(self.getPath(message) + '-D')
-        os.remove(self.getPath(message) + '-H')
+        os.remove(self.getPath(message) + b'-D')
+        os.remove(self.getPath(message) + b'-H')
         del self.relayed[message]
 
 
@@ -438,7 +440,7 @@ class Queue:
         @rtype: L{bytes}
         @return: The full base pathname of the message.
         """
-        return os.path.join(self.directory, message)
+        return FilePath(self.directory).child(message).asBytesMode().path
 
 
     def getEnvelope(self, message):
@@ -466,7 +468,7 @@ class Queue:
         @rtype: L{file}
         @return: The envelope file for the message.
         """
-        return open(os.path.join(self.directory, message + '-H'), 'rb')
+        return FilePath(self.directory).child(message + b'-H').open()
 
 
     def createNewMessage(self):
@@ -477,11 +479,13 @@ class Queue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
+        dirPath = FilePath(self.directory)
+        fname = u"{}_{}_{}_{}".format(
+            os.getpid(), time.time(), self.n, id(self))
         self.n = self.n + 1
-        headerFile = open(os.path.join(self.directory, fname + '-H'), 'wb')
-        tempFilename = os.path.join(self.directory, fname + '-C')
-        finalFilename = os.path.join(self.directory, fname + '-D')
+        headerFile = dirPath.child(fname + u'-H').open(mode='wb')
+        tempFilename = dirPath.child(fname + u'-C').asBytesMode().path
+        finalFilename = dirPath.child(fname + u'-D').asBytesMode().path
         messageFile = open(tempFilename, 'wb')
 
         from twisted.mail.mail import FileMessage
@@ -563,7 +567,7 @@ class _AttemptManager(object):
         @param message: The path of the file holding the message.
         """
         if self.noisy:
-            log.msg("success sending %s, removing from queue" % message)
+            log.msg(b"success sending " + message + b", removing from queue")
         self._finish(relay, message)
 
 
@@ -578,7 +582,7 @@ class _AttemptManager(object):
         @param message: The path of the file holding the message.
         """
         if self.noisy:
-            log.msg("could not relay " + message)
+            log.msg(b"could not relay " + message)
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
         # discard it
@@ -586,7 +590,7 @@ class _AttemptManager(object):
         with self.manager.queue.getEnvelopeFile(message) as fp:
             from_, to = pickle.load(fp)
         from_, to, bounceMessage = bounce.generateBounce(
-            open(self.manager.queue.getPath(message) + '-D'), from_, to)
+            open(self.manager.queue.getPath(message) + b'-D'), from_, to)
         fp, outgoingMessage = self.manager.queue.createNewMessage()
         with fp:
             pickle.dump([from_, to], fp)
@@ -607,7 +611,7 @@ class _AttemptManager(object):
         """
         for message in self.manager.managed.get(relay, ()):
             if self.noisy:
-                log.msg("Setting " + message + " waiting")
+                log.msg(b"Setting " + message + b" waiting")
             self.manager.queue.setWaiting(message)
         try:
             del self.manager.managed[relay]
@@ -776,7 +780,7 @@ class SmartHostSMTPRelayingManager:
             if len(parts) != 2:
                 log.err("Illegal message destination: " + to)
                 continue
-            domain = parts[1]
+            domain = parts[1].encode("ascii")
 
             self.queue.setRelaying(msg)
             exchanges.setdefault(domain, []).append(self.queue.getPath(msg))
@@ -787,10 +791,10 @@ class SmartHostSMTPRelayingManager:
             self.mxcalc = MXCalculator()
 
         relays = []
-        for (domain, msgs) in exchanges.iteritems():
+        for (domain, msgs) in iteritems(exchanges):
             manager = _AttemptManager(self, self.queue.noisy)
             factory = self.factory(msgs, manager, *self.fArgs, **self.fKwArgs)
-            self.managed[factory] = map(os.path.basename, msgs)
+            self.managed[factory] = [os.path.basename(msg) for msg in msgs]
             relayAttemptDeferred = manager.getCompletionDeferred()
             connectSetupDeferred = self.mxcalc.getMX(domain)
             connectSetupDeferred.addCallback(lambda mx: str(mx.name))
@@ -841,11 +845,11 @@ class SmartHostSMTPRelayingManager:
         @type domain: L{bytes}
         @param domain: A domain.
         """
-        log.err('Error setting up managed relay factory for ' + domain)
+        log.err(b'Error setting up managed relay factory for ' + domain)
         log.err(failure)
 
         def setWaiting(queue, messages):
-            map(queue.setWaiting, messages)
+            [queue.setWaiting(msg) for msg in messages]
 
         from twisted.internet import reactor
         reactor.callLater(30, setWaiting, self.queue, self.managed[factory])
@@ -969,7 +973,7 @@ class MXCalculator:
         @type mx: L{bytes}
         @param mx: The hostname of a mail exchange host.
         """
-        self.badMXs[str(mx)] = self.clock.seconds() + self.timeOutBadMX
+        self.badMXs[mx] = self.clock.seconds() + self.timeOutBadMX
 
 
     def markGood(self, mx):
@@ -1027,7 +1031,7 @@ class MXCalculator:
         """
         recordBag = {}
         for answer in records[0]:
-            recordBag.setdefault(str(answer.name), []).append(answer.payload)
+            recordBag.setdefault(answer.name.name, []).append(answer.payload)
         return recordBag
 
 
@@ -1072,7 +1076,7 @@ class MXCalculator:
                 # Remember that this name was an alias.
                 seenAliases.add(domain)
 
-                canonicalName = str(record.name)
+                canonicalName = record.name.name
                 # See if we have some local records which might be relevant.
                 if canonicalName in answers:
 
@@ -1096,9 +1100,9 @@ class MXCalculator:
                 exchanges.append((record.preference, record))
 
         if exchanges:
-            exchanges.sort()
+            exchanges = sorted(exchanges, key=lambda k: str(k))
             for (preference, record) in exchanges:
-                host = str(record.name)
+                host = record.name.name
                 if host not in self.badMXs:
                     return record
                 t = self.clock.seconds() - self.badMXs[host]

@@ -45,8 +45,8 @@ class DomainQueuer:
         """
         if self.willRelay(user.dest, user.protocol):
             # The most cursor form of verification of the addresses
-            orig = filter(None, str(user.orig).split('@', 1))
-            dest = filter(None, str(user.dest).split('@', 1))
+            orig = [c for c in str(user.orig).split('@', 1) if c]
+            dest = [c for c in str(user.dest).split('@', 1) if c]
             if len(orig) == 2 and len(dest) == 2:
                 return lambda: self.startMessage(user)
         raise smtp.SMTPBadRcpt(user)
@@ -94,9 +94,9 @@ class RelayerMixin:
         self.messages = []
         self.names = []
         for message in messagePaths:
-            with open(message + '-H') as fp:
+            with open(message + b'-H', "rb") as fp:
                 messageContents = pickle.load(fp)
-            fp = open(message + '-D')
+            fp = open(message + b'-D', "rb")
             messageContents.append(fp)
             self.messages.append(messageContents)
             self.names.append(message)
@@ -127,8 +127,8 @@ class RelayerMixin:
         """
         if code in smtp.SUCCESS:
             # At least one, i.e. all, recipients successfully delivered
-            os.remove(self.names[0] + '-D')
-            os.remove(self.names[0] + '-H')
+            os.remove(self.names[0] + b'-D')
+            os.remove(self.names[0] + b'-H')
         del self.messages[0]
         del self.names[0]
 

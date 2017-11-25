@@ -12,18 +12,16 @@ import stat
 import socket
 from hashlib import md5
 
-from zope.interface import implementer
+from io import BytesIO
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from zope.interface import implementer
 
 from twisted.mail import pop3
 from twisted.mail import smtp
 from twisted.protocols import basic
 from twisted.persisted import dirdbm
 from twisted.python import log, failure
+from twisted.python.filepath import FilePath
 from twisted.mail import mail
 from twisted.internet import interfaces, defer, reactor
 from twisted.cred import portal, credentials, checkers
@@ -80,10 +78,11 @@ class _MaildirNameGenerator:
         """
         self.n = self.n + 1
         t = self._clock.seconds()
-        seconds = str(int(t))
-        microseconds = '%07d' % (int((t - int(t)) * 10e6),)
-        return '%s.M%sP%sQ%s.%s' % (seconds, microseconds,
-                                    self.p, self.n, self.s)
+        seconds = int(t)
+        microseconds = u'{:07d}'.format(int((t - int(t)) * 10e6))
+        unique = u'{}.M{}P{}Q{}.{}'.format(seconds, microseconds, self.p,
+            self.n, self.s)
+        return unique.encode("ascii")
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
 
@@ -96,14 +95,15 @@ def initializeMaildir(dir):
     @type dir: L{bytes}
     @param dir: The path name for a user directory.
     """
-    if not os.path.isdir(dir):
-        os.mkdir(dir, 0o700)
+    dirPath = FilePath(dir)
+    if not dirPath.isdir():
+        os.mkdir(dirPath.path, 0o700)
         for subdir in ['new', 'cur', 'tmp', '.Trash']:
-            os.mkdir(os.path.join(dir, subdir), 0o700)
+            os.mkdir(dirPath.child(subdir).path, 0o700)
         for subdir in ['new', 'cur', 'tmp']:
-            os.mkdir(os.path.join(dir, '.Trash', subdir), 0o700)
+            os.mkdir(dirPath.child('.Trash').child(subdir).path, 0o700)
         # touch
-        open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
+        open(dirPath.child('.Trash').child('maildirfolder').path, 'w').close()
 
 
 
@@ -132,7 +132,7 @@ class MaildirMessage(mail.FileMessage):
         @type kw: L{dict}
         @param kw: Keyword arguments for L{FileMessage.__init__}.
         """
-        header = "Delivered-To: %s\n" % address
+        header = u"Delivered-To: {}\n".format(address).encode("ascii")
         fp.write(header)
         self.size = len(header)
         mail.FileMessage.__init__(self, fp, *a, **kw)
@@ -159,7 +159,8 @@ class MaildirMessage(mail.FileMessage):
         @return: A deferred which returns the name of the file holding the
             message.
         """
-        self.finalName = self.finalName+',S=%d' % self.size
+        self.finalName = self.finalName + u',S={}'.format(self.size).encode(
+            "ascii")
         return mail.FileMessage.eomReceived(self)
 
 
@@ -261,12 +262,13 @@ class AbstractMaildirDomain:
             name, domain = user.split('@', 1)
         else:
             name, domain = user.dest.local, user.dest.domain
-        dir = self.userDirectory(name)
+        dirPath = FilePath(self.userDirectory(name))
         fname = _generateMaildirName()
-        filename = os.path.join(dir, 'tmp', fname)
-        fp = open(filename, 'w')
-        return MaildirMessage('%s@%s' % (name, domain), fp, filename,
-                              os.path.join(dir, 'new', fname))
+        filename = dirPath.child('tmp').child(fname).asBytesMode().path
+        fp = open(filename, 'wb')
+        return MaildirMessage(
+            u'{}@{}'.format(name, domain).encode("ascii"), fp, filename,
+            dirPath.child('new').child(fname).asBytesMode().path)
 
 
     def willRelay(self, user, protocol):
@@ -368,7 +370,7 @@ class _MaildirMailboxAppendMessageTask:
         self.defer = defer.Deferred()
         self.openCall = None
         if not hasattr(msg, "read"):
-            msg = StringIO.StringIO(msg)
+            msg = BytesIO(msg)
         self.msg = msg
 
 
@@ -455,7 +457,8 @@ class _MaildirMailboxAppendMessageTask:
         successfully.
         """
         while True:
-            newname = os.path.join(self.mbox.path, "new", _generateMaildirName())
+            newname = FilePath(self.mbox.path).child(
+                "new").child(_generateMaildirName()).asBytesMode().path
             try:
                 self.osrename(self.tmpname, newname)
                 break
@@ -483,14 +486,16 @@ class _MaildirMailboxAppendMessageTask:
         tries = 0
         self.fh = -1
         while True:
-            self.tmpname = os.path.join(self.mbox.path, "tmp", _generateMaildirName())
+            self.tmpname = FilePath(self.mbox.path).child("tmp").child(
+                _generateMaildirName()).asBytesMode().path
             try:
                 self.fh = self.osopen(self.tmpname, attr, 0o600)
                 return None
             except OSError:
                 tries += 1
                 if tries > 500:
-                    self.defer.errback(RuntimeError("Could not create tmp file for %s" % self.mbox.path))
+                    self.defer.errback(RuntimeError(
+                        b"Could not create tmp file for " + self.mbox.path))
                     self.defer = None
                     return None
 
@@ -526,9 +531,10 @@ class MaildirMailbox(pop3.Mailbox):
         self.list = []
         self.deleted = {}
         initializeMaildir(path)
-        for name in ('cur', 'new'):
-            for file in os.listdir(os.path.join(path, name)):
-                self.list.append((file, os.path.join(path, name, file)))
+        for name in (b'cur', b'new'):
+            for file in FilePath(path).child(name).listdir():
+                self.list.append((file, FilePath(path).child(name).child(
+                    file).asBytesMode().path))
         self.list.sort()
         self.list = [e[1] for e in self.list]
 
@@ -574,7 +580,7 @@ class MaildirMailbox(pop3.Mailbox):
         @raise IndexError: When the index does not correspond to a message in
             the mailbox.
         """
-        return open(self.list[i])
+        return open(self.list[i], "rb")
 
 
     def getUidl(self, i):
@@ -609,11 +615,10 @@ class MaildirMailbox(pop3.Mailbox):
         @raise IndexError: When the index does not correspond to a message in
             the mailbox.
         """
-        trashFile = os.path.join(
-            self.path, '.Trash', 'cur', os.path.basename(self.list[i])
-        )
-        os.rename(self.list[i], trashFile)
-        self.deleted[self.list[i]] = trashFile
+        trashFile = FilePath(self.path).child(b'.Trash').child(b'cur').child(
+            os.path.basename(self.list[i])).asBytesMode()
+        os.rename(self.list[i], trashFile.path)
+        self.deleted[self.list[i]] = trashFile.path
         self.list[i] = 0
 
 
@@ -710,13 +715,13 @@ class StringListMailbox:
         @type i: L{int}
         @param i: The 0-based index of a message.
 
-        @rtype: L{StringIO <cStringIO.StringIO>}
+        @rtype: L{BytesIO}
         @return: An in-memory file-like object containing the message.
 
         @raise IndexError: When the index does not correspond to a message in
             the mailbox.
         """
-        return StringIO.StringIO(self.msgs[i])
+        return BytesIO(self.msgs[i])
 
 
     def getUidl(self, i):
@@ -760,7 +765,7 @@ class StringListMailbox:
         Discard the contents of any messages marked for deletion.
         """
         for index in self._delete:
-            self.msgs[index] = ""
+            self.msgs[index] = b""
         self._delete = set()
 
 
@@ -799,7 +804,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             bounced (C{False}).
         """
         AbstractMaildirDomain.__init__(self, service, root)
-        dbm = os.path.join(root, 'passwd')
+        dbm = FilePath(root).child(b'passwd').path
         if not os.path.exists(dbm):
             os.makedirs(dbm)
         self.dbm = dirdbm.open(dbm)
@@ -821,7 +826,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         if name not in self.dbm:
             if not self.postmaster:
                 return None
-            name = 'postmaster'
+            name = b'postmaster'
         dir = os.path.join(self.root, name)
         if not os.path.exists(dir):
             initializeMaildir(dir)
@@ -891,7 +896,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         if avatarId == checkers.ANONYMOUS:
             mbox = StringListMailbox([INTERNAL_ERROR])
         else:
-            mbox = MaildirMailbox(os.path.join(self.root, avatarId))
+            mbox = MaildirMailbox(FilePath(self.root).child(
+                avatarId).asBytesMode().path)
 
         return (
             pop3.IMailbox,

@@ -11,8 +11,8 @@ import warnings
 # Twisted imports
 from twisted.internet import defer
 from twisted.application import service, internet
-from twisted.python import util
-from twisted.python import log
+from twisted.python import log, util
+from twisted.python.compat import itervalues
 from twisted.mail.interfaces import IAliasableDomain, IDomain
 from twisted.cred.portal import Portal
 
@@ -180,7 +180,7 @@ class DomainWithDefaultDict:
         @return: A string containing the mapping of domain names to domain
             objects.
         """
-        return '<DomainWithDefaultDict %s>' % (self.domains,)
+        return '<DomainWithDefaultDict {}>'.format(self.domains)
 
 
     def __repr__(self):
@@ -191,7 +191,7 @@ class DomainWithDefaultDict:
         @return: A pseudo-executable string describing the underlying domain
             mapping of this object.
         """
-        return 'DomainWithDefaultDict(%s)' % (self.domains,)
+        return 'DomainWithDefaultDict({})'.format(self.domains)
 
 
     def get(self, key, default=None):
@@ -264,7 +264,7 @@ class DomainWithDefaultDict:
             L{None}
         @return: An iterator over the domain objects.
         """
-        return self.domains.itervalues()
+        return itervalues(self.domains)
 
 
     def keys(self):
@@ -275,7 +275,7 @@ class DomainWithDefaultDict:
         @return: The domain names in this dictionary.
 
         """
-        return self.domains.keys()
+        return list(self.domains.keys())
 
 
     def values(self):
@@ -285,7 +285,7 @@ class DomainWithDefaultDict:
         @rtype: L{list} of L{IDomain} provider or L{None}
         @return: The domain objects in this dictionary.
         """
-        return self.domains.values()
+        return list(self.domains.values())
 
 
     def items(self):
@@ -297,7 +297,7 @@ class DomainWithDefaultDict:
             provider or L{None}
         @return: Domain name/domain object pairs in this dictionary.
         """
-        return self.domains.items()
+        return list(self.domains.items())
 
 
     def popitem(self):
@@ -459,7 +459,7 @@ class FileMessage:
         @type line: L{bytes}
         @param line: A received line.
         """
-        self.fp.write(line+'\n')
+        self.fp.write(line + b'\n')
 
 
     def eomReceived(self):
@@ -630,12 +630,12 @@ class MailService(service.MultiService):
         """
         Return the portal for the default domain.
 
-        The default domain is named ''.
+        The default domain is named b''.
 
         @rtype: L{Portal}
         @return: The portal for the default domain.
         """
-        return self.portals['']
+        return self.portals[b'']
 
 
 
@@ -743,7 +743,7 @@ class FileMonitoringService(internet.TimerService):
             except:
                 now = 0
             if now > mtime:
-                log.msg("%s changed, notifying listener" % (name,))
+                log.msg("{} changed, notifying listener".format(name))
                 self.files[self.index][3] = now
                 callback(name)
         self._setupMonitor()
