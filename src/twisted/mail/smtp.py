@@ -1570,6 +1570,8 @@ class ESMTPClient(SMTPClient):
             resp = auth.challengeResponse(self.secret, challenge)
             self._expected = [235, 334]
             self._okresponse = self.smtpState_maybeAuthenticated
+            if isinstance(resp, unicode):
+                resp = resp.encode('utf-8')
             self.sendLine(base64.b64encode(resp))
 
 
