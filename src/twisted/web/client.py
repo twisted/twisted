@@ -83,10 +83,10 @@ class HTTPPageGetter(http.HTTPClient):
         self.sendCommand(method, self.factory.path)
         if self.factory.scheme == b'http' and self.factory.port != 80:
             host = (self.factory.host + b':' +
-                   str(self.factory.port).encode("ascii"))
+                   str(int(self.factory.port)).encode("ascii"))
         elif self.factory.scheme == b'https' and self.factory.port != 443:
             host = (self.factory.host + b':' +
-                    str(self.factory.port).encode("ascii"))
+                    str(int(self.factory.port)).encode("ascii"))
         else:
             host = self.factory.host
         self.sendHeader(b'Host', self.factory.headers.get(b"host", host))
@@ -1416,7 +1416,7 @@ class _AgentBase(object):
             host = b'[' + host + b']'
         if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
-        return host + b":" + str(port).encode("ascii")
+        return host + b":" + str(int(port)).encode("ascii")
 
 
     def _requestWithEndpoint(self, key, endpoint, method, parsedURI,

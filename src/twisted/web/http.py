@@ -1377,7 +1377,7 @@ class Request:
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + str(port).encode("ascii")
+            hostHeader = host + b":" + str(int(port)).encode("ascii")
         self.requestHeaders.setRawHeaders(b"host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
