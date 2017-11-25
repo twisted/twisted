@@ -33,6 +33,8 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.static import Data
 
 from twisted.web.test.test_web import DummyRequest
+from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.logger import globalLogPublisher
 
 
 def b64encode(s):
@@ -584,6 +586,10 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         method results in a 500 response code and causes the exception to be
         logged.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         class UnexpectedException(Exception):
             pass
 
@@ -602,6 +608,11 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = getChildForRequest(self.wrapper, request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
+        self.assertEquals(1, len(logObserver))
+        self.assertIsInstance(
+            logObserver[0]["log_failure"].value,
+            UnexpectedException
+        )
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
 
@@ -610,6 +621,10 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         Any unexpected failure from L{Portal.login} results in a 500 response
         code and causes the failure to be logged.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         class UnexpectedException(Exception):
             pass
 
@@ -625,6 +640,11 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = self._authorizedBasicLogin(request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
+        self.assertEquals(1, len(logObserver))
+        self.assertIsInstance(
+            logObserver[0]["log_failure"].value,
+            UnexpectedException
+        )
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
 

@@ -223,7 +223,7 @@ class ProcessUtilsTests(unittest.TestCase):
         scriptFile = self.makeSourceFile([
                 "import os, sys, stat",
                 # Fix the permissions so we can report the working directory.
-                # On OS X (and maybe elsewhere), os.getcwd() fails with EACCES
+                # On macOS (and maybe elsewhere), os.getcwd() fails with EACCES
                 # if +x is missing from the working directory.
                 "os.chmod(%r, stat.S_IXUSR)" % (dir,),
                 "sys.stdout.write(os.getcwd())"])

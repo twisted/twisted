@@ -30,11 +30,13 @@ from twisted.web.http import _IdentityTransferDecoder
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost, ConnectionDone
 from twisted.protocols import loopback
-from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
+from twisted.test.proto_helpers import (StringTransport, NonStreamingProducer,
+                                        EventLoggingObserver)
 from twisted.test.test_internet import DummyProducer
 from twisted.web.test.requesthelper import DummyChannel
 
 from zope.interface import directlyProvides, providedBy
+from twisted.logger import globalLogPublisher
 
 
 
@@ -314,6 +316,10 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         If a timed out transport doesn't close after 15 seconds, the
         L{HTTPChannel} will forcibly close it.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         clock = Clock()
         transport = StringTransport()
         factory = http.HTTPFactory()
@@ -328,6 +334,9 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertIn("Timing out client: {peer}", event["log_format"])
 
         # Watch the transport get force-closed.
         clock.advance(14)
@@ -336,6 +345,12 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(1)
         self.assertTrue(transport.disconnecting)
         self.assertTrue(transport.disconnected)
+        self.assertEquals(2, len(logObserver))
+        event = logObserver[1]
+        self.assertEquals(
+            "Forcibly timing out client: {peer}",
+            event["log_format"]
+        )
 
 
     def test_transportNotAbortedAfterConnectionLost(self):
@@ -1935,6 +1950,36 @@ Hello,
         self.assertTrue(channel.transport.disconnecting)
 
 
+    def test_basicAuthException(self):
+        """
+        A L{Request} that throws an exception processing basic authorization
+        logs an error and uses an empty username and password.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        requests = []
+        class Request(http.Request):
+            def process(self):
+                self.credentials = (self.getUser(), self.getPassword())
+                requests.append(self)
+
+        u = b"foo"
+        p = b"bar"
+        s = base64.encodestring(b":".join((u, p))).strip()
+        f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
+        self.patch(base64, 'decodestring', lambda x: [])
+        self.runRequest(f, Request, 0)
+        req = requests.pop()
+        self.assertEqual(('', ''), req.credentials)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, AttributeError)
+        self.flushLoggedErrors(AttributeError)
+
+
 
 class QueryArgumentsTests(unittest.TestCase):
     def testParseqs(self):
@@ -2568,7 +2613,47 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             [(b"HTTP/1.0 200 OK",
               b"Test: lemur",
               b"Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT",
+              b"Hello")]
+        )
+
+
+    def test_lastModifiedAlreadyWritten(self):
+        """
+        If the last-modified header already exists in the L{http.Request}
+        response headers, the lastModified attribute is ignored and a message
+        is logged.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        trans = StringTransport()
+
+        channel.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = b"HTTP/1.0"
+        req.lastModified = 1000000000
+        req.responseHeaders.setRawHeaders(
+            b"last-modified",
+            [b"Thu, 01 Jan 1970 00:00:00 GMT"]
+        )
+        req.write(b'Hello')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [(b"HTTP/1.0 200 OK",
+              b"Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT",
               b"Hello")])
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertEquals(
+            "Warning: last-modified specified both in"
+            " header list and lastModified attribute.",
+            event["log_format"]
+        )
 
 
     def test_receivedCookiesDefault(self):
@@ -2986,6 +3071,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertNotEqual(req, http.Request(DummyChannel(), False))
 
 
+    def test_hashable(self):
+        """
+        A L{http.Request} is hashable.
+        """
+        req = http.Request(DummyChannel(), False)
+        hash(req)
+
+
     def test_eqWithNonRequest(self):
         """
         A L{http.Request} on the left hand side of an equality
@@ -3024,6 +3117,25 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         self.assertNotEqual(req, _NotARequest())
         self.assertEqual(eqCalls, [req])
+
+
+    def test_finishProducerStillRegistered(self):
+        """
+        A RuntimeError is logged if a producer is still registered
+        when an L{http.Request} is finished.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        request = http.Request(DummyChannel(), False)
+        request.registerProducer(DummyProducer(), True)
+        request.finish()
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, RuntimeError)
+        self.flushLoggedErrors(RuntimeError)
 
 
 
