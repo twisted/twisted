@@ -28,6 +28,7 @@ Options howto.
 import itertools, getopt, inspect
 
 from twisted.python import reflect, util, usage
+from twisted.python.compat import ioType, unicode
 
 
 
@@ -157,6 +158,8 @@ class ZshBuilder(object):
         self.options = options
         self.cmdName = cmdName
         self.file = file
+        if file and ioType(file) == unicode:
+            self.file = file.buffer
 
 
     def write(self, genSubs=True):
@@ -269,6 +272,8 @@ class ZshArgumentsGenerator(object):
         self.options = options
         self.cmdName = cmdName
         self.file = file
+        if file and ioType(file) == unicode:
+            self.file = file.buffer
 
         self.descriptions = {}
         self.multiUse = set()
