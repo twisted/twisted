@@ -30,13 +30,16 @@ from zope.interface.verify import verifyObject
 from twisted.trial import unittest
 from twisted.test.test_process import MockOS
 
-from twisted import plugin, logger
+from twisted import plugin, logger, internet
 from twisted.application import service, app, reactors
 from twisted.application.service import IServiceMaker
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IReactorDaemonize
+from twisted.internet.interfaces import (IReactorDaemonize,
+                                         _ISupportsExitSignalCapturing)
 from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
+from twisted.internet.base import ReactorBase
+from twisted.test.proto_helpers import MemoryReactor
 from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.components import Componentized
 from twisted.python import util
@@ -686,6 +689,85 @@ class ApplicationRunnerTests(unittest.TestCase):
         runner.startReactor(reactor, None, None)
         self.assertTrue(
             reactor.called, "startReactor did not call reactor.run()")
+
+
+    def test_applicationRunnerChoosesReactorIfNone(self):
+        """
+        L{ApplicationRunner} chooses a reactor if none is specified.
+        """
+        reactor = DummyReactor()
+        self.patch(internet, 'reactor', reactor)
+        runner = app.ApplicationRunner({
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
+        runner.startReactor(None, None, None)
+        self.assertTrue(reactor.called)
+
+
+    def test_applicationRunnerCapturesSignal(self):
+        """
+        If the reactor exits with a signal, the application runner caches
+        the signal.
+        """
+
+        class DummyReactorWithSignal(ReactorBase):
+            """
+            A dummy reactor, providing a C{run} method, and setting the
+            _exitSignal attribute to a nonzero value.
+            """
+
+            def installWaker(self):
+                """
+                Dummy method, does nothing.
+                """
+
+            def run(self):
+                """
+                A fake run method setting _exitSignal to a nonzero value
+                """
+                self._exitSignal = 2
+
+        reactor = DummyReactorWithSignal()
+        runner = app.ApplicationRunner({
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
+        runner.startReactor(reactor, None, None)
+        self.assertEquals(2, runner._exitSignal)
+
+
+    def test_applicationRunnerIgnoresNoSignal(self):
+        """
+        The runner sets its _exitSignal instance attribute to None if
+        the reactor does not implement L{_ISupportsExitSignalCapturing}.
+        """
+
+        class DummyReactorWithExitSignalAttribute(object):
+            """
+            A dummy reactor, providing a C{run} method, and setting the
+            _exitSignal attribute to a nonzero value.
+            """
+
+            def installWaker(self):
+                """
+                Dummy method, does nothing.
+                """
+
+            def run(self):
+                """
+                A fake run method setting _exitSignal to a nonzero value
+                that should be ignored.
+                """
+                self._exitSignal = 2
+
+        reactor = DummyReactorWithExitSignalAttribute()
+        runner = app.ApplicationRunner({
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
+        runner.startReactor(reactor, None, None)
+        self.assertEquals(None, runner._exitSignal)
 
 
 
@@ -2031,6 +2113,160 @@ class DaemonizeTests(unittest.TestCase):
         self.runner.daemonize(reactor)
         self.assertFalse(reactor._beforeDaemonizeCalled)
         self.assertFalse(reactor._afterDaemonizeCalled)
+
+
+
+@implementer(_ISupportsExitSignalCapturing)
+class SignalCapturingMemoryReactor(MemoryReactor):
+    """
+    MemoryReactor that implements the _ISupportsExitSignalCapturing interface,
+    all other operations identical to MemoryReactor.
+    """
+
+
+
+class StubApplicationRunnerWithSignal(twistd._SomeApplicationRunner):
+    """
+    An application runner that uses a SignalCapturingMemoryReactor and
+    has a _signalValue attribute that it will set in the reactor.
+
+    @ivar _signalValue: The signal value to set on the reactor's _exitSignal
+        attribute.
+    """
+    loggerFactory = CrippledAppLogger
+
+    def __init__(self, config):
+        super(StubApplicationRunnerWithSignal, self).__init__(config)
+        self._signalValue = None
+
+
+    def preApplication(self):
+        """
+        Does nothing.
+        """
+
+    def postApplication(self):
+        """
+        Instantiate a SignalCapturingMemoryReactor and start it
+        in the runner.
+        """
+        reactor = SignalCapturingMemoryReactor()
+        reactor._exitSignal = self._signalValue
+        self.startReactor(reactor, sys.stdout, sys.stderr)
+
+
+
+def stubApplicationRunnerFactoryCreator(signum):
+    """
+    Create a factory function to instantiate a
+    StubApplicationRunnerWithSignal that will report signum as the captured
+    signal..
+
+    @param signum: The integer signal number or None
+    @type signum: C{int} or C{None}
+
+    @return: A factory function to create stub runners.
+    @rtype: stubApplicationRunnerFactory
+    """
+
+    def stubApplicationRunnerFactory(config):
+        """
+        Create a StubApplicationRunnerWithSignal using a reactor that
+        implements _ISupportsExitSignalCapturing and whose _exitSignal
+        attribute is set to signum.
+
+        @param config: The runner configuration, platform dependent.
+        @type config: L{twisted.scripts.twistd.ServerOptions}
+
+        @return: A runner to use for the test.
+        @rtype: twisted.test.test_twistd.StubApplicationRunnerWithSignal
+        """
+        runner = StubApplicationRunnerWithSignal(config)
+        runner._signalValue = signum
+        return runner
+
+    return stubApplicationRunnerFactory
+
+
+
+class ExitWithSignalTests(unittest.TestCase):
+
+    """
+    Tests for L{twisted.application.app._exitWithSignal}.
+    """
+
+    def setUp(self):
+        """
+        Set up the server options and a fake for use by test cases.
+        """
+        self.config = twistd.ServerOptions()
+        self.config.loadedPlugins = {'test_command': MockServiceMaker()}
+        self.config.subOptions = object()
+        self.config.subCommand = 'test_command'
+        self.fakeKillArgs = [None, None]
+
+        def fakeKill(pid, sig):
+            """
+            Fake method to capture arguments passed to os.kill.
+
+            @param pid: The pid of the process being killed.
+
+            @param sig: The signal sent to the process.
+            """
+            self.fakeKillArgs[0] = pid
+            self.fakeKillArgs[1] = sig
+
+        self.patch(os, 'kill', fakeKill)
+
+
+    def test_exitWithSignal(self):
+        """
+        exitWithSignal replaces the existing signal handler with the default
+        handler and sends the replaced signal to the current process.
+        """
+
+        fakeSignalArgs = [None, None]
+
+        def fake_signal(sig, handler):
+            fakeSignalArgs[0] = sig
+            fakeSignalArgs[1] = handler
+
+        self.patch(signal, 'signal', fake_signal)
+        app._exitWithSignal(signal.SIGINT)
+
+        self.assertEquals(fakeSignalArgs[0], signal.SIGINT)
+        self.assertEquals(fakeSignalArgs[1], signal.SIG_DFL)
+        self.assertEquals(self.fakeKillArgs[0], os.getpid())
+        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
+
+
+    def test_normalExit(self):
+        """
+        _exitWithSignal is not called if the runner does not exit with a
+        signal.
+        """
+        self.patch(
+            twistd,
+            '_SomeApplicationRunner',
+            stubApplicationRunnerFactoryCreator(None)
+        )
+        twistd.runApp(self.config)
+        self.assertIsNone(self.fakeKillArgs[0])
+        self.assertIsNone(self.fakeKillArgs[1])
+
+
+    def test_runnerExitsWithSignal(self):
+        """
+        _exitWithSignal is called when the runner exits with a signal.
+        """
+        self.patch(
+            twistd,
+            '_SomeApplicationRunner',
+            stubApplicationRunnerFactoryCreator(signal.SIGINT)
+        )
+        twistd.runApp(self.config)
+        self.assertEquals(self.fakeKillArgs[0], os.getpid())
+        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
 
 
 

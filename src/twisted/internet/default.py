@@ -28,7 +28,7 @@ def _getInstallFunction(platform):
     """
     # Linux: epoll(7) is the default, since it scales well.
     #
-    # OS X: poll(2) is not exposed by Python because it doesn't support all
+    # macOS: poll(2) is not exposed by Python because it doesn't support all
     # file descriptors (in particular, lack of PTY support is a problem) --
     # see <http://bugs.python.org/issue5154>. kqueue has the same restrictions
     # as poll(2) as far PTY support goes.
@@ -36,7 +36,7 @@ def _getInstallFunction(platform):
     # Windows: IOCP should eventually be default, but still has some serious
     # bugs, e.g. <http://twistedmatrix.com/trac/ticket/4667>.
     #
-    # We therefore choose epoll(7) on Linux, poll(2) on other non-OS X POSIX
+    # We therefore choose epoll(7) on Linux, poll(2) on other non-macOS POSIX
     # platforms, and select(2) everywhere else.
     try:
         if platform.isLinux():
