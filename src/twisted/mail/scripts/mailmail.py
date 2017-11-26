@@ -175,13 +175,13 @@ def parseOptions(argv):
             buffer.write(line)
 
     if not requiredHeaders['from']:
-        buffer.write('From: %s\r\n' % (o.sender,))
+        buffer.write('From: {}\r\n'.format(o.sender))
     if not requiredHeaders['to']:
         if not o.to:
             raise SystemExit("No recipients specified.")
-        buffer.write('To: %s\r\n' % (', '.join(o.to),))
+        buffer.write('To: {}\r\n'.format(', '.join(o.to)))
     if not requiredHeaders['date']:
-        buffer.write('Date: %s\r\n' % (smtp.rfc822date(),))
+        buffer.write('Date: {}\r\n'.format(smtp.rfc822date()))
 
     buffer.write(line)
 
