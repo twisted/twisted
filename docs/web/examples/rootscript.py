@@ -21,7 +21,7 @@ from twisted.application import internet, service
 
 default = static.Data('text/html', '')
 # Setting up vhost resource.
-default.putChild('vhost', vhost.VHostMonsterResource())
+default.putChild(b'vhost', vhost.VHostMonsterResource())
 resource = vhost.NameVirtualHost()
 resource.default = default
 # Here we use /var/www/html/ as our root diretory for the web server, you can

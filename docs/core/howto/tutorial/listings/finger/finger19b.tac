@@ -175,7 +175,7 @@ class UserStatusTree(resource.Resource):
     def __init__(self, service):
         resource.Resource.__init__(self)
         self.service = service
-        self.putChild('RPC2', UserStatusXR(self.service))
+        self.putChild(b'RPC2', UserStatusXR(self.service))
 
     def render_GET(self, request):
         d = self.service.getUsers()
@@ -189,7 +189,7 @@ class UserStatusTree(resource.Resource):
         return server.NOT_DONE_YET
 
     def getChild(self, path, request):
-        if path=="":
+        if path == b"":
             return UserStatusTree(self.service)
         else:
             return UserStatus(path, self.service)
