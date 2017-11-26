@@ -47,11 +47,13 @@ _log = Logger(observer=_logObserver)
 
 class Options:
     """
+    Store the values of the parsed command-line options to the I{mailmail}
+    script.
 
-    @type to: C{list} of C{str}
+    @type to: L{list} of L{str}
     @ivar to: The addresses to which to deliver this message.
 
-    @type sender: C{str}
+    @type sender: L{str}
     @ivar sender: The address from which this message is being sent.
 
     @type body: C{file}
