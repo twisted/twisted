@@ -1,0 +1,1 @@
+Various examples of twisted.web in the documentation have been changed to explicitly use byte string literals (b"") instead of string literals ("") when using twisted.web.resource.getChild() and twisted.web.resource.putChild().  This fixes these examples on Python 3, where ("") is a unicode string.
