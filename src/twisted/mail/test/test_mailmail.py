@@ -157,7 +157,8 @@ class OptionsTests(TestCase):
 
     def test_setFrom(self):
         """
-        The I{-F} flag specifies the From: value.
+        When a message has no I{From:} header, a I{From:} value can be
+        specified with the I{-F} flag.
         """
         self.patch(sys, 'stderr', self.out)
         stdin = NativeStringIO(
