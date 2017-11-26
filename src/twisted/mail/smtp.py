@@ -1937,11 +1937,19 @@ class SMTPSenderFactory(protocol.ClientFactory):
             connector.connect()
             self.retries += 1
         elif not self.sendFinished:
-            # If we were unable to communicate with the SMTP server a ConnectionDone will be
-            # returned. We want a more clear error message for debugging
+
             if err.check(error.ConnectionDone):
-                err.value = SMTPConnectError(-1, "Unable to connect to server.")
-            self.result.errback(err.value)
+                # If we were unable to communicate with the SMTP server,
+                # a ConnectionDone will be returned.
+                # We want a more clear error message for debugging.
+                reason = SMTPConnectError(-1, "Unable to connect to server.")
+            else:
+                reason = err
+            self.result.errback(reason)
+        else:
+            # No need to retry or the message was successfully delivered,
+            # so do nothing
+            pass
 
 
     def buildProtocol(self, addr):
