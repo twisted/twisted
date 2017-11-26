@@ -331,8 +331,8 @@ Resource rendering occurs when Twisted Web locates a leaf Resource object to han
 
 
 - Return a string
-- Call ``request.write("stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
-- Request a ``Deferred`` , return ``server.NOT_DONE_YET`` , and call ``request.write("stuff")`` and ``request.finish()`` later, in a callback on the ``Deferred`` .
+- Call ``request.write(b"stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
+- Request a ``Deferred`` , return ``server.NOT_DONE_YET`` , and call ``request.write(b"stuff")`` and ``request.finish()`` later, in a callback on the ``Deferred`` .
 
 
 
