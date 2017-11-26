@@ -45,9 +45,14 @@ from twisted.names.error import DNSNameError
 from twisted.python import failure, log
 from twisted.python.compat import iteritems, range
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import (LineSendingProtocol,
                                         MemoryReactorClock, StringTransport)
 from twisted.trial import unittest
+
+
+if platformType != "posix":
+    unittest.TestCase.skip = "twisted.mail only works on posix"
 
 
 
@@ -2649,12 +2654,3 @@ class _AttemptManagerTests(unittest.TestCase):
         self.quietAttemptMgr.notifyNoConnection(b'quietRelayer')
         self.assertFalse(self.eventLog)
         self.reactor.advance(60)
-
-
-
-from twisted.python.runtime import platformType
-import types
-if platformType != "posix":
-    for o in locals().values():
-        if isinstance(o, (types.ClassType, type)) and issubclass(o, unittest.TestCase):
-            o.skip = "twisted.mail only works on posix"
