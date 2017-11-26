@@ -206,9 +206,9 @@ class Configuration:
     @ivar denyUIDs: A list of UIDs which are not allowed to send mail.
     @ivar denyGIDs: A list of GIDs which are not allowed to send mail.
 
-    @type defaultAccess: C{bool}
-    @ivar defaultAccess: C{True} if access will be allowed when no other access
-    control rule matches or C{False} if it will be denied in that case.
+    @type defaultAccess: L{bool}
+    @ivar defaultAccess: L{True} if access will be allowed when no other access
+    control rule matches or L{False} if it will be denied in that case.
 
     @ivar useraccess: Either C{'allow'} to check C{allowUID} first
     or C{'deny'} to check C{denyUID} first.
@@ -216,7 +216,7 @@ class Configuration:
     @ivar groupaccess: Either C{'allow'} to check C{allowGID} first or
     C{'deny'} to check C{denyGID} first.
 
-    @ivar identities: A C{dict} mapping hostnames to credentials to use when
+    @ivar identities: A L{dict} mapping hostnames to credentials to use when
     sending mail to that host.
 
     @ivar smarthost: L{None} or a hostname through which all outgoing mail will

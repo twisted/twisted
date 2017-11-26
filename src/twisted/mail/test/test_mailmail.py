@@ -157,7 +157,7 @@ class OptionsTests(TestCase):
 
     def test_setFrom(self):
         """
-        The I{-F} flags specifies the From: value.
+        The I{-F} flag specifies the From: value.
         """
         self.patch(sys, 'stderr', self.out)
         stdin = NativeStringIO(
@@ -166,7 +166,13 @@ class OptionsTests(TestCase):
         self.patch(sys, 'stdin', stdin)
         o = parseOptions(["-F", "Larry <invaliduser1@example.com>", "-t"])
         self.assertEqual(o.sender, "Larry <invaliduser1@example.com>")
-        # Test that -F flag is overridden by From: value in header
+
+
+    def test_overrideFromFlagByFromHeader(self):
+        """
+        The I{-F} flag specifies the From: value.  However, I{-F} flag is
+        overriden by the value of From: in the e-mail header.
+        """
         sys.stdin = NativeStringIO(
             'To: Curly <invaliduser4@example.com>\n'
             'From: Shemp <invaliduser4@example.com>\n')
@@ -176,7 +182,8 @@ class OptionsTests(TestCase):
 
     def test_run(self):
         """
-        L{twisted.mail.scripts.mailmail.run}
+        Call L{mailmail.run}, and specify I{-oep} to print errors
+        to stderr.
         """
         self.addCleanup(setattr, sys, 'argv', sys.argv)
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
@@ -186,7 +193,8 @@ class OptionsTests(TestCase):
         mailmail.run()
 
     if platformType == "win32":
-        test_run.skip = "win32 lacks support for getuid()"
+        test_run.skip = ("mailmail.run() does not work on win32 due to "
+            "lack of support for getuid()")
 
 
     def test_readInvalidConfig(self):
@@ -236,15 +244,16 @@ class OptionsTests(TestCase):
                          'Illegal entry in \[identity\] section: funny')
 
     if platformType == "win32":
-        test_readInvalidConfig.skip = "win32 lacks support for getuid()"
+        test_run.skip = ("mailmail.run() does not work on win32 due to "
+            "lack of support for getuid()")
 
 
     def _loadConfig(self, config):
         """
         Read a mailmail configuration file.
-        The mailmail script checks
-        the twisted.mail.scripts.GLOBAL_CFG variable
-        and then the twisted.mail.scripts.LOCAL_CFG
+
+        The mailmail script checks the twisted.mail.scripts.mailmail.GLOBAL_CFG
+        variable and then the twisted.mail.scripts.mailmail.LOCAL_CFG
         variable for the path to its  config file.
 
         @param config: path to config file
