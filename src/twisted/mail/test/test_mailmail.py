@@ -28,7 +28,6 @@ class OptionsTests(TestCase):
     message text from stdin to produce an L{Options} instance which can be
     used to send a message.
     """
-    out = NativeStringIO()
     memoryReactor = MemoryReactor()
 
     def setUp(self):
@@ -36,14 +35,21 @@ class OptionsTests(TestCase):
         Override some things in mailmail, so that we capture C{stdout},
         and do not call L{reactor.stop}.
         """
+        self.out = NativeStringIO()
         # Override the mailmail logger, so we capture stderr output
         from twisted.logger import textFileLogObserver, Logger
         logObserver = textFileLogObserver(self.out)
         self.patch(mailmail, '_log', Logger(observer=logObserver))
+        self.host = None
+        self.options = None
+        self.ident = None
 
         # Override mailmail.sendmail, so we don't call reactor.stop()
         def sendmail(host, options, ident):
-            smtp.sendmail(host, options.sender, options.to, options.body,
+            self.host = host
+            self.options = options
+            self.ident = ident
+            return smtp.sendmail(host, options.sender, options.to, options.body,
                           reactor=self.memoryReactor)
 
         self.patch(mailmail, 'sendmail', sendmail)
@@ -160,7 +166,6 @@ class OptionsTests(TestCase):
         When a message has no I{From:} header, a I{From:} value can be
         specified with the I{-F} flag.
         """
-        self.patch(sys, 'stderr', self.out)
         stdin = NativeStringIO(
             'To: invaliduser2@example.com\n'
             'Subject: A wise guy?\n\n')
@@ -174,9 +179,10 @@ class OptionsTests(TestCase):
         The I{-F} flag specifies the From: value.  However, I{-F} flag is
         overriden by the value of From: in the e-mail header.
         """
-        sys.stdin = NativeStringIO(
+        stdin = NativeStringIO(
             'To: Curly <invaliduser4@example.com>\n'
             'From: Shemp <invaliduser4@example.com>\n')
+        self.patch(sys, 'stdin', stdin)
         o = parseOptions(["-F", "Groucho <invaliduser5@example.com>", "-t"])
         self.assertEqual(o.sender, "invaliduser4@example.com")
 
@@ -184,14 +190,20 @@ class OptionsTests(TestCase):
     def test_run(self):
         """
         Call L{mailmail.run}, and specify I{-oep} to print errors
-        to stderr.
+        to stderr.  The sender, to, and printErrors options should be
+        set and there should be no failure.
         """
-        self.addCleanup(setattr, sys, 'argv', sys.argv)
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
-        self.patch(sys, 'stderr', self.out)
-        sys.argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
-        sys.stdin = NativeStringIO('\n')
+        argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
+        stdin = NativeStringIO('\n')
+        self.patch(sys, 'argv', argv)
+        self.patch(sys, 'stdin', stdin)
         mailmail.run()
+        self.assertEqual(self.options.sender, mailmail.getlogin())
+        self.assertEqual(self.options.to, ["invaliduser2@example.com"])
+        # We should have printErrors set because we specified "-oep"
+        self.assertTrue(self.options.printErrors)
+        # We should not have any failures.
+        self.assertIsNone(mailmail.failed)
 
     if platformType == "win32":
         test_run.skip = ("mailmail.run() does not work on win32 due to "
@@ -200,7 +212,9 @@ class OptionsTests(TestCase):
 
     def test_readInvalidConfig(self):
         """
-        Read an invalid configuration file.
+        Read an invalid configuration file.  Error messages
+        for illegal UID value, illegal GID value, and illegal
+        identity entry will be sent to stderr.
         """
         stdin = NativeStringIO('\n')
         self.patch(sys, 'stdin', stdin)
