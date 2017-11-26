@@ -181,7 +181,7 @@ class UserStatusTree(resource.Resource):
     def __init__(self, service):
         resource.Resource.__init__(self)
         self.service = service
-        self.putChild('RPC2', UserStatusXR(self.service))
+        self.putChild(b'RPC2', UserStatusXR(self.service))
 
     def render_GET(self, request):
         d = self.service.getUsers()

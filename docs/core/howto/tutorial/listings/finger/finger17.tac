@@ -77,7 +77,7 @@ class FingerService(service.Service):
         r.getChild = getData
         x = xmlrpc.XMLRPC()
         x.xmlrpc_getUser = self.getUser
-        r.putChild('RPC2', x)
+        r.putChild(b'RPC2', x)
         return r
 
     def getIRCBot(self, nickname):
