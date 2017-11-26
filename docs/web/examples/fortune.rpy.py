@@ -38,12 +38,12 @@ class FortuneResource(Resource):
         Use L{utils.getProcessOutput}, which spawns a process and returns a
         Deferred which fires with its output.
         """
-        request.write("<pre>\n")
+        request.write(b"<pre>\n")
         deferred = utils.getProcessOutput(self.fortune)
         deferred.addCallback(lambda s:
-                             (request.write(s+"\n"), request.finish()))
+                             (request.write(s + b"\n"), request.finish()))
         deferred.addErrback(lambda s:
-                     (request.write(str(s)), request.finish()))
+                     (request.write(s), request.finish()))
         return server.NOT_DONE_YET
 
 resource = FortuneResource()
