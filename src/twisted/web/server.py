@@ -36,7 +36,7 @@ from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
-from twisted.python import log, reflect, failure, components
+from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
@@ -44,6 +44,7 @@ from twisted.web.error import UnsupportedMethod
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
+from twisted.logger import Logger
 
 NOT_DONE_YET = 1
 
@@ -109,6 +110,7 @@ class Request(Copyable, http.Request, components.Componentized):
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
+    _log = Logger()
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -260,15 +262,19 @@ class Request(Copyable, http.Request, components.Componentized):
                 # resource doesn't, fake it by giving the resource
                 # a 'GET' request and then return only the headers,
                 # not the body.
-                log.msg("Using GET to fake a HEAD request for %s" %
-                        (resrc,))
+                self._log.info(
+                    "Using GET to fake a HEAD request for {resrc}",
+                    resrc=resrc
+                )
                 self.method = b"GET"
                 self._inFakeHead = True
                 body = resrc.render(self)
 
                 if body is NOT_DONE_YET:
-                    log.msg("Tried to fake a HEAD request for %s, but "
-                            "it got away from me." % resrc)
+                    self._log.info(
+                        "Tried to fake a HEAD request for {resrc}, but "
+                        "it got away from me.", resrc=resrc
+                    )
                     # Oh well, I guess we won't include the content length.
                 else:
                     self.setHeader(b'content-length', intToBytes(len(body)))
@@ -316,10 +322,12 @@ class Request(Copyable, http.Request, components.Componentized):
         if self.method == b"HEAD":
             if len(body) > 0:
                 # This is a Bad Thing (RFC 2616, 9.4)
-                log.msg("Warning: HEAD request %s for resource %s is"
-                        " returning a message body."
-                        "  I think I'll eat it."
-                        % (self, resrc))
+                self._log.info(
+                    "Warning: HEAD request {slf} for resource {resrc} is"
+                    " returning a message body. I think I'll eat it.",
+                    slf=self,
+                    resrc=resrc
+                )
                 self.setHeader(b'content-length',
                                intToBytes(len(body)))
             self.write(b'')
@@ -331,7 +339,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
     def processingFailed(self, reason):
-        log.err(reason)
+        """
+        Finish this request with an indication that processing failed and
+        possibly display a traceback.
+
+        @param reason: Reason this request has failed.
+        @type reason: L{twisted.python.failure.Failure}
+
+        @return: The reason passed to this method.
+        @rtype: L{twisted.python.failure.Failure}
+        """
+        self._log.failure('', failure=reason)
         if self.site.displayTracebacks:
             body = (b"<html><head><title>web.Server Traceback"
                     b" (most recent call last)</title></head>"

@@ -1048,7 +1048,7 @@ def platformTrust():
               <https://launchpad.net/ubuntu/+source/ca-certificates>} package
               installed,
 
-            - Mac OS X when using the system-installed version of OpenSSL (i.e.
+            - macOS when using the system-installed version of OpenSSL (i.e.
               I{not} one installed via MacPorts or Homebrew),
 
             - any build of OpenSSL which has had certificate authority
@@ -1062,7 +1062,7 @@ def platformTrust():
         Hopefully soon, this API will be updated to use more sophisticated
         trust-root discovery mechanisms.  Until then, you can follow tickets in
         the Twisted tracker for progress on this implementation on U{Microsoft
-        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
+        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{macOS
         <https://twistedmatrix.com/trac/ticket/6372>}, and U{a fallback for
         other platforms which do not have native trust management tools
         <https://twistedmatrix.com/trac/ticket/6934>}.

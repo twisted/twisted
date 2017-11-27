@@ -11,14 +11,14 @@ __metaclass__ = type
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, succeed, fail, CancelledError
 from twisted.internet.protocol import Protocol
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import StringTransport, AccumulatingProtocol
+from twisted.test.proto_helpers import (StringTransport, AccumulatingProtocol,
+                                        EventLoggingObserver)
 from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
 from twisted.web._newclient import HTTPParser, HTTPClientParser
 from twisted.web._newclient import BadResponseVersion, ParseError
@@ -41,6 +41,7 @@ from twisted.web.client import (
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
+from twisted.logger import globalLogPublisher
 
 
 
@@ -808,6 +809,10 @@ class HTTPClientParserTests(TestCase):
         L{HTTPClientParser.connectionLost} raises an exception, the exception
         is logged and not re-raised.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         transport = StringTransport()
         protocol = HTTPClientParser(Request(b'GET', b'/', _boringHeaders, None),
                                     None)
@@ -827,8 +832,11 @@ class HTTPClientParserTests(TestCase):
         response._bodyDataFinished = fakeBodyDataFinished
 
         protocol.connectionLost(None)
-
-        self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryException)
+        self.flushLoggedErrors(ArbitraryException)
 
 
     def test_noResponseAtAll(self):
@@ -971,6 +979,10 @@ class HTTPClientParserTests(TestCase):
         """
         When a 1XX response is ignored, Twisted emits a log.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         sample103Response = (
             b'HTTP/1.1 103 Early Hints\r\n'
             b'Server: socketserver/1.0.0\r\n'
@@ -979,11 +991,6 @@ class HTTPClientParserTests(TestCase):
             b'\r\n'
         )
 
-        # Catch the logs.
-        logs = []
-        log.addObserver(logs.append)
-        self.addCleanup(log.removeObserver, logs.append)
-
         protocol = HTTPClientParser(
             Request(b'GET', b'/', _boringHeaders, None),
             lambda ign: None
@@ -991,9 +998,13 @@ class HTTPClientParserTests(TestCase):
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(sample103Response)
 
-        self.assertEqual(
-            logs[0]['message'][0], 'Ignoring unexpected 103 response'
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertEquals(
+            event['log_format'],
+            "Ignoring unexpected {code} response"
         )
+        self.assertEquals(event['code'], 103)
 
 
 
@@ -1188,15 +1199,19 @@ class HTTP11ClientProtocolTests(TestCase):
         lost, an error is logged that gives a non-confusing hint to user on what
         went wrong.
         """
-        errors = []
-        log.addObserver(errors.append)
-        self.addCleanup(log.removeObserver, errors.append)
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
 
         def check(ignore):
-            error = errors[0]
-            self.assertEqual(error[u'why'],
-                              u'Error writing request, but not in valid state '
-                              u'to finalize request: CONNECTION_LOST')
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            self.assertIn("log_failure", event)
+            self.assertEqual(event["log_format"],
+                             u'Error writing request, but not in valid state '
+                             u'to finalize request: {state}')
+            self.assertEqual(event["state"], 'CONNECTION_LOST')
 
         return self.test_connectionLostDuringRequestGeneration(
             'errback').addCallback(check)
@@ -1781,6 +1796,11 @@ class HTTP11ClientProtocolTests(TestCase):
         def callback(p):
             raise ZeroDivisionError()
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         transport = StringTransport()
         protocol = HTTP11ClientProtocol(callback)
         protocol.makeConnection(transport)
@@ -1799,8 +1819,12 @@ class HTTP11ClientProtocolTests(TestCase):
         response.deliverBody(bodyProtocol)
         bodyProtocol.closedReason.trap(ResponseDone)
 
-        errors = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertEqual(len(errors), 1)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ZeroDivisionError)
+
+        self.flushLoggedErrors(ZeroDivisionError)
         self.assertTrue(transport.disconnecting)
 
 
@@ -2203,8 +2227,17 @@ class RequestTests(TestCase):
         L{Deferred} returned by L{Request.writeTo} fires with a L{Failure}
         wrapping a L{WrongBodyLength} exception.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         def finisher(producer):
             producer.finished.errback(ArbitraryException())
+            event = logObserver[0]
+            self.assertIn("log_failure", event)
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, ArbitraryException)
             errors = self.flushLoggedErrors(ArbitraryException)
             self.assertEqual(len(errors), 1)
         return self._sendRequestBodyWithTooManyBytesTest(finisher)
@@ -2220,6 +2253,10 @@ class RequestTests(TestCase):
 
         This is a whitebox test.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         producer = StringProducer(3)
         request = Request(b'POST', b'/bar', _boringHeaders, producer)
         request.writeTo(self.transport)
@@ -2230,6 +2267,10 @@ class RequestTests(TestCase):
         producer.finished.callback(None)
 
         finishedConsuming.errback(ArbitraryException())
+        event = logObserver[0]
+        self.assertIn("log_failure", event)
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryException)
         self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
 
 
@@ -2383,6 +2424,10 @@ class RequestTests(TestCase):
         If the body producer's C{stopProducing} method raises an exception,
         L{Request.stopWriting} logs it and does not re-raise it.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         producer = StringProducer(3)
         def brokenStopProducing():
             raise ArbitraryException(u"stopProducing is busted")
@@ -2393,6 +2438,11 @@ class RequestTests(TestCase):
         request.stopWriting()
         self.assertEqual(
             len(self.flushLoggedErrors(ArbitraryException)), 1)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertIn("log_failure", event)
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryException)
 
 
 
