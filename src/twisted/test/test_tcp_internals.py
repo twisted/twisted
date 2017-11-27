@@ -50,7 +50,7 @@ class PlatformAssumptionsTests(TestCase):
         while self.openSockets:
             self.openSockets.pop().close()
         if resource is not None:
-            # OS X implicitly lowers the hard limit in the setrlimit call
+            # `macOS` implicitly lowers the hard limit in the setrlimit call
             # above.  Retrieve the new hard limit to pass in to this
             # setrlimit call, so that it doesn't give us a permission denied
             # error.
