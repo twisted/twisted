@@ -25,22 +25,29 @@ from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol, defer
 from twisted.python import log
-from twisted.python.compat import intToBytes, nativeString, networkString
+from twisted.python.compat import unicode
 
 # urllib's quote functions just happen to match
 # the postfix semantics.
 def quote(s):
-    return networkString(_quote(s))
+    quoted = _quote(s)
+    if isinstance(quoted, unicode):
+        quoted = quoted.encode("ascii")
+    return quoted
 
 
 
 def unquote(s):
-    return networkString(_unquote(nativeString(s)))
+    if isinstance(s, bytes):
+        s = s.decode("ascii")
+    quoted = _unquote(s)
+    return quoted.encode("ascii")
 
 
 
 class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
-    """Postfix mail transport agent TCP map protocol implementation.
+    """
+    Postfix mail transport agent TCP map protocol implementation.
 
     Receive requests for data matching given key via lineReceived,
     asks it's factory for the data with self.factory.get(key), and
@@ -64,7 +71,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
         """
         Send an SMTP-like code with a message.
         """
-        self.sendLine(intToBytes(code) + b' ' + message)
+        self.sendLine(str(code).encode("ascii") + b' ' + message)
 
 
 
@@ -76,15 +83,16 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
             request = line
             params = None
         try:
-            f = getattr(self, 'do_' + nativeString(request))
+            f = getattr(self, u'do_' + request.decode("ascii"))
         except AttributeError:
             self.sendCode(400, b'unknown command')
         else:
             try:
                 f(params)
             except:
+                excInfo = str(sys.exc_info()[1]).encode("ascii")
                 self.sendCode(400, b'Command ' + request + b' failed: ' +
-                              networkString(str(sys.exc_info()[1])))
+                              excInfo)
 
 
 
@@ -99,7 +107,8 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def _cbNot(self, fail):
-        self.sendCode(400, fail.getErrorMessage())
+        msg = fail.getErrorMessage().encode("ascii")
+        self.sendCode(400, msg)
 
 
 
@@ -125,7 +134,9 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
 
 
 class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
-    """An in-memory dictionary factory for PostfixTCPMapServer."""
+    """
+    An in-memory dictionary factory for PostfixTCPMapServer.
+    """
 
     protocol = PostfixTCPMapServer
 

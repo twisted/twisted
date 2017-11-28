@@ -3071,6 +3071,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertNotEqual(req, http.Request(DummyChannel(), False))
 
 
+    def test_hashable(self):
+        """
+        A L{http.Request} is hashable.
+        """
+        req = http.Request(DummyChannel(), False)
+        hash(req)
+
+
     def test_eqWithNonRequest(self):
         """
         A L{http.Request} on the left hand side of an equality
