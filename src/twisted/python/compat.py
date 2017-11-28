@@ -822,6 +822,32 @@ def _bytesRepr(bytestring):
         return 'b' + repr(bytestring)
 
 
+
+def toBytes(s, encoding="ascii", errors="strict"):
+    """
+    Convert L{unicode} string to L{bytes}.
+
+    @param s: The string to convert.
+    @param encoding: The encoding to pass to L{str.encode}.
+    @param errors: The error handling scheme to pass to L{str.encode).
+
+    @raise TypeError: The input is not L{unicode} or L{bytes}.
+
+    @return: The encoded string.  If I{s} is L{bytes} or L{None}, just return
+             I{s}.
+    @rtype: L{bytes}
+    """
+    if s is None:
+        return s
+    elif isinstance(s, bytes):
+        return s
+    elif isinstance(s, unicode):
+        return s.encode(encoding=encoding, errors=errors)
+    else:
+        raise TypeError("Expected {} to be unicode or bytes, not: {}".format(
+            s, type(s)))
+
+
 if _PY3:
     _tokenize = tokenize.tokenize
 else:
@@ -868,5 +894,6 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize"
+    "_tokenize",
+    "toBytes"
 ]
