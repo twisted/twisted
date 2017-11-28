@@ -794,7 +794,7 @@ class OrderedDictTests(unittest.TestCase):
         L{twisted.python.compat.OrderedDict} is deprecated.
         """
         from twisted.python.compat import OrderedDict
-        OrderedDict # Shh pyflakes
+        OrderedDict  # Shh pyflakes
 
         currentWarnings = self.flushWarnings(offendingFunctions=[
             self.test_deprecated])
@@ -874,6 +874,7 @@ class UnichrTests(unittest.TestCase):
         unichar exists and returns a unicode string with the given code point.
         """
         self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
+
 
 
 class RawInputTests(unittest.TestCase):
