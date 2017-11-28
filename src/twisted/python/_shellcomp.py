@@ -22,7 +22,7 @@ functions for your own commands. You should only need to change the first line
 to something like C{#compdef mycommand}.
 
 The main public documentation exists in the L{twisted.python.usage.Options}
-docstring, the L{twisted.python.usage.Completions} docstring, and the 
+docstring, the L{twisted.python.usage.Completions} docstring, and the
 Options howto.
 """
 import itertools, getopt, inspect
@@ -60,6 +60,12 @@ def shellComplete(config, cmdName, words, shellCompFile):
     @type shellCompFile: C{file}
     @param shellCompFile: The file to write completion data to.
     """
+
+    # If given a file with unicode semantics, such as sys.stdout on Python 3,
+    # we must get at the the underlying buffer which has bytes semantics.
+    if shellCompFile and ioType(shellCompFile) == unicode:
+        shellCompFile = shellCompFile.buffer
+
     # shellName is provided for forward-compatibility. It is not used,
     # since we currently only support zsh.
     shellName, position = words[-1].split(":")
@@ -152,14 +158,13 @@ class ZshBuilder(object):
     @ivar cmdName: The name of the command we're generating completions for.
 
     @type file: C{file}
-    @ivar file: The C{file} to write the completion function to.
+    @ivar file: The C{file} to write the completion function to.  The C{file}
+        must have L{bytes} I/O semantics.
     """
     def __init__(self, options, cmdName, file):
         self.options = options
         self.cmdName = cmdName
         self.file = file
-        if file and ioType(file) == unicode:
-            self.file = file.buffer
 
 
     def write(self, genSubs=True):
@@ -230,7 +235,8 @@ class ZshArgumentsGenerator(object):
     @ivar cmdName: The name of the command we're generating completions for.
 
     @type file: C{file}
-    @ivar file: The C{file} to write the completion function to
+    @ivar file: The C{file} to write the completion function to.  The C{file}
+        must have L{bytes} I/O semantics.
 
     The following non-constructor variables are populated by this class
     with data gathered from the C{Options} instance passed in, and its
@@ -272,8 +278,6 @@ class ZshArgumentsGenerator(object):
         self.options = options
         self.cmdName = cmdName
         self.file = file
-        if file and ioType(file) == unicode:
-            self.file = file.buffer
 
         self.descriptions = {}
         self.multiUse = set()
