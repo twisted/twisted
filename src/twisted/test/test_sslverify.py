@@ -1273,10 +1273,16 @@ class OpenSSLOptionsTests(unittest.TestCase):
             privateKey=self.sKey,
             certificate=self.sCert,
         )
-        opts._ecCurve = defaultCurve
+        self.assertEqual(opts._ecCurve, defaultCurve)
         # Exercise positive code path.  getContext swallows errors so we do it
         # explicitly by hand.
         opts.getContext().set_tmp_ecdh(opts._ecCurve)
+
+    if SSL.OPENSSL_VERSION_NUMBER >= 0x10002000:
+        test_ecSuccessWithRealBindings.skip = (
+            "OpenSSL 1.0.1 required to set explicit ECDHE "
+            "parameters on contexts."
+        )
 
 
     def test_abbreviatingDistinguishedNames(self):
