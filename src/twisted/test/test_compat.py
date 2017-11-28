@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -16,7 +17,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr
+    _coercedUnicode, unichr, raw_input, _bytesRepr, toBytes
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -921,3 +922,46 @@ class FutureBytesReprTests(unittest.TestCase):
         ``b`` to the returned repr on both Python 2 and 3.
         """
         self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
+
+
+
+class ToBytesTests(unittest.TestCase):
+    """
+    L{toBytes}
+    """
+
+    def test_toBytesUnicode(self):
+        """
+        If L{unicode} is passed to L{toBytes}, the L{unicode} is converted
+        to L{bytes} and returned.
+        """
+        self.assertEqual(toBytes(u"hello"), b"hello")
+        self.assertEqual(toBytes(u'\N{SNOWMAN}', encoding="utf-8"),
+                         b'\xe2\x98\x83')
+        self.assertEqual(
+            toBytes(u'\N{SNOWMAN}', encoding="ascii", errors="ignore"),
+            b'')
+        self.assertRaises(UnicodeEncodeError,
+            toBytes, u'\N{SNOWMAN}', encoding="ascii")
+
+
+    def test_toBytesBytes(self):
+        """
+        L{toBytes} just returns any L{bytes} passed to it.
+        """
+        self.assertEqual(toBytes(b'\xe2\x98\x83'), b'\xe2\x98\x83')
+
+
+    def test_toBytesNone(self):
+        """
+        L{toBytes} just returns L{None} if L{None} was passed to it.
+        """
+        self.assertEqual(toBytes(None), None)
+
+
+    def test_toBytesTypeError(self):
+        """
+        L{toBytes} will raise L{TypeError} if passed anything which
+        is not L{unicode}, L{bytes}, or L{None}.
+        """
+        self.assertRaises(TypeError, toBytes, ["foo", "bar"])
