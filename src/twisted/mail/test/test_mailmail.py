@@ -259,7 +259,7 @@ class OptionsTests(TestCase):
                          'Illegal entry in \[identity\] section: funny')
 
     if platformType == "win32":
-        test_run.skip = ("mailmail.run() does not work on win32 due to "
+        test_readInvalidConfig.skip = ("mailmail.run() does not work on win32 due to "
             "lack of support for getuid()")
 
 
