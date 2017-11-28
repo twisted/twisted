@@ -49,8 +49,8 @@ class OptionsTests(TestCase):
             self.host = host
             self.options = options
             self.ident = ident
-            return smtp.sendmail(host, options.sender, options.to, options.body,
-                          reactor=self.memoryReactor)
+            return smtp.sendmail(host, options.sender, options.to,
+                options.body, reactor=self.memoryReactor)
 
         self.patch(mailmail, 'sendmail', sendmail)
 
