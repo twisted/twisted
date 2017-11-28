@@ -328,7 +328,7 @@ class PY3Tests(unittest.SynchronousTestCase):
 
 
 
-class PYPYTest(unittest.SynchronousTestCase):
+class PYPYTests(unittest.SynchronousTestCase):
     """
     Identification of PyPy.
     """
