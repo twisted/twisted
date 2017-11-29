@@ -392,7 +392,7 @@ class SSHSession(channel.SSHChannel):
             c.dataReceived = self.handleInput
         else:
             c.dataReceived = self.write
-        c.connectionLost = lambda x=None, s=self:s.sendEOF()
+        c.connectionLost = lambda x: self.sendEOF()
         self.stdio = stdio.StandardIO(c)
         fd = 0
         if options['subsystem']:
