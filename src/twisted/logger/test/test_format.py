@@ -21,8 +21,9 @@ from twisted.python.compat import _PY3, unicode
 from .._levels import LogLevel
 from .._format import (
     formatEvent, formatUnformattableEvent, formatTime,
-    formatEventAsClassicLogText, formatWithCall,
+    formatEventAsClassicLogText, formatWithCall, formatEventWithTraceback
 )
+from twisted.python.failure import Failure
 
 
 
@@ -429,3 +430,94 @@ class Unformattable(object):
 
     def __repr__(self):
         return str(1 / 0)
+
+
+
+class CapturedError(Exception):
+    """
+    A captured error for use in format tests.
+    """
+
+
+
+class FormatEventWithTracebackTests(unittest.TestCase):
+    """
+    Tests for L{formatEventWithTraceback}, all of which ensure that the
+    returned type is a UTF-8.
+    """
+
+    def test_formatEventWithTraceback(self):
+        """
+        An event with a C{log_failure} key will have a traceback appended.
+        """
+        f = Failure(CapturedError("This is a fake error"))
+        event = {
+            "log_format": u"This is a test log message"
+        }
+        event["log_failure"] = f
+        eventText = formatEventWithTraceback(event)
+        self.assertIsInstance(eventText, unicode)
+        self.assertIn('Traceback', eventText)
+        self.assertIn('This is a fake error', eventText)
+        self.assertIn('This is a test log message', eventText)
+
+
+    def test_formatEmptyEventWithTraceback(self):
+        """
+        An event with an empty C{log_format} key appends a traceback from
+        the accompanying failure.
+        """
+        f = Failure(CapturedError("This is a fake error"))
+        event = {
+            "log_format": u""
+        }
+        event["log_failure"] = f
+        eventText = formatEventWithTraceback(event)
+        self.assertIsInstance(eventText, unicode)
+        self.assertIn('Traceback', eventText)
+        self.assertIn('This is a fake error', eventText)
+
+
+    def test_formatUnformattableWithTraceback(self):
+        """
+        An event with an unformattable value in the C{log_format} key still
+        has a traceback appended.
+        """
+        event = {
+            "log_format": "{evil()}",
+            "evil": lambda: 1 / 0,
+            Unformattable(): "gurk",
+        }
+        f = Failure(CapturedError("This is a fake error"))
+        event["log_failure"] = f
+        eventText = formatEventWithTraceback(event)
+        self.assertIsInstance(eventText, unicode)
+        self.assertIn('MESSAGE LOST', eventText)
+        self.assertIn('Traceback', eventText)
+        self.assertIn('This is a fake error', eventText)
+
+
+    def test_formatEventUnformattableTraceback(self):
+        """
+        If a traceback cannot be appended, a message indicating this is true
+        is appended.
+        """
+        event = {
+            "log_format": u""
+        }
+        event["log_failure"] = object()
+        eventText = formatEventWithTraceback(event)
+        self.assertIsInstance(eventText, unicode)
+        self.assertIn("(UNABLE TO OBTAIN TRACEBACK FROM EVENT)", eventText)
+
+
+    def test_formatEventNonCritical(self):
+        """
+        An event with no C{log_failure} key will not have a traceback appended.
+        """
+        event = {
+            "log_format": u"This is a test log message"
+        }
+        eventText = formatEventWithTraceback(event)
+        self.assertIsInstance(eventText, unicode)
+        self.assertIn('This is a test log message', eventText)
