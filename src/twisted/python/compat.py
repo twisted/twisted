@@ -829,9 +829,9 @@ def toBytes(s, encoding="ascii", errors="strict"):
 
     @param s: The string to convert.
     @param encoding: The encoding to pass to L{str.encode}.
-    @param errors: The error handling scheme to pass to L{str.encode).
+    @param errors: The error handling scheme to pass to L{str.encode}.
 
-    @raise TypeError: The input is not L{unicode} or L{bytes}.
+    @raise TypeError: The input is not L{unicode}, L{bytes} or L{None}.
 
     @return: The encoded string.  If I{s} is L{bytes} or L{None}, just return
              I{s}.
@@ -844,8 +844,8 @@ def toBytes(s, encoding="ascii", errors="strict"):
     elif isinstance(s, unicode):
         return s.encode(encoding=encoding, errors=errors)
     else:
-        raise TypeError("Expected {} to be unicode or bytes, not: {}".format(
-            s, type(s)))
+        raise TypeError("Expected {} to be unicode, bytes, or None not: "
+            "{}".format(s, type(s)))
 
 
 if _PY3:
