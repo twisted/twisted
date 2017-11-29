@@ -275,7 +275,7 @@ class _KeepAlive:
         d = self.conn.sendGlobalRequest(b"conch-keep-alive@twistedmatrix.com",
                 b"", wantReply=1)
         d.addBoth(self._cbGlobal)
-        self.globalTimeout=reactor.callLater(30, self._ebGlobal)
+        self.globalTimeout = reactor.callLater(30, self._ebGlobal)
 
 
     def _cbGlobal(self, res):
@@ -447,7 +447,8 @@ class SSHSession(channel.SSHChannel):
                 self.conn.transport.sendKexInit()
                 return
             elif char == b'#':  # Display connections
-                self.stdio.write(b'\r\nThe following connections are open:\r\n')
+                self.stdio.write(
+                    b'\r\nThe following connections are open:\r\n')
                 channels = self.conn.channels.keys()
                 channels.sort()
                 for channelId in channels:
