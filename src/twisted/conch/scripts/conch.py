@@ -422,18 +422,18 @@ class SSHSession(channel.SSHChannel):
 
 
     def handleInput(self, char):
-        if char in ('\n', '\r'):
+        if char in (b'\n', b'\r'):
             self.escapeMode = 1
             self.write(char)
         elif self.escapeMode == 1 and char == options['escape']:
             self.escapeMode = 2
         elif self.escapeMode == 2:
             self.escapeMode = 1  # So we can chain escapes together
-            if char == '.':  # Disconnect
+            if char == b'.':  # Disconnect
                 log.msg('disconnecting from escape')
                 stopConnection()
                 return
-            elif char == '\x1a':  # ^Z, suspend
+            elif char == b'\x1a':  # ^Z, suspend
                 def _():
                     _leaveRawMode()
                     sys.stdout.flush()
@@ -442,19 +442,19 @@ class SSHSession(channel.SSHChannel):
                     _enterRawMode()
                 reactor.callLater(0, _)
                 return
-            elif char == 'R':  # Rekey connection
+            elif char == b'R':  # Rekey connection
                 log.msg('rekeying connection')
                 self.conn.transport.sendKexInit()
                 return
-            elif char == '#':  # Display connections
-                self.stdio.write('\r\nThe following connections are open:\r\n')
+            elif char == b'#':  # Display connections
+                self.stdio.write(b'\r\nThe following connections are open:\r\n')
                 channels = self.conn.channels.keys()
                 channels.sort()
                 for channelId in channels:
-                    self.stdio.write('  #{} {}\r\n'.format(channelId,
-                        str(self.conn.channels[channelId])))
+                    self.stdio.write(u'  #{} {}\r\n'.format(channelId,
+                        str(self.conn.channels[channelId])).encode("ascii"))
                 return
-            self.write('~' + char)
+            self.write(b'~' + char)
         else:
             self.escapeMode = 0
             self.write(char)
