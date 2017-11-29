@@ -928,7 +928,7 @@ class FutureBytesReprTests(unittest.TestCase):
 
 class ToBytesTests(unittest.TestCase):
     """
-    L{toBytes}
+    L{twisted.python.compat.toBytes} is used to convert L{unicode} to L{bytes}.
     """
 
     def test_toBytesUnicode(self):
