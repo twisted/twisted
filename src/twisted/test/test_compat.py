@@ -937,11 +937,33 @@ class ToBytesTests(unittest.TestCase):
         to L{bytes} and returned.
         """
         self.assertEqual(toBytes(u"hello"), b"hello")
+
+
+    def test_toBytesEncodingParameter(self):
+        """
+        The I{encoding} parameter is passed to L{str.encode} and selects the
+        codec to use when converting L{unicode} to L{bytes}.
+        """
         self.assertEqual(toBytes(u'\N{SNOWMAN}', encoding="utf-8"),
                          b'\xe2\x98\x83')
+
+
+    def test_toBytesErrorsParameter(self):
+        """
+        The I{errors} parameter is passed to L{str.encode} and specifies the
+        response when the input string cannot be converted according to the
+        encoding’s rules.
+        """
         self.assertEqual(
             toBytes(u'\N{SNOWMAN}', encoding="ascii", errors="ignore"),
             b'')
+
+
+    def test_toBytesUnicodeEncodeError(self):
+        """
+        L{UnicodeEncodedError} will be raised if the input string cannot be
+        converted using the encoding's rules.
+        """
         self.assertRaises(UnicodeEncodeError,
             toBytes, u'\N{SNOWMAN}', encoding="ascii")
 
