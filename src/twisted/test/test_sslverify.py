@@ -1278,7 +1278,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         # explicitly by hand.
         opts.getContext().set_tmp_ecdh(opts._ecCurve)
 
-    if SSL.OPENSSL_VERSION_NUMBER >= 0x10002000:
+    if skipSSL is None and SSL.OPENSSL_VERSION_NUMBER >= 0x10002000:
         test_ecSuccessWithRealBindings.skip = (
             "OpenSSL 1.0.1 required to set explicit ECDHE "
             "parameters on contexts."
