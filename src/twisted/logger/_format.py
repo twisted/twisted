@@ -287,3 +287,33 @@ def formatWithCall(formatString, mapping):
     return unicode(
         aFormatter.vformat(formatString, (), CallMapping(mapping))
     )
+
+
+
+def formatEventWithTraceback(event):
+    """
+    Format an event as a unicode string and append a traceback if the event
+    contains a C{event["log_failure"]} key.
+
+    This implementation will always attempt to append a traceback, even if
+    formatting the C{event["log_format"]} fails.  The traceback, if bytes, will
+    be assumed to be UTF-8.
+
+    @param event: A logging event.
+    @type event: L{dict}
+
+    @return: A formatted string with a traceback if applicable.
+    @rtype: L{unicode}
+    """
+    eventText = formatEvent(event)
+    try:
+        traceback = event["log_failure"].getTraceback()
+        if isinstance(traceback, bytes):
+            traceback = traceback.decode('utf-8')
+    except KeyError:
+        return eventText
+    except:
+        traceback = u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT)\n"
+
+    eventText = u"\n".join((eventText, traceback))
+    return eventText
