@@ -15,7 +15,6 @@ import warnings
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import intToBytes, urlquote, _PY3
-from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
@@ -28,7 +27,9 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
-
+from twisted.logger import globalLogPublisher, Logger
+from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.internet.address import IPv4Address
 
 
 class SynchronousThreadPool:
@@ -38,6 +39,8 @@ class SynchronousThreadPool:
     them in a thread pool.  It is used to make the tests which are not
     directly for thread-related behavior deterministic.
     """
+    _log = Logger()
+
     def callInThread(self, f, *a, **kw):
         """
         Call C{f(*a, **kw)} in this thread rather than scheduling it to be
@@ -49,7 +52,9 @@ class SynchronousThreadPool:
             # callInThread doesn't let exceptions propagate to the caller.
             # None is always returned and any exception raised gets logged
             # later on.
-            err(None, "Callable passed to SynchronousThreadPool.callInThread failed")
+            self._log.failure(
+                "Callable passed to SynchronousThreadPool.callInThread failed"
+            )
 
 
 
@@ -104,6 +109,93 @@ class WSGIResourceTests(TestCase):
             RuntimeError,
             self.resource.putChild,
             b"foo", Resource())
+
+
+    def test_applicationAndRequestThrow(self):
+        """
+        If an exception is thrown by the application, and then in the
+        exception handling code, verify it should be propagated to the
+        provided L{ThreadPool}.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        class ArbitraryError(Exception):
+            """
+            An arbitrary error for this class
+            """
+
+        class FinishThrowingRequest(Request):
+            """
+            An L{IRequest} request whose finish method throws.
+            """
+            def __init__(self, *args, **kwargs):
+                Request.__init__(self, *args, **kwargs)
+                self.prepath = ''
+                self.postpath = ''
+                self.uri = b'www.example.com/stuff'
+
+
+            def getClientIP(self):
+                """
+                Return loopback address.
+
+                @return: loopback ip address.
+                """
+                return '127.0.0.1'
+
+
+            def getHost(self):
+                """
+                Return a fake Address
+
+                @return: A fake address
+                """
+                return IPv4Address('TCP', '127.0.0.1', 30000)
+
+
+        def application(environ, startResponse):
+            """
+            An application object that throws an exception.
+
+            @param environ: unused
+
+            @param startResponse: unused
+            """
+            raise ArbitraryError()
+
+
+        class ThrowingReactorThreads:
+            """
+            An L{IReactorThreads} implementation whose callFromThread raises
+            an exception.
+            """
+            def callFromThread(self, f, *a, **kw):
+                """
+                Raise an exception to the caller.
+
+                @param f: unused
+
+                @param a: unused
+
+                @param kw: unused
+                """
+                raise ArbitraryError()
+
+        self.resource = WSGIResource(
+            ThrowingReactorThreads(),
+            SynchronousThreadPool(),
+            application
+        )
+
+        self.resource.render(FinishThrowingRequest(DummyChannel(), False))
+        self.assertEquals(1, len(logObserver))
+        f = logObserver[0]["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryError)
+        self.flushLoggedErrors(ArbitraryError)
+
 
 
 class WSGITestsMixin:
@@ -766,9 +858,10 @@ class EnvironTests(WSGITestsMixin, TestCase):
         section of PEP 333) which converts bytes written to it into events for
         the logging system.
         """
-        events = []
-        addObserver(events.append)
-        self.addCleanup(removeObserver, events.append)
+        events = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
 
         errors = self.render('GET', '1.1', [], [''])
         def cbErrors(result):
@@ -2026,6 +2119,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
     def _connectionClosedTest(self, application, responseContent):
         channel = DummyChannel()
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         def applicationFactory():
             return application
 
@@ -2038,8 +2136,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return requests[-1]
 
         def ebRendered(ignored):
-            errors = self.flushLoggedErrors(RuntimeError)
-            self.assertEqual(len(errors), 1)
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, RuntimeError)
+            self.flushLoggedErrors(RuntimeError)
 
             response = channel.transport.written.getvalue()
             self.assertTrue(response.startswith(b'HTTP/1.1 200 OK'))
