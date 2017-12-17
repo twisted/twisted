@@ -14,8 +14,8 @@ def _checkRequirements():
     version = getattr(sys, "version_info", (0,))
     if version < (2, 7):
         raise ImportError("Twisted requires Python 2.7 or later.")
-    elif version >= (3, 0) and version < (3, 3):
-        raise ImportError("Twisted on Python 3 requires Python 3.3 or later.")
+    elif version >= (3, 0) and version < (3, 4):
+        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
 
 _checkRequirements()
 
