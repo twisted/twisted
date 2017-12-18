@@ -816,6 +816,8 @@ class ClientFile:
         data = self.handle + self.parent._packAttributes(attrs)
         return self.parent._sendRequest(FXP_FSTAT, data)
 
+
+
 class ClientDirectory:
 
     def __init__(self, parent, handle):
@@ -823,17 +825,21 @@ class ClientDirectory:
         self.handle = NS(handle)
         self.filesCache = []
 
+
     def read(self):
         d = self.parent._sendRequest(FXP_READDIR, self.handle)
         return d
 
+
     def close(self):
         return self.parent._sendRequest(FXP_CLOSE, self.handle)
+
 
     def __iter__(self):
         return self
 
-    def next(self):
+
+    def __next__(self):
         if self.filesCache:
             return self.filesCache.pop(0)
         d = self.read()
@@ -841,9 +847,13 @@ class ClientDirectory:
         d.addErrback(self._ebReadDir)
         return d
 
+    next = __next__
+
+
     def _cbReadDir(self, names):
         self.filesCache = names[1:]
         return names[0]
+
 
     def _ebReadDir(self, reason):
         reason.trap(EOFError)
@@ -851,6 +861,7 @@ class ClientDirectory:
             raise StopIteration
         self.next = _
         return reason
+
 
 
 class SFTPError(Exception):
