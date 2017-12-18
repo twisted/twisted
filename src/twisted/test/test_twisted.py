@@ -160,8 +160,8 @@ class RequirementsTests(TestCase):
     """
     unsupportedPythonVersion = (2, 6)
     supportedPythonVersion = (2, 7)
-    Py3unsupportedPythonVersion = (3, 2)
-    Py3supportedPythonVersion = (3, 3)
+    Py3unsupportedPythonVersion = (3, 3)
+    Py3supportedPythonVersion = (3, 4)
 
 
     def setUp(self):
