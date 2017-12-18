@@ -17,8 +17,6 @@ from twisted.python.compat import unicode, lazyByteSlice, _PY3
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
-import sys
-
 if _PY3:
     # Python 3.4+ can join bytes and memoryviews; using a
     # memoryview prevents the slice from copying
