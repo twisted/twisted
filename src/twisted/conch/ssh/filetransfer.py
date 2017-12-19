@@ -859,7 +859,8 @@ class ClientDirectory:
         reason.trap(EOFError)
         def _():
             raise StopIteration
-        self.next = _
+        self.__next__ = _
+        self.next = self.__next__
         return reason
 
 
