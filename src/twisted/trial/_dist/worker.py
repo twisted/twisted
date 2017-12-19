@@ -284,8 +284,9 @@ class LocalWorker(ProcessProtocol):
             os.makedirs(self._logDirectory)
         self._outLog = open(os.path.join(self._logDirectory, 'out.log'), 'wb')
         self._errLog = open(os.path.join(self._logDirectory, 'err.log'), 'wb')
-        testLog = open(os.path.join(self._logDirectory, self._logFile), 'wb')
-        self._ampProtocol.setTestStream(testLog)
+        self._testLog = open(
+            os.path.join(self._logDirectory, self._logFile), 'wb')
+        self._ampProtocol.setTestStream(self._testLog)
         logDirectory = self._logDirectory
         if isinstance(logDirectory, unicode):
             logDirectory = logDirectory.encode("utf-8")
