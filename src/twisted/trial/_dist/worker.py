@@ -304,6 +304,7 @@ class LocalWorker(ProcessProtocol):
         """
         self._outLog.close()
         self._errLog.close()
+        self._testLog.close()
 
 
     def processEnded(self, reason):
