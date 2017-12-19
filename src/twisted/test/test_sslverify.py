@@ -587,6 +587,9 @@ class FakeChooseDiffieHellmanEllipticCurve(object):
     def configureECDHCurve(self, ctx):
         """
         A null configuration.
+
+        @param ctx: An L{OpenSSL.SSL.Context} that would be
+            configured.
         """
 
 
