@@ -1,0 +1,1 @@
+_iocp.send no longer attaches send buffer to completion event, saving memory.
