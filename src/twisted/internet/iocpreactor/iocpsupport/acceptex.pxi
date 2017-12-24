@@ -14,7 +14,7 @@ def accept(long listening, long accepting, object buff, object obj):
 
     PyObject_AsWriteBuffer(buff, &mem_buffer, &size)
 
-    ov = makeOV(obj, buff)
+    ov = makeOV(obj)
 
     rc = lpAcceptEx(listening, accepting, mem_buffer, 0,
                     <DWORD>size / 2, <DWORD>size / 2,

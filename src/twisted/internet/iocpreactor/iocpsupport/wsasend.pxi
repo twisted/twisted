@@ -12,7 +12,7 @@ def send(long s, object buff, object obj, unsigned long flags = 0):
     PyObject_AsReadBuffer(buff, <void **>&ws_buf.buf, &size)
     ws_buf.len = <DWORD>size
 
-    ov = makeOV(obj, buff)
+    ov = makeOV(obj)
 
     rc = WSASend(s, &ws_buf, 1, &bytes, flags, <OVERLAPPED *>ov, NULL)
 

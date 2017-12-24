@@ -225,7 +225,7 @@ cdef class CompletionPort:
 
         obj = None
         if ov:
-            obj, ignored = <object>ov.attached
+            obj, _ = <object>ov.attached
             unmakeOV(ov)
 
         return (rc, bytes, key, obj)
