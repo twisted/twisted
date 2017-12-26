@@ -841,6 +841,8 @@ class ClientDirectory:
         d.addErrback(self._ebReadDir)
         return d
 
+    __next__ = next
+
     def _cbReadDir(self, names):
         self.filesCache = names[1:]
         return names[0]
