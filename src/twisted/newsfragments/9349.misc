@@ -1,0 +1,1 @@
+* Make conch.ssh.filetransfer.ClientDirectory class an iterator on python 3.x.
