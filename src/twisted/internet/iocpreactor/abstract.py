@@ -192,7 +192,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             self.doWrite()
 
 
-    def _handleWrite(self, rc, numBytesWritten, evt):
+    def _handleWrite(self, rc, numBytesWritten, evt, update_offset=False):
         """
         Returns false if we should stop writing for now
         """
@@ -200,36 +200,37 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             return False
         # XXX: not handling WSAEWOULDBLOCK
         # ("too many outstanding overlapped I/O requests")
-        if rc:
+        if rc and rc != ERROR_IO_PENDING:
             self.connectionLost(failure.Failure(
                                 error.ConnectionLost("write error -- %s (%s)" %
                                     (errno.errorcode.get(rc, 'unknown'), rc))))
             return False
-        else:
+        elif update_offset is True:
             self.offset += numBytesWritten
-            # If there is nothing left to send,
-            if self.offset == len(self.dataBuffer) and not self._tempDataLen:
-                self.dataBuffer = b""
-                self.offset = 0
-                # stop writing
-                self.stopWriting()
-                # If I've got a producer who is supposed to supply me with data
-                if self.producer is not None and ((not self.streamingProducer)
-                                                  or self.producerPaused):
-                    # tell them to supply some more.
-                    self.producerPaused = True
-                    self.producer.resumeProducing()
-                elif self.disconnecting:
-                    # But if I was previously asked to let the connection die,
-                    # do so.
-                    self.connectionLost(failure.Failure(main.CONNECTION_DONE))
-                elif self._writeDisconnecting:
-                    # I was previously asked to half-close the connection.
-                    self._writeDisconnected = True
-                    self._closeWriteConnection()
-                return False
-            else:
-                return True
+
+        # If there is nothing left to send,
+        if self.offset == len(self.dataBuffer) and not self._tempDataLen:
+            self.dataBuffer = b""
+            self.offset = 0
+            # stop writing
+            self.stopWriting()
+            # If I've got a producer who is supposed to supply me with data
+            if self.producer is not None and ((not self.streamingProducer)
+                                              or self.producerPaused):
+                # tell them to supply some more.
+                self.producerPaused = False
+                self.producer.resumeProducing()
+            elif self.disconnecting:
+                # But if I was previously asked to let the connection die,
+                # do so.
+                self.connectionLost(failure.Failure(main.CONNECTION_DONE))
+            elif self._writeDisconnecting:
+                # I was previously asked to half-close the connection.
+                self._writeDisconnected = True
+                self._closeWriteConnection()
+            return False
+        else:
+            return True
 
 
     def doWrite(self):
@@ -243,16 +244,14 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             self._tempDataLen = 0
 
         evt = _iocp.Event(self._cbWrite, self)
-
         # Send as much data as you can.
         if self.offset:
             sendView = memoryview(self.dataBuffer)
-            evt.buff = buff = sendView[self.offset:]
+            buff = sendView[self.offset:]
         else:
-            evt.buff = buff = self.dataBuffer
+            buff = self.dataBuffer
         rc, data = self.writeToHandle(buff, evt)
-        if rc and rc != ERROR_IO_PENDING:
-            self._handleWrite(rc, data, evt)
+        self._handleWrite(rc, data, evt, update_offset=True)
 
 
     def writeToHandle(self, buff, evt):

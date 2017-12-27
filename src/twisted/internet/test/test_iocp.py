@@ -20,7 +20,7 @@ try:
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
     from twisted.internet.iocpreactor.reactor import IOCPReactor, EVENTS_PER_LOOP, KEY_NORMAL
     from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-    from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
+    from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT, ERROR_IO_PENDING
     from twisted.internet.iocpreactor.abstract import FileHandle
 except ImportError:
     skip = 'This test only applies to IOCPReactor'
@@ -31,6 +31,14 @@ except error as e:
     ipv6Skip = str(e)
 else:
     ipv6Skip = None
+
+
+class FakeSocket(object):
+    def fileno(self):
+        return 0
+
+class FakeProtocol(object):
+    pass
 
 class SupportTests(unittest.TestCase):
     """
@@ -148,3 +156,35 @@ class IOCPReactorTests(unittest.TestCase):
         ir.doIteration(0)
         self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
 
+    def test_handleSlowServer(self):
+        """
+        Tests that multiple sends to a server that hasn't ACK'd do not result
+        in sending invalid data.
+        """
+
+        send_buffers = []
+        first_buffer = b"1234"
+        second_buffer = b"6789"
+
+        # patch _iocp.send to hold on to the send buffer.
+        def _patched_iocpsend(socket, send_buf, evt, flags=0):
+            send_buffers.append(send_buf)
+            return ERROR_IO_PENDING, len(send_buf)
+
+        self.patch(_iocp, "send", _patched_iocpsend)
+
+        ir = IOCPReactor()
+
+        conn = tcp.Connection(FakeSocket(), FakeProtocol(), ir)
+        conn.connected = True
+
+        conn.write(first_buffer)
+        ir.runUntilCurrent()
+        self.assertEqual(1, len(send_buffers))
+        self.assertEqual(first_buffer, send_buffers[0])
+
+        # Now send the second buffer, this will exercise the bug
+        conn.write(second_buffer)
+        ir.runUntilCurrent()
+        self.assertEqual(2, len(send_buffers))
+        self.assertEqual(second_buffer, send_buffers[1])
