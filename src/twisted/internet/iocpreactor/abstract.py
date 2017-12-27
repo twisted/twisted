@@ -188,7 +188,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
     def _cbWrite(self, rc, numBytesWritten, evt):
-        if self._handleWrite(rc, numBytesWritten, evt):
+        if self._handleWrite(rc, numBytesWritten, evt) and self._writeScheduled is None:
             self.doWrite()
 
 
