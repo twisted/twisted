@@ -1,0 +1,1 @@
+twisted.internet.iocpreactor now sends correct data when sending data to a server that hasn't yet acknowledged a previous send.
