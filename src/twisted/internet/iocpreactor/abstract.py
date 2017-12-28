@@ -188,11 +188,12 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
     def _cbWrite(self, rc, numBytesWritten, evt):
-        if self._handleWrite(rc, numBytesWritten, evt) and self._writeScheduled is None:
+        if self._handleWrite(rc, numBytesWritten, evt) and \
+        self._writeScheduled is None:
             self.doWrite()
 
 
-    def _handleWrite(self, rc, numBytesWritten, evt, update_offset=False):
+    def _handleWrite(self, rc, numBytesWritten, evt, updateOffset=False):
         """
         Returns false if we should stop writing for now
         """
@@ -205,19 +206,18 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                                 error.ConnectionLost("write error -- %s (%s)" %
                                     (errno.errorcode.get(rc, 'unknown'), rc))))
             return False
-        elif update_offset is True:
+        elif updateOffset is True:
             self.offset += numBytesWritten
 
         # If there is nothing left to send,
         if self.offset == len(self.dataBuffer) and not self._tempDataLen:
             self.dataBuffer = b""
             self.offset = 0
-            # stop writing
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data
             if self.producer is not None and ((not self.streamingProducer)
                                               or self.producerPaused):
-                # tell them to supply some more.
+                # Tell them to supply some more.
                 self.producerPaused = False
                 self.producer.resumeProducing()
             elif self.disconnecting:
@@ -251,7 +251,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         else:
             buff = self.dataBuffer
         rc, data = self.writeToHandle(buff, evt)
-        self._handleWrite(rc, data, evt, update_offset=True)
+        self._handleWrite(rc, data, evt, updateOffset=True)
 
 
     def writeToHandle(self, buff, evt):
