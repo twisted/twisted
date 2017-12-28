@@ -34,17 +34,24 @@ else:
     ipv6Skip = None
 
 
+
 class FakeSocket(object):
     def fileno(self):
         return 0
 
+
+
 class FakeProtocol(object):
     pass
 
+
+
 class FakeProducer(object):
+
 
     def __init__(self):
         self.resumed = False
+
 
     def resumeProducing(self):
         self.resumed = True
@@ -216,7 +223,10 @@ class IOCPReactorTests(unittest.TestCase):
         def _patchedCloseWriteConnection(self):
             # Workaround nonlocal for python 2.7
             _closeWriteConnectionCalled[0] = True
-        self.patch(tcp.Connection, "_closeWriteConnection", _patchedCloseWriteConnection)
+        self.patch(
+            tcp.Connection,
+            "_closeWriteConnection",
+            _patchedCloseWriteConnection)
 
         ir = IOCPReactor()
         conn = tcp.Connection(FakeSocket(), FakeProtocol(), ir)
@@ -283,5 +293,3 @@ class IOCPReactorTests(unittest.TestCase):
         self.assertEqual(0, len(conn.dataBuffer))
         self.assertTrue(conn._writeDisconnected)
         self.assertTrue(_closeWriteConnectionCalled[0])
-
-
