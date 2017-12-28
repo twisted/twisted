@@ -41,6 +41,14 @@ class FakeSocket(object):
 class FakeProtocol(object):
     pass
 
+class FakeProducer(object):
+
+    def __init__(self):
+        self.resumed = False
+
+    def resumeProducing(self):
+        self.resumed = True
+
 class SupportTests(unittest.TestCase):
     """
     Tests for L{twisted.internet.iocpreactor.iocpsupport}, low-level reactor
@@ -169,11 +177,11 @@ class IOCPReactorTests(unittest.TestCase):
         secondBuffer = b"6789"
 
         # Patch _iocp.send to hold on to the send buffer.
-        def _patched_iocpsend(socket, sendBuf, evt, flags=0):
+        def _patchedIOCPSend(socket, sendBuf, evt, flags=0):
             sendBuffers.append(sendBuf)
             return ERROR_IO_PENDING, len(sendBuf)
 
-        self.patch(_iocp, "send", _patched_iocpsend)
+        self.patch(_iocp, "send", _patchedIOCPSend)
 
         ir = IOCPReactor()
 
@@ -190,3 +198,90 @@ class IOCPReactorTests(unittest.TestCase):
         ir.runUntilCurrent()
         self.assertEqual(2, len(sendBuffers))
         self.assertEqual(secondBuffer, sendBuffers[1])
+
+
+    def test_abstractHandleWrite(self):
+        """
+        Tests that _handleWrite updates offsets correctly when called.
+        """
+
+        connectionLostCalled = [False]
+        _closeWriteConnectionCalled = [False]
+
+        def _patchedConnectionLost(self, reason):
+            # Workaround nonlocal for python 2.7
+            connectionLostCalled[0] = True
+        self.patch(tcp.Connection, "connectionLost", _patchedConnectionLost)
+
+        def _patchedCloseWriteConnection(self):
+            # Workaround nonlocal for python 2.7
+            _closeWriteConnectionCalled[0] = True
+        self.patch(tcp.Connection, "_closeWriteConnection", _patchedCloseWriteConnection)
+
+        ir = IOCPReactor()
+        conn = tcp.Connection(FakeSocket(), FakeProtocol(), ir)
+
+        # Verify when disconnected
+        conn.disconnected = True
+        self.assertFalse(conn._handleWrite(ERROR_IO_PENDING, 0, None))
+
+        # Verify when write disconnected
+        conn.disconnected = False
+        conn._writeDisconnected = True
+        self.assertFalse(conn._handleWrite(ERROR_IO_PENDING, 0, None))
+        conn._writeDisconnected = False
+
+        # Verify when not updating offset
+        conn.offset = 0
+        conn.dataBuffer = b"1234"
+        self.assertTrue(
+            conn._handleWrite(ERROR_IO_PENDING, len(conn.dataBuffer), None))
+        self.assertEqual(0, conn.offset)
+
+        # Verify when updating offset
+        self.assertTrue(
+            conn._handleWrite(ERROR_IO_PENDING, 3, None, True))
+        self.assertEqual(3, conn.offset)
+
+        # Verify when updating (simple case)
+        conn.offset = 0
+        self.assertFalse(
+            conn._handleWrite(
+                ERROR_IO_PENDING, len(conn.dataBuffer), None, True))
+        self.assertEqual(0, len(conn.dataBuffer))
+
+        # Handle disconnecting case
+        conn.offset = 0
+        conn.dataBuffer = b"1234"
+        conn.disconnecting = True
+        self.assertFalse(
+            conn._handleWrite(
+                ERROR_IO_PENDING, len(conn.dataBuffer), None, True))
+        self.assertEqual(0, len(conn.dataBuffer))
+        self.assertTrue(connectionLostCalled[0])
+
+        # Handle pull producer case
+        conn.offset = 0
+        conn.dataBuffer = b"1234"
+        conn.disconnecting = False
+        conn.producer = FakeProducer()
+        self.assertFalse(
+            conn._handleWrite(
+                ERROR_IO_PENDING, len(conn.dataBuffer), None, True))
+        self.assertEqual(0, len(conn.dataBuffer))
+        self.assertTrue(conn.producer.resumed)
+
+        # Handle _writeDisconnecting
+        conn.offset = 0
+        conn.dataBuffer = b"1234"
+        conn.producer = None
+        conn._writeDisconnecting = True
+        conn._writeDisconnected = False
+        self.assertFalse(
+            conn._handleWrite(
+                ERROR_IO_PENDING, len(conn.dataBuffer), None, True))
+        self.assertEqual(0, len(conn.dataBuffer))
+        self.assertTrue(conn._writeDisconnected)
+        self.assertTrue(_closeWriteConnectionCalled[0])
+
+
