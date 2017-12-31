@@ -478,7 +478,6 @@ class FileTransferClient(FileTransferBase):
         self.extData = {}
         self.counter = 0
         self.openRequests = {} # id -> Deferred
-        self.wasAFile = {} # Deferred -> 1 TERRIBLE HACK
 
     def connectionMade(self):
         data = struct.pack('!L', max(self.versions))
@@ -531,8 +530,13 @@ class FileTransferClient(FileTransferBase):
         """
         data = NS(filename) + struct.pack('!L', flags) + self._packAttributes(attrs)
         d = self._sendRequest(FXP_OPEN, data)
-        self.wasAFile[d] = (1, filename) # HACK
+        d.addCallback(self._cbOpenHandle, ClientFile, filename)
         return d
+
+    def _cbOpenHandle(self, handle, wrapperClass, name):
+        cb = wrapperClass(self, handle)
+        cb.name = name
+        return cb
 
     def removeFile(self, filename):
         """
@@ -618,7 +622,7 @@ class FileTransferClient(FileTransferBase):
         @param path: the directory to open.
         """
         d = self._sendRequest(FXP_OPENDIR, NS(path))
-        self.wasAFile[d] = (0, path)
+        d.addCallback(self._cbOpenHandle, ClientDirectory, path)
         return d
 
     def getAttrs(self, path, followLinks=0):
@@ -748,13 +752,8 @@ class FileTransferClient(FileTransferBase):
 
     def packet_HANDLE(self, data):
         d, data = self._parseRequest(data)
-        isFile, name = self.wasAFile.pop(d)
-        if isFile:
-            cb = ClientFile(self, getNS(data)[0])
-        else:
-            cb = ClientDirectory(self, getNS(data)[0])
-        cb.name = name
-        d.callback(cb)
+        handle, _ = getNS(data)
+        d.callback(handle)
 
     def packet_DATA(self, data):
         d, data = self._parseRequest(data)
