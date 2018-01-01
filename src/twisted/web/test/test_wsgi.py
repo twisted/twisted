@@ -2002,8 +2002,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
             def flush_pending_writes(self):
                 try:
-                    while self._pending:
-                        args, kwargs = self._pending.pop(0)
+                    while self._pending_writes:
+                        args, kwargs = self._pending_writes.pop(0)
                         self._pool.callInThread(*args, **kwargs)
                 except:
                     reactor.callFromThread(self._cb.errback, Failure())
@@ -2013,7 +2013,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def callInThread(self, *args, **kwargs):
                 # if this is a write-call, set it aside
                 if inspect.ismethod(args[0]) and args[0].im_func.func_name == 'write':
-                    self._pending.append((args, kwargs))
+                    self._pending_writes.append((args, kwargs))
                 # otherwise run it
                 else:
                     return self._pool.callInThread(*args, **kwargs)
