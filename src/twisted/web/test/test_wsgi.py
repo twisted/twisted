@@ -1959,50 +1959,48 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         lost_connection = threading.Event()
 
         def _loseConnection(self):
-            print('loseConnection A')
             f = Failure(ConnectionLost("No more connection"))
-            print('loseConnection Ab')
             Request.connectionLost(self, f)
-            print('loseConnection Ac')
             lost_connection.set()
-            print('loseConnection Ad')
 
         def applicationFactory():
             def application(environ, startResponse):
-                print('App A')
                 startResponse('200 OK', [])
                 yield b'some bytes'
 
                 # trigger a request disconnect
-                print('trigger loseConnection')
                 reactor.callFromThread(_loseConnection, running_request[0])
 
                 # wait for disconnect to go through
-                print('wait for loseConnection')
                 lost_connection.wait()
-                print('waited for loseConnection')
 
-                # unpause thread pool
+                # unpause thread pool, to unleash all pending writes
                 reactor.callFromThread(self.threadpool.flush_pending_writes)
-                print('unpause scheduled')
 
             return application
 
-        class MyRequest(Request):
+        class TrackedRequest(Request):
+            """
+            A subclass of Request to help us track the Request instance
+            created by self.lowLevelRender.
+            """
+
             def __init__(self, *args, **kwargs):
-                print('My A')
                 assert(running_request[0] is None)
                 Request.__init__(self, *args, **kwargs)
                 running_request[0] = self
-                print('My B')
 
         class PausedThreadpool:
+            """
+            A threadpool which will skip running all write requests
+            until requested specifically.
+            """
+
             _pool = ThreadPool()
-            _pending = []
+            _pending_writes = []
             _cb = Deferred()
 
             def flush_pending_writes(self):
-                print('flush')
                 try:
                     while self._pending:
                         args, kwargs = self._pending.pop(0)
@@ -2016,6 +2014,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 # if this is a write-call, set it aside
                 if inspect.ismethod(args[0]) and args[0].im_func.func_name == 'write':
                     self._pending.append((args, kwargs))
+                # otherwise run it
                 else:
                     return self._pool.callInThread(*args, **kwargs)
 
@@ -2024,13 +2023,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         self.addCleanup(self.threadpool._pool.stop)
 
         request = self.lowLevelRender(
-            MyRequest, applicationFactory, DummyChannel,
+            TrackedRequest, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
         try:
-            print('yield request.notifyFinish()', bytes)
             yield request.notifyFinish()
-            print('yield request.notifyFinish() B', bytes)
         except ConnectionLost:
             pass
         except:
@@ -2038,10 +2035,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         else:
             self.fail('should have raised ConnectionLost')
 
-        # wait for pending calls in threadpool to finish
-        print('yield self.threadpool._cb')
+        # wait for pending writes in threadpool to finish/fail
         yield self.threadpool._cb
-        print('yield self.threadpool._cb B')
 
     def test_writeCalledFromThread(self):
         """
