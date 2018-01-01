@@ -455,10 +455,13 @@ class _WSGIResponse:
         # Thing at some point in the future.
 
         def wsgiWrite(started):
-            if not self._requestFinished:
-                if not started:
-                    self._sendResponseHeaders()
-                self.request.write(data)
+            if self._requestFinished:
+                # self.request.notifyFinish() has triggered, and
+                # transport is potentially closed
+                return
+            if not started:
+                self._sendResponseHeaders()
+            self.request.write(data)
 
         try:
             return blockingCallFromThread(
@@ -519,19 +522,26 @@ class _WSGIResponse:
                     "WSGI application error",
                     failure=Failure(value, type, traceback)
                 )
-                if not self._requestFinished:
-                    if started:
-                        self.request.loseConnection()
-                    else:
-                        self.request.setResponseCode(INTERNAL_SERVER_ERROR)
-                        self.request.finish()
+                if self._requestFinished:
+                    # self.request.notifyFinish() has triggered, and
+                    # transport is potentially closed
+                    return
+                if started:
+                    self.request.loseConnection()
+                else:
+                    self.request.setResponseCode(INTERNAL_SERVER_ERROR)
+                    self.request.finish()
+
             self.reactor.callFromThread(wsgiError, self.started, *exc_info())
         else:
             def wsgiFinish(started):
-                if not self._requestFinished:
-                    if not started:
-                        self._sendResponseHeaders()
-                    self.request.finish()
+                if self._requestFinished:
+                    # self.request.notifyFinish() has triggered, and
+                    # transport is potentially closed
+                    return
+                if not started:
+                    self._sendResponseHeaders()
+                self.request.finish()
             self.reactor.callFromThread(wsgiFinish, self.started)
         self.started = True
 
