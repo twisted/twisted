@@ -1,0 +1,1 @@
+twisted.trial._dist.worker and twisted.trial._dist.workertrial consistently pass bytes, not unicode to AMP.  This fixes "trial -j" on Python 3.
