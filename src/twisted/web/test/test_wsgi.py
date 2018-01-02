@@ -1989,21 +1989,14 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
-        # run and wait for the request
+        # run and wait for the request to finish
         request = self.lowLevelRender(
             TrackedRequest, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
-        try:
-            yield request.notifyFinish()
-        except ConnectionLost:
-            pass
-        except:
-            self.fail('should have raised ConnectionLost')
-        else:
-            self.fail('should have raised ConnectionLost')
+        yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
 
-        # wait for first call to _WSGIResponse_write() to complete
+        # wait for first call to _WSGIResponse_write() to complete, and submit it
         _self, data = writes.get()
         yield threads.deferToThreadPool(self.reactor, self.threadpool, _write, _self, data)
 
