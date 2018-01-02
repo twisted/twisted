@@ -1958,27 +1958,21 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         # we intercept and queue calls to _WSGIResponse.write()
         # and submit them once the connection has been closed.
         self.enableThreads()
-        running_request = [None]
+        tracked_request = [None]
 
         def applicationFactory():
             def application(environ, startResponse):
                 # return some data, and subsequently disconnect
                 startResponse('200 OK', [])
                 yield b'some bytes'
-                reactor.callFromThread(running_request[0].connectionLost, Failure(ConnectionLost("No more connection")))
+                reactor.callFromThread(tracked_request[0].connectionLost, Failure(ConnectionLost("No more connection")))
 
             return application
 
-        class TrackedRequest(Request):
-            """
-            A subclass of Request to help us track the Request instantiated
-            by self.lowLevelRender.
-            """
-
-            def __init__(self, *args, **kwargs):
-                assert(running_request[0] is None)
-                Request.__init__(self, *args, **kwargs)
-                running_request[0] = self
+        def CreateAndTrackRequest(*args, **kwargs):
+            self.assertIsNone(tracked_request[0])
+            tracked_request[0] = Request(*args, **kwargs)
+            return tracked_request[0]
 
         # intercept _WSGIResponse.write() calls for later submission
         _write = _WSGIResponse.write
@@ -1991,7 +1985,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         # run and wait for the request to finish
         request = self.lowLevelRender(
-            TrackedRequest, applicationFactory, DummyChannel,
+            CreateAndTrackRequest, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
         yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
