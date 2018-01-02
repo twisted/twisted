@@ -12,7 +12,11 @@ import tempfile
 import traceback
 import warnings
 import threading
-import inspect
+
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
 from zope.interface.verify import verifyObject
 
@@ -22,13 +26,13 @@ from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet import reactor
+from twisted.internet import reactor, threads
 from twisted.internet.error import ConnectionLost
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
-from twisted.web.wsgi import WSGIResource
+from twisted.web.wsgi import WSGIResource, _WSGIResponse
 from twisted.web.test.test_web import DummyChannel
 from twisted.logger import globalLogPublisher, Logger
 from twisted.test.proto_helpers import EventLoggingObserver
@@ -1952,37 +1956,30 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         not be written to.
         """
 
-        # we queue up all writes, force a request disconnect
-        # and subsequently flush the pending writes
-
+        # we intercept and queue calls to _WSGIResponse.write()
+        # and submit them once the connection has been closed.
+        self.enableThreads()
         running_request = [None]
         lost_connection = threading.Event()
 
         def _loseConnection(self):
             f = Failure(ConnectionLost("No more connection"))
-            Request.connectionLost(self, f)
+            TrackedRequest.connectionLost(self, f)
             lost_connection.set()
 
         def applicationFactory():
             def application(environ, startResponse):
+                # return some data, and subsequently disconnect
                 startResponse('200 OK', [])
                 yield b'some bytes'
-
-                # trigger a request disconnect
                 reactor.callFromThread(_loseConnection, running_request[0])
-
-                # wait for disconnect to go through
-                lost_connection.wait()
-
-                # unpause thread pool, to unleash all pending writes
-                reactor.callFromThread(self.threadpool.flush_pending_writes)
 
             return application
 
         class TrackedRequest(Request):
             """
-            A subclass of Request to help us track the Request instance
-            created by self.lowLevelRender.
+            A subclass of Request to help us track the Request instantiated
+            by self.lowLevelRender.
             """
 
             def __init__(self, *args, **kwargs):
@@ -1990,38 +1987,16 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 Request.__init__(self, *args, **kwargs)
                 running_request[0] = self
 
-        class PausedThreadpool:
-            """
-            A threadpool which will skip running all write requests
-            until requested specifically.
-            """
+        # intercept _WSGIResponse.write() calls for later submission
+        _write = _WSGIResponse.write
+        writes = Queue()
 
-            _pool = ThreadPool()
-            _pending_writes = []
-            _cb = Deferred()
+        def _WSGIResponse_write(self, data):
+            writes.put((self, data))
 
-            def flush_pending_writes(self):
-                try:
-                    while self._pending_writes:
-                        args, kwargs = self._pending_writes.pop(0)
-                        self._pool.callInThread(*args, **kwargs)
-                except:
-                    reactor.callFromThread(self._cb.errback, Failure())
-                else:
-                    reactor.callFromThread(self._cb.callback, None)
+        self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
-            def callInThread(self, *args, **kwargs):
-                # if this is a write-call, set it aside
-                if inspect.ismethod(args[0]) and args[0].im_func.func_name == 'write':
-                    self._pending_writes.append((args, kwargs))
-                # otherwise run it
-                else:
-                    return self._pool.callInThread(*args, **kwargs)
-
-        self.threadpool = PausedThreadpool()
-        self.threadpool._pool.start()
-        self.addCleanup(self.threadpool._pool.stop)
-
+        # run and wait for the request
         request = self.lowLevelRender(
             TrackedRequest, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
@@ -2035,8 +2010,9 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         else:
             self.fail('should have raised ConnectionLost')
 
-        # wait for pending writes in threadpool to finish/fail
-        yield self.threadpool._cb
+        # wait for first call to _WSGIResponse_write() to complete
+        _self, data = writes.get()
+        yield threads.deferToThreadPool(self.reactor, self.threadpool, _write, _self, data)
 
     def test_writeCalledFromThread(self):
         """
