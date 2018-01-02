@@ -1952,13 +1952,13 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
 
         self.enableThreads()
-        request = [None]
+        trackedRequest = [None]
 
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [])
                 reason = Failure(ConnectionLost("No more connection"))
-                self.reactor.callFromThread(request[0].connectionLost, reason)
+                self.reactor.callFromThread(trackedRequest[0].connectionLost, reason)
                 yield b'write'
 
             return application
@@ -1966,9 +1966,9 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         def requestFactory(*args, **kwargs):
             # We need to manually close the request instantiated
             # by self.lowLevelRender().
-            self.assertIsNone(request[0])
-            request[0] = Request(*args, **kwargs)
-            return request[0]
+            self.assertIsNone(trackedRequest[0])
+            trackedRequest[0] = Request(*args, **kwargs)
+            return trackedRequest[0]
 
         # Keep a copy of _WSGIResponse.write before we patch it.
         _write = _WSGIResponse.write
