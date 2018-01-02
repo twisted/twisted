@@ -11,7 +11,6 @@ from sys import exc_info
 import tempfile
 import traceback
 import warnings
-import threading
 
 try:
     from queue import Queue
@@ -1960,19 +1959,13 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         # and submit them once the connection has been closed.
         self.enableThreads()
         running_request = [None]
-        lost_connection = threading.Event()
-
-        def _loseConnection(self):
-            f = Failure(ConnectionLost("No more connection"))
-            TrackedRequest.connectionLost(self, f)
-            lost_connection.set()
 
         def applicationFactory():
             def application(environ, startResponse):
                 # return some data, and subsequently disconnect
                 startResponse('200 OK', [])
                 yield b'some bytes'
-                reactor.callFromThread(_loseConnection, running_request[0])
+                reactor.callFromThread(running_request[0].connectionLost, Failure(ConnectionLost("No more connection")))
 
             return application
 
