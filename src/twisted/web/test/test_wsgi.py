@@ -11,11 +11,7 @@ from sys import exc_info
 import tempfile
 import traceback
 import warnings
-
-try:
-    from queue import Queue
-except ImportError:
-    from Queue import Queue
+import threading
 
 from zope.interface.verify import verifyObject
 
@@ -25,7 +21,7 @@ from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet import reactor, threads
+from twisted.internet import reactor
 from twisted.internet.error import ConnectionLost
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.web import http
@@ -1950,49 +1946,61 @@ class ApplicationTests(WSGITestsMixin, TestCase):
     @inlineCallbacks
     def test_pendingRequestOperationsRespectConnectionLoss(self):
         """
-        If there are pending transport writes when
-        notifyFinish() is called, the request should
+        If there are pending transport writes after
+        C{Request.notifyFinish} is called, the transport should
         not be written to.
         """
 
-        # we intercept and queue calls to _WSGIResponse.write()
-        # and submit them once the connection has been closed.
         self.enableThreads()
         tracked_request = [None]
 
         def applicationFactory():
             def application(environ, startResponse):
-                # return some data, and subsequently disconnect
                 startResponse('200 OK', [])
-                yield b'some bytes'
-                reactor.callFromThread(tracked_request[0].connectionLost, Failure(ConnectionLost("No more connection")))
+                reason = Failure(ConnectionLost("No more connection"))
+                self.reactor.callFromThread(tracked_request[0].connectionLost, reason)
+                yield b'write'
 
             return application
 
-        def CreateAndTrackRequest(*args, **kwargs):
+        def requestFactory(*args, **kwargs):
+            # we need to manually close the request instantiated by self.lowLevelRender
             self.assertIsNone(tracked_request[0])
             tracked_request[0] = Request(*args, **kwargs)
             return tracked_request[0]
 
-        # intercept _WSGIResponse.write() calls for later submission
+        # keep a copy of _WSGIResponse.write before we patch it
         _write = _WSGIResponse.write
-        writes = Queue()
+
+        # signal for the delayed write allowing it to proceed
+        connection_lost = threading.Event()
+
+        # result of the (delayed) write
+        write_result = Deferred()
 
         def _WSGIResponse_write(self, data):
-            writes.put((self, data))
+            # block write until transport is closed
+            connection_lost.wait()
+
+            try:
+                r = _write(self, data)
+                self.reactor.callFromThread(write_result.callback, None)
+                return r
+            except:
+                self.reactor.callFromThread(write_result.errback, Failure())
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
-        # run and wait for the request to finish
+        # run and wait for the request to fail
         request = self.lowLevelRender(
-            CreateAndTrackRequest, applicationFactory, DummyChannel,
+            requestFactory, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
         yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
 
-        # wait for first call to _WSGIResponse_write() to complete, and submit it
-        _self, data = writes.get()
-        yield threads.deferToThreadPool(self.reactor, self.threadpool, _write, _self, data)
+        # unblock write and wait for it to finish
+        connection_lost.set()
+        yield write_result
 
     def test_writeCalledFromThread(self):
         """
