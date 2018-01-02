@@ -1957,8 +1957,9 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [])
-                reason = Failure(ConnectionLost("No more connection"))
-                self.reactor.callFromThread(trackedRequest[0].connectionLost, reason)
+                self.reactor.callFromThread(
+                    trackedRequest[0].connectionLost,
+                    Failure(ConnectionLost("No more connection")))
                 yield b'write'
 
             return application

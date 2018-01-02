@@ -456,8 +456,8 @@ class _WSGIResponse:
 
         def wsgiWrite(started):
             if self._requestFinished:
-                # self.request.notifyFinish() has triggered, and
-                # transport is potentially closed
+                # Self.request.notifyFinish() has triggered, and
+                # transport is potentially closed.
                 return
             if not started:
                 self._sendResponseHeaders()
@@ -523,7 +523,7 @@ class _WSGIResponse:
                     failure=Failure(value, type, traceback)
                 )
                 if self._requestFinished:
-                    # self.request.notifyFinish() has triggered, and
+                    # Self.request.notifyFinish() has triggered, and
                     # transport is potentially closed
                     return
                 if started:
@@ -536,7 +536,7 @@ class _WSGIResponse:
         else:
             def wsgiFinish(started):
                 if self._requestFinished:
-                    # self.request.notifyFinish() has triggered, and
+                    # Self.request.notifyFinish() has triggered, and
                     # transport is potentially closed
                     return
                 if not started:
