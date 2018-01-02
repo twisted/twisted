@@ -1952,55 +1952,57 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
 
         self.enableThreads()
-        tracked_request = [None]
+        request = [None]
 
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [])
                 reason = Failure(ConnectionLost("No more connection"))
-                self.reactor.callFromThread(tracked_request[0].connectionLost, reason)
+                self.reactor.callFromThread(request[0].connectionLost, reason)
                 yield b'write'
 
             return application
 
         def requestFactory(*args, **kwargs):
-            # we need to manually close the request instantiated by self.lowLevelRender
-            self.assertIsNone(tracked_request[0])
-            tracked_request[0] = Request(*args, **kwargs)
-            return tracked_request[0]
+            # We need to manually close the request instantiated
+            # by self.lowLevelRender().
+            self.assertIsNone(request[0])
+            request[0] = Request(*args, **kwargs)
+            return request[0]
 
-        # keep a copy of _WSGIResponse.write before we patch it
+        # Keep a copy of _WSGIResponse.write before we patch it.
         _write = _WSGIResponse.write
 
-        # signal for the delayed write allowing it to proceed
-        connection_lost = threading.Event()
+        # Signal for the delayed write allowing it to proceed.
+        connectionLost = threading.Event()
 
-        # result of the (delayed) write
-        write_result = Deferred()
+        # Result of the (delayed) write.
+        writeResult = Deferred()
 
         def _WSGIResponse_write(self, data):
-            # block write until transport is closed
-            connection_lost.wait()
+            # Block write until transport is closed.
+            connectionLost.wait()
 
             try:
                 r = _write(self, data)
-                self.reactor.callFromThread(write_result.callback, None)
+                self.reactor.callFromThread(writeResult.callback, None)
                 return r
             except:
-                self.reactor.callFromThread(write_result.errback, Failure())
+                self.reactor.callFromThread(writeResult.errback, Failure())
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
-        # run and wait for the request to fail
+        # Run and wait for the request to fail.
         request = self.lowLevelRender(
             requestFactory, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
         yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
 
-        # unblock write and wait for it to finish
-        connection_lost.set()
-        yield write_result
+        # Unblock write and wait for it to finish.
+        connectionLost.set()
+        yield writeResult
+
 
     def test_writeCalledFromThread(self):
         """
