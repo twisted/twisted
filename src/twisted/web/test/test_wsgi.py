@@ -1968,7 +1968,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                     trackedRequest[0].connectionLost,
                     Failure(ConnectionLost("No more connection")))
 
-                yield b'write'
+                yield b'single chunk response'
 
             return application
 
