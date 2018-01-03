@@ -197,11 +197,27 @@ _EXTENSIONS = [
 
 
 
+def _checkPythonVersion():
+    """
+    Fail if we detect a version of Python we don't support.
+    """
+    import sys
+
+    version = getattr(sys, "version_info", (0,))
+    if version < (2, 7):
+        raise ImportError("Twisted requires Python 2.7 or later.")
+    elif version >= (3, 0) and version < (3, 4):
+        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+
+
+
 def getSetupArgs(extensions=_EXTENSIONS):
     """
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
+    _checkPythonVersion()
+
     arguments = STATIC_PACKAGE_METADATA.copy()
 
     # This is a workaround for distutils behavior; ext_modules isn't

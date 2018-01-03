@@ -13,11 +13,6 @@ import setuptools
 
 if __name__ == "__main__":
 
-    _checkRequirements = {}
-    with open('src/twisted/_checkrequirements.py') as f:
-        exec(f.read(), _checkRequirements)
-    _checkRequirements["_checkRequirements"]()
-
     _setup = {}
     with open('src/twisted/python/_setup.py') as f:
         exec(f.read(), _setup)
