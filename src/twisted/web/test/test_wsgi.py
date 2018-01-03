@@ -1948,7 +1948,10 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
         If there are pending transport writes after
         C{Request.notifyFinish} is called, the transport should
-        not be written to.
+        not be written to. The test issues a request to a wsgi
+        app, which schedules the transport to . All writes
+        to the transport are blocked until after the disconnect
+        finishes, forcing the write-after-closed behaviour.
         """
 
         self.enableThreads()
@@ -1956,7 +1959,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         def applicationFactory():
             """
-            A special wsgi application behaves normally, except
+            A special wsgi application which behaves normally, except
             that it will schedule a request disconnect to trigger
             a write-to-transport after disconnect.
             """
@@ -1985,15 +1988,17 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         _originalWSGIResponseWrite = _WSGIResponse.write
 
-        # Signal for the delayed write allowing it to proceed.
-        connectionLost = threading.Event()
+        # Event signalled after trackedRequest[0] is
+        # closed, allowing pending writes to
+        # proceed.
+        connectionLostSyncPoint = threading.Event()
 
         # Result of the (delayed) write.
         writeResult = Deferred()
 
         def _WSGIResponse_write(self, data):
             # Block write until transport is closed.
-            connectionLost.wait()
+            connectionLostSyncPoint.wait()
 
             try:
                 r = _originalWSGIResponseWrite(self, data)
@@ -2011,8 +2016,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
 
-        # Unblock write and wait for it to finish.
-        connectionLost.set()
+        # Transport is now closed, signal writes to proceed.
+        connectionLostSyncPoint.set()
         yield writeResult
 
 
