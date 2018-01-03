@@ -2000,7 +2000,6 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             connectionLostSyncPoint.wait()
 
             try:
-                raise ValueError
                 r = _originalWSGIResponseWrite(self, data)
                 self.reactor.callFromThread(wsgiResponseWriteResult.callback, None)
                 return r
