@@ -1996,6 +1996,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             blocks until C{connectionLostSyncPoint} is
             signalled, and puts the result/failure
             in C{writeResult}.
+            @return: None
             """
             connectionLostSyncPoint.wait()
 
