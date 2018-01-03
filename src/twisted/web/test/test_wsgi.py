@@ -1955,11 +1955,19 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         trackedRequest = [None]
 
         def applicationFactory():
+            """
+            A special wsgi application behaves normally, except
+            that it will schedule a request disconnect to trigger
+            a write-to-transport after disconnect.
+            """
             def application(environ, startResponse):
                 startResponse('200 OK', [])
+
+                # Schedule the disconnect.
                 self.reactor.callFromThread(
                     trackedRequest[0].connectionLost,
                     Failure(ConnectionLost("No more connection")))
+
                 yield b'write'
 
             return application
