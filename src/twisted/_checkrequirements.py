@@ -4,7 +4,9 @@
 # See LICENSE for details.
 
 def _checkRequirements():
-    # Don't allow the user to run a version of Python we don't support.
+    """
+    Do not allow the user to run a version of Python we don't support.
+    """
     import sys
 
     version = getattr(sys, "version_info", (0,))
