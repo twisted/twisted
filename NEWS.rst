@@ -89,6 +89,7 @@ Improved Documentation
   pages on GitHub. (#9216)
 - The example code for the trial tutorial is now compatible with Python3 and
   the current version of Twisted. (#9223)
+- Fixed a typo in finger08.py. (#9364)
 
 
 Deprecations and Removals
@@ -1960,7 +1961,7 @@ Twisted Core 15.4.0 (2015-09-04)
 ================================
 
 This is the last Twisted release where Python 2.6 is supported, on any
-platform. 
+platform.
 
 Features
 --------
