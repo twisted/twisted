@@ -2001,13 +2001,15 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
             try:
                 r = _originalWSGIResponseWrite(self, data)
-                self.reactor.callFromThread(wsgiResponseWriteResult.callback, None)
+                self.reactor.callFromThread(
+                    wsgiResponseWriteResult.callback, None)
                 return r
             except Exception:
                 # The above code is not expected to fail, but if it does the
-                # test will hang (on yield wsgiResponseWriteResult) and the exception
-                # will not be logged.
-                self.reactor.callFromThread(wsgiResponseWriteResult.errback, Failure())
+                # test will hang (on yield wsgiResponseWriteResult) and
+                # the exception will not be logged.
+                self.reactor.callFromThread(
+                    wsgiResponseWriteResult.errback, Failure())
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
