@@ -1,1 +1,1 @@
-There is no longer a race condition in _WSGIResponse where pending writes would fail on already closed transports.
+Fixed a race condition in twisted.web.wsgi.WSGIResource which would emit "Unhandled error in Deferred" log messages for wsgi apps.
