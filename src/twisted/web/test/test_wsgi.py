@@ -1959,13 +1959,12 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         def applicationFactory():
             """
-            A special wsgi application which behaves normally, except
-            that it will schedule a request disconnect.
+            A wsgi application which schedules a request
+            disconnect, and returns a single response chunk.
             """
             def application(environ, startResponse):
                 startResponse('200 OK', [])
 
-                # Schedule the disconnect.
                 self.reactor.callFromThread(
                     trackedRequest[0].connectionLost,
                     Failure(ConnectionLost("No more connection")))
@@ -1989,22 +1988,27 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         # Event signalled after trackedRequest[0] is
         # disconnected.
         connectionLostSyncPoint = threading.Event()
-        writeResult = Deferred()
+        wsgiResponseWriteResult = Deferred()
 
         def _WSGIResponse_write(self, data):
             """
-            A wrapper for C{_WSGIResponse.write} which blocks
-            until C{connectionLostSyncPoint} is signalled,
-            and puts the result/failure in C{writeResult}.
+            A wrapper for C{_WSGIResponse.write} which first
+            blocks until C{connectionLostSyncPoint} is
+            signalled, and puts the result/failure
+            in C{writeResult}.
             """
             connectionLostSyncPoint.wait()
 
             try:
+                raise ValueError
                 r = _originalWSGIResponseWrite(self, data)
-                self.reactor.callFromThread(writeResult.callback, None)
+                self.reactor.callFromThread(wsgiResponseWriteResult.callback, None)
                 return r
             except Exception:
-                self.reactor.callFromThread(writeResult.errback, Failure())
+                # The above code is not expected to fail, but if it does the
+                # test will hang (on yield wsgiResponseWriteResult) and the exception
+                # will not be logged.
+                self.reactor.callFromThread(wsgiResponseWriteResult.errback, Failure())
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
@@ -2015,9 +2019,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
 
-        # Transport is now closed, signal writes to proceed.
+        # Transport is now closed, signal write to proceed.
         connectionLostSyncPoint.set()
-        yield writeResult
+
+        # Wait for the write to finish.
+        yield wsgiResponseWriteResult
 
 
     def test_writeCalledFromThread(self):
