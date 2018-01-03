@@ -1973,8 +1973,12 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return application
 
         def requestFactory(*args, **kwargs):
-            # We need to manually close the request instantiated
-            # by self.lowLevelRender().
+            # A factory which returns a twisted.web.server.Request
+            # but stores a reference to it in trackedRequest[0].
+
+            # Self.lowLevelRender() is call only once, and it
+            # is expected to call requestFactory() once.
+
             self.assertIsNone(trackedRequest[0])
             trackedRequest[0] = Request(*args, **kwargs)
             return trackedRequest[0]
