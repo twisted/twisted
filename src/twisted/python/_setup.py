@@ -201,8 +201,6 @@ def _checkPythonVersion():
     """
     Fail if we detect a version of Python we don't support.
     """
-    import sys
-
     version = getattr(sys, "version_info", (0,))
     if version < (2, 7):
         raise ImportError("Twisted requires Python 2.7 or later.")
