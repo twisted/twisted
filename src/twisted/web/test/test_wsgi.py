@@ -1949,9 +1949,9 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         If there are pending transport writes after
         C{Request.notifyFinish} is called, the transport should
         not be written to. The test issues a request to a wsgi
-        app, which schedules the transport to . All writes
+        app, which schedules the transport to disconnect. All writes
         to the transport are blocked until after the disconnect
-        finishes, forcing the write-after-closed behaviour.
+        finishes, forcing the write-after-disconnect behaviour.
         """
 
         self.enableThreads()
@@ -1960,8 +1960,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             """
             A special wsgi application which behaves normally, except
-            that it will schedule a request disconnect to trigger
-            a write-to-transport after disconnect.
+            that it will schedule a request disconnect.
             """
             def application(environ, startResponse):
                 startResponse('200 OK', [])
@@ -1977,11 +1976,10 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         def requestFactory(*args, **kwargs):
             # A factory which returns a twisted.web.server.Request
-            # but stores a reference to it in trackedRequest[0].
+            # and stores a reference to it in trackedRequest[0].
 
             # Self.lowLevelRender() is call only once, and it
             # is expected to call requestFactory() once.
-
             self.assertIsNone(trackedRequest[0])
             trackedRequest[0] = Request(*args, **kwargs)
             return trackedRequest[0]
@@ -1989,22 +1987,23 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         _originalWSGIResponseWrite = _WSGIResponse.write
 
         # Event signalled after trackedRequest[0] is
-        # closed, allowing pending writes to
-        # proceed.
+        # disconnected.
         connectionLostSyncPoint = threading.Event()
-
-        # Result of the (delayed) write.
         writeResult = Deferred()
 
         def _WSGIResponse_write(self, data):
-            # Block write until transport is closed.
+            """
+            A wrapper for C{_WSGIResponse.write} which blocks
+            until C{connectionLostSyncPoint} is signalled,
+            and puts the result/failure in C{writeResult}.
+            """
             connectionLostSyncPoint.wait()
 
             try:
                 r = _originalWSGIResponseWrite(self, data)
                 self.reactor.callFromThread(writeResult.callback, None)
                 return r
-            except:
+            except Exception:
                 self.reactor.callFromThread(writeResult.errback, Failure())
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
