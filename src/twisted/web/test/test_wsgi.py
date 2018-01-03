@@ -2017,7 +2017,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             requestFactory, applicationFactory, DummyChannel,
             'GET', '1.1', [], [''])
 
-        yield self.failUnlessFailure(request.notifyFinish(), ConnectionLost)
+        yield self.assertFailure(request.notifyFinish(), ConnectionLost)
 
         # Transport is now closed, signal write to proceed.
         connectionLostSyncPoint.set()
