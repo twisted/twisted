@@ -1983,8 +1983,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             trackedRequest[0] = Request(*args, **kwargs)
             return trackedRequest[0]
 
-        # Keep a copy of _WSGIResponse.write before we patch it.
-        _write = _WSGIResponse.write
+        _originalWSGIResponseWrite = _WSGIResponse.write
 
         # Signal for the delayed write allowing it to proceed.
         connectionLost = threading.Event()
@@ -1997,7 +1996,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             connectionLost.wait()
 
             try:
-                r = _write(self, data)
+                r = _originalWSGIResponseWrite(self, data)
                 self.reactor.callFromThread(writeResult.callback, None)
                 return r
             except:
