@@ -1,1 +1,1 @@
-Fixed a race condition in twisted.web.wsgi.WSGIResource which would emit "Unhandled error in Deferred" log messages for wsgi apps.
+A race condition in twisted.web.wsgi.WSGIResource caused by writes being done after the request was finished no longer occur. The condition was triggering "Unhandled error in Deferred" type of errors.
