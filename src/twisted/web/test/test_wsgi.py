@@ -2030,11 +2030,11 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         # Wait for the write to finish.
         data = yield wsgiResponseWriteResult
 
-        # we attempt write this
+        # We attempted write this.
         self.assertEqual(data, b'single chunk response')
 
-        # but because we did if after we disconnected
-        # nothing was written
+        # But because we did if after we disconnected
+        # nothing was written.
         self.assertEqual(requestChannel.transport.written.getvalue(), b'')
 
     def test_writeCalledFromThread(self):
