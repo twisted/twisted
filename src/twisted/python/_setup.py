@@ -211,6 +211,7 @@ def _checkPythonVersion():
 
 def getSetupArgs(extensions=_EXTENSIONS):
     """
+
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
@@ -354,8 +355,8 @@ class build_ext_twisted(build_ext.build_ext, object):
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
-        self.compiler.announce("checking for %s ..." % header_name, 0)
-        return self._compile_helper("#include <%s>\n" % header_name)
+        self.compiler.announce("checking for {} ...".format(header_name), 0)
+        return self._compile_helper("#include <{}>\n".format(header_name))
 
 
 
