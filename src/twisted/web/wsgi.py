@@ -458,6 +458,12 @@ class _WSGIResponse:
             if self._requestFinished:
                 # Self.request.notifyFinish() has triggered, and
                 # transport is potentially closed.
+                message = 'skipping write scheduled after transport closed'
+                self._log.error(message,
+                    system='wsgi',
+                    isError=True,
+                    data=(data,)
+                )
                 return
             if not started:
                 self._sendResponseHeaders()
