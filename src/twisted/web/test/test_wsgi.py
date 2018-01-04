@@ -1962,6 +1962,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             """
             A wsgi application which schedules a request
             disconnect, and returns a single response chunk.
+
+            @return: the wsgi application
             """
             def application(environ, startResponse):
                 startResponse('200 OK', [])
@@ -1978,6 +1980,10 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             """
             A factory which returns a twisted.web.server.Request
             and stores a reference to it in trackedRequest[0].
+
+            @param args: positional arguments for Request constructor
+            @param kwargs: keyword arguments for Request constructor
+            @return: an instance of twisted.web.server.Request
             """
 
             # Self.lowLevelRender() is call only once, and it
@@ -2000,6 +2006,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             blocks until connectionLostSyncPoint is
             signalled, and puts the result/failure
             writeResult.
+            @return: the result/exception of _originalWSGIResponseWrite(data)
             """
             connectionLostSyncPoint.wait()
 
