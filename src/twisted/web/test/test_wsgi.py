@@ -1974,12 +1974,15 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return application
 
         def requestFactory(*args, **kwargs):
-            # A factory which returns a twisted.web.server.Request
-            # and stores a reference to it in trackedRequest[0].
+            """
+            A factory which returns a twisted.web.server.Request
+            and stores a reference to it in trackedRequest[0].
+            """
 
             # Self.lowLevelRender() is call only once, and it
             # is expected to call requestFactory() once.
             self.assertIsNone(trackedRequest[0])
+
             trackedRequest[0] = Request(*args, **kwargs)
             return trackedRequest[0]
 
@@ -1992,23 +1995,22 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         def _WSGIResponse_write(self, data):
             """
-            A wrapper for C{_WSGIResponse.write} which first
-            blocks until C{connectionLostSyncPoint} is
+            A wrapper for _WSGIResponse.write which first
+            blocks until connectionLostSyncPoint is
             signalled, and puts the result/failure
-            in C{writeResult}.
-            @return: None
+            writeResult}
             """
             connectionLostSyncPoint.wait()
 
             try:
                 r = _originalWSGIResponseWrite(self, data)
                 self.reactor.callFromThread(
-                    wsgiResponseWriteResult.callback, None)
+                    wsgiResponseWriteResult.callback, data)
                 return r
             except Exception:
-                # The above code is not expected to fail, but if it does the
-                # test will hang (on yield wsgiResponseWriteResult) and
-                # the exception will not be logged.
+                # The above code is not expected to fail.
+                # We need this handling here as if the code does fail,
+                # without this part the test will hang.
                 self.reactor.callFromThread(
                     wsgiResponseWriteResult.errback, Failure())
 
@@ -2025,7 +2027,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         connectionLostSyncPoint.set()
 
         # Wait for the write to finish.
-        yield wsgiResponseWriteResult
+        data = yield wsgiResponseWriteResult
+        self.assertEqual(data, b'single chunk response')
 
 
     def test_writeCalledFromThread(self):
