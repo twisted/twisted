@@ -1956,6 +1956,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         self.enableThreads()
         trackedRequest = [None]
+        requestChannel = DummyChannel()
 
         def applicationFactory():
             """
@@ -2018,7 +2019,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         # Run and wait for the request to fail.
         request = self.lowLevelRender(
-            requestFactory, applicationFactory, DummyChannel,
+            requestFactory, applicationFactory, lambda: requestChannel,
             'GET', '1.1', [], [''])
 
         yield self.assertFailure(request.notifyFinish(), ConnectionLost)
@@ -2028,8 +2029,13 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         # Wait for the write to finish.
         data = yield wsgiResponseWriteResult
+
+        # we attempt write this
         self.assertEqual(data, b'single chunk response')
 
+        # but because we did if after we disconnected
+        # nothing was written
+        self.assertEqual(requestChannel.transport.written.getvalue(), b'')
 
     def test_writeCalledFromThread(self):
         """
