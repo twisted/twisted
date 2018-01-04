@@ -1999,7 +1999,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             A wrapper for _WSGIResponse.write which first
             blocks until connectionLostSyncPoint is
             signalled, and puts the result/failure
-            writeResult}
+            writeResult.
             """
             connectionLostSyncPoint.wait()
 
@@ -2014,6 +2014,8 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 # without this part the test will hang.
                 self.reactor.callFromThread(
                     wsgiResponseWriteResult.errback, Failure())
+
+                raise
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
