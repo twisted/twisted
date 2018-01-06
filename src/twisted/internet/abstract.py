@@ -17,18 +17,11 @@ from twisted.python.compat import unicode, lazyByteSlice, _PY3
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
-import sys
-
 if _PY3:
-    if (sys.version_info.major, sys.version_info.minor) == (3, 3):
-        # Python 3.3 cannot join bytes and memoryviews
-        def _concatenate(bObj, offset, bArray):
-            return bObj[offset:] + b"".join(bArray)
-    else:
-        # Python 3.4+ can join bytes and memoryviews; using a
-        # memoryview prevents the slice from copying
-        def _concatenate(bObj, offset, bArray):
-            return b''.join([memoryview(bObj)[offset:]] + bArray)
+    # Python 3.4+ can join bytes and memoryviews; using a
+    # memoryview prevents the slice from copying
+    def _concatenate(bObj, offset, bArray):
+        return b''.join([memoryview(bObj)[offset:]] + bArray)
 else:
     from __builtin__ import buffer
 
