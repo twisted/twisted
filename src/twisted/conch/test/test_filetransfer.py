@@ -489,6 +489,43 @@ class OurServerOurClientTests(SFTPTestBase):
         return self.assertFailure(d, NotImplementedError)
 
 
+    @defer.inlineCallbacks
+    def test_openDirectoryIterator(self):
+        """
+        Check that the object returned by
+        L{filetransfer.FileTransferClient.openDirectory} can be used
+        as an iterator.
+        """
+
+        # This function is a little more complicated than it would be
+        # normally, since we need to call _emptyBuffers() after
+        # creating any SSH-related Deferreds, but before waiting on
+        # them via yield.
+
+        d = self.client.openDirectory(b'')
+        self._emptyBuffers()
+        openDir = yield d
+
+        filenames = set()
+        try:
+            for f in openDir:
+                self._emptyBuffers()
+                (filename, _, fileattrs) = yield f
+                filenames.add(filename)
+        finally:
+            d = openDir.close()
+            self._emptyBuffers()
+            yield d
+
+        self._emptyBuffers()
+
+        self.assertEqual(filenames,
+                         set([b'.testHiddenFile', b'testDirectory',
+                              b'testRemoveFile', b'testRenameFile',
+                              b'testfile1']))
+
+
+
 class FakeConn:
     def sendClose(self, channel):
         pass
