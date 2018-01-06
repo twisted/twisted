@@ -290,7 +290,7 @@ class FileTransferServer(FileTransferBase):
     def _scanDirectory(self, dirIter, f):
         while len(f) < 250:
             try:
-                info = dirIter.next()
+                info = next(dirIter)
             except StopIteration:
                 if not f:
                     raise EOFError
