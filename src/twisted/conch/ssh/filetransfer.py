@@ -856,12 +856,8 @@ class ClientDirectory:
 
 
     def _ebReadDir(self, reason):
-        reason.trap(EOFError)
-        def _():
-            raise StopIteration
-        self.__next__ = _
-        self.next = self.__next__
-        return reason
+        reason.trap(EOFError, StopIteration)
+        return failure.Failure(StopIteration())
 
 
 
