@@ -30,7 +30,8 @@ RECORD_TYPES = [
     dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
-    dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.Record_SSHFP,
+    dns.UnknownRecord,
     ]
 
 
@@ -508,6 +509,16 @@ class RoundtripDNSTests(unittest.TestCase):
         self._recordRoundtripTest(dns.Record_SRV(
                 priority=1, weight=2, port=3, target=b'example.com'))
 
+    def test_SSHFP(self):
+        """
+        The byte stream written by L{dns.Record_SSHFP.encode} can be used by
+        L{dns.Record_SSHFP.decode} to reconstruct the state of the original
+        L{dns.Record_SSHFP} instance.
+        """
+        self._recordRoundtripTest(dns.Record_SSHFP(
+            keytype=dns.Record_SSHFP.KEYTYPE_DSS,
+            fptype=dns.Record_SSHFP.FPTYPE_SHA1,
+            fingerprint=b'\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09'))
 
     def test_NAPTR(self):
         """
@@ -1970,6 +1981,32 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_SRV(10, 20, 30, b'example.com', 40),
             dns.Record_SRV(10, 20, 30, b'example.com', 400))
 
+
+    def test_sshfp(self):
+        """
+        Two L{dns.Record_SSHFP} instances compare equal if and only if they have
+        the same key type, fingerprint type, fingerprint, and ttl.
+        """
+        # Vary the key type
+        self._equalityTest(
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(2, 2, b'happyday', 40))
+        # Vary the fingerprint type
+        self._equalityTest(
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 1, b'happyday', 40))
+        # Vary the fingerprint itself
+        self._equalityTest(
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 2, b'happxday', 40))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 2, b'happyday', 40),
+            dns.Record_SSHFP(1, 2, b'happyday', 45))
 
     def test_naptr(self):
         """

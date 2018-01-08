@@ -17,7 +17,7 @@ __all__ = [
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
     'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
-    'WKS',
+    'SSHFP', 'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
@@ -29,7 +29,8 @@ __all__ = [
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
-    'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
+    'Record_SPF', 'Record_SRV', 'Record_SSHFP', 'Record_TXT', 'Record_WKS',
+    'UnknownRecord',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -120,6 +121,7 @@ NAPTR = 35
 A6 = 38
 DNAME = 39
 OPT = 41
+SSHFP = 44
 SPF = 99
 
 QUERY_TYPES = {
@@ -150,6 +152,7 @@ QUERY_TYPES = {
     A6: 'A6',
     DNAME: 'DNAME',
     OPT: 'OPT',
+    SSHFP: 'SSHFP',
     SPF: 'SPF'
 }
 
@@ -1900,6 +1903,71 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     def __hash__(self):
         return hash((self.preference, self.name))
 
+
+@implementer(IEncodable, IRecord)
+class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
+    """
+    A record containing the fingerprint of an SSH key.
+
+    @type keytype: L{int}
+    @ivar keytype: The SSH key algorithm or key type.
+    Note that the numbering used for SSH key algorithms is specific to the SSHFP record type, and is not the same as the nubering used for KEY or SIG records.
+
+    @type fptype: L{int}
+    @ivar fptype: The fingerprint type, such as L{FPTYPE_SHA1} or L{FPTYPE_SHA256}.
+
+    @type fingerprint: L{bytes}
+    @ivar fingerprint: The key's fingerprint, e.g. a 32-byte SHA-256 digest.
+
+    @cvar KEYTYPE_RSA: The key type value for C{ssh-rsa} keys.
+    @cvar KEYTYPE_DSS: The key type value for C{ssh-dss} keys.
+    @cvar KEYTYPE_ECDSA: The key type value for C{ecdsa-sha2-*} keys.
+    @cvar KEYTYPE_Ed25519: The key type value for C{ed25519} keys.
+
+    @cvar FPTYPE_SHA1: The fptype value for SHA-1 fingerprints.
+    @cvar FPTYPE_SHA256: The fptype value for SHA-256 fingerprints.
+
+    @see: U{RFC 4255 <https://tools.ietf.org/html/rfc4255>}
+          and
+          U{RFC 6594 <https://tools.ietf.org/html/rfc6594>}
+    """
+    fancybasename = "SSHFP"
+    compareAttributes = ('keytype', 'fptype', 'fingerprint', 'ttl')
+    showAttributes = ('keytype', 'fptype', ('fingerprint', _nicebytes))
+    TYPE = SSHFP
+
+    KEYTYPE_RSA = 1
+    KEYTYPE_DSS = 2
+    KEYTYPE_ECDSA = 3
+    KEYTYPE_Ed25519 = 4
+    _KEYTYPES = [
+        ( KEYTYPE_RSA, 'RSA' ),
+        ( KEYTYPE_DSS, 'DSS' ),
+        ( KEYTYPE_ECDSA, 'ECDSA' ),
+        ( KEYTYPE_Ed25519, 'Ed25519' ),
+    ]
+
+    FPTYPE_SHA1 = 1
+    FPTYPE_SHA256 = 2
+
+    def __init__(self, keytype=0, fptype=0, fingerprint=b'', ttl=0):
+        self.keytype = keytype
+        self.fptype = fptype
+        self.fingerprint = fingerprint
+        self.ttl = ttl
+
+    def encode(self, strio, compDict = None):
+        strio.write(struct.pack('!BB',
+                                self.keytype, self.fptype))
+        strio.write(self.fingerprint)
+
+    def decode(self, strio, length = None):
+        r = struct.unpack('!BB', readPrecisely(strio, 2))
+        (self.keytype, self.fptype) = r
+        self.fingerprint = readPrecisely(strio, length - 2)
+
+    def __hash__(self):
+        return hash((self.keytype, self.fptype, self.fingerprint))
 
 
 @implementer(IEncodable, IRecord)
