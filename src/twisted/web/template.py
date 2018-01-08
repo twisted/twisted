@@ -68,7 +68,7 @@ class _NSContext(object):
         if parent is not None:
             self.nss = OrderedDict(parent.nss)
         else:
-            self.nss = {'http://www.w3.org/XML/1998/namespace':'xml'}
+            self.nss = {'http://www.w3.org/XML/1998/namespace': 'xml'}
 
 
     def get(self, k, d=None):
@@ -108,6 +108,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self.sourceFilename = sourceFilename
         self.prefixMap = _NSContext()
         self.inCDATA = False
+        self.locator = None
 
 
     def setDocumentLocator(self, locator):
@@ -183,10 +184,18 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         """
 
         filename = self.sourceFilename
-        lineNumber = self.locator.getLineNumber()
-        columnNumber = self.locator.getColumnNumber()
+        if self.locator:
+            lineNumber = self.locator.getLineNumber()
+            columnNumber = self.locator.getColumnNumber()
+        else:
+            lineNumber = None
+            columnNumber = None
 
         ns, name = namespaceAndName
+        if ns is None:
+            if name.startswith("t:"):
+                ns = TEMPLATE_NAMESPACE
+                name = name.split(":", 1)[1]
         if ns == TEMPLATE_NAMESPACE:
             if name == 'transparent':
                 name = ''
@@ -212,6 +221,10 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         attrs = OrderedDict(attrs)
         for k, v in items(attrs):
             attrNS, justTheName = k
+            if attrNS is None:
+                if justTheName.startswith("t:"):
+                    attrNS = TEMPLATE_NAMESPACE
+                    justTheName = justTheName.split(":", 1)[1]
             if attrNS != TEMPLATE_NAMESPACE:
                 continue
             if justTheName == 'render':
@@ -358,6 +371,23 @@ def _flatsaxParse(fl):
     return s.document
 
 
+def _html5saxParse(fl):
+    """
+    
+    """
+    from html5lib import getTreeWalker, getTreeBuilder, HTMLParser
+    from html5lib.treeadapters.sax import to_sax
+
+    intermediate = 'etree'
+    builder = getTreeBuilder(intermediate)
+    walker = getTreeWalker(intermediate)
+    parser = HTMLParser(tree=builder, namespaceHTMLElements=False)
+    document = parser.parseFragment(fl)
+    handler = _ToStan(getattr(fl, 'name', None))
+    to_sax(walker(document), handler)
+    return handler.document
+
+
 @implementer(ITemplateLoader)
 class TagLoader(object):
     """
@@ -387,7 +417,11 @@ class XMLString(object):
 
     @ivar _loadedTemplate: The loaded document.
     @type _loadedTemplate: a C{list} of Stan objects.
+
+    @ivar _parser: The parser to use.
     """
+
+    _parser = staticmethod(_flatsaxParse)
 
     def __init__(self, s):
         """
@@ -399,7 +433,7 @@ class XMLString(object):
         if not isinstance(s, str):
             s = s.decode('utf8')
 
-        self._loadedTemplate = _flatsaxParse(NativeStringIO(s))
+        self._loadedTemplate = self._parser(NativeStringIO(s))
 
 
     def load(self):
@@ -410,6 +444,13 @@ class XMLString(object):
         @rtype: a C{list} of Stan objects.
         """
         return self._loadedTemplate
+
+
+class HTMLString(XMLString):
+    """
+    
+    """
+    _parser = staticmethod(_html5saxParse)
 
 
 

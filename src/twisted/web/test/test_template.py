@@ -14,7 +14,7 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
 from twisted.web.template import (
-    Element, TagLoader, renderer, tags, XMLFile, XMLString)
+    Element, TagLoader, renderer, tags, XMLFile, XMLString, HTMLString)
 from twisted.web.iweb import ITemplateLoader
 
 from twisted.web.error import (FlattenerError, MissingTemplateLoader,
@@ -269,6 +269,37 @@ class XMLStringLoaderTests(TestCase, XMLLoaderTestsMixin):
         @return: an L{XMLString} constructed with C{self.templateString}.
         """
         return XMLString(self.templateString)
+
+
+
+class HTMLStringLoaderTests(TestCase, XMLLoaderTestsMixin):
+    """
+    
+    """
+    deprecatedUse = False
+
+    def loaderFactory(self):
+        """
+        
+        """
+        return HTMLString(self.templateString.split("</")[0])
+
+
+    def test_parseRenderAndSlot(self):
+        """
+        
+        """
+        class RenderMe(Element):
+            loader = HTMLString(
+                "<div t:render='arender'>one <br> <t:slot name='aslot'></div>"
+            )
+            @renderer
+            def arender(self, request, tag):
+                return tag.fillSlots(aslot="two")
+        from twisted.web.template import flattenString
+        rendered = self.successResultOf(flattenString(None, RenderMe()))
+        # Skip XML namespaces
+        self.assertIn(b">one <br /> two</div>", rendered)
 
 
 
