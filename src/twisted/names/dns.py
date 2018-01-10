@@ -17,19 +17,21 @@ __all__ = [
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
     'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
-    'SSHFP', 'WKS',
+    'SSHFP', 'TSIG', 'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
     'ALL_RECORDS', 'AXFR', 'IXFR',
 
     'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER', 'EBADVERSION',
+    'EBADSIG', 'EBADKEY', 'EBADTIME',
 
     'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
-    'Record_SPF', 'Record_SRV', 'Record_SSHFP', 'Record_TXT', 'Record_WKS',
+    'Record_SPF', 'Record_SRV', 'Record_SSHFP', 'Record_TSIG', 'Record_TXT',
+    'Record_WKS',
     'UnknownRecord',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
@@ -124,6 +126,11 @@ OPT = 41
 SSHFP = 44
 SPF = 99
 
+# These record types do not exist in zones, but are transferred in
+# messages the same way normal RRs are.
+TKEY = 249
+TSIG = 250
+
 QUERY_TYPES = {
     A: 'A',
     NS: 'NS',
@@ -153,7 +160,10 @@ QUERY_TYPES = {
     DNAME: 'DNAME',
     OPT: 'OPT',
     SSHFP: 'SSHFP',
-    SPF: 'SPF'
+    SPF: 'SPF',
+
+    TKEY: 'TKEY',
+    TSIG: 'TSIG',
 }
 
 IXFR, AXFR, MAILB, MAILA, ALL_RECORDS = range(251, 256)
@@ -196,6 +206,8 @@ OP_UPDATE = 5 # RFC 2136
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 # https://tools.ietf.org/html/rfc6891#section-9
 EBADVERSION = 16
+# RFC 2845
+EBADSIG, EBADKEY, EBADTIME = range(16, 19)
 
 class IRecord(Interface):
     """
@@ -2078,6 +2090,67 @@ class Record_SPF(Record_TXT):
     TYPE = SPF
     fancybasename = 'SPF'
 
+
+@implementer(IEncodable, IRecord)
+class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
+    """
+    A transaction signature, encapsulated in a RR, as described
+    in U{RFC 2845 <https://tools.ietf.org/html/rfc2845>}.
+
+    @type algorithm: L{Name}
+    @ivar algorithm: The name of the signature or MAC algorithm.
+
+    @type timeSigned: L{int}
+    @ivar timeSigned: Signing time, as seconds from the POSIX epoch.
+
+    @type fudge: L{int}
+    @ivar fudge: Allowable time skew, in seconds.
+
+    @type MAC: L{bytes}
+    @ivar MAC: The message digest or signature.
+
+    @type originalID: L{int}
+    @ivar originalID: A message ID.
+
+    @type otherData: L{bytes}
+    @ivar otherData: Other data carried in exceptional cases.
+
+    """
+    fancybasename = "TSIG"
+    compareAttributes = ('algorithm', 'timeSigned', 'fudge', 'MAC', 'originalID', 'error', 'otherData', 'ttl')
+    showAttributes = ['algorithm', 'timeSigned', 'MAC', 'error', 'otherData']
+
+    TYPE = TSIG
+
+    def __init__(self, algorithm=None, timeSigned=None, fudge=5, MAC=None, originalID=0, error=OK, otherData=b'', ttl=0):
+        self.algorithm = None if algorithm is None else Name(algorithm)
+        self.timeSigned = None if timeSigned is None else int(timeSigned)
+        self.fudge = str2time(fudge)
+        self.MAC = MAC
+        self.originalID = int(originalID)
+        self.error = int(error)
+        self.otherData = otherData
+        self.ttl = ttl
+
+    def encode(self, strio, compDict = None):
+        self.algorithm.encode(strio, compDict)
+        strio.write(struct.pack('!Q', self.timeSigned)[2:])  # 48-bit number
+        strio.write(struct.pack('!HH', self.fudge, len(self.MAC)))
+        strio.write(self.MAC)
+        strio.write(struct.pack('!HHH', self.originalID, self.error, len(self.otherData)))
+        strio.write(self.otherData)
+
+    def decode(self, strio, length = None):
+        algorithm = Name()
+        algorithm.decode(strio)
+        self.algorithm = algorithm
+        self.timeSigned, self.fudge, macLength = struct.unpack('!QHH', b'\x00\x00' + readPrecisely(strio, 10))
+        self.MAC = readPrecisely(strio, macLength)
+        self.originalID, self.error, otherLength = struct.unpack('!HHH', readPrecisely(strio, 6))
+        self.otherData = readPrecisely(strio, otherLength)
+
+    def __hash__(self):
+        return hash((self.algorithm, self.timeSigned, self.MAC, self.originalID))
 
 
 def _responseFromMessage(responseConstructor, message, **kwargs):

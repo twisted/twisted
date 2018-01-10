@@ -31,6 +31,7 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.Record_SSHFP,
+    dns.Record_TSIG,
     dns.UnknownRecord,
     ]
 
@@ -595,6 +596,25 @@ class RoundtripDNSTests(unittest.TestCase):
         self._recordRoundtripTest(dns.Record_MX(
                 preference=1, name=b'example.com'))
 
+    def test_TSIG(self):
+        """
+        The byte stream written by L{dns.Record_TSIG.encode} can be used by
+        L{dns.Record_TSIG.decode} to reconstruct the state of the original
+        L{dns.Record_TSIG} instance.
+        """
+        rr = dns.Record_TSIG(algorithm='hmac-md5.sig-alg.reg.int',
+                             timeSigned=1515548975,
+                             originalID=42,
+                             MAC=b'\x00\x01\x02\x03\x10\x11\x12\x13\x20\x21\x22\x23\x30\x31\x32\x33')
+        self._recordRoundtripTest(rr)
+
+        rr = dns.Record_TSIG(algorithm='hmac-sha256',
+                             timeSigned=4511798055, # More than 32 bits
+                             originalID=65535,
+                             error=dns.EBADTIME,
+                             otherData=b'\x80\x00\x00\x00\x00\x08',
+                             MAC=b'\x00\x01\x02\x03\x10\x11\x12\x13\x20\x21\x22\x23\x30\x31\x32\x33')
+        self._recordRoundtripTest(rr)
 
     def test_TXT(self):
         """
@@ -2204,6 +2224,23 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=100))
 
+    def test_tsig(self):
+        """
+        L{dns.Record_TSIG} instances compare equal if and only if they have the
+        same data and ttl.
+        """
+        base_args = { 'algorithm': 'hmac-sha224', 'timeSigned': 1515548975,
+                      'fudge': 5, 'MAC': b'\x01\x02\x03\x04\x05', 'originalID': 99,
+                      'error': dns.OK, 'otherData': b'', 'ttl': 40 }
+        alt_args =  { 'algorithm': 'hmac-sha512', 'timeSigned': 1515548875,
+                      'fudge': 0, 'MAC': b'\x05\x04\x03\x02\x01', 'originalID': 65437,
+                      'error': dns.EBADTIME, 'otherData': b'\x00\x00', 'ttl': 400 }
+        for kw in base_args.keys():
+            altered = base_args.copy()
+            altered[kw] = alt_args[kw]
+            self._equalityTest(dns.Record_TSIG(**altered),
+                               dns.Record_TSIG(**altered),
+                               dns.Record_TSIG(**base_args))
 
     def test_unknown(self):
         """
