@@ -401,21 +401,13 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.connectionLost} closes the log streams.
         """
 
-        class FakeStream(object):
-            callNumber = 0
-
-            def close(self):
-                self.callNumber += 1
-
-
         transport = FakeTransport()
         localWorker = LocalWorker(FakeAMProtocol(), '.', 'test.log')
         localWorker.makeConnection(transport)
-        localWorker._outLog = FakeStream()
-        localWorker._errLog = FakeStream()
         localWorker.connectionLost(None)
-        self.assertEqual(localWorker._outLog.callNumber, 1)
-        self.assertEqual(localWorker._errLog.callNumber, 1)
+        self.assertTrue(localWorker._outLog.closed)
+        self.assertTrue(localWorker._errLog.closed)
+        self.assertTrue(localWorker._testLog.closed)
 
 
     def test_processEnded(self):
@@ -424,22 +416,17 @@ class LocalWorkerTests(TestCase):
         the L{AMP} protocol.
         """
 
-        class FakeStream(object):
-            callNumber = 0
-
-            def close(self):
-                self.callNumber += 1
-
-
         transport = FakeTransport()
         protocol = FakeAMProtocol()
         localWorker = LocalWorker(protocol, '.', 'test.log')
         localWorker.makeConnection(transport)
-        localWorker._outLog = FakeStream()
         localWorker.processEnded(Failure(CONNECTION_DONE))
-        self.assertEqual(localWorker._outLog.callNumber, 1)
+        self.assertTrue(localWorker._outLog.closed)
+        self.assertTrue(localWorker._errLog.closed)
+        self.assertTrue(localWorker._testLog.closed)
         self.assertIdentical(None, protocol.transport)
         return self.assertFailure(localWorker.endDeferred, ConnectionDone)
+
 
     def test_addresses(self):
         """
