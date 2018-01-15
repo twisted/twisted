@@ -15,9 +15,23 @@ from twisted.protocols import basic
 
 @attr.s(frozen=True)
 class _Process(object):
-
     """
-    The details of a process to be restarted.
+    The parameters of a process to be restarted.
+
+    @ivar args: command-line arguments (including name of command as first one)
+    @type args: C{list}
+
+    @ivar uid: user-id to run process as, or None
+    @type uid: C{int}
+ 
+    @ivar gid: group-id to run process as, or None
+    @type gid: C{int}
+
+    @ivar env: environment for process
+    @type env: C{dict}
+
+    @ivar cwd: initial working directory for process
+    @type cwd: C{str}
     """
 
     args = attr.ib()
@@ -26,7 +40,7 @@ class _Process(object):
     env = attr.ib(default=attr.Factory(dict))
     cwd = attr.ib(default=None)
 
-    @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
+    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
     def toTuple(self):
         """
         Convert to tuple
