@@ -153,15 +153,15 @@ class ProcessMonitor(service.Service):
     @deprecate.deprecatedProperty(incremental.Version("Twisted", 17, 10, 0))
     def processes(self):
         """
-        Processes as list of tuples
+        Processes as dict of tuples
 
-        @return: List of monitored processes as tuples
+        @return: Dict of process name to monitored processes as tuples
         """
         return {name: process.toTuple()
                 for name, process in self._processes.items()}
 
 
-    @deprecate.deprecated(incremental.Version("Twisted", 17, 10, 0))
+    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
         del dct['_reactor']
