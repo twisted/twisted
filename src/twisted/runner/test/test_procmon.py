@@ -145,7 +145,10 @@ class ProcmonTests(unittest.TestCase):
 
     def test_simpleReprLooksGood(self):
         """
-        Repr does not include unneeded details
+        Repr does not include unneeded details.
+
+        Values of attributes that just mean "inherit from launching
+        process" do not appear in the repr of a process.
         """
         self.pm.addProcess("foo", ["arg1", "arg2"], env={})
         representation = repr(self.pm)
@@ -540,7 +543,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_restartAllRestartsOneProcess(self):
         """
-        L{ProcessMonitor.restartAll} succeeds when there are no processes
+        L{ProcessMonitor.restartAll} succeeds when there is one process.
         """
         self.pm.addProcess("foo", ["foo"])
         self.pm.startService()
@@ -608,7 +611,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
     def setUp(self):
         """
-        Create reactor and process monitor
+        Create reactor and process monitor.
         """
         self.reactor = DummyProcessReactor()
         self.pm = ProcessMonitor(reactor=self.reactor)
@@ -616,7 +619,11 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
     def test_toTuple(self):
         """
-        _Process.toTuple is deprecated
+        _Process.toTuple is deprecated.
+
+        When getting the deprecated processes property, the actual
+        data (kept in the class _Process) is converted to a tuple --
+        which produces a DeprecationWarning per process so converted.
         """
         self.pm.addProcess("foo", ["foo"])
         myprocesses = self.pm.processes
@@ -634,6 +641,10 @@ class DeprecationTests(unittest.SynchronousTestCase):
     def test_processes(self):
         """
         Accessing L{ProcessMonitor.processes} results in deprecation warning
+
+        Even when there are no processes, and thus no process is converted
+        to a tuple, accessing the L{ProcessMonitor.processes} property
+        should generate its own DeprecationWarning.
         """
         myProcesses = self.pm.processes
         self.assertEquals(myProcesses, {})

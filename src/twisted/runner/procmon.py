@@ -197,6 +197,10 @@ class ProcessMonitor(service.Service):
         @param env: The environment to give to the launched process. See
             L{IReactorProcess.spawnProcess}'s C{env} parameter.
         @type env: C{dict}
+        @param cwd: The initial working directory of the launched process.
+            The default of C{None} means inheriting the laucnhing process's
+            working directory.
+        @type env: C{dict}
         @raises: C{KeyError} if a process with the given name already
             exists
         """
