@@ -23,7 +23,7 @@ class _Process(object):
 
     @ivar uid: user-id to run process as, or None
     @type uid: C{int}
- 
+
     @ivar gid: group-id to run process as, or None
     @type gid: C{int}
 
