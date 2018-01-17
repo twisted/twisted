@@ -429,13 +429,17 @@ class RoundtripDNSTests(unittest.TestCase):
             self.assertEqual(result.string, n)
 
 
-    def _recordRoundtripTest(self, record):
+    def _recordRoundtripTest(self, record, expectedEncoding=None):
         """
         Assert that encoding C{record} and then decoding the resulting bytes
-        creates a record which compares equal to C{record}.
+        creates a record which compares equal to C{record}. Optionally assert
+        that the encoded bytes are equal to C{expectedEncoding}.
         """
         stream = BytesIO()
         record.encode(stream)
+
+        if expectedEncoding is not None:
+            self.assertEqual(stream.getvalue(), expectedEncoding)
 
         length = stream.tell()
         stream.seek(0, 0)
@@ -516,10 +520,12 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_SSHFP.decode} to reconstruct the state of the original
         L{dns.Record_SSHFP} instance.
         """
-        self._recordRoundtripTest(dns.Record_SSHFP(
-            keytype=dns.Record_SSHFP.KEYTYPE_DSS,
-            fptype=dns.Record_SSHFP.FPTYPE_SHA1,
-            fingerprint=b'\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09'))
+
+        fp = b'\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09'
+        rr = dns.Record_SSHFP(keytype=dns.Record_SSHFP.KEYTYPE_DSS,
+                              fptype=dns.Record_SSHFP.FPTYPE_SHA1,
+                              fingerprint=fp)
+        self._recordRoundtripTest(rr, expectedEncoding=b'\x02\x01' + fp)
 
     def test_NAPTR(self):
         """
@@ -604,9 +610,12 @@ class RoundtripDNSTests(unittest.TestCase):
         """
         rr = dns.Record_TSIG(algorithm='hmac-md5.sig-alg.reg.int',
                              timeSigned=1515548975,
-                             originalID=42,
+                             originalID=42, fudge=5,
                              MAC=b'\x00\x01\x02\x03\x10\x11\x12\x13\x20\x21\x22\x23\x30\x31\x32\x33')
-        self._recordRoundtripTest(rr)
+        rdata = ( b'\x08hmac-md5\x07sig-alg\x03reg\x03int\x00\x00\x00\x5a\x55\x71\x2f\x00\x05'
+                  b'\x00\x10\x00\x01\x02\x03\x10\x11\x12\x13\x20\x21\x22\x23\x30\x31\x32\x33'
+                  b'\x00\x2A\x00\x00\x00\x00' )
+        self._recordRoundtripTest(rr, expectedEncoding=rdata)
 
         rr = dns.Record_TSIG(algorithm='hmac-sha256',
                              timeSigned=4511798055, # More than 32 bits
