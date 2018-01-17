@@ -827,12 +827,15 @@ class ClientDirectory:
 
 
     def read(self):
-        d = self.parent._sendRequest(FXP_READDIR, self.handle)
-        return d
+        return self.parent._sendRequest(FXP_READDIR, self.handle)
 
 
     def close(self):
-        return self.parent._sendRequest(FXP_CLOSE, self.handle)
+        if self.handle is None:
+            return defer.succeed(None)
+        d = self.parent._sendRequest(FXP_CLOSE, self.handle)
+        self.handle = None
+        return d
 
 
     def __iter__(self):
@@ -842,9 +845,10 @@ class ClientDirectory:
     def __next__(self):
         if self.filesCache:
             return self.filesCache.pop(0)
+        if self.filesCache is None:
+            raise StopIteration()
         d = self.read()
-        d.addCallback(self._cbReadDir)
-        d.addErrback(self._ebReadDir)
+        d.addCallbacks(self._cbReadDir, self._ebReadDir)
         return d
 
     next = __next__
@@ -856,7 +860,8 @@ class ClientDirectory:
 
 
     def _ebReadDir(self, reason):
-        reason.trap(EOFError, StopIteration)
+        reason.trap(EOFError)
+        self.filesCache = None
         return failure.Failure(StopIteration())
 
 
