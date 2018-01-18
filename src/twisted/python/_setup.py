@@ -244,6 +244,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
         "incremental >= 16.10.1",
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
+        "attrs >= 17.4.0",
     ]
 
     arguments.update(dict(
