@@ -43,7 +43,19 @@ class _Process(object):
     @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
     def toTuple(self):
         """
-        Convert to tuple
+        Convert process to tuple.
+
+        Convert process to tuple that looks like the legacy structure
+        of processes, for potential users who inspected processes
+        directly.
+
+        This was only an accidental feature, and will be removed. If
+        you need to remember what processes were added to a process monitor,
+        keep track of that when they are added. The process list
+        inside the process monitor is no longer a public API.
+
+        This allows changing the internal structure of the process list,
+        when warranted by bug fixes or additional features.
 
         @return: tuple representation of process
         """
