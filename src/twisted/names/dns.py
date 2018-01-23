@@ -1916,6 +1916,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
         return hash((self.preference, self.name))
 
 
+
 @implementer(IEncodable, IRecord)
 class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
@@ -1923,10 +1924,13 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @type keytype: L{int}
     @ivar keytype: The SSH key algorithm or key type.
-    Note that the numbering used for SSH key algorithms is specific to the SSHFP record type, and is not the same as the nubering used for KEY or SIG records.
+    Note that the numbering used for SSH key algorithms is specific
+    to the SSHFP record type, and is not the same as the nubering
+    used for KEY or SIG records.
 
     @type fptype: L{int}
-    @ivar fptype: The fingerprint type, such as L{FPTYPE_SHA1} or L{FPTYPE_SHA256}.
+    @ivar fptype: The fingerprint type,
+                  such as L{FPTYPE_SHA1} or L{FPTYPE_SHA256}.
 
     @type fingerprint: L{bytes}
     @ivar fingerprint: The key's fingerprint, e.g. a 32-byte SHA-256 digest.
@@ -1953,10 +1957,10 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     KEYTYPE_ECDSA = 3
     KEYTYPE_Ed25519 = 4
     _KEYTYPES = [
-        ( KEYTYPE_RSA, 'RSA' ),
-        ( KEYTYPE_DSS, 'DSS' ),
-        ( KEYTYPE_ECDSA, 'ECDSA' ),
-        ( KEYTYPE_Ed25519, 'Ed25519' ),
+        (KEYTYPE_RSA, 'RSA'),
+        (KEYTYPE_DSS, 'DSS'),
+        (KEYTYPE_ECDSA, 'ECDSA'),
+        (KEYTYPE_Ed25519, 'Ed25519'),
     ]
 
     FPTYPE_SHA1 = 1
@@ -1968,18 +1972,22 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.fingerprint = fingerprint
         self.ttl = ttl
 
-    def encode(self, strio, compDict = None):
+
+    def encode(self, strio, compDict=None):
         strio.write(struct.pack('!BB',
                                 self.keytype, self.fptype))
         strio.write(self.fingerprint)
 
-    def decode(self, strio, length = None):
+
+    def decode(self, strio, length=None):
         r = struct.unpack('!BB', readPrecisely(strio, 2))
         (self.keytype, self.fptype) = r
         self.fingerprint = readPrecisely(strio, length - 2)
 
+
     def __hash__(self):
         return hash((self.keytype, self.fptype, self.fingerprint))
+
 
 
 @implementer(IEncodable, IRecord)
@@ -2085,10 +2093,12 @@ class Record_SPF(Record_TXT):
     @ivar data: Freeform text which makes up this record.
 
     @type ttl: L{int}
-    @ivar ttl: The maximum number of seconds which this record should be cached.
+    @ivar ttl: The maximum number of seconds
+               which this record should be cached.
     """
     TYPE = SPF
     fancybasename = 'SPF'
+
 
 
 @implementer(IEncodable, IRecord)
@@ -2117,12 +2127,16 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     """
     fancybasename = "TSIG"
-    compareAttributes = ('algorithm', 'timeSigned', 'fudge', 'MAC', 'originalID', 'error', 'otherData', 'ttl')
+    compareAttributes = ('algorithm', 'timeSigned', 'fudge',
+                         'MAC', 'originalID', 'error', 'otherData',
+                         'ttl')
     showAttributes = ['algorithm', 'timeSigned', 'MAC', 'error', 'otherData']
 
     TYPE = TSIG
 
-    def __init__(self, algorithm=None, timeSigned=None, fudge=5, MAC=None, originalID=0, error=OK, otherData=b'', ttl=0):
+    def __init__(self, algorithm=None, timeSigned=None,
+                 fudge=5, MAC=None, originalID=0,
+                 error=OK, otherData=b'', ttl=0):
         self.algorithm = None if algorithm is None else Name(algorithm)
         self.timeSigned = None if timeSigned is None else int(timeSigned)
         self.fudge = str2time(fudge)
@@ -2132,25 +2146,33 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.otherData = otherData
         self.ttl = ttl
 
-    def encode(self, strio, compDict = None):
+
+    def encode(self, strio, compDict=None):
         self.algorithm.encode(strio, compDict)
         strio.write(struct.pack('!Q', self.timeSigned)[2:])  # 48-bit number
         strio.write(struct.pack('!HH', self.fudge, len(self.MAC)))
         strio.write(self.MAC)
-        strio.write(struct.pack('!HHH', self.originalID, self.error, len(self.otherData)))
+        strio.write(struct.pack('!HHH',
+                                self.originalID, self.error,
+                                len(self.otherData)))
         strio.write(self.otherData)
 
-    def decode(self, strio, length = None):
+
+    def decode(self, strio, length=None):
         algorithm = Name()
         algorithm.decode(strio)
         self.algorithm = algorithm
-        self.timeSigned, self.fudge, macLength = struct.unpack('!QHH', b'\x00\x00' + readPrecisely(strio, 10))
+        fields = struct.unpack('!QHH', b'\x00\x00' + readPrecisely(strio, 10))
+        self.timeSigned, self.fudge, macLength = fields
         self.MAC = readPrecisely(strio, macLength)
-        self.originalID, self.error, otherLength = struct.unpack('!HHH', readPrecisely(strio, 6))
+        fields = struct.unpack('!HHH', readPrecisely(strio, 6))
+        self.originalID, self.error, otherLength = fields
         self.otherData = readPrecisely(strio, otherLength)
 
+
     def __hash__(self):
-        return hash((self.algorithm, self.timeSigned, self.MAC, self.originalID))
+        return hash((self.algorithm, self.timeSigned,
+                     self.MAC, self.originalID))
 
 
 def _responseFromMessage(responseConstructor, message, **kwargs):
