@@ -124,7 +124,7 @@ class ProtocolWrapper(Protocol):
         self.factory.unregisterProtocol(self)
         self.wrappedProtocol.connectionLost(reason)
 
-        # breaking reference cycle between self and wrappedProtocol
+        # Breaking reference cycle between self and wrappedProtocol
         self.wrappedProtocol = None
 
 

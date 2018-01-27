@@ -271,18 +271,18 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     clientWrappedProto = ListeningClient()
     serverWrappedProto = GreetingServer()
 
-    CF = protocol.Factory()
-    CF.protocol = lambda: clientWrappedProto
-    SF = protocol.Factory()
-    SF.protocol = lambda: serverWrappedProto
+    cF = protocol.Factory()
+    cF.protocol = lambda: clientWrappedProto
+    sF = protocol.Factory()
+    sF.protocol = lambda: serverWrappedProto
 
     clientFactory = TLSMemoryBIOFactory(
         clientOpts, isClient=True,
-        wrappedFactory=SF
+        wrappedFactory=sF
     )
     serverFactory = TLSMemoryBIOFactory(
         serverOpts, isClient=False,
-        wrappedFactory=CF
+        wrappedFactory=cF
     )
 
     sProto, cProto, pump = connectedServerAndClient(
@@ -1674,19 +1674,19 @@ class TrustRootTests(unittest.TestCase):
         chainedCert = pathContainingDumpOf(self, serverCert, caSelfCert)
         privateKey = pathContainingDumpOf(self, serverCert.privateKey)
 
-        sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnection(
+        sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=platformTrust(),
             privateKeyFile=privateKey,
             chainedCertFile=chainedCert,
         )
         # No data was received.
-        self.assertEqual(cWrappedProto.data, b'')
+        self.assertEqual(cWrapped.data, b'')
 
         # It was an L{SSL.Error}.
-        self.assertEqual(cWrappedProto.lostReason.type, SSL.Error)
+        self.assertEqual(cWrapped.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
-        err = cWrappedProto.lostReason.value
+        err = cWrapped.lostReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
@@ -1697,15 +1697,15 @@ class TrustRootTests(unittest.TestCase):
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
         otherCa, otherServer = certificatesForAuthorityAndServer()
-        sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnection(
+        sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
-        self.assertIsNone(cWrappedProto.lostReason)
-        self.assertEqual(cWrappedProto.data,
-                         sWrappedProto.greeting)
+        self.assertIsNone(cWrapped.lostReason)
+        self.assertEqual(cWrapped.data,
+                         sWrapped.greeting)
 
 
 
@@ -1776,9 +1776,10 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @type useDefaultTrust: L{bool}
 
         @return: the client TLS protocol, the client wrapped protocol,
-            the server TLS protocol, the server wrapped protocol and an L{IOPump}
-            which, when its C{pump} and C{flush} methods are called, will move
-            data between the created client and server protocol instances
+            the server TLS protocol, the server wrapped protocol and
+            an L{IOPump} which, when its C{pump} and C{flush} methods are
+            called, will move data between the created client and server
+            protocol instances
         @rtype: 5-L{tuple} of 4 L{IProtocol}s and L{IOPump}
         """
         serverCA, serverCert = certificatesForAuthorityAndServer(
@@ -1857,21 +1858,21 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         serverWrappedProto = GreetingServer()
         clientWrappedProto = GreetingClient()
 
-        CF = protocol.Factory()
-        CF.protocol = lambda: clientWrappedProto
-        SF = protocol.Factory()
-        SF.protocol = lambda: serverWrappedProto
+        cF = protocol.Factory()
+        cF.protocol = lambda: clientWrappedProto
+        sF = protocol.Factory()
+        sF.protocol = lambda: serverWrappedProto
 
         self.serverOpts = serverOpts
         self.clientOpts = clientOpts
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
-            wrappedFactory=CF
+            wrappedFactory=cF
         )
         serverFactory = TLSMemoryBIOFactory(
             serverOpts, isClient=False,
-            wrappedFactory=SF
+            wrappedFactory=sF
         )
 
         cProto, sProto, pump = connectedServerAndClient(
@@ -1886,15 +1887,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         When a certificate containing an invalid hostname is received from the
         server, the connection is immediately dropped.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"wrong-host.example.com",
             u"correct-host.example.com",
         )
-        self.assertEqual(cWrappedProto.data, b'')
-        self.assertEqual(sWrappedProto.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cWrappedProto.lostReason.value
-        sErr = sWrappedProto.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, VerificationError)
         self.assertIsInstance(sErr, ConnectionClosed)
@@ -1905,15 +1906,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         Whenever a valid certificate containing a valid hostname is received,
         connection proceeds normally.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
         )
-        self.assertEqual(cWrappedProto.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cWrappedProto.lostReason
-        sErr = sWrappedProto.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -1923,17 +1924,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         When an invalid certificate containing a perfectly valid hostname is
         received, the connection is aborted with an OpenSSL error.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=False,
         )
 
-        self.assertEqual(cWrappedProto.data, b'')
-        self.assertEqual(sWrappedProto.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cWrappedProto.lostReason.value
-        sErr = sWrappedProto.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
@@ -1944,18 +1945,18 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         If we use the default trust from the platform, our dinky certificate
         should I{really} fail.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=False,
             useDefaultTrust=True,
         )
 
-        self.assertEqual(cWrappedProto.data, b'')
-        self.assertEqual(sWrappedProto.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cWrappedProto.lostReason.value
-        sErr = sWrappedProto.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
@@ -1966,17 +1967,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         L{ssl.optionsForClientTLS} should be using L{ssl.platformTrust} by
         default, so if we fake that out then it should trust ourselves again.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             useDefaultTrust=True,
             fakePlatformTrust=True,
         )
-        self.assertEqual(cWrappedProto.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cWrappedProto.lostReason
-        sErr = sWrappedProto.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -1987,7 +1988,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         for that verification by passing it to
         L{sslverify.optionsForClientTLS}, communication proceeds.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=True,
@@ -1995,11 +1996,11 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             clientPresentsCertificate=True,
         )
 
-        self.assertEqual(cWrappedProto.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cWrappedProto.lostReason
-        sErr = sWrappedProto.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -2011,7 +2012,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         L{sslverify.optionsForClientTLS}, the connection cannot be established
         with an SSL error.
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=True,
@@ -2020,11 +2021,11 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             clientPresentsCertificate=True,
         )
 
-        self.assertEqual(cWrappedProto.data,
+        self.assertEqual(cWrapped.data,
                          b'')
 
-        cErr = cWrappedProto.lostReason.value
-        sErr = sWrappedProto.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
@@ -2042,7 +2043,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             def servername_received(conn):
                 names.append(conn.get_servername().decode("ascii"))
             ctx.set_tlsext_servername_callback(servername_received)
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             setupServerContext
@@ -2064,15 +2065,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 serverIDNA = _idnaText(conn.get_servername())
                 names.append(serverIDNA)
             ctx.set_tlsext_servername_callback(servername_received)
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             hello, hello, setupServerContext
         )
         self.assertEqual(names, [hello])
-        self.assertEqual(cWrappedProto.data,
+        self.assertEqual(cWrapped.data,
                          b'greetings!')
 
-        cErr = cWrappedProto.lostReason
-        sErr = sWrappedProto.lostReason
+        cErr = cWrapped.lostReason
+        sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
@@ -2115,17 +2116,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         connection should be shut down (if possible, anyway; the app_data could
         be clobbered but there's no point testing for that).
         """
-        cProto, sProto, cWrappedProto, sWrappedProto, pump = self.serviceIdentitySetup(
+        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
             u"correct-host.example.com",
             u"correct-host.example.com",
             buggyInfoCallback=True,
         )
 
-        self.assertEqual(cWrappedProto.data, b'')
-        self.assertEqual(sWrappedProto.data, b'')
+        self.assertEqual(cWrapped.data, b'')
+        self.assertEqual(sWrapped.data, b'')
 
-        cErr = cWrappedProto.lostReason.value
-        sErr = sWrappedProto.lostReason.value
+        cErr = cWrapped.lostReason.value
+        sErr = sWrapped.lostReason.value
 
         self.assertIsInstance(cErr, ZeroDivisionError)
         self.assertIsInstance(sErr, (ConnectionClosed, SSL.Error))
@@ -2152,7 +2153,7 @@ def negotiateProtocol(serverProtocols,
         caCertificate.original,
     ])
 
-    sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnectionInMemory(
+    sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnectionInMemory(
         trustRoot=trustRoot,
         privateKey=serverCertificate.privateKey.original,
         serverCertificate=serverCertificate.original,
@@ -2162,7 +2163,7 @@ def negotiateProtocol(serverProtocols,
     )
     pump.flush()
 
-    return (cProto.negotiatedProtocol, cWrappedProto.lostReason)
+    return (cProto.negotiatedProtocol, cWrapped.lostReason)
 
 
 
@@ -2453,15 +2454,15 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Verify that the returned object acts correctly when used as a
         # trustRoot= param to optionsForClientTLS.
-        sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=mt,
             privateKey=privateCert.privateKey.original,
             serverCertificate=privateCert.original,
         )
 
         # This connection should succeed
-        self.assertEqual(cWrappedProto.data, b'greetings!')
-        self.assertIsNone(cWrappedProto.lostReason)
+        self.assertEqual(cWrap.data, b'greetings!')
+        self.assertIsNone(cWrap.lostReason)
 
 
     def test_trustRootSelfSignedServerCertificate(self):
@@ -2480,13 +2481,13 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Since we trust this exact certificate, connections to this server
         # should succeed.
-        sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=selfSigned.privateKey.original,
             serverCertificate=selfSigned.original,
         )
-        self.assertEqual(cWrappedProto.data, b'greetings!')
-        self.assertIsNone(cWrappedProto.lostReason)
+        self.assertEqual(cWrap.data, b'greetings!')
+        self.assertIsNone(cWrap.lostReason)
 
 
     def test_trustRootCertificateAuthorityTrustsConnection(self):
@@ -2501,13 +2502,13 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Since we've listed the CA's certificate as a trusted cert, a
         # connection to the server certificate it signed should succeed.
-        sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=serverCert.privateKey.original,
             serverCertificate=serverCert.original,
         )
-        self.assertEqual(cWrappedProto.data, b'greetings!')
-        self.assertIsNone(cWrappedProto.lostReason)
+        self.assertEqual(cWrap.data, b'greetings!')
+        self.assertIsNone(cWrap.lostReason)
 
 
     def test_trustRootFromCertificatesUntrusted(self):
@@ -2529,20 +2530,20 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # Since we only trust 'untrustedCert' which has not signed our
         # server's cert, we should reject this connection
-        sProto, cProto, sWrappedProto, cWrappedProto, pump = loopbackTLSConnectionInMemory(
+        sProto, cProto, sWrap, cWrap, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=serverCert.privateKey.original,
             serverCertificate=serverCert.original,
         )
 
         # This connection should fail, so no data was received.
-        self.assertEqual(cWrappedProto.data, b'')
+        self.assertEqual(cWrap.data, b'')
 
         # It was an L{SSL.Error}.
-        self.assertEqual(cWrappedProto.lostReason.type, SSL.Error)
+        self.assertEqual(cWrap.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
-        err = cWrappedProto.lostReason.value
+        err = cWrap.lostReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 

@@ -198,8 +198,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        # using weakref.proxy to avoid circular references
-        self._tlsConnection = self.factory._createConnection(weakref.proxy(self))
+        # Using weakref.proxy to avoid circular references
+        selfProxy = weakref.proxy(self)
+        self._tlsConnection = self.factory._createConnection(selfProxy)
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:

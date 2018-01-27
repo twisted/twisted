@@ -44,7 +44,8 @@ from twisted.internet.interfaces import (
 
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory, Factory
+from twisted.internet.protocol import (Protocol, ClientFactory, ServerFactory,
+                                       Factory)
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
 from twisted.trial.unittest import TestCase, SynchronousTestCase
@@ -1020,8 +1021,10 @@ class TLSMemoryBIOTests(TestCase):
                 TLSMemoryBIOProtocol(clientFactory, DummyClientProtocol())
             )
 
-            self.assertEqual(nObjectsOfType(TLSMemoryBIOProtocol), origTLSProtos)
-            self.assertEqual(nObjectsOfType(DummyServerProtocol), origServerProtos)
+            newTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
+            newServerProtos = nObjectsOfType(DummyServerProtocol)
+            self.assertEqual(newTLSProtos, origTLSProtos)
+            self.assertEqual(newServerProtos, origServerProtos)
         finally:
             gc.enable()
 
