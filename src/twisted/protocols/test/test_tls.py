@@ -985,6 +985,9 @@ class TLSMemoryBIOTests(TestCase):
         TLSMemoryBIOProtocol doesn't leave circular references that make
         it alive after connection is closed.
         """
+        def nObjectsOfType(type):
+            return sum(1 for x in gc.get_objects() if isinstance(x, type))
+
         gc.disable()
 
         try:
@@ -1000,6 +1003,9 @@ class TLSMemoryBIOTests(TestCase):
                 def connectionLost(self, reason):
                     reason.trap(ConnectionDone)
 
+            origTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
+            origServerProtos = nObjectsOfType(DummyServerProtocol)
+
             authCert, serverCert = certificatesForAuthorityAndServer()
             serverFactory = TLSMemoryBIOFactory(
                 serverCert.options(), False,
@@ -1014,11 +1020,8 @@ class TLSMemoryBIOTests(TestCase):
                 TLSMemoryBIOProtocol(clientFactory, DummyClientProtocol())
             )
 
-            def nObjectsOfType(type):
-                return sum(1 for x in gc.get_objects() if isinstance(x, type))
-
-            self.assertEqual(nObjectsOfType(TLSMemoryBIOProtocol), 0)
-            self.assertEqual(nObjectsOfType(DummyServerProtocol), 0)
+            self.assertEqual(nObjectsOfType(TLSMemoryBIOProtocol), origTLSProtos)
+            self.assertEqual(nObjectsOfType(DummyServerProtocol), origServerProtos)
         finally:
             gc.enable()
 
