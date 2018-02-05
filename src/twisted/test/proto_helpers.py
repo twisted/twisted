@@ -10,7 +10,11 @@ from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
 from io import BytesIO
-from collections import Sequence
+
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass

@@ -8,7 +8,10 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 __metaclass__ = type
 
-from collections import Sequence
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 from sys import exc_info
 from warnings import warn
 
