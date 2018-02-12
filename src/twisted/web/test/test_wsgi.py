@@ -1948,20 +1948,32 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
         If there are pending transport writes after
         C{Request.notifyFinish} is called, the transport should
-        not be written to. The test issues a request to a wsgi
-        app, which schedules the transport to disconnect. All writes
-        to the transport are blocked until after the disconnect
-        finishes, forcing the write-after-disconnect behaviour.
+        not be written to. The test issues two requests to a wsgi
+        app, each of which schedules the transport to disconnect.
+        All writes to the transport are purposfulyl blocked until
+        the disconnect completes, forcing the write-after-disconnect
+        behaviour.
         """
 
         self.enableThreads()
-        trackedRequest = [None]
-        requestChannel = DummyChannel()
+        trackedRequests = [None, None]
 
-        def applicationFactory():
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
+        class ArbitraryError(Exception):
+            """
+            An arbitrary error for this class
+            """
+
+        def applicationFactory(fail, requestIndex):
             """
             A wsgi application which schedules a request
-            disconnect, and returns a single response chunk.
+            disconnect for trackedRequests[requestIndex],
+            and either fails with an ArbitraryError
+            or yields a single response chunk.
 
             @return: the wsgi application
             """
@@ -1969,29 +1981,35 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                 startResponse('200 OK', [])
 
                 self.reactor.callFromThread(
-                    trackedRequest[0].connectionLost,
+                    trackedRequests[requestIndex].connectionLost,
                     Failure(ConnectionLost("No more connection")))
 
-                yield b'single chunk response'
+                if fail:
+                    raise ArbitraryError
+                else:
+                    yield b'single chunk response'
 
             return application
 
-        def requestFactory(*args, **kwargs):
-            """
-            A factory which returns a twisted.web.server.Request
-            and stores a reference to it in trackedRequest[0].
+        def requestFactory(index):
+            def _requestFactory(*args, **kwargs):
+                """
+                A factory which returns a twisted.web.server.Request
+                and stores a reference to it in trackedRequest[index].
 
-            @param args: positional arguments for Request constructor
-            @param kwargs: keyword arguments for Request constructor
-            @return: an instance of twisted.web.server.Request
-            """
+                @param args: positional arguments for Request constructor
+                @param kwargs: keyword arguments for Request constructor
+                @return: an instance of twisted.web.server.Request
+                """
 
-            # Self.lowLevelRender() is call only once, and it
-            # is expected to call requestFactory() once.
-            self.assertIsNone(trackedRequest[0])
+                # Self.lowLevelRender() is call only once, and it
+                # is expected to call requestFactory() once.
+                self.assertIsNone(trackedRequests[index])
 
-            trackedRequest[0] = Request(*args, **kwargs)
-            return trackedRequest[0]
+                trackedRequests[index] = Request(*args, **kwargs)
+                return trackedRequests[index]
+
+            return _requestFactory
 
         _originalWSGIResponseWrite = _WSGIResponse.write
 
@@ -2026,25 +2044,44 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         self.patch(_WSGIResponse, 'write', _WSGIResponse_write)
 
-        # Run and wait for the request to fail.
-        request = self.lowLevelRender(
-            requestFactory, applicationFactory, lambda: requestChannel,
-            'GET', '1.1', [], [''])
+        # Run two requests, one for which the application will
+        # attempt a write, and one for wihch the application will
+        # raise an ArbitraryError. This exercises both wsgiError()
+        # and wsgiFinish() of _WSGIResponse.run()
+        writingRequestChannel = DummyChannel()
+        writingRequest = self.lowLevelRender(
+            requestFactory(0), lambda: applicationFactory(False, 0),
+            lambda: writingRequestChannel, 'GET', '1.1', [], [''])
 
-        yield self.assertFailure(request.notifyFinish(), ConnectionLost)
+        failingRequestChannel = DummyChannel()
+        failingRequest = self.lowLevelRender(
+            requestFactory(1), lambda: applicationFactory(True, 1),
+            lambda: failingRequestChannel, 'GET', '1.1', [], [''])
 
-        # Transport is now closed, signal write to proceed.
+        # both should fail with ConnectionLost
+        yield self.assertFailure(writingRequest.notifyFinish(), ConnectionLost)
+        yield self.assertFailure(failingRequest.notifyFinish(), ConnectionLost)
+
+        # Transport is now closed, signal pending write to proceed.
         connectionLostSyncPoint.set()
 
         # Wait for the write to finish.
         data = yield wsgiResponseWriteResult
 
-        # We attempted write this.
+        # Response handler for first request attempted to write this
         self.assertEqual(data, b'single chunk response')
 
-        # But because we did if after we disconnected
-        # nothing was written.
-        self.assertEqual(requestChannel.transport.written.getvalue(), b'')
+        # But because it did so after a disconnect, nothing was written
+        self.assertEqual(writingRequestChannel.transport.written.getvalue(), b'')
+
+        # Response handler for second request raised an ArbitraryError
+        self.assertEquals(1, len(logObserver))
+        f = logObserver[0]["log_failure"]
+        self.assertIsInstance(f.value, ArbitraryError)
+        self.flushLoggedErrors(ArbitraryError)
+
+        # and did not write anything
+        self.assertEqual(failingRequestChannel.transport.written.getvalue(), b'')
 
     def test_writeCalledFromThread(self):
         """
