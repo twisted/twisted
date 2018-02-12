@@ -13,7 +13,7 @@ import twisted
 
 from types import ModuleType
 
-from twisted import _checkRequirements
+from twisted.python._setup import _checkPythonVersion
 from twisted.python.compat import _PY3
 from twisted.python import reflect
 from twisted.trial.unittest import TestCase
@@ -160,8 +160,8 @@ class RequirementsTests(TestCase):
     """
     unsupportedPythonVersion = (2, 6)
     supportedPythonVersion = (2, 7)
-    Py3unsupportedPythonVersion = (3, 2)
-    Py3supportedPythonVersion = (3, 3)
+    Py3unsupportedPythonVersion = (3, 3)
+    Py3supportedPythonVersion = (3, 4)
 
 
     def setUp(self):
@@ -181,12 +181,12 @@ class RequirementsTests(TestCase):
 
     def test_oldPython(self):
         """
-        L{_checkRequirements} raises L{ImportError} when run on a version of
+        L{_checkPythonVersion} raises L{ImportError} when run on a version of
         Python that is too old.
         """
         sys.version_info = self.unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
-            _checkRequirements()
+            _checkPythonVersion()
         self.assertEqual("Twisted requires Python %d.%d or later."
                          % self.supportedPythonVersion,
                          str(raised.exception))
@@ -194,21 +194,21 @@ class RequirementsTests(TestCase):
 
     def test_newPython(self):
         """
-        L{_checkRequirements} returns L{None} when run on a version of Python
+        L{_checkPythonVersion} returns L{None} when run on a version of Python
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
-        self.assertIsNone(_checkRequirements())
+        self.assertIsNone(_checkPythonVersion())
 
 
     def test_oldPythonPy3(self):
         """
-        L{_checkRequirements} raises L{ImportError} when run on a version of
+        L{_checkPythonVersion} raises L{ImportError} when run on a version of
         Python that is too old.
         """
         sys.version_info = self.Py3unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
-            _checkRequirements()
+            _checkPythonVersion()
         self.assertEqual("Twisted on Python 3 requires Python %d.%d or later."
                          % self.Py3supportedPythonVersion,
                          str(raised.exception))
@@ -216,11 +216,11 @@ class RequirementsTests(TestCase):
 
     def test_newPythonPy3(self):
         """
-        L{_checkRequirements} returns L{None} when run on a version of Python
+        L{_checkPythonVersion} returns L{None} when run on a version of Python
         that is sufficiently new.
         """
         sys.version_info = self.Py3supportedPythonVersion
-        self.assertIsNone(_checkRequirements())
+        self.assertIsNone(_checkPythonVersion())
 
 
 
