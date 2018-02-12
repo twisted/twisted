@@ -1950,7 +1950,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         C{Request.notifyFinish} is called, the transport should
         not be written to. The test issues two requests to a wsgi
         app, each of which schedules the transport to disconnect.
-        All writes to the transport are purposfulyl blocked until
+        All writes to the transport are purposefully blocked until
         the disconnect completes, forcing the write-after-disconnect
         behaviour.
         """
