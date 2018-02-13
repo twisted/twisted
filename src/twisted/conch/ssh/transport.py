@@ -725,11 +725,18 @@ class SSHTransportBase(protocol.Protocol):
         if not self.gotVersion:
             if self.buf.find(b'\n', self.buf.find(b'SSH-')) == -1:
                 return
+
+            # RFC 4253 section 4.2 ask for strict `\r\n` line ending.
+            # Here we are a bit more relaxed and accept implementations ending
+            # only in '\n'.
+            # https://tools.ietf.org/html/rfc4253#section-4.2
             lines = self.buf.split(b'\n')
             for p in lines:
                 if p.startswith(b'SSH-'):
                     self.gotVersion = True
-                    self.otherVersionString = p.strip()
+                    # Since the line was split on '\n' and most of the time
+                    # it uses '\r\n' we may get an extra '\r'.
+                    self.otherVersionString = p.rstrip('\r')
                     remoteVersion = p.split(b'-')[1]
                     if remoteVersion not in self.supportedVersions:
                         self._unsupportedVersionReceived(remoteVersion)
