@@ -2476,6 +2476,58 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
         self.assertIn("\\u2ff0-garbage-\\u2ff0", str(err))
 
 
+class HostnameEndpointReprTests(unittest.SynchronousTestCase):
+    def test_allASCII(self):
+        """
+        The string representation of L{HostnameEndpoint} includes the host and
+        port passed to the constructor.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            'example.com', 80,
+        )
+
+        self.assertEqual("<HostnameEndpoint example.com:80>", repr(endpoint))
+
+    def test_idnaHostname(self):
+        """
+        When IDN is passed to the L{HostnameEndpoint} constructor the string
+        representation includes the punycode version of the host.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            u'b\xfccher.ch', 443,
+        )
+
+        self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", repr(endpoint))
+
+    def test_hostIPv6Address(self):
+        """
+        When the host passed to L{HostnameEndpoint} is an IPv6 address it is
+        wrapped in brackets in the string representation, like in a URI. This
+        prevents the colon separating the host from the port from being
+        ambiguous.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'::1', 22,
+        )
+
+        self.assertEqual("<HostnameEndpoint [::1]:22>", repr(endpoint))
+
+    def test_badEncoding(self):
+        """
+        When a bad hostname is passed to L{HostnameEndpoint}, the string
+        representation displays invalid characters in backslash-escaped form.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'\xff-garbage-\xff', 80
+        )
+
+        self.assertEqual('<HostnameEndpoint \\xff-garbage-\\xff:80>', repr(endpoint))
+
+
 
 class HostnameEndpointsGAIFailureTests(unittest.TestCase):
     """
