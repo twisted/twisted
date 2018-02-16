@@ -2491,7 +2491,10 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
             'example.com', 80,
         )
 
-        self.assertEqual("<HostnameEndpoint example.com:80>", repr(endpoint))
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint example.com:80>", rep)
+        self.assertIs(str, type(rep))
 
 
     def test_idnaHostname(self):
@@ -2504,10 +2507,10 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
             u'b\xfccher.ch', 443,
         )
 
-        self.assertEqual(
-            "<HostnameEndpoint xn--bcher-kva.ch:443>",
-            repr(endpoint),
-        )
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", rep)
+        self.assertIs(str, type(rep))
 
 
     def test_hostIPv6Address(self):
@@ -2522,7 +2525,10 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
             b'::1', 22,
         )
 
-        self.assertEqual("<HostnameEndpoint [::1]:22>", repr(endpoint))
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint [::1]:22>", rep)
+        self.assertIs(str, type(rep))
 
 
     def test_badEncoding(self):
