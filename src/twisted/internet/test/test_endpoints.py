@@ -2504,7 +2504,10 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
             u'b\xfccher.ch', 443,
         )
 
-        self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", repr(endpoint))
+        self.assertEqual(
+            "<HostnameEndpoint xn--bcher-kva.ch:443>",
+            repr(endpoint),
+        )
 
 
     def test_hostIPv6Address(self):
@@ -2532,7 +2535,10 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
             b'\xff-garbage-\xff', 80
         )
 
-        self.assertEqual('<HostnameEndpoint \\xff-garbage-\\xff:80>', repr(endpoint))
+        self.assertEqual(
+            '<HostnameEndpoint \\xff-garbage-\\xff:80>',
+            repr(endpoint),
+        )
 
 
 
