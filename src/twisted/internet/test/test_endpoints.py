@@ -2476,7 +2476,11 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
         self.assertIn("\\u2ff0-garbage-\\u2ff0", str(err))
 
 
+
 class HostnameEndpointReprTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{HostnameEndpoint}'s string representation.
+    """
     def test_allASCII(self):
         """
         The string representation of L{HostnameEndpoint} includes the host and
@@ -2489,6 +2493,7 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
 
         self.assertEqual("<HostnameEndpoint example.com:80>", repr(endpoint))
 
+
     def test_idnaHostname(self):
         """
         When IDN is passed to the L{HostnameEndpoint} constructor the string
@@ -2500,6 +2505,7 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
         )
 
         self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", repr(endpoint))
+
 
     def test_hostIPv6Address(self):
         """
@@ -2514,6 +2520,7 @@ class HostnameEndpointReprTests(unittest.SynchronousTestCase):
         )
 
         self.assertEqual("<HostnameEndpoint [::1]:22>", repr(endpoint))
+
 
     def test_badEncoding(self):
         """
