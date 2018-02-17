@@ -922,7 +922,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
 
         @param sentDeferred: Deferred used to signal the message delivery.
         @type sentDeferred: L{defer.Deferred}.
-        
+
         @param retries: Number of times to retry on failed delivery.
         @type retries: L{int}.
 
