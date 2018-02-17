@@ -98,7 +98,9 @@ complete code for this example:
             self.year = year
 
         def render_GET(self, request):
-            return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
+            cal = calendar(self.year)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + "</pre>")
 
     class Calendar(Resource):
         def getChild(self, name, request):

@@ -1,0 +1,1 @@
+twisted.protocols.postfix now properly encodes errors which are unicode strings to bytes.

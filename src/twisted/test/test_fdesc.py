@@ -236,7 +236,7 @@ else:
                 os._exit(30)
         else:
             # On Linux wait(2) doesn't seem ever able to fail with EINTR but
-            # POSIX seems to allow it and on OS X it happens quite a lot.
+            # POSIX seems to allow it and on macOS it happens quite a lot.
             return untilConcludes(os.waitpid, pid, 0)[1]
 
 
