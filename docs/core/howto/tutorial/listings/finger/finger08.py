@@ -21,7 +21,7 @@ class FingerFactory(protocol.ServerFactory):
     protocol = FingerProtocol
 
     def __init__(self, users):
-        self.users = usrs
+        self.users = users
 
     def getUser(self, user):
         return defer.succeed(self.users.get(user, b"No such user"))
