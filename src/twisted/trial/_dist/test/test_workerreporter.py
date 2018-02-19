@@ -92,9 +92,9 @@ class WorkerReporterTests(TestCase):
 
     def test_addFailureNonASCII(self):
         """
-        L{WorkerReporter.addFailure} sends a L{managercommands.AddFailure} message
-        when called with a L{Failure}, even if it includes encoded non-ASCII
-        content.
+        L{WorkerReporter.addFailure} sends a L{managercommands.AddFailure}
+        message when called with a L{Failure}, even if it includes encoded
+        non-ASCII content.
         """
         content = u"\N{SNOWMAN}".encode("utf-8")
         exception = RuntimeError(content)
@@ -109,7 +109,9 @@ class WorkerReporterTests(TestCase):
             self.fakeAMProtocol.lastArgs["fail"],
         )
     if _PY3:
-        test_addFailureNonASCII.skip = "Exceptions only convert to unicode on Python 3"
+        test_addFailureNonASCII.skip = (
+            "Exceptions only convert to unicode on Python 3"
+        )
 
 
     def test_addSkip(self):
