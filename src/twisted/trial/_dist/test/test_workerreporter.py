@@ -5,6 +5,7 @@
 Tests for L{twisted.trial._dist.workerreporter}.
 """
 
+from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase, Todo
 from twisted.trial._dist.workerreporter import WorkerReporter
@@ -107,6 +108,9 @@ class WorkerReporterTests(TestCase):
             content,
             self.fakeAMProtocol.lastArgs["fail"],
         )
+    if _PY3:
+        test_addFailureNonASCII.skip = "Exceptions only convert to unicode on Python 3"
+
 
     def test_addSkip(self):
         """
