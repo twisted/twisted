@@ -20,6 +20,7 @@ class FakeAMProtocol(object):
 
     def callRemote(self, command, **kwargs):
         self.lastCall = command
+        self.lastArgs = kwargs
 
 
 
@@ -87,6 +88,25 @@ class WorkerReporterTests(TestCase):
         self.assertEqual(self.fakeAMProtocol.lastCall,
                          managercommands.AddFailure)
 
+
+    def test_addFailureNonASCII(self):
+        """
+        L{WorkerReporter.addFailure} sends a L{managercommands.AddFailure} message
+        when called with a L{Failure}, even if it includes encoded non-ASCII
+        content.
+        """
+        content = u"\N{SNOWMAN}".encode("utf-8")
+        exception = RuntimeError(content)
+        failure = Failure(exception)
+        self.workerReporter.addFailure(self.test, failure)
+        self.assertEqual(
+            self.fakeAMProtocol.lastCall,
+            managercommands.AddFailure,
+        )
+        self.assertEqual(
+            content,
+            self.fakeAMProtocol.lastArgs["fail"],
+        )
 
     def test_addSkip(self):
         """
