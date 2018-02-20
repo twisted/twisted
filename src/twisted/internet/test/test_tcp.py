@@ -635,7 +635,9 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             while True:
                 ignored, port = findFreePort(self.interface, self.family)[:2]
                 bindAddress = (self.interface, port)
-                log.msg("Connect attempt with bindAddress {}".format(bindAddress))
+                log.msg("Connect attempt with bindAddress {}".format(
+                    bindAddress
+                ))
                 try:
                     reactor.connectTCP(
                         fakeDomain,
