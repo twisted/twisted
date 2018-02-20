@@ -14,7 +14,8 @@ from twisted.trial.unittest import TestCase
 
 class EnsureBytesTests(TestCase):
     """
-    L{twisted.python.bytes.ensureBytes} is used to convert L{unicode} to L{bytes}.
+    L{twisted.python.bytes.ensureBytes} is used to convert L{unicode} to
+    L{bytes}.
     """
 
     def test_ensureBytesUnicode(self):
