@@ -1,1 +1,1 @@
-twisted.python.bytes.toBytes is a convenience function for converting unicode strings to bytes.
+twisted.python.bytes.ensureBytes is a convenience function for converting unicode strings to bytes.
