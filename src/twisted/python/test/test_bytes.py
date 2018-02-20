@@ -64,6 +64,6 @@ class EnsureBytesTests(TestCase):
     def test_ensureBytesTypeError(self):
         """
         L{ensureBytes} will raise L{TypeError} if passed anything which
-        is not L{unicode}, L{bytes}, or L{None}.
+        is not L{unicode} or L{bytes}.
         """
         self.assertRaises(TypeError, ensureBytes, ["foo", "bar"])
