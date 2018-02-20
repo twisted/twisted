@@ -16,6 +16,12 @@ test: off
 # commits on random branches without an associated PR.
 skip_branch_with_pr: true
 
+# Don't build branch if the only change in the HEAD commit is a news fragment.
+# https://www.appveyor.com/docs/how-to/filtering-commits/
+only_commits:
+  files:
+    - '**/newsfragments/*'
+
 # Not sure if the cache works.
 # Note the use of single quotes around the entire line, when environment
 # variables are used.
