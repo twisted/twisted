@@ -97,7 +97,9 @@ class WorkerReporter(TestResult):
         if isinstance(testName, unicode):
             testName = testName.encode("utf-8")
         failure = self._getFailure(fail)
-        fail = failure.getErrorMessage().encode("utf-8")
+        fail = failure.getErrorMessage()
+        if isinstance(fail, unicode):
+            fail = fail.encode("utf-8")
         failClass = qual(failure.type).encode("utf-8")
         frames = [frame.encode("utf-8") for frame in self._getFrames(failure)]
         self.ampProtocol.callRemote(managercommands.AddFailure,
