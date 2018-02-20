@@ -16,10 +16,11 @@ def ensureBytes(s, encoding="ascii", errors="strict"):
     Convert L{unicode} string to L{bytes}.
 
     @param s: The string to convert.
+    @type s: L{unicode} or L{bytes}
     @param encoding: The encoding to pass to L{str.encode}.
     @param errors: The error handling scheme to pass to L{str.encode}.
 
-    @raise TypeError: The input is not L{unicode}, L{bytes}.
+    @raise TypeError: The input is not L{unicode} or L{bytes}.
 
     @return: The encoded string.  If I{s} is L{bytes} just return I{s}.
     @rtype: L{bytes}
