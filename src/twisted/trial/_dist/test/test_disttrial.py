@@ -143,13 +143,18 @@ class CountingReactorTests(SynchronousTestCase):
     def test_run(self):
         """
         Running the reactor increments its C{runCount}, does not imply
-        C{stop}.
+        C{stop}, and calls L{IReactorCore.callWhenRunning} hooks.
         """
         self.assertFalse(self.reactor.runCount)
+
+        whenRunningCalls = []
+        self.reactor.callWhenRunning(whenRunningCalls.append, None)
+
         for count in [1, 2]:
             self.reactor.run()
             self.assertEqual(self.reactor.runCount, count)
             self.assertEqual(self.reactor.stopCount, 0)
+            self.assertEqual(len(whenRunningCalls), count)
 
 
 
