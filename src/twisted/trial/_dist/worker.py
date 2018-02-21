@@ -45,6 +45,7 @@ class WorkerProtocol(AMP):
         """
         if _PY3:
             testCase = testCase.decode("utf-8")
+        print("CASE", testCase)
         case = self._loader.loadByName(testCase)
         suite = TrialSuite([case], self._forceGarbageCollection)
         suite.run(self._result)

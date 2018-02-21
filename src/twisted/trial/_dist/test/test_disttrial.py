@@ -10,7 +10,7 @@ import sys
 
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import fail, succeed
-from twisted.internet.task import Cooperator, deferLater
+from twisted.internet.task import Clock, Cooperator, deferLater
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet import reactor
 from twisted.python.compat import NativeStringIO as StringIO
@@ -40,9 +40,11 @@ class FakeTransport(object):
         Ignore write calls.
         """
 
+    def closeChildFD(self, fd):
+        pass
 
 
-class FakeReactor(object):
+class FakeReactor(Clock):
     """
     A simple fake reactor for testing purposes.
     """
@@ -308,7 +310,8 @@ class DistTrialRunnerTests(TestCase):
             def succeedingRun(self, case, result):
                 return succeed(None)
 
-            def addSystemEventTrigger(oself, phase, event, function):
+            def addSystemEventTrigger(
+                    oself, phase, event, function, *args, **kwargs):
                 self.assertEqual('before', phase)
                 self.assertEqual('shutdown', event)
                 functions.append(function)
@@ -322,9 +325,6 @@ class DistTrialRunnerTests(TestCase):
             localLock = FilesystemLock(workingDirectory + ".lock")
             self.assertTrue(localLock.lock())
             self.assertEqual(1, fakeReactor.stopCount)
-            # We don't wait for the process deferreds here, so nothing is
-            # returned by the function before shutdown
-            self.assertIdentical(None, functions[0]())
 
         return deferLater(reactor, 0, check)
 
@@ -344,7 +344,8 @@ class DistTrialRunnerTests(TestCase):
                 worker.makeConnection(FakeTransport())
                 workers.append(worker)
 
-            def addSystemEventTrigger(oself, phase, event, function):
+            def addSystemEventTrigger(oself,
+                                      phase, event, function, *args, **kwargs):
                 self.assertEqual('before', phase)
                 self.assertEqual('shutdown', event)
                 functions.append(function)
@@ -361,11 +362,10 @@ class DistTrialRunnerTests(TestCase):
         def realCheck():
             localLock = FilesystemLock(workingDirectory + ".lock")
             self.assertTrue(localLock.lock())
-            # Stop is not called, as it ought to have been called before
-            self.assertEqual(0, fakeReactor.stopCount)
+            self.assertEqual(1, fakeReactor.stopCount)
 
         workers[0].processEnded(Failure(CONNECTION_DONE))
-        return functions[0]().addCallback(check)
+        return functions[-1]().addCallback(check)
 
 
     def test_runUntilFailure(self):

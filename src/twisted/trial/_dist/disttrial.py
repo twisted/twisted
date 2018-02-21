@@ -14,7 +14,7 @@ import sys
 
 from twisted.python.filepath import FilePath
 from twisted.python.modules import theSystemPath
-from twisted.internet.defer import DeferredList
+from twisted.internet.defer import DeferredList, Deferred
 from twisted.internet.task import cooperate
 
 from twisted.trial.util import _unusedTestDirectory
@@ -38,6 +38,7 @@ class DistTrialRunner(object):
 
     @ivar _reporterFactory: the reporter class to be used.
     """
+    _terminationTimeout = 2
     _distReporterFactory = DistReporter
 
     def _makeResult(self):
@@ -200,6 +201,7 @@ class DistTrialRunner(object):
         processEndDeferreds = [worker.endDeferred for worker in workers]
         self.launchWorkerProcesses(reactor.spawnProcess, workers,
                                    self._workerArguments)
+        processes = [worker.transport for worker in workers]
 
         def runTests():
             testCases = iter(list(_iterateTests(suite)))
@@ -225,25 +227,48 @@ class DistTrialRunner(object):
 
         def stop(ign):
             testDirLock.unlock()
+
+            def removeProcess(result, process):
+                processes.remove(process)
+                return result
+
+            for process, endDeferred in list(zip(processes,
+                                                 processEndDeferreds)):
+                # Worker processes exit when the pipe they receive
+                # commands on is closed
+                process.closeChildFD(_WORKER_AMP_STDIN)
+                endDeferred.addBoth(removeProcess, process)
+
             if not stopping:
                 stopping.append(None)
                 reactor.stop()
 
-        def beforeShutDown():
-            if not stopping:
-                stopping.append(None)
-                d = DeferredList(processEndDeferreds, consumeErrors=True)
-                return d.addCallback(continueShutdown)
+        def waitForProcesses():
+            processesEnded = DeferredList(processEndDeferreds,
+                                          consumeErrors=True)
+            timer = Deferred().addTimeout(self._terminationTimeout, reactor)
+            timed = DeferredList(
+                [processesEnded, timer],
+                fireOnOneCallback=True,
+                fireOnOneErrback=True,
+                consumeErrors=True,
+            )
+            timed.addErrback(killProcessesAndWaitAgain)
+            return timed
 
-        def continueShutdown(ign):
-            self.writeResults(result)
-            return ign
+        def killProcessesAndWaitAgain(error):
+            for process in list(processes):
+                process.signalProcess("KILL")
+
+            return waitForProcesses()
 
         d = runTests()
         d.addCallback(nextRun)
         d.addBoth(stop)
 
-        reactor.addSystemEventTrigger('before', 'shutdown', beforeShutDown)
+        reactor.addSystemEventTrigger(
+            'before', 'shutdown', stopping.append, None)
+        reactor.addSystemEventTrigger('before', 'shutdown', waitForProcesses)
         reactor.run()
 
         return result
