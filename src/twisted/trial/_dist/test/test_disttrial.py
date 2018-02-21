@@ -8,7 +8,7 @@ Tests for L{twisted.trial._dist.disttrial}.
 import os
 import sys
 
-from twisted.internet.protocol import ProcessProtocol
+from twisted.internet.protocol import Protocol, ProcessProtocol
 from twisted.internet.defer import fail, gatherResults, maybeDeferred, succeed
 from twisted.internet.task import Cooperator, deferLater
 from twisted.internet.main import CONNECTION_DONE
@@ -20,7 +20,7 @@ from twisted.python.lockfile import FilesystemLock
 from twisted.test.test_cooperator import FakeScheduler
 from twisted.test.proto_helpers import MemoryReactorClock
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.trial.reporter import Reporter, TreeReporter
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial.runner import TrialSuite, ErrorHolder
@@ -29,7 +29,7 @@ from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.worker import LocalWorker
 
-from zope.interface import implementer
+from zope.interface import implementer, verify
 
 
 
@@ -90,11 +90,69 @@ class CountingReactor(MemoryReactorClock):
         """
         self.runCount += 1
 
+        # The same as IReactorCore.run, except no stop.
         self.running = True
         self.hasRun = True
 
         for f, args, kwargs in self.whenRunningHooks:
             f(*args, **kwargs)
+
+
+
+class CountingReactorTests(SynchronousTestCase):
+    """
+    Tests for L{CountingReactor}.
+    """
+
+    def setUp(self):
+        self.workers = []
+        self.reactor = CountingReactor(self.workers)
+
+
+    def test_providesIReactorProcess(self):
+        """
+        L{CountingReactor} instances provide L{IReactorProcess}.
+        """
+        verify.verifyObject(interfaces.IReactorProcess, self.reactor)
+
+
+    def test_spawnProcess(self):
+        """
+        The process protocol for a spawned process is connected to a
+        transport and appended onto the provided C{workers} list, and
+        the reactor's C{spawnCount} increased.
+        """
+        self.assertFalse(self.reactor.spawnCount)
+
+        proto = Protocol()
+        for count in [1, 2]:
+            self.reactor.spawnProcess(proto, sys.executable,
+                                      arg=[sys.executable])
+            self.assertTrue(proto.transport)
+            self.assertEqual(self.workers, [proto] * count)
+            self.assertEqual(self.reactor.spawnCount, count)
+
+
+    def test_stop(self):
+        """
+        Stopping the reactor increments its C{stopCount}
+        """
+        self.assertFalse(self.reactor.stopCount)
+        for count in [1, 2]:
+            self.reactor.stop()
+            self.assertEqual(self.reactor.stopCount, count)
+
+
+    def test_run(self):
+        """
+        Running the reactor increments its C{runCount}, does not imply
+        C{stop}.
+        """
+        self.assertFalse(self.reactor.runCount)
+        for count in [1, 2]:
+            self.reactor.run()
+            self.assertEqual(self.reactor.runCount, count)
+            self.assertEqual(self.reactor.stopCount, 0)
 
 
 
