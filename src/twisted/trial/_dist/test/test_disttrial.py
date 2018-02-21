@@ -9,15 +9,16 @@ import os
 import sys
 
 from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.defer import fail, succeed
-from twisted.internet.task import Clock, Cooperator, deferLater
+from twisted.internet.defer import fail, gatherResults, maybeDeferred, succeed
+from twisted.internet.task import Cooperator, deferLater
 from twisted.internet.main import CONNECTION_DONE
-from twisted.internet import reactor
+from twisted.internet import reactor, interfaces
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.failure import Failure
 from twisted.python.lockfile import FilesystemLock
 
 from twisted.test.test_cooperator import FakeScheduler
+from twisted.test.proto_helpers import MemoryReactorClock
 
 from twisted.trial.unittest import TestCase
 from twisted.trial.reporter import Reporter, TreeReporter
@@ -27,6 +28,8 @@ from twisted.trial.runner import TrialSuite, ErrorHolder
 from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.worker import LocalWorker
+
+from zope.interface import implementer
 
 
 
@@ -44,29 +47,54 @@ class FakeTransport(object):
         pass
 
 
-class FakeReactor(Clock):
+
+@implementer(interfaces.IReactorProcess)
+class CountingReactor(MemoryReactorClock):
     """
-    A simple fake reactor for testing purposes.
+    A fake reactor that counts the calls to L{IReactorCore.run},
+    L{IReactorCore.stop}, and L{IReactorProcess.spawnProcess}.
     """
     spawnCount = 0
     stopCount = 0
     runCount = 0
 
+    def __init__(self, workers):
+        MemoryReactorClock.__init__(self)
+        self._workers = workers
+
+
     def spawnProcess(self, worker, *args, **kwargs):
+        """
+        See L{IReactorProcess.spawnProcess}.
+
+        @param worker: See L{IReactorProcess.spawnProcess}.
+        @param args: See L{IReactorProcess.spawnProcess}.
+        @param kwargs: See L{IReactorProcess.spawnProcess}.
+        """
+        self._workers.append(worker)
         worker.makeConnection(FakeTransport())
         self.spawnCount += 1
 
 
     def stop(self):
+        """
+        See L{IReactorCore.stop}.
+        """
+        MemoryReactorClock.stop(self)
         self.stopCount += 1
 
 
     def run(self):
+        """
+        See L{IReactorCore.run}.
+        """
         self.runCount += 1
 
+        self.running = True
+        self.hasRun = True
 
-    def addSystemEventTrigger(self, *args, **kw):
-        pass
+        for f, args, kwargs in self.whenRunningHooks:
+            f(*args, **kwargs)
 
 
 
@@ -95,6 +123,22 @@ class DistTrialRunnerTests(TestCase):
         self.runner = DistTrialRunner(TreeReporter, 4, [],
                                       workingDirectory=self.mktemp())
         self.runner._stream = StringIO()
+
+
+    def reap(self, workers, consumeErrors=True):
+        """
+        Reap the workers.
+
+        @param workers: The workers to reap.
+        @type workers: An iterable of L{LocalWorker}
+
+        @param consumeErrors: Whether or not to suppress errors.
+        @type consumeErrors: L{bool}
+        """
+        for worker in workers:
+            if consumeErrors:
+                worker.endDeferred.addErrback(lambda _: None)
+            worker.processEnded(Failure(CONNECTION_DONE))
 
 
     def getFakeSchedulerAndEternalCooperator(self):
@@ -167,7 +211,10 @@ class DistTrialRunnerTests(TestCase):
         C{run} starts the reactor exactly once and spawns each of the workers
         exactly once.
         """
-        fakeReactor = FakeReactor()
+        workers = []
+        fakeReactor = CountingReactor(workers)
+        self.addCleanup(self.reap, workers)
+
         suite = TrialSuite()
         for i in range(10):
             suite.addTest(TestCase())
@@ -182,9 +229,10 @@ class DistTrialRunnerTests(TestCase):
         if it is generates a name based on it.
         """
 
-        class FakeReactorWithLock(FakeReactor):
+        class CountingReactorWithLock(CountingReactor):
 
             def spawnProcess(oself, worker, *args, **kwargs):
+                oself._workers.append(worker)
                 self.assertEqual(os.path.abspath(worker._logDirectory),
                                  os.path.abspath(
                                      os.path.join(workingDirectory + "-1",
@@ -203,10 +251,15 @@ class DistTrialRunnerTests(TestCase):
         self.addCleanup(lock.unlock)
         self.runner._workingDirectory = workingDirectory
 
-        fakeReactor = FakeReactorWithLock()
+        workers = []
+
+        fakeReactor = CountingReactorWithLock(workers)
+        self.addCleanup(self.reap, workers)
+
         suite = TrialSuite()
         for i in range(10):
             suite.addTest(TestCase())
+
         self.runner.run(suite, fakeReactor)
 
 
@@ -215,7 +268,10 @@ class DistTrialRunnerTests(TestCase):
         L{DistTrialRunner} doesn't try to start more workers than the number of
         tests.
         """
-        fakeReactor = FakeReactor()
+        workers = []
+        fakeReactor = CountingReactor(workers)
+        self.addCleanup(self.reap, workers)
+
         self.runner.run(TestCase(), fakeReactor)
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, 1)
@@ -226,7 +282,10 @@ class DistTrialRunnerTests(TestCase):
         Running with the C{unclean-warnings} option makes L{DistTrialRunner}
         uses the L{UncleanWarningsReporterWrapper}.
         """
-        fakeReactor = FakeReactor()
+        workers = []
+        fakeReactor = CountingReactor(workers)
+        self.addCleanup(self.reap, workers)
+
         self.runner._uncleanWarnings = True
         result = self.runner.run(TestCase(), fakeReactor)
         self.assertIsInstance(result, DistReporter)
@@ -272,9 +331,10 @@ class DistTrialRunnerTests(TestCase):
         suite catches and fails.
         """
 
-        class FakeReactorWithFail(FakeReactor):
+        class CountingReactorWithFail(CountingReactor):
 
             def spawnProcess(self, worker, *args, **kwargs):
+                self._workers.append(worker)
                 worker.makeConnection(FakeTransport())
                 self.spawnCount += 1
                 worker._ampProtocol.run = self.failingRun
@@ -284,7 +344,10 @@ class DistTrialRunnerTests(TestCase):
 
         scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
 
-        fakeReactor = FakeReactorWithFail()
+        workers = []
+        fakeReactor = CountingReactorWithFail(workers)
+        self.addCleanup(self.reap, workers)
+
         result = self.runner.run(TestCase(), fakeReactor,
                                  cooperator.cooperate)
         self.assertEqual(fakeReactor.runCount, 1)
@@ -298,11 +361,10 @@ class DistTrialRunnerTests(TestCase):
         L{DistTrialRunner} calls C{reactor.stop} and unlocks the test directory
         once the tests have run.
         """
-        functions = []
-
-        class FakeReactorWithSuccess(FakeReactor):
+        class CountingReactorWithSuccess(CountingReactor):
 
             def spawnProcess(self, worker, *args, **kwargs):
+                self._workers.append(worker)
                 worker.makeConnection(FakeTransport())
                 self.spawnCount += 1
                 worker._ampProtocol.run = self.succeedingRun
@@ -310,21 +372,21 @@ class DistTrialRunnerTests(TestCase):
             def succeedingRun(self, case, result):
                 return succeed(None)
 
-            def addSystemEventTrigger(
-                    oself, phase, event, function, *args, **kwargs):
-                self.assertEqual('before', phase)
-                self.assertEqual('shutdown', event)
-                functions.append(function)
-
         workingDirectory = self.runner._workingDirectory
 
-        fakeReactor = FakeReactorWithSuccess()
+        workers = []
+        fakeReactor = CountingReactorWithSuccess(workers)
+
         self.runner.run(TestCase(), fakeReactor)
 
         def check():
             localLock = FilesystemLock(workingDirectory + ".lock")
             self.assertTrue(localLock.lock())
             self.assertEqual(1, fakeReactor.stopCount)
+
+        self.assertEqual(list(fakeReactor.triggers.keys()), ["before"])
+        self.assertEqual(list(fakeReactor.triggers["before"]), ["shutdown"])
+        self.reap(workers)
 
         return deferLater(reactor, 0, check)
 
@@ -335,24 +397,10 @@ class DistTrialRunnerTests(TestCase):
         reactor is stopping, and then unlocks the test directory, not trying to
         stop the reactor again.
         """
-        functions = []
         workers = []
-
-        class FakeReactorWithEvent(FakeReactor):
-
-            def spawnProcess(self, worker, *args, **kwargs):
-                worker.makeConnection(FakeTransport())
-                workers.append(worker)
-
-            def addSystemEventTrigger(oself,
-                                      phase, event, function, *args, **kwargs):
-                self.assertEqual('before', phase)
-                self.assertEqual('shutdown', event)
-                functions.append(function)
-
         workingDirectory = self.runner._workingDirectory
 
-        fakeReactor = FakeReactorWithEvent()
+        fakeReactor = CountingReactor(workers)
         self.runner.run(TestCase(), fakeReactor)
 
         def check(ign):
@@ -362,10 +410,17 @@ class DistTrialRunnerTests(TestCase):
         def realCheck():
             localLock = FilesystemLock(workingDirectory + ".lock")
             self.assertTrue(localLock.lock())
-            self.assertEqual(1, fakeReactor.stopCount)
+            # Stop is not called, as it ought to have been called before
+            self.assertEqual(0, fakeReactor.stopCount)
 
-        workers[0].processEnded(Failure(CONNECTION_DONE))
-        return functions[-1]().addCallback(check)
+        self.assertEqual(list(fakeReactor.triggers.keys()), ["before"])
+        self.assertEqual(list(fakeReactor.triggers["before"]), ["shutdown"])
+        self.reap(workers)
+
+        return gatherResults([
+            maybeDeferred(f, *a, **kw)
+            for f, a, kw in fakeReactor.triggers["before"]["shutdown"]
+        ]).addCallback(check)
 
 
     def test_runUntilFailure(self):
@@ -375,9 +430,10 @@ class DistTrialRunnerTests(TestCase):
         """
         called = []
 
-        class FakeReactorWithSuccess(FakeReactor):
+        class CountingReactorWithSuccess(CountingReactor):
 
             def spawnProcess(self, worker, *args, **kwargs):
+                self._workers.append(worker)
                 worker.makeConnection(FakeTransport())
                 self.spawnCount += 1
                 worker._ampProtocol.run = self.succeedingRun
@@ -388,7 +444,9 @@ class DistTrialRunnerTests(TestCase):
                     return fail(RuntimeError("oops"))
                 return succeed(None)
 
-        fakeReactor = FakeReactorWithSuccess()
+        workers = []
+        fakeReactor = CountingReactorWithSuccess(workers)
+        self.addCleanup(self.reap, workers)
 
         scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
 
