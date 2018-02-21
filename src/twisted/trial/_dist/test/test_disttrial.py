@@ -12,7 +12,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import fail, gatherResults, maybeDeferred, succeed
 from twisted.internet.task import Cooperator, deferLater
 from twisted.internet.main import CONNECTION_DONE
-from twisted.internet import reactor, interfaces
+from twisted.internet import reactor, interfaces, error
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.failure import Failure
 from twisted.python.lockfile import FilesystemLock
@@ -125,19 +125,17 @@ class DistTrialRunnerTests(TestCase):
         self.runner._stream = StringIO()
 
 
-    def reap(self, workers, consumeErrors=True):
+    def reap(self, workers):
         """
-        Reap the workers.
+        Reap the workers and trap L{ConnectionDone} failures on their
+        C{endDeferred}s.
 
         @param workers: The workers to reap.
         @type workers: An iterable of L{LocalWorker}
-
-        @param consumeErrors: Whether or not to suppress errors.
-        @type consumeErrors: L{bool}
         """
+
         for worker in workers:
-            if consumeErrors:
-                worker.endDeferred.addErrback(lambda _: None)
+            worker.endDeferred.addErrback(Failure.trap, error.ConnectionDone)
             worker.processEnded(Failure(CONNECTION_DONE))
 
 
