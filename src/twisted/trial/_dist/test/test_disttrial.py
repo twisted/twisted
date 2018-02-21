@@ -43,9 +43,6 @@ class FakeTransport(object):
         Ignore write calls.
         """
 
-    def closeChildFD(self, fd):
-        pass
-
 
 
 @implementer(interfaces.IReactorProcess)
