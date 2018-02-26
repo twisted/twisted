@@ -42,7 +42,7 @@ from twisted.python.compat import (
     _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
     intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _PY3
+    _matchingString, _PY3, get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -1090,8 +1090,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self._respond(b'NO', tag, message)
 
 
-    def sendUntaggedResponse(self, message, async=False):
-        if not async or (self.blocked is None):
+    def sendUntaggedResponse(self, message, async_=None, **kwargs):
+        async_ = get_async_param(async_, **kwargs)
+        if not async_ or (self.blocked is None):
             self._respond(message, None, None)
         else:
             self._queuedAsync.append(message)
@@ -2497,9 +2498,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     #
     def modeChanged(self, writeable):
         if writeable:
-            self.sendUntaggedResponse(message=b'[READ-WRITE]', async=True)
+            self.sendUntaggedResponse(message=b'[READ-WRITE]', async_=True)
         else:
-            self.sendUntaggedResponse(message=b'[READ-ONLY]', async=True)
+            self.sendUntaggedResponse(message=b'[READ-ONLY]', async_=True)
 
 
     def flagsChanged(self, newFlags):
@@ -2508,14 +2509,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             msg = intToBytes(mId) + (
                 b' FETCH (FLAGS (' +b' '.join(encodedFlags) + b'))'
             )
-            self.sendUntaggedResponse(msg, async=True)
+            self.sendUntaggedResponse(msg, async_=True)
 
 
     def newMessages(self, exists, recent):
         if exists is not None:
-            self.sendUntaggedResponse(intToBytes(exists) + b' EXISTS', async=True)
+            self.sendUntaggedResponse(
+                intToBytes(exists) + b' EXISTS', async_=True)
         if recent is not None:
-            self.sendUntaggedResponse(intToBytes(recent) + b' RECENT', async=True)
+            self.sendUntaggedResponse(
+                intToBytes(recent) + b' RECENT', async_=True)
 
 
 TIMEOUT_ERROR = error.TimeoutError()

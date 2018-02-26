@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr
+    _coercedUnicode, unichr, raw_input, _bytesRepr, get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -921,3 +921,20 @@ class FutureBytesReprTests(unittest.TestCase):
         ``b`` to the returned repr on both Python 2 and 3.
         """
         self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")
+
+
+
+class GetAsyncParamTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{get_async_param}
+    """
+    def test_get_async_param(self):
+        """
+        L{twisted.python.compat.get_async_param}
+        """
+        self.assertEqual(get_async_param(async_=False), False)
+        self.assertEqual(get_async_param(async_=True), True)
+        self.assertEqual(
+            get_async_param(async_=None, **{'async': False}), False)
+        self.assertEqual(get_async_param(async_=None, **{'async': True}), True)
+        self.assertRaises(TypeError, get_async_param, False, {'async': False})

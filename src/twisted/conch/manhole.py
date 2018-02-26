@@ -19,7 +19,7 @@ from io import BytesIO
 from twisted.conch import recvline
 
 from twisted.internet import defer
-from twisted.python.compat import _tokenize
+from twisted.python.compat import _tokenize, get_async_param
 from twisted.python.htmlizer import TokenPrinter
 
 class FileWrapper:
@@ -151,9 +151,9 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return failure
 
 
-    def write(self, data, async=False):
-        self.handler.addOutput(data, async)
-
+    def write(self, data, async_=None, **kwargs):
+        async_ = get_async_param(async_, **kwargs)
+        self.handler.addOutput(data, async_)
 
 
 CTRL_C = b'\x03'
@@ -237,14 +237,15 @@ class Manhole(recvline.HistoricRecvLine):
         return not w.endswith(b'\n') and not w.endswith(b'\x1bE')
 
 
-    def addOutput(self, data, async=False):
-        if async:
+    def addOutput(self, data, async_=None, **kwargs):
+        async_ = get_async_param(async_, **kwargs)
+        if async_:
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
 
         self.terminal.write(data)
 
-        if async:
+        if async_:
             if self._needsNewline():
                 self.terminal.nextLine()
 
