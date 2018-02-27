@@ -289,7 +289,8 @@ class StringTransport:
 
 class StringTransportWithDisconnection(StringTransport):
     """
-    A L{StringTransport} which can be disconnected.
+    A L{StringTransport} which on disconnection will trigger the connection
+    lost on the attached protocol.
     """
 
     def loseConnection(self):
