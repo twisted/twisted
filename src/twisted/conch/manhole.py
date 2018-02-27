@@ -151,9 +151,9 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return failure
 
 
-    def write(self, data, async_=None, **kwargs):
-        async_ = get_async_param(async_, **kwargs)
-        self.handler.addOutput(data, async_)
+    def write(self, data, _async=None, **kwargs):
+        _async = get_async_param(_async, **kwargs)
+        self.handler.addOutput(data, _async)
 
 
 CTRL_C = b'\x03'
@@ -237,15 +237,15 @@ class Manhole(recvline.HistoricRecvLine):
         return not w.endswith(b'\n') and not w.endswith(b'\x1bE')
 
 
-    def addOutput(self, data, async_=None, **kwargs):
-        async_ = get_async_param(async_, **kwargs)
-        if async_:
+    def addOutput(self, data, _async=None, **kwargs):
+        _async = get_async_param(_async, **kwargs)
+        if _async:
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
 
         self.terminal.write(data)
 
-        if async_:
+        if _async:
             if self._needsNewline():
                 self.terminal.nextLine()
 

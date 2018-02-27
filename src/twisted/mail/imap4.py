@@ -1090,9 +1090,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self._respond(b'NO', tag, message)
 
 
-    def sendUntaggedResponse(self, message, async_=None, **kwargs):
-        async_ = get_async_param(async_, **kwargs)
-        if not async_ or (self.blocked is None):
+    def sendUntaggedResponse(self, message, _async=None, **kwargs):
+        _async = get_async_param(_async, **kwargs)
+        if not _async or (self.blocked is None):
             self._respond(message, None, None)
         else:
             self._queuedAsync.append(message)
@@ -2498,9 +2498,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     #
     def modeChanged(self, writeable):
         if writeable:
-            self.sendUntaggedResponse(message=b'[READ-WRITE]', async_=True)
+            self.sendUntaggedResponse(message=b'[READ-WRITE]', _async=True)
         else:
-            self.sendUntaggedResponse(message=b'[READ-ONLY]', async_=True)
+            self.sendUntaggedResponse(message=b'[READ-ONLY]', _async=True)
 
 
     def flagsChanged(self, newFlags):
@@ -2509,16 +2509,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             msg = intToBytes(mId) + (
                 b' FETCH (FLAGS (' +b' '.join(encodedFlags) + b'))'
             )
-            self.sendUntaggedResponse(msg, async_=True)
+            self.sendUntaggedResponse(msg, _async=True)
 
 
     def newMessages(self, exists, recent):
         if exists is not None:
             self.sendUntaggedResponse(
-                intToBytes(exists) + b' EXISTS', async_=True)
+                intToBytes(exists) + b' EXISTS', _async=True)
         if recent is not None:
             self.sendUntaggedResponse(
-                intToBytes(recent) + b' RECENT', async_=True)
+                intToBytes(recent) + b' RECENT', _async=True)
 
 
 TIMEOUT_ERROR = error.TimeoutError()

@@ -928,13 +928,14 @@ class GetAsyncParamTests(unittest.SynchronousTestCase):
     """
     Tests for L{get_async_param}
     """
+
     def test_get_async_param(self):
         """
         L{twisted.python.compat.get_async_param}
         """
-        self.assertEqual(get_async_param(async_=False), False)
-        self.assertEqual(get_async_param(async_=True), True)
+        self.assertEqual(get_async_param(_async=False), False)
+        self.assertEqual(get_async_param(_async=True), True)
         self.assertEqual(
-            get_async_param(async_=None, **{'async': False}), False)
-        self.assertEqual(get_async_param(async_=None, **{'async': True}), True)
+            get_async_param(_async=None, **{'async': False}), False)
+        self.assertEqual(get_async_param(_async=None, **{'async': True}), True)
         self.assertRaises(TypeError, get_async_param, False, {'async': False})

@@ -829,27 +829,27 @@ else:
 
 
 
-def get_async_param(async_=None, **kwargs):
+def get_async_param(_async=None, **kwargs):
     """
     Provide a backwards-compatible way to get async param value that does not
     cause a syntax error under Python 3.7.
 
-    @param async_: async_ param value (should default to None)
-    @type async_: L{bool}
+    @param _async: _async param value (should default to None)
+    @type _async: L{bool}
 
     @param kwargs: keyword arguments of the caller (only async is allowed)
-    @type async_: L{dict}
+    @type kwargs: L{dict}
 
-    @raise TypeError: Both async_ and async specified.
+    @raise TypeError: Both _async and async specified.
 
-    @return: Final async_ param value
+    @return: Final _async param value
     @rtype: L{bool}
     """
-    if async_ is None and 'async' in kwargs:
-        async_ = kwargs.pop('async')
+    if _async is None and 'async' in kwargs:
+        _async = kwargs.pop('async')
     if kwargs:
         raise TypeError
-    return bool(async_)
+    return bool(_async)
 
 
 __all__ = [
