@@ -1057,12 +1057,11 @@ class Request:
             # chunked mode, so that we can support pipelining in
             # persistent connections.
             # For no-body responses and CONNECT requests this
-            # does not apply and the header should not or must
-            # not be sent.
+            # does not apply and the header must not be sent.
             if ((version == b"HTTP/1.1") and
                 (self.responseHeaders.getRawHeaders(b'content-length') is None) and
                 self.method != b"HEAD" and self.code not in NO_BODY_CODES and
-                (self.method != b"CONNECT" and self.code//100 == 2)):
+                (self.method != b"CONNECT" and self.code // 100 == 2)):
                 headers.append((b'Transfer-Encoding', b'chunked'))
                 self.chunked = 1
 
@@ -1089,10 +1088,10 @@ class Request:
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
                         value = networkString('%s' % (value,))
-                    if (self.method == b"CONNECT" and self.code//100 == 2 and
+                    if (self.method == b"CONNECT" and self.code // 100 == 2 and
                         name == b"Content-Length"):
-                        log.msg("Warning: Removing Content-Length header in"
-                                " response to CONNECT request")
+                        self._log.info("Warning: Removing Content-Length"
+                                " header in response to CONNECT request")
                         continue
                     headers.append((name, value))
 

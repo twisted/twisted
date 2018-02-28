@@ -3327,16 +3327,16 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
 
 class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
     """
-    Test correct RFC 7231 handling for CONNECT requests. Responses to these
+    Test RFC 7231 handling for CONNECT requests. Responses to these
     tests must not contain Transfer-Encoding or Content-Length headers
     """
 
     def test_headers(self):
         """
-        A HTTP connection is opened and a CONNECT request is received, which
+        An HTTP connection is opened and a CONNECT request is received, which
         should return a 200 response with the HTTP version header, the host and
         port as well as the CONNECT command but not a Transfer-Encoding or
-        Content-Length header, which both are not allowed in a 200 response.
+        Content-Length header, neither of which is allowed in a 200 response.
         """
         transport = StringTransport()
         channel = http.HTTPChannel()
@@ -3347,9 +3347,6 @@ class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
 
         self.assertEqual(transport.value(), b"")
         channel.dataReceived(b"\r\n")
-
-        self.assertTrue(
-            transport.value().startswith(b"HTTP/1.1 200 OK\r\n"))
 
         self.assertResponseEquals(
             transport.value(),
