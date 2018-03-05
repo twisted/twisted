@@ -1,1 +1,1 @@
-twisted.python.bytes.ensureBytes is a convenience function for converting unicode strings to bytes.
+twisted.python.bytes.ensureBytes was added for converting Unicode to bytes.
