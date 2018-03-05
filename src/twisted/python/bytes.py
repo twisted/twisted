@@ -25,13 +25,9 @@ def ensureBytes(s, encoding="ascii", errors="strict"):
     @return: The encoded string.  If I{s} is L{bytes} just return I{s}.
     @rtype: L{bytes}
     """
-    if isinstance(s, bytes):
-        return s
-    elif isinstance(s, unicode):
+    if isinstance(s, unicode):
         return s.encode(encoding=encoding, errors=errors)
-    else:
-        raise TypeError("Expected {} to be unicode or bytes not: "
-            "{}".format(s, type(s)))
+    return s
 
 
 
