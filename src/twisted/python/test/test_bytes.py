@@ -31,8 +31,9 @@ class EnsureBytesTests(TestCase):
         The I{encoding} parameter is passed to L{str.encode} and selects the
         codec to use when converting L{unicode} to L{bytes}.
         """
-        self.assertEqual(ensureBytes(u'\N{SNOWMAN}', encoding="utf-8"),
-                         b'\xe2\x98\x83')
+        self.assertEqual(
+            ensureBytes(u'\N{SNOWMAN}', encoding="utf-8"),
+            b'\xe2\x98\x83')
 
 
     def test_ensureBytesErrorsParameter(self):
@@ -51,7 +52,8 @@ class EnsureBytesTests(TestCase):
         L{UnicodeEncodedError} will be raised if the input string cannot be
         converted using the encoding's rules.
         """
-        self.assertRaises(UnicodeEncodeError,
+        self.assertRaises(
+            UnicodeEncodeError,
             ensureBytes, u'\N{SNOWMAN}', encoding="ascii")
 
 
@@ -60,11 +62,3 @@ class EnsureBytesTests(TestCase):
         L{ensureBytes} just returns any L{bytes} passed to it.
         """
         self.assertEqual(ensureBytes(b'\xe2\x98\x83'), b'\xe2\x98\x83')
-
-
-    def test_ensureBytesTypeError(self):
-        """
-        L{ensureBytes} will raise L{TypeError} if passed anything which
-        is not L{unicode} or L{bytes}.
-        """
-        self.assertRaises(TypeError, ensureBytes, ["foo", "bar"])
