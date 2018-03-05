@@ -117,7 +117,7 @@ class FingerService(service.Service):
     def getResource(self):
         r = UserStatusTree(self)
         x = UserStatusXR(self)
-        r.putChild('RPC2', x)
+        r.putChild(b'RPC2', x)
         return r
 
     def getIRCBot(self, nickname):

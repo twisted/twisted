@@ -13,7 +13,6 @@ from io import BytesIO
 
 from zope.interface import implementer
 
-from twisted.python.compat import intToBytes
 from twisted.python.deprecate import deprecated
 from incremental import Version
 from twisted.internet.defer import Deferred
@@ -353,7 +352,7 @@ class DummyRequest(object):
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = host + b":" + str(port).encode("ascii")
         self.requestHeaders.addRawHeader(b"host", hostHeader)
 
 

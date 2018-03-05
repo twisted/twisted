@@ -97,7 +97,7 @@ class DistribTests(unittest.TestCase):
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        url = "http://127.0.0.1:{}/here/there".format(
+        url = u"http://127.0.0.1:{}/here/there".format(
             self.port2.getHost().port)
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
@@ -148,7 +148,7 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
-        url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        url = u"http://{}:{}/child".format(mainAddr.host, mainAddr.port)
         url = url.encode("ascii")
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)
@@ -170,7 +170,7 @@ class DistribTests(unittest.TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = u"http://{}:{}/child".format(mainAddr.host, mainAddr.port)
         url = url.encode("ascii")
         d = client.Agent(reactor).request(b"GET", url, **kwargs)
 
@@ -429,7 +429,7 @@ class UserDirectoryTests(unittest.TestCase):
         response when passed a string which does not correspond to any known
         user.
         """
-        return self._404Test('carol')
+        return self._404Test(b'carol')
 
 
     def test_getUserWithoutResource(self):
@@ -438,7 +438,7 @@ class UserDirectoryTests(unittest.TestCase):
         response when passed a string which corresponds to a known user who has
         neither a user directory nor a user distrib socket.
         """
-        return self._404Test('alice')
+        return self._404Test(b'alice')
 
 
     def test_getPublicHTMLChild(self):
@@ -451,7 +451,7 @@ class UserDirectoryTests(unittest.TestCase):
         public_html = home.child('public_html')
         public_html.makedirs()
         request = DummyRequest(['bob'])
-        result = self.directory.getChild('bob', request)
+        result = self.directory.getChild(b'bob', request)
         self.assertIsInstance(result, static.File)
         self.assertEqual(result.path, public_html.path)
 
@@ -466,10 +466,30 @@ class UserDirectoryTests(unittest.TestCase):
         home.makedirs()
         web = home.child('.twistd-web-pb')
         request = DummyRequest(['bob'])
-        result = self.directory.getChild('bob.twistd', request)
+        result = self.directory.getChild(b'bob.twistd', request)
         self.assertIsInstance(result, distrib.ResourceSubscription)
         self.assertEqual(result.host, 'unix')
         self.assertEqual(abspath(result.port), web.path)
+
+
+    def test_getChildWrongType(self):
+        """
+        L{distrib.UserDirectory.getChild} should raise L{TypeError}
+        if the path is not L{bytes}.
+        """
+        request = DummyRequest([b'foo.bar'])
+        self.assertRaises(TypeError,
+            self.directory.getChild, u'bob.twistd', request)
+
+
+    def test_getChildEmptyName(self):
+        """
+        L{distrib.UserDirectory.getChild} will return the same instance of
+        L{distrib.UserDirectory} if passed name of b"".
+        """
+        request = DummyRequest([b'foo.bar'])
+        child = self.directory.getChild(b"", request)
+        self.assertIs(child, self.directory)
 
 
     def test_invalidMethod(self):
@@ -477,8 +497,8 @@ class UserDirectoryTests(unittest.TestCase):
         L{UserDirectory.render} raises L{UnsupportedMethod} in response to a
         non-I{GET} request.
         """
-        request = DummyRequest([''])
-        request.method = 'POST'
+        request = DummyRequest([b''])
+        request.method = b'POST'
         self.assertRaises(
             server.UnsupportedMethod, self.directory.render, request)
 

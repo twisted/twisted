@@ -44,12 +44,23 @@ class ResourceScriptDirectoryTests(TestCase):
         os.makedirs(path)
         resource = ResourceScriptDirectory(path)
         request = DummyRequest([b'foo'])
-        child = resource.getChild("foo", request)
+        child = resource.getChild(b"foo", request)
         d = _render(child, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)
         d.addCallback(cbRendered)
         return d
+
+
+    def test_getChildWrongType(self):
+        """
+        L{ResourceScriptDirectory.getChild} should raise L{TypeError}
+        if the path is not L{bytes}.
+        """
+        resource = ResourceScriptDirectory(u"someresource")
+        request = DummyRequest([b'foo.bar'])
+        self.assertRaises(TypeError,
+            resource.getChild, u"foo.bar", request)
 
 
     def test_render(self):
@@ -67,7 +78,7 @@ class TestResource(Resource):
     def render_GET(self, request):
         return b'ok'
 resource = TestResource()""")
-        resource = ResourceScriptDirectory(tmp._asBytesPath())
+        resource = ResourceScriptDirectory(tmp.asBytesMode().path)
         request = DummyRequest([b''])
         child = resource.getChild(b"test.rpy", request)
         d = _render(child, request)

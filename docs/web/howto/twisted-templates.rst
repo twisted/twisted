@@ -417,7 +417,7 @@ As a ``DOCTYPE`` declaration in your template would describe the
 template itself, rather than its output, it won't be included in your output.
 If you wish to annotate your template output with a DOCTYPE, you will have to
 write it to the browser out of band.  One way to do this would be to simply
-do ``request.write('<!DOCTYPE html>\n')`` when you are ready to
+do ``request.write(b'<!DOCTYPE html>\n')`` when you are ready to
 begin emitting your response.  The same goes for an XML ``DOCTYPE`` 
 declaration.
 

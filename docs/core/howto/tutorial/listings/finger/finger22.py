@@ -174,20 +174,20 @@ class UserStatusTree(resource.Resource):
         self.service=service
 
         # add a specific child for the path "RPC2"
-        self.putChild("RPC2", UserStatusXR(self.service))
+        self.putChild(b"RPC2", UserStatusXR(self.service))
 
         # need to do this for resources at the root of the site
-        self.putChild("", self)
+        self.putChild(b"", self)
 
     def _cb_render_GET(self, users, request):
-        userOutput = ''.join(["<li><a href=\"%s\">%s</a></li>" % (user, user)
+        userOutput = b''.join([b"<li><a href=\"" + user + "\">" + user + "</a></li>"
                 for user in users])
-        request.write("""
+        request.write(b"""
             <html><head><title>Users</title></head><body>
             <h1>Users</h1>
-            <ul>
-            %s
-            </ul></body></html>""" % userOutput)
+            <ul>""" +
+            userOutput + b"""
+            </ul></body></html>""")
         request.finish()
 
     def render_GET(self, request):
@@ -211,10 +211,10 @@ class UserStatus(resource.Resource):
         self.service = service
 
     def _cb_render_GET(self, status, request):
-        request.write("""<html><head><title>%s</title></head>
-        <body><h1>%s</h1>
-        <p>%s</p>
-        </body></html>""" % (self.user, self.user, status))
+        request.write(b"<html><head><title>" + self.user + b"""</title></head>
+        <body><h1>""" + self.user + b"""</h1>
+        <p>""" + status + b"""</p>
+        </body></html>""")
         request.finish()
 
     def render_GET(self, request):

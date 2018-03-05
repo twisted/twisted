@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.logger import Logger
@@ -225,10 +225,10 @@ def datetimeToString(msSinceEpoch=None):
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = networkString("%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
+    s = u"{}, {:02d} {:3} {:4d} {:02d}:{:02d}:{:02d} GMT".format(
             weekdayname[wd],
             day, monthname[month], year,
-            hh, mm, ss))
+            hh, mm, ss).encode("ascii")
     return s
 
 
@@ -242,7 +242,7 @@ def datetimeToLogString(msSinceEpoch=None):
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+    s = "[{:02d}/{:3}/{:4d}:{:02d}:{:02d}:{:02d} +0000]".format(
         day, monthname[month], year,
         hh, mm, ss)
     return s
@@ -334,7 +334,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString('%x' % (len(data),)), b"\r\n", data, b"\r\n")
+    return (u'{:x}'.format(len(data)).encode("ascii"), b"\r\n", data, b"\r\n")
 
 
 
@@ -527,7 +527,7 @@ class HTTPClient(basic.LineReceiver):
     def sendHeader(self, name, value):
         if not isinstance(value, bytes):
             # XXX Deprecate this case
-            value = networkString(str(value))
+            value = str(value).encode("ascii")
         self.transport.writeSequence([name, b': ', value, b'\r\n'])
 
     def endHeaders(self):
@@ -1049,7 +1049,7 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            code = intToBytes(self.code)
+            code = str(self.code).encode("ascii")
             reason = self.code_message
             headers = []
 
@@ -1084,7 +1084,7 @@ class Request:
                             "since Twisted 12.3. Pass only bytes instead.",
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
-                        value = networkString('%s' % (value,))
+                        value = u'{}'.format(value).encode("ascii")
                     headers.append((name, value))
 
             for cookie in self.cookies:
@@ -1331,7 +1331,10 @@ class Request:
         host = self.getHeader(b'host')
         if host:
             return host.split(b':', 1)[0]
-        return networkString(self.getHost().host)
+        gotHost = self.getHost().host
+        if isinstance(gotHost, unicode):
+            gotHost = gotHost.encode("ascii")
+        return gotHost
 
 
     def getHost(self):
@@ -1374,7 +1377,7 @@ class Request:
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = host + b":" + str(int(port)).encode("ascii")
         self.requestHeaders.setRawHeaders(b"host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 

@@ -12,6 +12,7 @@ import errno
 import itertools
 import mimetypes
 import os
+import sys
 import time
 import warnings
 
@@ -22,8 +23,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import (_PY3, intToBytes, nativeString,
-                                   networkString)
+from twisted.python.compat import _PY3, unicode
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
@@ -42,7 +42,8 @@ else:
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
 def isDangerous(path):
-    return path == b'..' or b'/' in path or networkString(os.sep) in path
+    return (path == b'..' or b'/' in path or
+            os.sep.encode(sys.getfilesystemencoding()) in path)
 
 
 class Data(resource.Resource):
@@ -57,8 +58,12 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        request.setHeader(b"content-type", networkString(self.type))
-        request.setHeader(b"content-length", intToBytes(len(self.data)))
+        contentType = self.type
+        if isinstance(contentType, unicode):
+            contentType = contentType.encode("ascii")
+        request.setHeader(b"content-type", contentType)
+        request.setHeader(b"content-length",
+                          str(len(self.data)).encode("ascii"))
         if request.method == b"HEAD":
             return b''
         return self.data
@@ -157,7 +162,7 @@ def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
     p, ext = filepath.FilePath(filename).splitext()
-    ext = filepath._coerceToFilesystemEncoding('', ext.lower())
+    ext = filepath._coerceToFilesystemEncoding(u'', ext.lower())
     if ext in encodings:
         enc = encodings[ext]
         ext = os.path.splitext(p)[1].lower()
@@ -201,8 +206,8 @@ class File(resource.Resource, filepath.FilePath):
     contentTypes = loadMimeTypes()
 
     contentEncodings = {
-        ".gz" : "gzip",
-        ".bz2": "bzip2"
+        u".gz": u"gzip",
+        u".bz2": u"bzip2"
         }
 
     processors = {}
@@ -211,7 +216,8 @@ class File(resource.Resource, filepath.FilePath):
 
     type = None
 
-    def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
+    def __init__(self, path, defaultType="text/html", ignoredExts=(),
+                 registry=None, allowExt=0):
         """
         Create a file with the given path.
 
@@ -290,15 +296,16 @@ class File(resource.Resource, filepath.FilePath):
             accessed.
         @rtype: An object that provides L{resource.IResource}.
         """
-        if isinstance(path, bytes):
-            try:
-                # Request calls urllib.unquote on each path segment,
-                # leaving us with raw bytes.
-                path = path.decode('utf-8')
-            except UnicodeDecodeError:
-                log.err(None,
-                        "Could not decode path segment as utf-8: %r" % (path,))
-                return self.childNotFound
+        if not isinstance(path, bytes):
+            raise TypeError(
+                "{} is type: {}, not bytes".format(path, type(path)))
+        try:
+            path.decode(sys.getfilesystemencoding())
+        except UnicodeDecodeError:
+            log.err(None,
+               "Could not decode path segment as {}: {!r}".format(
+               sys.getfilesystemencoding(), path))
+            return self.childNotFound
 
         self.restat(reraise=False)
 
@@ -361,36 +368,39 @@ class File(resource.Resource, filepath.FilePath):
             raise ValueError("Missing '=' separator")
         kind = kind.strip()
         if kind != b'bytes':
-            raise ValueError("Unsupported Bytes-Unit: %r" % (kind,))
+            raise ValueError("Unsupported Bytes-Unit: {!r}".format(kind))
         unparsedRanges = list(filter(None, map(bytes.strip, value.split(b','))))
         parsedRanges = []
         for byteRange in unparsedRanges:
             try:
                 start, end = byteRange.split(b'-', 1)
             except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                raise ValueError("Invalid Byte-Range: {!r}".format(byteRange))
             if start:
                 try:
                     start = int(start)
                 except ValueError:
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError("Invalid Byte-Range: {!r}".format(
+                        byteRange))
             else:
                 start = None
             if end:
                 try:
                     end = int(end)
                 except ValueError:
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError("Invalid Byte-Range: {!r}".format(
+                        byteRange))
             else:
                 end = None
             if start is not None:
                 if end is not None and start > end:
                     # Start must be less than or equal to end or it is invalid.
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError("Invalid Byte-Range: {!r}".format(
+                        byteRange))
             elif end is None:
                 # One or both of start and end must be specified.  Omitting
                 # both is invalid.
-                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                raise ValueError("Invalid Byte-Range: {!r}".format(byteRange))
             parsedRanges.append((start, end))
         return parsedRanges
 
@@ -451,8 +461,8 @@ class File(resource.Resource, filepath.FilePath):
         @return: The value as appropriate for the value of a Content-Range
             header.
         """
-        return networkString('bytes %d-%d/%d' % (
-            offset, offset + size - 1, self.getFileSize()))
+        return u'bytes {}-{}/{}'.format(
+            offset, offset + size - 1, self.getFileSize()).encode("ascii")
 
 
     def _doSingleRangeRequest(self, request, startAndEnd):
@@ -477,7 +487,8 @@ class File(resource.Resource, filepath.FilePath):
             # request is unsatisfiable.
             request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
             request.setHeader(
-                b'content-range', networkString('bytes */%d' % (self.getFileSize(),)))
+                b'content-range',
+                u'bytes */{}'.format(self.getFileSize()).encode("ascii"))
         else:
             request.setResponseCode(http.PARTIAL_CONTENT)
             request.setHeader(
@@ -515,9 +526,12 @@ class File(resource.Resource, filepath.FilePath):
         matchingRangeFound = False
         rangeInfo = []
         contentLength = 0
-        boundary = networkString("%x%x" % (int(time.time()*1000000), os.getpid()))
+        boundary = u"{:x}{:x}".format(
+            int(time.time()*1000000), os.getpid()).encode("ascii")
         if self.type:
             contentType = self.type
+            if isinstance(contentType, unicode):
+                contentType = contentType.encode("ascii")
         else:
             contentType = b'bytes' # It's what Apache does...
         for start, end in byteRanges:
@@ -527,12 +541,12 @@ class File(resource.Resource, filepath.FilePath):
             contentLength += partSize
             matchingRangeFound = True
             partContentRange = self._contentRange(partOffset, partSize)
-            partSeparator = networkString((
-                "\r\n"
-                "--%s\r\n"
-                "Content-type: %s\r\n"
-                "Content-range: %s\r\n"
-                "\r\n") % (nativeString(boundary), nativeString(contentType), nativeString(partContentRange)))
+            partSeparator = (
+                b"\r\n" +
+                b"--" + boundary + b"\r\n" +
+                b"Content-type: " + contentType + b"\r\n" +
+                b"Content-range: " + partContentRange + b"\r\n" +
+                b"\r\n")
             contentLength += len(partSeparator)
             rangeInfo.append((partSeparator, partOffset, partSize))
         if not matchingRangeFound:
@@ -540,15 +554,18 @@ class File(resource.Resource, filepath.FilePath):
             request.setHeader(
                 b'content-length', b'0')
             request.setHeader(
-                b'content-range', networkString('bytes */%d' % (self.getFileSize(),)))
+                b'content-range',
+                u'bytes */{}'.format(self.getFileSize()).encode("ascii"))
             return [], b''
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
-            b'content-type', networkString('multipart/byteranges; boundary="%s"' % (nativeString(boundary),)))
+            b'content-type',
+            b'multipart/byteranges; boundary="' + boundary + b'"')
         request.setHeader(
-            b'content-length', intToBytes(contentLength + len(finalBoundary)))
+            b'content-length',
+            str(contentLength + len(finalBoundary)).encode("ascii"))
         return rangeInfo
 
 
@@ -565,11 +582,17 @@ class File(resource.Resource, filepath.FilePath):
         """
         if size is None:
             size = self.getFileSize()
-        request.setHeader(b'content-length', intToBytes(size))
+        request.setHeader(b'content-length', str(size).encode("ascii"))
         if self.type:
-            request.setHeader(b'content-type', networkString(self.type))
+            contentType = self.type
+            if isinstance(contentType, unicode):
+                contentType = contentType.encode("ascii")
+            request.setHeader(b'content-type', contentType)
         if self.encoding:
-            request.setHeader(b'content-encoding', networkString(self.encoding))
+            contentEncoding = self.encoding
+            if isinstance(contentEncoding, unicode):
+                contentEncoding = contentEncoding.encode("ascii")
+            request.setHeader(b'content-encoding', contentEncoding)
 
 
     def makeProducer(self, request, fileForReading):
@@ -591,7 +614,8 @@ class File(resource.Resource, filepath.FilePath):
         try:
             parsedRanges = self._parseRangeHeader(byteRange)
         except ValueError:
-            log.msg("Ignoring malformed Range header %r" % (byteRange.decode(),))
+            log.msg("Ignoring malformed Range header {!r}".format(
+                byteRange.decode()))
             self._setContentHeaders(request)
             request.setResponseCode(http.OK)
             return NoRangeStaticProducer(request, fileForReading)
@@ -676,8 +700,10 @@ class File(resource.Resource, filepath.FilePath):
 
 
     def createSimilarFile(self, path):
-        f = self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
-        # refactoring by steps, here - constructor should almost certainly take these
+        f = self.__class__(path, self.defaultType, self.ignoredExts,
+            self.registry)
+        # Refactoring by steps, here - constructor should almost certainly
+        # take these
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
         f.childNotFound = self.childNotFound
@@ -1001,9 +1027,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         dirs = []
 
         for path in directory:
-            if _PY3:
-                if isinstance(path, bytes):
-                    path = path.decode("utf8")
+            if isinstance(path, bytes):
+                path = path.decode("utf-8")
 
             url = quote(path, "/")
             escapedPath = escape(path)
@@ -1023,8 +1048,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
                     continue
                 files.append({
                     'text': escapedPath, "href": url,
-                    'type': '[%s]' % mimetype,
-                    'encoding': (encoding and '[%s]' % encoding or ''),
+                    'type': '[{}]'.format(mimetype),
+                    'encoding': (encoding and '[{}]'.format(encoding) or ''),
                     'size': formatFileSize(size)})
         return dirs, files
 
@@ -1057,17 +1082,15 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 
         tableContent = "".join(self._buildTableContent(dirs + files))
 
-        header = "Directory listing for %s" % (
-            escape(unquote(nativeString(request.uri))),)
+        header = u"Directory listing for {}".format(
+            escape(unquote(request.uri.decode("utf-8"))))
 
         done = self.template % {"header": header, "tableContent": tableContent}
-        if _PY3:
-            done = done.encode("utf8")
-
+        done = done.encode("utf-8")
         return done
 
 
     def __repr__(self):
-        return '<DirectoryLister of %r>' % self.path
+        return '<DirectoryLister of {!r}>'.format(self.path)
 
     __str__ = __repr__

@@ -8,11 +8,12 @@ Tests for L{twisted.web.util}.
 from __future__ import absolute_import, division
 
 import gc
+import sys
 
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet import defer
-from twisted.python.compat import _PY3, intToBytes, networkString
+from twisted.python.compat import _PY3
 from twisted.web import resource, util
 from twisted.web.error import FlattenerError
 from twisted.web.http import FOUND
@@ -159,7 +160,9 @@ class FailureElementTests(TestCase):
             # __file__ differs depending on whether an up-to-date .pyc file
             # already existed.
             self.assertEqual,
-            b"<span>" + networkString(__file__.rstrip('c')) + b"</span>")
+            b"<span>" +
+            __file__.rstrip('c').encode(sys.getfilesystemencoding()) +
+            b"</span>")
         return d
 
 
@@ -173,8 +176,8 @@ class FailureElementTests(TestCase):
             TagLoader(tags.span(render="lineNumber")),
             self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
+        d.addCallback(self.assertEqual,
+            b"<span>" + str(self.base + 1).encode("ascii") + b"</span>")
         return d
 
 

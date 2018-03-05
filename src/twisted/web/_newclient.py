@@ -31,7 +31,6 @@ __metaclass__ = type
 
 from zope.interface import implementer
 
-from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
@@ -713,8 +712,8 @@ class Request:
         """
         self._writeHeaders(
             transport,
-            networkString(
-                'Content-Length: %d\r\n' % (self.bodyProducer.length,)))
+            u'Content-Length: {}\r\n'.format(
+                self.bodyProducer.length).encode("ascii"))
 
         # This Deferred is used to signal an error in the data written to the
         # encoder below.  It can only errback and it will only do so before too
@@ -1284,7 +1283,8 @@ class ChunkedEncoder:
         """
         if self.transport is None:
             raise ExcessWrite()
-        self.transport.writeSequence((networkString("%x\r\n" % len(data)),
+        self.transport.writeSequence((
+            u"{:x}\r\n".format(len(data)).encode("ascii"),
             data, b"\r\n"))
 
 

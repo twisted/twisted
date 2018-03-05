@@ -182,9 +182,9 @@ class UserStatusTree(resource.Resource):
         self.service = service
 
     def getChild(self, path, request):
-        if path == '':
+        if path == b'':
             return self
-        elif path == 'RPC2':
+        elif path == b'RPC2':
             return UserStatusXR(self.service)
         else:
             return UserStatus(path, self.service)

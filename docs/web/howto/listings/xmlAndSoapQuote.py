@@ -17,8 +17,8 @@ class SOAPQuoter(soap.SOAPPublisher):
 def main():
     from twisted.internet import reactor
     root = resource.Resource()
-    root.putChild('RPC2', XMLRPCQuoter())
-    root.putChild('SOAP', SOAPQuoter())
+    root.putChild(b'RPC2', XMLRPCQuoter())
+    root.putChild(b'SOAP', SOAPQuoter())
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
     endpoint.listen(server.Site(root))
     reactor.run()

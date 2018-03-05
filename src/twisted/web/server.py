@@ -31,7 +31,7 @@ from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.python.compat import nativeString
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
@@ -277,7 +277,8 @@ class Request(Copyable, http.Request, components.Componentized):
                     )
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader(b'content-length', intToBytes(len(body)))
+                    self.setHeader(b'content-length',
+                                   str(len(body)).encode("ascii"))
 
                 self._inFakeHead = False
                 self.method = b"HEAD"
@@ -329,11 +330,11 @@ class Request(Copyable, http.Request, components.Componentized):
                     resrc=resrc
                 )
                 self.setHeader(b'content-length',
-                               intToBytes(len(body)))
+                               str(len(body)).encode("ascii"))
             self.write(b'')
         else:
             self.setHeader(b'content-length',
-                           intToBytes(len(body)))
+                           str(len(body)).encode("ascii"))
             self.write(body)
         self.finish()
 
@@ -364,7 +365,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
         self.setHeader(b'content-type', b"text/html")
-        self.setHeader(b'content-length', intToBytes(len(body)))
+        self.setHeader(b'content-length', str(len(body)).encode("ascii"))
         self.write(body)
         self.finish()
         return reason
@@ -505,10 +506,10 @@ class Request(Copyable, http.Request, components.Componentized):
             hostport = ''
         else:
             hostport = ':%d' % port
-        prefix = networkString('http%s://%s%s/' % (
+        prefix = u'http{}://{}{}/'.format(
             self.isSecure() and 's' or '',
             nativeString(self.getRequestHostname()),
-            hostport))
+            hostport).encode("ascii")
         path = b'/'.join([quote(segment, safe=b'') for segment in prepath])
         return prefix + path
 
@@ -719,7 +720,7 @@ class Session(components.Componentized):
             self._expireCall.reset(self.sessionTimeout)
 
 
-version = networkString("TwistedWeb/%s" % (copyright.version,))
+version = u"TwistedWeb/{}".format(copyright.version).encode("ascii")
 
 
 

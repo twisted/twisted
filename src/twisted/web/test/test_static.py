@@ -13,7 +13,7 @@ import sys
 import warnings
 
 
-from io import BytesIO as StringIO
+from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
@@ -21,8 +21,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.python.compat import intToBytes, networkString
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test.requesthelper import DummyRequest
@@ -57,6 +56,18 @@ class StaticDataTests(TestCase):
         request = DummyRequest([b''])
         request.method = b'POST'
         self.assertRaises(UnsupportedMethod, data.render, request)
+
+
+    def test_isDangerous(self):
+        """
+        L{static.isDangerous} returns L{True} if path
+        contains b'..', b'/' or L{os.sep}.
+        """
+        self.assertTrue(static.isDangerous(b".."))
+        self.assertTrue(static.isDangerous(b"foo/bar"))
+        self.assertTrue(static.isDangerous(
+            b"foo" + os.sep.encode(sys.getfilesystemencoding()) + b"bar"))
+        self.assertFalse(static.isDangerous(b"ok_path"))
 
 
 
@@ -201,8 +212,8 @@ class StaticFileTests(TestCase):
 
     def test_undecodablePath(self):
         """
-        A request whose path cannot be decoded as UTF-8 receives a not
-        found response, and the failure is logged.
+        A request whose path cannot be decoded using the default file system
+        encoding receives a not found response, and the failure is logged.
         """
         path = self.mktemp()
         if isinstance(path, bytes):
@@ -211,7 +222,17 @@ class StaticFileTests(TestCase):
         base.makedirs()
 
         file = static.File(base.path)
-        request = DummyRequest([b"\xff"])
+        undecodablePath = b"\xff"
+        fsEncoding = sys.getfilesystemencoding()
+        try:
+            undecodablePath.decode(fsEncoding)
+        except UnicodeDecodeError:
+            pass
+        else:
+            raise SkipTest("Skipping test for file system encoding: {}".format(
+                fsEncoding))
+
+        request = DummyRequest([undecodablePath])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
@@ -330,13 +351,13 @@ class StaticFileTests(TestCase):
             self.assertEqual(b''.join(request.written), content)
             self.assertEqual(
                 request.responseHeaders.getRawHeaders(b'content-length')[0],
-                networkString(str(len(content))))
+                str(len(content)).encode("ascii"))
         d.addCallback(cbRendered)
         return d
     if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
         test_staticFileUnicodeFileName.skip = (
             "Cannot write unicode filenames with file system encoding of"
-            " %s" % (sys.getfilesystemencoding(),))
+            " {}".format(sys.getfilesystemencoding()))
 
 
     def test_staticFileDeletedGetChild(self):
@@ -348,6 +369,17 @@ class StaticFileTests(TestCase):
         request = DummyRequest([b'foo.bar'])
         child = staticFile.getChild(b"foo.bar", request)
         self.assertEqual(child, staticFile.childNotFound)
+
+
+    def test_getChildWrongType(self):
+        """
+        L{static.File.getChild} should raise L{TypeError}
+        if the path is not L{bytes}.
+        """
+        staticFile = static.File(self.mktemp())
+        request = DummyRequest([b'foo.bar'])
+        self.assertRaises(TypeError,
+            staticFile.getChild, u"foo.bar", request)
 
 
     def test_staticFileDeletedRender(self):
@@ -426,7 +458,7 @@ class StaticFileTests(TestCase):
             b"resource = Data(b'dynamic world', 'text/plain')\n")
 
         file = static.File(base.path)
-        file.processors = {'.bar': script.ResourceScript}
+        file.processors = {b'.bar': script.ResourceScript}
         request = DummyRequest([b"foo.bar"])
         child = resource.getChildForRequest(file, request)
 
@@ -498,14 +530,14 @@ class StaticFileTests(TestCase):
                          [b"http://dummy/folder/#baz?foo=bar"])
 
 
-    def _makeFilePathWithStringIO(self):
+    def _makeFilePathWithBytesIO(self):
         """
-        Create a L{File} that when opened for reading, returns a L{StringIO}.
+        Create a L{File} that when opened for reading, returns a L{BytesIO}.
 
         @return: 2-tuple of the opened "file" and the L{File}.
         @rtype: L{tuple}
         """
-        fakeFile = StringIO()
+        fakeFile = BytesIO()
         path = FilePath(self.mktemp())
         path.touch()
         file = static.File(path.path)
@@ -519,7 +551,7 @@ class StaticFileTests(TestCase):
         A HEAD request opens the file, gets the size, and then closes it after
         the request.
         """
-        fakeFile, file = self._makeFilePathWithStringIO()
+        fakeFile, file = self._makeFilePathWithBytesIO()
         request = DummyRequest([''])
         request.method = b'HEAD'
         self.successResultOf(_render(file, request))
@@ -531,7 +563,7 @@ class StaticFileTests(TestCase):
         """
         A GET request that is cached closes the file after the request.
         """
-        fakeFile, file = self._makeFilePathWithStringIO()
+        fakeFile, file = self._makeFilePathWithBytesIO()
         request = DummyRequest([''])
         request.method = b'GET'
         # This request will always return saying that it is cached
@@ -557,7 +589,7 @@ class StaticMakeProducerTests(TestCase):
         """
         fileName = FilePath(self.mktemp())
         fileName.setContent(content)
-        resource = static.File(fileName._asBytesPath())
+        resource = static.File(fileName.asBytesMode().path)
         resource.encoding = encoding
         resource.type = type
         return resource
@@ -601,23 +633,43 @@ class StaticMakeProducerTests(TestCase):
             self.assertEqual(http.OK, request.responseCode)
 
 
-    def test_noRangeHeaderSetsContentHeaders(self):
+    def _noRangeHeaderSetsContentHeaders(self, contentTypeIn,
+        contentEncodingIn, contentTypeOut, contentEncodingOut):
         """
         makeProducer when no Range header is set sets the Content-* headers
         for the response.
         """
         length = 123
-        contentType = "text/plain"
-        contentEncoding = 'gzip'
         resource = self.makeResourceWithContent(
-            b'a'*length, type=contentType, encoding=contentEncoding)
+            b'a'*length, type=contentTypeIn, encoding=contentEncodingIn)
         request = DummyRequest([])
         with resource.openForReading() as file:
             resource.makeProducer(request, file)
             self.assertEqual(
-                {b'content-type': networkString(contentType), b'content-length': intToBytes(length),
-                 b'content-encoding': networkString(contentEncoding)},
+                {b'content-type': contentTypeOut,
+                 b'content-length': str(length).encode("ascii"),
+                 b'content-encoding': contentEncodingOut},
                 self.contentHeaders(request))
+
+
+    def test_noRangeHeaderSetsContentHeadersBytes(self):
+        """
+        If we call C{_noRangeHeaderSetsContentHeaders} with L{bytes} values
+        for content-type and content-encoding, the values will be of type
+        L{bytes} in the header.
+        """
+        return self._noRangeHeaderSetsContentHeaders(b"text/plain", b"gzip",
+            b"text/plain", b"gzip")
+
+
+    def test_noRangeHeaderSetsContentHeadersUnicode(self):
+        """
+        If we call C{_noRangeHeaderSetsContentHeaders} with L{unicode} values
+        for content-type and content-encoding, the values will be of type
+        L{bytes} in the header.
+        """
+        return self._noRangeHeaderSetsContentHeaders(u"text/plain", u"gzip",
+            b"text/plain", b"gzip")
 
 
     def test_singleRangeGivesSingleRangeStaticProducer(self):
@@ -654,14 +706,14 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.requestHeaders.addRawHeader(b'range', b'bytes=1-3')
-        contentType = "text/plain"
-        contentEncoding = 'gzip'
+        contentType = b"text/plain"
+        contentEncoding = b'gzip'
         resource = self.makeResourceWithContent(b'abcdef', type=contentType, encoding=contentEncoding)
         with resource.openForReading() as file:
             resource.makeProducer(request, file)
             self.assertEqual(
-                {b'content-type': networkString(contentType),
-                 b'content-encoding': networkString(contentEncoding),
+                {b'content-type': contentType,
+                 b'content-encoding': contentEncoding,
                  b'content-range': b'bytes 1-3/6', b'content-length': b'3'},
                 self.contentHeaders(request))
 
@@ -777,7 +829,8 @@ class StaticMakeProducerTests(TestCase):
             expectedLength = 5
             for boundary, offset, size in producer.rangeInfo:
                 expectedLength += len(boundary)
-            self.assertEqual(intToBytes(expectedLength), contentHeaders[b'content-length'])
+            self.assertEqual(str(expectedLength).encode("ascii"),
+                             contentHeaders[b'content-length'])
             # Content-type should be set to a value indicating a multipart
             # response and the boundary used to separate the parts.
             self.assertIn(b'content-type', contentHeaders)
@@ -865,7 +918,7 @@ class StaticProducerTests(TestCase):
         L{StaticProducer.stopProducing} closes the file object the producer is
         producing data from.
         """
-        fileObject = StringIO()
+        fileObject = BytesIO()
         producer = static.StaticProducer(None, fileObject)
         producer.stopProducing()
         self.assertTrue(fileObject.closed)
@@ -877,7 +930,7 @@ class StaticProducerTests(TestCase):
         None, which indicates to subclasses' resumeProducing methods that no
         more data should be produced.
         """
-        fileObject = StringIO()
+        fileObject = BytesIO()
         producer = static.StaticProducer(DummyRequest([]), fileObject)
         producer.stopProducing()
         self.assertIdentical(None, producer.request)
@@ -906,7 +959,7 @@ class NoRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'abcdef'
         producer = static.NoRangeStaticProducer(
-            request, StringIO(content))
+            request, BytesIO(content))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -923,7 +976,7 @@ class NoRangeStaticProducerTests(TestCase):
         bufferSize = abstract.FileDescriptor.bufferSize
         content = b'a' * (2*bufferSize + 1)
         producer = static.NoRangeStaticProducer(
-            request, StringIO(content))
+            request, BytesIO(content))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -945,7 +998,7 @@ class NoRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.NoRangeStaticProducer(
-            request, StringIO(b'abcdef'))
+            request, BytesIO(b'abcdef'))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -976,7 +1029,7 @@ class SingleRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'abcdef'
         producer = static.SingleRangeStaticProducer(
-            request, StringIO(content), 1, 3)
+            request, BytesIO(content), 1, 3)
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
@@ -993,7 +1046,7 @@ class SingleRangeStaticProducerTests(TestCase):
         bufferSize = abstract.FileDescriptor.bufferSize
         content = b'abc' * bufferSize
         producer = static.SingleRangeStaticProducer(
-            request, StringIO(content), 1, bufferSize+10)
+            request, BytesIO(content), 1, bufferSize+10)
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
@@ -1014,7 +1067,7 @@ class SingleRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.SingleRangeStaticProducer(
-            request, StringIO(b'abcdef'), 1, 1)
+            request, BytesIO(b'abcdef'), 1, 1)
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -1045,7 +1098,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'abcdef'
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO(content), [(b'1', 1, 3), (b'2', 5, 1)])
+            request, BytesIO(content), [(b'1', 1, 3), (b'2', 5, 1)])
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
@@ -1069,7 +1122,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         request = DummyRequest([])
         content = b'0123456789' * 2
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO(content),
+            request, BytesIO(content),
             [(b'a', 0, 2), (b'b', 5, 10), (b'c', 0, 0)])
         producer.bufferSize = 10
         # DummyRequest.registerProducer pulls all output from the producer, so
@@ -1092,7 +1145,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO(b'abcdef'), [(b'', 1, 2)])
+            request, BytesIO(b'abcdef'), [(b'', 1, 2)])
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -1281,7 +1334,7 @@ class RangeTests(TestCase):
         self.assertEqual(self.request.responseCode, http.OK)
         self.assertEqual(
             self.request.responseHeaders.getRawHeaders(b'content-length')[0],
-            intToBytes(len(self.payload)))
+            str(len(self.payload)).encode("ascii"))
 
 
     def parseMultipartBody(self, body, boundary):
@@ -1319,7 +1372,8 @@ class RangeTests(TestCase):
         multipart response.
         """
         startEnds = [(0, 2), (20, 30), (40, 50)]
-        rangeHeaderValue = b','.join([networkString("%s-%s" % (s,e)) for (s, e) in startEnds])
+        rangeHeaderValue = b','.join(
+            [u"{}-{}".format(s, e).encode("ascii") for (s, e) in startEnds])
         self.request.requestHeaders.addRawHeader(b'range',
                                                  b'bytes=' + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1330,7 +1384,7 @@ class RangeTests(TestCase):
         parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(networkString(self.resource.type),
+            self.assertEqual(self.resource.type.encode("ascii"),
                              part[b'contentType'])
             start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
@@ -1346,7 +1400,8 @@ class RangeTests(TestCase):
         the resource.
         """
         startEnds = [(0, 2), (40, len(self.payload) + 10)]
-        rangeHeaderValue = b','.join([networkString("%s-%s" % (s,e)) for (s, e) in startEnds])
+        rangeHeaderValue = b','.join(
+            [u"{}-{}".format(s, e).encode("ascii") for (s, e) in startEnds])
         self.request.requestHeaders.addRawHeader(b'range',
                                                  b'bytes=' + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1357,7 +1412,7 @@ class RangeTests(TestCase):
         parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(networkString(self.resource.type),
+            self.assertEqual(self.resource.type.encode("ascii"),
                              part[b'contentType'])
             start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
@@ -1418,7 +1473,7 @@ class RangeTests(TestCase):
             self.request.responseHeaders.getRawHeaders(b'content-range')[0],
             b'bytes 3-43/64')
         self.assertEqual(
-            intToBytes(len(written)),
+            str(len(written)).encode("ascii"),
             self.request.responseHeaders.getRawHeaders(b'content-length')[0])
 
 
@@ -1438,7 +1493,7 @@ class RangeTests(TestCase):
             self.request.responseHeaders.getRawHeaders(b'content-range')[0],
             b'bytes 40-63/64')
         self.assertEqual(
-            intToBytes(len(written)),
+            str(len(written)).encode("ascii"),
             self.request.responseHeaders.getRawHeaders(b'content-length')[0])
 
 
@@ -1454,7 +1509,7 @@ class RangeTests(TestCase):
         self.assertEqual(b''.join(self.request.written), self.payload)
         self.assertEqual(
             self.request.responseHeaders.getRawHeaders(b'content-length')[0],
-            intToBytes(len(self.payload)))
+            str(len(self.payload)).encode("ascii"))
 
 
     def test_invalidStartBytePos(self):
@@ -1475,7 +1530,7 @@ class RangeTests(TestCase):
         # Sections 10.4.17 and 14.16
         self.assertEqual(
             self.request.responseHeaders.getRawHeaders(b'content-range')[0],
-            networkString('bytes */%d' % (len(self.payload),)))
+            u'bytes */{}'.format(len(self.payload)).encode("ascii"))
 
 
 
@@ -1658,10 +1713,10 @@ class DirectoryListerTests(TestCase):
         directory.sort()
 
         contentTypes = {
-            ".txt": "text/plain",
-            ".py": "text/python",
-            ".conf": "text/configuration",
-            ".diff": "text/diff"
+            u".txt": u"text/plain",
+            u".py": u"text/python",
+            u".conf": u"text/configuration",
+            u".diff": u"text/diff"
         }
 
         lister = static.DirectoryLister(path.path, contentTypes=contentTypes)
@@ -1803,10 +1858,12 @@ class LoadMimeTypesTests(TestCase):
         # something, somewhere, calls mimetypes.init. Yay global
         # mutable state :)
         if getattr(inspect, "signature", None):
+            # Python 3
             signature = inspect.signature(static.loadMimeTypes)
             self.assertIs(signature.parameters["init"].default,
                           mimetypes.init)
         else:
+            # Python 2
             args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
             defaultInit = defaults[args.index("init")]
             self.assertIs(defaultInit, mimetypes.init)

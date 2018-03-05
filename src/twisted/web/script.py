@@ -8,11 +8,13 @@ I contain PythonScript, which is a very simple python script resource.
 
 from __future__ import division, absolute_import
 
-import os, traceback
+import os
+import sys
+import traceback
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
+from twisted.python.compat import execfile, NativeStringIO
 from twisted.web import http, server, static, resource, util
 
 
@@ -119,11 +121,16 @@ class ResourceScriptDirectory(resource.Resource):
     """
     def __init__(self, pathname, registry=None):
         resource.Resource.__init__(self)
+        if isinstance(pathname, bytes):
+            pathname = pathname.decode(sys.getfilesystemencoding())
         self.path = pathname
         self.registry = registry or static.Registry()
 
     def getChild(self, path, request):
-        fn = os.path.join(self.path, path)
+        if not isinstance(path, bytes):
+            raise TypeError(
+                "{} is type: {}, not bytes".format(path, type(path)))
+        fn = os.path.join(self.path, path.decode("utf-8"))
 
         if os.path.isdir(fn):
             return ResourceScriptDirectory(fn, self.registry)
@@ -139,6 +146,7 @@ class ResourceScriptDirectory(resource.Resource):
 class PythonScript(resource.Resource):
     """
     I am an extremely simple dynamic resource; an embedded python script.
+    The script must consist of valid UTF-8 characters.
 
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
@@ -161,7 +169,8 @@ class PythonScript(resource.Resource):
         will NOT be handled with print - standard output goes to the log - but
         with request.write.
         """
-        request.setHeader(b"x-powered-by", networkString("Twisted/%s" % copyright.version))
+        request.setHeader(b"x-powered-by",
+            u"Twisted/{}".format(copyright.version).encode("ascii"))
         namespace = {'request': request,
                      '__file__': _coerceToFilesystemEncoding("", self.filename),
                      'registry': self.registry}
@@ -175,8 +184,8 @@ class PythonScript(resource.Resource):
             io = NativeStringIO()
             traceback.print_exc(file=io)
             output = util._PRE(io.getvalue())
-            if _PY3:
-                output = output.encode("utf8")
+            if not isinstance(output, bytes):
+                output = output.encode("utf-8")
             request.write(output)
         request.finish()
         return server.NOT_DONE_YET
