@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -23,7 +24,7 @@ class EnsureBytesTests(TestCase):
         If L{unicode} is passed to L{ensureBytes}, the L{unicode} is converted
         to L{bytes} and returned.
         """
-        self.assertEqual(ensureBytes(u"hello"), b"hello")
+        self.assertEqual(b"hello", ensureBytes(u"hello"))
 
 
     def test_ensureBytesEncodingParameter(self):
@@ -32,8 +33,8 @@ class EnsureBytesTests(TestCase):
         codec to use when converting L{unicode} to L{bytes}.
         """
         self.assertEqual(
-            ensureBytes(u'\N{SNOWMAN}', encoding="utf-8"),
-            b'\xe2\x98\x83')
+            b'\xe2\x98\x83',
+            ensureBytes(u'\N{SNOWMAN}', encoding="utf-8"))
 
 
     def test_ensureBytesErrorsParameter(self):
@@ -43,8 +44,8 @@ class EnsureBytesTests(TestCase):
         encoding’s rules.
         """
         self.assertEqual(
-            ensureBytes(u'\N{SNOWMAN}', encoding="ascii", errors="ignore"),
-            b'')
+            b'',
+            ensureBytes(u'\N{SNOWMAN}', encoding="ascii", errors="ignore"))
 
 
     def test_ensureBytesUnicodeEncodeError(self):
@@ -61,4 +62,4 @@ class EnsureBytesTests(TestCase):
         """
         L{ensureBytes} just returns any L{bytes} passed to it.
         """
-        self.assertEqual(ensureBytes(b'\xe2\x98\x83'), b'\xe2\x98\x83')
+        self.assertEqual(b'\xe2\x98\x83', ensureBytes(b'\xe2\x98\x83'))
