@@ -2494,7 +2494,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         self._checkCookie(expectedCookieValue, b"foo", 10)
 
-        warnings = self.flushWarnings([self._checkCookie])
+        warnings = self.flushWarnings()
         self.assertEqual(1, len(warnings))
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(
