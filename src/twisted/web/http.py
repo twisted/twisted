@@ -1152,6 +1152,13 @@ class Request:
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
         """
+        if not isinstance(v, (unicode, bytes)):
+            v = str(v)
+            warnings.warn(
+                "Passing non-bytes or non-unicode cookie arguments is "
+                "deprecated since Twisted 16.1.",
+                category=DeprecationWarning, stacklevel=3)
+
         cookie = ensureBytes(k) + b"=" + ensureBytes(v)
         if expires is not None:
             cookie = cookie + b"; Expires=" + ensureBytes(expires)
