@@ -89,6 +89,7 @@ except ImportError:
 from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import (
     _PY3, long, unicode, nativeString)
 from twisted.python.deprecate import deprecated
@@ -1151,39 +1152,17 @@ class Request:
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
         """
-        def _ensureBytes(val):
-            """
-            Ensure that C{val} is bytes, encoding using UTF-8 if needed.
-            """
-            if val is None:
-                # It's None, so we don't want to touch it
-                return val
-
-            if isinstance(val, bytes):
-                return val
-            elif isinstance(val, unicode):
-                return val.encode('utf8')
-
-            # Not bytes or unicode, relying on string conversion legacy
-            # str() it, and warn, it's the best we can do
-            warnings.warn(
-                "Passing non-bytes or non-unicode cookie arguments is "
-                "deprecated since Twisted 16.1.",
-                category=DeprecationWarning, stacklevel=3)
-
-            return str(val).encode('utf8')
-
-        cookie = _ensureBytes(k) + b"=" + _ensureBytes(v)
+        cookie = ensureBytes(k) + b"=" + ensureBytes(v)
         if expires is not None:
-            cookie = cookie + b"; Expires=" + _ensureBytes(expires)
+            cookie = cookie + b"; Expires=" + ensureBytes(expires)
         if domain is not None:
-            cookie = cookie + b"; Domain=" + _ensureBytes(domain)
+            cookie = cookie + b"; Domain=" + ensureBytes(domain)
         if path is not None:
-            cookie = cookie + b"; Path=" + _ensureBytes(path)
+            cookie = cookie + b"; Path=" + ensureBytes(path)
         if max_age is not None:
-            cookie = cookie + b"; Max-Age=" + _ensureBytes(max_age)
+            cookie = cookie + b"; Max-Age=" + ensureBytes(max_age)
         if comment is not None:
-            cookie = cookie + b"; Comment=" + _ensureBytes(comment)
+            cookie = cookie + b"; Comment=" + ensureBytes(comment)
         if secure:
             cookie = cookie + b"; Secure"
         if httpOnly:
