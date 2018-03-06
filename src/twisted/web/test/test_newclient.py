@@ -1292,34 +1292,6 @@ class HTTP11ClientProtocolTests(TestCase):
         d.addCallback(cbAllResponse)
         return d
 
-    def test_receiveResponseHeadersTooLong(self):
-        """
-        The connection is closed when the server respond with a header which
-        is above the maximum line.
-        """
-        transport = StringTransportWithDisconnection()
-        protocol = HTTP11ClientProtocol()
-        transport.protocol = protocol
-        protocol.makeConnection(transport)
-
-        longLine = b'a' * LineReceiver.MAX_LENGTH
-        d = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
-
-        def cbRequest(result):
-            raise AssertionError('This should not succeed! Got: %r' % result)
-        d.addCallback(cbRequest)
-
-        protocol.dataReceived(
-            b"HTTP/1.1 200 OK\r\n"
-            b"X-Foo: " + longLine + b"\r\n"
-            b"X-Foo: baz\r\n"
-            b"\r\n")
-
-        # FIXME
-        # For now, there is no signal that something went wrong, just a
-        # connection which is closed in what looks like a clean way.
-        # But I think that this should be fixed in this patch.
-        return assertResponseFailed(self, d, [ConnectionDone])
 
     def test_receiveResponseHeadersTooLong(self):
         """
