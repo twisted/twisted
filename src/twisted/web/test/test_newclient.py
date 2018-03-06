@@ -1311,7 +1311,7 @@ class HTTP11ClientProtocolTests(TestCase):
 
         protocol.dataReceived(
             b"HTTP/1.1 200 OK\r\n"
-            b"X-Foo: " + longLine + "\r\n"
+            b"X-Foo: " + longLine + b"\r\n"
             b"X-Foo: baz\r\n"
             b"\r\n")
 
