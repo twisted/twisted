@@ -24,7 +24,7 @@ from twisted.web import http
 from twisted.web.util import redirectTo
 
 from twisted.python.bytes import ensureBytes
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3
 from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
