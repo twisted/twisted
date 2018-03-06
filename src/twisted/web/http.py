@@ -91,7 +91,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 # twisted imports
 from twisted.python.bytes import ensureBytes
 from twisted.python.compat import (
-    _PY3, long, unicode, nativeString)
+    _PY3, long, unicode, intToBytes, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.logger import Logger
