@@ -31,7 +31,6 @@ __metaclass__ = type
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.bytes import ensureBytes
 from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
