@@ -23,6 +23,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import _PY3, unicode
 from twisted.python.compat import escape
 
@@ -58,12 +59,10 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        contentType = self.type
-        if isinstance(contentType, unicode):
-            contentType = contentType.encode("ascii")
+        contentType = ensureBytes(self.type)
         request.setHeader(b"content-type", contentType)
         request.setHeader(b"content-length",
-                          str(len(self.data)).encode("ascii"))
+                          ensureBytes(str(len(self.data))))
         if request.method == b"HEAD":
             return b''
         return self.data
@@ -529,9 +528,7 @@ class File(resource.Resource, filepath.FilePath):
         boundary = u"{:x}{:x}".format(
             int(time.time()*1000000), os.getpid()).encode("ascii")
         if self.type:
-            contentType = self.type
-            if isinstance(contentType, unicode):
-                contentType = contentType.encode("ascii")
+            contentType = ensureBytes(self.type)
         else:
             contentType = b'bytes' # It's what Apache does...
         for start, end in byteRanges:
@@ -584,14 +581,10 @@ class File(resource.Resource, filepath.FilePath):
             size = self.getFileSize()
         request.setHeader(b'content-length', str(size).encode("ascii"))
         if self.type:
-            contentType = self.type
-            if isinstance(contentType, unicode):
-                contentType = contentType.encode("ascii")
+            contentType = ensureBytes(self.type)
             request.setHeader(b'content-type', contentType)
         if self.encoding:
-            contentEncoding = self.encoding
-            if isinstance(contentEncoding, unicode):
-                contentEncoding = contentEncoding.encode("ascii")
+            contentEncoding = ensureBytes(self.encoding)
             request.setHeader(b'content-encoding', contentEncoding)
 
 

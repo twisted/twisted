@@ -13,6 +13,7 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import
 
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import (_PY3, intToBytes,
     nativeString, unicode, urllib_parse)
 
@@ -194,8 +195,7 @@ class XMLRPC(resource.Resource):
                 content = xmlrpclib.dumps(f, methodresponse=True,
                     allow_none=self.allowNone, encode="utf-8")
 
-            if isinstance(content, unicode):
-                content = content.encode('utf8')
+            content = ensureBytes(content, encoding='utf-8')
             request.setHeader(
                 b"content-length", intToBytes(len(content)))
             request.write(content)
