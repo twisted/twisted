@@ -1,0 +1,1 @@
+SMTP authentication in twisted.mail.smtp now works better on Python 3, due to improved improved bytes vs unicode handling.
