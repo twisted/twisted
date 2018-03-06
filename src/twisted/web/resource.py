@@ -17,7 +17,7 @@ import warnings
 
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.compat import unicode
+from twisted.python.bytes import ensureBytes
 from twisted.python.reflect import prefixedMethodNames
 from twisted.python.components import proxyForInterface
 
@@ -331,9 +331,7 @@ class ErrorPage(Resource):
         request.setHeader(b"content-type", b"text/html; charset=utf-8")
         interpolated = self.template % dict(
             code=self.code, brief=self.brief, detail=self.detail)
-        if isinstance(interpolated, unicode):
-            return interpolated.encode('utf-8')
-        return interpolated
+        return ensureBytes(interpolated, encoding='utf-8')
 
 
     def getChild(self, chnam, request):
