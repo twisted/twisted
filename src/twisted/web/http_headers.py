@@ -8,6 +8,7 @@ An API for storing HTTP header names and values.
 
 from __future__ import division, absolute_import
 
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import comparable, cmp, unicode
 
 
@@ -93,9 +94,8 @@ class Headers(object):
         @return: C{name}, encoded if required, lowercased
         @rtype: L{bytes}
         """
-        if isinstance(name, unicode):
-            return name.lower().encode('iso-8859-1')
-        return name.lower()
+        name = ensureBytes(name.lower(), encoding='iso-8859-1')
+        return name
 
 
     def _encodeValue(self, value):
@@ -108,9 +108,7 @@ class Headers(object):
         @return: C{value}, encoded if required
         @rtype: L{bytes}
         """
-        if isinstance(value, unicode):
-            return value.encode('utf8')
-        return value
+        return ensureBytes(value, encoding='utf-8')
 
 
     def _encodeValues(self, values):
