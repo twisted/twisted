@@ -22,7 +22,7 @@ from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.python.compat import intToBytes
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test.requesthelper import DummyRequest
