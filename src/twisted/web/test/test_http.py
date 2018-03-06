@@ -18,8 +18,8 @@ from io import BytesIO
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, iterbytes, long, networkString,
-                                   unicode, intToBytes)
+from twisted.python.bytes import ensureBytes
+from twisted.python.compat import _PY3, intToBytes, iterbytes, long, unicode
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -967,11 +967,9 @@ def _prequest(**headers):
     """
     request = http.Request(DummyChannel(), False)
     for headerName, v in headers.items():
-        if isinstance(headerName, unicode):
-            headerName = headerName.encode("ascii")
-        if isinstance(v, unicode):
-            v = v.encode("ascii")
-        request.requestHeaders.setRawHeaders(headerName, v)
+        request.requestHeaders.setRawHeaders(
+            ensureBytes(headerName),
+            ensureBytes(v))
     return request
 
 

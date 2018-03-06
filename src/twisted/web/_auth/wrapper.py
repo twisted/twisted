@@ -17,7 +17,7 @@ from __future__ import absolute_import, division
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
-from twisted.python.compat import unicode
+from twisted.python.bytes import ensureBytes
 from twisted.python.components import proxyForInterface
 from twisted.web import util
 from twisted.web.resource import ErrorPage, IResource
@@ -42,9 +42,6 @@ class UnauthorizedResource(object):
         """
         Send www-authenticate headers to the client
         """
-        def ensureBytes(s):
-            return s.encode('ascii') if isinstance(s, unicode) else s
-
         def generateWWWAuthenticate(scheme, challenge):
             l = []
             for k, v in challenge.items():

@@ -21,6 +21,7 @@ except ImportError:
     def iscoroutine(*args, **kwargs):
         return False
 
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import unicode, nativeString, iteritems
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
@@ -44,8 +45,7 @@ def escapeForContent(data):
     @return: The quoted form of C{data}.  If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
-        data = data.encode('utf-8')
+    data = ensureBytes(data, encoding='utf-8')
     data = data.replace(b'&', b'&amp;'
         ).replace(b'<', b'&lt;'
         ).replace(b'>', b'&gt;')
@@ -69,8 +69,7 @@ def attributeEscapingDoneOutside(data):
     @return: The string, unchanged, except for encoding.
     @rtype: C{bytes}
     """
-    if isinstance(data, unicode):
-        return data.encode("utf-8")
+    data = ensureBytes(data, encoding='utf-8')
     return data
 
 
@@ -130,8 +129,7 @@ def escapedCDATA(data):
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
-        data = data.encode('utf-8')
+    data = ensureBytes(data, encoding='utf-8')
     return data.replace(b']]>', b']]]]><![CDATA[>')
 
 
@@ -147,8 +145,7 @@ def escapedComment(data):
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
-        data = data.encode('utf-8')
+    data = ensureBytes(data, encoding='utf-8')
     data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
     if data and data[-1:] == b'-':
         data += b' '
@@ -244,14 +241,10 @@ def _flattenElement(request, root, write, slotData, renderFactory,
             return
 
         write(b'<')
-        if isinstance(root.tagName, unicode):
-            tagName = root.tagName.encode('ascii')
-        else:
-            tagName = root.tagName
+        tagName = ensureBytes(root.tagName)
         write(tagName)
         for k, v in iteritems(root.attributes):
-            if isinstance(k, unicode):
-                k = k.encode('ascii')
+            k = ensureBytes(k)
             write(b' ' + k + b'="')
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
