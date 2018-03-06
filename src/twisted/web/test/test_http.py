@@ -129,7 +129,7 @@ class DummyHTTPHandler(http.Request):
         data = self.content.read()
         length = self.getHeader(b'content-length')
         if length is None:
-            length = str(length).encode("ascii")
+            length = intToBytes(len(data))
         request = b"'''\n" + length + b"\n" + data + b"'''\n"
         self.setResponseCode(200)
         self.setHeader(b"Request", self.uri)
