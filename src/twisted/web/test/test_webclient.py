@@ -15,6 +15,7 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urljoin
 
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import nativeString, intToBytes
 from twisted.trial import unittest, util
 from twisted.web import server, client, error, resource
@@ -114,14 +115,14 @@ class CookieMirrorResource(resource.Resource):
         for k,v in sorted(list(request.received_cookies.items())):
             l.append((nativeString(k), nativeString(v)))
         l.sort()
-        return repr(l).encode("ascii")
+        return ensureBytes(repr(l))
 
 class RawCookieMirrorResource(resource.Resource):
     def render(self, request):
         header = request.getHeader(b'cookie')
         if header is None:
             return b'None'
-        return repr(nativeString(header)).encode("ascii")
+        return ensureBytes(repr(nativeString(header)))
 
 class ErrorResource(resource.Resource):
 
@@ -365,7 +366,7 @@ class WebClientTests(unittest.TestCase):
 
     def getURL(self, path):
         host = "http://127.0.0.1:{}/".format(self.portno)
-        return urljoin(host, nativeString(path)).encode("ascii")
+        return ensureBytes(urljoin(host, nativeString(path)))
 
     def testPayload(self):
         s = b"0123456789" * 10
@@ -504,7 +505,7 @@ class WebClientTests(unittest.TestCase):
         """
         d = client.getPage(self.getURL("host"), timeout=100)
         d.addCallback(self.assertEqual,
-                      u"127.0.0.1:{}".format(self.portno).encode("ascii"))
+                      ensureBytes(u"127.0.0.1:{}".format(self.portno)))
         return d
 
 
@@ -870,8 +871,8 @@ class WebClientSSLTests(WebClientTests):
             interface="127.0.0.1")
 
     def getURL(self, path):
-        return u"https://127.0.0.1:{}/{}".format(
-            self.portno, path).encode("ascii")
+        return ensureBytes(u"https://127.0.0.1:{}/{}".format(
+            self.portno, path))
 
     def testFactoryInfo(self):
         url = self.getURL('file')
@@ -889,12 +890,12 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
 
 
     def getHTTPS(self, path):
-        return u"https://127.0.0.1:{}/{}".format(
-            self.tlsPortno, path).encode("ascii")
+        return ensureBytes(u"https://127.0.0.1:{}/{}".format(
+            self.tlsPortno, path))
 
     def getHTTP(self, path):
-        return u"http://127.0.0.1:{}/{}".format(
-            self.plainPortno, path).encode("ascii")
+        return ensureBytes(u"http://127.0.0.1:{}/{}".format(
+            self.plainPortno, path))
 
     def setUp(self):
         plainRoot = Data(b'not me', 'text/plain')
@@ -949,8 +950,8 @@ class CookieTests(unittest.TestCase):
         return self.port.stopListening()
 
     def getHTTP(self, path):
-        return u"http://127.0.0.1:{}/{}".format(
-            self.portno, path).encode("ascii")
+        return ensureBytes(u"http://127.0.0.1:{}/{}".format(
+            self.portno, path))
 
     def testNoCookies(self):
         return client.getPage(self.getHTTP("cookiemirror")
@@ -1441,7 +1442,7 @@ class DeprecationTests(unittest.TestCase):
             0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
         portno = port.getHost().port
         self.addCleanup(port.stopListening)
-        url = u"http://127.0.0.1:{}".format(portno).encode("ascii")
+        url = ensureBytes(u"http://127.0.0.1:{}".format(portno))
 
         d = client.getPage(url)
         warningInfo = self.flushWarnings([self.test_getPageDeprecated])
@@ -1463,7 +1464,7 @@ class DeprecationTests(unittest.TestCase):
             0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
         portno = port.getHost().port
         self.addCleanup(port.stopListening)
-        url = u"http://127.0.0.1:{}".format(portno).encode("ascii")
+        url = ensureBytes(u"http://127.0.0.1:{}".format(portno))
 
         path = FilePath(self.mktemp())
         d = client.downloadPage(url, path.path)
