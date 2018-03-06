@@ -1482,7 +1482,7 @@ class ParsingTests(unittest.TestCase):
 
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(u"{}: foo".format(i).encode("ascii"))
+            requestLines.append(ensureBytes(u"{}: foo".format(i)))
         requestLines.extend([b"", b""])
 
         channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
@@ -1758,12 +1758,12 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
         from the C{content} attribute.
         """
         query = u'key=value&multiple=two+words&multiple=more%20words&empty='
-        httpRequest = u'''\
+        httpRequest = ensureBytes(u'''\
 POST / HTTP/1.0
 Content-Length: {}
 Content-Type: application/x-www-form-urlencoded
 
-{}'''.format(len(query), query).encode("ascii")
+{}'''.format(len(query), query))
 
         method = []
         args = []
@@ -1785,7 +1785,7 @@ Content-Type: application/x-www-form-urlencoded
             args, [[b"value"], [b""], [b"two words", b"more words"]])
         # Reading from the content file-like must produce the entire request
         # body.
-        self.assertEqual(content, [query.encode("ascii")])
+        self.assertEqual(content, [ensureBytes(query)])
 
 
     def test_missingContentDisposition(self):
@@ -2009,7 +2009,7 @@ class QueryArgumentsTests(unittest.TestCase):
                     for port in (None, 100):
                         for path in (b'', b'path'):
                             if port is not None:
-                                host = host + b':' + str(port).encode("ascii")
+                                host = host + b':' + intToBytes(port)
                                 yield urlunsplit((scheme, host, path, b'', b''))
 
 
