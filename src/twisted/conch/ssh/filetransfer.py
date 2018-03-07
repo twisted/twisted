@@ -538,8 +538,20 @@ class FileTransferClient(FileTransferBase):
         return d
 
 
-    def _cbOpenHandle(self, handle, wrapperClass, name):
-        cb = wrapperClass(self, handle)
+    def _cbOpenHandle(self, handle, handleClass, name):
+        """
+        Callback invoked when an OPEN or OPENDIR request succeeds.
+
+        @param handle: The handle returned by the server
+        @type handle: L{bytes}
+        @param handleClass: The class that will represent the
+        newly-opened file or directory to the user (either L{ClientFile} or
+        L{ClientDirectory}).
+        @param name: The name of the file or directory represented
+        by C{handle}.
+        @type name: L{bytes}
+        """
+        cb = handleClass(self, handle)
         cb.name = name
         return cb
 
