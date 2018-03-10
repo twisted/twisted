@@ -1,0 +1,1 @@
+twisted.internet.iocpreactor.send no longer attaches send buffer to completion event, saving memory.
