@@ -26,7 +26,9 @@ from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, NoProtocol)
+    ConnectionAborted, DNSLookupError, NoProtocol,
+    ConnectBindError,
+)
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
@@ -608,7 +610,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         L{connectTCP<twisted.internet.interfaces.IReactorTCP.connectTCP>}, if a
         hostname was used.
         """
-        host, port = findFreePort(self.interface, self.family)[:2]
+        host, ignored = findFreePort(self.interface, self.family)[:2]
         reactor = self.buildReactor()
         fakeDomain = self.fakeDomainName
         reactor.installResolver(FakeResolver({fakeDomain: self.interface}))
@@ -630,9 +632,25 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         clientFactory.protocol = CheckAddress
 
         def connectMe():
-            reactor.connectTCP(
-                fakeDomain, server.getHost().port, clientFactory,
-                bindAddress=(self.interface, port))
+            while True:
+                ignored, port = findFreePort(self.interface, self.family)[:2]
+                bindAddress = (self.interface, port)
+                log.msg("Connect attempt with bindAddress {}".format(
+                    bindAddress
+                ))
+                try:
+                    reactor.connectTCP(
+                        fakeDomain,
+                        server.getHost().port,
+                        clientFactory,
+                        bindAddress=bindAddress,
+                    )
+                except ConnectBindError:
+                    continue
+                else:
+                    clientFactory.boundPort = port
+                    break
+
         needsRunningReactor(reactor, connectMe)
 
         self.runReactor(reactor)
@@ -647,7 +665,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         self.assertEqual(
             transportData['host'],
-            self.addressClass('TCP', self.interface, port))
+            self.addressClass('TCP', self.interface, clientFactory.boundPort))
         self.assertEqual(
             transportData['peer'],
             self.addressClass('TCP', self.interface, serverAddress.port))
