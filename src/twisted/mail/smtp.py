@@ -2128,11 +2128,11 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     @type port: L{int}
 
     @param username: The username to use, if wanting to authenticate.
-    @type username: L{bytes}
+    @type username: L{bytes} or L{unicode}
 
     @param password: The secret to use, if wanting to authenticate. If you do
         not specify this, SMTP authentication will not occur.
-    @type password: L{bytes}
+    @type password: L{bytes} or L{unicode}
 
     @param requireTransportSecurity: Whether or not STARTTLS is required.
     @type requireTransportSecurity: L{bool}
@@ -2173,6 +2173,12 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
             connector.disconnect()
 
     d = defer.Deferred(cancel)
+
+    if isinstance(username, unicode):
+        username = username.encode("utf-8")
+    if isinstance(password, unicode):
+        password = password.encode("utf-8")
+
     factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
         d, heloFallback=True, requireAuthentication=requireAuthentication,
         requireTransportSecurity=requireTransportSecurity)
