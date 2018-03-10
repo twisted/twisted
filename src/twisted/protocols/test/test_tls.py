@@ -993,6 +993,10 @@ class TLSMemoryBIOTests(TestCase):
         def nObjectsOfType(type):
             """
             Return the number of instances of a given type in memory.
+
+            @param type: Type whose instances to find.
+
+            @return: The number of instances found.
             """
             return sum(1 for x in gc.get_objects() if isinstance(x, type))
 
