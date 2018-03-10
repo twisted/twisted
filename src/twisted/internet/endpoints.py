@@ -796,6 +796,27 @@ class HostnameEndpoint(object):
         self._attemptDelay = attemptDelay
 
 
+    def __repr__(self):
+        """
+        Produce a string representation of the L{HostnameEndpoint}.
+
+        @return: A L{str}
+        """
+        if self._badHostname:
+            # Use the backslash-encoded version of the string passed to the
+            # constructor, which is already a native string.
+            host = self._hostStr
+        elif isIPv6Address(self._hostStr):
+            host = '[{}]'.format(self._hostStr)
+        else:
+            # Convert the bytes representation to a native string to ensure
+            # that we display the punycoded version of the hostname, which is
+            # more useful than any IDN version as it can be easily copy-pasted
+            # into debugging tools.
+            host = nativeString(self._hostBytes)
+        return "".join(["<HostnameEndpoint ", host, ":", str(self._port), ">"])
+
+
     def _getNameResolverAndMaybeWarn(self, reactor):
         """
         Retrieve a C{nameResolver} callable and warn the caller's

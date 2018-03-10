@@ -16,9 +16,14 @@ from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, succeed, fail, CancelledError
 from twisted.internet.protocol import Protocol
+from twisted.protocols.basic import LineReceiver
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import (StringTransport, AccumulatingProtocol,
-                                        EventLoggingObserver)
+from twisted.test.proto_helpers import (
+    AccumulatingProtocol,
+    EventLoggingObserver,
+    StringTransport,
+    StringTransportWithDisconnection,
+    )
 from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
 from twisted.web._newclient import HTTPParser, HTTPClientParser
 from twisted.web._newclient import BadResponseVersion, ParseError
@@ -43,24 +48,6 @@ from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
 from twisted.logger import globalLogPublisher
 
-
-
-class StringTransport(StringTransport):
-    """
-    A version of C{StringTransport} that supports C{abortConnection}.
-    """
-    aborting = False
-
-
-    def abortConnection(self):
-        """
-        A testable version of the C{ITCPTransport.abortConnection} method.
-
-        Since this is a special case of closing the connection,
-        C{loseConnection} is also called.
-        """
-        self.aborting = True
-        self.loseConnection()
 
 
 
@@ -1306,6 +1293,33 @@ class HTTP11ClientProtocolTests(TestCase):
         return d
 
 
+    def test_receiveResponseHeadersTooLong(self):
+        """
+        The connection is closed when the server respond with a header which
+        is above the maximum line.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = HTTP11ClientProtocol()
+        transport.protocol = protocol
+        protocol.makeConnection(transport)
+
+        longLine = b'a' * LineReceiver.MAX_LENGTH
+        d = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
+
+        protocol.dataReceived(
+            b"HTTP/1.1 200 OK\r\n"
+            b"X-Foo: " + longLine + b"\r\n"
+            b"X-Ignored: ignored\r\n"
+            b"\r\n"
+            )
+
+        # For now, there is no signal that something went wrong, just a
+        # connection which is closed in what looks like a clean way.
+        # L{LineReceiver.lineLengthExceeded} just calls loseConnection
+        # without giving any reason.
+        return assertResponseFailed(self, d, [ConnectionDone])
+
+
     def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
         """
         If response bytes are delivered to L{HTTP11ClientProtocol} before the
@@ -1840,7 +1854,7 @@ class HTTP11ClientProtocolTests(TestCase):
         protocol.makeConnection(transport)
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
         result.cancel()
-        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnected)
         return assertWrapperExceptionTypes(
             self, result, ResponseNeverReceived, [CancelledError])
 
@@ -1858,7 +1872,7 @@ class HTTP11ClientProtocolTests(TestCase):
         result = protocol.request(Request(b'GET', b'/', _boringHeaders, None))
         protocol.dataReceived(b"HTTP/1.1 200 OK\r\n")
         result.cancel()
-        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnected)
         return assertResponseFailed(self, result, [CancelledError])
 
 
@@ -1887,7 +1901,7 @@ class HTTP11ClientProtocolTests(TestCase):
                                           producer))
         producer.consumer.write(b'x' * 5)
         result.cancel()
-        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnected)
         self.assertTrue(nonLocal['cancelled'])
         return assertRequestGenerationFailed(self, result, [CancelledError])
 
@@ -2613,13 +2627,13 @@ class TransportProxyProducerTests(TestCase):
 
     def test_stopProxyingUnreferencesProducer(self):
         """
-        L{TransportProxyProducer._stopProxying} drops the reference to the
+        L{TransportProxyProducer.stopProxying} drops the reference to the
         wrapped L{IPushProducer} provider.
         """
         transport = StringTransport()
         proxy = TransportProxyProducer(transport)
         self.assertIdentical(proxy._producer, transport)
-        proxy._stopProxying()
+        proxy.stopProxying()
         self.assertIdentical(proxy._producer, None)
 
 
@@ -2639,7 +2653,7 @@ class TransportProxyProducerTests(TestCase):
         self.assertEqual(transport.producerState, u'producing')
 
         transport.pauseProducing()
-        proxy._stopProxying()
+        proxy.stopProxying()
 
         # The proxy should no longer do anything to the transport.
         proxy.resumeProducing()
@@ -2661,7 +2675,7 @@ class TransportProxyProducerTests(TestCase):
         self.assertEqual(transport.producerState, u'paused')
 
         transport.resumeProducing()
-        proxy._stopProxying()
+        proxy.stopProxying()
 
         # The proxy should no longer do anything to the transport.
         proxy.pauseProducing()
@@ -2683,11 +2697,51 @@ class TransportProxyProducerTests(TestCase):
 
         transport = StringTransport()
         proxy = TransportProxyProducer(transport)
-        proxy._stopProxying()
+        proxy.stopProxying()
         proxy.stopProducing()
         # The transport should not have been stopped.
         self.assertEqual(transport.producerState, u'producing')
 
+
+    def test_loseConnectionWhileProxying(self):
+        """
+        L{TransportProxyProducer.loseConnection} calls the wrapped transport's
+        C{loseConnection}.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = AccumulatingProtocol()
+        protocol.makeConnection(transport)
+        transport.protocol = protocol
+        proxy = TransportProxyProducer(transport)
+        # Transport is connected and production.
+        self.assertTrue(transport.connected)
+        self.assertEqual(transport.producerState, u'producing')
+
+        proxy.loseConnection()
+
+        # The transport is not explicitly stopped, but requested to
+        # disconnect.
+        self.assertEqual(transport.producerState, u'producing')
+        self.assertFalse(transport.connected)
+
+
+    def test_loseConnectionNotProxying(self):
+        """
+        L{TransportProxyProducer.loseConnection} does nothing when the
+        proxy is not active.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = AccumulatingProtocol()
+        protocol.makeConnection(transport)
+        transport.protocol = protocol
+        proxy = TransportProxyProducer(transport)
+        proxy.stopProxying()
+        self.assertTrue(transport.connected)
+
+        proxy.loseConnection()
+
+        # The transport is not touched, when not proxying.
+        self.assertTrue(transport.connected)
 
 
 class ResponseTests(TestCase):
