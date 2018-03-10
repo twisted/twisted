@@ -1003,7 +1003,7 @@ class TLSMemoryBIOTests(TestCase):
         gc.disable()
 
         try:
-            class ConnectionCloserProtocol(Protocol):
+            class CloserProtocol(Protocol):
                 def dataReceived(self, data):
                     self.transport.loseConnection()
 
@@ -1013,24 +1013,24 @@ class TLSMemoryBIOTests(TestCase):
                     self.transport.write(b'hello')
 
             origTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
-            origServerProtos = nObjectsOfType(ConnectionCloserProtocol)
+            origServerProtos = nObjectsOfType(CloserProtocol)
 
             authCert, serverCert = certificatesForAuthorityAndServer()
             serverFactory = TLSMemoryBIOFactory(
                 serverCert.options(), False,
-                Factory.forProtocol(ConnectionCloserProtocol)
+                Factory.forProtocol(CloserProtocol)
             )
             clientFactory = TLSMemoryBIOFactory(
                 optionsForClientTLS(u'example.com', trustRoot=authCert), True,
                 Factory.forProtocol(GreeterProtocol)
             )
             loopbackAsync(
-                TLSMemoryBIOProtocol(serverFactory, ConnectionCloserProtocol()),
+                TLSMemoryBIOProtocol(serverFactory, CloserProtocol()),
                 TLSMemoryBIOProtocol(clientFactory, GreeterProtocol())
             )
 
             newTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
-            newServerProtos = nObjectsOfType(ConnectionCloserProtocol)
+            newServerProtos = nObjectsOfType(CloserProtocol)
             self.assertEqual(newTLSProtos, origTLSProtos)
             self.assertEqual(newServerProtos, origServerProtos)
         finally:
