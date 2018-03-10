@@ -1,1 +1,1 @@
-t.p.p.ProtocolWrapper and t.p.t.TLSMemoryBIOProtocol no longer create circular references that still alive after connection is closed
+twisted.protocols.policies.ProtocolWrapper and twisted.protocols.tls.TLSMemoryBIOProtocol no longer create circular references that still alive after connection is closed.

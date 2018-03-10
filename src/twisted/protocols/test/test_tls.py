@@ -44,8 +44,12 @@ from twisted.internet.interfaces import (
 
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet.protocol import (Protocol, ClientFactory, ServerFactory,
-                                       Factory)
+from twisted.internet.protocol import (
+    ClientFactory,
+    Factory,
+    Protocol,
+    ServerFactory,
+    )
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
 from twisted.trial.unittest import TestCase, SynchronousTestCase
@@ -983,46 +987,46 @@ class TLSMemoryBIOTests(TestCase):
 
     def test_noCircularReferences(self):
         """
-        TLSMemoryBIOProtocol doesn't leave circular references that make
-        it alive after connection is closed.
+        TLSMemoryBIOProtocol doesn't leave circular references that keep
+        it in memory after connection is closed.
         """
         def nObjectsOfType(type):
+            """
+            Return the number of instances of a given type in memory.
+            """
             return sum(1 for x in gc.get_objects() if isinstance(x, type))
 
         gc.disable()
 
         try:
-            class DummyServerProtocol(Protocol):
+            class ConnectionCloserProtocol(Protocol):
                 def dataReceived(self, data):
                     self.transport.loseConnection()
 
 
-            class DummyClientProtocol(Protocol):
+            class GreeterProtocol(Protocol):
                 def connectionMade(self):
                     self.transport.write(b'hello')
 
-                def connectionLost(self, reason):
-                    reason.trap(ConnectionDone)
-
             origTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
-            origServerProtos = nObjectsOfType(DummyServerProtocol)
+            origServerProtos = nObjectsOfType(ConnectionCloserProtocol)
 
             authCert, serverCert = certificatesForAuthorityAndServer()
             serverFactory = TLSMemoryBIOFactory(
                 serverCert.options(), False,
-                Factory.forProtocol(DummyServerProtocol)
+                Factory.forProtocol(ConnectionCloserProtocol)
             )
             clientFactory = TLSMemoryBIOFactory(
                 optionsForClientTLS(u'example.com', trustRoot=authCert), True,
-                Factory.forProtocol(DummyClientProtocol)
+                Factory.forProtocol(GreeterProtocol)
             )
             loopbackAsync(
-                TLSMemoryBIOProtocol(serverFactory, DummyServerProtocol()),
-                TLSMemoryBIOProtocol(clientFactory, DummyClientProtocol())
+                TLSMemoryBIOProtocol(serverFactory, ConnectionCloserProtocol()),
+                TLSMemoryBIOProtocol(clientFactory, GreeterProtocol())
             )
 
             newTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
-            newServerProtos = nObjectsOfType(DummyServerProtocol)
+            newServerProtos = nObjectsOfType(ConnectionCloserProtocol)
             self.assertEqual(newTLSProtos, origTLSProtos)
             self.assertEqual(newServerProtos, origServerProtos)
         finally:

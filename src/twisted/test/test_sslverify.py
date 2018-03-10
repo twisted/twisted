@@ -271,18 +271,18 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     clientWrappedProto = ListeningClient()
     serverWrappedProto = GreetingServer()
 
-    cF = protocol.Factory()
-    cF.protocol = lambda: clientWrappedProto
-    sF = protocol.Factory()
-    sF.protocol = lambda: serverWrappedProto
+    plainClientFactory = protocol.Factory()
+    plainClientFactory.protocol = lambda: clientWrappedProto
+    plainServerFactory = protocol.Factory()
+    plainServerFactory.protocol = lambda: serverWrappedProto
 
     clientFactory = TLSMemoryBIOFactory(
         clientOpts, isClient=True,
-        wrappedFactory=sF
+        wrappedFactory=plainServerFactory
     )
     serverFactory = TLSMemoryBIOFactory(
         serverOpts, isClient=False,
-        wrappedFactory=cF
+        wrappedFactory=plainClientFactory
     )
 
     sProto, cProto, pump = connectedServerAndClient(
