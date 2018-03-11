@@ -540,9 +540,11 @@ class RoundtripDNSTests(unittest.TestCase):
 
         fp = b'\xda\x39\xa3\xee\x5e\x6b\x4b\x0d' + \
              b'\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09'
-        rr = dns.Record_SSHFP(algorithm=dns.Record_SSHFP.ALGORITHM_DSS,
-                              fingerprintType=dns.Record_SSHFP.FINGERPRINT_TYPE_SHA1,
-                              fingerprint=fp)
+        rr = dns.Record_SSHFP(
+            algorithm=dns.Record_SSHFP.ALGORITHM_DSS,
+            fingerprintType=dns.Record_SSHFP.FINGERPRINT_TYPE_SHA1,
+            fingerprint=fp,
+            )
         self._recordRoundtripTest(rr)
         self._recordEncodingTest(rr, b'\x02\x01' + fp)
 
