@@ -1922,71 +1922,66 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A record containing the fingerprint of an SSH key.
 
-    @type keytype: L{int}
-    @ivar keytype: The SSH key algorithm or key type.
-    Note that the numbering used for SSH key algorithms is specific
-    to the SSHFP record type, and is not the same as the nubering
-    used for KEY or SIG records.
+    @type algorithm: L{int}
+    @ivar algorithm: The SSH key's algorithm, such as L{ALGORITHM_RSA}.
+        Note that the numbering used for SSH key algorithms is specific
+        to the SSHFP record, and is not the same as the numbering
+        used for KEY or SIG records.
 
-    @type fptype: L{int}
-    @ivar fptype: The fingerprint type,
-                  such as L{FPTYPE_SHA1} or L{FPTYPE_SHA256}.
+    @type fingerprintType: L{int}
+    @ivar fingerprintType: The fingerprint type,
+        such as L{FINGERPRINT_TYPE_SHA256}.
 
     @type fingerprint: L{bytes}
     @ivar fingerprint: The key's fingerprint, e.g. a 32-byte SHA-256 digest.
 
-    @cvar KEYTYPE_RSA: The key type value for C{ssh-rsa} keys.
-    @cvar KEYTYPE_DSS: The key type value for C{ssh-dss} keys.
-    @cvar KEYTYPE_ECDSA: The key type value for C{ecdsa-sha2-*} keys.
-    @cvar KEYTYPE_Ed25519: The key type value for C{ed25519} keys.
+    @cvar ALGORITHM_RSA: The algorithm value for C{ssh-rsa} keys.
+    @cvar ALGORITHM_DSS: The algorithm value for C{ssh-dss} keys.
+    @cvar ALGORITHM_ECDSA: The algorithm value for C{ecdsa-sha2-*} keys.
+    @cvar ALGORITHM_Ed25519: The algorithm value for C{ed25519} keys.
 
-    @cvar FPTYPE_SHA1: The fptype value for SHA-1 fingerprints.
-    @cvar FPTYPE_SHA256: The fptype value for SHA-256 fingerprints.
+    @cvar FINGERPRINT_TYPE_SHA1: The type for SHA-1 fingerprints.
+    @cvar FINGERPRINT_TYPE_SHA256: The type for SHA-256 fingerprints.
 
     @see: U{RFC 4255 <https://tools.ietf.org/html/rfc4255>}
           and
           U{RFC 6594 <https://tools.ietf.org/html/rfc6594>}
     """
     fancybasename = "SSHFP"
-    compareAttributes = ('keytype', 'fptype', 'fingerprint', 'ttl')
-    showAttributes = ('keytype', 'fptype', ('fingerprint', _nicebytes))
+    compareAttributes = ('algorithm', 'fingerprintType', 'fingerprint', 'ttl')
+    showAttributes = ('algorithm', 'fingerprintType', 'fingerprint')
+
     TYPE = SSHFP
 
-    KEYTYPE_RSA = 1
-    KEYTYPE_DSS = 2
-    KEYTYPE_ECDSA = 3
-    KEYTYPE_Ed25519 = 4
-    _KEYTYPES = [
-        (KEYTYPE_RSA, 'RSA'),
-        (KEYTYPE_DSS, 'DSS'),
-        (KEYTYPE_ECDSA, 'ECDSA'),
-        (KEYTYPE_Ed25519, 'Ed25519'),
-    ]
+    ALGORITHM_RSA = 1
+    ALGORITHM_DSS = 2
+    ALGORITHM_ECDSA = 3
+    ALGORITHM_Ed25519 = 4
 
-    FPTYPE_SHA1 = 1
-    FPTYPE_SHA256 = 2
+    FINGERPRINT_TYPE_SHA1 = 1
+    FINGERPRINT_TYPE_SHA256 = 2
 
-    def __init__(self, keytype=0, fptype=0, fingerprint=b'', ttl=0):
-        self.keytype = keytype
-        self.fptype = fptype
+    def __init__(self, algorithm=0, fingerprintType=0, fingerprint=b'', ttl=0):
+        self.algorithm = algorithm
+        self.fingerprintType = fingerprintType
         self.fingerprint = fingerprint
         self.ttl = ttl
 
 
     def encode(self, strio, compDict=None):
         strio.write(struct.pack('!BB',
-                                self.keytype, self.fptype))
+                                self.algorithm, self.fingerprintType))
         strio.write(self.fingerprint)
 
 
     def decode(self, strio, length=None):
         r = struct.unpack('!BB', readPrecisely(strio, 2))
-        (self.keytype, self.fptype) = r
+        (self.algorithm, self.fingerprintType) = r
         self.fingerprint = readPrecisely(strio, length - 2)
 
 
     def __hash__(self):
-        return hash((self.keytype, self.fptype, self.fingerprint))
+        return hash((self.algorithm, self.fingerprintType, self.fingerprint))
 
 
 
@@ -2110,8 +2105,8 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type algorithm: L{Name}
     @ivar algorithm: The name of the signature or MAC algorithm.
 
-    @type timeSigned: L{int}
-    @ivar timeSigned: Signing time, as seconds from the POSIX epoch.
+    @type time: L{int}
+    @ivar time: Signing time, as seconds from the POSIX epoch.
 
     @type fudge: L{int}
     @ivar fudge: Allowable time skew, in seconds.
@@ -2127,18 +2122,18 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     """
     fancybasename = "TSIG"
-    compareAttributes = ('algorithm', 'timeSigned', 'fudge',
+    compareAttributes = ('algorithm', 'time', 'fudge',
                          'MAC', 'originalID', 'error', 'otherData',
                          'ttl')
-    showAttributes = ['algorithm', 'timeSigned', 'MAC', 'error', 'otherData']
+    showAttributes = ['algorithm', 'time', 'MAC', 'error', 'otherData']
 
     TYPE = TSIG
 
-    def __init__(self, algorithm=None, timeSigned=None,
+    def __init__(self, algorithm=None, time=None,
                  fudge=5, MAC=None, originalID=0,
                  error=OK, otherData=b'', ttl=0):
         self.algorithm = None if algorithm is None else Name(algorithm)
-        self.timeSigned = None if timeSigned is None else int(timeSigned)
+        self.time = None if time is None else int(time)
         self.fudge = str2time(fudge)
         self.MAC = MAC
         self.originalID = int(originalID)
@@ -2149,7 +2144,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def encode(self, strio, compDict=None):
         self.algorithm.encode(strio, compDict)
-        strio.write(struct.pack('!Q', self.timeSigned)[2:])  # 48-bit number
+        strio.write(struct.pack('!Q', self.time)[2:])  # 48-bit number
         strio.write(struct.pack('!HH', self.fudge, len(self.MAC)))
         strio.write(self.MAC)
         strio.write(struct.pack('!HHH',
@@ -2163,7 +2158,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
         algorithm.decode(strio)
         self.algorithm = algorithm
         fields = struct.unpack('!QHH', b'\x00\x00' + readPrecisely(strio, 10))
-        self.timeSigned, self.fudge, macLength = fields
+        self.time, self.fudge, macLength = fields
         self.MAC = readPrecisely(strio, macLength)
         fields = struct.unpack('!HHH', readPrecisely(strio, 6))
         self.originalID, self.error, otherLength = fields
@@ -2171,8 +2166,9 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
     def __hash__(self):
-        return hash((self.algorithm, self.timeSigned,
+        return hash((self.algorithm, self.time,
                      self.MAC, self.originalID))
+
 
 
 def _responseFromMessage(responseConstructor, message, **kwargs):

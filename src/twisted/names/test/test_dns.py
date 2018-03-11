@@ -429,23 +429,39 @@ class RoundtripDNSTests(unittest.TestCase):
             self.assertEqual(result.string, n)
 
 
-    def _recordRoundtripTest(self, record, expectedEncoding=None):
+    def _recordRoundtripTest(self, record):
         """
         Assert that encoding C{record} and then decoding the resulting bytes
-        creates a record which compares equal to C{record}. Optionally assert
-        that the encoded bytes are equal to C{expectedEncoding}.
+        creates a record which compares equal to C{record}.
+
+        @type record: L{dns.IEncodable}
+        @param record: A record instance to encode
         """
         stream = BytesIO()
         record.encode(stream)
-
-        if expectedEncoding is not None:
-            self.assertEqual(stream.getvalue(), expectedEncoding)
 
         length = stream.tell()
         stream.seek(0, 0)
         replica = record.__class__()
         replica.decode(stream, length)
         self.assertEqual(record, replica)
+
+
+    def _recordEncodingTest(self, record, expectedEncoding):
+        """
+        Assert that encoding C{record} produces the expected bytes.
+
+        @type record: L{dns.IEncodable}
+        @param record: A record instance to encode
+
+        @type expectedEncoding: L{bytes}
+        @param expectedEncoding: The value which C{record.encode()}
+            should produce.
+        """
+        stream = BytesIO()
+        record.encode(stream)
+
+        self.assertEqual(stream.getvalue(), expectedEncoding)
 
 
     def test_SOA(self):
@@ -524,10 +540,11 @@ class RoundtripDNSTests(unittest.TestCase):
 
         fp = b'\xda\x39\xa3\xee\x5e\x6b\x4b\x0d' + \
              b'\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09'
-        rr = dns.Record_SSHFP(keytype=dns.Record_SSHFP.KEYTYPE_DSS,
-                              fptype=dns.Record_SSHFP.FPTYPE_SHA1,
+        rr = dns.Record_SSHFP(algorithm=dns.Record_SSHFP.ALGORITHM_DSS,
+                              fingerprintType=dns.Record_SSHFP.FINGERPRINT_TYPE_SHA1,
                               fingerprint=fp)
-        self._recordRoundtripTest(rr, expectedEncoding=b'\x02\x01' + fp)
+        self._recordRoundtripTest(rr)
+        self._recordEncodingTest(rr, b'\x02\x01' + fp)
 
 
     def test_NAPTR(self):
@@ -612,26 +629,31 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_TSIG.decode} to reconstruct the state of the original
         L{dns.Record_TSIG} instance.
         """
+        mac = (b'\x00\x01\x02\x03\x10\x11\x12\x13'
+               b'\x20\x21\x22\x23\x30\x31\x32\x33')
         rr = dns.Record_TSIG(algorithm='hmac-md5.sig-alg.reg.int',
-                             timeSigned=1515548975,
+                             time=1515548975,
                              originalID=42, fudge=5,
-                             MAC=b'\x00\x01\x02\x03\x10\x11\x12\x13'
-                                 b'\x20\x21\x22\x23\x30\x31\x32\x33')
+                             MAC=mac)
+        self._recordRoundtripTest(rr)
         rdata = (b'\x08hmac-md5\x07sig-alg\x03reg\x03int\x00'
-                 b'\x00\x00\x5a\x55\x71\x2f\x00\x05'
-                 b'\x00\x10\x00\x01\x02\x03\x10\x11'
-                 b'\x12\x13\x20\x21\x22\x23\x30\x31\x32\x33'
-                 b'\x00\x2A\x00\x00\x00\x00')
-        self._recordRoundtripTest(rr, expectedEncoding=rdata)
+                 b'\x00\x00\x5a\x55\x71\x2f\x00\x05\x00\x10' +
+                 mac + b'\x00\x2A\x00\x00\x00\x00')
+        self._recordEncodingTest(rr, rdata)
 
         rr = dns.Record_TSIG(algorithm='hmac-sha256',
-                             timeSigned=4511798055,  # More than 32 bits
+                             time=4511798055,  # More than 32 bits
                              originalID=65535,
                              error=dns.EBADTIME,
                              otherData=b'\x80\x00\x00\x00\x00\x08',
-                             MAC=b'\x00\x01\x02\x03\x10\x11\x12\x13'
-                                 b'\x20\x21\x22\x23\x30\x31\x32\x33')
+                             MAC=mac)
         self._recordRoundtripTest(rr)
+        rdata = (b'\x0Bhmac-sha256\x00'
+                 b'\x00\x01\x0c\xec\x93\x27\x00\x05\x00\x10' +
+                 mac + b'\xff\xff\x00\x12\x00\x06'
+                 b'\x80\x00\x00\x00\x00\x08')
+        self._recordEncodingTest(rr, rdata)
+
 
     def test_TXT(self):
         """
@@ -2024,26 +2046,27 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         Two L{dns.Record_SSHFP} instances compare equal if and only if
         they have the same key type, fingerprint type, fingerprint, and ttl.
         """
-        # Vary the key type
+        # Vary the key type.
         self._equalityTest(
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(2, 2, b'happyday', 40))
-        # Vary the fingerprint type
+        # Vary the fingerprint type.
         self._equalityTest(
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 1, b'happyday', 40))
-        # Vary the fingerprint itself
+        # Vary the fingerprint itself.
         self._equalityTest(
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 2, b'happxday', 40))
-        # Vary the ttl
+        # Vary the ttl.
         self._equalityTest(
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 2, b'happyday', 40),
             dns.Record_SSHFP(1, 2, b'happyday', 45))
+
 
     def test_naptr(self):
         """
@@ -2245,13 +2268,13 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     def test_tsig(self):
         """
         L{dns.Record_TSIG} instances compare equal if and only if they have the
-        same data and ttl.
+        same RDATA (algorithm, timestamp, MAC, etc.) and ttl.
         """
-        baseargs = {'algorithm': 'hmac-sha224', 'timeSigned': 1515548975,
+        baseargs = {'algorithm': 'hmac-sha224', 'time': 1515548975,
                     'fudge': 5,
                     'MAC': b'\x01\x02\x03\x04\x05', 'originalID': 99,
                     'error': dns.OK, 'otherData': b'', 'ttl': 40}
-        altargs = {'algorithm': 'hmac-sha512', 'timeSigned': 1515548875,
+        altargs = {'algorithm': 'hmac-sha512', 'time': 1515548875,
                    'fudge': 0,
                    'MAC': b'\x05\x04\x03\x02\x01', 'originalID': 65437,
                    'error': dns.EBADTIME, 'otherData': b'\x00\x00',
@@ -2262,6 +2285,7 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             self._equalityTest(dns.Record_TSIG(**altered),
                                dns.Record_TSIG(**altered),
                                dns.Record_TSIG(**baseargs))
+
 
     def test_unknown(self):
         """
