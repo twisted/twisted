@@ -113,7 +113,8 @@ class FakeTransport:
 
 
     def write(self, data):
-        if self.disconnected:
+        # If transport is closed, we should accept writes but drop the data.
+        if self.disconnecting:
             return
 
         if self.tls is not None:
