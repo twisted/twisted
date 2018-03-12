@@ -113,6 +113,9 @@ class FakeTransport:
 
 
     def write(self, data):
+        if self.disconnected:
+            return
+
         if self.tls is not None:
             self.tlsbuf.append(data)
         else:
