@@ -401,6 +401,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self._reason = None
         self.connected = False
         ProtocolWrapper.connectionLost(self, reason)
+
+        # Breaking reference cycle between self._tlsConnection and self.
         self._tlsConnection = None
 
 
