@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=I0011,C0103,W9401,W9402
+
 """
 Data used by test_keys as well as others.
 """
