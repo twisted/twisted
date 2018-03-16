@@ -1000,41 +1000,39 @@ class TLSMemoryBIOTests(TestCase):
             """
             return sum(1 for x in gc.get_objects() if isinstance(x, type))
 
+        self.addCleanup(gc.enable)
         gc.disable()
 
-        try:
-            class CloserProtocol(Protocol):
-                def dataReceived(self, data):
-                    self.transport.loseConnection()
+        class CloserProtocol(Protocol):
+            def dataReceived(self, data):
+                self.transport.loseConnection()
 
 
-            class GreeterProtocol(Protocol):
-                def connectionMade(self):
-                    self.transport.write(b'hello')
+        class GreeterProtocol(Protocol):
+            def connectionMade(self):
+                self.transport.write(b'hello')
 
-            origTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
-            origServerProtos = nObjectsOfType(CloserProtocol)
+        origTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
+        origServerProtos = nObjectsOfType(CloserProtocol)
 
-            authCert, serverCert = certificatesForAuthorityAndServer()
-            serverFactory = TLSMemoryBIOFactory(
-                serverCert.options(), False,
-                Factory.forProtocol(CloserProtocol)
-            )
-            clientFactory = TLSMemoryBIOFactory(
-                optionsForClientTLS(u'example.com', trustRoot=authCert), True,
-                Factory.forProtocol(GreeterProtocol)
-            )
-            loopbackAsync(
-                TLSMemoryBIOProtocol(serverFactory, CloserProtocol()),
-                TLSMemoryBIOProtocol(clientFactory, GreeterProtocol())
-            )
+        authCert, serverCert = certificatesForAuthorityAndServer()
+        serverFactory = TLSMemoryBIOFactory(
+            serverCert.options(), False,
+            Factory.forProtocol(CloserProtocol)
+        )
+        clientFactory = TLSMemoryBIOFactory(
+            optionsForClientTLS(u'example.com', trustRoot=authCert), True,
+            Factory.forProtocol(GreeterProtocol)
+        )
+        loopbackAsync(
+            TLSMemoryBIOProtocol(serverFactory, CloserProtocol()),
+            TLSMemoryBIOProtocol(clientFactory, GreeterProtocol())
+        )
 
-            newTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
-            newServerProtos = nObjectsOfType(CloserProtocol)
-            self.assertEqual(newTLSProtos, origTLSProtos)
-            self.assertEqual(newServerProtos, origServerProtos)
-        finally:
-            gc.enable()
+        newTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
+        newServerProtos = nObjectsOfType(CloserProtocol)
+        self.assertEqual(newTLSProtos, origTLSProtos)
+        self.assertEqual(newServerProtos, origServerProtos)
 
 
 
