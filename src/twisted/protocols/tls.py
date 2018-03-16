@@ -410,7 +410,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Send a TLS close alert and close the underlying connection.
         """
-        if self.disconnecting:
+        if self.disconnecting or not self.connected:
             return
         # If connection setup has not finished, OpenSSL 1.0.2f+ will not shut
         # down the connection until we write some data to the connection which
