@@ -865,6 +865,19 @@ class RequestTests(unittest.TestCase):
         self.assertNotIn(b'content-type', response.lower())
 
 
+    def test_hyperlinkRequestURL(self):
+        """
+        L{Request.prePathURL} quotes special characters in the URL segments to
+        preserve the original meaning.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.setHost(b'example.com', 80)
+        request.gotLength(0)
+        request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
+        self.assertEqual(request.hyperlinkURL().asText(), 'http://example.com/foo%2Fbar')
+
+
 
 class GzipEncoderTests(unittest.TestCase):
     def setUp(self):
