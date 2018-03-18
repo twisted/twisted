@@ -48,7 +48,7 @@ from twisted.application import service
 from twisted.internet import task
 from twisted.python.failure import Failure
 from twisted.internet.defer import (
-    CancelledError, Deferred, succeed, fail
+    CancelledError, Deferred, succeed, fail, maybeDeferred
 )
 
 from automat import MethodicalMachine
@@ -633,12 +633,35 @@ class _ClientMachine(object):
         factoryProxy = _DisconnectFactory(self._factory,
                                           lambda _: self._clientDisconnected())
 
-        d = self._endpoint.connect(factoryProxy)
+        self._connectionInProgress = (
+            self._endpoint.connect(factoryProxy)
+            .addCallback(self._runOnNewConnection)
+            .addCallback(self._connectionMade)
+            .addErrback(self._connectionFailed))
+
+
+    def _runOnNewConnection(self, protocol):
+        """
+        Run any C{onNewConnection} callback with the connected protocol,
+        ignoring its return value but propagating any failure.
+
+        @param protocol: The protocol of the connection.
+        @type protocol: L{IProtocol}
+
+        @return: Either:
+
+            - A L{Deferred} that succeeds with the protocol when the
+              C{onNewConnection} callback has executed successfully.
+
+            - A L{Deferred} that fails when the C{onNewConnection} callback
+              throws or returns a failed L{Deferred}.
+
+            - The protocol, when no C{onNewConnection} callback is defined.
+        """
         if self._onNewConnection:
-            d.addCallback(self._onNewConnection)
-        d.addCallback(self._connectionMade)
-        d.addErrback(self._connectionFailed)
-        self._connectionInProgress = d
+            return (maybeDeferred(self._onNewConnection, protocol)
+                    .addCallback(lambda _: protocol))
+        return protocol
 
 
     @_machine.output()

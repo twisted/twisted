@@ -1064,7 +1064,7 @@ class ClientServiceTests(SynchronousTestCase):
             onNewConnection=onNewConnection,
             protocolType=NewProtocol
         )
-        self.assertIsInstance(newProtocols[0], NewProtocol)
+        self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
 
 
     def test_onNewConnectionReturningADeferred(self):
@@ -1086,4 +1086,13 @@ class ClientServiceTests(SynchronousTestCase):
 
         newProtocolDeferred.callback(None)
 
-        self.assertEquals(self.successResultOf(whenConnectedDeferred), newProtocols[0])
+        self.assertIdentical(cq.applicationProtocols[0],
+                             self.successResultOf(whenConnectedDeferred))
+
+
+    def test_onNewConnectionThrows(self):
+        """
+        The connection attempt counts as a failure when the C{onNewConnection}
+        callable throws.
+        """
+
