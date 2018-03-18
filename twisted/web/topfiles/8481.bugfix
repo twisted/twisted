@@ -1,1 +1,0 @@
-The HTTP server now correctly times connections out. (broken in 16.2)

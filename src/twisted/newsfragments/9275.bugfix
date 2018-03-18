@@ -1,0 +1,1 @@
+twisted.trial.runner now uses the  'importlib' module instead of the 'imp' module on Python 3+.  This eliminates DeprecationWarnings caused by importing 'imp' on Python 3.

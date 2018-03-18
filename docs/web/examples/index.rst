@@ -9,8 +9,9 @@ Examples
 twisted.web.client
 ------------------
 
-- :download:`getpage.py` - use ``twisted.web.client.getPage`` to download a web page.
-- :download:`dlpage.py` - add callbacks to ``twisted.web.client.downloadPage`` to display errors that occur when downloading a web page
+- :download:`httpclient.py` - use ``twisted.web.client.Agent`` to download a web page.
+- (deprecated) :download:`getpage.py` - use ``twisted.web.client.getPage`` to download a web page.
+- (deprecated) :download:`dlpage.py` - add callbacks to ``twisted.web.client.downloadPage`` to display errors that occur when downloading a web page
 
 
 XML-RPC

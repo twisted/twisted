@@ -1,1 +1,0 @@
-twisted.python.filepath.setContent() and twisted.python.filepath.moveTo() now work on Windows with Python 3

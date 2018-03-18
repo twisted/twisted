@@ -18,7 +18,7 @@ log.startLogging(f)
 
 # print a few message
 for i in range(10):
-    log.msg("this is a test of the logfile: %s" % i)
+    log.msg("this is a test of the logfile: {}".format(i))
 
 # rotate the logfile manually
 f.rotate()

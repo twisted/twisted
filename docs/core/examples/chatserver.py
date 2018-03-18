@@ -24,7 +24,7 @@ class MyChat(basic.LineReceiver):
             c.message(line)
 
     def message(self, message):
-        self.transport.write(message + '\n')
+        self.transport.write(message + b'\n')
 
 
 from twisted.internet import protocol

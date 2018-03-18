@@ -1,0 +1,1 @@
+twisted.protocols.basic.LineOnlyReceiver.lineLengthExceeded no longer returns twisted.internet.error.ConnectionLost.  It instead directly disconnects the transport and returns None.

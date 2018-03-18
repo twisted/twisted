@@ -16,7 +16,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -30,7 +30,7 @@ class IRCReplyBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         user = user.split('!')[0]
         if self.nickname.lower() == channel.lower():
-            d = self.factory.getUser(msg)
+            d = self.factory.getUser(msg.encode("ascii"))
             d.addErrback(catchError)
             d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
             d.addCallback(lambda m: self.msg(user, m))
@@ -94,19 +94,19 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def getFingerFactory(self):
         f = protocol.ServerFactory()

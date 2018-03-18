@@ -1,4 +1,5 @@
 *.egg-info/
+.eggs/
 *.o
 *.py[co]
 *.so
@@ -15,3 +16,4 @@ htmlcov/
 *~
 *.lock
 apidocs/
+.automat_visualize

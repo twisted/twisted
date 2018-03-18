@@ -1,1 +1,0 @@
-Twisted Web's HTTP/2 server can now tolerate streams being reset by the client midway through a data upload without throwing exceptions.

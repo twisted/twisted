@@ -9,11 +9,11 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return 'Internal error in server'
+            return b'Internal error in server'
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + '\r\n')
+            self.transport.write(message + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeResponse)
 
@@ -21,11 +21,11 @@ class FingerFactory(protocol.ServerFactory):
     protocol = FingerProtocol
 
     def __init__(self, prefix):
-        self.prefix=prefix
+        self.prefix = prefix
 
     def getUser(self, user):
-        return client.getPage(self.prefix+user)
+        return client.getPage(self.prefix + user)
 
 fingerEndpoint = endpoints.serverFromString(reactor, "tcp:1079")
-fingerEndpoint.listen(FingerFactory(prefix='http://livejournal.com/~'))
+fingerEndpoint.listen(FingerFactory(prefix=b'http://livejournal.com/~'))
 reactor.run()

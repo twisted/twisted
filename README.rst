@@ -1,20 +1,17 @@
-Twisted 16.3.0
+Twisted 17.9.0
 ==============
 
-|pypi|
-|coverage|
-|travis|
-|appveyor|
+|pypi|_
+|coverage|_
+|travis|_
+|appveyor|_
 
 .. code::
 
-    <tomprince> [...] that made me think of (infinity,1)-groupoids and motivic and crystalline cohomology. :)
-    <@glyph> tomprince: NO IDEA IF THOSE ARE REAL WORDS
-    <tomprince> They are.
-    <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
+    <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
+    <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
 
-
-For information on what's new in Twisted 16.3.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
@@ -31,7 +28,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
-Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, OS X), IOCP (Windows), and various GUI event loops (GTK+2/3, QT, wxWidgets).
+Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, macOS), IOCP (Windows), and various GUI event loops (GTK+2/3, QT, wxWidgets).
 Third-party reactors can plug into Twisted, and provide support for additional event loops.
 
 
@@ -81,7 +78,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2016 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2017 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -110,7 +107,7 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 .. _pypi: https://pypi.python.org/pypi/twisted
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
-.. _travis https://travis-ci.org/twisted/twisted
+.. _travis: https://travis-ci.org/twisted/twisted
 
 .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
-.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted
+.. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted

@@ -1,0 +1,1 @@
+twisted.python.failure now handles long stacktraces better; in particular it will log tracebacks for stack overflow errors.

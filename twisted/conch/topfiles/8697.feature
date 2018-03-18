@@ -1,1 +1,0 @@
-twisted.conch.client.knownhosts is now ported to Python 3.

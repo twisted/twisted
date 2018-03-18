@@ -1,1 +1,0 @@
-twisted.python._release now uses subprocess.check_output.

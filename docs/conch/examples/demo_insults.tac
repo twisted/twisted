@@ -3,8 +3,15 @@
 
 # You can run this .tac file directly with:
 #    twistd -ny demo_insults.tac
+#
+# Re-using a private key is dangerous, generate one.
+#
+# For this example you can use:
+#
+# $ ckeygen -t rsa -f ssh-keys/ssh_host_rsa_key
 
-"""Various simple terminal manipulations using the insults module.
+"""
+Various simple terminal manipulations using the insults module.
 
 This demo sets up two listening ports: one on 6022 which accepts ssh
 connections; one on 6023 which accepts telnet connections.  No login
@@ -21,14 +28,16 @@ animation process.
 
 import random, string
 
-from twisted.python import log
-from twisted.internet import protocol, task
 from twisted.application import internet, service
-from twisted.cred import checkers, portal
-
 from twisted.conch.insults import insults
 from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
+from twisted.conch.ssh import keys
+from twisted.cred import checkers, portal
+from twisted.internet import protocol, task
+from twisted.python import log
+
+
 
 class DrawingFinished(Exception):
     """Sentinel exception, raised when no \"frames\" for a particular
@@ -218,7 +227,7 @@ class DemoProtocol(insults.TerminalProtocol):
 
 
 def makeService(args):
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
     f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
@@ -238,6 +247,8 @@ def makeService(args):
     rlm.chainedProtocolFactory = chainProtocolFactory
     ptl = portal.Portal(rlm, [checker])
     f = ConchFactory(ptl)
+    f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
+    f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
     csvc = internet.TCPServer(args['ssh'], f)
 
     m = service.MultiService()

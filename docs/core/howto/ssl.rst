@@ -1,8 +1,3 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
 Using TLS in Twisted
 ====================
 
@@ -24,10 +19,10 @@ To create a TLS client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint 
 TLS provides transport layer security, but it's important to understand what "security" means.
 With respect to TLS it means three things:
 
-    1. Identity: TLS servers (and sometimes clients) present a certificate, offering proof of who they are, so that you know who you are talking to.
-    2. Confidentiality: once you know who you are talking to, encryption of the connection ensures that the communications can't be understood by any third parties who might be listening in.
-    3. Integrity: TLS checks the encrypted messages to ensure that they actually came from the party you originally authenticated to.
-       If the messages fail these checks, then they are discarded and your application does not see them.
+#. Identity: TLS servers (and sometimes clients) present a certificate, offering proof of who they are, so that you know who you are talking to.
+#. Confidentiality: once you know who you are talking to, encryption of the connection ensures that the communications can't be understood by any third parties who might be listening in.
+#. Integrity: TLS checks the encrypted messages to ensure that they actually came from the party you originally authenticated to.
+   If the messages fail these checks, then they are discarded and your application does not see them.
 
 Without identity, neither confidentiality nor integrity is possible.
 If you don't know who you're talking to, then you might as easily be talking to your bank or to a thief who wants to steal your bank password.
@@ -35,9 +30,9 @@ Each of the APIs listed above with "SSL" in the name requires a configuration ob
 (Please pardon the somewhat awkward name.)
 The ``contextFactory`` serves three purposes:
 
-    1. It provides the materials to prove your own identity to the other side of the connection: in other words, who you are.
-    2. It expresses your requirements of the other side's identity: in other words, who you would like to talk to (and who you trust to tell you that you're talking to the right party).
-    3. It allows you to specify certain specialized options about the way the TLS protocol itself operates.
+1. It provides the materials to prove your own identity to the other side of the connection: in other words, who you are.
+2. It expresses your requirements of the other side's identity: in other words, who you would like to talk to (and who you trust to tell you that you're talking to the right party).
+3. It allows you to specify certain specialized options about the way the TLS protocol itself operates.
 
 The requirements of clients and servers are slightly different.
 Both *can* provide a certificate to prove their identity, but commonly, TLS *servers* provide a certificate, whereas TLS *clients* check the server's certificate (to make sure they're talking to the right server) and then later identify themselves to the server some other way, often by offering a shared secret such as a password or API key via an application protocol secured with TLS and not as part of TLS itself.
@@ -58,7 +53,7 @@ You may obtain an object suitable to pass as the ``trustRoot=`` parameter with a
 
    Currently, Twisted only supports loading of OpenSSL's default trust roots.
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
-   If you're using the OpenSSL shipped as part of Mac OS X 10.5-10.9, this behavior will also be correct.
+   If you're using the OpenSSL shipped as part of macOS 10.5-10.9, this behavior will also be correct.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
    Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` uses by default --- more robust.
    For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
@@ -204,19 +199,46 @@ For example,
     options = CertificateOptions(..., dhParameters=dhParams)
 
 Another part of the TLS protocol which ``CertificateOptions`` can control is the version of the TLS or SSL protocol used.
-This is often called the context's "method".
-By default, ``CertificateOptions`` creates contexts that require at least the TLSv1 protocol.
-``CertificateOptions`` also supports the older SSLv3 protocol (which may be required interoperate with an existing service or piece of software).
-To allow SSLv3, just pass ``OpenSSL.SSL.SSLv3_METHOD`` to ``CertificateOptions``'s initializer:
+By default, Twisted will configure it to use TLSv1.0 or later and disable the insecure SSLv3 protocol.
+Manual control over protocols can be helpful if you need to support legacy SSLv3 systems, or you wish to restrict it down to just the strongest of the TLS versions.
+
+You can ask ``CertificateOptions`` to use a more secure default minimum than Twisted's by using the ``raiseMinimumTo`` argument in the initializer:
 
 .. code-block:: python
 
-    from twisted.internet.ssl import CertificateOptions
-    from OpenSSL.SSL import SSLv3_METHOD
-    options = CertificateOptions(..., method=SSLv3_METHOD)
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(
+        ...,
+        raiseMinimumTo=TLSVersion.TLSv1_1)
 
-The somewhat confusingly-named ``OpenSSL.SSL.SSLv23_METHOD`` is also supported (to enable SSLv3 or better, based on negotiation).
-SSLv2 is insecure; it is explicitly not supported and will be disabled in all configurations.
+This will always negotiate a minimum of TLSv1.1, but will negotiate higher versions if Twisted's default is higher.
+This usage will stay secure if Twisted updates the minimum to TLSv1.2, rather than causing your application to use the now theoretically insecure minimum you set.
+
+If you need a strictly hard range of TLS versions you wish ``CertificateOptions`` to negotiate, you can use the ``insecurelyLowerMinimumTo`` and ``lowerMaximumSecurityTo`` arguments in the initializer:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(
+        ...,
+        insecurelyLowerMinimumTo=TLSVersion.TLSv1_0,
+        lowerMaximumSecurityTo=TLSVersion.TLSv1_2)
+
+This will cause it to negotiate between TLSv1.0 and TLSv1.2, and will not change if Twisted's default minimum TLS version is raised.
+It is highly recommended not to set ``lowerMaximumSecurityTo`` unless you have a peer that is known to misbehave on newer TLS versions, and to only set ``insecurelyLowerMinimumTo`` when Twisted's minimum is not acceptable.
+Using these two arguments to ``CertificateOptions`` may make your application's TLS insecure if you do not review it frequently, and should not be used in libraries.
+
+SSLv3 support is still available and you can enable support for it if you wish.
+As an example, this supports all TLS versions and SSLv3:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions, TLSVersion
+    options = CertificateOptions(
+        ...,
+        insecurelyLowerMinimumTo=TLSVersion.SSLv3)
+
+Future OpenSSL versions may completely remove the ability to negotiate the insecure SSLv3 protocol, and this will not allow you to re-enable it.
 
 Additionally, it is possible to limit the acceptable ciphers for your connection by passing an :api:`twisted.internet.interfaces.IAcceptableCiphers <IAcceptableCiphers>` object to ``CertificateOptions``.
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
