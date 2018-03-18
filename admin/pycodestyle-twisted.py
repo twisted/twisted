@@ -1,6 +1,32 @@
 #!/usr/bin/env python
 
 """
+Copyright © 2006-2009 Johann C. Rocholl <johann@rocholl.net>
+Copyright © 2009-2014 Florent Xicluna <florent.xicluna@gmail.com>
+Copyright © 2014-2018 Ian Lee <IanLee1521@gmail.com>
+
+Licensed under the terms of the Expat License
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation files
+(the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software,
+and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 A patched version for pycodestyle which uses the blank line conversion from
 Twisted.
 
@@ -106,5 +132,6 @@ pycodestyle._checks['logical_line'][blank_lines] = _previousValue
 
 
 if __name__ == '__main__':
+    # Calling main in a similar was as the upstream script.
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(pycodestyle._main())
