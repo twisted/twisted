@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 """
-Copyright © 2006-2009 Johann C. Rocholl <johann@rocholl.net>
-Copyright © 2009-2014 Florent Xicluna <florent.xicluna@gmail.com>
-Copyright © 2014-2018 Ian Lee <IanLee1521@gmail.com>
+Copyright 2006-2009 Johann C. Rocholl <johann@rocholl.net>
+Copyright 2009-2014 Florent Xicluna <florent.xicluna@gmail.com>
+Copyright 2014-2018 Ian Lee <IanLee1521@gmail.com>
 
 Licensed under the terms of the Expat License
 
