@@ -1,4 +1,4 @@
-# CircleCI 2.0 configuration file for running Python on macOS
+# CircleCI 2.0 configuration file for running Python on macOS.
 #
 # Based on these v1.0 steps:
 # https://pewpewthespells.com/blog/building_python_on_circleci.html
@@ -30,4 +30,4 @@ jobs:
           name: run tests
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
-            tox -r -e py27-alldeps-nocov-posix twisted
+            tox -r -e py27-alldeps-withcov-posix twisted
