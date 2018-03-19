@@ -19,6 +19,7 @@ jobs:
       - run:
           name: run tests
           command: |
+            export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             python --version
             pip install --user --ignore-installed --upgrade virtualenv
             pip install tox --user
