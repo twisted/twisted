@@ -1,0 +1,29 @@
+# CircleCI 2.0 configuration file for running 
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+
+jobs:
+  py27-alldeps-nocov-posix:
+    macos:
+      xcode: "9.3.0"
+
+    working_directory: ~/repo
+
+    steps:
+      # Get the source.
+      - checkout
+
+      # Run tests with tox without any cached dependencies.
+      - run:
+          name: run tests
+          command: tox -r -e py27-alldeps-nocov-posix twisted
+
+
+# For this is a simple workflow with a single stage.
+workflows:
+  version: 2
+  test:
+    jobs:
+      - py27-alldeps-nocov-posix
