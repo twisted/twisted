@@ -5,7 +5,7 @@
 version: 2
 
 jobs:
-  py27-alldeps-nocov-posix:
+  build:
     macos:
       xcode: "9.3.0"
 
@@ -26,4 +26,4 @@ workflows:
   version: 2
   test:
     jobs:
-      - py27-alldeps-nocov-posix
+      - build
