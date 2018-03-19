@@ -1,6 +1,7 @@
-# CircleCI 2.0 configuration file for running 
+# CircleCI 2.0 configuration file for running Python on macOS
 #
-# Check https://circleci.com/docs/2.0/language-python/ for more details
+# Based on these v1.0 steps:
+# https://pewpewthespells.com/blog/building_python_on_circleci.html
 #
 version: 2
 
@@ -21,8 +22,8 @@ jobs:
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             python --version
-            pip install --user --ignore-installed --upgrade virtualenv
-            pip install tox --user
+            pip install -q --user --ignore-installed --upgrade virtualenv
+            pip install -q tox --user
             tox -r -e py27-alldeps-nocov-posix twisted
 
 
