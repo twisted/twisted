@@ -27,7 +27,7 @@ jobs:
 
       # Run tests with tox without any cached dependencies.
       - run:
-          name: run tests
+          name: tests with default reactor
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             tox -r -e py27-alldeps-withcov-posix twisted
