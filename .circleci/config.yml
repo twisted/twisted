@@ -18,7 +18,11 @@ jobs:
       # Run tests with tox without any cached dependencies.
       - run:
           name: run tests
-          command: tox -r -e py27-alldeps-nocov-posix twisted
+          command: |
+            python --version
+            pip install --user --ignore-installed --upgrade virtualenv
+            pip install tox --user
+            tox -r -e py27-alldeps-nocov-posix twisted
 
 
 # For this is a simple workflow with a single stage.
