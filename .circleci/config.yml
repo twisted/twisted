@@ -8,7 +8,8 @@ version: 2
 jobs:
   build:
     macos:
-      xcode: "9.3.0"
+      # We don't use the xcode, but we need to put something here.
+      xcode: "9.0"
 
     working_directory: ~/repo
 
@@ -16,20 +17,17 @@ jobs:
       # Get the source.
       - checkout
 
-      # Run tests with tox without any cached dependencies.
       - run:
-          name: run tests
+          name: prepare environment
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             python --version
             pip install -q --user --ignore-installed --upgrade virtualenv
             pip install -q tox --user
+
+      # Run tests with tox without any cached dependencies.
+      - run:
+          name: run tests
+          command: |
+            export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             tox -r -e py27-alldeps-nocov-posix twisted
-
-
-# For this is a simple workflow with a single stage.
-workflows:
-  version: 2
-  test:
-    jobs:
-      - build
