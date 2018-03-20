@@ -7,15 +7,16 @@
 # Based on these v1.0 steps:
 # https://pewpewthespells.com/blog/building_python_on_circleci.html
 #
+# This uses the v2 workflows and a separate commit status is sent for each
+# job.
+#
 version: 2
 
 jobs:
-  build_static_checkers:
+  static_checkers:
     working_directory: ~/static-checkers
     docker:
-      # Alpine should be small and the generic python 2 should give us
-      # latest Python version.
-      - image: python/2-alpine3.7
+      - image: circleci/python:2.7.14
     steps:
       # Get the source.
       - checkout
@@ -42,7 +43,7 @@ jobs:
           command: |
             tox -r -e apidocs
 
-  build_macos_py27:
+  macos_py27_default_reactor:
     macos:
       # We don't use the xcode, but we need to put something here.
       xcode: "9.0"
@@ -75,7 +76,7 @@ workflows:
   version: 2
   all-tests:
     jobs:
-      - build_static_checkers
-      - build_macos_py27:
+      - static_checkers
+      - macos_py27_default_reactor:
           requires:
-            - build_static_checkers
+            - static_checkers
