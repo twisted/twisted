@@ -1089,7 +1089,6 @@ class ClientServiceTests(SynchronousTestCase):
         callable throws.
         """
         clock = Clock()
-        newProtocolDeferred = Deferred()
 
         def onNewConnection(_proto):
             raise IndentationError()
