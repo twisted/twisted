@@ -73,9 +73,9 @@ jobs:
 # in this way we should save some macOS minutes.
 workflows:
   version: 2
-  all_tests:
+  all-tests:
     jobs:
       - build_static_checkers
-      - build_macos_py27
+      - build_macos_py27:
           requires:
             - build_static_checkers
