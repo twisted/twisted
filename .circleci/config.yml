@@ -10,7 +10,39 @@
 version: 2
 
 jobs:
-  build:
+  build_static_checkers:
+    working_directory: ~/static-checkers
+    docker:
+      # Alpine should be small and the generic python 2 should give us
+      # latest Python version.
+      - image: python/2-alpine3.7
+    steps:
+      # Get the source.
+      - checkout
+
+      # Run each checker in a separate step.
+      - run:
+          name: Check newsfragment.
+          command: |
+            tox -r -e newsfragment
+      - run:
+          name: Check manifest-checker.
+          command: |
+            tox -r -e manifest-checker
+      - run:
+          name: Check pyflakes.
+          command: |
+            tox -r -e pyflakes
+      - run:
+          name: Check the narrative documentation.
+          command: |
+            tox -r -e narrativedocs
+      - run:
+          name: Check the API documentation.
+          command: |
+            tox -r -e apidocs
+
+  build_macos_py27:
     macos:
       # We don't use the xcode, but we need to put something here.
       xcode: "9.0"
