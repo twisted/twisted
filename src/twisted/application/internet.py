@@ -1060,8 +1060,10 @@ class ClientService(service.Service, object):
         @type clock: L{IReactorTime}
 
         @param onNewConnection: A single argument L{callable} that may return a
-            Deferred. It will be called with the L{protocol
-            <interfaces.IProtocol>} after a new connection is made.
+            L{Deferred} or L{None}. It will be called with the L{protocol
+            <interfaces.IProtocol>} after a new connection is made. Should it
+            raise an exception or the L{Deferred} fail, the connection attempt
+            is treated as a failure.
         @type onNewConnection: L{callable}
         """
         clock = _maybeGlobalReactor(clock)
@@ -1069,7 +1071,7 @@ class ClientService(service.Service, object):
 
         self._machine = _ClientMachine(
             endpoint, factory, retryPolicy, clock,
-            onNewConnection, log=self._log,
+            onNewConnection=onNewConnection, log=self._log,
         )
 
 
