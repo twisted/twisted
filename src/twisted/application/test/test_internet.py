@@ -1050,19 +1050,12 @@ class ClientServiceTests(SynchronousTestCase):
         """
         The C{onNewConnection} callable is passed the connected protocol instance.
         """
-
-        class NewProtocol(Protocol, object):
-            """
-            A protocol for new connections.
-            """
-
         newProtocols = []
         def onNewConnection(proto):
             newProtocols.append(proto)
 
         cq, service = self.makeReconnector(
             onNewConnection=onNewConnection,
-            protocolType=NewProtocol
         )
         self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
 
@@ -1095,4 +1088,21 @@ class ClientServiceTests(SynchronousTestCase):
         The connection attempt counts as a failure when the C{onNewConnection}
         callable throws.
         """
+        clock = Clock()
+        newProtocolDeferred = Deferred()
 
+        def onNewConnection(_proto):
+            raise IndentationError()
+
+        cq, service = self.makeReconnector(onNewConnection=onNewConnection,
+                                           clock=clock)
+
+        whenConnectedDeferred = service.whenConnected(failAfterFailures=2)
+        self.assertNoResult(whenConnectedDeferred)
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertNoResult(whenConnectedDeferred)
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertIdentical(IndentationError,
+                             self.failureResultOf(whenConnectedDeferred).type)
