@@ -45,14 +45,7 @@ jobs:
           name: Check pyflakes.
           command: |
             tox -r -e pyflakes
-      - run:
-          name: Check the narrative documentation.
-          command: |
-            tox -r -e narrativedocs
-      - run:
-          name: Check the API documentation.
-          command: |
-            tox -r -e apidocs
+
 
   #
   # Documentation tests are slow so we execute them in a separate job.
@@ -74,9 +67,15 @@ jobs:
             echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
 
       - run:
+          name: Check the narrative documentation.
+          command: |
+            tox -r -e narrativedocs
+
+      - run:
           name: Check the API documentation.
           command: |
             tox -r -e apidocs
+
 
   #
   # We run pyflakes with Python 3 .
