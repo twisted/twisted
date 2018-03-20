@@ -1048,7 +1048,8 @@ class ClientServiceTests(SynchronousTestCase):
 
     def test_onNewConnectionCalledWithProtocol(self):
         """
-        The C{onNewConnection} callable is passed the connected protocol instance.
+        The C{onNewConnection} callable is passed the connected protocol
+        instance.
         """
         newProtocols = []
         def onNewConnection(proto):

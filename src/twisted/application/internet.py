@@ -1037,7 +1037,8 @@ class ClientService(service.Service, object):
 
     _log = Logger()
 
-    def __init__(self, endpoint, factory, retryPolicy=None, clock=None, onNewConnection=None):
+    def __init__(self, endpoint, factory, retryPolicy=None, clock=None,
+                 onNewConnection=None):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -1059,8 +1060,8 @@ class ClientService(service.Service, object):
         @type clock: L{IReactorTime}
 
         @param onNewConnection: A single argument L{callable} that may return a
-            Deferred. It will be called with the L{protocol <interfaces.IProtocol>}
-            after a new connection is made.
+            Deferred. It will be called with the L{protocol
+            <interfaces.IProtocol>} after a new connection is made.
         @type onNewConnection: L{callable}
         """
         clock = _maybeGlobalReactor(clock)
