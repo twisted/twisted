@@ -16,15 +16,23 @@ jobs:
   static_checkers:
     working_directory: ~/static-checkers
     docker:
-      - image: circleci/python:2.7.14
+      - image: circleci/python:2.7
     steps:
       # Get the source.
       - checkout
+
+      - run:
+          name: Prepare the environment.
+          command: |
+            python --version
+            pip install -q --user --ignore-installed --upgrade virtualenv
+            pip install -q tox --user
 
       # Run each checker in a separate step.
       - run:
           name: Check newsfragment.
           command: |
+            export PATH=~/.local/bin:$PATH
             tox -r -e newsfragment
       - run:
           name: Check manifest-checker.
