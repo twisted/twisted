@@ -1,0 +1,1 @@
+twisted.conch.ssh.filetransfer.FileTransferClient.wasAFile attribute has been removed as it serves no purpose.

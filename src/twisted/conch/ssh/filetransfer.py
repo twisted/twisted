@@ -478,13 +478,14 @@ class FileTransferClient(FileTransferBase):
         self.extData = {}
         self.counter = 0
         self.openRequests = {} # id -> Deferred
-        self.wasAFile = {} # Deferred -> 1 TERRIBLE HACK
+
 
     def connectionMade(self):
         data = struct.pack('!L', max(self.versions))
         for k,v in itervalues(self.extData):
             data += NS(k) + NS(v)
         self.sendPacket(FXP_INIT, data)
+
 
     def _sendRequest(self, msg, data):
         data = struct.pack('!L', self.counter) + data
@@ -494,11 +495,13 @@ class FileTransferClient(FileTransferBase):
         self.sendPacket(msg, data)
         return d
 
+
     def _parseRequest(self, data):
         (id,) = struct.unpack('!L', data[:4])
         d = self.openRequests[id]
         del self.openRequests[id]
         return d, data[4:]
+
 
     def openFile(self, filename, flags, attrs):
         """
@@ -531,8 +534,27 @@ class FileTransferClient(FileTransferBase):
         """
         data = NS(filename) + struct.pack('!L', flags) + self._packAttributes(attrs)
         d = self._sendRequest(FXP_OPEN, data)
-        self.wasAFile[d] = (1, filename) # HACK
+        d.addCallback(self._cbOpenHandle, ClientFile, filename)
         return d
+
+
+    def _cbOpenHandle(self, handle, handleClass, name):
+        """
+        Callback invoked when an OPEN or OPENDIR request succeeds.
+
+        @param handle: The handle returned by the server
+        @type handle: L{bytes}
+        @param handleClass: The class that will represent the
+        newly-opened file or directory to the user (either L{ClientFile} or
+        L{ClientDirectory}).
+        @param name: The name of the file or directory represented
+        by C{handle}.
+        @type name: L{bytes}
+        """
+        cb = handleClass(self, handle)
+        cb.name = name
+        return cb
+
 
     def removeFile(self, filename):
         """
@@ -544,6 +566,7 @@ class FileTransferClient(FileTransferBase):
         @param filename: the name of the file as a string.
         """
         return self._sendRequest(FXP_REMOVE, NS(filename))
+
 
     def renameFile(self, oldpath, newpath):
         """
@@ -557,6 +580,7 @@ class FileTransferClient(FileTransferBase):
         @param newpath: the new file name.
         """
         return self._sendRequest(FXP_RENAME, NS(oldpath)+NS(newpath))
+
 
     def makeDirectory(self, path, attrs):
         """
@@ -573,6 +597,7 @@ class FileTransferClient(FileTransferBase):
         """
         return self._sendRequest(FXP_MKDIR, NS(path)+self._packAttributes(attrs))
 
+
     def removeDirectory(self, path):
         """
         Remove a directory (non-recursively)
@@ -586,6 +611,7 @@ class FileTransferClient(FileTransferBase):
         @param path: the directory to remove.
         """
         return self._sendRequest(FXP_RMDIR, NS(path))
+
 
     def openDirectory(self, path):
         """
@@ -618,8 +644,9 @@ class FileTransferClient(FileTransferBase):
         @param path: the directory to open.
         """
         d = self._sendRequest(FXP_OPENDIR, NS(path))
-        self.wasAFile[d] = (0, path)
+        d.addCallback(self._cbOpenHandle, ClientDirectory, path)
         return d
+
 
     def getAttrs(self, path, followLinks=0):
         """
@@ -638,6 +665,7 @@ class FileTransferClient(FileTransferBase):
         else: m = FXP_LSTAT
         return self._sendRequest(m, NS(path))
 
+
     def setAttrs(self, path, attrs):
         """
         Set the attributes for the path.
@@ -653,6 +681,7 @@ class FileTransferClient(FileTransferBase):
         data = NS(path) + self._packAttributes(attrs)
         return self._sendRequest(FXP_SETSTAT, data)
 
+
     def readLink(self, path):
         """
         Find the root of a set of symbolic links.
@@ -665,6 +694,7 @@ class FileTransferClient(FileTransferBase):
         """
         d = self._sendRequest(FXP_READLINK, NS(path))
         return d.addCallback(self._cbRealPath)
+
 
     def makeLink(self, linkPath, targetPath):
         """
@@ -680,6 +710,7 @@ class FileTransferClient(FileTransferBase):
         """
         return self._sendRequest(FXP_SYMLINK, NS(linkPath)+NS(targetPath))
 
+
     def realPath(self, path):
         """
         Convert any path to an absolute path.
@@ -693,11 +724,13 @@ class FileTransferClient(FileTransferBase):
         d = self._sendRequest(FXP_REALPATH, NS(path))
         return d.addCallback(self._cbRealPath)
 
+
     def _cbRealPath(self, result):
         name, longname, attrs = result[0]
         if _PY3:
             name = name.decode("utf-8")
         return name
+
 
     def extendedRequest(self, request, data):
         """
@@ -713,6 +746,7 @@ class FileTransferClient(FileTransferBase):
         """
         return self._sendRequest(FXP_EXTENDED, NS(request) + data)
 
+
     def packet_VERSION(self, data):
         version, = struct.unpack('!L', data[:4])
         data = data[4:]
@@ -723,6 +757,7 @@ class FileTransferClient(FileTransferBase):
             d[k]=v
         self.version = version
         self.gotServerVersion(version, d)
+
 
     def packet_STATUS(self, data):
         d, data = self._parseRequest(data)
@@ -746,19 +781,17 @@ class FileTransferClient(FileTransferBase):
         else:
             d.errback(SFTPError(code, nativeString(msg), lang))
 
+
     def packet_HANDLE(self, data):
         d, data = self._parseRequest(data)
-        isFile, name = self.wasAFile.pop(d)
-        if isFile:
-            cb = ClientFile(self, getNS(data)[0])
-        else:
-            cb = ClientDirectory(self, getNS(data)[0])
-        cb.name = name
-        d.callback(cb)
+        handle, _ = getNS(data)
+        d.callback(handle)
+
 
     def packet_DATA(self, data):
         d, data = self._parseRequest(data)
         d.callback(getNS(data)[0])
+
 
     def packet_NAME(self, data):
         d, data = self._parseRequest(data)
@@ -772,13 +805,16 @@ class FileTransferClient(FileTransferBase):
             files.append((filename, longname, attrs))
         d.callback(files)
 
+
     def packet_ATTRS(self, data):
         d, data = self._parseRequest(data)
         d.callback(self._parseAttributes(data)[0])
 
+
     def packet_EXTENDED_REPLY(self, data):
         d, data = self._parseRequest(data)
         d.callback(data)
+
 
     def gotServerVersion(self, serverVersion, extData):
         """
