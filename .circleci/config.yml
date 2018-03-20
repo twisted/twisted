@@ -23,16 +23,18 @@ jobs:
 
       - run:
           name: Prepare the environment.
+          # CircleCI 2.0 automatically sets a $BASH_ENV variable to a
+          # random name in /tmp, and will source this file for each step.
           command: |
             python --version
             pip install -q --user --ignore-installed --upgrade virtualenv
             pip install -q tox --user
+            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
 
       # Run each checker in a separate step.
       - run:
           name: Check newsfragment.
           command: |
-            export PATH=~/.local/bin:$PATH
             tox -r -e newsfragment
       - run:
           name: Check manifest-checker.
