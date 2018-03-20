@@ -67,3 +67,15 @@ jobs:
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             tox -r -e py27-alldeps-withcov-posix twisted
+
+
+# First we run the static checkers, and only if they pass we spin the macOS.
+# in this way we should save some macOS minutes.
+workflows:
+  version: 2
+  all_tests:
+    jobs:
+      - build_static_checkers
+      - build_macos_py27
+          requires:
+            - build_static_checkers
