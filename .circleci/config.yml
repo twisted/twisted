@@ -1,5 +1,9 @@
 # CircleCI 2.0 configuration file for running Python on macOS.
 #
+# Email notifications are configured only from web.
+# See "Email Preferences by Organization" in
+# https://circleci.com/account/notifications
+#
 # Based on these v1.0 steps:
 # https://pewpewthespells.com/blog/building_python_on_circleci.html
 #
@@ -18,7 +22,7 @@ jobs:
       - checkout
 
       - run:
-          name: prepare environment
+          name: Prepare the macOS environment.
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             python --version
@@ -27,7 +31,7 @@ jobs:
 
       # Run tests with tox without any cached dependencies.
       - run:
-          name: tests with default reactor
+          name: Test with the default reactor.
           command: |
             export PATH=/usr/local/bin:$PATH:/Users/distiller/Library/Python/2.7/bin
             tox -r -e py27-alldeps-withcov-posix twisted
