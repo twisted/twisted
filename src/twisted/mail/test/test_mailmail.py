@@ -22,6 +22,7 @@ from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial.unittest import TestCase
 
 
+
 class OptionsTests(TestCase):
     """
     Tests for L{parseOptions} which parses command line arguments and reads
@@ -50,7 +51,7 @@ class OptionsTests(TestCase):
             self.options = options
             self.ident = ident
             return smtp.sendmail(host, options.sender, options.to,
-                options.body, reactor=self.memoryReactor)
+                                 options.body, reactor=self.memoryReactor)
 
         self.patch(mailmail, 'sendmail', sendmail)
 
@@ -207,7 +208,7 @@ class OptionsTests(TestCase):
 
     if platformType == "win32":
         test_run.skip = ("mailmail.run() does not work on win32 due to "
-            "lack of support for getuid()")
+                         "lack of support for getuid()")
 
 
     def test_readInvalidConfig(self):
@@ -259,8 +260,8 @@ class OptionsTests(TestCase):
                          'Illegal entry in \[identity\] section: funny')
 
     if platformType == "win32":
-        test_readInvalidConfig.skip = ("mailmail.run() does not work on win32 due to "
-            "lack of support for getuid()")
+        test_readInvalidConfig.skip = ("mailmail.run() does not work on win32"
+                                       " due to lack of support for getuid()")
 
 
     def _loadConfig(self, config):
@@ -315,8 +316,7 @@ default_domain=example.com""")
 host1=invalid
 host2=username:password""")
         self.assertNotIn("host1", config.identities)
-        self.assertEqual(config.identities["host2"],
-     ["username", "password"])
+        self.assertEqual(config.identities["host2"], ["username", "password"])
 
         config = self._loadConfig("""
 [useraccess]

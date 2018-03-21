@@ -44,7 +44,6 @@ _log = Logger(observer=_logObserver)
 
 
 
-
 class Options:
     """
     Store the values of the parsed command-line options to the I{mailmail}
@@ -298,7 +297,7 @@ def loadConfig(path):
             parts = up.split(':', 1)
             if len(parts) != 2:
                 _log.error("Illegal entry in [identity] section: {section}",
-                          section=up)
+                           section=up)
                 continue
             c.identities[host] = parts
 
