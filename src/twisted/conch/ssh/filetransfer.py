@@ -109,9 +109,9 @@ class FileTransferBase(protocol.Protocol):
         extended = []
         for k in attrs:
             if k.startswith('ext_'):
-                ext_type = NS(ensureBytes(k[4:]))
-                ext_data = NS(attrs[k])
-                extended.append(ext_type+ext_data)
+                extType = NS(ensureBytes(k[4:]))
+                extData = NS(attrs[k])
+                extended.append(extType + extData)
         if extended:
             data += struct.pack('!L', len(extended))
             data += b''.join(extended)
@@ -126,21 +126,23 @@ class FileTransferServer(FileTransferBase):
         self.openFiles = {}
         self.openDirs = {}
 
+
     def packet_INIT(self, data):
         version ,= struct.unpack('!L', data[:4])
         self.version = min(list(self.versions) + [version])
         data = data[4:]
         ext = {}
         while data:
-            ext_name, data = getNS(data)
-            ext_data, data = getNS(data)
-            ext[ext_name] = ext_data
-        our_ext = self.client.gotVersion(version, ext)
-        our_ext_data = b""
-        for (k,v) in our_ext.items():
-            our_ext_data += NS(k) + NS(v)
-        self.sendPacket(FXP_VERSION, struct.pack('!L', self.version) + \
-                                     our_ext_data)
+            extName, data = getNS(data)
+            extData, data = getNS(data)
+            ext[extName] = extData
+        ourExt = self.client.gotVersion(version, ext)
+        ourExtData = b""
+        for (k,v) in ourExt.items():
+            ourExtData += NS(k) + NS(v)
+        self.sendPacket(FXP_VERSION, struct.pack('!L', self.version) +
+                                     ourExtData)
+
 
     def packet_OPEN(self, data):
         requestId = data[:4]
