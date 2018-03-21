@@ -85,13 +85,13 @@ class FileTransferBase(protocol.Protocol):
             attrs['mtime'] = mtime
             data = data[8:]
         if flags & FILEXFER_ATTR_EXTENDED == FILEXFER_ATTR_EXTENDED:
-            (extended_count,) = struct.unpack('!L', data[:4])
+            (extendedCount,) = struct.unpack('!L', data[:4])
             data = data[4:]
-            for i in range(extended_count):
-                (extended_type, data) = getNS(data)
-                (extended_data, data) = getNS(data)
-                attrs['ext_{}'.format(nativeString(extended_type))] = \
-                    extended_data
+            for i in range(extendedCount):
+                (extendedType, data) = getNS(data)
+                (extendedData, data) = getNS(data)
+                attrs['ext_{}'.format(nativeString(extendedType))] = \
+                    extendedData
         return attrs, data
 
 
