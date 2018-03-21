@@ -253,11 +253,13 @@ class OptionsTests(TestCase):
         self.patch(sys, 'argv', argv)
         mailmail.run()
         self.assertRegex(self.out.getvalue(),
-                         "Illegal UID in \[useraccess\] section: invaliduser1")
+                         "Illegal UID in \\[useraccess\\] section: "
+                         "invaliduser1")
         self.assertRegex(self.out.getvalue(),
-                         "Illegal GID in \[groupaccess\] section: invalidgid1")
+                         "Illegal GID in \\[groupaccess\\] section: "
+                         "invalidgid1")
         self.assertRegex(self.out.getvalue(),
-                         'Illegal entry in \[identity\] section: funny')
+                         'Illegal entry in \\[identity\\] section: funny')
 
     if platformType == "win32":
         test_readInvalidConfig.skip = ("mailmail.run() does not work on win32"
