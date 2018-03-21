@@ -65,7 +65,6 @@ on event-based network programming and multiprotocol integration.
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
@@ -198,11 +197,26 @@ _EXTENSIONS = [
 
 
 
+def _checkPythonVersion():
+    """
+    Fail if we detect a version of Python we don't support.
+    """
+    version = getattr(sys, "version_info", (0,))
+    if version < (2, 7):
+        raise ImportError("Twisted requires Python 2.7 or later.")
+    elif version >= (3, 0) and version < (3, 4):
+        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+
+
+
 def getSetupArgs(extensions=_EXTENSIONS):
     """
+
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
+    _checkPythonVersion()
+
     arguments = STATIC_PACKAGE_METADATA.copy()
 
     # This is a workaround for distutils behavior; ext_modules isn't
@@ -341,8 +355,8 @@ class build_ext_twisted(build_ext.build_ext, object):
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
-        self.compiler.announce("checking for %s ..." % header_name, 0)
-        return self._compile_helper("#include <%s>\n" % header_name)
+        self.compiler.announce("checking for {} ...".format(header_name), 0)
+        return self._compile_helper("#include <{}>\n".format(header_name))
 
 
 

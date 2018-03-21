@@ -1,0 +1,1 @@
+twisted.application.service.IService is now documented as requiring the 'running', 'name' and 'parent' attributes (the documentation previously implied they were required, but was unclear).

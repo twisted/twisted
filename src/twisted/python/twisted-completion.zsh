@@ -1,4 +1,4 @@
-#compdef twistd trial conch cftp ckeygen pyhtmlizer tkconch
+#compdef twist twistd trial conch cftp ckeygen pyhtmlizer tkconch
 #
 # This is the ZSH completion file for Twisted commands. It calls the current
 # command-line with the special "--_shell-completion" option which is handled
