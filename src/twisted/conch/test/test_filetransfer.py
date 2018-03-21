@@ -156,7 +156,7 @@ class OurServerOurClientTests(SFTPTestBase):
 
     def test_serverVersion(self):
         self.assertEqual(self._serverVersion, 3)
-        self.assertEqual(self._extData, {b'conchTest' : b'ext data'})
+        self.assertEqual(self._extData, {b'conchTest': b'ext data'})
 
 
     def test_interface_implementation(self):
@@ -350,10 +350,12 @@ class OurServerOurClientTests(SFTPTestBase):
     def test_removeFile(self):
         d = self.client.getAttrs(b"testRemoveFile")
         self._emptyBuffers()
+
         def _removeFile(ignored):
             d = self.client.removeFile(b"testRemoveFile")
             self._emptyBuffers()
             return d
+
         d.addCallback(_removeFile)
         d.addCallback(_removeFile)
         return self.assertFailure(d, filetransfer.SFTPError)
@@ -362,15 +364,18 @@ class OurServerOurClientTests(SFTPTestBase):
     def test_renameFile(self):
         d = self.client.getAttrs(b"testRenameFile")
         self._emptyBuffers()
+
         def _rename(attrs):
             d = self.client.renameFile(b"testRenameFile", b"testRenamedFile")
             self._emptyBuffers()
             d.addCallback(_testRenamed, attrs)
             return d
+
         def _testRenamed(_, attrs):
             d = self.client.getAttrs(b"testRenamedFile")
             self._emptyBuffers()
             d.addCallback(self.assertEqual, attrs)
+
         return d.addCallback(_rename)
 
 
@@ -447,15 +452,18 @@ class OurServerOurClientTests(SFTPTestBase):
     def test_linkSharesAttrs(self):
         d = self.client.makeLink(b'testLink', b'testfile1')
         self._emptyBuffers()
+
         def _getFirstAttrs(_):
             d = self.client.getAttrs(b'testLink', 1)
             self._emptyBuffers()
             return d
+
         def _getSecondAttrs(firstAttrs):
             d = self.client.getAttrs(b'testfile1')
             self._emptyBuffers()
             d.addCallback(self.assertEqual, firstAttrs)
             return d
+
         d.addCallback(_getFirstAttrs)
         return d.addCallback(_getSecondAttrs)
 
@@ -463,6 +471,7 @@ class OurServerOurClientTests(SFTPTestBase):
     def test_linkPath(self):
         d = self.client.makeLink(b'testLink', b'testfile1')
         self._emptyBuffers()
+
         def _readLink(_):
             d = self.client.readLink(b'testLink')
             self._emptyBuffers()
@@ -472,6 +481,7 @@ class OurServerOurClientTests(SFTPTestBase):
                 self.assertEqual,
                 testFile.path)
             return d
+
         def _realPath(_):
             d = self.client.realPath(b'testLink')
             self._emptyBuffers()
@@ -481,6 +491,7 @@ class OurServerOurClientTests(SFTPTestBase):
                 self.assertEqual,
                 testLink.path)
             return d
+
         d.addCallback(_readLink)
         d.addCallback(_realPath)
         return d
@@ -577,7 +588,7 @@ class FileTransferCloseTests(unittest.TestCase):
 
     def assertSFTPConnectionLost(self):
         self.assertTrue(self.connectionLostFired,
-            "sftpServer's connectionLost was not called")
+                        "sftpServer's connectionLost was not called")
 
 
     def test_sessionClose(self):

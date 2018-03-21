@@ -271,9 +271,10 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
                 else:
                     log.msg('exitSignal: %s' % (signame,))
                     coreDumped = 0
-                self.session.conn.sendRequest(self.session, b'exit-signal',
-                        common.NS(ensureBytes(signame[3:])) +
-                        chr(coreDumped) + common.NS(b'') + common.NS(b''))
+                self.session.conn.sendRequest(
+                    self.session, b'exit-signal',
+                    common.NS(ensureBytes(signame[3:])) + chr(coreDumped) +
+                    common.NS(b'') + common.NS(b''))
             elif err.exitCode is not None:
                 log.msg('exitCode: %r' % (err.exitCode,))
                 self.session.conn.sendRequest(self.session, b'exit-status',

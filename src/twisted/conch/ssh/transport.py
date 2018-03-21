@@ -30,7 +30,7 @@ from twisted.python.bytes import ensureBytes
 from twisted.python.compat import iterbytes, _bytesChr as chr
 
 # This import is needed if SHA256 hashing is used.
-#from twisted.python.compat import nativeString
+# from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
@@ -658,7 +658,7 @@ class SSHTransportBase(protocol.Protocol):
             first = self.first
             del self.first
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
-        if packetLen > 1048576: # 1024 ** 2
+        if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
                 ensureBytes('bad packet length {}'.format(packetLen)))
@@ -672,7 +672,7 @@ class SSHTransportBase(protocol.Protocol):
                 DISCONNECT_PROTOCOL_ERROR,
                 ensureBytes(
                     'bad packet mod (%i%%%i == %i)' % (
-                        packetLen + 4, bs,(packetLen + 4) % bs)))
+                        packetLen + 4, bs, (packetLen + 4) % bs)))
             return
         encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
         packet = first + self.currentEncryptions.decrypt(encData[bs:])

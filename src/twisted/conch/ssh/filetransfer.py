@@ -28,7 +28,7 @@ class FileTransferBase(protocol.Protocol):
 
     def __init__(self):
         self.buf = b''
-        self.otherVersion = None # this gets set
+        self.otherVersion = None  # This gets set
 
 
     def sendPacket(self, kind, data):
@@ -53,7 +53,7 @@ class FileTransferBase(protocol.Protocol):
                 reqId, = struct.unpack('!L', data[:4])
                 self._sendStatus(reqId, FX_OP_UNSUPPORTED,
                                  "don't understand {}".format(packetType))
-                #XXX not implemented
+                # XXX not implemented
                 continue
             try:
                 f(data)
@@ -147,7 +147,7 @@ class FileTransferServer(FileTransferBase):
         for (k, v) in ourExt.items():
             ourExtData += NS(k) + NS(v)
         self.sendPacket(FXP_VERSION, struct.pack('!L', self.version) +
-                                     ourExtData)
+                        ourExtData)
 
 
     def packet_OPEN(self, data):
@@ -214,7 +214,7 @@ class FileTransferServer(FileTransferBase):
 
 
     def _cbRead(self, result, requestId):
-        if result == b'': # python's read will return this for EOF
+        if result == b'':  # Python's read will return this for EOF
             raise EOFError()
         self.sendPacket(FXP_DATA, requestId + NS(result))
 
@@ -432,7 +432,7 @@ class FileTransferServer(FileTransferBase):
         path, data = getNS(data)
         assert data == b'', 'still have data in REALPATH: {!r}'.format(data)
         d = defer.maybeDeferred(self.client.realPath, path)
-        d.addCallback(self._cbReadLink, requestId) # same return format
+        d.addCallback(self._cbReadLink, requestId)  # Same return format
         d.addErrback(self._ebStatus, requestId, b'realpath failed')
 
 
@@ -443,7 +443,7 @@ class FileTransferServer(FileTransferBase):
         d = defer.maybeDeferred(self.client.extendedRequest, extName, extData)
         d.addCallback(self._cbExtended, requestId)
         d.addErrback(self._ebStatus, requestId,
-            b'extended ' + extName + b' failed')
+                     b'extended ' + extName + b' failed')
 
 
     def _cbExtended(self, data, requestId):
@@ -458,17 +458,17 @@ class FileTransferServer(FileTransferBase):
         code = FX_FAILURE
         message = msg
         if isinstance(reason.value, (IOError, OSError)):
-            if reason.value.errno == errno.ENOENT: # no such file
+            if reason.value.errno == errno.ENOENT:  # No such file
                 code = FX_NO_SUCH_FILE
                 message = ensureBytes(reason.value.strerror)
-            elif reason.value.errno == errno.EACCES: # permission denied
+            elif reason.value.errno == errno.EACCES:  # Permission denied
                 code = FX_PERMISSION_DENIED
                 message = ensureBytes(reason.value.strerror)
             elif reason.value.errno == errno.EEXIST:
                 code = FX_FILE_ALREADY_EXISTS
             else:
                 log.err(reason)
-        elif isinstance(reason.value, EOFError): # EOF
+        elif isinstance(reason.value, EOFError):  # EOF
             code = FX_EOF
             if reason.value.args:
                 message = ensureBytes(reason.value.args[0])
@@ -971,6 +971,8 @@ class SFTPError(Exception):
 
     def __str__(self):
         return 'SFTPError {}: {}'.format(self.code, self.message)
+
+
 
 FXP_INIT = 1
 FXP_VERSION = 2

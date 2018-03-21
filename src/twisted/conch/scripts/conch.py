@@ -16,9 +16,18 @@ from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import ioType, unicode
 
-import os, sys, getpass, struct, tty, fcntl, signal
+import os
+import sys
+import getpass
+import struct
+import tty
+import fcntl
+import signal
+
+
 
 class ClientOptions(options.ConchOptions):
 
@@ -101,10 +110,12 @@ old = None
 _inRawMode = 0
 _savedRawMode = None
 
+
+
 def run():
     global options, old
     args = sys.argv[1:]
-    if '-l' in args: # cvs is an idiot
+    if '-l' in args:  # CVS is an idiot
         i = args.index('-l')
         args = args[i:i+2]+args
         del args[i+2:i+4]
@@ -112,7 +123,7 @@ def run():
         try:
             i = args.index(arg)
             if arg[:2] == '-o' and args[i+1][0] != '-':
-                args[i:i+2] = [] # suck on it scp
+                args[i:i+2] = []  # Suck on it scp
         except ValueError:
             pass
     options = ClientOptions()
@@ -179,7 +190,7 @@ def _stopReactor():
 
 def doConnect():
     if '@' in options['host']:
-        options['user'], options['host'] = options['host'].split('@',1)
+        options['user'], options['host'] = options['host'].split('@', 1)
     if not options.identitys:
         options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     host = options['host']
@@ -273,7 +284,7 @@ class _KeepAlive:
 
     def sendGlobal(self):
         d = self.conn.sendGlobalRequest(b"conch-keep-alive@twistedmatrix.com",
-                b"", wantReply=1)
+                                        b"", wantReply=1)
         d.addBoth(self._cbGlobal)
         self.globalTimeout = reactor.callLater(30, self._ebGlobal)
 
@@ -341,7 +352,7 @@ class SSHConnection(connection.SSHConnection):
         log.msg('cancelling remote forwarding {}'.format(remotePort))
         try:
             del self.remoteForwards[remotePort]
-        except:
+        except Exception:
             pass
         log.msg(repr(self.remoteForwards))
 
@@ -355,11 +366,12 @@ class SSHConnection(connection.SSHConnection):
             connectHP = self.remoteForwards[remoteHP[1]]
             log.msg('connect forwarding {}'.format(connectHP))
             return SSHConnectForwardingChannel(connectHP,
-                                            remoteWindow=windowSize,
-                                            remoteMaxPacket=maxPacket,
-                                            conn=self)
+                                               remoteWindow=windowSize,
+                                               remoteMaxPacket=maxPacket,
+                                               conn=self)
         else:
-            raise ConchError(connection.OPEN_CONNECT_FAILED, "don't know about that port")
+            raise ConchError(connection.OPEN_CONNECT_FAILED,
+                             "don't know about that port")
 
 
     def channelClosed(self, channel):
@@ -381,9 +393,11 @@ class SSHSession(channel.SSHChannel):
     def channelOpen(self, foo):
         log.msg('session {} open'.format(self.id))
         if options['agent']:
-            d = self.conn.sendRequest(self, b'auth-agent-req@openssh.com', b'', wantReply=1)
+            d = self.conn.sendRequest(self, b'auth-agent-req@openssh.com',
+                                      b'', wantReply=1)
             d.addBoth(lambda x: log.msg(x))
-        if options['noshell']: return
+        if options['noshell']:
+            return
         if (options['command'] and options['tty']) or not options['notty']:
             _enterRawMode()
         c = session.SSHSessionClient()
@@ -397,7 +411,7 @@ class SSHSession(channel.SSHChannel):
         fd = 0
         if options['subsystem']:
             self.conn.sendRequest(self, b'subsystem',
-                common.NS(options['command']))
+                                  common.NS(options['command']))
         elif options['command']:
             if options['tty']:
                 term = os.environ['TERM']
@@ -406,8 +420,7 @@ class SSHSession(channel.SSHChannel):
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, b'pty-req', ptyReqData)
                 signal.signal(signal.SIGWINCH, self._windowResized)
-            self.conn.sendRequest(self, b'exec',
-                common.NS(options['command']))
+            self.conn.sendRequest(self, b'exec', common.NS(options['command']))
         else:
             if not options['notty']:
                 term = os.environ['TERM']
@@ -452,8 +465,9 @@ class SSHSession(channel.SSHChannel):
                 channels = self.conn.channels.keys()
                 channels.sort()
                 for channelId in channels:
-                    self.stdio.write(u'  #{} {}\r\n'.format(channelId,
-                        str(self.conn.channels[channelId])).encode("ascii"))
+                    self.stdio.write(ensureBytes('  #{} {}\r\n'.format(
+                                     channelId,
+                                     self.conn.channels[channelId])))
                 return
             self.write(b'~' + char)
         else:
