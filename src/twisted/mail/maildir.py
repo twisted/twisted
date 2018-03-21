@@ -81,8 +81,10 @@ class _MaildirNameGenerator:
         seconds = int(t)
         microseconds = u'{:07d}'.format(int((t - int(t)) * 10e6))
         unique = u'{}.M{}P{}Q{}.{}'.format(seconds, microseconds, self.p,
-            self.n, self.s)
+                                           self.n, self.s)
         return unique.encode("ascii")
+
+
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
 
@@ -238,7 +240,7 @@ class AbstractMaildirDomain:
             return lambda: self.startMessage(user)
         try:
             a = self.alias[user.dest.local]
-        except:
+        except Exception:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.alias, memo)

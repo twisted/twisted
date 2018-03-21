@@ -39,7 +39,7 @@ from twisted.internet.error import (DNSLookupError, CannotListenError,
                                     ProcessDone, ProcessTerminated)
 from twisted.mail import pop3, smtp
 from twisted.mail.relaymanager import _AttemptManager
-from twisted.names import dns
+from twisted.names import dns, server, client, common
 from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
 from twisted.names.error import DNSNameError
 from twisted.python import failure, log
@@ -57,7 +57,7 @@ if platformType != "posix":
 
 
 class DomainWithDefaultsTests(unittest.TestCase):
-    def testMethods(self):
+    def test_methods(self):
         d = dict([(x, x + 10) for x in range(10)])
         d = mail.mail.DomainWithDefaultDict(d, 'Default')
 
@@ -170,18 +170,17 @@ class BounceTests(unittest.TestCase):
         self.domain = mail.mail.BounceDomain()
 
 
-    def testExists(self):
+    def test_exists(self):
         self.assertRaises(smtp.AddressError, self.domain.exists, "any user")
 
 
-    def testRelay(self):
+    def test_relay(self):
         self.assertEqual(
             self.domain.willRelay("random q emailer", "protocol"),
-            False
-        )
+            False)
 
 
-    def testAddUser(self):
+    def test_addUser(self):
         self.domain.addUser(b"bob", b"password")
         self.assertRaises(smtp.SMTPBadRcpt, self.domain.exists, "bob")
 
@@ -233,7 +232,7 @@ class FileMessageTests(unittest.TestCase):
     def tearDown(self):
         try:
             self.file.close()
-        except:
+        except Exception:
             pass
         try:
             os.remove(self.name)
@@ -241,11 +240,11 @@ class FileMessageTests(unittest.TestCase):
             pass
         try:
             os.remove(self.final)
-        except:
+        except Exception:
             pass
 
 
-    def testFinalName(self):
+    def test_finalName(self):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
 
 
@@ -255,7 +254,7 @@ class FileMessageTests(unittest.TestCase):
         self.assertFalse(os.path.exists(self.name))
 
 
-    def testContents(self):
+    def test_contents(self):
         contents = b"first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
@@ -264,7 +263,7 @@ class FileMessageTests(unittest.TestCase):
             self.assertEqual(f.read(), contents)
 
 
-    def testInterrupted(self):
+    def test_interrupted(self):
         contents = b"first line\nsecond line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
@@ -279,7 +278,7 @@ class MailServiceTests(unittest.TestCase):
         self.service = mail.mail.MailService()
 
 
-    def testFactories(self):
+    def test_factories(self):
         f = self.service.getPOP3Factory()
         self.assertTrue(isinstance(f, protocol.ServerFactory))
         self.assertTrue(f.buildProtocol(('127.0.0.1', 12345)), pop3.POP3)
@@ -293,7 +292,7 @@ class MailServiceTests(unittest.TestCase):
         self.assertTrue(f.buildProtocol(('127.0.0.1', 12345)), smtp.ESMTP)
 
 
-    def testPortals(self):
+    def test_portals(self):
         o1 = object()
         o2 = object()
         self.service.portals[b'domain'] = o1
@@ -567,7 +566,7 @@ class MaildirTests(unittest.TestCase):
         shutil.rmtree(self.dir)
 
 
-    def testInitializer(self):
+    def test_initializer(self):
         d = FilePath(self.dir)
         trash = d.child(b'.Trash')
 
@@ -729,8 +728,7 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
         self.D.addUser(b'user', b'password')
         self.assertRaises(
             NotImplementedError,
-            self.D.requestAvatar, 'user', None, ISomething
-        )
+            self.D.requestAvatar, 'user', None, ISomething)
 
         t = self.D.requestAvatar('user', None, pop3.IMailbox)
         self.assertEqual(len(t), 3)
@@ -753,8 +751,7 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
         creds = cred.credentials.UsernamePassword(b'user', b'wrong password')
         self.assertRaises(
             cred.error.UnauthorizedLogin,
-            database.requestAvatarId, creds
-        )
+            database.requestAvatarId, creds)
 
         creds = cred.credentials.UsernamePassword(b'user', b'password')
         self.assertEqual(database.requestAvatarId(creds), b'user')
@@ -838,7 +835,7 @@ class ServiceDomainTests(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
 
-    def testAddAliasableDomain(self):
+    def test_addAliasableDomain(self):
         """
         Test that adding an IAliasableDomain to a mail service properly sets
         up alias group references and such.
@@ -850,12 +847,11 @@ class ServiceDomainTests(unittest.TestCase):
         self.assertIdentical(domain.aliasGroup, aliases)
 
 
-    def testReceivedHeader(self):
+    def test_receivedHeader(self):
         hdr = self.D.receivedHeader(
             (b'remotehost', b'123.232.101.234'),
             smtp.Address('<someguy@someplace>'),
-            [b'user@host.name']
-        )
+            [b'user@host.name'])
         fp = StringIO(hdr.decode("ascii"))
         emailParser = email.parser.Parser()
         m = emailParser.parse(fp)
@@ -863,32 +859,31 @@ class ServiceDomainTests(unittest.TestCase):
         self.assertIn('Received', m)
 
 
-    def testValidateTo(self):
+    def test_validateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')
-        return defer.maybeDeferred(self.D.validateTo, user
-            ).addCallback(self._cbValidateTo
-            )
+        d = defer.maybeDeferred(self.D.validateTo, user)
+        return d.addCallback(self._cbValidateTo)
 
 
     def _cbValidateTo(self, result):
         self.assertTrue(callable(result))
 
 
-    def testValidateToBadUsername(self):
+    def test_validateToBadUsername(self):
         user = smtp.User('resu@test.domain', 'helo', None, 'wherever@whatever')
         return self.assertFailure(
             defer.maybeDeferred(self.D.validateTo, user),
             smtp.SMTPBadRcpt)
 
 
-    def testValidateToBadDomain(self):
+    def test_validateToBadDomain(self):
         user = smtp.User('user@domain.test', 'helo', None, 'wherever@whatever')
         return self.assertFailure(
             defer.maybeDeferred(self.D.validateTo, user),
             smtp.SMTPBadRcpt)
 
 
-    def testValidateFrom(self):
+    def test_validateFrom(self):
         helo = ('hostname', '127.0.0.1')
         origin = smtp.Address('<user@hostname>')
         self.assertTrue(self.D.validateFrom(helo, origin) is origin)
@@ -903,8 +898,7 @@ class ServiceDomainTests(unittest.TestCase):
 
         self.assertRaises(
             smtp.SMTPBadSender,
-            self.D.validateFrom, None, origin
-        )
+            self.D.validateFrom, None, origin)
 
 
 
@@ -930,11 +924,10 @@ class VirtualPOP3Tests(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
 
-    def testAuthenticateAPOP(self):
+    def test_authenticateAPOP(self):
         resp = md5(self.P.magic + b'password').hexdigest()
-        return self.P.authenticateUserAPOP(b'user', resp
-            ).addCallback(self._cbAuthenticateAPOP
-            )
+        d = self.P.authenticateUserAPOP(b'user', resp)
+        return d.addCallback(self._cbAuthenticateAPOP)
 
 
     def _cbAuthenticateAPOP(self, result):
@@ -944,24 +937,23 @@ class VirtualPOP3Tests(unittest.TestCase):
         result[2]()
 
 
-    def testAuthenticateIncorrectUserAPOP(self):
+    def test_authenticateIncorrectUserAPOP(self):
         resp = md5(self.P.magic + b'password').hexdigest()
         return self.assertFailure(
             self.P.authenticateUserAPOP(b'resu', resp),
             cred.error.UnauthorizedLogin)
 
 
-    def testAuthenticateIncorrectResponseAPOP(self):
+    def test_authenticateIncorrectResponseAPOP(self):
         resp = md5(b'wrong digest').hexdigest()
         return self.assertFailure(
             self.P.authenticateUserAPOP(b'user', resp),
             cred.error.UnauthorizedLogin)
 
 
-    def testAuthenticatePASS(self):
-        return self.P.authenticateUserPASS(b'user', b'password'
-            ).addCallback(self._cbAuthenticatePASS
-            )
+    def test_authenticatePASS(self):
+        d = self.P.authenticateUserPASS(b'user', b'password')
+        return d.addCallback(self._cbAuthenticatePASS)
 
 
     def _cbAuthenticatePASS(self, result):
@@ -971,13 +963,13 @@ class VirtualPOP3Tests(unittest.TestCase):
         result[2]()
 
 
-    def testAuthenticateBadUserPASS(self):
+    def test_authenticateBadUserPASS(self):
         return self.assertFailure(
             self.P.authenticateUserPASS(b'resu', b'password'),
             cred.error.UnauthorizedLogin)
 
 
-    def testAuthenticateBadPasswordPASS(self):
+    def test_authenticateBadPasswordPASS(self):
         return self.assertFailure(
             self.P.authenticateUserPASS(b'user', b'wrong password'),
             cred.error.UnauthorizedLogin)
@@ -991,7 +983,7 @@ class empty(smtp.User):
 
 
 class RelayTests(unittest.TestCase):
-    def testExists(self):
+    def test_exists(self):
         service = mail.mail.MailService()
         domain = mail.relay.DomainQueuer(service)
 
@@ -1050,21 +1042,21 @@ class RelayerTests(unittest.TestCase):
         shutil.rmtree(self.tmpdir.path)
 
 
-    def testMailFrom(self):
+    def test_mailFrom(self):
         for i in range(10):
             self.assertEqual(self.R.getMailFrom(), 'from-%d' % (i,))
             self.R.sentMail(250, None, None, None, None)
         self.assertEqual(self.R.getMailFrom(), None)
 
 
-    def testMailTo(self):
+    def test_mailTo(self):
         for i in range(10):
             self.assertEqual(self.R.getMailTo(), ['to-%d' % (i,)])
             self.R.sentMail(250, None, None, None, None)
         self.assertEqual(self.R.getMailTo(), None)
 
 
-    def testMailData(self):
+    def test_mailData(self):
         for i in range(10):
             name = self.tmpdir.child('body-{}'.format(i)).asBytesMode().path
             self.assertEqual(self.R.getMailData().read(), name)
@@ -1104,27 +1096,25 @@ class ManagedRelayerTests(unittest.TestCase):
         self.relay.factory = self.factory
 
 
-    def testSuccessfulSentMail(self):
+    def test_successfulSentMail(self):
         for i in self.messages:
             self.relay.sentMail(250, None, None, None, None)
 
         self.assertEqual(
             self.manager.success,
-            [(self.factory, m) for m in self.messages]
-        )
+            [(self.factory, m) for m in self.messages])
 
 
-    def testFailedSentMail(self):
+    def test_failedSentMail(self):
         for i in self.messages:
             self.relay.sentMail(550, None, None, None, None)
 
         self.assertEqual(
             self.manager.failure,
-            [(self.factory, m) for m in self.messages]
-        )
+            [(self.factory, m) for m in self.messages])
 
 
-    def testConnectionLost(self):
+    def test_connectionLost(self):
         self.relay.connectionLost(failure.Failure(Exception()))
         self.assertEqual(self.manager.done, [self.factory])
 
@@ -1150,7 +1140,7 @@ class DirectoryQueueTests(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
 
-    def testWaiting(self):
+    def test_waiting(self):
         self.assertTrue(self.queue.hasWaiting())
         self.assertEqual(len(self.queue.getWaiting()), 25)
 
@@ -1162,13 +1152,12 @@ class DirectoryQueueTests(unittest.TestCase):
         self.assertEqual(len(self.queue.getWaiting()), 25)
 
 
-    def testRelaying(self):
+    def test_relaying(self):
         for m in self.queue.getWaiting():
             self.queue.setRelaying(m)
             self.assertEqual(
                 len(self.queue.getRelayed()),
-                25 - len(self.queue.getWaiting())
-            )
+                25 - len(self.queue.getWaiting()))
 
         self.assertFalse(self.queue.hasWaiting())
 
@@ -1178,7 +1167,7 @@ class DirectoryQueueTests(unittest.TestCase):
         self.assertEqual(len(self.queue.getRelayed()), 24)
 
 
-    def testDone(self):
+    def test_done(self):
         msg = self.queue.getWaiting()[0]
         self.queue.setRelaying(msg)
         self.queue.done(msg)
@@ -1190,7 +1179,7 @@ class DirectoryQueueTests(unittest.TestCase):
         self.assertFalse(msg in self.queue.getRelayed())
 
 
-    def testEnvelope(self):
+    def test_envelope(self):
         envelopes = []
 
         for msg in self.queue.getWaiting():
@@ -1200,12 +1189,9 @@ class DirectoryQueueTests(unittest.TestCase):
         for i in range(25):
             self.assertEqual(
                 envelopes.pop(0),
-                ['header', i]
-            )
+                ['header', i])
 
-from twisted.names import server
-from twisted.names import client
-from twisted.names import common
+
 
 class TestAuthority(common.ResolverBase):
     def __init__(self):
@@ -1218,8 +1204,7 @@ class TestAuthority(common.ResolverBase):
             results = []
             for a in self.addresses[name]:
                 hdr = dns.RRHeader(
-                    name, dns.MX, dns.IN, 60, dns.Record_MX(0, a)
-                )
+                    name, dns.MX, dns.IN, 60, dns.Record_MX(0, a))
                 results.append(hdr)
             return defer.succeed((results, [], []))
         return defer.fail(failure.Failure(dns.DomainError(name)))
@@ -1279,7 +1264,7 @@ class MXTests(unittest.TestCase):
             reactor)
 
 
-    def testSimpleSuccess(self):
+    def test_simpleSuccess(self):
         self.auth.addresses[b'test.domain'] = [b'the.email.test.domain']
         return self.mx.getMX(b'test.domain').addCallback(self._cbSimpleSuccess)
 
@@ -1289,14 +1274,14 @@ class MXTests(unittest.TestCase):
         self.assertEqual(str(mx.name), 'the.email.test.domain')
 
 
-    def testSimpleFailure(self):
+    def test_simpleFailure(self):
         self.mx.fallbackToDomain = False
         return self.assertFailure(self.mx.getMX(b'test.domain'), IOError)
 
 
-    def testSimpleFailureWithFallback(self):
+    def test_simpleFailureWithFallback(self):
         return self.assertFailure(self.mx.getMX(b'test.domain'),
-            DNSLookupError)
+                                  DNSLookupError)
 
 
     def _exchangeTest(self, domain, records, correctMailExchange):
@@ -1321,8 +1306,10 @@ class MXTests(unittest.TestCase):
 
         self.mx.resolver = DummyResolver()
         d = self.mx.getMX(domain)
+
         def gotMailExchange(record):
             self.assertEqual(record.name.name, correctMailExchange)
+
         d.addCallback(gotMailExchange)
         return d
 
@@ -1559,10 +1546,12 @@ class MXTests(unittest.TestCase):
         d = self.mx.getMX(b"mail.example.com", cnameLimit)
         self.assertFailure(
             d, twisted.mail.relaymanager.CanonicalNameChainTooLong)
+
         def cbChainTooLong(error):
             self.assertEqual(error.args[0], Record_CNAME(
                 u"x-{}.example.com".format(cnameLimit + 1,).encode("ascii")))
             self.assertEqual(self.mx.resolver.chainCounter, cnameLimit + 1)
+
         d.addCallback(cbChainTooLong)
         return d
 
@@ -1626,31 +1615,28 @@ class MXTests(unittest.TestCase):
         return d
 
 
-    def testManyRecords(self):
+    def test_manyRecords(self):
         self.auth.addresses[b'test.domain'] = [
             b'mx1.test.domain', b'mx2.test.domain', b'mx3.test.domain'
         ]
-        return self.mx.getMX(b'test.domain'
-            ).addCallback(self._cbManyRecordsSuccessfulLookup
-            )
+        return self.mx.getMX(b'test.domain').addCallback(
+            self._cbManyRecordsSuccessfulLookup)
 
 
     def _cbManyRecordsSuccessfulLookup(self, mx):
         self.assertTrue(mx.name.name.split(b'.', 1)[0] in (
             b'mx1', b'mx2', b'mx3'))
         self.mx.markBad(mx.name.name)
-        return self.mx.getMX(b'test.domain'
-            ).addCallback(self._cbManyRecordsDifferentResult, mx
-            )
+        testMX = self.mx.getMX(b'test.domain')
+        return testMX.addCallback(self._cbManyRecordsDifferentResult, mx)
 
 
     def _cbManyRecordsDifferentResult(self, nextMX, mx):
         self.assertNotEqual(mx.name.name, nextMX.name.name)
         self.mx.markBad(nextMX.name.name)
 
-        return self.mx.getMX(b'test.domain'
-            ).addCallback(self._cbManyRecordsLastResult, mx, nextMX
-            )
+        testMX = self.mx.getMX(b'test.domain')
+        return testMX.addCallback(self._cbManyRecordsLastResult, mx, nextMX)
 
 
     def _cbManyRecordsLastResult(self, lastMX, mx, nextMX):
@@ -1660,9 +1646,9 @@ class MXTests(unittest.TestCase):
         self.mx.markBad(lastMX.name.name)
         self.mx.markGood(nextMX.name.name)
 
-        return self.mx.getMX(b'test.domain'
-            ).addCallback(self._cbManyRecordsRepeatSpecificResult, nextMX
-            )
+        testMX = self.mx.getMX(b'test.domain')
+        return testMX.addCallback(self._cbManyRecordsRepeatSpecificResult,
+                                  nextMX)
 
 
     def _cbManyRecordsRepeatSpecificResult(self, againMX, nextMX):
@@ -1690,9 +1676,10 @@ class LiveFireExerciseTests(unittest.TestCase):
         return tearDownDNS(self)
 
 
-    def testLocalDelivery(self):
+    def test_localDelivery(self):
         service = mail.mail.MailService()
-        service.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
+        service.smtpPortal.registerChecker(
+            cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(service, b'domainDir')
         domain.addUser(b'user', b'password')
         service.addDomain(b'test.domain', domain)
@@ -1732,10 +1719,11 @@ class LiveFireExerciseTests(unittest.TestCase):
         return done
 
 
-    def testRelayDelivery(self):
+    def test_relayDelivery(self):
         # Here is the service we will connect to and send mail from
         insServ = mail.mail.MailService()
-        insServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
+        insServ.smtpPortal.registerChecker(
+            cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(insServ, b'insertionDomain')
         insServ.addDomain(b'insertion.domain', domain)
         os.mkdir(b'insertionQueue')
@@ -1755,8 +1743,10 @@ class LiveFireExerciseTests(unittest.TestCase):
         # Here is the service the previous one will connect to for final
         # delivery
         destServ = mail.mail.MailService()
-        destServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
-        domain = mail.maildir.MaildirDirdbmDomain(destServ,
+        destServ.smtpPortal.registerChecker(
+            cred.checkers.AllowAnonymousAccess())
+        domain = mail.maildir.MaildirDirdbmDomain(
+            destServ,
             b'destinationDomain')
         domain.addUser(b'user', b'password')
         destServ.addDomain(b'destination.domain', domain)
@@ -1792,6 +1782,7 @@ class LiveFireExerciseTests(unittest.TestCase):
             # First part of the delivery is done.  Poke the queue manually now
             # so we don't have to wait for the queue to be flushed.
             delivery = manager.checkState()
+
             def delivered(ign):
                 mbox = domain.requestAvatar(b'user', None, pop3.IMailbox)[1]
                 msg = mbox.getMessage(0).read()
@@ -1802,8 +1793,10 @@ class LiveFireExerciseTests(unittest.TestCase):
                 helper.stopService()
             delivery.addCallback(delivered)
             return delivery
+
         done.addCallback(finished)
         return done
+
 
 
 aliasFile = BytesIO(b"""\
@@ -1850,7 +1843,7 @@ class AliasTests(unittest.TestCase):
         aliasFile.seek(0)
 
 
-    def testHandle(self):
+    def test_handle(self):
         result = {}
         lines = [
             b'user:  another@host\n',
@@ -1870,7 +1863,7 @@ class AliasTests(unittest.TestCase):
                          [b'first@host', b'second@host', b'last@anotherhost'])
 
 
-    def testFileLoader(self):
+    def test_fileLoader(self):
         domains = {'': object()}
         result = mail.alias.loadAliasFile(domains, fp=aliasFile)
 
@@ -1878,7 +1871,8 @@ class AliasTests(unittest.TestCase):
 
         group = result[b'testuser']
         s = str(group)
-        for a in ('address1', 'address2', 'address3', 'continuation@address', '/bin/process/this'):
+        for a in ('address1', 'address2', 'address3', 'continuation@address',
+                  '/bin/process/this'):
             self.assertNotEqual(s.find(a), -1)
         self.assertEqual(len(group), 5)
 
@@ -1896,7 +1890,7 @@ class AliasTests(unittest.TestCase):
         self.assertEqual(len(group), 3)
 
 
-    def testMultiWrapper(self):
+    def test_multiWrapper(self):
         msgs = LineBufferMessage(), LineBufferMessage(), LineBufferMessage()
         msg = mail.alias.MultiWrapper(msgs)
 
@@ -1912,7 +1906,7 @@ class AliasTests(unittest.TestCase):
             self.assertEqual(self.lines, m.lines)
 
 
-    def testFileAlias(self):
+    def test_fileAlias(self):
         tmpfile = FilePath(self.mktemp()).asBytesMode().path
         a = mail.alias.FileAlias(tmpfile, None, None)
         m = a.createMessageReceiver()
@@ -2488,14 +2482,13 @@ class _AttemptManagerTests(unittest.TestCase):
         self.eventLog = None
         log.addObserver(self._logObserver)
 
+        path = self.tmpdir.asBytesMode().path
         self.noisyAttemptMgr = _AttemptManager(
-                DummySmartHostSMTPRelayingManager(DummyQueue(
-                self.tmpdir.asBytesMode().path)),
-                True, self.reactor)
+            DummySmartHostSMTPRelayingManager(DummyQueue(path)), True,
+            self.reactor)
         self.quietAttemptMgr = _AttemptManager(
-                DummySmartHostSMTPRelayingManager(
-                    DummyQueue(self.tmpdir.asBytesMode().path)),
-                False, self.reactor)
+            DummySmartHostSMTPRelayingManager(DummyQueue(path)), False,
+            self.reactor)
 
         noisyBaseName = b"noisyMessage"
         quietBaseName = b"quietMessage"
