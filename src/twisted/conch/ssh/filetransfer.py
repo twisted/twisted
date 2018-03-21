@@ -269,10 +269,10 @@ class FileTransferServer(FileTransferBase):
         d.addErrback(self._ebStatus, requestId, b"opendir failed")
 
     def _cbOpenDirectory(self, dirObj, requestId):
-        handle = (str(hash(dirObj)))
+        handle = ensureBytes((str(hash(dirObj))))
         if handle in self.openDirs:
             raise KeyError("already opened this directory")
-        self.openDirs[handle] = [dirObj, iter(dirObj)]
+        self.openDirs[handle] = [ensureBytes(dirObj), iter(dirObj)]
         self.sendPacket(FXP_HANDLE, requestId + NS(handle))
 
     def packet_READDIR(self, data):
