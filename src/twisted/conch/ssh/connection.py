@@ -16,8 +16,9 @@ from twisted.conch.ssh import service, common
 from twisted.conch import error
 from twisted.internet import defer
 from twisted.python import log
+from twisted.python.bytes import ensureBytes
 from twisted.python.compat import (
-    networkString, nativeString, long, _bytesChr as chr)
+    nativeString, long, _bytesChr as chr)
 
 class SSHConnection(service.SSHService):
     """
@@ -160,7 +161,7 @@ class SSHConnection(service.SSHService):
             self.transport.sendPacket(
                 MSG_CHANNEL_OPEN_FAILURE,
                 struct.pack('>2L', senderChannel, reason) +
-                common.NS(networkString(textualInfo)) + common.NS(b''))
+                common.NS(ensureBytes(textualInfo)) + common.NS(b''))
 
     def ssh_CHANNEL_OPEN_CONFIRMATION(self, packet):
         """
@@ -635,7 +636,7 @@ for name, value in locals().copy().items():
         messages[value] = name # doesn't handle doubles
 
 import string
-alphanums = networkString(string.ascii_letters + string.digits)
+alphanums = ensureBytes(string.ascii_letters + string.digits)
 TRANSLATE_TABLE = b''.join([chr(i) in alphanums and chr(i) or b'_'
     for i in range(256)])
 SSHConnection.protocolMessages = messages

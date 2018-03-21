@@ -12,7 +12,8 @@ from errno import ENOSYS
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, iteritems
+from twisted.python.bytes import ensureBytes
+from twisted.python.compat import iteritems
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -691,7 +692,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         self.knownHosts.addHostKey(
             self.hostname, self.factory.publicKeys[b'ssh-rsa'])
         self.knownHosts.addHostKey(
-            networkString(self.serverAddress.host),
+            ensureBytes(self.serverAddress.host),
             self.factory.publicKeys[b'ssh-rsa'])
         self.knownHosts.save()
 
@@ -810,7 +811,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         endpoint.connect(factory)
 
         host, port, factory, timeout, bindAddress = self.reactor.tcpClients[0]
-        self.assertEqual(self.hostname, networkString(host))
+        self.assertEqual(self.hostname, ensureBytes(host))
         self.assertEqual(self.port, port)
         self.assertEqual(1, len(self.reactor.tcpClients))
 
@@ -869,7 +870,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         firstKey = Key.fromString(privateRSA_openssh).public()
         knownHosts = KnownHostsFile(FilePath(self.mktemp()))
         knownHosts.addHostKey(
-            networkString(self.serverAddress.host), firstKey)
+            ensureBytes(self.serverAddress.host), firstKey)
         # Add a different RSA key with the same hostname
         differentKey = Key.fromString(privateRSA_openssh_encrypted_aes,
                                       passphrase=b'testxp').public()
@@ -1232,7 +1233,7 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         knownHosts.addHostKey(
             self.hostname, self.factory.publicKeys[b'ssh-rsa'])
         knownHosts.addHostKey(
-            networkString(self.serverAddress.host),
+            ensureBytes(self.serverAddress.host),
             self.factory.publicKeys[b'ssh-rsa'])
 
         self.endpoint = SSHCommandClientEndpoint.newConnection(
