@@ -172,9 +172,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # Sanity check - no threads should have been started yet.
         self.assertEqual(tp.threads, [])
 
-        # this holds references obtained in onResult
-        refdict = {} # name -> ref value
-
         onResultWait = threading.Event()
         onResultDone = threading.Event()
 
@@ -183,8 +180,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # result callback
         def onResult(success, result):
             onResultWait.wait(self.getTimeout())
-            refdict['workerRef'] = workerRef()
-            refdict['uniqueRef'] = uniqueRef()
             onResultDone.set()
             resultRef.append(weakref.ref(result))
 
