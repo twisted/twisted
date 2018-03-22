@@ -45,7 +45,10 @@ jobs:
           name: Check pyflakes.
           command: |
             tox -r -e pyflakes
-
+      - run:
+          name: Check pycodestyle diff with trunk.
+          command: |
+            tox -r -e pycodestylediff
 
   #
   # Documentation tests are slow so we execute them in a separate job.

@@ -1,0 +1,1 @@
+In twisted.conch.scripts.conch, on Python 3 do not write bytes directly to sys.stderr.  On Python 3, this fixes remote SSH execution of a command which fails.
