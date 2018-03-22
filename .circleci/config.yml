@@ -32,21 +32,26 @@ jobs:
             pip install -q tox --user
             echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
 
-      # Run each checker in a separate step.
+      # Run each checker in a separate step, but always run all steps to get
+      # a the results from each step.
       - run:
           name: Check newsfragment.
+          when: always
           command: |
             tox -r -e newsfragment
       - run:
           name: Check manifest-checker.
+          when: always
           command: |
             tox -r -e manifest-checker
       - run:
           name: Check pyflakes.
+          when: always
           command: |
             tox -r -e pyflakes
       - run:
           name: Check pycodestyle diff with trunk.
+          when: always
           command: |
             tox -r -e pycodestylediff
 
