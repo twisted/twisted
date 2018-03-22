@@ -1519,9 +1519,9 @@ class SMTPClientErrorTests(unittest.TestCase):
         self.assertEqual(str(err), "foo bar")
         err = smtp.SMTPClientError(-1, u"\N{SNOWMAN} smiling")
         if _PY3:
-           self.assertEqual(str(err), u"\N{SNOWMAN} smiling")
+            self.assertEqual(str(err), u"\N{SNOWMAN} smiling")
         else:
-           self.assertEqual(str(err), b"\xe2\x98\x83 smiling")
+            self.assertEqual(str(err), b"\xe2\x98\x83 smiling")
 
 
     def test_strWithLog(self):
@@ -1681,7 +1681,8 @@ class SMTPUTF8Option(unittest.TestCase):
 
         # Try to send UTF-8 text when client encoding is ascii
         # will result in an error which causes the transport to disconnect.
-        self.clientProtocol.sendLine(u"RCPT TO:<прив@example.com>".encode("utf-8"))
+        self.clientProtocol.sendLine(
+            u"RCPT TO:<прив@example.com>".encode("utf-8"))
         self.assertTrue(self.clientProtocol.transport.disconnecting)
 
 
@@ -1695,7 +1696,8 @@ class SMTPUTF8Option(unittest.TestCase):
             b"250-STARTTLS\r\n"
             b"250 SMTPUTF8\r\n")
         self.assertEqual(self.clientProtocol._encoding, "utf-8")
-        self.clientProtocol.sendLine(u"RCPT TO:<прив@example.com>".encode("utf-8"))
+        self.clientProtocol.sendLine(
+            u"RCPT TO:<прив@example.com>".encode("utf-8"))
 
         # Try to send UTF-8 text when client encoding is utf-8 will work.
         # The transport will not disconnect.
@@ -2076,11 +2078,12 @@ class AddressTests(unittest.TestCase):
         such as "" and \
         """
         addr = smtp.Address("")
-        self.assertEqual(addr.dequote(u'"user@example.com"'),
-                                      b'user@example.com')
-        self.assertEqual(addr.dequote(b'"user@example.com"'),
-                                      b'user@example.com')
-        self.assertEqual(addr.dequote('"user@example.com"'),
-                                      b'user@example.com')
-        self.assertEqual(addr.dequote(u"Moshe\\\",Zadka <moshe@example.com>"),
-                                      b"Moshe\\,Zadka <moshe@example.com>")
+        self.assertEqual(
+            addr.dequote(u'"user@example.com"'), b'user@example.com')
+        self.assertEqual(
+            addr.dequote(b'"user@example.com"'), b'user@example.com')
+        self.assertEqual(
+            addr.dequote('"user@example.com"'), b'user@example.com')
+        self.assertEqual(
+            addr.dequote(u"Moshe\\\",Zadka <moshe@example.com>"),
+            b"Moshe\\,Zadka <moshe@example.com>")

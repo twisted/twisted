@@ -180,9 +180,11 @@ def quoteaddr(addr, encoding='utf-8'):
 
     if res == ('', ''):
         # It didn't parse, use it as-is
-        return  b'<' + str(addr).encode(encoding) + b'>'
+        return b'<' + str(addr).encode(encoding) + b'>'
     else:
-        return  b'<' + res[1].encode(encoding) + b'>'
+        return b'<' + res[1].encode(encoding) + b'>'
+
+
 
 COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
@@ -196,6 +198,8 @@ COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 # The following regular expression is taken from the 'atext' regular
 # expression specified in the above document.
 atom = u"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~\u00a0-\U0010ffff]"
+
+
 
 class Address:
     """
@@ -216,7 +220,7 @@ class Address:
                            |\\. # backslash-escaped characted
                            |''' + atom + u''' # atom character
                            )+|.) # or any single character''', re.X)
-    atomre = re.compile(atom) # match any one atom character
+    atomre = re.compile(atom)  # match any one atom character
 
 
     def __init__(self, addr, defaultDomain=None, encoding='utf-8'):
@@ -263,7 +267,8 @@ class Address:
             elif (len(atl[0]) == 1 and
                   not self.atomre.match(atl[0]) and
                   atl[0] != u'.'):
-                raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
+                raise AddressError(
+                    "Parse error at {!r} of {!r}".format(atl[0], (addr, atl)))
             else:
                 if not domain:
                     local.append(atl[0])
@@ -535,11 +540,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                           |<''' + qstring + u'''> # <addr>
                           |''' + qstring + u''' # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-                          $''', re.I|re.X)
+                          $''', re.I | re.X)
     rcpt_re = re.compile(u'\s*TO:\s*(?P<path><' + qstring + u'''> # <addr>
                           |''' + qstring + u''' # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-                          $''', re.I|re.X)
+                          $''', re.I | re.X)
 
     def do_MAIL(self, rest):
         if self._from:
@@ -959,13 +964,14 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             line.decode(self._encoding)
         except UnicodeDecodeError:
             self.sendError(
-                SMTPProtocolError(-1,
+                SMTPProtocolError(
+                    -1,
                     "Server supports {} encoding, invalid "
                     "characters detected in sent line:\n{} .".format(
                         self._encoding, repr(line)),
                     self.log.str()))
             return
-        basic.LineReceiver.sendLine(self,line)
+        basic.LineReceiver.sendLine(self, line)
 
 
     def connectionMade(self):
@@ -1084,10 +1090,10 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         except StopIteration:
             if self.successAddresses:
                 self.sendLine(b'DATA')
-                self._expected = [ 354 ]
+                self._expected = [354]
                 self._okresponse = self.smtpState_data
             else:
-                return self.smtpState_msgSent(code,'No recipients accepted')
+                return self.smtpState_msgSent(code, 'No recipients accepted')
         else:
             self.sendLine(b'RCPT TO:' + quoteaddr(self.lastAddress,
                                                   self._encoding))
