@@ -65,7 +65,6 @@ on event-based network programming and multiprotocol integration.
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
@@ -104,7 +103,7 @@ _EXTRA_OPTIONS = dict(
     ],
     soap=['soappy'],
     serial=['pyserial >= 3.0'],
-    osx=['pyobjc-core',
+    macos=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
     windows=['pypiwin32'],
@@ -128,13 +127,14 @@ _EXTRAS_REQUIRE = {
     'serial': _EXTRA_OPTIONS['serial'],
     'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
-    'osx_platform': (
-        _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
+    'macos_platform': (
+        _EXTRA_OPTIONS['macos'] + _PLATFORM_INDEPENDENT
     ),
     'windows_platform': (
         _EXTRA_OPTIONS['windows'] + _PLATFORM_INDEPENDENT
     ),
 }
+_EXTRAS_REQUIRE['osx_platform'] = _EXTRAS_REQUIRE['macos_platform']
 
 # Scripts provided by Twisted on Python 2 and 3.
 _CONSOLE_SCRIPTS = [
@@ -197,11 +197,26 @@ _EXTENSIONS = [
 
 
 
+def _checkPythonVersion():
+    """
+    Fail if we detect a version of Python we don't support.
+    """
+    version = getattr(sys, "version_info", (0,))
+    if version < (2, 7):
+        raise ImportError("Twisted requires Python 2.7 or later.")
+    elif version >= (3, 0) and version < (3, 4):
+        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+
+
+
 def getSetupArgs(extensions=_EXTENSIONS):
     """
+
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
+    _checkPythonVersion()
+
     arguments = STATIC_PACKAGE_METADATA.copy()
 
     # This is a workaround for distutils behavior; ext_modules isn't
@@ -340,8 +355,8 @@ class build_ext_twisted(build_ext.build_ext, object):
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
-        self.compiler.announce("checking for %s ..." % header_name, 0)
-        return self._compile_helper("#include <%s>\n" % header_name)
+        self.compiler.announce("checking for {} ...".format(header_name), 0)
+        return self._compile_helper("#include <{}>\n".format(header_name))
 
 
 
@@ -364,27 +379,19 @@ def _checkCPython(sys=sys, platform=platform):
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.mail.__init__",
     "twisted.mail.alias",
     "twisted.mail.bounce",
     "twisted.mail.mail",
     "twisted.mail.maildir",
     "twisted.mail.pb",
-    "twisted.mail.pop3",
-    "twisted.mail.pop3client",
-    "twisted.mail.protocols",
-    "twisted.mail.relay",
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
     "twisted.mail.scripts.mailmail",
     "twisted.mail.tap",
-    "twisted.mail.test.pop3testserver",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_mail",
     "twisted.mail.test.test_mailmail",
     "twisted.mail.test.test_options",
-    "twisted.mail.test.test_pop3",
-    "twisted.mail.test.test_pop3client",
     "twisted.mail.test.test_scripts",
     "twisted.news.__init__",
     "twisted.news.database",

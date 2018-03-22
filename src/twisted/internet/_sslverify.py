@@ -1048,7 +1048,7 @@ def platformTrust():
               <https://launchpad.net/ubuntu/+source/ca-certificates>} package
               installed,
 
-            - Mac OS X when using the system-installed version of OpenSSL (i.e.
+            - macOS when using the system-installed version of OpenSSL (i.e.
               I{not} one installed via MacPorts or Homebrew),
 
             - any build of OpenSSL which has had certificate authority
@@ -1062,7 +1062,7 @@ def platformTrust():
         Hopefully soon, this API will be updated to use more sophisticated
         trust-root discovery mechanisms.  Until then, you can follow tickets in
         the Twisted tracker for progress on this implementation on U{Microsoft
-        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
+        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{macOS
         <https://twistedmatrix.com/trac/ticket/6372>}, and U{a fallback for
         other platforms which do not have native trust management tools
         <https://twistedmatrix.com/trac/ticket/6934>}.
@@ -1592,8 +1592,8 @@ class OpenSSLCertificateOptions(object):
         self.dhParameters = dhParameters
 
         try:
-            self._ecCurve = _OpenSSLECCurve(_defaultCurveName)
-        except NotImplementedError:
+            self._ecCurve = self._getEllipticCurve(_defaultCurveName)
+        except ValueError:
             self._ecCurve = None
 
         if acceptableCiphers is None:
@@ -1626,6 +1626,18 @@ class OpenSSLCertificateOptions(object):
             )
 
         self._acceptableProtocols = acceptableProtocols
+
+
+    def _getEllipticCurve(self, name):
+        """
+        A patchable wrapper for L{OpenSSL.crypto.get_elliptic_curve}
+
+        @param name: The name of the elliptic curve to look up.
+        @type name: L{unicode}
+
+        @return: A pyOpenSSL elliptic curve object.
+        """
+        return crypto.get_elliptic_curve(name)
 
 
     def __getstate__(self):
@@ -1693,7 +1705,7 @@ class OpenSSLCertificateOptions(object):
 
         if self._ecCurve is not None:
             try:
-                self._ecCurve.addECKeyToContext(ctx)
+                ctx.set_tmp_ecdh(self._ecCurve)
             except BaseException:
                 pass  # ECDHE support is best effort only.
 
@@ -1711,75 +1723,6 @@ OpenSSLCertificateOptions.__getstate__ = deprecated(
 OpenSSLCertificateOptions.__setstate__ = deprecated(
         Version("Twisted", 15, 0, 0),
         "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
-
-
-
-class _OpenSSLECCurve(FancyEqMixin, object):
-    """
-    A private representation of an OpenSSL ECC curve.
-    """
-    compareAttributes = ("snName", )
-
-    def __init__(self, snName):
-        """
-        @param snName: The name of the curve as used by C{OBJ_sn2nid}.
-        @param snName: L{unicode}
-
-        @raises NotImplementedError: If ECC support is not available.
-        @raises ValueError: If C{snName} is not a supported curve.
-        """
-        self.snName = nativeString(snName)
-
-        # As soon as pyOpenSSL supports ECDHE directly, attempt to use its
-        # APIs first.  See #7033.
-
-        # If pyOpenSSL is based on cryptography.io (0.14+), we use its
-        # bindings directly to set the ECDHE curve.
-        try:
-            binding = self._getBinding()
-            self._lib = binding.lib
-            self._ffi = binding.ffi
-            self._nid = self._lib.OBJ_sn2nid(self.snName.encode('ascii'))
-            if self._nid == self._lib.NID_undef:
-                raise ValueError("Unknown ECC curve.")
-        except AttributeError:
-            raise NotImplementedError(
-                "This version of pyOpenSSL does not support ECC."
-            )
-
-
-    def _getBinding(self):
-        """
-        Attempt to get cryptography's binding instance.
-
-        @raises NotImplementedError: If underlying pyOpenSSL is not based on
-            cryptography.
-
-        @return: cryptograpy bindings.
-        @rtype: C{cryptography.hazmat.bindings.openssl.Binding}
-        """
-        try:
-            from OpenSSL._util import binding
-            return binding
-        except ImportError:
-            raise NotImplementedError(
-                "This version of pyOpenSSL does not support ECC."
-            )
-
-
-    def addECKeyToContext(self, context):
-        """
-        Add a temporary EC key to C{context}.
-
-        @param context: The context to add a key to.
-        @type context: L{OpenSSL.SSL.Context}
-        """
-        ecKey = self._lib.EC_KEY_new_by_curve_name(self._nid)
-        if ecKey == self._ffi.NULL:
-            raise EnvironmentError("EC key creation failed.")
-
-        self._lib.SSL_CTX_set_tmp_ecdh(context._context, ecKey)
-        self._lib.EC_KEY_free(ecKey)
 
 
 

@@ -62,7 +62,7 @@ it - set the response's status code.
     class PaymentRequired(Resource):
         def render_GET(self, request):
             request.setResponseCode(402)
-            return "<html><body>Please swipe your credit card.</body></html>"
+            return b"<html><body>Please swipe your credit card.</body></html>"
 
 
 
@@ -87,7 +87,7 @@ the above defined resource at ``/buy`` :
 
 
     root = Resource()
-    root.putChild("buy", PaymentRequired())
+    root.putChild(b"buy", PaymentRequired())
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)
@@ -112,10 +112,10 @@ Here's the complete example:
     class PaymentRequired(Resource):
         def render_GET(self, request):
             request.setResponseCode(402)
-            return "<html><body>Please swipe your credit card.</body></html>"
+            return b"<html><body>Please swipe your credit card.</body></html>"
 
     root = Resource()
-    root.putChild("buy", PaymentRequired())
+    root.putChild(b"buy", PaymentRequired())
     factory = Site(root)
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
     endpoint.listen(factory)

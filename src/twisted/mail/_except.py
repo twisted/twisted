@@ -136,11 +136,11 @@ class SMTPClientError(SMTPError):
         self.isFatal = isFatal
         self.retry = retry
 
-    if _PY3:
-        def __str__(self):
+
+    def __str__(self):
+        if _PY3:
             return self.__bytes__().decode("utf-8")
-    else:
-        def __str__(self):
+        else:
             return self.__bytes__()
 
 
@@ -155,6 +155,9 @@ class SMTPClientError(SMTPError):
         if self.log:
             res.append(self.log)
             res.append(b'')
+        for (i, r) in enumerate(res):
+            if isinstance(r, unicode):
+                res[i] = r.encode('utf-8')
         return b'\n'.join(res)
 
 

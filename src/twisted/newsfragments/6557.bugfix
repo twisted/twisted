@@ -1,0 +1,1 @@
+twisted.protocols.basic.LineOnlyReceiver disconnects the transport after receiving a line that exceeds MAX_LENGTH, like LineReceiver.

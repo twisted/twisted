@@ -1,0 +1,1 @@
+Writing large amounts of data no longer implies repeated, expensive copying under Python 3.  Python 3's write speeds are now as fast as Python 2's.
