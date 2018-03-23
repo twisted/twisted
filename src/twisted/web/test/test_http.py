@@ -3139,10 +3139,23 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.flushLoggedErrors(RuntimeError)
 
 
+    def test_getClientIPWithIPv4(self):
+        """
+        L{http.Request.getClientIP} returns the host part of the
+        client's address when connected over IPv4.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12344)))
+        request.gotLength(0)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        self.assertEqual(request.getClientIP(), "127.0.0.1")
+
+
+
     def test_getClientIPWithIPv6(self):
         """
-        L{http.Request.getClientIP} returns the host part the client's
-        address when connected over IPv6.
+        L{http.Request.getClientIP} returns the host part of the
+        client's address when connected over IPv6.
         """
         request = http.Request(
             DummyChannel(peer=address.IPv6Address("TCP", "::1", 12344)))
