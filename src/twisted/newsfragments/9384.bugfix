@@ -1,3 +1,2 @@
 Syntax error under Python 3.7 fixed for twisted.conch.manhole and
-twisted.main.imap4. isAsync keyword argument is used by default instead of
-async, async keywoard argument is deprecated.
+twisted.main.imap4.
