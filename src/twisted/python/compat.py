@@ -31,6 +31,7 @@ import struct
 import sys
 import tokenize
 from types import MethodType as _MethodType
+import warnings
 
 from io import TextIOBase, IOBase
 
@@ -845,6 +846,10 @@ def get_async_param(isAsync=None, **kwargs):
     @return: Final isAsync param value
     @rtype: L{bool}
     """
+    if 'async' in kwargs:
+        warnings.warn(
+            "'async' keyword argument is deprecated, please use isAsync",
+            DeprecationWarning, stacklevel=2)
     if isAsync is None and 'async' in kwargs:
         isAsync = kwargs.pop('async')
     if kwargs:

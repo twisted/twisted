@@ -939,3 +939,13 @@ class GetAsyncParamTests(unittest.SynchronousTestCase):
             get_async_param(isAsync=None, **{'async': False}), False)
         self.assertEqual(get_async_param(isAsync=None, **{'async': True}), True)
         self.assertRaises(TypeError, get_async_param, False, {'async': False})
+
+
+    def test_get_async_param_deprecation(self):
+        self.assertEqual(
+            get_async_param(isAsync=None, **{'async': False}), False)
+        currentWarnings = self.flushWarnings(
+            offendingFunctions=[self.test_get_async_param_deprecation])
+        self.assertEqual(
+            currentWarnings[0]['message'],
+            "'async' keyword argument is deprecated, please use isAsync")
