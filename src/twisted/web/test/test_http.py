@@ -3151,7 +3151,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(request.getClientIP(), "127.0.0.1")
 
 
-
     def test_getClientIPWithIPv6(self):
         """
         L{http.Request.getClientIP} returns the host part of the
