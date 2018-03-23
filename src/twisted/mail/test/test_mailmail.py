@@ -114,7 +114,7 @@ class OptionsTests(TestCase):
     def test_version(self):
         """
         The I{--version} option displays the version and raises
-        L{SystemExit}.
+        L{SystemExit} with L{None} as the exit code.
         """
         out = NativeStringIO()
         self.patch(sys, 'stdout', out)
@@ -126,7 +126,7 @@ class OptionsTests(TestCase):
         self.assertEqual(data, "mailmail version: {}\n".format(version))
 
 
-    def test_backGroundDelivery(self):
+    def test_backgroundDelivery(self):
         """
         The I{-odb} flag specifies background delivery.
         """
@@ -136,7 +136,7 @@ class OptionsTests(TestCase):
         self.assertTrue(o.background)
 
 
-    def test_foreGroundDelivery(self):
+    def test_foregroundDelivery(self):
         """
         The I{-odf} flags specifies foreground delivery.
         """
@@ -188,7 +188,7 @@ class OptionsTests(TestCase):
         self.assertEqual(o.sender, "invaliduser4@example.com")
 
 
-    def test_run(self):
+    def test_runErrorsToStderr(self):
         """
         Call L{mailmail.run}, and specify I{-oep} to print errors
         to stderr.  The sender, to, and printErrors options should be
@@ -213,8 +213,7 @@ class OptionsTests(TestCase):
 
     def test_readInvalidConfig(self):
         """
-        Read an invalid configuration file.  Error messages
-        for illegal UID value, illegal GID value, and illegal
+        Error messages for illegal UID value, illegal GID value, and illegal
         identity entry will be sent to stderr.
         """
         stdin = NativeStringIO('\n')
