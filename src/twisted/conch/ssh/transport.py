@@ -26,10 +26,11 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
+from twisted.python.bytes import ensureBytes
+from twisted.python.compat import iterbytes, _bytesChr as chr
 
 # This import is needed if SHA256 hashing is used.
-#from twisted.python.compat import nativeString
+# from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
@@ -657,10 +658,10 @@ class SSHTransportBase(protocol.Protocol):
             first = self.first
             del self.first
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
-        if packetLen > 1048576: # 1024 ** 2
+        if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString('bad packet length %s' % (packetLen,)))
+                ensureBytes('bad packet length {}'.format(packetLen)))
             return
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
@@ -669,9 +670,9 @@ class SSHTransportBase(protocol.Protocol):
         if (packetLen + 4) % bs != 0:
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString(
+                ensureBytes(
                     'bad packet mod (%i%%%i == %i)' % (
-                        packetLen + 4, bs,(packetLen + 4) % bs)))
+                        packetLen + 4, bs, (packetLen + 4) % bs)))
             return
         encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
         packet = first + self.currentEncryptions.decrypt(encData[bs:])
