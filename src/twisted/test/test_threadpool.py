@@ -172,6 +172,9 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # Sanity check - no threads should have been started yet.
         self.assertEqual(tp.threads, [])
 
+        # this holds references obtained in onResult
+        refdict = {} # name -> ref value
+
         onResultWait = threading.Event()
         onResultDone = threading.Event()
 
@@ -179,7 +182,12 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         # result callback
         def onResult(success, result):
+            # Spin the GC, which should now delete worker and unique if it's
+            # not held on to by callInThreadWithCallback after it is complete
+            gc.collect()
             onResultWait.wait(self.getTimeout())
+            refdict['workerRef'] = workerRef()
+            refdict['uniqueRef'] = uniqueRef()
             onResultDone.set()
             resultRef.append(weakref.ref(result))
 
@@ -221,6 +229,9 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         gc.collect()
         self.assertIsNone(onResultRef())
         self.assertIsNone(resultRef[0]())
+
+        # The callback shouldn't have been able to resolve the references.
+        self.assertEqual(list(refdict.values()), [None, None])
 
 
     def test_persistence(self):
@@ -740,4 +751,3 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         helper.threadpool.start()
         helper.performAllCoordination()
         self.assertEqual(len(helper.workers), helper.threadpool.max)
-
