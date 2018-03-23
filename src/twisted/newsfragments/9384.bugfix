@@ -1,3 +1,3 @@
 Syntax error under Python 3.7 fixed for twisted.conch.manhole and
-twisted.main.imap4. _async keyword argument is used by default instead of async,
-but async is also supported for backwards compatibility.
+twisted.main.imap4. isAsync keyword argument is used by default instead of
+async, but async is also supported for backwards compatibility.

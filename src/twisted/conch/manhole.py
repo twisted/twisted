@@ -153,9 +153,9 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return failure
 
 
-    def write(self, data, _async=None, **kwargs):
-        _async = get_async_param(_async, **kwargs)
-        self.handler.addOutput(data, _async)
+    def write(self, data, isAsync=None, **kwargs):
+        isAsync = get_async_param(isAsync, **kwargs)
+        self.handler.addOutput(data, isAsync)
 
 
 
@@ -240,16 +240,16 @@ class Manhole(recvline.HistoricRecvLine):
         return not w.endswith(b'\n') and not w.endswith(b'\x1bE')
 
 
-    def addOutput(self, data, _async=None, **kwargs):
-        _async = get_async_param(_async, **kwargs)
-        if _async:
+    def addOutput(self, data, isAsync=None, **kwargs):
+        isAsync = get_async_param(isAsync, **kwargs)
+        if isAsync:
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) +
                                          len(self.ps[self.pn]))
 
         self.terminal.write(data)
 
-        if _async:
+        if isAsync:
             if self._needsNewline():
                 self.terminal.nextLine()
 
