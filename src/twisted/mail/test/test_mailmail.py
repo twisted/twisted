@@ -266,7 +266,7 @@ class OptionsTests(TestCase):
                                        " due to lack of support for getuid()")
 
 
-    def _loadConfig(self, config):
+    def getConfigFromFile(self, config):
         """
         Read a mailmail configuration file.
 
@@ -296,43 +296,43 @@ class OptionsTests(TestCase):
         L{twisted.mail.scripts.mailmail.loadConfig}
         parses the config file for mailmail.
         """
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [addresses]
 smarthost=localhost""")
         self.assertEqual(config.smarthost, "localhost")
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [addresses]
 default_domain=example.com""")
         self.assertEqual(config.domain, "example.com")
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [addresses]
 smarthost=localhost
 default_domain=example.com""")
         self.assertEqual(config.smarthost, "localhost")
         self.assertEqual(config.domain, "example.com")
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [identity]
 host1=invalid
 host2=username:password""")
         self.assertNotIn("host1", config.identities)
         self.assertEqual(config.identities["host2"], ["username", "password"])
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [useraccess]
 allow=invalid1,35
 order=allow""")
         self.assertEqual(config.allowUIDs, [35])
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [useraccess]
 deny=35,36
 order=deny""")
         self.assertEqual(config.denyUIDs, [35, 36])
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [useraccess]
 allow=35,36
 deny=37,38
@@ -340,19 +340,19 @@ order=deny""")
         self.assertEqual(config.allowUIDs, [35, 36])
         self.assertEqual(config.denyUIDs, [37, 38])
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [groupaccess]
 allow=gid1,41
 order=allow""")
         self.assertEqual(config.allowGIDs, [41])
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [groupaccess]
 deny=41
 order=deny""")
         self.assertEqual(config.denyGIDs, [41])
 
-        config = self._loadConfig("""
+        config = self.getConfigFromFile("""
 [groupaccess]
 allow=41,42
 deny=43,44
