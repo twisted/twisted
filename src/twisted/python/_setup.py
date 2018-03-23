@@ -141,19 +141,13 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
+    "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
-# Scripts provided by Twisted on Python 2 only.
-_CONSOLE_SCRIPTS_PY2 = [
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    ]
-
-if not _PY3:
-    _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
 
 
 
@@ -376,13 +370,10 @@ def _checkCPython(sys=sys, platform=platform):
     return platform.python_implementation() == "CPython"
 
 
+
 _isCPython = _checkCPython()
 
 notPortedModules = [
-    "twisted.mail.scripts.__init__",
-    "twisted.mail.scripts.mailmail",
-    "twisted.mail.test.test_mailmail",
-    "twisted.mail.test.test_scripts",
     "twisted.news.__init__",
     "twisted.news.database",
     "twisted.news.news",
