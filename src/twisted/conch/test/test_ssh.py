@@ -439,7 +439,7 @@ if cryptography is not None and pyasn1 is not None:
         def verifyHostKey(self, key, fp):
             keyMatch = key == keys.Key.fromString(publicRSA_openssh).blob()
             fingerprintMatch = (
-                fp == b'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
+                fp == b'85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da')
             if keyMatch and fingerprintMatch:
                 return defer.succeed(1)
             return defer.fail(Exception("Key or fingerprint mismatch"))
