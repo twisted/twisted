@@ -830,7 +830,7 @@ else:
 
 
 
-def get_async_param(isAsync=None, **kwargs):
+def _get_async_param(isAsync=None, **kwargs):
     """
     Provide a backwards-compatible way to get async param value that does not
     cause a syntax error under Python 3.7.
@@ -898,5 +898,5 @@ __all__ = [
     "unichr",
     "raw_input",
     "_tokenize",
-    "get_async_param",
+    "_get_async_param",
 ]

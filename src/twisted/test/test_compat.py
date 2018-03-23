@@ -16,7 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode, unichr, raw_input, _bytesRepr, get_async_param,
+    _coercedUnicode, unichr, raw_input, _bytesRepr, _get_async_param,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -926,25 +926,30 @@ class FutureBytesReprTests(unittest.TestCase):
 
 class GetAsyncParamTests(unittest.SynchronousTestCase):
     """
-    Tests for L{get_async_param}
+    Tests for L{twisted.python.compat._get_async_param}
     """
 
     def test_get_async_param(self):
         """
-        L{twisted.python.compat.get_async_param}
+        L{twisted.python.compat._get_async_param} uses isAsync by default,
+        or deprecated async keyword argument if isAsync is None.
         """
-        self.assertEqual(get_async_param(isAsync=False), False)
-        self.assertEqual(get_async_param(isAsync=True), True)
+        self.assertEqual(_get_async_param(isAsync=False), False)
+        self.assertEqual(_get_async_param(isAsync=True), True)
         self.assertEqual(
-            get_async_param(isAsync=None, **{'async': False}), False)
+            _get_async_param(isAsync=None, **{'async': False}), False)
         self.assertEqual(
-            get_async_param(isAsync=None, **{'async': True}), True)
-        self.assertRaises(TypeError, get_async_param, False, {'async': False})
+            _get_async_param(isAsync=None, **{'async': True}), True)
+        self.assertRaises(TypeError, _get_async_param, False, {'async': False})
 
 
     def test_get_async_param_deprecation(self):
+        """
+        L{twisted.python.compat._get_async_param} raises a deprecation
+        warning if async keyword argument is passed.
+        """
         self.assertEqual(
-            get_async_param(isAsync=None, **{'async': False}), False)
+            _get_async_param(isAsync=None, **{'async': False}), False)
         currentWarnings = self.flushWarnings(
             offendingFunctions=[self.test_get_async_param_deprecation])
         self.assertEqual(

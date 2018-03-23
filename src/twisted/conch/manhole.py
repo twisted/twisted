@@ -19,7 +19,7 @@ from io import BytesIO
 from twisted.conch import recvline
 
 from twisted.internet import defer
-from twisted.python.compat import _tokenize, get_async_param
+from twisted.python.compat import _tokenize, _get_async_param
 from twisted.python.htmlizer import TokenPrinter
 
 
@@ -154,7 +154,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 
 
     def write(self, data, isAsync=None, **kwargs):
-        isAsync = get_async_param(isAsync, **kwargs)
+        isAsync = _get_async_param(isAsync, **kwargs)
         self.handler.addOutput(data, isAsync)
 
 
@@ -241,7 +241,7 @@ class Manhole(recvline.HistoricRecvLine):
 
 
     def addOutput(self, data, isAsync=None, **kwargs):
-        isAsync = get_async_param(isAsync, **kwargs)
+        isAsync = _get_async_param(isAsync, **kwargs)
         if isAsync:
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) +

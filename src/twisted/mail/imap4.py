@@ -42,7 +42,7 @@ from twisted.python.compat import (
     _bytesChr, unichr as chr, _b64decodebytes as decodebytes,
     _b64encodebytes as encodebytes,
     intToBytes, iterbytes, long, nativeString, networkString, unicode,
-    _matchingString, _PY3, get_async_param,
+    _matchingString, _PY3, _get_async_param,
 )
 from twisted.internet import interfaces
 
@@ -1091,7 +1091,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def sendUntaggedResponse(self, message, isAsync=None, **kwargs):
-        isAsync = get_async_param(isAsync, **kwargs)
+        isAsync = _get_async_param(isAsync, **kwargs)
         if not isAsync or (self.blocked is None):
             self._respond(message, None, None)
         else:
