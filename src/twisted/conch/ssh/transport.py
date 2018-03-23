@@ -737,7 +737,7 @@ class SSHTransportBase(protocol.Protocol):
                     self.gotVersion = True
                     # Since the line was split on '\n' and most of the time
                     # it uses '\r\n' we may get an extra '\r'.
-                    self.otherVersionString = p.rstrip('\r')
+                    self.otherVersionString = p.rstrip(b'\r')
                     remoteVersion = p.split(b'-')[1]
                     if remoteVersion not in self.supportedVersions:
                         self._unsupportedVersionReceived(remoteVersion)
