@@ -937,7 +937,8 @@ class GetAsyncParamTests(unittest.SynchronousTestCase):
         self.assertEqual(get_async_param(isAsync=True), True)
         self.assertEqual(
             get_async_param(isAsync=None, **{'async': False}), False)
-        self.assertEqual(get_async_param(isAsync=None, **{'async': True}), True)
+        self.assertEqual(
+            get_async_param(isAsync=None, **{'async': True}), True)
         self.assertRaises(TypeError, get_async_param, False, {'async': False})
 
 
