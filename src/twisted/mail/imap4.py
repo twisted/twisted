@@ -2507,7 +2507,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         for (mId, flags) in newFlags.items():
             encodedFlags = [networkString(flag) for flag in flags]
             msg = intToBytes(mId) + (
-                b' FETCH (FLAGS (' +b' '.join(encodedFlags) + b'))'
+                b' FETCH (FLAGS (' + b' '.join(encodedFlags) + b'))'
             )
             self.sendUntaggedResponse(msg, _async=True)
 
@@ -2519,6 +2519,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if recent is not None:
             self.sendUntaggedResponse(
                 intToBytes(recent) + b' RECENT', _async=True)
+
 
 
 TIMEOUT_ERROR = error.TimeoutError()

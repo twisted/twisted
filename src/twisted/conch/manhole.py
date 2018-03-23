@@ -22,6 +22,8 @@ from twisted.internet import defer
 from twisted.python.compat import _tokenize, get_async_param
 from twisted.python.htmlizer import TokenPrinter
 
+
+
 class FileWrapper:
     """
     Minimal write-file-like object.
@@ -156,6 +158,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self.handler.addOutput(data, _async)
 
 
+
 CTRL_C = b'\x03'
 CTRL_D = b'\x04'
 CTRL_BACKSLASH = b'\x1c'
@@ -241,7 +244,8 @@ class Manhole(recvline.HistoricRecvLine):
         _async = get_async_param(_async, **kwargs)
         if _async:
             self.terminal.eraseLine()
-            self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
+            self.terminal.cursorBackward(len(self.lineBuffer) +
+                                         len(self.ps[self.pn]))
 
         self.terminal.write(data)
 
