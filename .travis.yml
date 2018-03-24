@@ -33,13 +33,6 @@ matrix:
       env: TOXENV=py35-alldeps-withcov-posix,codecov-publish
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish
-    # For now all non-trial tests are in a single job to reduce the time spent
-    # on starting separate jobs.
-    - python: 2.7
-      env: TOXENV=narrativedocs,apidocs,pyflakes,newsfragment,manifest-checker,pycodestylediff
-    - python: 3.6
-      env: TOXENV=pyflakes3
-    # This needs to be on Python 3.5 for the moment, due to astroid changes.
     - python: 3.5
       env: TOXENV=txchecker-travis-required
     # We need a builder without IPv6. This is going to be slower than all the
