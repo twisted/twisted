@@ -128,7 +128,6 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol = None
 
 
-
 class WrappingFactory(ClientFactory):
     """
     Wraps a factory and its protocols, and keeps track of them.

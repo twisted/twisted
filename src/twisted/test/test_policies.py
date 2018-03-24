@@ -341,6 +341,24 @@ class WrapperTests(unittest.TestCase):
         self.assertEqual(result, [(connector, reason)])
 
 
+    def test_breakReferenceCycle(self):
+        """
+        L{policies.ProtocolWrapper.connectionLost} sets C{wrappedProtocol} to
+        C{None} in order to break reference cycle between wrapper and wrapped
+        protocols.
+        :return:
+        """
+        wrapper = policies.ProtocolWrapper(policies.WrappingFactory(Server()),
+                                           protocol.Protocol())
+        transport = StringTransportWithDisconnection()
+        transport.protocol = wrapper
+        wrapper.makeConnection(transport)
+
+        self.assertIsNotNone(wrapper.wrappedProtocol)
+        transport.loseConnection()
+        self.assertIsNone(wrapper.wrappedProtocol)
+
+
 
 class WrappingFactory(policies.WrappingFactory):
     protocol = lambda s, f, p: p
