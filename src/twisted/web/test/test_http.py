@@ -3163,6 +3163,18 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(request.getClientIP(), "::1")
 
 
+    def test_getClientIPWithNonTCPPeer(self):
+        """
+        L{http.Request.getClientIP} returns L{None} for the client's
+        IP address when connected over a non-TCP transport.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.UNIXAddress("/path/to/socket")))
+        request.gotLength(0)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        self.assertEqual(request.getClientIP(), None)
+
+
 
 class MultilineHeadersTests(unittest.TestCase):
     """
