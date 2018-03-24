@@ -927,8 +927,6 @@ class TLSMemoryBIOTests(TestCase):
         return disconnectDeferred
 
 
-    from twisted.internet import defer
-    @defer.inlineCallbacks
     def test_loseConnectionAfterConnectionLost(self):
         """
         If TLSMemoryBIOProtocol.loseConnection is called after connectionLost,
@@ -946,12 +944,17 @@ class TLSMemoryBIOTests(TestCase):
         tlsServer._shutdownTLS = _shutdownTLS
         tlsServer.write(b'x')
         tlsClient.loseConnection()
-        # wait until tlsServer.connectionLost is called
-        yield disconnectDeferred
-        self.assertEqual(calls, [1])
 
-        tlsServer.loseConnection()
-        self.assertEqual(calls, [1])
+        def disconnected(_):
+            # At this point tlsServer.connectionLost is already called
+            self.assertEqual(calls, [1])
+
+            # This call should do nothing
+            tlsServer.loseConnection()
+            self.assertEqual(calls, [1])
+
+        disconnectDeferred.addCallback(disconnected)
+        return disconnectDeferred
 
 
     def test_unexpectedEOF(self):
