@@ -827,6 +827,10 @@ if _PY3:
 else:
     _tokenize = tokenize.generate_tokens
 
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 
 __all__ = [
@@ -868,5 +872,6 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize"
+    "_tokenize",
+    "Sequence",
 ]
