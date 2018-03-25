@@ -5,6 +5,7 @@ Twisted 17.9.0
 |coverage|_
 |travis|_
 |appveyor|_
+|circleci|_
 
 .. code::
 
@@ -111,3 +112,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
 .. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted
+
+.. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
+.. _circleci: https://circleci.com/gh/twisted/twisted

@@ -1007,6 +1007,50 @@ here's some other stuff
         self.assertEqual(proto.otherVersionString, b"SSH-1.99-OpenSSH")
 
 
+    def test_dataReceivedSSHVersionUnixNewline(self):
+        """
+        It can parse the SSH version string even when it ends only in
+        Unix newlines (CR) and does not follows the RFC 4253 to use
+        network newlines (CR LF).
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(proto_helpers.StringTransport())
+
+        sut.dataReceived(
+            b'SSH-2.0-PoorSSHD Some-comment here\n'
+            b'more-data'
+            )
+
+        self.assertTrue(sut.gotVersion)
+        self.assertEqual(
+            sut.otherVersionString,
+            b'SSH-2.0-PoorSSHD Some-comment here')
+
+
+    def test_dataReceivedSSHVersionTrailingSpaces(self):
+        """
+        The trailing spaces from SSH version comment are not removed.
+
+        The SSH version string needs to be kept as received
+        (without CR LF end of line) as they are used in the host
+        authentication process.
+
+        This can happen with a Bitvise SSH server which hides its version.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(proto_helpers.StringTransport())
+
+        sut.dataReceived(
+            b'SSH-2.0-9.99 FlowSsh: Bitvise SSH Server (WinSSHD) \r\n'
+            b'more-data'
+            )
+
+        self.assertTrue(sut.gotVersion)
+        self.assertEqual(
+            sut.otherVersionString,
+            b'SSH-2.0-9.99 FlowSsh: Bitvise SSH Server (WinSSHD) ')
+
+
     def test_supportedVersionsAreAllowed(self):
         """
         If an unusual SSH version is received and is included in
