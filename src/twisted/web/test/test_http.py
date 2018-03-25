@@ -3169,6 +3169,16 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(request.getClientIP(), None)
 
 
+    def test_getClientAddress(self):
+        """
+        L{http.Request.getClientAddress} returns the client's address
+        as an L{IAddress} provider.
+        """
+        client = address.UNIXAddress("/path/to/socket")
+        request = http.Request(DummyChannel(peer=client))
+        self.assertIs(request.getClientAddress(), client)
+
+
 
 class MultilineHeadersTests(unittest.TestCase):
     """
@@ -3378,6 +3388,29 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
     """
     Tests for deprecated attributes of L{twisted.web.http.Request}.
     """
+
+    def test_getClientIP(self):
+        """
+        L{Request.getClientIP} is deprecated in favor of
+        L{Request.getClientAddress}.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12345)))
+        request.gotLength(0)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        request.getClientIP()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClientIP])
+
+        self.assertEqual(1, len(warnings))
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.getClientIP was deprecated "
+                    "in Twisted NEXT; please use getClientAddress instead")},
+                         sub(["category", "message"], warnings[0]))
+
 
     def test_noLongerQueued(self):
         """

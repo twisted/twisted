@@ -1392,6 +1392,22 @@ class Request:
         else:
             return None
 
+
+    def getClientAddress(self):
+        """
+        Return the address of the client who submitted this request.
+
+        This may not be a network address (e.g., a server listening on
+        a UNIX domain socket will cause this to return
+        L{UNIXAddress}).  Callers must check the type of the returned
+        address.
+
+        @return: the client's address.
+        @rtype: L{IAddress}
+        """
+        return self.client
+
+
     def isSecure(self):
         """
         Return L{True} if this request is using a secure transport.
@@ -1539,6 +1555,11 @@ class Request:
         return id(self)
 
 
+
+Request.getClientIP = deprecated(
+    Version("Twisted", "NEXT", 0, 0),
+    replacement="getClientAddress",
+)(Request.getClientIP)
 
 Request.noLongerQueued = deprecated(
     Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
