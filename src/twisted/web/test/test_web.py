@@ -990,10 +990,13 @@ class GzipEncoderTests(unittest.TestCase):
 
 
 class RootResource(resource.Resource):
-    isLeaf=0
+    isLeaf = 0
+
     def getChildWithDefault(self, name, request):
         request.rememberRootURL()
         return resource.Resource.getChildWithDefault(self, name, request)
+
+
     def render(self, request):
         return ''
 
@@ -1027,7 +1030,7 @@ class RememberURLTests(unittest.TestCase):
         netloc component is the L{site.Server}'s own host and port.
         """
         r = resource.Resource()
-        r.isLeaf=0
+        r.isLeaf = 0
         rr = RootResource()
         r.putChild(b'foo', rr)
         rr.putChild(b'', rr)
