@@ -299,7 +299,6 @@ class _WSGIResponse:
         # *both* Python 2 and Python 3, so says PEP-3333.
         self.environ = {
             'REQUEST_METHOD': _wsgiString(request.method),
-            'REMOTE_ADDR': _wsgiString(request.getClientAddress().host),
             'SCRIPT_NAME': _wsgiString(scriptName),
             'PATH_INFO': _wsgiString(pathInfo),
             'QUERY_STRING': _wsgiString(queryString),
@@ -308,8 +307,24 @@ class _WSGIResponse:
             'CONTENT_LENGTH': _wsgiString(
                 request.getHeader(b'content-length') or ''),
             'SERVER_NAME': _wsgiString(request.getRequestHostname()),
-            'SERVER_PORT': _wsgiString(str(request.getHost().port)),
             'SERVER_PROTOCOL': _wsgiString(request.clientproto)}
+
+        # Do not set REMOTE_ADDR if we do not have it.  This occurs if are
+        # doing wsgi over a Unix socket.
+        clientAddress = request.getClientAddress()
+        if getattr(clientAddress, "host", None):
+            self.environ['REMOTE_ADDR'] = _wsgiString(clientAddress.host)
+
+        serverHost = request.getHost()
+        if getattr(serverHost, "port", None):
+            self.environ['SERVER_PORT'] = _wsgiString(str(serverHost.port))
+        else:
+            # When running wsgi over a unix socket, we do not have a port,
+            # so populate SERVER_PORT with a fake value.
+            if request.isSecure():
+                self.environ['SERVER_PORT'] = _wsgiString("443")
+            else:
+                self.environ['SERVER_PORT'] = _wsgiString("80")
 
         # The application object is entirely in control of response headers;
         # disable the default Content-Type value normally provided by
