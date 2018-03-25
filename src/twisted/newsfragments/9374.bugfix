@@ -1,0 +1,1 @@
+twisted.protocols.policies.ProtocolWrapper and twisted.protocols.tls.TLSMemoryBIOProtocol no longer create circular references that keep protocol instances in memory after connection is closed.
