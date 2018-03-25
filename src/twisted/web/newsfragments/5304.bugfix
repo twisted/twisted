@@ -1,0 +1,1 @@
+Running a wsgi server over a Unix socket now works.  This can be tested with: twist web --port=unix:/tmp/sock  --wsgi wsgiref.simple_server.demo_app
