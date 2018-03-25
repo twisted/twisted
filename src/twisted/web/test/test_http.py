@@ -1329,11 +1329,11 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
         """
         Test that the L{HTTPChannel} correctly chunks responses when needed.
         """
-        channel = http.HTTPChannel()
-        req = http.Request(channel, False)
         trans = StringTransport()
+        channel = http.HTTPChannel()
+        channel.makeConnection(trans)
 
-        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -3146,8 +3146,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         request = http.Request(
             DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12344)))
-        request.gotLength(0)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
         self.assertEqual(request.getClientIP(), "127.0.0.1")
 
 
@@ -3158,8 +3156,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         request = http.Request(
             DummyChannel(peer=address.IPv6Address("TCP", "::1", 12344)))
-        request.gotLength(0)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
         self.assertEqual(request.getClientIP(), "::1")
 
 
@@ -3170,8 +3166,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         request = http.Request(
             DummyChannel(peer=address.UNIXAddress("/path/to/socket")))
-        request.gotLength(0)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
         self.assertEqual(request.getClientIP(), None)
 
 

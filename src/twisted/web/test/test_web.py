@@ -997,13 +997,35 @@ class RootResource(resource.Resource):
     def render(self, request):
         return ''
 
+
+
 class RememberURLTests(unittest.TestCase):
+    """
+    Tests for L{server.Site}'s root request URL calculation.
+    """
+
     def createServer(self, r):
+        """
+        Create a L{server.Site} bound to a L{DummyChannel} and the
+        given resource as its root.
+
+        @param r: The root resource.
+        @type r: L{resource.Resource}
+
+        @return: The channel to which the site is bound.
+        @rtype: L{DummyChannel}
+        """
         chan = DummyChannel()
         chan.site = server.Site(r)
         return chan
 
+
     def testSimple(self):
+        """
+        The path component of the root URL of a L{server.Site} whose
+        root resource is below C{/} is that resource's path, and the
+        netloc component is the L{site.Server}'s own host and port.
+        """
         r = resource.Resource()
         r.isLeaf=0
         rr = RootResource()
@@ -1016,9 +1038,16 @@ class RememberURLTests(unittest.TestCase):
             request.setHost(b'example.com', 81)
             request.gotLength(0)
             request.requestReceived(b'GET', url, b'HTTP/1.0')
-            self.assertEqual(request.getRootURL(), b"http://example.com/foo")
+            self.assertEqual(request.getRootURL(),
+                             b"http://example.com:81/foo")
+
 
     def testRoot(self):
+        """
+        The path component of the root URL of a L{server.Site} whose
+        root resource is at C{/} is C{/}, and the netloc component is
+        the L{site.Server}'s own host and port.
+        """
         rr = RootResource()
         rr.putChild(b'', rr)
         rr.putChild(b'bar', resource.Resource())
@@ -1028,7 +1057,9 @@ class RememberURLTests(unittest.TestCase):
             request.setHost(b'example.com', 81)
             request.gotLength(0)
             request.requestReceived(b'GET', url, b'HTTP/1.0')
-            self.assertEqual(request.getRootURL(), b"http://example.com/")
+            self.assertEqual(request.getRootURL(),
+                             b"http://example.com:81/")
+
 
 
 class NewRenderResource(resource.Resource):

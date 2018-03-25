@@ -720,6 +720,12 @@ class Request:
         """
         self.notifications = []
         self.channel = channel
+
+        # cache the client and server information, we'll need this later to be
+        # serialized and sent with the request so CGIs will work remotely
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
+
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
@@ -850,11 +856,6 @@ class Request:
         else:
             self.path, argstring = x
             self.args = parse_qs(argstring, 1)
-
-        # cache the client and server information, we'll need this later to be
-        # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.getPeer()
-        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
