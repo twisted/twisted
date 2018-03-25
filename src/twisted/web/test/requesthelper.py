@@ -379,6 +379,8 @@ class DummyRequest(object):
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
 
+
+
 DummyRequest.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(DummyRequest.getClient)

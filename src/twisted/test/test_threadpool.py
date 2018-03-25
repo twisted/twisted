@@ -7,7 +7,11 @@ Tests for L{twisted.python.threadpool}
 
 from __future__ import division, absolute_import
 
-import pickle, time, weakref, gc, threading
+import pickle
+import time
+import weakref
+import gc
+import threading
 
 from twisted.python.compat import range
 
@@ -15,9 +19,7 @@ from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
 from twisted._threads import Team, createMemoryWorker
 
-#
-# See the end of this module for the remainder of the imports.
-#
+
 
 class Synchronization(object):
     failures = 0
@@ -36,10 +38,9 @@ class Synchronization(object):
         # holding the lock.
         if self.lock.acquire(False):
             if not len(self.runs) % 5:
-                time.sleep(0.0002) # Constant selected based on
-                                   # empirical data to maximize the
-                                   # chance of a quick failure if this
-                                   # code is broken.
+                # Constant selected based on empirical data to maximize the
+                # chance of a quick failure if this code is broken.
+                time.sleep(0.0002)
             self.lock.release()
         else:
             self.failures += 1
@@ -54,6 +55,9 @@ class Synchronization(object):
         self.lock.release()
 
     synchronized = ["run"]
+
+
+
 threadable.synchronize(Synchronization)
 
 
@@ -67,7 +71,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         """
         Return number of seconds to wait before giving up.
         """
-        return 5 # Really should be order of magnitude less
+        return 5  # Really should be order of magnitude less
 
 
     def _waitForLock(self, lock):
@@ -135,9 +139,11 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # Here's our function
         def worker(arg):
             pass
+
         # weakref needs an object subclass
         class Dumb(object):
             pass
+
         # And here's the unique object
         unique = Dumb()
 
@@ -173,7 +179,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(tp.threads, [])
 
         # this holds references obtained in onResult
-        refdict = {} # name -> ref value
+        refdict = {}  # name -> ref value
 
         onResultWait = threading.Event()
         onResultDone = threading.Event()
@@ -275,8 +281,9 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         self._waitForLock(waiting)
 
-        self.assertFalse(actor.failures, "run() re-entered %d times" %
-                                    (actor.failures,))
+        self.assertFalse(
+            actor.failures,
+            "run() re-entered {} times".format(actor.failures))
 
 
     def test_callInThread(self):
@@ -391,7 +398,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             raise NewError()
 
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThreadWithCallback(onResult, lambda : None)
+        tp.callInThreadWithCallback(onResult, lambda: None)
         tp.callInThread(waiter.release)
         tp.start()
 
@@ -477,7 +484,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         waiter.acquire()
 
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThread(waiter.release) # before start()
+        tp.callInThread(waiter.release)  # before start()
         tp.start()
 
         try:
@@ -531,9 +538,11 @@ class RaceConditionTests(unittest.SynchronousTestCase):
         self.threadpool = threadpool.ThreadPool(0, 10)
         self.event = threading.Event()
         self.threadpool.start()
+
         def done():
             self.threadpool.stop()
             del self.threadpool
+
         self.addCleanup(done)
 
 
@@ -655,8 +664,8 @@ class MemoryPool(threadpool.ThreadPool):
             # twisted.threads._pool, which is unfortunately bound up
             # with lots of actual-threading stuff.
             stats = team.statistics()
-            if (stats.busyWorkerCount + stats.idleWorkerCount
-                >= currentLimit()):
+            if ((stats.busyWorkerCount +
+                 stats.idleWorkerCount) >= currentLimit()):
                 return None
             return self._newWorker()
         team = Team(coordinator=self._coordinator,
@@ -696,9 +705,11 @@ class PoolHelper(object):
         """
         coordinator, self.performCoordination = createMemoryWorker()
         self.workers = []
+
         def newWorker():
             self.workers.append(createMemoryWorker())
             return self.workers[-1][0]
+
         self.threadpool = MemoryPool(coordinator, testCase.fail, newWorker,
                                      *args, **kwargs)
 
