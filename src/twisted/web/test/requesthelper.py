@@ -31,12 +31,15 @@ class DummyChannel:
         port = 80
         disconnected = False
 
-        def __init__(self):
+        def __init__(self, peer=None):
+            if peer is None:
+                peer = IPv4Address("TCP", '192.168.1.1', 12344)
+            self._peer = peer
             self.written = BytesIO()
             self.producers = []
 
         def getPeer(self):
-            return IPv4Address("TCP", '192.168.1.1', 12344)
+            return self._peer
 
         def write(self, data):
             if not isinstance(data, bytes):
@@ -66,8 +69,8 @@ class DummyChannel:
 
     site = Site(Resource())
 
-    def __init__(self):
-        self.transport = self.TCP()
+    def __init__(self, peer=None):
+        self.transport = self.TCP(peer)
 
 
     def requestDone(self, request):

@@ -29,7 +29,8 @@ from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 from twisted.logger import globalLogPublisher, Logger
 from twisted.test.proto_helpers import EventLoggingObserver
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
+
 
 
 class SynchronousThreadPool:
@@ -287,8 +288,9 @@ class WSGITestsMixin:
                 startResponse('200 OK', [])
                 return iter(())
             return application
+        channelFactory = kw.pop('channelFactory', self.channelFactory)
         self.lowLevelRender(
-            Request, applicationFactory, self.channelFactory, *a, **kw)
+            Request, applicationFactory, channelFactory, *a, **kw)
         return result
 
 
@@ -757,6 +759,21 @@ class EnvironTests(WSGITestsMixin, TestCase):
         d.addCallback(self.environKeyEqual('REMOTE_ADDR', '192.168.1.1'))
 
         return d
+
+
+    def test_remoteAddrIPv6(self):
+        """
+        The C{'REMOTE_ADDR'} key of the C{environ} C{dict} passed to
+        the application contains the address of the client making the
+        request when connecting over IPv6.
+        """
+        def channelFactory():
+            return DummyChannel(peer=IPv6Address('TCP', '::1', 1234))
+        d = self.render('GET', '1.1', [], [''], channelFactory=channelFactory)
+        d.addCallback(self.environKeyEqual('REMOTE_ADDR', '::1'))
+
+        return d
+
 
     def test_headers(self):
         """
