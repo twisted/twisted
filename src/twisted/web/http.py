@@ -1386,7 +1386,7 @@ class Request:
         @returns: the client IP address
         @rtype: C{str}
         """
-        if isinstance(self.client, address.IPv4Address):
+        if isinstance(self.client, (address.IPv4Address, address.IPv6Address)):
             return self.client.host
         else:
             return None
@@ -1466,17 +1466,6 @@ class Request:
         return self.password
 
 
-    def getClient(self):
-        """
-        Get the client's IP address, if it has one.  No attempt is made to
-        resolve the address to a hostname.
-
-        @return: The same value as C{getClientIP}.
-        @rtype: L{bytes}
-        """
-        return self.getClientIP()
-
-
     def connectionLost(self, reason):
         """
         There is no longer a connection for this request to respond over.
@@ -1548,11 +1537,6 @@ class Request:
         """
         return id(self)
 
-
-
-Request.getClient = deprecated(
-    Version("Twisted", 15, 0, 0),
-    "Twisted Names to resolve hostnames")(Request.getClient)
 
 
 Request.noLongerQueued = deprecated(
