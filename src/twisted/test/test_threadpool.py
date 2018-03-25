@@ -484,7 +484,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         waiter.acquire()
 
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThread(waiter.release)  # before start()
+        tp.callInThread(waiter.release)  # Before start()
         tp.start()
 
         try:
@@ -502,12 +502,12 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         pool.start()
         self.addCleanup(pool.stop)
 
-        # sanity check
+        # Sanity check
         self.assertEqual(pool.workers, 0)
         self.assertEqual(len(pool.waiters), 0)
         self.assertEqual(len(pool.working), 0)
 
-        # fire up a worker and give it some 'work'
+        # Fire up a worker and give it some 'work'
         threadWorking = threading.Event()
         threadFinish = threading.Event()
 
@@ -521,12 +521,12 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.waiters), 0)
         self.assertEqual(len(pool.working), 1)
 
-        # finish work, and spin until state changes
+        # Finish work, and spin until state changes
         threadFinish.set()
         while not len(pool.waiters):
             time.sleep(0.0005)
 
-        # make sure state changed correctly
+        # Make sure state changed correctly
         self.assertEqual(len(pool.waiters), 1)
         self.assertEqual(len(pool.working), 0)
 
