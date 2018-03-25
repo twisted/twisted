@@ -1858,26 +1858,26 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         serverWrappedProto = GreetingServer()
         clientWrappedProto = GreetingClient()
 
-        cF = protocol.Factory()
-        cF.protocol = lambda: clientWrappedProto
-        sF = protocol.Factory()
-        sF.protocol = lambda: serverWrappedProto
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = lambda: clientWrappedProto
+        serverFactory = protocol.Factory()
+        serverFactory.protocol = lambda: serverWrappedProto
 
         self.serverOpts = serverOpts
         self.clientOpts = clientOpts
 
-        clientFactory = TLSMemoryBIOFactory(
+        clientTLSFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
-            wrappedFactory=cF
+            wrappedFactory=clientFactory
         )
-        serverFactory = TLSMemoryBIOFactory(
+        serverTLSFactory = TLSMemoryBIOFactory(
             serverOpts, isClient=False,
-            wrappedFactory=sF
+            wrappedFactory=serverFactory
         )
 
         cProto, sProto, pump = connectedServerAndClient(
-            lambda: serverFactory.buildProtocol(None),
-            lambda: clientFactory.buildProtocol(None),
+            lambda: serverTLSFactory.buildProtocol(None),
+            lambda: clientTLSFactory.buildProtocol(None),
         )
         return cProto, sProto, clientWrappedProto, serverWrappedProto, pump
 
