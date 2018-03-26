@@ -721,8 +721,9 @@ class Request:
         self.notifications = []
         self.channel = channel
 
-        # cache the client and server information, we'll need this later to be
-        # serialized and sent with the request so CGIs will work remotely
+        # Cache the client and server information, we'll need this
+        # later to be serialized and sent with the request so CGIs
+        # will work remotely
         self.client = self.channel.getPeer()
         self.host = self.channel.getHost()
 
