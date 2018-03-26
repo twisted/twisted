@@ -1,0 +1,2 @@
+twisted.conch.ssh.transport.SSHTransportBase no longer strips trailing spaces
+from the SSH version string of the connected peer.
