@@ -497,10 +497,6 @@ if _PY3:
         return ("%d" % i).encode("ascii")
 
 
-    # Ideally we would use memoryview, but it has a number of differences from
-    # the Python 2 buffer() that make that impractical
-    # (http://bugs.python.org/issue15945, incompatibility with pyOpenSSL due to
-    # PyArg_ParseTuple differences.)
     def lazyByteSlice(object, offset=0, size=None):
         """
         Return a copy of the given bytes-like object.
@@ -515,10 +511,11 @@ if _PY3:
         @param size: Optional, if an C{int} is given limit the length of copy
             to this size.
         """
+        view = memoryview(object)
         if size is None:
-            return object[offset:]
+            return view[offset:]
         else:
-            return object[offset:(offset + size)]
+            return view[offset:(offset + size)]
 
 
     def networkString(s):
@@ -830,6 +827,10 @@ if _PY3:
 else:
     _tokenize = tokenize.generate_tokens
 
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 
 __all__ = [
@@ -871,5 +872,6 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize"
+    "_tokenize",
+    "Sequence",
 ]

@@ -1053,7 +1053,7 @@ class Port(base.BasePort, _SocketCloser):
                         # returns a connection that fails as though the it were
                         # terminated after being fully established.  This
                         # appears to be an implementation choice (see
-                        # inet_accept in inet/ipv4/af_inet.c).  On macOS X,
+                        # inet_accept in inet/ipv4/af_inet.c).  On macOS,
                         # such a listener is not considered readable, so
                         # accept(2) will never be called.  Calling accept(2) on
                         # such a listener, however, does not return at all.

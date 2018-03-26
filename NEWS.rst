@@ -6,6 +6,9 @@ http://twistedmatrix.com/trac/ticket/<number>
 Twisted 17.9.0 (2017-09-23)
 ===========================
 
+This is the last Twisted release where Python 3.3 is supported, on any
+platform.
+
 Features
 --------
 

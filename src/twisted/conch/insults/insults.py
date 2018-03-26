@@ -11,7 +11,8 @@ VT102 and VT220 terminal manipulation.
 from zope.interface import implementer, Interface
 
 from twisted.internet import protocol, defer, interfaces as iinternet
-from twisted.python.compat import intToBytes, iterbytes, networkString
+from twisted.python.bytes import ensureBytes
+from twisted.python.compat import intToBytes, iterbytes
 
 
 
@@ -832,7 +833,7 @@ class ServerProtocol(protocol.Protocol):
         # each member of attributes must be a native string
         attrs = []
         for a in attributes:
-            attrs.append(networkString(a))
+            attrs.append(ensureBytes(a))
         self.write(b'\x1b[' +
                    b';'.join(attrs) +
                    b'm')

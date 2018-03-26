@@ -5,6 +5,7 @@
 Tests for L{twisted.trial._dist.workerreporter}.
 """
 
+from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase, Todo
 from twisted.trial._dist.workerreporter import WorkerReporter
@@ -20,6 +21,7 @@ class FakeAMProtocol(object):
 
     def callRemote(self, command, **kwargs):
         self.lastCall = command
+        self.lastArgs = kwargs
 
 
 
@@ -86,6 +88,30 @@ class WorkerReporterTests(TestCase):
             self.test, (RuntimeError, RuntimeError('fail'), None))
         self.assertEqual(self.fakeAMProtocol.lastCall,
                          managercommands.AddFailure)
+
+
+    def test_addFailureNonASCII(self):
+        """
+        L{WorkerReporter.addFailure} sends a L{managercommands.AddFailure}
+        message when called with a L{Failure}, even if it includes encoded
+        non-ASCII content.
+        """
+        content = u"\N{SNOWMAN}".encode("utf-8")
+        exception = RuntimeError(content)
+        failure = Failure(exception)
+        self.workerReporter.addFailure(self.test, failure)
+        self.assertEqual(
+            self.fakeAMProtocol.lastCall,
+            managercommands.AddFailure,
+        )
+        self.assertEqual(
+            content,
+            self.fakeAMProtocol.lastArgs["fail"],
+        )
+    if _PY3:
+        test_addFailureNonASCII.skip = (
+            "Exceptions only convert to unicode on Python 3"
+        )
 
 
     def test_addSkip(self):

@@ -57,6 +57,7 @@ def strip(f):
     return lambda result, f=f: f()
 
 
+
 class IMAP4UTF7Tests(unittest.TestCase):
     tests = [
         [u'Hello world', b'Hello world'],
@@ -789,7 +790,7 @@ class IMAP4HelperTests(unittest.TestCase):
         def cbProduced(result):
             self.failUnlessIdentical(result, p)
             self.assertEqual(
-                (b'{%d}\r\n' % len(b))+ b,
+                (b'{' + intToBytes(len(b)) + b'}' + b'\r\n' + b),
                 b''.join(c.buffer))
             return result
 
@@ -970,8 +971,8 @@ class IMAP4HelperTests(unittest.TestCase):
 
 
         check(
-            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' %
-            (len(s), s,),
+            b'(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {' +
+            intToBytes(len(s)) + b'}\r\n' + s + b')',
             [b'BODY.PEEK', [b'HEADER.FIELDS.NOT', [b'subject', b'bcc', b'cc']],
              s],
         )
@@ -2776,7 +2777,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
 
-    def testCheck(self):
+    def _testCheck(self):
         SimpleServer.theAccount.addMailbox(b'root/subthing')
         def login():
             return self.client.login(b'testuser', b'password-test')
@@ -2791,7 +2792,31 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
         return self.loopback()
 
-        # Okay, that was fun
+
+    def test_check(self):
+        """
+        Trigger the L{imap.IMAP4Server._cbSelectWork} callback
+        by selecting an mbox.
+        """
+        return self._testCheck()
+
+
+    def test_checkFail(self):
+        """
+        Trigger the L{imap.IMAP4Server._ebSelectWork} errback
+        by failing when we select an mbox.
+        """
+        def failSelect(self, name, rw=1):
+            raise imap4.IllegalMailboxEncoding("encoding")
+
+        def checkResponse(ignore):
+            failures = self.flushLoggedErrors()
+            self.assertEqual(failures[1].value.args[0],
+                             b'SELECT failed: Server error')
+
+        self.patch(Account, "select", failSelect)
+        d = self._testCheck()
+        return d.addCallback(checkResponse)
 
 
     def testClose(self):
@@ -3007,12 +3032,12 @@ class IMAP4ServerParsingTests(unittest.SynchronousTestCase):
         self.server.lineReceived(b"001 LOGIN A B C")
         self.assertEqual(
             self.transport.value(),
-            networkString(
-                "001 BAD Illegal syntax:"
-                " Too many arguments for command: %r"
-                "\r\n"
-                % (b"C",)
-            ))
+            (b"001 BAD Illegal syntax:" +
+             b" Too many arguments for command: " +
+             repr(b'C').encode("utf-8") +
+             b"\r\n"
+            )
+        )
 
 
     def assertCommandExceptionResponse(self,
@@ -3479,6 +3504,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
             self.server.search_SINCE(self.laterQuery, self.seq, self.msg))
 
 
+
 @implementer(IRealm)
 class TestRealm:
     """
@@ -3503,6 +3529,7 @@ class TestRealm:
             self._getAccount = lambda: accountHolder.theAccount
         else:
             self._getAccount = lambda: self.theAccount
+
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         return imap4.IAccount, self._getAccount(), lambda: None
@@ -4649,7 +4676,7 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
         for line in lines:
             self.client.dataReceived(line + b'\r\n')
         self.client.dataReceived(
-            b'0001 OK [READ-ONLY] %s completed\r\n' % (self.command,))
+            b'0001 OK [READ-ONLY] ' + self.command + b' completed\r\n')
 
 
     def test_exists(self):
@@ -5601,6 +5628,7 @@ class FakeyServer(imap4.IMAP4Server):
 
     def sendServerGreeting(self):
         pass
+
 
 
 @implementer(imap4.IMessage)

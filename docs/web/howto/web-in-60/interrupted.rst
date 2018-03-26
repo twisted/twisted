@@ -53,7 +53,7 @@ a resource class with the same ``_delayedRender`` used previously:
     
     class DelayedResource(Resource):
         def _delayedRender(self, request):
-            request.write("<html><body>Sorry to keep you waiting.</body></html>")
+            request.write(b"<html><body>Sorry to keep you waiting.</body></html>")
             request.finish()
 
 
@@ -128,7 +128,7 @@ without interruptions, as an :doc:`rpy script <rpy-scripts>` :
     
     class DelayedResource(Resource):
         def _delayedRender(self, request):
-            request.write("<html><body>Sorry to keep you waiting.</body></html>")
+            request.write(b"<html><body>Sorry to keep you waiting.</body></html>")
             request.finish()
     
         def _responseFailed(self, err, call):

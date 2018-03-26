@@ -291,10 +291,10 @@ Supporting and de-supporting Python versions
 --------------------------------------------
 
 Twisted does not have a formal policy around supporting new versions of Python or de-supporting old versions of Python.
-We strive to support Twisted on any version of Python that is the default Python for a vendor-supported release from a major platform, namely Debian, Ubuntu, the latest release of Windows, or the latest release of OS X.
+We strive to support Twisted on any version of Python that is the default Python for a vendor-supported release from a major platform, namely Debian, Ubuntu, the latest release of Windows, or the latest release of macOS.
 The versions of Python currently supported are listed in the ​INSTALL file for each release.
 
-A distribution release + Python version is only considered supported when a `buidlbot builder <http://buildbot.twistedmatrix.com>`_ exists for it.
+A distribution release + Python version is only considered supported when a `buildbot builder <http://buildbot.twistedmatrix.com>`_ exists for it.
 
 Removing support for a Python version will be announced at least 1 release prior to the removal.
 

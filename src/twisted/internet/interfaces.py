@@ -173,7 +173,7 @@ class IHostnameResolver(Interface):
             practice, this means an iterable containing
             L{twisted.internet.address.IPv4Address},
             L{twisted.internet.address.IPv6Address}, both, or neither.
-        @type addressTypes: L{collections.Iterable} of L{type}
+        @type addressTypes: L{collections.abc.Iterable} of L{type}
 
         @param transportSemantics: A string describing the semantics of the
             transport; either C{'TCP'} for stream-oriented transports or
@@ -2888,3 +2888,20 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
         @return: a client endpoint
         @rtype: a provider of L{IStreamClientEndpoint}
         """
+
+
+
+class _ISupportsExitSignalCapturing(Interface):
+    """
+    An implementor of L{_ISupportsExitSignalCapturing} will capture the
+    value of any delivered exit signal (SIGINT, SIGTERM, SIGBREAK) for which
+    it has installed a handler.  The caught signal number is made available in
+    the _exitSignal attribute.
+    """
+
+    _exitSignal = Attribute(
+        """
+        C{int} or C{None}, the integer exit signal delivered to the
+        application, or None if no signal was delivered.
+        """
+    )

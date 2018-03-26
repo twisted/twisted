@@ -186,7 +186,7 @@ class StandardInputOutputTests(unittest.TestCase):
         """
         p = StandardIOTestProcessProtocol()
 
-        # Note: the OS X bug which prompted the addition of this test
+        # Note: the macOS bug which prompted the addition of this test
         # is an apparent race condition involving non-blocking PTYs.
         # Delaying the parent process significantly increases the
         # likelihood of the race going the wrong way.  If you need to

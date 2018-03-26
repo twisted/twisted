@@ -108,19 +108,6 @@ class IRequest(Interface):
         """
 
 
-    def getClient():
-        """
-        Return the hostname of the IP address of the client who submitted this
-        request, if possible.
-
-        This method is B{deprecated}.  See L{getClientIP} instead.
-
-        @rtype: L{None} or L{str}
-        @return: The canonical hostname of the client, as determined by
-            performing a name lookup on the IP address of the client.
-        """
-
-
     def getUser():
         """
         Return the HTTP user sent with this request, if any.
