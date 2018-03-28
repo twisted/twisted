@@ -1322,18 +1322,29 @@ class Request:
         """
         Get the hostname that the user passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        This will either use the Host: header (if it is available) or
+        the host we are listening on if the header is unavailable.
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
+
+        @raises: L{UnsupportedTransport} if there is no C{Host} header
+            and the transport does have a hostname (e.g., when
+            listening on a UNIX socket)
         """
         # XXX This method probably has no unit tests.  I changed it a ton and
         # nothing failed.
         host = self.getHeader(b'host')
         if host:
             return host.split(b':', 1)[0]
-        return networkString(self.getHost().host)
+        hostAddress = self.getHost()
+        if isinstance(hostAddress, (address.IPv4Address, address.IPv6Address)):
+            return networkString(self.getHost().host)
+        else:
+            raise UnsupportedTransport(
+                "Transport of type {} does not have a hostname.".format(
+                    type(hostAddress)))
 
 
     def getHost(self):
@@ -1797,6 +1808,14 @@ class _ChunkedTransferDecoder(object):
             raise _DataLoss(
                 "Chunked decoder in %r state, still expecting more data to "
                 "get to 'FINISHED' state." % (self.state,))
+
+
+
+class UnsupportedTransport(Exception):
+    """
+    Raised when a L{Request} is bound to a transport that does not
+    support a given operation.
+    """
 
 
 

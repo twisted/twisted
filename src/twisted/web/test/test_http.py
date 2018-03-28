@@ -3211,6 +3211,20 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(request.getRequestHostname(), host.encode('ascii'))
 
 
+    def test_getRequestHostnameWithUnsupportedTransport(self):
+        """
+        L{http.Request.getRequestHostname} returns the transport's
+        host address in the absence of a C{Host} header.
+        """
+        transport = DummyChannel(
+            host=address.UNIXAddress("/path/to/unix.socket"))
+        request = http.Request(transport, False)
+        self.assertIsNone(request.getHeader(b"host"))
+        self.assertRaises(http.UnsupportedTransport,
+                          request.getRequestHostname)
+
+
+
 class MultilineHeadersTests(unittest.TestCase):
     """
     Tests to exercise handling of multiline headers by L{HTTPClient}.  RFCs 1945
