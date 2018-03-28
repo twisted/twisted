@@ -15,6 +15,7 @@ except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
 from io import BytesIO
+from itertools import product
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
@@ -3178,6 +3179,36 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request = http.Request(DummyChannel(peer=client))
         self.assertIs(request.getClientAddress(), client)
 
+
+    def test_getRequestHostnameWithHostHeader(self):
+        """
+        L{http.Request.getRequestHostname} returns the host component
+        of the C{Host} header's value when it is present, even when
+        the underlying transport does not have a hostname.
+        """
+        hostPorts = [[b"example.invalid"],
+                     [b"example.invalid", b"1234"]]
+        addresses = [address.IPv4Address("TCP", "10.0.0.1", 1234),
+                     address.UNIXAddress("/path/to/unix.socket")]
+        for hostAndMaybePort, hostAddress in product(hostPorts, addresses):
+            host = hostAndMaybePort[0]
+            request = http.Request(DummyChannel(host=hostAddress), False)
+            request.requestHeaders.setRawHeaders(
+                b"host", [b":".join(hostAndMaybePort)])
+            self.assertEqual(request.getRequestHostname(), host)
+
+
+    def test_getRequestHostnameWithoutHostHeader(self):
+        """
+        L{http.Request.getRequestHostname} returns the transport's
+        host address in the absence of a C{Host} header.
+        """
+        host = "10.0.0.1"
+        transport = DummyChannel(
+            host=address.IPv4Address("TCP", host, 1234))
+        request = http.Request(transport, False)
+        self.assertIsNone(request.getHeader(b"host"))
+        self.assertEqual(request.getRequestHostname(), host.encode('ascii'))
 
 
 class MultilineHeadersTests(unittest.TestCase):
