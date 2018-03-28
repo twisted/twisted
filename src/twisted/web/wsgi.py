@@ -13,12 +13,13 @@ from warnings import warn
 
 from zope.interface import implementer
 
+from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.threads import blockingCallFromThread
 from twisted.python.compat import reraise, Sequence
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import INTERNAL_SERVER_ERROR
+from twisted.web.http import INTERNAL_SERVER_ERROR, UnsupportedTransport
 from twisted.logger import Logger
 
 
@@ -234,6 +235,86 @@ class _InputStream:
 
 
 
+def _extractAddresses(getRequestHostname, isSecure, server, client):
+    """
+    Generate a dictionary containing the subset of C{SERVER_NAME},
+    C{SERVER_PORT}, and C{REMOTE_ADDR} values appropriate given the
+    server and client addresses:
+
+        1. When C{server} and C{client} are both L{IPv4Address}es or
+           L{IPv6Address}es, C{SERVER_NAME} will be the result of
+           calling C{getRequestHostname}, C{SERVER_PORT} will be the
+           port to which C{server} is bound, and C{REMOTE_ADDR} will
+           be the C{client}'s IP address.
+
+        2. When the C{server} and C{client} are both L{UNIXAddress}es
+           and C{getRequestHostname} returns the value of the C{Host}
+           header, C{SERVER_NAME} will be that value and
+           C{SERVER_PORT} will be C{"80"} for HTTP requests and
+           C{"443"} for HTTPS requests.  C{REMOTE_ADDR} will not be
+           set.
+
+        3. When C{server} and C{client} are both L{UNIXAddress}es and
+           C{getRequestHostname} raises L{UnsupportedTransport},
+           C{SERVER_NAME} will be C{"<unix>"} and C{SERVER_PORT} will
+           be C{"80"} for HTTP requests and C{"443"} for HTTPS
+           requests.  C{REMOTE_ADDR} will not be set.
+
+    Any other combination of values for C{host}, C{server}, and
+    C{client} will result in a L{RuntimeError}.
+
+    @param host: The value, if any, of the request's C{Host} header.
+    @type host: L{bytes} or L{None}.
+
+    @param isSecure: Whether the request was secure or not.
+    @type isSecure: L{bool}
+
+    @param server: The server's address.
+    @type server: an L{IAddress} provider.
+
+    @param client: The client's address.
+    @type client: an L{IAddress} provider.
+
+    @return: A dictionary containing a subset of C{SERVER_NAME},
+        C{SERVER_PORT}, and C{REMOTE_ADDR}.
+    @rtype: L{dict}.
+
+    @raises: L{RuntimeError} if C{host}, C{server}, and C{client}
+        don't conform to the specification described above.
+    """
+    if (isinstance(server, (IPv4Address, IPv6Address)) and
+        isinstance(client, (IPv4Address, IPv6Address))):
+        serverName = _wsgiString(getRequestHostname())
+        serverPort = str(server.port)
+        remoteAddr = _wsgiString(client.host)
+        return {
+            "SERVER_NAME": serverName,
+            "SERVER_PORT": serverPort,
+            "REMOTE_ADDR": remoteAddr,
+        }
+    elif (isinstance(server, UNIXAddress) and
+          isinstance(client, UNIXAddress)):
+        try:
+            hostname = getRequestHostname()
+        except UnsupportedTransport:
+            serverName = "<unix>"
+        else:
+            serverName = _wsgiString(hostname)
+        serverPort = "443" if isSecure else "80"
+        # Most clients don't bother to bind(2) their own UNIX socket,
+        # so we can't rely on a REMOTE_ADDR
+        return {
+            "SERVER_NAME": serverName,
+            "SERVER_PORT": serverPort,
+        }
+    else:
+        raise RuntimeError(
+            "Unknown address types {} (server) and {} (client)".format(
+                type(server), type(client),
+            ))
+
+
+
 class _WSGIResponse:
     """
     Helper for L{WSGIResource} which drives the WSGI application using a
@@ -299,7 +380,6 @@ class _WSGIResponse:
         # *both* Python 2 and Python 3, so says PEP-3333.
         self.environ = {
             'REQUEST_METHOD': _wsgiString(request.method),
-            'REMOTE_ADDR': _wsgiString(request.getClientAddress().host),
             'SCRIPT_NAME': _wsgiString(scriptName),
             'PATH_INFO': _wsgiString(pathInfo),
             'QUERY_STRING': _wsgiString(queryString),
@@ -307,9 +387,14 @@ class _WSGIResponse:
                 request.getHeader(b'content-type') or ''),
             'CONTENT_LENGTH': _wsgiString(
                 request.getHeader(b'content-length') or ''),
-            'SERVER_NAME': _wsgiString(request.getRequestHostname()),
-            'SERVER_PORT': _wsgiString(str(request.getHost().port)),
             'SERVER_PROTOCOL': _wsgiString(request.clientproto)}
+
+        self.environ.update(_extractAddresses(
+            getRequestHostname=request.getRequestHostname,
+            isSecure=request.isSecure(),
+            server=request.getHost(),
+            client=request.getClientAddress(),
+        ))
 
         # The application object is entirely in control of response headers;
         # disable the default Content-Type value normally provided by

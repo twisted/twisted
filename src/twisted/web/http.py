@@ -1338,7 +1338,11 @@ class Request:
         host = self.getHeader(b'host')
         if host:
             return host.split(b':', 1)[0]
-        return networkString(self.getHost().host)
+        hostAddress = self.getHost()
+        if isinstance(hostAddress, (address.IPv4Address, address.IPv6Address)):
+            return networkString(self.getHost().host)
+        elif isinstance(hostAddress, address.UNIXAddress):
+            return networkString("OOPS")
 
 
     def getHost(self):
