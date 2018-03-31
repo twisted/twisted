@@ -12,9 +12,9 @@ from binascii import Error as BinasciiError, b2a_base64, a2b_base64
 
 from zope.interface.verify import verifyObject
 
+from twisted.python.compat import networkString
 from twisted.python.reflect import requireModule
 from twisted.python.filepath import FilePath
-from twisted.python.bytes import ensureBytes
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.conch.interfaces import IKnownHostEntry
@@ -214,7 +214,7 @@ class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
         hostSalt = b"gJbSEPBG9ZSBoZpHNtZBD1bHKBA"
         hostHash = b"bQv+0Xa0dByrwkA1EB0E7Xop/Fo"
         publicKey = Key.fromString(sampleKey)
-        keyType = ensureBytes(publicKey.type())
+        keyType = networkString(publicKey.type())
         comment = b"hello, world"
 
         entry = HashedEntry(
