@@ -972,7 +972,8 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         # The original failure should not be changed.
         self.assertEqual(original_failure_str, f.getTraceback())
 
-        # The new failure should be different and contain stack info for our generator.
+        # The new failure should be different and contain stack info for
+        # our generator.
         self.assertNotEqual(newFailures[0].getTraceback(), f.getTraceback())
         self.assertIn("generator", newFailures[0].getTraceback())
         self.assertNotIn("generator", f.getTraceback())
