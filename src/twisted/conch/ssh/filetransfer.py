@@ -14,9 +14,8 @@ from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
-from twisted.python.bytes import ensureBytes
 from twisted.python.compat import (
-    _PY3, range, itervalues, nativeString)
+    _PY3, range, itervalues, nativeString, networkString)
 
 
 
@@ -113,7 +112,7 @@ class FileTransferBase(protocol.Protocol):
         extended = []
         for k in attrs:
             if k.startswith('ext_'):
-                extType = NS(ensureBytes(k[4:]))
+                extType = NS(networkString(k[4:]))
                 extData = NS(attrs[k])
                 extended.append(extType + extData)
         if extended:
@@ -164,7 +163,7 @@ class FileTransferServer(FileTransferBase):
 
 
     def _cbOpenFile(self, fileObj, requestId):
-        fileId = ensureBytes(str(hash(fileObj)))
+        fileId = networkString(str(hash(fileObj)))
         if fileId in self.openFiles:
             raise KeyError('id already open')
         self.openFiles[fileId] = fileObj
@@ -289,10 +288,10 @@ class FileTransferServer(FileTransferBase):
 
 
     def _cbOpenDirectory(self, dirObj, requestId):
-        handle = ensureBytes((str(hash(dirObj))))
+        handle = networkString((str(hash(dirObj))))
         if handle in self.openDirs:
             raise KeyError("already opened this directory")
-        self.openDirs[handle] = [ensureBytes(dirObj), iter(dirObj)]
+        self.openDirs[handle] = [dirObj, iter(dirObj)]
         self.sendPacket(FXP_HANDLE, requestId + NS(handle))
 
 
@@ -460,10 +459,10 @@ class FileTransferServer(FileTransferBase):
         if isinstance(reason.value, (IOError, OSError)):
             if reason.value.errno == errno.ENOENT:  # No such file
                 code = FX_NO_SUCH_FILE
-                message = ensureBytes(reason.value.strerror)
+                message = networkString(reason.value.strerror)
             elif reason.value.errno == errno.EACCES:  # Permission denied
                 code = FX_PERMISSION_DENIED
-                message = ensureBytes(reason.value.strerror)
+                message = networkString(reason.value.strerror)
             elif reason.value.errno == errno.EEXIST:
                 code = FX_FILE_ALREADY_EXISTS
             else:
@@ -471,14 +470,14 @@ class FileTransferServer(FileTransferBase):
         elif isinstance(reason.value, EOFError):  # EOF
             code = FX_EOF
             if reason.value.args:
-                message = ensureBytes(reason.value.args[0])
+                message = networkString(reason.value.args[0])
         elif isinstance(reason.value, NotImplementedError):
             code = FX_OP_UNSUPPORTED
             if reason.value.args:
-                message = ensureBytes(reason.value.args[0])
+                message = networkString(reason.value.args[0])
         elif isinstance(reason.value, SFTPError):
             code = reason.value.code
-            message = ensureBytes(reason.value.message)
+            message = networkString(reason.value.message)
         else:
             log.err(reason)
         self._sendStatus(requestId, code, message)

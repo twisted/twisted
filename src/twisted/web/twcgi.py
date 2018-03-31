@@ -85,10 +85,9 @@ class CGIScript(resource.Resource):
                "REQUEST_METHOD":    request.method,
                "SCRIPT_NAME":       scriptName,
                "SCRIPT_FILENAME":   self.filename,
-               "REQUEST_URI":       request.uri,
-        }
+               "REQUEST_URI":       request.uri}
 
-        ip = request.getClientIP()
+        ip = request.getClientAddress().host
         if ip is not None:
             env['REMOTE_ADDR'] = ip
         pp = request.postpath
