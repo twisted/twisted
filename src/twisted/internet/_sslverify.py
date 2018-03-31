@@ -1874,7 +1874,7 @@ class _ChooseDiffieHellmanEllipticCurve(object):
             try:
                 self._ecCurve = openSSLcrypto.get_elliptic_curve(
                     _defaultCurveName)
-            except:
+            except ValueError:
                 # The get_elliptic_curve method raises a ValueError
                 # when the curve does not exist.
                 self.configureECDHCurve = self._configureOpenSSL101NoCurves
