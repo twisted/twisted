@@ -1558,7 +1558,7 @@ class Request:
 
 
 Request.getClientIP = deprecated(
-    Version("Twisted", "NEXT", 0, 0),
+    Version('Twisted', 18, 4, 0, release_candidate=1),
     replacement="getClientAddress",
 )(Request.getClientIP)
 
