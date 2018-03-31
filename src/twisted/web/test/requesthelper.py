@@ -11,17 +11,30 @@ __all__ = ['DummyChannel', 'DummyRequest']
 
 from io import BytesIO
 
-from zope.interface import implementer
+from zope.interface import implementer, verify
 
 from twisted.python.compat import intToBytes
+from twisted.python.deprecate import deprecated
+from incremental import Version
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
-from twisted.internet.interfaces import ISSLTransport
+from twisted.internet.interfaces import ISSLTransport, IAddress
+
+from twisted.trial import unittest
 
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
 from twisted.web._responses import FOUND
+
+
+
+@implementer(IAddress)
+class NullAddress(object):
+    """
+    A null implementation of L{IAddress}.
+    """
+
 
 
 class DummyChannel:
@@ -150,7 +163,17 @@ class DummyRequest(object):
     client = None
 
 
-    def registerProducer(self, prod,s):
+    def registerProducer(self, prod, s):
+        """
+        Call an L{IPullProducer}'s C{resumeProducing} method in a
+        loop until it unregisters itself.
+
+        @param prod: The producer.
+        @type prod: L{IPullProducer}
+
+        @param s: Whether or not the producer is streaming.
+        """
+        # XXX: Handle IPushProducers
         self.go = 1
         while self.go:
             prod.resumeProducing()
@@ -160,7 +183,7 @@ class DummyRequest(object):
         self.go = 0
 
 
-    def __init__(self, postpath, session=None):
+    def __init__(self, postpath, session=None, client=None):
         self.sitepath = []
         self.written = []
         self.finished = 0
@@ -315,6 +338,18 @@ class DummyRequest(object):
         return None
 
 
+    def getClientAddress(self):
+        """
+        Return the L{IAddress} of the client that made this request.
+
+        @return: an address.
+        @rtype: an L{IAddress} provider.
+        """
+        if self.client is None:
+            return NullAddress()
+        return self.client
+
+
     def getRequestHostname(self):
         """
         Get a dummy hostname associated to the HTTP request.
@@ -366,3 +401,60 @@ class DummyRequest(object):
         """
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
+
+
+
+DummyRequest.getClientIP = deprecated(
+    Version("Twisted", "NEXT", 0, 0),
+    replacement="getClientAddress",
+)(DummyRequest.getClientIP)
+
+
+
+class DummyRequestTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{DummyRequest}.
+    """
+
+    def test_getClientIPDeprecated(self):
+        """
+        L{DummyRequest.getClientIP} is deprecated in favor of
+        L{DummyRequest.getClientAddress}
+        """
+
+        request = DummyRequest([])
+        request.getClientIP()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClientIPDeprecated])
+
+        self.assertEqual(1, len(warnings))
+        [warning] = warnings
+        self.assertEqual(warning.get("category"), DeprecationWarning)
+        self.assertEqual(
+            warning.get("message"),
+            ("twisted.web.test.requesthelper.DummyRequest.getClientIP "
+             "was deprecated in Twisted NEXT; "
+             "please use getClientAddress instead"),
+        )
+
+
+    def test_getClientAddressWithoutClient(self):
+        """
+        L{DummyRequest.getClientAddress} returns an L{IAddress}
+        provider no C{client} has been set.
+        """
+        request = DummyRequest([])
+        null = request.getClientAddress()
+        verify.verifyObject(IAddress, null)
+
+
+    def test_getClientAddress(self):
+        """
+        L{DummyRequest.getClientAddress} returns the C{client}.
+        """
+        request = DummyRequest([])
+        client = IPv4Address("TCP", "127.0.0.1", 12345)
+        request.client = client
+        address = request.getClientAddress()
+        self.assertIs(address, client)
