@@ -62,9 +62,9 @@ class _ISSHConnectionCreator(Interface):
 
         @param connection: An L{twisted.conch.ssh.transport.SSHServerTransport}
             or L{twisted.conch.ssh.transport.SSHClientTransport} returned by a
-            previous call to C{secureConnection}.  It is no longer needed by the
-            caller of that method and may be closed or otherwise cleaned up as
-            necessary.
+            previous call to C{secureConnection}.  It is no longer needed by
+            the caller of that method and may be closed or otherwise cleaned up
+            as necessary.
 
         @param immediate: If C{True} don't wait for any network communication,
             just close the connection immediately and as aggressively as
@@ -174,8 +174,8 @@ class _CommandChannel(SSHChannel):
     def _execSuccess(self, ignored):
         """
         When the request to execute the command in this channel succeeds, use
-        C{protocolFactory} to build a protocol to handle the command's input and
-        output and connect the protocol to a transport representing those
+        C{protocolFactory} to build a protocol to handle the command's input
+        and output and connect the protocol to a transport representing those
         streams.
 
         Also fire C{commandConnected} with the created protocol after it is
@@ -261,9 +261,9 @@ class _ConnectionReady(SSHConnection):
 
     def serviceStarted(self):
         """
-        When the SSH I{connection} I{service} this object represents is ready to
-        be used, fire the C{connectionReady} L{Deferred} to publish that event
-        to some other interested party.
+        When the SSH I{connection} I{service} this object represents is ready
+        to be used, fire the C{connectionReady} L{Deferred} to publish that
+        event to some other interested party.
 
         """
         self._ready.callback(self)
@@ -290,8 +290,8 @@ class _UserAuth(SSHUserAuthClient):
         delegating to an authentication agent if there is one.
 
         @return: The public part of a key pair that could be used to
-            authenticate with the server, or L{None} if there are no more public
-            keys to try.
+            authenticate with the server, or L{None} if there are no more
+            public keys to try.
         @rtype: L{twisted.conch.ssh.keys.Key} or L{None}
         """
         if self.agent is not None:
@@ -385,8 +385,8 @@ class _UserAuth(SSHUserAuthClient):
 
 class _CommandTransport(SSHClientTransport):
     """
-    L{_CommandTransport} is an SSH client I{transport} which includes a host key
-    verification step before it will proceed to secure the connection.
+    L{_CommandTransport} is an SSH client I{transport} which includes a host
+    key verification step before it will proceed to secure the connection.
 
     L{_CommandTransport} also knows how to set up a connection to an
     authentication agent if it is told where it can connect to one.
@@ -527,9 +527,9 @@ class SSHCommandClientEndpoint(object):
 
         @param command: The command line to execute on the SSH server.  This
             byte string is interpreted by a shell on the SSH server, so it may
-            have a value like C{"ls /"}.  Take care when trying to run a command
-            like C{"/Volumes/My Stuff/a-program"} - spaces (and other special
-            bytes) may require escaping.
+            have a value like C{"ls /"}.  Take care when trying to run a
+            command like C{"/Volumes/My Stuff/a-program"} - spaces (and other
+            special bytes) may require escaping.
         @type command: L{bytes}
 
         """
@@ -600,10 +600,10 @@ class SSHCommandClientEndpoint(object):
     @classmethod
     def existingConnection(cls, connection, command):
         """
-        Create and return a new endpoint which will try to open a new channel on
-        an existing SSH connection and run a command over it.  It will B{not}
-        close the connection if there is a problem executing the command or
-        after the command finishes.
+        Create and return a new endpoint which will try to open a new channel
+        on an existing SSH connection and run a command over it.  It will
+        B{not} close the connection if there is a problem executing the command
+        or after the command finishes.
 
         @param connection: An existing connection to an SSH server.
         @type connection: L{SSHConnection}
@@ -654,10 +654,11 @@ class SSHCommandClientEndpoint(object):
         @return: See L{SSHCommandClientEndpoint.connect}'s return value.
         """
         commandConnected = Deferred()
+
         def disconnectOnFailure(passthrough):
             # Close the connection immediately in case of cancellation, since
             # that implies user wants it gone immediately (e.g. a timeout):
-            immediate =  passthrough.check(CancelledError)
+            immediate = passthrough.check(CancelledError)
             self._creator.cleanupConnection(connection, immediate)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)

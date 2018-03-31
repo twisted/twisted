@@ -75,7 +75,7 @@ class SSHUserAuthClientTests(TestCase):
         client.signData(self.rsaPublic, cleartext)
         self.assertEqual(
             transport.value(),
-            b"\x00\x00\x00\x8b\r\x00\x00\x00u" + self.rsaPublic.blob() +
+            b"\x00\x00\x01\x2d\r\x00\x00\x01\x17" + self.rsaPublic.blob() +
             b"\x00\x00\x00\t" + cleartext +
             b"\x00\x00\x00\x00")
 

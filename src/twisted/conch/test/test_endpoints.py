@@ -12,7 +12,7 @@ from errno import ENOSYS
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, iteritems
+from twisted.python.compat import iteritems, networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg

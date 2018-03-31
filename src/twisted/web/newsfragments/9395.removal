@@ -1,0 +1,1 @@
+twisted.web.iweb.IRequest.getClient and its implementations (deprecated in #2552) have been removed.
