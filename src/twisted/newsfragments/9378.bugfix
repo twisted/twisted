@@ -1,0 +1,1 @@
+`trial -j`  no longer crashes on Python 2 on test failure messages containing non-ASCII bytes.
