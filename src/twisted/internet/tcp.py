@@ -89,9 +89,6 @@ from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
 from twisted.internet.protocol import Protocol
 
-# Not all platforms have, or support, this flag.
-_AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
-
 
 # The type for service names passed to socket.getservbyname:
 _portNameType = (str, unicode)
@@ -613,8 +610,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
 
 
 
-_NUMERIC_ONLY = socket.AI_NUMERICHOST | _AI_NUMERICSERV
-
 def _resolveIPv6(ip, port):
     """
     Resolve an IPv6 literal into an IPv6 address.
@@ -636,7 +631,14 @@ def _resolveIPv6(ip, port):
     @raise socket.gaierror: if either the IP or port is not numeric as it
         should be.
     """
-    return socket.getaddrinfo(ip, port, 0, 0, 0, _NUMERIC_ONLY)[0][4]
+    return socket.getaddrinfo(
+        ip,
+        port,
+        socket.AF_UNSPEC,  # Any family.
+        0,  # Any socket type.
+        0,  # Any protocol.
+        socket.AI_NUMERICHOST,
+    )[0][4]
 
 
 

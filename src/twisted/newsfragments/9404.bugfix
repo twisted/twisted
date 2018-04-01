@@ -1,0 +1,3 @@
+twisted.internet.tcp.Port and twisted.internet.tcp.Client now work with IPv6
+addressed on Solaris.
+Previously it failed to recognize an IPv6 address literal.
