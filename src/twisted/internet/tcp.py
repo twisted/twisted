@@ -638,7 +638,7 @@ def _resolveIPv6(ip, port):
         # the socket.AI_NUMERICSERV flag.
         # The socket.AI_NUMERICSERV flag is not used as it fails on Solaris
         # even when a numeric port is provided.
-        raise socket.gaierror(-2, 'Name or service not known')
+        raise socket.gaierror(socket.EAI_NONAME, 'Name or service not known')
 
     return socket.getaddrinfo(
         ip,
