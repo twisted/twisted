@@ -683,7 +683,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
             # This is kind of a cheat; getRequestHostname() breaks in Python 3
             # when the "Host" request header is set to a native string because
             # it tries to split around b":", so we patch the method.
-            request.getRequestHostname = lambda: serverName
+            request.getRequestHost = lambda: serverName
             request.requestReceived()
             result.addCallback(self.environKeyEqual('SERVER_NAME', 'host.example.com'))
             self.assertIsInstance(self.successResultOf(result), str)

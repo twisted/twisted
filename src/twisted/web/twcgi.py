@@ -76,7 +76,7 @@ class CGIScript(resource.Resource):
         @param request: An HTTP request.
         """
         scriptName = b"/" + b"/".join(request.prepath)
-        serverName = request.getRequestHostname().split(b':')[0]
+        serverName = request.getRequestHost().split(b':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
                "GATEWAY_INTERFACE": "CGI/1.1",

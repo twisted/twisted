@@ -364,6 +364,16 @@ class DummyRequest(object):
         return self._serverName
 
 
+    def getRequestHost(self):
+        """
+        Get a dummy host associated to the HTTP request.
+
+        @rtype: C{bytes}
+        @returns: a dummy host
+        """
+        return self._serverName
+
+
     def getHost(self):
         """
         Get a dummy transport's host.
@@ -412,6 +422,11 @@ DummyRequest.getClientIP = deprecated(
     Version("Twisted", "NEXT", 0, 0),
     replacement="getClientAddress",
 )(DummyRequest.getClientIP)
+
+DummyRequest.getRequestHostname = deprecated(
+        Version("Twisted", "NEXT", 0, 0),
+        replacement="getRequestHost",
+)(DummyRequest.getRequestHostname)
 
 
 
