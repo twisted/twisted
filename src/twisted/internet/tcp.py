@@ -631,6 +631,15 @@ def _resolveIPv6(ip, port):
     @raise socket.gaierror: if either the IP or port is not numeric as it
         should be.
     """
+    try:
+        int(port)
+    except ValueError:
+        # This raises a similar error to the error raised when using
+        # the socket.AI_NUMERICSERV flag.
+        # The socket.AI_NUMERICSERV flag is not used as it fails on Solaris
+        # even when a numeric port is provided.
+        raise socket.gaierror(-2, 'Name or service not known')
+
     return socket.getaddrinfo(
         ip,
         port,
