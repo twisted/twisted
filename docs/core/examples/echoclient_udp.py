@@ -3,15 +3,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
 class EchoClientDatagramProtocol(DatagramProtocol):
     strings = [
-        "Hello, world!",
-        "What a fine day it is.",
-        "Bye-bye!"
+        b"Hello, world!",
+        b"What a fine day it is.",
+        b"Bye-bye!"
     ]
     
     def startProtocol(self):
@@ -26,7 +27,7 @@ class EchoClientDatagramProtocol(DatagramProtocol):
             reactor.stop()
 
     def datagramReceived(self, datagram, host):
-        print 'Datagram received: ', repr(datagram)
+        print('Datagram received: ', repr(datagram))
         self.sendDatagram()
 
 def main():

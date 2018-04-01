@@ -1,1 +1,0 @@
-twisted.protocols.mice, containing a Logitech MouseMan serial driver, has been deprecated.

@@ -9,8 +9,11 @@ Simple IMAP4 client which displays the subjects of all messages in a
 particular mailbox.
 """
 
+from __future__ import print_function
+
 import sys
 
+from twisted.internet import endpoints
 from twisted.internet import protocol
 from twisted.internet import ssl
 from twisted.internet import defer
@@ -21,9 +24,16 @@ from twisted.python import util
 from twisted.python import log
 
 
+try:
+    raw_input
+except NameError:
+    # Python 3
+    raw_input = input
+
 
 class TrivialPrompter(basic.LineReceiver):
     from os import linesep as delimiter
+    delimiter = delimiter.encode('utf-8')
 
     promptDeferred = None
 
@@ -34,13 +44,13 @@ class TrivialPrompter(basic.LineReceiver):
         return self.promptDeferred
 
     def display(self, msg):
-        self.transport.write(msg)
+        self.transport.write(msg.encode('utf-8'))
 
     def lineReceived(self, line):
         if self.promptDeferred is None:
             return
         d, self.promptDeferred = self.promptDeferred, None
-        d.callback(line)
+        d.callback(line.decode('utf-8'))
 
 
 
@@ -65,8 +75,6 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
 
 
     def __init__(self, username, onConn):
-        self.ctx = ssl.ClientContextFactory()
-
         self.username = username
         self.onConn = onConn
 
@@ -82,7 +90,7 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
         assert not self.usedUp
         self.usedUp = True
 
-        p = self.protocol(self.ctx)
+        p = self.protocol()
         p.factory = self
         p.greetDeferred = self.onConn
 
@@ -208,12 +216,11 @@ def cbFetch(result, proto):
     Finally, display headers.
     """
     if result:
-        keys = result.keys()
-        keys.sort()
+        keys = sorted(result)
         for k in keys:
             proto.display('%s %s' % (k, result[k][0][2]))
     else:
-        print "Hey, an empty mailbox!"
+        print("Hey, an empty mailbox!")
 
     return proto.logout()
 
@@ -229,8 +236,12 @@ def cbClose(result):
 def main():
     hostname = raw_input('IMAP4 Server Hostname: ')
     port = raw_input('IMAP4 Server Port (the default is 143, 993 uses SSL): ')
-    username = raw_input('IMAP4 Username: ')
-    password = util.getPassword('IMAP4 Password: ')
+
+    # Usernames are bytes.
+    username = raw_input('IMAP4 Username: ').encode('ascii')
+
+    # Passwords are bytes.
+    password = util.getPassword('IMAP4 Password: ').encode('ascii')
 
     onConn = defer.Deferred(
         ).addCallback(cbServerGreeting, username, password
@@ -239,13 +250,26 @@ def main():
 
     factory = SimpleIMAP4ClientFactory(username, onConn)
 
-    from twisted.internet import reactor
-    if port == '993':
-        reactor.connectSSL(hostname, int(port), factory, ssl.ClientContextFactory())
+    if not port:
+        port = 143
     else:
-        if not port:
-            port = 143
-        reactor.connectTCP(hostname, int(port), factory)
+        port = int(port)
+
+    from twisted.internet import reactor
+
+    endpoint = endpoints.HostnameEndpoint(reactor, hostname, port)
+
+    if port == 993:
+        if isinstance(hostname, bytes):
+            # This is python 2
+            hostname = hostname.decode('utf-8')
+
+        contextFactory = ssl.optionsForClientTLS(
+            hostname=hostname,
+        )
+        endpoint = endpoints.wrapClientTLS(contextFactory, endpoint)
+
+    endpoint.connect(factory)
     reactor.run()
 
 

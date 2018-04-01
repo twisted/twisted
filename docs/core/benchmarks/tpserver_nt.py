@@ -1,9 +1,10 @@
 """Non-twisted throughput server."""
+from __future__ import print_function
 
 import socket, signal, sys
 
 def signalhandler(*args):
-    print "alarm!"
+    print("alarm!")
     sys.stdout.flush()
 
 signal.signal(signal.SIGALRM, signalhandler)

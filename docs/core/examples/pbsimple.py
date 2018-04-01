@@ -2,13 +2,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
 
 from twisted.spread import pb
 from twisted.internet import reactor
 
 class Echoer(pb.Root):
     def remote_echo(self, st):
-        print 'echoing:', st
+        print('echoing:', st)
         return st
 
 if __name__ == '__main__':

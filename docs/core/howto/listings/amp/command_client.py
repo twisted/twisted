@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 if __name__ == '__main__':
     import command_client
@@ -36,7 +37,7 @@ def main():
     d.addCallback(connected)
 
     def registered(result):
-        print 'Registration result:', result
+        print('Registration result:', result)
     d.addCallback(registered)
 
     d.addErrback(err, "Failed to register")

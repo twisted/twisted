@@ -1,12 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 if __name__ == '__main__':
     # Avoid using any names defined in the "__main__" module.
     from pbecho import main
     raise SystemExit(main())
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.spread import pb
 from twisted.cred.portal import IRealm
@@ -18,19 +19,18 @@ class DefinedError(pb.Error):
 class SimplePerspective(pb.Avatar):
 
     def perspective_echo(self, text):
-        print 'echoing',text
+        print('echoing',text)
         return text
 
     def perspective_error(self):
         raise DefinedError("exception!")
 
     def logout(self):
-        print self, "logged out"
+        print(self, "logged out")
 
 
+@implementer(IRealm)
 class SimpleRealm:
-    implements(IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:
             avatar = SimplePerspective()

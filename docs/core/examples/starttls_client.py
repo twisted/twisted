@@ -1,17 +1,19 @@
+from __future__ import print_function
+
 from twisted.internet import ssl, endpoints, task, protocol, defer
 from twisted.protocols.basic import LineReceiver
 from twisted.python.modules import getModule
 
 class StartTLSClient(LineReceiver):
     def connectionMade(self):
-        self.sendLine("plain text")
-        self.sendLine("STARTTLS")
+        self.sendLine(b"plain text")
+        self.sendLine(b"STARTTLS")
 
     def lineReceived(self, line):
-        print("received: " + line)
-        if line == "READY":
+        print("received: ", line)
+        if line == b"READY":
             self.transport.startTLS(self.factory.options)
-            self.sendLine("secure text")
+            self.sendLine(b"secure text")
             self.transport.loseConnection()
 
 @defer.inlineCallbacks

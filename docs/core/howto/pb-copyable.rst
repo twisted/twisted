@@ -501,9 +501,6 @@ More Information
 - ``Copyable`` is also used in :api:`twisted.web.distrib <twisted.web.distrib>` to deliver HTTP requests to other
   programs for rendering, allowing subtrees of URL space to be delegated to
   multiple programs (on multiple machines).
-- :api:`twisted.manhole.explorer <twisted.manhole.explorer>` also uses
-  ``Copyable`` to distribute debugging information from the program
-  under test to the debugging tool.
 
 
 
@@ -752,8 +749,6 @@ More Information
 - The best source for information comes from the docstrings
   in :api:`twisted.spread.flavors <twisted.spread.flavors>` ,
   where ``pb.Cacheable`` is implemented.
-- :api:`twisted.manhole.explorer <twisted.manhole.explorer>` uses
-  ``Cacheable`` , and does some fairly interesting things with it.
 - The :api:`twisted.spread.publish <spread.publish>` module also
   uses ``Cacheable`` , and might be a source of further
   information.

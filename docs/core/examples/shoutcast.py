@@ -6,6 +6,7 @@ Example Shoutcast client. Run with:
 
 python shoutcast.py localhost 8080
 """
+from __future__ import print_function
 
 import sys
 
@@ -14,7 +15,7 @@ from twisted.protocols.shoutcast import ShoutcastClient
 
 class Test(ShoutcastClient):
     def gotMetaData(self, data):
-        print "meta:", data
+        print("meta:", data)
 
     def gotMP3Data(self, data):
         pass

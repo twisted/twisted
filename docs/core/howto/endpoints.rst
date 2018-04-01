@@ -152,6 +152,36 @@ Keep in mind that you may need to wrap this up for your particular application, 
 For example, that little snippet is slightly oversimplified: at the time ``connectedNow`` is run, the bot hasn't authenticated or joined the channel yet, so its message will be refused.
 A real-life IRC bot would need to have its own method for waiting until the connection is fully ready for chat before chatting.
 
+Reporting an Initial Failure
+----------------------------
+
+Often times, a failure of the very first connection attempt is special.
+It may indicate a problem that won't go away by just trying harder.
+The service may be configured with the wrong hostname, or the user may not have an internet connection at all (perhaps they forgot to turn on their wifi adapter).
+
+Applications can ask ``whenConnected`` to make their ``Deferred`` fail if the service makes one or more connection attempts in a row without success.
+You can pass the ``failAfterFailures`` parameter into ``ClientService`` to set this threshold.
+
+By calling ``whenConnected(failAfterFailures=1)`` when the service is first started (just before or just after ``startService``), your application will get notification of an initial connection failure.
+
+Setting it to 1 makes it fail after a single connection failure.
+Setting it to 2 means it will try once, wait a bit, try again, and then either fail or succeed depending upon the outcome of the second connection attempt.
+You can use 3 or more too, if you're feeling particularly patient.
+The default of ``None`` means it will wait forever for a successful connection.
+
+Regardless of ``failAfterFailures``, the ``Deferred`` will always fail with :api:`twisted.internet.defer.CancelledError <CancelledError>` if the service is stopped before a connection is made.
+
+.. code-block:: python
+
+    waitForConnection = myReconnectingService.whenConnected(failAfterFailures=1)
+    def connectedNow(clientForIRC):
+        clientForIRC.say("#bot-test", "hello, world!")
+    def failed(f):
+        print("initial connection failed: %s" % (f,))
+        # now you should stop the service and report the error upwards
+    waitForConnection.addCallbacks(connectedNow, failed)
+
+
 Retry Policies
 --------------
 
@@ -353,3 +383,10 @@ systemd
    For example, ``systemd:domain=INET6:index=3``.
 
    See also :doc:`Deploying Twisted with systemd <systemd>`.
+
+PROXY
+  The PROXY protocol is a stream wrapper and can be applied any of the other server endpoints by placing ``haproxy:`` in front of a normal port definition.
+
+  For example, ``haproxy:tcp:port=80:interface=192.168.1.1`` or ``haproxy:ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
+
+  The PROXY protocol provides a way for load balancers and reverse proxies to send down the real IP of a connection's source and destination without relying on X-Forwarded-For headers. A Twisted service using this endpoint wrapper must run behind a service that sends valid PROXY protocol headers. For more on the protocol see `the formal specification <http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>`_. Both version one and two of the protocol are currently supported.

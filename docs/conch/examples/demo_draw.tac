@@ -3,21 +3,30 @@
 
 # You can run this .tac file directly with:
 #    twistd -ny demo_draw.tac
+#
+# Re-using a private key is dangerous, generate one.
+#
+# For this example you can use:
+#
+# $ ckeygen -t rsa -f ssh-keys/ssh_host_rsa_key
 
-"""A trivial drawing application.
+"""
+A trivial drawing application.
 
 Clients are allowed to connect and spew various characters out over
 the terminal.  Spacebar changes the drawing character, while the arrow
 keys move the cursor.
 """
 
+from twisted.application import internet, service
 from twisted.conch.insults import insults
 from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
-
-from twisted.internet import protocol
-from twisted.application import internet, service
+from twisted.conch.ssh import keys
 from twisted.cred import checkers, portal
+from twisted.internet import protocol
+
+
 
 class Draw(insults.TerminalProtocol):
     """Protocol which accepts arrow key and spacebar input and places
@@ -47,7 +56,7 @@ class Draw(insults.TerminalProtocol):
         self.terminal.cursorBackward()
 
 def makeService(args):
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
     f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
@@ -67,6 +76,8 @@ def makeService(args):
     rlm.chainedProtocolFactory = chainProtocolFactory
     ptl = portal.Portal(rlm, [checker])
     f = ConchFactory(ptl)
+    f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
+    f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
     csvc = internet.TCPServer(args['ssh'], f)
 
     m = service.MultiService()

@@ -203,10 +203,10 @@ the data. For our demonstration, we will just print the results.
     
     ...
         def receiveCounts(self, lines, words, chars):
-            print 'Received counts from wc.'
-            print 'Lines:', lines
-            print 'Words:', words
-            print 'Characters:', chars
+            print('Received counts from wc.')
+            print('Lines:', lines)
+            print('Words:', words)
+            print('Characters:', chars)
 
 
 

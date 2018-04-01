@@ -2,9 +2,8 @@ from __future__ import print_function
 import sys
 from twisted.internet import defer, endpoints, protocol, ssl, task
 
-certificate = ssl.Certificate.loadPEM(
-    open("../../../examples/server.pem").read()
-)
+with open("../../../examples/server.pem") as f:
+    certificate = ssl.Certificate.loadPEM(f.read())
 
 def main(reactor, host, port=443):
     options = ssl.optionsForClientTLS(host.decode("utf-8"),

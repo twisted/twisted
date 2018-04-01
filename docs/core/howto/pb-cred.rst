@@ -62,7 +62,7 @@ look something like this:
             self.groups = {} # indexed by name
             self.users = {} # indexed by name
         def remote_joinGroup(self, username, groupname):
-            if not self.groups.has_key(groupname):
+            if groupname not in self.groups:
                 self.groups[groupname] = []
             self.groups[groupname].append(self.users[username])
         def remote_sendMessage(self, from_username, groupname, message):
@@ -160,7 +160,7 @@ object. Rather than choosing an obvious name [#]_ , let's call this the
         def __init__(self):
             self.groups = {} # indexed by name
         def joinGroup(self, groupname, user):
-            if not self.groups.has_key(groupname):
+            if groupname not in self.groups:
                 self.groups[groupname] = []
             self.groups[groupname].append(user)
         def sendMessage(self, from_username, groupname, message):
@@ -257,7 +257,7 @@ per-group object. We'll go out on a limb and call this the
             self.users = []
         def remote_send(self, from_user, message):
             if not self.allowMattress and "mattress" in message:
-                raise ValueError, "Don't say that word"
+                raise ValueError("Don't say that word")
             for user in self.users:
                 user.send("<%s> says: %s" % (from_user.name, message))
         def addUser(self, user):
@@ -294,7 +294,7 @@ this:
     
     class ClientThing(pb.Referenceable):
         def remote_print(self, message):
-            print message
+            print(message)
         def join(self):
             d = self.remoteUser.callRemote("joinGroup", "#twisted",
                                            allowMattress=False)
@@ -468,7 +468,7 @@ that it will ever use, so no lookups are needed:
             self.users = []
         def send(self, from_user, message):
             if not self.allowMattress and "mattress" in message:
-                raise ValueError, "Don't say that word"
+                raise ValueError("Don't say that word")
             for user in self.users:
                 user.send("<%s> says: %s" % (from_user.name, message))
         def addUser(self, user):
@@ -1016,10 +1016,10 @@ when the connection is lost.
             self.clients = []
         def attached(self, mind):
             self.clients.append(mind)
-            print "attached to", mind
+            print("attached to", mind)
         def detached(self, mind):
             self.clients.remove(mind)
-            print "detached from", mind
+            print("detached from", mind)
         def update(self, message):
             for c in self.clients:
                 c.callRemote("update", message)

@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
@@ -16,18 +18,18 @@ def main():
     reactor.run()
 
 def got_rootobj(rootobj):
-    print "got root object:", rootobj
-    print "telling root object to do foo(A)"
+    print("got root object:", rootobj)
+    print("telling root object to do foo(A)")
     rootobj.callRemote("foo", "A")
 
 def got_obj2(obj2):
-    print "got second object:", obj2
-    print "telling second object to do foo(B)"
+    print("got second object:", obj2)
+    print("telling second object to do foo(B)")
     obj2.callRemote("foo", "B")
 
 def got_obj3(obj3):
-    print "got third object:", obj3
-    print "telling third object to do foo(C)"
+    print("got third object:", obj3)
+    print("telling third object to do foo(C)")
     obj3.callRemote("foo", "C")
 
 class my_ObjectRetrieval(pb._ObjectRetrieval):

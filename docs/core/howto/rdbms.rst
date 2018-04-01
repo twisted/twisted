@@ -70,9 +70,9 @@ Now we can do a database query::
 
     def printResult(l):
         if l:
-            print l[0][0], "years old"
+            print(l[0][0], "years old")
         else:
-            print "No such user"
+            print("No such user")
 
     getAge("joe").addCallback(printResult)
 
@@ -103,9 +103,9 @@ In all cases a database transaction will be committed after your database usage 
 
     def printResult(age):
         if age != None:
-            print age, "years old"
+            print(age, "years old")
         else:
-            print "No such user"
+            print("No such user")
 
     getAge("joe").addCallback(printResult)
 

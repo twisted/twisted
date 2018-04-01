@@ -13,18 +13,25 @@ Run this example by typing in:
 """
 
 
-from Tkinter import Tk, Frame, Button, LEFT
+from __future__ import print_function
+
+import sys
+
+if sys.version_info >= (3,):
+    from tkinter import Tk, Frame, Button, LEFT
+else:
+    from Tkinter import Tk, Frame, Button, LEFT
 from twisted.internet import reactor, tksupport
 
 
 class App(object):
 
     def onQuit(self):
-        print "Quit!"
+        print("Quit!")
         reactor.stop()
 
     def onButton(self):
-        print "Hello!"
+        print("Hello!")
 
     def __init__(self, master):
         frame = Frame(master)

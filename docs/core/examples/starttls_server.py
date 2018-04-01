@@ -1,13 +1,15 @@
+from __future__ import print_function
+
 from twisted.internet import ssl, protocol, defer, task, endpoints
 from twisted.protocols.basic import LineReceiver
 from twisted.python.modules import getModule
 
 class TLSServer(LineReceiver):
     def lineReceived(self, line):
-        print("received: " + line)
-        if line == "STARTTLS":
+        print("received: ", line)
+        if line == b"STARTTLS":
             print("-- Switching to TLS")
-            self.sendLine('READY')
+            self.sendLine(b'READY')
             self.transport.startTLS(self.factory.options)
 
 def main(reactor):

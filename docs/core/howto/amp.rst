@@ -5,11 +5,10 @@
 
 
 
-**A** synchronous **M** essaging **P** rotocol Overview
+Asynchronous Messaging Protocol Overview
+========================================
 
 
-
-**A** synchronous **M** essaging **P** rotocol Overview
 The purpose of this guide is to describe the uses for and usage of :api:`twisted.protocols.amp <twisted.protocols.amp>` beyond what is explained in the API documentation.  It will show you how to implement an AMP server which can respond to commands or interact directly with individual messages.  It will also show you how to implement an AMP client which can issue commands to a server.
 
     
@@ -163,13 +162,12 @@ AMP conversations consist of an exchange of messages called *boxes* .  A *box* c
 
 .. code-block:: python
 
-    from zope.interface import implements
+    from zope.interface import implementer
     
     from twisted.protocols.amp import IBoxReceiver
     
+    @implementer(IBoxReceiver)
     class BoxReflector(object):
-        implements(IBoxReceiver)
-    
         def startReceivingBoxes(self, boxSender):
             self.boxSender = boxSender
     

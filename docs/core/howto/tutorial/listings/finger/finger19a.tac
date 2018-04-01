@@ -1,20 +1,20 @@
 # Do everything properly, and componentize
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 import cgi
 
 class IFingerService(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def getUsers():
-        """Return a deferred returning a list of strings"""
+        """Return a deferred returning a L{list} of L{bytes}"""
 
 class IFingerSetterService(Interface):
 
@@ -30,7 +30,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -38,16 +38,14 @@ class FingerProtocol(basic.LineReceiver):
 class IFingerFactory(Interface):
 
     def getUser(user):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """Return a protocol returning L{bytes}"""
 
 
+@implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerFactory)
-
     protocol = FingerProtocol
 
     def __init__(self, service):
@@ -76,16 +74,14 @@ class FingerSetterProtocol(basic.LineReceiver):
 class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
-        """Return a deferred returning a string"""
+        """Return a deferred returning L{bytes}"""
 
     def buildProtocol(addr):
-        """Return a protocol returning a string"""
+        """Return a protocol returning L{bytes}"""
 
 
+@implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerSetterFactory)
-
     protocol = FingerSetterProtocol
 
     def __init__(self, service):
@@ -127,10 +123,8 @@ class IIRCClientFactory(Interface):
         """Return a protocol"""
 
 
+@implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
-    implements(IIRCClientFactory)
-
     protocol = IRCReplyBot
     nickname = None
 
@@ -144,10 +138,8 @@ components.registerAdapter(IRCClientFactoryFromService,
                            IFingerService,
                            IIRCClientFactory)
 
+@implementer(resource.IResource)
 class UserStatusTree(resource.Resource):
-
-    implements(resource.IResource)
-
     def __init__(self, service):
         resource.Resource.__init__(self)
         self.service = service
@@ -199,33 +191,32 @@ class UserStatusXR(xmlrpc.XMLRPC):
     def xmlrpc_getUser(self, user):
         return self.service.getUser(user)
 
+@implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
-
-    implements([IFingerService, IFingerSetterService])
-
-    def __init__(self, **kwargs):
-        self.users = kwargs
+    def __init__(self, users):
+        self.users = users
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def setUser(self, user, status):
         self.users[user] = status
 
 
 application = service.Application('finger', uid=1, gid=1)
-f = MemoryFingerService(moshez='Happy and well')
+f = MemoryFingerService({b'moshez': b'Happy and well')
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79, IFingerFactory(f)
+strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(resource.IResource(f))
+strports.service("tcp:8000", server.Site(resource.IResource(f))
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
-internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
-internet.TCPServer(1079, IFingerSetterFactory(f), interface='127.0.0.1'
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    i).setServiceParent(serviceCollection)
+strports.service("tcp:1079:interface=127.0.0.1", IFingerSetterFactory(f)
                    ).setServiceParent(serviceCollection)

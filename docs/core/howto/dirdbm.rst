@@ -59,13 +59,13 @@ dirdbm.Shelf
 
 
 
-Sometimes it is neccessary to persist more complicated objects than strings.
+Sometimes it is necessary to persist more complicated objects than strings.
 With some care, :api:`twisted.persisted.dirdbm.Shelf <dirdbm.Shelf>` 
 can transparently persist
 them. ``Shelf`` works exactly like ``DirDBM`` , except that
 the values (but not the keys) can be arbitrary picklable objects. However,
 notice that mutating an object after it has been stored in the  ``Shelf`` has no effect on the Shelf.
-When mutating objects, it is neccessary to explicitly store them back in the ``Shelf``
+When mutating objects, it is necessary to explicitly store them back in the ``Shelf``
 afterwards:
 
 

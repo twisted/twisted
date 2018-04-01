@@ -916,7 +916,7 @@ class UserNameVirtualHost(resource.Resource):
             username = host[:-len(tail)]
         else:
             username = default
-        if self.users.has_key(username):
+        if username in self.users:
             return self.users[username]
         try:
             (pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir,

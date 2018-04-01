@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 from twisted.spread import pb
 from twisted.internet import defer, reactor
@@ -10,15 +11,15 @@ class PBBenchClient:
     calledThisSecond = 0
 
     def callLoop(self, ignored):
-        d1 = self.persp.callRemote("simple")
-        d2 = self.persp.callRemote("complexTypes")
+        d1 = self.persp.callRemote(b"simple")
+        d2 = self.persp.callRemote(b"complexTypes")
         defer.DeferredList([d1, d2]).addCallback(self.callLoop)
         self.calledThisSecond += 1
         thisSecond = int(time.time())
         if thisSecond != self.lastSecond:
             if thisSecond - self.lastSecond > 1:
-                print "WARNING it took more than one second"
-            print 'cps:', self.calledThisSecond
+                print("WARNING it took more than one second")
+            print('cps:', self.calledThisSecond)
             self.calledThisSecond = 0
             self.lastSecond = thisSecond
 
@@ -30,7 +31,7 @@ class PBBenchClient:
     def runTest(self):
         factory = pb.PBClientFactory()
         reactor.connectTCP(self.hostname, self.portno, factory)
-        factory.login(UsernamePassword("benchmark", "benchmark")).addCallback(self._cbPerspective)
+        factory.login(UsernamePassword(b"benchmark", b"benchmark")).addCallback(self._cbPerspective)
 
 
 def main():

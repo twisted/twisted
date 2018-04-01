@@ -9,6 +9,8 @@ To run the script:
 $ python xmpp_client.py <jid> <secret>
 """
 
+from __future__ import print_function
+
 import sys
 
 from twisted.internet.defer import Deferred
@@ -34,15 +36,15 @@ class Client(object):
 
 
     def rawDataIn(self, buf):
-        print "RECV: %s" % unicode(buf, 'utf-8').encode('ascii', 'replace')
+        print("RECV: %r" % buf)
 
 
     def rawDataOut(self, buf):
-        print "SEND: %s" % unicode(buf, 'utf-8').encode('ascii', 'replace')
+        print("SEND: %r" % buf)
 
 
     def connected(self, xs):
-        print 'Connected.'
+        print('Connected.')
 
         self.xmlstream = xs
 
@@ -52,13 +54,13 @@ class Client(object):
 
 
     def disconnected(self, xs):
-        print 'Disconnected.'
+        print('Disconnected.')
 
         self.finished.callback(None)
 
 
     def authenticated(self, xs):
-        print "Authenticated."
+        print("Authenticated.")
 
         presence = domish.Element((None, 'presence'))
         xs.send(presence)
@@ -67,8 +69,8 @@ class Client(object):
 
 
     def init_failed(self, failure):
-        print "Initialization failed."
-        print failure
+        print("Initialization failed.")
+        print(failure)
 
         self.xmlstream.sendFooter()
 

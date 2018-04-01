@@ -1,1 +1,0 @@
-twisted.web.util.DeferredResource no longer causes spurious "Unhandled error in Deferred" log messages.

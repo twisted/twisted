@@ -1,1 +1,0 @@
-twisted.web.static.File on Python 3 now redirects paths to directories without a trailing slash, to a path with a trailing slash, as on Python 2.

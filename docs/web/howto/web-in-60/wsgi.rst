@@ -68,13 +68,13 @@ simple one just to get things going:
     
     def application(environ, start_response):
         start_response('200 OK', [('Content-type', 'text/plain')])
-        return ['Hello, world!']
+        return [b'Hello, world!']
 
 
 
 
 If this doesn't make sense to you, take a look at one of
-these `fine tutorials <http://wsgi.readthedocs.org/en/latest/learn.html>`_ . Otherwise,
+these `fine tutorials <https://wsgi.readthedocs.io/en/latest/learn.html>`_ . Otherwise,
 or once you're done with that, the next step is to create
 a ``WSGIResource`` instance, as this is going to be
 another :doc:`rpy script <rpy-scripts>` example:
@@ -138,7 +138,7 @@ The example, sans interruption:
     
     def application(environ, start_response):
         start_response('200 OK', [('Content-type', 'text/plain')])
-        return ['Hello, world!']
+        return [b'Hello, world!']
     
     resource = WSGIResource(reactor, reactor.getThreadPool(), application)
 

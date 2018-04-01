@@ -1,0 +1,1 @@
+twisted.plugins.cred_unix now properly converts a username and password from bytes to str on Python 3.  In addition, passwords which are encrypted with SHA512 and SH256 are properly verified.  This fixes running a conch server with: "twistd -n conch -d /etc/ssh/ --auth=unix".

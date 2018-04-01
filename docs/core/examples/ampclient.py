@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from twisted.internet import reactor, defer, endpoints
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 from twisted.protocols.amp import AMP
@@ -20,12 +22,12 @@ def doMath():
     divideDeferred.addCallback(connected)
     def trapZero(result):
         result.trap(ZeroDivisionError)
-        print "Divided by zero: returning INF"
+        print("Divided by zero: returning INF")
         return 1e1000
     divideDeferred.addErrback(trapZero)
 
     def done(result):
-        print 'Done with math:', result
+        print('Done with math:', result)
         reactor.stop()
     defer.DeferredList([sumDeferred, divideDeferred]).addCallback(done)
 

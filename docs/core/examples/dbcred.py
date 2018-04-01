@@ -13,16 +13,15 @@ from twisted.cred.credentials import IUsernameHashedPassword, IUsernamePassword
 from twisted.cred.checkers import ICredentialsChecker
 from twisted.internet.defer import Deferred
 
-from zope.interface import implements
+from zope.interface import implementer
 
 
+@implementer(ICredentialsChecker)
 class DBCredentialsChecker(object):
     """
     This class checks the credentials of incoming connections
     against a user table in a database.
     """
-    implements(ICredentialsChecker)
-
     def __init__(self, runQuery,
         query="SELECT username, password FROM user WHERE username = %s",
         customCheckFunc=None, caseSensitivePasswords=True):

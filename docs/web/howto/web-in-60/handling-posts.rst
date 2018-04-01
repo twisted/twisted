@@ -3,14 +3,15 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Handling POSTs
-==============
+================
+ Handling POSTs
+================
 
 
 
 
 
-All of the previous examples have focused on ``GET`` 
+All of the previous examples have focused on ``GET``
 requests. Unlike ``GET`` requests, ``POST`` requests can have
 a request body - extra data after the request headers; for example, data
 representing the contents of an HTML form. Twisted Web makes this data available
@@ -38,11 +39,11 @@ this example uses the ``cgi`` module to `escape user-enteredcontent <http://en.w
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     import cgi
 
 
@@ -57,16 +58,18 @@ respond to ``GET`` requests with a static HTML form:
 
 .. code-block:: python
 
-    
+
     class FormPage(Resource):
         def render_GET(self, request):
-            return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"<form><input name='the-field' type='text'></form>")
 
 
 
 
 This is similar to the resource used in a :doc:`previous installment <dynamic-content>` . However, we'll now add
-one more method to give it a second behavior; this ``render_POST`` 
+one more method to give it a second behavior; this ``render_POST``
 method will allow it to accept ``POST`` requests:
 
 
@@ -75,10 +78,14 @@ method will allow it to accept ``POST`` requests:
 
 .. code-block:: python
 
-    
+
     ...
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
+            args = request.args[b"the-field"][0].decode("utf-8")
+            escapedArgs = cgi.escape(args)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"You submitted: " + escapedArgs.encode('utf-8'))
 
 
 
@@ -87,12 +94,12 @@ The main thing to note here is the use
 of ``request.args`` . This is a dictionary-like object that
 provides access to the contents of the form. The keys in this
 dictionary are the names of inputs in the form. Each value is a list
-containing strings (since there can be multiple inputs with the same
+containing bytes objects (since there can be multiple inputs with the same
 name), which is why we had to extract the first element to pass
 to ``cgi.escape`` . ``request.args`` will be
 populated from form contents whenever a ``POST`` request is
 made with a content type
-of ``application/x-www-form-urlencoded`` 
+of ``application/x-www-form-urlencoded``
 or ``multipart/form-data`` (it's also populated by query
 arguments for any type of request).
 
@@ -107,11 +114,12 @@ Finally, the example just needs the usual site creation and port setup:
 
 .. code-block:: python
 
-    
+
     root = Resource()
-    root.putChild("form", FormPage())
+    root.putChild(b"form", FormPage())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
@@ -133,24 +141,31 @@ Here's the complete source for the example:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     import cgi
-    
+
     class FormPage(Resource):
         def render_GET(self, request):
-            return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
-    
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"<form method='POST'><input name='the-field'></form>")
+
         def render_POST(self, request):
-            return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
-    
+            args = request.args[b"the-field"][0].decode("utf-8")
+            escapedArgs = cgi.escape(args)
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"You submitted: " + escapedArgs.encode('utf-8'))
+
     root = Resource()
-    root.putChild("form", FormPage())
+    root.putChild(b"form", FormPage())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
