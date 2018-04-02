@@ -4,7 +4,7 @@
 
 """
 The parent class for all the SSH Channels.  Currently implemented channels
-are session. direct-tcp, and forwarded-tcp.
+are session, direct-tcp, and forwarded-tcp.
 
 Maintainer: Paul Swartz
 """

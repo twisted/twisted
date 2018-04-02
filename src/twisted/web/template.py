@@ -34,11 +34,11 @@ from zope.interface import implementer
 
 from xml.sax import make_parser, handler
 
-from twisted.python import log
 from twisted.python.compat import NativeStringIO, items
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
+from twisted.logger import Logger
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
@@ -51,6 +51,7 @@ TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 #
 # See http://twistedmatrix.com/trac/ticket/5557 for progress on fixing this.
 NOT_DONE_YET = 1
+_moduleLog = Logger()
 
 
 class _NSContext(object):
@@ -549,7 +550,10 @@ def renderElement(request, element,
     d = flatten(request, element, request.write)
 
     def eb(failure):
-        log.err(failure, "An error occurred while rendering the response.")
+        _moduleLog.failure(
+            "An error occurred while rendering the response.",
+            failure=failure
+        )
         if request.site.displayTracebacks:
             return flatten(request, _failElement(failure),
                            request.write).encode('utf8')

@@ -20,9 +20,12 @@ include NEWS.rst README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 exclude pyproject.toml
 exclude codecov.yml
 exclude appveyor.yml
+exclude .circleci
+recursive-exclude .circleci *
 prune bin
 prune admin
 prune .travis
+prune .github
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc

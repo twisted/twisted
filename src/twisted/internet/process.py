@@ -238,7 +238,7 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         See abstract.FileDescriptor.connectionLost.
         """
-        # At least on OS X 10.4, exiting while stdout is non-blocking can
+        # At least on macOS 10.4, exiting while stdout is non-blocking can
         # result in data loss.  For some reason putting the file descriptor
         # back into blocking mode seems to resolve this issue.
         fdesc.setBlocking(self.fd)

@@ -93,6 +93,8 @@ from twisted.python.compat import (
     _PY3, long, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
+from twisted.logger import Logger
+from twisted.python.failure import Failure
 from incremental import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, protocol, address
@@ -470,6 +472,15 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
+    def __hash__():
+        """
+        Generate a hash value for the request.
+
+        @return: The request's hash value.
+        @rtype: L{int}
+        """
+
+
 
 class StringTransport:
     """
@@ -678,6 +689,9 @@ class Request:
         which this request was received is closed and which is C{True} after
         that.
     @type _disconnected: C{bool}
+
+    @ivar _log: A logger instance for request related messages.
+    @type _log: L{twisted.logger.Logger}
     """
     producer = None
     finished = 0
@@ -696,6 +710,7 @@ class Request:
     content = None
     _forceSSL = 0
     _disconnected = False
+    _log = Logger()
 
     def __init__(self, channel, queued=_QUEUED_SENTINEL):
         """
@@ -705,6 +720,13 @@ class Request:
         """
         self.notifications = []
         self.channel = channel
+
+        # Cache the client and server information, we'll need this
+        # later to be serialized and sent with the request so CGIs
+        # will work remotely
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
+
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
@@ -722,7 +744,14 @@ class Request:
         Called when have finished responding and are no longer queued.
         """
         if self.producer:
-            log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
+            self._log.failure(
+                '',
+                Failure(
+                    RuntimeError(
+                        "Producer was not unregistered for %s" % (self.uri,)
+                    )
+                )
+            )
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
@@ -828,11 +857,6 @@ class Request:
         else:
             self.path, argstring = x
             self.args = parse_qs(argstring, 1)
-
-        # cache the client and server information, we'll need this later to be
-        # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.getPeer()
-        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
@@ -1042,8 +1066,10 @@ class Request:
 
             if self.lastModified is not None:
                 if self.responseHeaders.hasHeader(b'last-modified'):
-                    log.msg("Warning: last-modified specified both in"
-                            " header list and lastModified attribute.")
+                    self._log.info(
+                        "Warning: last-modified specified both in"
+                        " header list and lastModified attribute."
+                    )
                 else:
                     self.responseHeaders.setRawHeaders(
                         b'last-modified',
@@ -1362,10 +1388,26 @@ class Request:
         @returns: the client IP address
         @rtype: C{str}
         """
-        if isinstance(self.client, address.IPv4Address):
+        if isinstance(self.client, (address.IPv4Address, address.IPv6Address)):
             return self.client.host
         else:
             return None
+
+
+    def getClientAddress(self):
+        """
+        Return the address of the client who submitted this request.
+
+        This may not be a network address (e.g., a server listening on
+        a UNIX domain socket will cause this to return
+        L{UNIXAddress}).  Callers must check the type of the returned
+        address.
+
+        @return: the client's address.
+        @rtype: L{IAddress}
+        """
+        return self.client
+
 
     def isSecure(self):
         """
@@ -1404,7 +1446,7 @@ class Request:
         except (binascii.Error, ValueError):
             self.user = self.password = ""
         except:
-            log.err()
+            self._log.failure('')
             self.user = self.password = ""
 
 
@@ -1440,17 +1482,6 @@ class Request:
             pass
         self._authorize()
         return self.password
-
-
-    def getClient(self):
-        """
-        Get the client's IP address, if it has one.  No attempt is made to
-        resolve the address to a hostname.
-
-        @return: The same value as C{getClientIP}.
-        @rtype: L{bytes}
-        """
-        return self.getClientIP()
 
 
     def connectionLost(self, reason):
@@ -1516,11 +1547,20 @@ class Request:
         return NotImplemented
 
 
+    def __hash__(self):
+        """
+        A C{Request} is hashable so that it can be used as a mapping key.
 
-Request.getClient = deprecated(
-    Version("Twisted", 15, 0, 0),
-    "Twisted Names to resolve hostnames")(Request.getClient)
+        @return A C{int} based on the instance's identity.
+        """
+        return id(self)
 
+
+
+Request.getClientIP = deprecated(
+    Version("Twisted", "NEXT", 0, 0),
+    replacement="getClientAddress",
+)(Request.getClientIP)
 
 Request.noLongerQueued = deprecated(
     Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
@@ -1934,6 +1974,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _waitingForTransport = False
     _abortingCall = None
     _optimisticEagerReadSize = 0x4000
+    _log = Logger()
 
     def __init__(self):
         # the request queue
@@ -2218,7 +2259,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def timeoutConnection(self):
-        log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        self._log.info(
+            "Timing out client: {peer}",
+            peer=str(self.transport.getPeer())
+        )
         if self.abortTimeout is not None:
             # We use self.callLater because that's what TimeoutMixin does.
             self._abortingCall = self.callLater(
@@ -2234,8 +2278,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         on extremely bad connections or when clients are maliciously attempting
         to keep connections open.
         """
-        log.msg(
-            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
+        self._log.info(
+            "Forcibly timing out client: {peer}",
+            peer=str(self.transport.getPeer())
         )
         # We want to lose track of the _abortingCall so that no-one tries to
         # cancel it.

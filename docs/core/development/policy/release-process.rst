@@ -4,7 +4,7 @@ Twisted Release Process
 This document describes the Twisted release process.
 Although it is still incomplete, every effort has been made to ensure that it is accurate and up-to-date.
 
-This process has only been tested on Linux or OS X, so we recommend that you do the release on Linux or OS X.
+This process has only been tested on Linux or macOS, so we recommend that you do the release on Linux or macOS.
 
 If you want to make changes to the release process, follow the normal Twisted development process (contribute release automation software that has documentation and unit tests demonstrating that it works).
 

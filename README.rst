@@ -5,13 +5,14 @@ Twisted 17.9.0
 |coverage|_
 |travis|_
 |appveyor|_
+|circleci|_
 
 .. code::
 
     <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
     <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
 
-For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
@@ -28,7 +29,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
-Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, OS X), IOCP (Windows), and various GUI event loops (GTK+2/3, QT, wxWidgets).
+Twisted supports all major system event loops -- ``select`` (all platforms), ``poll`` (most POSIX platforms), ``epoll`` (Linux), ``kqueue`` (FreeBSD, macOS), IOCP (Windows), and various GUI event loops (GTK+2/3, QT, wxWidgets).
 Third-party reactors can plug into Twisted, and provide support for additional event loops.
 
 
@@ -111,3 +112,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
 .. _appveyor: https://ci.appveyor.com/project/adiroiban/twisted
+
+.. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
+.. _circleci: https://circleci.com/gh/twisted/twisted

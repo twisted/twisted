@@ -487,7 +487,7 @@ Using the Global Reactor
 
 Even though it may be convenient, module-level imports of the global Twisted reactor (``from twisted.internet import reactor``) should be avoided.
 Importing the reactor at the module level means that reactor selection occurs on initial import, and not at the request of the code that originally imported the module.
-Applications may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on OS X); importing at the module level means they would have to monkeypatch in the different reactor, or use similar hacks.
+Applications may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on macOS); importing at the module level means they would have to monkeypatch in the different reactor, or use similar hacks.
 This is especially apparent in Twisted's own test suite; many tests wish to provide their own reactor which controls the passage of time and simulates timeouts.
 
 Below is an example of the pattern for accepting the user's choice of reactor -- importing the global one if none is specified -- taken (and trimmed for brevity) from existing Twisted source code.
@@ -618,7 +618,7 @@ All SQL keywords should be in upper case.
 C Code
 ------
 
-C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.3/3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, OS X, and FreeBSD).
+C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.3/3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
 If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
