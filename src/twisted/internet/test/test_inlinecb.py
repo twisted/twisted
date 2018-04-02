@@ -196,3 +196,35 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling3", tb)
         self.assertNotIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
+
+
+    def test_forwardTracebacksWithFinally(self):
+        """
+        Exception that goes through a finally still transmit its stack.
+
+        In this case, the finally will break the traceback.
+        The traceback thrown through finally do not include anymore
+        the reference to throwExceptionIntoGenerator.
+        That is because in between, we called g.send(result),
+        with result yield from the finally block.
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception('Error Marker')
+
+        @inlineCallbacks
+        def calling():
+            try:
+                yield erroring()
+            finally:
+                yield "yield in finally"
+
+        d = calling()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("in erroring", tb)
+        self.assertIn("in calling", tb)
+        self.assertNotIn("throwExceptionIntoGenerator", tb)
+        self.assertIn("Error Marker", tb)

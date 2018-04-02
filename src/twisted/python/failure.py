@@ -506,6 +506,16 @@ class Failure(BaseException):
         if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
             return frame.f_locals.get('self')
 
+        # If the exception was thrown and went through a finally
+        # block, python will forget about the original stack trace
+        # so we loss track of throwExceptionIntoGenerator
+        # in that case, _inlineCallbacks did record it as 'last_failure'
+        # local variable
+        if secondLastTb:
+            frame = secondLastTb.tb_frame
+            from twisted.internet.defer import _inlineCallbacks
+            if frame and frame.f_code is _inlineCallbacks.__code__:
+                return frame.f_locals.get('last_failure')
     _findFailure = classmethod(_findFailure)
 
     def __repr__(self):

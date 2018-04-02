@@ -1375,12 +1375,15 @@ def _inlineCallbacks(result, g, deferred):
 
     waiting = [True, # waiting for result?
                None] # result
-
+    last_failure = None
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, failure.Failure)
             if isFailure:
+                # last failure is kept in the stack so that
+                # _findFailure can find it.
+                last_failure = result
                 result = result.throwExceptionIntoGenerator(g)
             else:
                 result = g.send(result)
