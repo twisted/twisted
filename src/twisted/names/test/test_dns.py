@@ -447,7 +447,7 @@ class RoundtripDNSTests(unittest.TestCase):
         self.assertEqual(record, replica)
 
 
-    def _recordEncodingTest(self, record, expectedEncoding):
+    def assertEncodedFormat(self, expectedEncoding, record):
         """
         Assert that encoding C{record} produces the expected bytes.
 
@@ -546,7 +546,7 @@ class RoundtripDNSTests(unittest.TestCase):
             fingerprint=fp,
             )
         self._recordRoundtripTest(rr)
-        self._recordEncodingTest(rr, b'\x02\x01' + fp)
+        self.assertEncodedFormat(b'\x02\x01' + fp, rr)
 
 
     def test_NAPTR(self):
@@ -641,7 +641,7 @@ class RoundtripDNSTests(unittest.TestCase):
         rdata = (b'\x08hmac-md5\x07sig-alg\x03reg\x03int\x00'
                  b'\x00\x00\x5a\x55\x71\x2f\x00\x05\x00\x10' +
                  mac + b'\x00\x2A\x00\x00\x00\x00')
-        self._recordEncodingTest(rr, rdata)
+        self.assertEncodedFormat(rdata, rr)
 
         rr = dns.Record_TSIG(algorithm='hmac-sha256',
                              time=4511798055,  # More than 32 bits
@@ -654,7 +654,7 @@ class RoundtripDNSTests(unittest.TestCase):
                  b'\x00\x01\x0c\xec\x93\x27\x00\x05\x00\x10' +
                  mac + b'\xff\xff\x00\x12\x00\x06'
                  b'\x80\x00\x00\x00\x00\x08')
-        self._recordEncodingTest(rr, rdata)
+        self.assertEncodedFormat(rdata, rr)
 
 
     def test_TXT(self):
