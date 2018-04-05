@@ -1,0 +1,1 @@
+When using TLS enable automatic ECDH curve selection on OpenSSL 1.0.2+ instead of only supporting P-256
