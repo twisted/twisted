@@ -14,8 +14,7 @@ from os.path import expanduser
 
 from zope.interface import Interface, implementer
 
-from twisted.python.bytes import ensureBytes
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone, ProcessTerminated
@@ -434,7 +433,7 @@ class _CommandTransport(SSHClientTransport):
             L{KnownHostsFile.verifyHostKey}.
         """
         hostname = self.creator.hostname
-        ip = ensureBytes(self.transport.getPeer().host)
+        ip = networkString(self.transport.getPeer().host)
 
         self._state = b'SECURING'
         d = self.creator.knownHosts.verifyHostKey(
