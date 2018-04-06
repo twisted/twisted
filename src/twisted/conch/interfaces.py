@@ -18,30 +18,36 @@ class IConchUser(Interface):
     def lookupChannel(channelType, windowSize, maxPacket, data):
         """
         The other side requested a channel of some sort.
-        channelType is the type of channel being requested,
-        windowSize is the initial size of the remote window,
-        maxPacket is the largest packet we should send,
-        data is any other packet data (often nothing).
+
+        C{channelType} is the type of channel being requested,
+        as an ssh connection protocol channel type.
+        C{data} is any other packet data (often nothing).
 
         We return a subclass of L{SSHChannel<ssh.channel.SSHChannel>}.  If
         an appropriate channel can not be found, an exception will be
-        raised.  If a L{ConchError<error.ConchError>} is raised, the .value
-        will be the message, and the .data will be the error code.
+        raised.  If a L{ConchError<error.ConchError>} is raised, the C{.value}
+        will be the message, and the C{.data} will be the error code.
 
-        @type channelType:  L{str}
+        @param channelType: The requested channel type
+        @type channelType:  L{bytes}
+        @param windowSize:  The initial size of the remote window
         @type windowSize:   L{int}
+        @param maxPacket:   The largest packet we should send
         @type maxPacket:    L{int}
-        @type data:         L{str}
-        @rtype:             subclass of L{SSHChannel}/L{tuple}
+        @param data:        Additional request data
+        @type data:         L{bytes}
+        @rtype:             a subclass of L{SSHChannel} or L{None}
         """
 
     def lookupSubsystem(subsystem, data):
         """
         The other side requested a subsystem.
-        subsystem is the name of the subsystem being requested.
-        data is any other packet data (often nothing).
 
-        We return a L{Protocol}.
+        @param subsystem: The name of the subsystem being requested
+        @type subsystem: L{bytes}
+        @param data:     Additional request data (often nothing)
+        @type data:      L{bytes}
+        @rtype:          L{Protocol} or L{None}
         """
 
     def gotGlobalRequest(requestType, data):
