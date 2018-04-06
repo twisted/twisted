@@ -48,10 +48,15 @@ class IConchUser(Interface):
         """
         A global request was sent from the other side.
 
-        By default, this dispatches to a method 'channel_channelType' with any
-        non-alphanumerics in the channelType replace with _'s.  If it cannot
-        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.
-        The method is called with arguments of windowSize, maxPacket, data.
+        We return a true value on success or a false value on failure.
+        If we indicate success by returning a tuple, its second item
+        will be sent to the other side as additional response data.
+
+        @param requestType: The type of the request
+        @type requestType:  L{bytes}
+        @param data:        Additional request data
+        @type data:         L{bytes}
+        @rtype:             boolean or L{tuple}
         """
 
 
