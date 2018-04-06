@@ -1941,7 +1941,9 @@ class IPullProducer(IProducer):
         This tells a producer to produce data for the consumer once
         (not repeatedly, once only). Typically this will be done
         by calling the consumer's write() method a single time with
-        produced data.
+        produced data. The producer should produce data before returning
+        from C{resumeProducing()}, that is, it should not schedule a deferred
+        write.
         """
 
 class IProtocol(Interface):
