@@ -141,19 +141,13 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
+    "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
-# Scripts provided by Twisted on Python 2 only.
-_CONSOLE_SCRIPTS_PY2 = [
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    ]
-
-if not _PY3:
-    _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
 
 
 
@@ -256,6 +250,9 @@ def getSetupArgs(extensions=_EXTENSIONS):
         },
         cmdclass=command_classes,
         include_package_data=True,
+        exclude_package_data={
+            "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
+        },
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
         package_dir={"": "src"},
@@ -386,11 +383,9 @@ notPortedModules = [
     "twisted.mail.pb",
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
-    "twisted.mail.scripts.mailmail",
     "twisted.mail.tap",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_mail",
-    "twisted.mail.test.test_mailmail",
     "twisted.mail.test.test_options",
     "twisted.mail.test.test_scripts",
     "twisted.news.__init__",

@@ -10,6 +10,7 @@ Maintainer: Paul Swartz
 """
 from __future__ import division, absolute_import
 
+import string
 import struct
 
 from twisted.conch.ssh import service, common
@@ -17,7 +18,9 @@ from twisted.conch import error
 from twisted.internet import defer
 from twisted.python import log
 from twisted.python.compat import (
-    networkString, nativeString, long, _bytesChr as chr)
+    nativeString, networkString, long, _bytesChr as chr)
+
+
 
 class SSHConnection(service.SSHService):
     """
@@ -632,10 +635,9 @@ EXTENDED_DATA_STDERR = 1
 messages = {}
 for name, value in locals().copy().items():
     if name[:4] == 'MSG_':
-        messages[value] = name # doesn't handle doubles
+        messages[value] = name  # Doesn't handle doubles
 
-import string
 alphanums = networkString(string.ascii_letters + string.digits)
 TRANSLATE_TABLE = b''.join([chr(i) in alphanums and chr(i) or b'_'
-    for i in range(256)])
+                            for i in range(256)])
 SSHConnection.protocolMessages = messages

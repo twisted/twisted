@@ -44,12 +44,14 @@ class ShortcutTests(unittest.TestCase):
         testFilename = sys.executable
         baseFileName = os.path.basename(testFilename)
         tempDir = tempfile.gettempdir()
-        s1 = shortcut.Shortcut(path=testFilename,
-                               arguments="-V",
-                               description="The Python executable",
-			       workingdir=tempDir,
-			       iconpath=tempDir,
-                               iconidx=1)
+        s1 = shortcut.Shortcut(
+            path=testFilename,
+            arguments="-V",
+            description="The Python executable",
+            workingdir=tempDir,
+            iconpath=tempDir,
+            iconidx=1,
+            )
         tempname = self.mktemp() + '.lnk'
         s1.save(tempname)
         self.assertTrue(os.path.exists(tempname))
