@@ -1333,7 +1333,11 @@ class Request:
         host = self.getHeader(b'host')
         if host:
             return host.split(b':', 1)[0]
-        return networkString(self.getHost().host)
+        hostAddress = self.getHost()
+        if isinstance(hostAddress, address.UNIXAddress):
+            return b"unix-socket"
+        else:
+            return networkString(self.getHost().host)
 
 
     def getHost(self):
