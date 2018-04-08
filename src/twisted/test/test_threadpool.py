@@ -585,36 +585,6 @@ class RaceConditionTests(unittest.SynchronousTestCase):
             )
 
 
-    def test_singleThread(self):
-        """
-        The submission of a new job to a thread pool in response to the
-        C{onResult} callback does not cause a new thread to be added to the
-        thread pool.
-
-        This requires that the thread which calls C{onResult} to have first
-        marked itself as available so that when the new job is queued, that
-        thread may be considered to run it.  This is desirable so that when
-        only N jobs are ever being executed in the thread pool at once only
-        N threads will ever be created.
-        """
-        # Ensure no threads running
-        self.assertEqual(self.threadpool.workers, 0)
-
-        event = threading.Event()
-        event.clear()
-
-        def onResult(success, counter):
-            event.set()
-
-        for i in range(10):
-            self.threadpool.callInThreadWithCallback(
-                onResult, lambda: None)
-            event.wait(10)
-            event.clear()
-
-        self.assertEqual(self.threadpool.workers, 1)
-
-
 
 class MemoryPool(threadpool.ThreadPool):
     """
