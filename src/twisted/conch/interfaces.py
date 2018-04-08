@@ -24,9 +24,11 @@ class IConchUser(Interface):
         C{data} is any other packet data (often nothing).
 
         We return a subclass of L{SSHChannel<ssh.channel.SSHChannel>}.  If
-        an appropriate channel can not be found, an exception will be
-        raised.  If a L{ConchError<error.ConchError>} is raised, the C{.value}
-        will be the message, and the C{.data} will be the error code.
+        the channel type is unknown, we return C{None}.
+
+        For other failures, we raise an exception. If a
+        L{ConchError<error.ConchError>} is raised, the C{.value} will
+        be the message, and the C{.data} will be the error code.
 
         @param channelType: The requested channel type
         @type channelType:  L{bytes}
@@ -42,6 +44,9 @@ class IConchUser(Interface):
     def lookupSubsystem(subsystem, data):
         """
         The other side requested a subsystem.
+
+        We return a L{Protocol} implementing the requested subsystem.
+        If the subsystem is not available, we return C{None}.
 
         @param subsystem: The name of the subsystem being requested
         @type subsystem: L{bytes}
