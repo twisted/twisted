@@ -26,6 +26,8 @@ from twisted.web.static import Data
 from twisted.logger import globalLogPublisher, LogLevel
 from twisted.test.proto_helpers import EventLoggingObserver
 
+from hyperlink import DecodedURL, URL as hyperlinkURL
+
 
 class ResourceTests(unittest.TestCase):
     def testListEntities(self):
@@ -865,17 +867,29 @@ class RequestTests(unittest.TestCase):
         self.assertNotIn(b'content-type', response.lower())
 
 
-    def test_hyperlinkRequestURL(self):
+    def test_DecodedURL(self):
         """
-        L{Request.prePathURL} quotes special characters in the URL segments to
-        preserve the original meaning.
+        Test URL function for simple request url case
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
+        request.setHost(b'example.com', 80)
+        self.assertEqual(request.URL(),
+            DecodedURL(hyperlinkURL.from_text('http://example.com/foo/bar')))
+
+
+    def test_DecodedURLQuoting(self):
+        """
+        L{Request.prePathURL} quotes special characters, URL should handle it.
         """
         d = DummyChannel()
         request = server.Request(d, 1)
         request.setHost(b'example.com', 80)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
-        self.assertEqual(request.hyperlinkURL().asText(), 'http://example.com/foo%2Fbar')
+        self.assertEqual(request.URL(),
+            DecodedURL(hyperlinkURL.from_text('http://example.com/foo%2Fbar')))
 
 
 
