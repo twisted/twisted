@@ -32,6 +32,3 @@ def run():
 
 
 __all__ = ['run', 'runApp']
-
-
-__name__ == '__main__' and run()
