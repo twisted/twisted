@@ -259,7 +259,7 @@ class _DisconnectSelectableMixin(object):
 
 
 
-@implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
+@implementer(IReactorTCP, IReactorTCPReusePort, IReactorUDP, IReactorMulticast)
 class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
                        ReactorBase):
     """
@@ -490,9 +490,8 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     # IReactorTCP
 
-    def listenTCP(self, port, factory, backlog=50, interface='',
-            listenMultiple=False):
-        p = tcp.Port(port, factory, backlog, interface, self, listenMultiple)
+    def listenTCP(self, port, factory, backlog=50, interface=''):
+        p = tcp.Port(port, factory, backlog, interface, self)
         p.startListening()
         return p
 
@@ -500,6 +499,13 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c
+
+    # IReactorTCPReusePort
+    def listenTCPReusePort(self, port, factory, backlog=50, interface=''):
+        p = tcp.Port(port, factory, backlog, interface, self,
+                     reusePort=True)
+        p.startListening()
+        return p
 
     # IReactorSSL (sometimes, not implemented)
 
