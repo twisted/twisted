@@ -168,15 +168,14 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
 
 
     if TLSMemoryBIOFactory is not None:
-        def listenSSL(self, port, factory, contextFactory, backlog=50, interface='',
-                multiListen=False):
+        def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
             """
             @see: twisted.internet.interfaces.IReactorSSL.listenSSL
             """
             port = self.listenTCP(
                 port,
                 TLSMemoryBIOFactory(contextFactory, False, factory),
-                backlog, interface, multiListen)
+                backlog, interface)
             port._type = 'TLS'
             return port
 
@@ -190,8 +189,7 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
                 TLSMemoryBIOFactory(contextFactory, True, factory),
                 timeout, bindAddress)
     else:
-        def listenSSL(self, port, factory, contextFactory, backlog=50, interface='',
-                multiListen=False):
+        def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
             """
             Non-implementation of L{IReactorSSL.listenSSL}.  Some dependency
             is not satisfied.  This implementation always raises
