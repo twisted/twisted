@@ -721,6 +721,7 @@ class ClientContextFactoryTests(unittest.TestCase):
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
 
 
+
 if interfaces.IReactorSSL(reactor, None) is None:
     for tCase in [StolenTCPTests, TLSTests, SpammyTLSTests,
                   BufferingTests, ConnectionLostTests,

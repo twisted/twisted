@@ -1386,7 +1386,7 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 (address.port, factory,
                  listenArgs.get('backlog', 50),
                  listenArgs.get('interface', ''),
-                 listenArgs.get('listenMultiple', False)),
+                 listenArgs.get('reusePort', False)),
                 address)
 
 
@@ -1496,7 +1496,7 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 (address.port, factory,
                  listenArgs.get('backlog', 50),
                  interface,
-                 listenArgs.get('listenMultiple', False)),
+                 listenArgs.get('reusePort', False)),
                 address)
 
 
@@ -2801,8 +2801,7 @@ class SSL4EndpointsTests(EndpointTestCaseMixin,
                                              **listenArgs),
                 (address.port, factory, self.serverSSLContext,
                  listenArgs.get('backlog', 50),
-                 listenArgs.get('interface', ''),
-                 listenArgs.get('listenMultiple', False)),
+                 listenArgs.get('interface', '')),
                 address)
 
 
