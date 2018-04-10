@@ -259,7 +259,7 @@ class _DisconnectSelectableMixin(object):
 
 
 
-@implementer(IReactorTCP, IReactorTCPReusePort, IReactorUDP, IReactorMulticast)
+@implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
 class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
                        ReactorBase):
     """
@@ -523,18 +523,15 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
 
 
-    def listenSSL(self, port, factory, contextFactory, backlog=50, interface='',
-            listenMultiple=False):
+    def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
         if tls is not None:
             tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, False, factory)
-            port = self.listenTCP(port, tlsFactory, backlog, interface,
-                    listenMultiple)
+            port = self.listenTCP(port, tlsFactory, backlog, interface)
             port._type = 'TLS'
             return port
         elif ssl is not None:
             p = ssl.Port(
-                port, factory, contextFactory, backlog, interface, self,
-                listenMultiple)
+                port, factory, contextFactory, backlog, interface, self)
             p.startListening()
             return p
         else:
@@ -795,7 +792,8 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         return fd in self._writers
 
 
-
+if tcp.Port.hasReusePort():
+    classImplements(PosixReactorBase, IReactorTCPReusePort)
 if tls is not None or ssl is not None:
     classImplements(PosixReactorBase, IReactorSSL)
 if unixEnabled:

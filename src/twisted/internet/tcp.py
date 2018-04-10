@@ -911,6 +911,10 @@ class Port(base.BasePort, _SocketCloser):
     addressFamily = socket.AF_INET
     _addressType = address.IPv4Address
 
+    @classmethod
+    def hasReusePort(cls):
+        return hasattr(socket, "SO_REUSEPORT")
+
     def __init__(self, port, factory, backlog=50, interface='', reactor=None,
             reusePort=False):
         """Initialize with a numeric port to listen on.
