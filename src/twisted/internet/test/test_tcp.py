@@ -917,6 +917,8 @@ class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
+    lostConnectionReason = ConnectionDone
+
     def test_startedListeningLogMessage(self):
         """
         When a port starts, a message including a description of the associated
@@ -977,6 +979,42 @@ class StreamTransportTestsMixin(LogObserverMixin):
         self.assertFullyNewStyle(port)
 
 
+    def test_closePeerOnEMFILE(self):
+        """
+        The L{IListeningPort} immediately closes an accepted peer socket when
+        the number of open file descriptors exceeds the resource limit.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, MyServerFactory())
+        listeningHost = port.getHost()
+        clientFactory = MyClientFactory()
+        self.connectToListener(reactor, listeningHost, clientFactory)
+
+        clientFactory.protocolConnectionMade = Deferred()
+
+        def loseConnection(proto):
+            proto.transport.loseConnection()
+
+        clientFactory.protocolConnectionMade.addCallback(loseConnection)
+
+        def stopReactor(result):
+            reactor.stop()
+            return result
+
+        clientFactory.deferred.addBoth(stopReactor)
+        clientFactory.failDeferred.addBoth(stopReactor)
+
+        self.runReactor(reactor)
+
+        self.assertNoResult(clientFactory.failDeferred)
+        self.successResultOf(clientFactory.deferred)
+        self.assertRaises(
+            self.lostConnectionReason,
+            clientFactory.lostReason.raiseException,
+        )
+
+
+
 class ListenTCPMixin(object):
     """
     Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.
@@ -986,6 +1024,24 @@ class ListenTCPMixin(object):
         Get a TCP port from a reactor.
         """
         return reactor.listenTCP(port, factory, interface=interface)
+
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to the given listening address.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorTCP}
+
+        @param address: The listening's address.
+        @type address: L{IPv4Address} or L{IPv6Address}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectTCP(address.host, address.port, factory)
 
 
 
@@ -1022,6 +1078,24 @@ class SocketTCPMixin(object):
                 portSock.close()
         else:
             raise SkipTest("Reactor does not provide IReactorSocket")
+
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to a listening TCP port.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorTCP}
+
+        @param address: The listening's address.
+        @type address: L{IPv4Address} or L{IPv6Address}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectTCP(address.host, address.port, factory)
 
 
 

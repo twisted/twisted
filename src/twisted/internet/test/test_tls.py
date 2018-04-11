@@ -20,7 +20,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
-from twisted.internet.error import ConnectionClosed
+from twisted.internet.error import ConnectionAborted, ConnectionClosed
 from twisted.internet.task import Cooperator
 from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
@@ -292,6 +292,8 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
     """
     Tests for L{IReactorSSL.listenSSL}
     """
+    lostConnectionReason = ConnectionAborted
+
     def getListeningPort(self, reactor, factory):
         """
         Get a TLS port from a reactor.
@@ -322,6 +324,26 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         def useIt(reactor, contextFactory):
             return reactor.listenSSL(0, ServerFactory(), contextFactory)
         self._testBadContext(useIt)
+
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to the given listening TLS port, assuming the
+        underlying transport is TCP.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorSSL}
+
+        @param address: The listening's address.
+        @type address: L{IPv4Address} or L{IPv6Address}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectSSL(
+            address.host, address.port, factory, self.getClientContext())
 
 
 
