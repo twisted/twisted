@@ -343,7 +343,7 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         @return: The connector
         """
         return reactor.connectSSL(
-            address.host, address.port, factory, self.getClientContext())
+            '127.0.0.1', address.port, factory, self.getClientContext())
 
 
 

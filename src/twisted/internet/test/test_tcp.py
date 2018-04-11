@@ -1028,7 +1028,7 @@ class ListenTCPMixin(object):
 
     def connectToListener(self, reactor, address, factory):
         """
-        Connect to the given listening address.
+        Connect to the given listening TCP port.
 
         @param reactor: The reactor under test.
         @type reactor: L{IReactorTCP}
@@ -1041,7 +1041,7 @@ class ListenTCPMixin(object):
 
         @return: The connector
         """
-        return reactor.connectTCP(address.host, address.port, factory)
+        return reactor.connectTCP('127.0.0.1', address.port, factory)
 
 
 
@@ -1095,7 +1095,7 @@ class SocketTCPMixin(object):
 
         @return: The connector
         """
-        return reactor.connectTCP(address.host, address.port, factory)
+        return reactor.connectTCP('127.0.0.1', address.port, factory)
 
 
 
