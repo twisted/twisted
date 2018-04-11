@@ -458,8 +458,8 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
         self.assertIn('Traceback', eventText)
-        self.assertIn('This is a fake error', eventText)
-        self.assertIn('This is a test log message', eventText)
+        self.assertIn(u'This is a fake error', eventText)
+        self.assertIn(u'This is a test log message', eventText)
 
 
     def test_formatEmptyEventWithTraceback(self):
@@ -475,7 +475,7 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
         self.assertIn('Traceback', eventText)
-        self.assertIn('This is a fake error', eventText)
+        self.assertIn(u'This is a fake error', eventText)
 
 
     def test_formatUnformattableWithTraceback(self):
@@ -492,9 +492,9 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         event["log_failure"] = f
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
-        self.assertIn('MESSAGE LOST', eventText)
-        self.assertIn('Traceback', eventText)
-        self.assertIn('This is a fake error', eventText)
+        self.assertIn(u'MESSAGE LOST', eventText)
+        self.assertIn(u'Traceback', eventText)
+        self.assertIn(u'This is a fake error', eventText)
 
 
     def test_formatEventUnformattableTraceback(self):
@@ -520,4 +520,4 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         }
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
-        self.assertIn('This is a test log message', eventText)
+        self.assertIn(u'This is a test log message', eventText)
