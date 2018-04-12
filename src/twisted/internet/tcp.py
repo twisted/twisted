@@ -18,7 +18,8 @@ import os
 import struct
 
 import attr
-import automat
+
+from automat import MethodicalMachine
 
 from zope.interface import implementer
 
@@ -911,7 +912,7 @@ class _FileDescriptorReservation(object):
         returns an object with a C{close} method.
     """
     _log = Logger()
-    _machine = automat.MethodicalMachine()
+    _machine = MethodicalMachine()
 
     _fileFactory = attr.ib()
     _fileDescriptor = attr.ib(init=False, default=None)
