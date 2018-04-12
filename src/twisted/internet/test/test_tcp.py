@@ -19,8 +19,8 @@ from functools import wraps
 
 import attr
 
-from zope.interface import implementer
-from zope.interface.verify import verifyClass
+from zope.interface import Interface, implementer
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.logger import Logger
 from twisted.python.compat import long
@@ -56,6 +56,7 @@ from twisted.internet.tcp import (
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
+from twisted.test.proto_helpers import MemoryReactor, StringTransport
 
 try:
     from OpenSSL import SSL
@@ -920,6 +921,38 @@ def createTestSocket(test, addressFamily, socketType):
 
 
 
+class _IExhaustsFileDescriptors(Interface):
+    """
+    A way to trigger C{EMFILE}.
+    """
+
+    def exhaust():
+        """
+        Open file descriptors until C{EMFILE} is reached.
+
+        This can raise any exception except an L{OSError} whose
+        C{errno} is C{EMFILE}.  Any exception raised to the caller
+        implies L{release}.
+        """
+
+
+    def release():
+        """
+        Release all file descriptors opened by L{exhaust}.
+        """
+
+
+    def count():
+        """
+        Return the number of opened file descriptors.
+
+        @return: The number of opened file descriptors; this will be
+            zero if this instance has not opened any.
+        @rtype: L{int}
+        """
+
+
+@implementer(_IExhaustsFileDescriptors)
 @attr.s
 class _ExhaustsFileDescriptors(object):
     """
@@ -1008,6 +1041,14 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         open(os.devnull).close()
 
 
+    def test_providesInterface(self):
+        """
+        L{_ExhaustsFileDescriptors} instances provide
+        L{_IExhaustsFileDescriptors}.
+        """
+        verifyObject(_IExhaustsFileDescriptors, self.exhauster)
+
+
     def test_count(self):
         """
         L{_ExhaustsFileDescriptors.count} returns the number of open
@@ -1065,6 +1106,167 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         for fd in fileDescriptors:
             exception = self.assertRaises(OSError, os.close, fd)
             self.assertEqual(exception.errno, errno.EBADF)
+
+
+
+def assertPeerClosedOnEMFILE(
+        testCase,
+        exhauster,
+        reactor,
+        runReactor,
+        listen,
+        connect,
+):
+    """
+    Assert that an L{IListeningPort} immediately closes an accepted
+    peer socket when the number of open file descriptors exceeds the
+    soft resource limit.
+
+    @param testCase: The test case under which to run this assertion.
+    @type testCase: L{trial.unittest.SynchronousTestCase} or
+        L{trial.unittest.TestCase}
+
+    @param exhauster: The file descriptor exhauster.
+    @type exhauster: L{_ExhaustsFileDescriptors}
+
+    @param reactor: The reactor under test.
+
+    @param runReactor: A callable that will synchronously run the
+        provided reactor.
+
+    @param listen: A callback to bind to a port.
+    @type listen: A L{callable} that accepts two arguments: the
+        provided C{reactor}; and a L{ServerFactory}.  It must return
+        an L{IListeningPort} provider.
+
+    @param connect: A callback to connect a client to the listening
+        port.
+    @type connect: A L{callable} that accepts three arguments: the
+        provided C{reactor}; the address returned by
+        L{IListeningPort.getHost}; and a L{ClientFactory}.  Its return
+        value is ignored.
+    """
+    testCase.addCleanup(exhauster.release)
+
+    serverFactory = MyServerFactory()
+    serverConnectionMade = Deferred()
+    serverFactory.protocolConnectionMade = serverConnectionMade
+    serverConnectionCompleted = [False]
+
+    def stopReactorIfServerAccepted(_):
+        reactor.stop()
+        serverConnectionCompleted[0] = True
+
+    serverConnectionMade.addCallback(
+        stopReactorIfServerAccepted)
+
+    port = listen(reactor, serverFactory)
+    listeningHost = port.getHost()
+    clientFactory = MyClientFactory()
+    connect(reactor, listeningHost, clientFactory)
+
+    reactor.callWhenRunning(exhauster.exhaust)
+
+    def stopReactorAndCloseFileDescriptors(result):
+        exhauster.release()
+        if reactor.running:
+            reactor.stop()
+        return result
+
+    clientFactory.deferred.addBoth(stopReactorAndCloseFileDescriptors)
+    clientFactory.failDeferred.addBoth(stopReactorAndCloseFileDescriptors)
+
+    runReactor(reactor)
+
+    noResult = []
+    serverConnectionMade.addBoth(noResult.append)
+    testCase.assertFalse(
+        noResult, "Server accepted connection; EMFILE not triggered.")
+    testCase.assertNoResult(clientFactory.failDeferred)
+    testCase.successResultOf(clientFactory.deferred)
+    testCase.assertRaises(
+        testCase.lostConnectionReason,
+        clientFactory.lostReason.raiseException,
+    )
+
+
+
+class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
+    """
+    Tests for L{assertPeerClosedOnEMFILE}.
+    """
+    @implementer(_IExhaustsFileDescriptors)
+    class NullExhauster(object):
+        """
+        An exhauster that does nothing.
+        """
+
+        def exhaust(self):
+            """
+            See L{_IExhaustsFileDescriptors.exhaust}
+            """
+
+
+        def release(self):
+            """
+            See L{_IExhaustsFileDescriptors.release}
+            """
+
+
+        def count(self):
+            """
+            See L{_IExhaustsFileDescriptors.count}
+            """
+
+    def setUp(self):
+        self.reactor = MemoryReactor()
+        self.testCase = SynchronousTestCase()
+
+
+    def test_nullExhausterProvidesInterface(self):
+        """
+        L{NullExhauster} instances provide
+        L{_IExhaustsFileDescriptors}.
+        """
+        verifyObject(_IExhaustsFileDescriptors, self.NullExhauster())
+
+
+    def test_reactorStoppedOnSuccessfulConnection(self):
+        """
+        If the exhauster fails to trigger C{EMFILE} and a connection
+        reaches the server, the reactor is stopped and the test fails.
+        """
+        exhauster = self.NullExhauster()
+        serverFactory = [None]
+
+        def runReactor(reactor):
+            reactor.run()
+            proto = serverFactory[0].buildProtocol(
+                IPv4Address('TCP', '127.0.0.1', 4321))
+            proto.makeConnection(StringTransport())
+
+        def listen(reactor, factory):
+            port = reactor.listenTCP('127.0.0.1', 1234, factory)
+            factory.doStart()
+            serverFactory[0] = factory
+            return port
+
+        def connect(reactor, address, factory):
+            reactor.connectTCP('127.0.0.1', 0, factory)
+
+        exception = self.assertRaises(
+            self.testCase.failureException,
+            assertPeerClosedOnEMFILE,
+            testCase=self.testCase,
+            exhauster=exhauster,
+            reactor=self.reactor,
+            runReactor=runReactor,
+            listen=listen,
+            connect=connect,
+        )
+
+        self.assertIn("EMFILE", str(exception))
+        self.assertFalse(self.reactor.running)
 
 
 
@@ -1136,34 +1338,15 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
     def test_closePeerOnEMFILE(self):
         """
-        The L{IListeningPort} immediately closes an accepted peer
-        socket when the number of open file descriptors exceeds the
-        soft resource limit.
+        See L{assertPeerClosedOnEMFILE}.
         """
-        reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, MyServerFactory())
-        listeningHost = port.getHost()
-        clientFactory = MyClientFactory()
-        self.connectToListener(reactor, listeningHost, clientFactory)
-
-        exhauster = _ExhaustsFileDescriptors()
-        reactor.callWhenRunning(exhauster.exhaust)
-
-        def stopReactorAndCloseFileDescriptors(result):
-            exhauster.release()
-            reactor.stop()
-            return result
-
-        clientFactory.deferred.addBoth(stopReactorAndCloseFileDescriptors)
-        clientFactory.failDeferred.addBoth(stopReactorAndCloseFileDescriptors)
-
-        self.runReactor(reactor)
-
-        self.assertNoResult(clientFactory.failDeferred)
-        self.successResultOf(clientFactory.deferred)
-        self.assertRaises(
-            self.lostConnectionReason,
-            clientFactory.lostReason.raiseException,
+        assertPeerClosedOnEMFILE(
+            testCase=self,
+            exhauster=_ExhaustsFileDescriptors(),
+            reactor=self.buildReactor(),
+            runReactor=self.runReactor,
+            listen=self.getListeningPort,
+            connect=self.connectToListener,
         )
 
 
