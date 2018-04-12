@@ -14,10 +14,15 @@ from __future__ import division, absolute_import
 import socket
 import sys
 import operator
+import os
 import struct
+
+import attr
+import automat
 
 from zope.interface import implementer
 
+from twisted.logger import Logger
 from twisted.python.compat import lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
@@ -853,6 +858,246 @@ class Server(_TLSServerMixin, Connection):
 
 
 
+def _silenceOutputs(outputs):
+    """
+    An L{automat} output collector that returns L{None}.
+
+    @param outputs: An outputs iterator
+
+    @return: L{None}
+    """
+    list(outputs)
+    return None
+
+
+
+def _nthOutput(n):
+    """
+    An L{automat} output collector factory that returns the value of
+    the C{nth} output.
+
+    @param n: An integer representing C{nth} output to return.
+        Counting starts at zero.
+
+    @return: The value of the first output.
+    """
+    def _collectNthOutput(outputs):
+        return list(outputs)[n]
+    return _collectNthOutput
+
+
+
+@attr.s
+class _FileDescriptorReservation(object):
+    """
+    An open file that represents an emergency reservation in the
+    process' file descriptor table.  If L{Port} encounters C{EMFILE}
+    on C{accept(2)}, it can close this file descriptor, retry the
+    C{accept} so that the incoming connection occupies this file
+    descriptor's space, and then close that connection and reopen this
+    one.
+
+    Calling L{_FileDescriptorReservation.ensure} opens the reserve
+    file descriptor if it is not already open.
+    L{_FileDescriptorReservation.release} close this descriptor; a
+    subsequent call to L{_FileDescriptorReservation.replace} will
+    close the provided file and re-open the reservation file.  A
+    claimed reservation will not replace the provided file with
+    itself.  L{_FileDescriptorReservation.release} is idempotent.
+
+    @param fileFactory: A factory that will be called to reserve a
+        file descriptor.
+    @type fileFactory: A L{callable} that accepts no arguments and
+        returns an object with a C{close} method.
+    """
+    _log = Logger()
+    _machine = automat.MethodicalMachine()
+
+    _fileFactory = attr.ib()
+    _fileDescriptor = attr.ib(init=False, default=None)
+
+    @_machine.state(initial=True)
+    def _unreserved(self):
+        """
+        The reservation file is unreserved.
+        """
+
+
+    @_machine.state()
+    def _reserved(self):
+        """
+        The reservation file is reserved.
+        """
+
+
+    @_machine.input()
+    def available(self):
+        """
+        Is the reservation available?
+        """
+
+
+    @_machine.input()
+    def release(self):
+        """
+        Release the reservation descriptor so another file can take
+        its place.
+        """
+
+
+    @_machine.input()
+    def acquire(self):
+        """
+        Ensure that the reservation file is held.
+        """
+
+
+    @_machine.input()
+    def replace(self, fileObject):
+        """
+        Replace a file with the reservation file only if our reserve
+        file is unclaimed.
+
+        @param fileObject: The file object to close.
+        """
+
+
+    @_machine.input()
+    def _openFailedWithEMFILE(self):
+        """
+        An internal input that undoes a reservation that failed to
+        open the reservation file.
+        """
+
+
+    def _createFD(self):
+        """
+        Actually open the reservation file.
+        """
+        try:
+            self._fileDescriptor = self._fileFactory()
+        except (IOError, OSError) as e:
+            if e.errno == EMFILE:
+                self._log.failure("Failed to open reservation file.")
+                self._fileDescriptor = None
+            else:
+                raise
+
+
+    @_machine.output()
+    def _openReservationFile(self):
+        """
+        Use the C{_fileFactory} to claim a file descriptor.
+        """
+        self._createFD()
+
+
+    @_machine.output()
+    def _reopenReservationFile(self, fileObject):
+        """
+        The same as L{_openReservationFile}, except that it accepts a
+        C{fileObject} argument.
+
+        @param fileObject: ignored.
+        """
+        self._createFD()
+
+
+    @_machine.output()
+    def _closeReservationFile(self):
+        """
+        Close the reservation file.
+        """
+        self._fileDescriptor.close()
+        self._fileDescriptor = None
+
+
+    @_machine.output()
+    def _closeFile(self, fileObject):
+        """
+        Close the provided file object.
+
+        @param fileObject: The file object to close.
+        """
+        fileObject.close()
+
+
+    @_machine.output()
+    def _returnTrue(self):
+        """
+        Return True.
+
+        @return: L{True}
+        """
+        return True
+
+
+    @_machine.output()
+    def _returnFalse(self):
+        """
+        Return False.
+
+        @return: L{False}
+        """
+        return False
+
+
+    @_machine.output()
+    def _replaced(self, fileObject):
+        """
+        Return True.
+
+        @param fileObject: ignored.
+
+        @return: L{True}
+        """
+        if self._fileDescriptor is None:
+            self._openFailedWithEMFILE()
+            return False
+        return True
+
+
+    @_machine.output()
+    def _notReplaced(self, fileObject):
+        """
+        Return False.
+
+        @param fileObject: ignored.
+
+        @return: L{False}
+        """
+        return False
+
+
+    _unreserved.upon(
+        acquire, enter=_reserved, outputs=[_openReservationFile],
+        collector=_silenceOutputs)
+    _unreserved.upon(
+        replace, enter=_reserved,
+        outputs=[_closeFile, _reopenReservationFile, _replaced],
+        collector=_nthOutput(-1))
+    _unreserved.upon(
+        available, enter=_unreserved, outputs=[_returnFalse],
+        collector=_nthOutput(0))
+
+    _reserved.upon(
+        release, enter=_unreserved, outputs=[_closeReservationFile],
+        collector=_silenceOutputs)
+    _reserved.upon(
+        acquire, enter=_reserved, outputs=[],
+        collector=_silenceOutputs)
+    _reserved.upon(
+        replace, enter=_reserved,
+        outputs=[_notReplaced],
+        collector=_nthOutput(0))
+    _reserved.upon(
+        available, enter=_reserved, outputs=[_returnTrue],
+        collector=_nthOutput(0))
+    _reserved.upon(
+        _openFailedWithEMFILE, enter=_unreserved, outputs=[])
+
+
+
 @implementer(interfaces.IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
@@ -921,6 +1166,7 @@ class Port(base.BasePort, _SocketCloser):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
         self.interface = interface
+        self._reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
 
 
     @classmethod
@@ -967,6 +1213,7 @@ class Port(base.BasePort, _SocketCloser):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
+        self._reservedFD.acquire()
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
@@ -1038,42 +1285,62 @@ class Port(base.BasePort, _SocketCloser):
                         # connection, but we get told to try to accept()
                         # anyway.
                         continue
-                    elif e.args[0] in (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED):
-                        # Linux gives EMFILE when a process is not allowed to
-                        # allocate any more file descriptors.  *BSD and Win32
-                        # give (WSA)ENOBUFS.  Linux can also give ENFILE if the
-                        # system is out of inodes, or ENOMEM if there is
-                        # insufficient memory to allocate a new dentry.
-                        # ECONNABORTED is documented as possible on all
-                        # relevant platforms (Linux, Windows, macOS, and the
-                        # BSDs) but occurs only on the BSDs.  It occurs when a
-                        # client sends a FIN or RST after the server sends a
-                        # SYN|ACK but before application code calls accept(2).
-                        # On Linux, calling accept(2) on such a listener
-                        # returns a connection that fails as though the it were
-                        # terminated after being fully established.  This
-                        # appears to be an implementation choice (see
-                        # inet_accept in inet/ipv4/af_inet.c).  On macOS,
-                        # such a listener is not considered readable, so
-                        # accept(2) will never be called.  Calling accept(2) on
-                        # such a listener, however, does not return at all.
+                    elif e.args[0] == EMFILE and self._reservedFD.available():
+                        # Linux gives EMFILE when a process is not
+                        # allowed to allocate any more file
+                        # descriptors.  *BSD and Win32 give
+                        # (WSA)ENOBUFS.
+                        log.msg(
+                            "EMFILE encountered;"
+                            " releasing reserved file descriptor.")
+                        self._reservedFD.release()
+                        continue
+                    elif e.args[0] in (
+                            EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED):
+                        # Linux can give ENFILE if the system is out
+                        # of inodes, or ENOMEM if there is
+                        # insufficient memory to allocate a new
+                        # dentry.  ECONNABORTED is documented as
+                        # possible on all relevant platforms (Linux,
+                        # Windows, macOS, and the BSDs) but occurs
+                        # only on the BSDs.  It occurs when a client
+                        # sends a FIN or RST after the server sends a
+                        # SYN|ACK but before application code calls
+                        # accept(2).  On Linux, calling accept(2) on
+                        # such a listener returns a connection that
+                        # fails as though the it were terminated after
+                        # being fully established.  This appears to be
+                        # an implementation choice (see inet_accept in
+                        # inet/ipv4/af_inet.c).  On macOS, such a
+                        # listener is not considered readable, so
+                        # accept(2) will never be called.  Calling
+                        # accept(2) on such a listener, however, does
+                        # not return at all.
                         log.msg("Could not accept new connection (%s)" % (
                             errorcode[e.args[0]],))
                         break
                     raise
 
-                fdesc._setCloseOnExec(skt.fileno())
-                protocol = self.factory.buildProtocol(self._buildAddr(addr))
-                if protocol is None:
-                    skt.close()
-                    continue
-                s = self.sessionno
-                self.sessionno = s+1
-                transport = self.transport(skt, protocol, addr, self, s, self.reactor)
-                protocol.makeConnection(transport)
+                if self._reservedFD.replace(skt):
+                    log.msg(
+                        "EMFILE recovery:"
+                        " Closing socket %r"
+                        " and reopening reserve file descriptor")
+                else:
+                    fdesc._setCloseOnExec(skt.fileno())
+                    protocol = self.factory.buildProtocol(
+                        self._buildAddr(addr))
+                    if protocol is None:
+                        skt.close()
+                        continue
+                    s = self.sessionno
+                    self.sessionno = s+1
+                    transport = self.transport(
+                        skt, protocol, addr, self, s, self.reactor)
+                    protocol.makeConnection(transport)
             else:
                 self.numberAccepts = self.numberAccepts+20
-        except:
+        except BaseException:
             # Note that in TLS mode, this will possibly catch SSL.Errors
             # raised by self.socket.accept()
             #

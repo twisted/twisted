@@ -20,7 +20,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
-from twisted.internet.error import ConnectionAborted, ConnectionClosed
+from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
 from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
@@ -292,7 +292,6 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
     """
     Tests for L{IReactorSSL.listenSSL}
     """
-    lostConnectionReason = ConnectionAborted
 
     def getListeningPort(self, reactor, factory):
         """

@@ -11,9 +11,13 @@ from __future__ import division, absolute_import
 __metaclass__ = type
 
 import errno
+import io
+import os
 import socket
 
 from functools import wraps
+
+import attr
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
@@ -23,7 +27,7 @@ from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted, DNSLookupError, NoProtocol,
@@ -45,7 +49,9 @@ from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
-from twisted.internet.tcp import Connection, Server, _resolveIPv6
+from twisted.internet.tcp import (
+    Connection, EMFILE, _FileDescriptorReservation, Server, _resolveIPv6
+)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
@@ -913,6 +919,75 @@ def createTestSocket(test, addressFamily, socketType):
 
 
 
+@attr.s
+class _ExhaustsFileDescriptors(object):
+    """
+    A class that triggers C{EMFILE} by creating as many file
+    descriptors as necessary.
+    """
+    _fileDescriptors = attr.ib(default=attr.Factory(list), init=False)
+
+    def exhaust(self):
+        """
+        Open file descriptors until C{EMFILE} is reached.
+        """
+
+        start = os.open(os.devnull, os.O_RDONLY)
+        self._fileDescriptors.append(start)
+        while True:
+            try:
+                fd = os.dup(start)
+            except (IOError, OSError) as e:
+                if e.errno == EMFILE:
+                    break
+                else:
+                    raise
+            else:
+                self._fileDescriptors.append(fd)
+
+
+    def release(self):
+        """
+        Release all file descriptors opened by L{exhaust}.
+        """
+        for fd in self._fileDescriptors:
+            try:
+                os.close(fd)
+            except Exception:
+                continue
+
+
+
+class ExhaustsFileDescriptorsTests(SynchronousTestCase):
+    """
+    Tests for L{_ExhaustsFileDescriptors}.
+    """
+
+    def setUp(self):
+        self.exhauster = _ExhaustsFileDescriptors()
+
+
+    def test_triggersEMFILEAndRelease(self):
+        """
+        L{_ExhaustsFileDescriptors.exhaust} causes the process to
+        exhaust its available file descriptors and
+        L{_ExhaustsFileDescriptors.release} releases all those
+        acquired.
+        """
+        self.exhauster.exhaust()
+
+        def failsWithEMFILE():
+            open(os.devnull).close()
+
+        exception = self.assertRaises(IOError, failsWithEMFILE)
+        self.assertEqual(exception.errno, EMFILE)
+
+        self.exhauster.release()
+
+        failsWithEMFILE()
+
+
+
 class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
@@ -981,8 +1056,9 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
     def test_closePeerOnEMFILE(self):
         """
-        The L{IListeningPort} immediately closes an accepted peer socket when
-        the number of open file descriptors exceeds the resource limit.
+        The L{IListeningPort} immediately closes an accepted peer
+        socket when the number of open file descriptors exceeds the
+        soft resource limit.
         """
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, MyServerFactory())
@@ -990,19 +1066,16 @@ class StreamTransportTestsMixin(LogObserverMixin):
         clientFactory = MyClientFactory()
         self.connectToListener(reactor, listeningHost, clientFactory)
 
-        clientFactory.protocolConnectionMade = Deferred()
+        exhauster = _ExhaustsFileDescriptors()
+        reactor.callWhenRunning(exhauster.exhaust)
 
-        def loseConnection(proto):
-            proto.transport.loseConnection()
-
-        clientFactory.protocolConnectionMade.addCallback(loseConnection)
-
-        def stopReactor(result):
+        def stopReactorAndCloseFileDescriptors(result):
+            exhauster.release()
             reactor.stop()
             return result
 
-        clientFactory.deferred.addBoth(stopReactor)
-        clientFactory.failDeferred.addBoth(stopReactor)
+        clientFactory.deferred.addBoth(stopReactorAndCloseFileDescriptors)
+        clientFactory.failDeferred.addBoth(stopReactorAndCloseFileDescriptors)
 
         self.runReactor(reactor)
 
@@ -2613,3 +2686,107 @@ class SimpleUtilityTests(TestCase):
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
+
+
+
+class FileDescriptorReservationTests(SynchronousTestCase):
+    """
+    Tests for L{_FileDescriptorReservation}.
+    """
+
+    def setUp(self):
+        self.fileObjects = []
+        self.tempfile = self.mktemp()
+
+        def fakeFileFactory():
+            self.fileObjects.append(open(self.tempfile, 'w'))
+            return self.fileObjects[-1]
+
+        self.reserveFD = _FileDescriptorReservation(fakeFileFactory)
+
+
+    def test_acquireOpensFileOnce(self):
+        """
+        Multiple acquisitions without releases open the reservation
+        file exactly once.
+        """
+        self.assertEqual(len(self.fileObjects), 0)
+
+        for _ in range(10):
+            self.reserveFD.acquire()
+            self.assertEqual(len(self.fileObjects), 1)
+            self.assertFalse(self.fileObjects[0].closed)
+
+
+    def test_releaseClosesFile(self):
+        """
+        Releasing the reserveration closes the reservation file.
+        """
+        self.reserveFD.acquire()
+        self.reserveFD.release()
+        self.assertEqual(len(self.fileObjects), 1)
+        self.assertTrue(self.fileObjects[0].closed)
+
+
+    def test_acquireAvailableReleaseUnavailable(self):
+        """
+        Acquiring the reservation makes it available; releasing it
+        makes it unavailable.
+        """
+        self.assertFalse(self.reserveFD.available())
+
+        self.reserveFD.acquire()
+        self.assertTrue(self.reserveFD.available())
+
+        self.reserveFD.release()
+        self.assertFalse(self.reserveFD.available())
+
+
+    def test_acquireAvailableReleaseReplaceAvailable(self):
+        """
+        Replacing a released reservation closes the provided file,
+        reopens the reservation file, evaluates to L{True}, and makes
+        the reservation available.
+        """
+        self.assertFalse(self.reserveFD.available())
+
+        toClose = io.BytesIO()
+
+        self.reserveFD.acquire()
+        self.reserveFD.release()
+
+        self.assertFalse(toClose.closed)
+        self.assertTrue(self.reserveFD.replace(toClose))
+        self.assertTrue(toClose.closed)
+
+        self.assertGreater(len(self.fileObjects), 0)
+        self.assertFalse(self.fileObjects[-1].closed)
+
+        self.assertTrue(self.reserveFD.available())
+
+
+    def test_replaceFailsWithEMFILE(self):
+        """
+        A log message is generated and a reservation remains
+        unavailable when replacing a file fails because of C{EMFILE}.
+        """
+        self.assertFalse(self.reserveFD.available())
+
+        toClose = io.BytesIO()
+
+        self.reserveFD.acquire()
+        self.reserveFD.release()
+
+        exhauster = _ExhaustsFileDescriptors()
+        self.addCleanup(exhauster.release)
+        exhauster.exhaust()
+
+        self.assertFalse(toClose.closed)
+        self.assertFalse(self.reserveFD.replace(toClose))
+        self.assertTrue(toClose.closed)
+
+        self.assertFalse(self.reserveFD.available())
+
+        errors = self.flushLoggedErrors(OSError, IOError)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].value.errno, EMFILE)
