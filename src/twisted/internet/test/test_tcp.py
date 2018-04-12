@@ -22,6 +22,7 @@ import attr
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
+from twisted.logger import Logger
 from twisted.python.compat import long
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
@@ -924,37 +925,66 @@ class _ExhaustsFileDescriptors(object):
     """
     A class that triggers C{EMFILE} by creating as many file
     descriptors as necessary.
+
+    @param fileDescriptorFactory: A factory that creates a new file
+        descriptor.
+    @type fileDescriptorFactory: A L{callable} that accepts no
+        arguments and returns an integral file descriptor, suitable
+        for passing to L{os.close}.
     """
-    _fileDescriptors = attr.ib(default=attr.Factory(list), init=False)
+    _log = Logger()
+    _fileDescriptorFactory = attr.ib(default=lambda: os.dup(0), repr=False)
+    _fileDescriptors = attr.ib(
+        default=attr.Factory(list), init=False, repr=False)
 
     def exhaust(self):
         """
         Open file descriptors until C{EMFILE} is reached.
         """
-
-        start = os.open(os.devnull, os.O_RDONLY)
-        self._fileDescriptors.append(start)
-        while True:
-            try:
-                fd = os.dup(start)
-            except (IOError, OSError) as e:
-                if e.errno == EMFILE:
-                    break
-                else:
+        try:
+            while True:
+                try:
+                    fd = self._fileDescriptorFactory()
+                except (IOError, OSError) as e:
+                    if e.errno == EMFILE:
+                        break
                     raise
-            else:
-                self._fileDescriptors.append(fd)
+                else:
+                    self._fileDescriptors.append(fd)
+        except Exception as e:
+            self.release()
+            raise e
+        else:
+            self._log.info(
+                "EMFILE reached by opening"
+                " {openedFileDescriptors} file descriptors.",
+                openedFileDescriptors=self.count(),
+            )
 
 
     def release(self):
         """
         Release all file descriptors opened by L{exhaust}.
         """
-        for fd in self._fileDescriptors:
+        while self._fileDescriptors:
+            fd = self._fileDescriptors.pop()
             try:
                 os.close(fd)
-            except Exception:
-                continue
+            except OSError as e:
+                if e.errno == errno.EBADF:
+                    continue
+                raise
+
+
+    def count(self):
+        """
+        Return the number of opened file descriptors.
+
+        @return: The number of opened file descriptors; this will be
+            zero if this instance has not opened any.
+        @rtype: L{int}
+        """
+        return len(self._fileDescriptors)
 
 
 
@@ -965,26 +995,76 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
 
     def setUp(self):
         self.exhauster = _ExhaustsFileDescriptors()
+        # This assumes release succeeds when there are no file
+        # descriptors to close.
+        self.addCleanup(self.exhauster.release)
 
 
-    def test_triggersEMFILEAndRelease(self):
+    def openAFile(self):
+        """
+        Attempt to open a file; if successful, the file is immediately
+        closed.
+        """
+        open(os.devnull).close()
+
+
+    def test_count(self):
+        """
+        L{_ExhaustsFileDescriptors.count} returns the number of open
+        file descriptors.
+        """
+        self.assertEqual(self.exhauster.count(), 0)
+        self.exhauster.exhaust()
+        self.assertGreater(self.exhauster.count(), 0)
+        self.exhauster.release()
+        self.assertEqual(self.exhauster.count(), 0)
+
+
+    def test_exhaustTriggersEMFILE(self):
         """
         L{_ExhaustsFileDescriptors.exhaust} causes the process to
-        exhaust its available file descriptors and
-        L{_ExhaustsFileDescriptors.release} releases all those
-        acquired.
+        exhaust its available file descriptors.
         """
+        self.addCleanup(self.exhauster.release)
         self.exhauster.exhaust()
-
-        def failsWithEMFILE():
-            open(os.devnull).close()
-
-        exception = self.assertRaises(IOError, failsWithEMFILE)
+        exception = self.assertRaises(IOError, self.openAFile)
         self.assertEqual(exception.errno, EMFILE)
 
-        self.exhauster.release()
 
-        failsWithEMFILE()
+    def test_release(self):
+        """
+        L{_ExhaustsFileDescriptors.release} releases all opened
+        file descriptors.
+        """
+        self.exhauster.exhaust()
+        self.exhauster.release()
+        self.openAFile()        # Does not fail with EMFILE
+
+
+    def test_fileDescriptorsReleasedOnFailure(self):
+        """
+        L{_ExhaustsFileDescriptors.exhaust} closes any opened file
+        descriptors if an exception occurs during its exhaustion loop.
+        """
+        fileDescriptors = []
+        def failsAfterThree():
+            if len(fileDescriptors) == 3:
+                raise ValueError
+            else:
+                fd = os.dup(0)
+                fileDescriptors.append(fd)
+                return fd
+
+        exhauster = _ExhaustsFileDescriptors(failsAfterThree)
+        self.addCleanup(exhauster.release)
+
+        self.assertRaises(ValueError, exhauster.exhaust)
+        self.assertEqual(len(fileDescriptors), 3)
+        self.assertEqual(exhauster.count(), 0)
+
+        for fd in fileDescriptors:
+            exception = self.assertRaises(OSError, os.close, fd)
+            self.assertEqual(exception.errno, errno.EBADF)
 
 
 
