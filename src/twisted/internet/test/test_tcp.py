@@ -51,7 +51,7 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import (
-    Connection, EMFILE, _FileDescriptorReservation, Server, _resolveIPv6
+    Connection, _FileDescriptorReservation, Server, _resolveIPv6,
 )
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
@@ -946,7 +946,7 @@ class _ExhaustsFileDescriptors(object):
                 try:
                     fd = self._fileDescriptorFactory()
                 except (IOError, OSError) as e:
-                    if e.errno == EMFILE:
+                    if e.errno == errno.EMFILE:
                         break
                     raise
                 else:
@@ -1028,7 +1028,7 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         self.addCleanup(self.exhauster.release)
         self.exhauster.exhaust()
         exception = self.assertRaises(IOError, self.openAFile)
-        self.assertEqual(exception.errno, EMFILE)
+        self.assertEqual(exception.errno, errno.EMFILE)
 
 
     def test_release(self):
@@ -2869,4 +2869,4 @@ class FileDescriptorReservationTests(SynchronousTestCase):
 
         errors = self.flushLoggedErrors(OSError, IOError)
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].value.errno, EMFILE)
+        self.assertEqual(errors[0].value.errno, errno.EMFILE)
