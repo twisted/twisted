@@ -897,7 +897,7 @@ class _FileDescriptorReservation(object):
     descriptor's space, and then close that connection and reopen this
     one.
 
-    Calling L{_FileDescriptorReservation.ensure} opens the reserve
+    Calling L{_FileDescriptorReservation.acquire} opens the reserve
     file descriptor if it is not already open.
     L{_FileDescriptorReservation.release} close this descriptor; a
     subsequent call to L{_FileDescriptorReservation.replace} will
