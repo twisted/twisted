@@ -976,6 +976,8 @@ class _ExhaustsFileDescriptors(object):
         """
         Open file descriptors until C{EMFILE} is reached.
         """
+        gc.collect()            # Force a collection to close dangling
+                                # files.
         try:
             while True:
                 try:
@@ -1342,7 +1344,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
         """
         See L{assertPeerClosedOnEMFILE}.
         """
-        gc.collect()
         assertPeerClosedOnEMFILE(
             testCase=self,
             exhauster=_ExhaustsFileDescriptors(),
