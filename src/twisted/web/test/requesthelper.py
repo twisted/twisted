@@ -405,7 +405,7 @@ class DummyRequest(object):
 
 
 DummyRequest.getClientIP = deprecated(
-    Version('Twisted', 18, 4, 0, release_candidate=1),
+    Version('Twisted', 18, 4, 0),
     replacement="getClientAddress",
 )(DummyRequest.getClientIP)
 
@@ -434,7 +434,7 @@ class DummyRequestTests(unittest.SynchronousTestCase):
         self.assertEqual(
             warning.get("message"),
             ("twisted.web.test.requesthelper.DummyRequest.getClientIP "
-             "was deprecated in Twisted 18.4.0rc1; "
+             "was deprecated in Twisted 18.4.0; "
              "please use getClientAddress instead"),
         )
 

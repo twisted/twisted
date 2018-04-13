@@ -75,7 +75,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         Strports description of port to start the server on
         """
         msg = deprecate.getDeprecationWarningString(
-            self.opt_port, incremental.Version('Twisted', 18, 4, 0, release_candidate=1))
+            self.opt_port, incremental.Version('Twisted', 18, 4, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['port'] = port
 
@@ -87,7 +87,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         Port to listen on for Secure HTTP.
         """
         msg = deprecate.getDeprecationWarningString(
-            self.opt_https, incremental.Version('Twisted', 18, 4, 0, release_candidate=1))
+            self.opt_https, incremental.Version('Twisted', 18, 4, 0))
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self['https'] = port
 
