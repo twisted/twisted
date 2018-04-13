@@ -1398,6 +1398,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
             connect=self.connectToListener,
         )
 
+
     def test_closePeerOnEMFILEWithoutRemaingAccepts(self):
         """
         The peer is closed on C{EMFILE} when L{Port.doRead} has no
