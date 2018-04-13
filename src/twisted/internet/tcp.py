@@ -1270,7 +1270,8 @@ class Port(base.BasePort, _SocketCloser):
                 # win32 event loop breaks if we do more than one accept()
                 # in an iteration of the event loop.
                 numAccepts = 1
-            for i in range(numAccepts):
+            i = 0
+            while i < numAccepts:
                 # we need this so we can deal with a factory's buildProtocol
                 # calling our loseConnection
                 if self.disconnecting:
@@ -1295,6 +1296,10 @@ class Port(base.BasePort, _SocketCloser):
                             "EMFILE encountered;"
                             " releasing reserved file descriptor.")
                         self._reservedFD.release()
+                        # Ensure that we have one more iteration
+                        # available after this.
+                        if i == (numAccepts - 1):
+                            numAccepts += 1
                         continue
                     elif e.args[0] in (
                             EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED):
@@ -1323,6 +1328,8 @@ class Port(base.BasePort, _SocketCloser):
                     raise
 
                 if self._reservedFD.replace(skt):
+                i += 1
+
                     log.msg(
                         "EMFILE recovery:"
                         " Closing socket %r"
