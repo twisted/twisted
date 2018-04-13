@@ -901,7 +901,7 @@ class _FileDescriptorReservation(object):
     Calling L{_FileDescriptorReservation.acquire} opens the reserve
     file descriptor if it is not already open.
     L{_FileDescriptorReservation.release} close this descriptor; a
-    subsequent call to L{_FileDescriptorReservation.replace} will
+    subsequent call to L{_FileDescriptorReservation.maybeClose} will
     close the provided file and re-open the reservation file.  A
     claimed reservation will not replace the provided file with
     itself.  L{_FileDescriptorReservation.release} is idempotent.
@@ -1037,7 +1037,7 @@ class _FileDescriptorReservation(object):
 
 
     @_machine.output()
-    def _replaced(self, fileObject):
+    def _closed(self, fileObject):
         """
         Return True.
 
@@ -1051,7 +1051,7 @@ class _FileDescriptorReservation(object):
 
 
     @_machine.output()
-    def _notReplaced(self, fileObject):
+    def _notClosed(self, fileObject):
         """
         Return False.
 
@@ -1066,7 +1066,7 @@ class _FileDescriptorReservation(object):
         collector=_silenceOutputs)
     _unreserved.upon(
         maybeClose, enter=_reserved,
-        outputs=[_closeFile, _reopenReservationFile, _replaced],
+        outputs=[_closeFile, _reopenReservationFile, _closed],
         collector=_nthOutput(-1))
     _unreserved.upon(
         available, enter=_unreserved, outputs=[_returnFalse],
@@ -1080,7 +1080,7 @@ class _FileDescriptorReservation(object):
         collector=_silenceOutputs)
     _reserved.upon(
         maybeClose, enter=_reserved,
-        outputs=[_notReplaced],
+        outputs=[_notClosed],
         collector=_nthOutput(0))
     _reserved.upon(
         available, enter=_reserved, outputs=[_returnTrue],
