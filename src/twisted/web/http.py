@@ -1198,7 +1198,8 @@ class Request:
         if samesite:
             samesite = _ensureBytes(samesite).lower()
             if samesite not in [b"lax", b"strict"]:
-                raise ValueError("Invalid value for samesite: " + repr(samesite))
+                raise ValueError(
+                    "Invalid value for samesite: " + repr(samesite))
             cookie += b"; SameSite=" + samesite
         self.cookies.append(cookie)
 
