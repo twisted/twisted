@@ -923,20 +923,17 @@ class _FileDescriptorReservation(object):
         The reservation file is unreserved.
         """
 
-
     @_machine.state()
     def _reserved(self):
         """
         The reservation file is reserved.
         """
 
-
     @_machine.input()
     def available(self):
         """
         Is the reservation available?
         """
-
 
     @_machine.input()
     def release(self):
@@ -945,13 +942,11 @@ class _FileDescriptorReservation(object):
         its place.
         """
 
-
     @_machine.input()
     def acquire(self):
         """
         Ensure that the reservation file is held.
         """
-
 
     @_machine.input()
     def maybeClose(self, fileObject):
@@ -962,14 +957,12 @@ class _FileDescriptorReservation(object):
         @param fileObject: The file object to close.
         """
 
-
     @_machine.input()
     def _openFailedWithEMFILE(self):
         """
         An internal input that undoes a reservation that failed to
         open the reservation file.
         """
-
 
     def _createFD(self):
         """
@@ -1067,7 +1060,6 @@ class _FileDescriptorReservation(object):
         @return: L{False}
         """
         return False
-
 
     _unreserved.upon(
         acquire, enter=_reserved, outputs=[_openReservationFile],
