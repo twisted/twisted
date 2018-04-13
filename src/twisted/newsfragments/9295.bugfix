@@ -1,0 +1,3 @@
+twisted.web.client.HTTP11ClientProtocol now closes the connection when the
+server is sending a header line which is longer than he line limit of
+twisted.protocols.basic.LineReceiver.MAX_LENGTH.

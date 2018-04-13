@@ -1,0 +1,1 @@
+AsyncioSelectorReactor uses the global policy's event loop.  asyncio libraries that retrieve the running event loop with get_event_loop() will now receive the one used by AsyncioSelectorReactor.

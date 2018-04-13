@@ -1,0 +1,1 @@
+twistd now uses the UID's default GID to initialize groups when --uid is given but --gid is not.  This prevents an unhandled TypeError from being raised when os.initgroups() is called.
