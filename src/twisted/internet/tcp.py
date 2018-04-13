@@ -954,7 +954,7 @@ class _FileDescriptorReservation(object):
 
 
     @_machine.input()
-    def replace(self, fileObject):
+    def maybeClose(self, fileObject):
         """
         Replace a file with the reservation file only if our reserve
         file is unclaimed.
@@ -1054,7 +1054,6 @@ class _FileDescriptorReservation(object):
         """
         if self._fileDescriptor is None:
             self._openFailedWithEMFILE()
-            return False
         return True
 
 
@@ -1074,7 +1073,7 @@ class _FileDescriptorReservation(object):
         acquire, enter=_reserved, outputs=[_openReservationFile],
         collector=_silenceOutputs)
     _unreserved.upon(
-        replace, enter=_reserved,
+        maybeClose, enter=_reserved,
         outputs=[_closeFile, _reopenReservationFile, _replaced],
         collector=_nthOutput(-1))
     _unreserved.upon(
@@ -1088,7 +1087,7 @@ class _FileDescriptorReservation(object):
         acquire, enter=_reserved, outputs=[],
         collector=_silenceOutputs)
     _reserved.upon(
-        replace, enter=_reserved,
+        maybeClose, enter=_reserved,
         outputs=[_notReplaced],
         collector=_nthOutput(0))
     _reserved.upon(
@@ -1327,9 +1326,9 @@ class Port(base.BasePort, _SocketCloser):
                         break
                     raise
 
-                if self._reservedFD.replace(skt):
                 i += 1
 
+                if self._reservedFD.maybeClose(skt):
                     log.msg(
                         "EMFILE recovery:"
                         " Closing socket %r"

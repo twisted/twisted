@@ -3003,7 +3003,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.assertFalse(self.reserveFD.available())
 
 
-    def test_acquireAvailableReleaseReplaceAvailable(self):
+    def test_acquireAvailableReleaseMaybeCloseAvailable(self):
         """
         Replacing a released reservation closes the provided file,
         reopens the reservation file, evaluates to L{True}, and makes
@@ -3017,7 +3017,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.reserveFD.release()
 
         self.assertFalse(toClose.closed)
-        self.assertTrue(self.reserveFD.replace(toClose))
+        self.assertTrue(self.reserveFD.maybeClose(toClose))
         self.assertTrue(toClose.closed)
 
         self.assertGreater(len(self.fileObjects), 0)
@@ -3026,7 +3026,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.assertTrue(self.reserveFD.available())
 
 
-    def test_replaceFailsWithEMFILE(self):
+    def test_maybeCloseFailsWithEMFILE(self):
         """
         A log message is generated and a reservation remains
         unavailable when replacing a file fails because of C{EMFILE}.
@@ -3043,7 +3043,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         exhauster.exhaust()
 
         self.assertFalse(toClose.closed)
-        self.assertFalse(self.reserveFD.replace(toClose))
+        self.assertTrue(self.reserveFD.maybeClose(toClose))
         self.assertTrue(toClose.closed)
 
         self.assertFalse(self.reserveFD.available())
