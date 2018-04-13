@@ -21,7 +21,7 @@ import attr
 
 from automat import MethodicalMachine
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
 from twisted.python.compat import lazyByteSlice, unicode
@@ -888,8 +888,7 @@ def _nthOutput(n):
 
 
 
-@attr.s
-class _FileDescriptorReservation(object):
+class _IFileDescriptorReservation(Interface):
     """
     An open file that represents an emergency reservation in the
     process' file descriptor table.  If L{Port} encounters C{EMFILE}
@@ -901,11 +900,62 @@ class _FileDescriptorReservation(object):
     Calling L{_FileDescriptorReservation.reserve} opens the reserve
     file descriptor if it is not already open.
     L{_FileDescriptorReservation.release} close this descriptor; a
-    subsequent call to L{_FileDescriptorReservation.maybeClose} will
-    close the provided file and re-open the reserved file.  A claimed
+    subsequent call to
+    L{_FileDescriptorReservation.maybeCloseForReserved} will close the
+    provided file and re-open the reserved file.  A claimed
     reservation will not replace the provided file with itself.
     L{_FileDescriptorReservation.reserve} and
     L{_FileDescriptorReservation.release} are idempotent.
+    """
+
+    def available():
+        """
+        Is the reservation available?
+
+        @return: L{True} if the reserved file descriptor is open and
+            can thus be closed to allow a new file to be opened in its
+            place; L{False} if it is not open.
+        """
+
+
+    def reserve():
+        """
+        Attempt to open the reserved file descriptor; if this fails
+        because of C{EMFILE}, internal state is reset so that another
+        reservation attempt can be made.
+
+        @raises: Any exception except an L{OSError} or L{IOError}
+            whose errno is L{EMFILE}.
+        """
+
+
+    def maybeCloseForReserved(fileObject):
+        """
+        Close the provided file if and only if L{release} has been
+        called to free the reserved file's file descriptor in exchage
+        for re-opening the reserved file.
+
+        @param fileObject: The file object to close iff the
+            reservation is available.
+
+        @return: L{True} when the file object was closed; L{False}
+            otherwise.
+        """
+
+
+    def release():
+        """
+        Release the reserved descriptor so another file can take
+        its place.
+        """
+
+
+
+@implementer(_IFileDescriptorReservation)
+@attr.s
+class _FileDescriptorReservation(object):
+    """
+    L{_IFileDescriptorReservation} implementation.
 
     @param fileFactory: A factory that will be called to reserve a
         file descriptor.
@@ -967,7 +1017,7 @@ class _FileDescriptorReservation(object):
 
     def available(self):
         """
-        Is the reservation available?
+        See L{_IFileDescriptorReservation.available}.
 
         @return: L{True} if the reserved file descriptor is open and
             can thus be closed to allow a new file to be opened in its
@@ -978,13 +1028,7 @@ class _FileDescriptorReservation(object):
 
     def reserve(self):
         """
-        Attempt to open the reserved file descriptor; if this fails
-        because of C{EMFILE}, internal state is reset so that another
-        reservation attempt can be made.
-
-        @raises: Any exception the C{fileFactory} callable can raise,
-            except an L{OSError} or L{IOError} whose errno is
-            L{EMFILE}.
+        See L{_IFileDescriptorReservation.reserve}.
         """
         reserved = self._maybeReserve()
         if reserved:
@@ -993,11 +1037,9 @@ class _FileDescriptorReservation(object):
             self._reservationFailedWithEMFILE()
 
 
-    def maybeClose(self, fileObject):
+    def maybeCloseForReserved(self, fileObject):
         """
-        Close the provided file if and only if L{release} has been
-        called to free the reserved file's file descriptor.  Then
-        attempt to re-open the reserved file.
+        See L{_IFileDescriptorReservation.maybeCloseForReserved}.
 
         @param fileObject: The file object to close iff the
             reservation is available.
@@ -1014,6 +1056,7 @@ class _FileDescriptorReservation(object):
     @_machine.input()
     def release(self):
         """
+        See L{_IFileDescriptorReservation.maybeCloseForReserved}.
         Release the reserved descriptor so another file can take
         its place.
         """
@@ -1120,8 +1163,53 @@ class _FileDescriptorReservation(object):
         collector=_nthOutput(0))
 
 
-_reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
 
+@implementer(_IFileDescriptorReservation)
+class _NullFileDescriptorReservation(object):
+    """
+    A null implementation of L{_IFileDescriptorReservation}.  It is
+    never available and its L{maybeCloseForReserved} never closes files.
+    """
+
+    def available(self):
+        """
+        The reserved file is never available.  See
+        L{_IFileDescriptorReservation.available}.
+
+        @return: L{False}
+        """
+        return False
+
+
+    def reserve(self):
+        """
+        Do nothing.  See L{_IFileDescriptorReservation.reserve}.
+        """
+
+
+    def maybeCloseForReserved(self, fileObject):
+        """
+        Never close the file in exchange for the reserved file.  See
+        L{_IFileDescriptorReservation.maybeCloseForReserved}.
+
+        @param fileObject: The file; never closed by this method.
+
+        @return: L{False}
+        """
+        return False
+
+
+    def release(self):
+        """
+        Do nothing.  See L{_IFileDescriptorReservation.release}.
+        """
+
+
+
+if platformType == 'win32':
+    _reservedFD = _NullFileDescriptorReservation()
+else:
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
 
 
 @implementer(interfaces.IListeningPort)
@@ -1353,7 +1441,7 @@ class Port(base.BasePort, _SocketCloser):
 
                 i += 1
 
-                if _reservedFD.maybeClose(skt):
+                if _reservedFD.maybeCloseForReserved(skt):
                     log.msg(
                         "EMFILE recovery:"
                         " Closing socket from %r"

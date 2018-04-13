@@ -52,7 +52,12 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import (
-    Connection, _FileDescriptorReservation, Server, _resolveIPv6,
+    Connection,
+    _FileDescriptorReservation,
+    _IFileDescriptorReservation,
+    _NullFileDescriptorReservation,
+    Server,
+    _resolveIPv6,
 )
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
@@ -83,6 +88,8 @@ if s is not None:
 if platform.isWindows():
     from twisted.internet.test import _win32ifaces
     getLinkLocalIPv6Addresses = _win32ifaces.win32GetLinkLocalIPv6Addresses
+
+    SKIP_EMFILE = "Reserved EMFILE file descriptor not supported on Windows."
 else:
     try:
         from twisted.internet.test import _posixifaces
@@ -90,6 +97,8 @@ else:
         getLinkLocalIPv6Addresses = lambda: []
     else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
+
+    SKIP_EMFILE = None
 
 
 
@@ -1029,6 +1038,7 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
     """
     Tests for L{_ExhaustsFileDescriptors}.
     """
+    skip = SKIP_EMFILE
 
     def setUp(self):
         self.exhauster = _ExhaustsFileDescriptors()
@@ -1199,6 +1209,8 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
     """
     Tests for L{assertPeerClosedOnEMFILE}.
     """
+    skip = SKIP_EMFILE
+
     @implementer(_IExhaustsFileDescriptors)
     class NullExhauster(object):
         """
@@ -1352,6 +1364,9 @@ class StreamTransportTestsMixin(LogObserverMixin):
             listen=self.getListeningPort,
             connect=self.connectToListener,
         )
+
+    if SKIP_EMFILE:
+        test_closePeerOnEMFILE.skip = SKIP_EMFILE
 
 
 
@@ -2958,6 +2973,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
     """
     Tests for L{_FileDescriptorReservation}.
     """
+    skip = SKIP_EMFILE
 
     def setUp(self):
         self.reservedFileObjects = []
@@ -2967,7 +2983,15 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             self.reservedFileObjects.append(open(self.tempfile, 'w'))
             return self.reservedFileObjects[-1]
 
-        self.reserveFD = _FileDescriptorReservation(fakeFileFactory)
+        self.reservedFD = _FileDescriptorReservation(fakeFileFactory)
+
+
+    def test_providesInterface(self):
+        """
+        L{_FileDescriptorReservation} instances provide
+        L{_IFileDescriptorReservation}.
+        """
+        verifyObject(_IFileDescriptorReservation, self.reservedFD)
 
 
     def test_reserveOpensFileOnce(self):
@@ -2978,7 +3002,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.assertEqual(len(self.reservedFileObjects), 0)
 
         for _ in range(10):
-            self.reserveFD.reserve()
+            self.reservedFD.reserve()
             self.assertEqual(len(self.reservedFileObjects), 1)
             self.assertFalse(self.reservedFileObjects[0].closed)
 
@@ -2987,10 +3011,32 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         """
         Releasing the reserveration closes the reservation file.
         """
-        self.reserveFD.reserve()
-        self.reserveFD.release()
+        self.reservedFD.reserve()
+        self.reservedFD.release()
         self.assertEqual(len(self.reservedFileObjects), 1)
         self.assertTrue(self.reservedFileObjects[0].closed)
+
+
+    def test_maybeCloseForReserved(self):
+        """
+        Attempting to close a file in exchange for the reserved file
+        does not close it and returns L{False} when the reserved file
+        is available, but does close it and return L{True} when it the
+        reserved file been released.
+        """
+        self.reservedFD.reserve()
+        self.assertTrue(self.reservedFD.available())
+        openFile = io.BytesIO()
+        self.assertFalse(
+            self.reservedFD.maybeCloseForReserved(openFile))
+        self.assertFalse(openFile.closed)
+
+        self.reservedFD.release()
+        self.assertFalse(self.reservedFD.available())
+        closedFile = io.BytesIO()
+        self.assertTrue(
+            self.reservedFD.maybeCloseForReserved(closedFile))
+        self.assertTrue(closedFile.closed)
 
 
     def test_reserveAvailableReleaseUnavailable(self):
@@ -2998,60 +3044,96 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         Acquiring the reservation makes it available; releasing it
         makes it unavailable.
         """
-        self.assertFalse(self.reserveFD.available())
+        self.assertFalse(self.reservedFD.available())
 
-        self.reserveFD.reserve()
-        self.assertTrue(self.reserveFD.available())
+        self.reservedFD.reserve()
+        self.assertTrue(self.reservedFD.available())
 
-        self.reserveFD.release()
-        self.assertFalse(self.reserveFD.available())
+        self.reservedFD.release()
+        self.assertFalse(self.reservedFD.available())
 
 
-    def test_reserveAvailableReleaseMaybeCloseAvailable(self):
+    def test_reserveAvailableReleaseMaybeCloseForReservedAvailable(self):
         """
-        Replacing a released reservation closes the provided file,
-        reopens the reservation file, evaluates to L{True}, and makes
-        the reservation available.
+        An unavailable reservation closes the provided file and
+        reopens the reservation file to makes itself available and
+        returns L{True} to indicate that did close the file.
         """
-        self.assertFalse(self.reserveFD.available())
+        self.assertFalse(self.reservedFD.available())
 
         toClose = io.BytesIO()
 
-        self.reserveFD.reserve()
-        self.reserveFD.release()
+        self.reservedFD.reserve()
+        self.reservedFD.release()
 
         self.assertFalse(toClose.closed)
-        self.assertTrue(self.reserveFD.maybeClose(toClose))
+        self.assertTrue(self.reservedFD.maybeCloseForReserved(toClose))
         self.assertTrue(toClose.closed)
 
         self.assertGreater(len(self.reservedFileObjects), 0)
         self.assertFalse(self.reservedFileObjects[-1].closed)
 
-        self.assertTrue(self.reserveFD.available())
+        self.assertTrue(self.reservedFD.available())
 
 
-    def test_maybeCloseFailsWithEMFILE(self):
+    def test_maybeCloseForReservedFailsWithEMFILE(self):
         """
         A log message is generated and a reservation remains
         unavailable when replacing a file fails because of C{EMFILE}.
         """
-        self.assertFalse(self.reserveFD.available())
+        self.assertFalse(self.reservedFD.available())
 
         toClose = io.BytesIO()
 
-        self.reserveFD.reserve()
-        self.reserveFD.release()
+        self.reservedFD.reserve()
+        self.reservedFD.release()
 
         exhauster = _ExhaustsFileDescriptors()
         self.addCleanup(exhauster.release)
         exhauster.exhaust()
 
         self.assertFalse(toClose.closed)
-        self.assertTrue(self.reserveFD.maybeClose(toClose))
+        self.assertTrue(self.reservedFD.maybeCloseForReserved(toClose))
         self.assertTrue(toClose.closed)
 
-        self.assertFalse(self.reserveFD.available())
+        self.assertFalse(self.reservedFD.available())
 
         errors = self.flushLoggedErrors(OSError, IOError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].value.errno, errno.EMFILE)
+
+
+
+class NullFileDescriptorReservationTests(SynchronousTestCase):
+    """
+    Tests for L{_NullFileDescriptorReservation}.
+    """
+
+    def setUp(self):
+        self.nullReservedFD = _NullFileDescriptorReservation()
+
+
+    def test_providesInterface(self):
+        """
+        L{_NullFileDescriptorReservation} provides
+        L{_IFileDescriptorReservation}.
+        """
+        verifyObject(_IFileDescriptorReservation, self.nullReservedFD)
+
+
+    def test_available(self):
+        """
+        The null reserved file descriptor is never available.
+        """
+        self.assertFalse(self.nullReservedFD.available())
+
+
+    def test_maybeCloseForReservedFailsWithEMFILE(self):
+        """
+        The null reserved file descriptor never closes the file it
+        receives.
+        """
+        openFile = io.BytesIO()
+        self.assertFalse(openFile.closed)
+        self.assertFalse(self.nullReservedFD.maybeCloseForReserved(openFile))
+        self.assertFalse(openFile.closed)
