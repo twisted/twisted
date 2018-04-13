@@ -1097,6 +1097,9 @@ class _FileDescriptorReservation(object):
         _openFailedWithEMFILE, enter=_unreserved, outputs=[])
 
 
+_reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
+
+
 
 @implementer(interfaces.IListeningPort)
 class Port(base.BasePort, _SocketCloser):
@@ -1166,7 +1169,6 @@ class Port(base.BasePort, _SocketCloser):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
         self.interface = interface
-        self._reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
 
 
     @classmethod
@@ -1213,7 +1215,7 @@ class Port(base.BasePort, _SocketCloser):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        self._reservedFD.acquire()
+        _reservedFD.acquire()
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
@@ -1286,7 +1288,7 @@ class Port(base.BasePort, _SocketCloser):
                         # connection, but we get told to try to accept()
                         # anyway.
                         continue
-                    elif e.args[0] == EMFILE and self._reservedFD.available():
+                    elif e.args[0] == EMFILE and _reservedFD.available():
                         # Linux gives EMFILE when a process is not
                         # allowed to allocate any more file
                         # descriptors.  *BSD and Win32 give
@@ -1294,7 +1296,7 @@ class Port(base.BasePort, _SocketCloser):
                         log.msg(
                             "EMFILE encountered;"
                             " releasing reserved file descriptor.")
-                        self._reservedFD.release()
+                        _reservedFD.release()
                         # Ensure that we have one more iteration
                         # available after this.
                         if i == (numAccepts - 1):
@@ -1328,7 +1330,7 @@ class Port(base.BasePort, _SocketCloser):
 
                 i += 1
 
-                if self._reservedFD.maybeClose(skt):
+                if _reservedFD.maybeClose(skt):
                     log.msg(
                         "EMFILE recovery:"
                         " Closing socket %r"
