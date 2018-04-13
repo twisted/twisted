@@ -1356,8 +1356,9 @@ class Port(base.BasePort, _SocketCloser):
                 if _reservedFD.maybeClose(skt):
                     log.msg(
                         "EMFILE recovery:"
-                        " Closing socket %r"
-                        " and reopening reserve file descriptor")
+                        " Closing socket from %r"
+                        " and reopening reserve file descriptor"
+                        % (addr,))
                 else:
                     fdesc._setCloseOnExec(skt.fileno())
                     protocol = self.factory.buildProtocol(
