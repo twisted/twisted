@@ -16,7 +16,7 @@ import io
 import os
 import socket
 
-from functools import wraps
+from functools import partial, wraps
 
 import attr
 
@@ -1122,6 +1122,39 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
             self.assertEqual(exception.errno, errno.EBADF)
 
 
+    def test_exhaustRaisesNonEMFILEErrors(self):
+        """
+        L{_ExhaustsFileDescriptors.exhaust} allows through L{OSError}s
+        and L{IOError}s raised by its file descriptor factory that do
+        not represent C{EMFILE}
+        """
+
+        def failWith(error):
+            raise error
+
+        for exceptionClass in (IOError, OSError):
+            exception = exceptionClass(errno.EMFILE + 1, "error")
+            exhauster = _ExhaustsFileDescriptors(
+                partial(failWith, exception))
+            raised = self.assertRaises(exceptionClass, exhauster.exhaust)
+            self.assertIs(raised, exception)
+
+
+    def test_releaseIgnoresEBADF(self):
+        """
+        L{_ExhaustsFileDescriptors.release} proceeds past a C{EBADF}
+        failure encountered when closing a file.
+        """
+        self.assertEqual(self.exhauster.count(), 0)
+        self.exhauster.exhaust()
+        self.assertGreater(self.exhauster.count(), 0)
+
+        os.close(self.exhauster._fileDescriptors[0])
+
+        self.exhauster.release()
+        self.assertEqual(self.exhauster.count(), 0)
+
+
 
 def assertPeerClosedOnEMFILE(
         testCase,
@@ -1367,6 +1400,28 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
     if SKIP_EMFILE:
         test_closePeerOnEMFILE.skip = SKIP_EMFILE
+
+
+    def test_closePeerOnEMFILEWithoutRemaingAccepts(self):
+        """
+        The peer is closed on C{EMFILE} when L{Port.doRead} has no
+        remaining consecutive C{accept} calls.  See
+        L{assertPeerClosedOnEMFILE}.
+        """
+
+        def setNumberAccepts(*args, **kwargs):
+            port = self.getListeningPort(*args, **kwargs)
+            port.numberAccepts = 1
+            return port
+
+        assertPeerClosedOnEMFILE(
+            testCase=self,
+            exhauster=_ExhaustsFileDescriptors(),
+            reactor=self.buildReactor(),
+            runReactor=self.runReactor,
+            listen=setNumberAccepts,
+            connect=self.connectToListener,
+        )
 
 
 
