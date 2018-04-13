@@ -1351,7 +1351,41 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
 
 
-class ListenTCPMixin(object):
+class ConnectToTCPListenerMixin(object):
+    """
+    Provides L{connectToListener} for TCP transports.
+
+    @ivar LISTENER_HOST: The host on which the port is expected to be
+        listening.  This is specific to avoid compatibility issues
+        with Windows, which cannot connect to the wildcard host.
+    @type LISTENER_HOST: L{str}
+
+    @see: U{http://twistedmatrix.com/trac/ticket/1472}
+    """
+    LISTENER_HOST = '127.0.0.1'
+
+
+    def connectToListener(self, reactor, address, factory):
+        """
+        Connect to the given listening TCP port.
+
+        @param reactor: The reactor under test.
+        @type reactor: L{IReactorTCP}
+
+        @param address: The listening port's address.  Only the
+            C{port} component is used; see L{LISTENER_HOST}.
+        @type address: L{IPv4Address} or L{IPv6Address}
+
+        @param factory: The client factory.
+        @type factory: L{ClientFactory}
+
+        @return: The connector
+        """
+        return reactor.connectTCP(self.LISTENER_HOST, address.port, factory)
+
+
+
+class ListenTCPMixin(ConnectToTCPListenerMixin):
     """
     Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.
     """
@@ -1362,26 +1396,8 @@ class ListenTCPMixin(object):
         return reactor.listenTCP(port, factory, interface=interface)
 
 
-    def connectToListener(self, reactor, address, factory):
-        """
-        Connect to the given listening TCP port.
 
-        @param reactor: The reactor under test.
-        @type reactor: L{IReactorTCP}
-
-        @param address: The listening's address.
-        @type address: L{IPv4Address} or L{IPv6Address}
-
-        @param factory: The client factory.
-        @type factory: L{ClientFactory}
-
-        @return: The connector
-        """
-        return reactor.connectTCP('127.0.0.1', address.port, factory)
-
-
-
-class SocketTCPMixin(object):
+class SocketTCPMixin(ConnectToTCPListenerMixin):
     """
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening TCP
     ports.
@@ -1414,24 +1430,6 @@ class SocketTCPMixin(object):
                 portSock.close()
         else:
             raise SkipTest("Reactor does not provide IReactorSocket")
-
-
-    def connectToListener(self, reactor, address, factory):
-        """
-        Connect to a listening TCP port.
-
-        @param reactor: The reactor under test.
-        @type reactor: L{IReactorTCP}
-
-        @param address: The listening's address.
-        @type address: L{IPv4Address} or L{IPv6Address}
-
-        @param factory: The client factory.
-        @type factory: L{ClientFactory}
-
-        @return: The connector
-        """
-        return reactor.connectTCP('127.0.0.1', address.port, factory)
 
 
 

@@ -27,7 +27,8 @@ from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
-    StreamTransportTestsMixin, AbortConnectionMixin)
+    ConnectToTCPListenerMixin, StreamTransportTestsMixin, AbortConnectionMixin,
+)
 from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
 
@@ -288,6 +289,7 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
 
 class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
                           ObjectModelIntegrationMixin, BadContextTestsMixin,
+                          ConnectToTCPListenerMixin,
                           StreamTransportTestsMixin, ReactorBuilder):
     """
     Tests for L{IReactorSSL.listenSSL}
@@ -333,7 +335,9 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         @param reactor: The reactor under test.
         @type reactor: L{IReactorSSL}
 
-        @param address: The listening's address.
+        @param address: The listening's address.  Only the C{port}
+            component is used; see
+            L{ConnectToTCPListenerMixin.LISTENER_HOST}.
         @type address: L{IPv4Address} or L{IPv6Address}
 
         @param factory: The client factory.
@@ -342,7 +346,11 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         @return: The connector
         """
         return reactor.connectSSL(
-            '127.0.0.1', address.port, factory, self.getClientContext())
+            self.LISTENER_HOST,
+            address.port,
+            factory,
+            self.getClientContext(),
+        )
 
 
 
