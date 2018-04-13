@@ -2960,54 +2960,54 @@ class FileDescriptorReservationTests(SynchronousTestCase):
     """
 
     def setUp(self):
-        self.fileObjects = []
+        self.reservedFileObjects = []
         self.tempfile = self.mktemp()
 
         def fakeFileFactory():
-            self.fileObjects.append(open(self.tempfile, 'w'))
-            return self.fileObjects[-1]
+            self.reservedFileObjects.append(open(self.tempfile, 'w'))
+            return self.reservedFileObjects[-1]
 
         self.reserveFD = _FileDescriptorReservation(fakeFileFactory)
 
 
-    def test_acquireOpensFileOnce(self):
+    def test_reserveOpensFileOnce(self):
         """
         Multiple acquisitions without releases open the reservation
         file exactly once.
         """
-        self.assertEqual(len(self.fileObjects), 0)
+        self.assertEqual(len(self.reservedFileObjects), 0)
 
         for _ in range(10):
-            self.reserveFD.acquire()
-            self.assertEqual(len(self.fileObjects), 1)
-            self.assertFalse(self.fileObjects[0].closed)
+            self.reserveFD.reserve()
+            self.assertEqual(len(self.reservedFileObjects), 1)
+            self.assertFalse(self.reservedFileObjects[0].closed)
 
 
     def test_releaseClosesFile(self):
         """
         Releasing the reserveration closes the reservation file.
         """
-        self.reserveFD.acquire()
+        self.reserveFD.reserve()
         self.reserveFD.release()
-        self.assertEqual(len(self.fileObjects), 1)
-        self.assertTrue(self.fileObjects[0].closed)
+        self.assertEqual(len(self.reservedFileObjects), 1)
+        self.assertTrue(self.reservedFileObjects[0].closed)
 
 
-    def test_acquireAvailableReleaseUnavailable(self):
+    def test_reserveAvailableReleaseUnavailable(self):
         """
         Acquiring the reservation makes it available; releasing it
         makes it unavailable.
         """
         self.assertFalse(self.reserveFD.available())
 
-        self.reserveFD.acquire()
+        self.reserveFD.reserve()
         self.assertTrue(self.reserveFD.available())
 
         self.reserveFD.release()
         self.assertFalse(self.reserveFD.available())
 
 
-    def test_acquireAvailableReleaseMaybeCloseAvailable(self):
+    def test_reserveAvailableReleaseMaybeCloseAvailable(self):
         """
         Replacing a released reservation closes the provided file,
         reopens the reservation file, evaluates to L{True}, and makes
@@ -3017,15 +3017,15 @@ class FileDescriptorReservationTests(SynchronousTestCase):
 
         toClose = io.BytesIO()
 
-        self.reserveFD.acquire()
+        self.reserveFD.reserve()
         self.reserveFD.release()
 
         self.assertFalse(toClose.closed)
         self.assertTrue(self.reserveFD.maybeClose(toClose))
         self.assertTrue(toClose.closed)
 
-        self.assertGreater(len(self.fileObjects), 0)
-        self.assertFalse(self.fileObjects[-1].closed)
+        self.assertGreater(len(self.reservedFileObjects), 0)
+        self.assertFalse(self.reservedFileObjects[-1].closed)
 
         self.assertTrue(self.reserveFD.available())
 
@@ -3039,7 +3039,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
 
         toClose = io.BytesIO()
 
-        self.reserveFD.acquire()
+        self.reserveFD.reserve()
         self.reserveFD.release()
 
         exhauster = _ExhaustsFileDescriptors()

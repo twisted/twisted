@@ -898,13 +898,14 @@ class _FileDescriptorReservation(object):
     descriptor's space, and then close that connection and reopen this
     one.
 
-    Calling L{_FileDescriptorReservation.acquire} opens the reserve
+    Calling L{_FileDescriptorReservation.reserve} opens the reserve
     file descriptor if it is not already open.
     L{_FileDescriptorReservation.release} close this descriptor; a
     subsequent call to L{_FileDescriptorReservation.maybeClose} will
-    close the provided file and re-open the reservation file.  A
-    claimed reservation will not replace the provided file with
-    itself.  L{_FileDescriptorReservation.release} is idempotent.
+    close the provided file and re-open the reserved file.  A claimed
+    reservation will not replace the provided file with itself.
+    L{_FileDescriptorReservation.reserve} and
+    L{_FileDescriptorReservation.release} are idempotent.
 
     @param fileFactory: A factory that will be called to reserve a
         file descriptor.
@@ -920,87 +921,126 @@ class _FileDescriptorReservation(object):
     @_machine.state(initial=True)
     def _unreserved(self):
         """
-        The reservation file is unreserved.
+        The reserved file is unreserved.
+        """
+
+    @_machine.state()
+    def _reservationRequested(self):
+        """
+        A request to open the reserved file was made.
         """
 
     @_machine.state()
     def _reserved(self):
         """
-        The reservation file is reserved.
+        The reserved file is reserved.
         """
 
     @_machine.input()
-    def available(self):
+    def _maybeReserve(self):
         """
-        Is the reservation available?
-        """
-
-    @_machine.input()
-    def release(self):
-        """
-        Release the reservation descriptor so another file can take
-        its place.
+        Attempt to open the reserved file.
         """
 
     @_machine.input()
-    def acquire(self):
+    def _closeWhenUnreserved(self, fileObject):
         """
-        Ensure that the reservation file is held.
-        """
-
-    @_machine.input()
-    def maybeClose(self, fileObject):
-        """
-        Replace a file with the reservation file only if our reserve
-        file is unclaimed.
+        Close the file object when the reserved file's descriptor is
+        available because of a prior call to L{release}.
 
         @param fileObject: The file object to close.
         """
 
     @_machine.input()
-    def _openFailedWithEMFILE(self):
+    def _reservationFailedWithEMFILE(self):
         """
-        An internal input that undoes a reservation that failed to
-        open the reservation file.
+        An attempt to open the reserved file itself failed with
+        C{EMFILE}.
         """
 
-    def _createFD(self):
+    @_machine.input()
+    def _fileDesecriptorReserved(self):
         """
-        Actually open the reservation file.
+        The reserved file was opened.
         """
-        try:
-            self._fileDescriptor = self._fileFactory()
-        except (IOError, OSError) as e:
-            if e.errno == EMFILE:
-                self._log.failure("Failed to open reservation file.")
-                self._fileDescriptor = None
-            else:
-                raise
 
+
+    def available(self):
+        """
+        Is the reservation available?
+
+        @return: L{True} if the reserved file descriptor is open and
+            can thus be closed to allow a new file to be opened in its
+            place; L{False} if it is not open.
+        """
+        return self._fileDescriptor is not None
+
+
+    def reserve(self):
+        """
+        Attempt to open the reserved file descriptor; if this fails
+        because of C{EMFILE}, internal state is reset so that another
+        reservation attempt can be made.
+
+        @raises: Any exception the L{_fileFactory} callable can raise,
+            except an L{OSError} or L{IOError} whose errno is
+            L{EMFILE}.
+        """
+        reserved = self._maybeReserve()
+        if reserved:
+            self._fileDesecriptorReserved()
+        else:
+            self._reservationFailedWithEMFILE()
+
+
+    def maybeClose(self, fileObject):
+        """
+        Close the provided file if and only if L{release} has been
+        called to free the reserved file's file descriptor.  Then
+        attempt to re-open the reserved file.
+
+        @param fileObject: The file object to close iff the
+            reservation is available.
+
+        @return: L{True} when the file object was closed; L{False}
+            otherwise.
+        """
+        if self._closeWhenUnreserved(fileObject):
+            self.reserve()
+            return True
+        return False
+
+
+    @_machine.input()
+    def release(self):
+        """
+        Release the reserved descriptor so another file can take
+        its place.
+        """
 
     @_machine.output()
     def _openReservationFile(self):
         """
         Use the C{_fileFactory} to claim a file descriptor.
         """
-        self._createFD()
+        try:
+            fileDescriptor = self._fileFactory()
+        except (IOError, OSError) as e:
+            if e.errno == EMFILE:
+                self._log.failure("Failed to open reserved file.")
+                self._fileDescriptor = None
+                return False
+            else:
+                raise
+        else:
+            self._fileDescriptor = fileDescriptor
+            return True
 
 
     @_machine.output()
-    def _reopenReservationFile(self, fileObject):
+    def _closeReservedFile(self):
         """
-        The same as L{_openReservationFile}, except that it accepts a
-        C{fileObject} argument.
-
-        @param fileObject: ignored.
-        """
-        self._createFD()
-
-
-    @_machine.output()
-    def _closeReservationFile(self):
-        """
-        Close the reservation file.
+        Close the reserved file.
         """
         self._fileDescriptor.close()
         self._fileDescriptor = None
@@ -1009,44 +1049,12 @@ class _FileDescriptorReservation(object):
     @_machine.output()
     def _closeFile(self, fileObject):
         """
-        Close the provided file object.
+        Close the provided file object and return L{True}
 
         @param fileObject: The file object to close.
+        @return: L{True}
         """
         fileObject.close()
-
-
-    @_machine.output()
-    def _returnTrue(self):
-        """
-        Return True.
-
-        @return: L{True}
-        """
-        return True
-
-
-    @_machine.output()
-    def _returnFalse(self):
-        """
-        Return False.
-
-        @return: L{False}
-        """
-        return False
-
-
-    @_machine.output()
-    def _closed(self, fileObject):
-        """
-        Return True.
-
-        @param fileObject: ignored.
-
-        @return: L{True}
-        """
-        if self._fileDescriptor is None:
-            self._openFailedWithEMFILE()
         return True
 
 
@@ -1061,32 +1069,55 @@ class _FileDescriptorReservation(object):
         """
         return False
 
+
+    @_machine.output()
+    def _returnTrue(self):
+        """
+        An output that always returns L{True}.
+
+        @return: L{True}
+        """
+        return True
+
     _unreserved.upon(
-        acquire, enter=_reserved, outputs=[_openReservationFile],
+        release,
+        enter=_unreserved, outputs=[],
         collector=_silenceOutputs)
     _unreserved.upon(
-        maybeClose, enter=_reserved,
-        outputs=[_closeFile, _reopenReservationFile, _closed],
-        collector=_nthOutput(-1))
-    _unreserved.upon(
-        available, enter=_unreserved, outputs=[_returnFalse],
+        _maybeReserve,
+        enter=_reservationRequested, outputs=[_openReservationFile],
         collector=_nthOutput(0))
+    _unreserved.upon(
+        _closeWhenUnreserved,
+        enter=_unreserved,
+        outputs=[_closeFile],
+        collector=_nthOutput(-1))
+
+    _reservationRequested.upon(
+        _reservationFailedWithEMFILE,
+        enter=_unreserved, outputs=[],
+        collector=_silenceOutputs)
+    _reservationRequested.upon(
+        _fileDesecriptorReserved,
+        enter=_reserved, outputs=[],
+        collector=_silenceOutputs)
 
     _reserved.upon(
-        release, enter=_unreserved, outputs=[_closeReservationFile],
+        release,
+        enter=_unreserved, outputs=[_closeReservedFile],
         collector=_silenceOutputs)
     _reserved.upon(
-        acquire, enter=_reserved, outputs=[],
+        _maybeReserve,
+        enter=_reserved, outputs=[_returnTrue],
+        collector=_nthOutput(0))
+    _reserved.upon(
+        _fileDesecriptorReserved,
+        enter=_reserved, outputs=[],
         collector=_silenceOutputs)
     _reserved.upon(
-        maybeClose, enter=_reserved,
+        _closeWhenUnreserved, enter=_reserved,
         outputs=[_notClosed],
         collector=_nthOutput(0))
-    _reserved.upon(
-        available, enter=_reserved, outputs=[_returnTrue],
-        collector=_nthOutput(0))
-    _reserved.upon(
-        _openFailedWithEMFILE, enter=_unreserved, outputs=[])
 
 
 _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
@@ -1207,7 +1238,7 @@ class Port(base.BasePort, _SocketCloser):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        _reservedFD.acquire()
+        _reservedFD.reserve()
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
