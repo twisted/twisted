@@ -11,6 +11,7 @@ from __future__ import division, absolute_import
 __metaclass__ = type
 
 import errno
+import gc
 import io
 import os
 import socket
@@ -1340,6 +1341,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         """
         See L{assertPeerClosedOnEMFILE}.
         """
+        gc.collect()
         assertPeerClosedOnEMFILE(
             testCase=self,
             exhauster=_ExhaustsFileDescriptors(),
