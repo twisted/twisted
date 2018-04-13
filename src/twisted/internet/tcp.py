@@ -982,7 +982,7 @@ class _FileDescriptorReservation(object):
         because of C{EMFILE}, internal state is reset so that another
         reservation attempt can be made.
 
-        @raises: Any exception the L{_fileFactory} callable can raise,
+        @raises: Any exception the C{fileFactory} callable can raise,
             except an L{OSError} or L{IOError} whose errno is
             L{EMFILE}.
         """
