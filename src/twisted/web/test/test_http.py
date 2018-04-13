@@ -2417,7 +2417,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def _checkCookie(self, expectedCookieValue, *args, **kwargs):
         """
-        Call L{http.Request.setCookie} with C{*args} and C{**kwargs}, and check
+        Call L{http.Request.addCookie} with C{*args} and C{**kwargs}, and check
         that the cookie value is equal to C{expectedCookieValue}.
         """
         channel = DummyChannel()
@@ -2430,16 +2430,16 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         writtenLines = channel.transport.written.getvalue().split(b"\r\n")
 
         # There should be one Set-Cookie header
-        setCookieLines = [x for x in writtenLines
+        addCookieLines = [x for x in writtenLines
                           if x.startswith(b"Set-Cookie")]
-        self.assertEqual(len(setCookieLines), 1)
-        self.assertEqual(setCookieLines[0],
+        self.assertEqual(len(addCookieLines), 1)
+        self.assertEqual(addCookieLines[0],
                          b"Set-Cookie: " + expectedCookieValue)
 
 
     def test_addCookieWithMinimumArgumentsUnicode(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response, and can be called with just a key and a value. L{unicode}
         arguments are encoded using UTF-8.
         """
@@ -2450,7 +2450,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieWithAllArgumentsUnicode(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response. L{unicode} arguments are encoded using UTF-8.
         """
         expectedCookieValue = (
@@ -2466,7 +2466,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieWithMinimumArgumentsBytes(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response, and can be called with just a key and a value. L{bytes}
         arguments are not decoded.
         """
@@ -2477,7 +2477,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieWithAllArgumentsBytes(self):
         """
-        L{http.Request.setCookie} adds a new cookie to be sent with the
+        L{http.Request.addCookie} adds a new cookie to be sent with the
         response. L{bytes} arguments are not decoded.
         """
         expectedCookieValue = (
@@ -2493,7 +2493,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieNonStringArgument(self):
         """
-        L{http.Request.setCookie} will raise a L{DeprecationWarning} if
+        L{http.Request.addCookie} will raise a L{DeprecationWarning} if
         non-string (not L{bytes} or L{unicode}) arguments are given, and will
         call C{str()} on it to preserve past behaviour.
         """
