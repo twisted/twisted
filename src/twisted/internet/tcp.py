@@ -1212,6 +1212,25 @@ else:
     _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))
 
 
+# Linux and other UNIX-like operating systems return EMFILE when a
+# process has reached its soft limit of file descriptors. *BSD and
+# Win32 raise (WSA)ENOBUFS when socket limits are reached.  Linux can
+# give ENFILE if the system is out of inodes, or ENOMEM if there is
+# insufficient memory to allocate a new dentry.  ECONNABORTED is
+# documented as possible on all relevant platforms (Linux, Windows,
+# macOS, and the BSDs) but occurs only on the BSDs.  It occurs when a
+# client sends a FIN or RST after the server sends a SYN|ACK but
+# before application code calls accept(2).  On Linux, calling
+# accept(2) on such a listener returns a connection that fails as
+# though the it were terminated after being fully established.  This
+# appears to be an implementation choice (see inet_accept in
+# inet/ipv4/af_inet.c).  On macOS, such a listener is not considered
+# readable, so accept(2) will never be called.  Calling accept(2) on
+# such a listener, however, does not return at all.
+_ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
+
+
+
 @implementer(interfaces.IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
@@ -1400,10 +1419,9 @@ class Port(base.BasePort, _SocketCloser):
                         # anyway.
                         continue
                     elif e.args[0] == EMFILE and _reservedFD.available():
-                        # Linux gives EMFILE when a process is not
-                        # allowed to allocate any more file
-                        # descriptors.  *BSD and Win32 give
-                        # (WSA)ENOBUFS.
+                        # Linux and other UNIX-like operating systems
+                        # return EMFILE when a process has reached its
+                        # soft limit of file descriptors.
                         log.msg(
                             "EMFILE encountered;"
                             " releasing reserved file descriptor.")
@@ -1413,27 +1431,7 @@ class Port(base.BasePort, _SocketCloser):
                         if i == (numAccepts - 1):
                             numAccepts += 1
                         continue
-                    elif e.args[0] in (
-                            EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED):
-                        # Linux can give ENFILE if the system is out
-                        # of inodes, or ENOMEM if there is
-                        # insufficient memory to allocate a new
-                        # dentry.  ECONNABORTED is documented as
-                        # possible on all relevant platforms (Linux,
-                        # Windows, macOS, and the BSDs) but occurs
-                        # only on the BSDs.  It occurs when a client
-                        # sends a FIN or RST after the server sends a
-                        # SYN|ACK but before application code calls
-                        # accept(2).  On Linux, calling accept(2) on
-                        # such a listener returns a connection that
-                        # fails as though the it were terminated after
-                        # being fully established.  This appears to be
-                        # an implementation choice (see inet_accept in
-                        # inet/ipv4/af_inet.c).  On macOS, such a
-                        # listener is not considered readable, so
-                        # accept(2) will never be called.  Calling
-                        # accept(2) on such a listener, however, does
-                        # not return at all.
+                    elif e.args[0] in _ACCEPT_ERRORS:
                         log.msg("Could not accept new connection (%s)" % (
                             errorcode[e.args[0]],))
                         break
