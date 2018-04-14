@@ -9,7 +9,6 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
 from __future__ import division, absolute_import
-
 # System Imports
 import socket
 import sys
@@ -19,12 +18,10 @@ import struct
 
 import attr
 
-from automat import MethodicalMachine
-
 from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
-from twisted.python.compat import lazyByteSlice, unicode
+from twisted.python.compat import izip, lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -897,15 +894,20 @@ class _IFileDescriptorReservation(Interface):
     descriptor's space, and then close that connection and reopen this
     one.
 
-    Calling L{_FileDescriptorReservation.reserve} opens the reserve
-    file descriptor if it is not already open.
-    L{_FileDescriptorReservation.release} close this descriptor; a
-    subsequent call to
-    L{_FileDescriptorReservation.maybeCloseForReserved} will close the
-    provided file and re-open the reserved file.  A claimed
-    reservation will not replace the provided file with itself.
-    L{_FileDescriptorReservation.reserve} and
-    L{_FileDescriptorReservation.release} are idempotent.
+    Calling L{_IFileDescriptorReservation.reserve} attempts to open
+    the reserve file descriptor if it is not already open.
+    L{_IFileDescriptorReservation.available} returns L{True} if the
+    underlying file is open and its descriptor claimed.
+
+    L{_IFileDescriptorReservation} instances are context managers;
+    entering them releases the underlying file descriptor, while
+    exiting them attempts to reacquire it.  The block can take
+    advantage of the free slot in the process' file descriptor table
+    accept and close a client connection.
+
+    Because another thread might open a file descriptor between the
+    time the context manager is entered and the time C{accept} is
+    called, opening the reserve descriptor is best-effort only.
     """
 
     def available():
@@ -929,24 +931,21 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
-    def maybeCloseForReserved(fileObject):
+    def __enter__():
         """
-        Close the provided file if and only if L{release} has been
-        called to free the reserved file's file descriptor in exchage
-        for re-opening the reserved file.
-
-        @param fileObject: The file object to close iff the
-            reservation is available.
-
-        @return: L{True} when the file object was closed; L{False}
-            otherwise.
+        Release the underlying file descriptor so that code within the
+        context manager can open a new file.
         """
 
 
-    def release():
+    def __exit__(excType, excValue, traceback):
         """
-        Release the reserved descriptor so another file can take
-        its place.
+        Attempt to re-open the reserved file descriptor.  See
+        L{reserve} for caveats.
+
+        @param excType: See L{object.__exit__}
+        @param excValue: See L{object.__exit__}
+        @param traceback: See L{object.__exit__}
         """
 
 
@@ -963,56 +962,9 @@ class _FileDescriptorReservation(object):
         returns an object with a C{close} method.
     """
     _log = Logger()
-    _machine = MethodicalMachine()
 
     _fileFactory = attr.ib()
     _fileDescriptor = attr.ib(init=False, default=None)
-
-    @_machine.state(initial=True)
-    def _unreserved(self):
-        """
-        The reserved file is unreserved.
-        """
-
-    @_machine.state()
-    def _reservationRequested(self):
-        """
-        A request to open the reserved file was made.
-        """
-
-    @_machine.state()
-    def _reserved(self):
-        """
-        The reserved file is reserved.
-        """
-
-    @_machine.input()
-    def _maybeReserve(self):
-        """
-        Attempt to open the reserved file.
-        """
-
-    @_machine.input()
-    def _closeWhenUnreserved(self, fileObject):
-        """
-        Close the file object when the reserved file's descriptor is
-        available because of a prior call to L{release}.
-
-        @param fileObject: The file object to close.
-        """
-
-    @_machine.input()
-    def _reservationFailedWithEMFILE(self):
-        """
-        An attempt to open the reserved file itself failed with
-        C{EMFILE}.
-        """
-
-    @_machine.input()
-    def _fileDesecriptorReserved(self):
-        """
-        The reserved file was opened.
-        """
 
 
     def available(self):
@@ -1030,137 +982,40 @@ class _FileDescriptorReservation(object):
         """
         See L{_IFileDescriptorReservation.reserve}.
         """
-        reserved = self._maybeReserve()
-        if reserved:
-            self._fileDesecriptorReserved()
-        else:
-            self._reservationFailedWithEMFILE()
-
-
-    def maybeCloseForReserved(self, fileObject):
-        """
-        See L{_IFileDescriptorReservation.maybeCloseForReserved}.
-
-        @param fileObject: The file object to close iff the
-            reservation is available.
-
-        @return: L{True} when the file object was closed; L{False}
-            otherwise.
-        """
-        if self._closeWhenUnreserved(fileObject):
-            self.reserve()
-            return True
-        return False
-
-
-    @_machine.input()
-    def release(self):
-        """
-        See L{_IFileDescriptorReservation.maybeCloseForReserved}.
-        Release the reserved descriptor so another file can take
-        its place.
-        """
-
-    @_machine.output()
-    def _openReservationFile(self):
-        """
-        Use the C{_fileFactory} to claim a file descriptor.
-        """
-        try:
-            fileDescriptor = self._fileFactory()
-        except (IOError, OSError) as e:
-            if e.errno == EMFILE:
-                self._log.failure("Failed to open reserved file.")
-                self._fileDescriptor = None
-                return False
+        if self._fileDescriptor is None:
+            try:
+                fileDescriptor = self._fileFactory()
+            except (IOError, OSError) as e:
+                if e.errno == EMFILE:
+                    self._log.failure(
+                        "Could not reserve EMFILE recovery file descriptor.")
+                    self._fileDescriptor = None
+                else:
+                    raise
             else:
-                raise
-        else:
-            self._fileDescriptor = fileDescriptor
-            return True
+                self._fileDescriptor = fileDescriptor
 
 
-    @_machine.output()
-    def _closeReservedFile(self):
+    def __enter__(self):
         """
-        Close the reserved file.
+        See L{_IFileDescriptorReservation.__enter__}.
         """
+        if not self._fileDescriptor:
+            raise RuntimeError(
+                "No file reserved.  Have you called my reserve method?")
         self._fileDescriptor.close()
         self._fileDescriptor = None
 
 
-    @_machine.output()
-    def _closeFile(self, fileObject):
+    def __exit__(self, excValue, excType, traceback):
         """
-        Close the provided file object and return L{True}
-
-        @param fileObject: The file object to close.
-        @return: L{True}
+        See L{_IFileDescriptorReservation.__exit__}.
         """
-        fileObject.close()
-        return True
-
-
-    @_machine.output()
-    def _notClosed(self, fileObject):
-        """
-        Return False.
-
-        @param fileObject: ignored.
-
-        @return: L{False}
-        """
-        return False
-
-
-    @_machine.output()
-    def _returnTrue(self):
-        """
-        An output that always returns L{True}.
-
-        @return: L{True}
-        """
-        return True
-
-    _unreserved.upon(
-        release,
-        enter=_unreserved, outputs=[],
-        collector=_silenceOutputs)
-    _unreserved.upon(
-        _maybeReserve,
-        enter=_reservationRequested, outputs=[_openReservationFile],
-        collector=_nthOutput(0))
-    _unreserved.upon(
-        _closeWhenUnreserved,
-        enter=_unreserved,
-        outputs=[_closeFile],
-        collector=_nthOutput(-1))
-
-    _reservationRequested.upon(
-        _reservationFailedWithEMFILE,
-        enter=_unreserved, outputs=[],
-        collector=_silenceOutputs)
-    _reservationRequested.upon(
-        _fileDesecriptorReserved,
-        enter=_reserved, outputs=[],
-        collector=_silenceOutputs)
-
-    _reserved.upon(
-        release,
-        enter=_unreserved, outputs=[_closeReservedFile],
-        collector=_silenceOutputs)
-    _reserved.upon(
-        _maybeReserve,
-        enter=_reserved, outputs=[_returnTrue],
-        collector=_nthOutput(0))
-    _reserved.upon(
-        _fileDesecriptorReserved,
-        enter=_reserved, outputs=[],
-        collector=_silenceOutputs)
-    _reserved.upon(
-        _closeWhenUnreserved, enter=_reserved,
-        outputs=[_notClosed],
-        collector=_nthOutput(0))
+        try:
+            self.reserve()
+        except Exception:
+            self._log.failure(
+                "Could not reserve EMFILE recovery file descriptor.")
 
 
 
@@ -1187,21 +1042,21 @@ class _NullFileDescriptorReservation(object):
         """
 
 
-    def maybeCloseForReserved(self, fileObject):
+    def __enter__(self):
         """
-        Never close the file in exchange for the reserved file.  See
-        L{_IFileDescriptorReservation.maybeCloseForReserved}.
-
-        @param fileObject: The file; never closed by this method.
+        Do nothing. See L{_IFileDescriptorReservation.__enter__}
 
         @return: L{False}
         """
-        return False
 
 
-    def release(self):
+    def __exit__(self, excValue, excType, traceback):
         """
-        Do nothing.  See L{_IFileDescriptorReservation.release}.
+        Do nothing.  See L{_IFileDescriptorReservation.__exit__}.
+
+        @param excType: See L{object.__exit__}
+        @param excValue: See L{object.__exit__}
+        @param traceback: See L{object.__exit__}
         """
 
 
@@ -1228,6 +1083,66 @@ else:
 # readable, so accept(2) will never be called.  Calling accept(2) on
 # such a listener, however, does not return at all.
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
+
+
+def _accept(listener, reservedFD):
+    """
+    Return a generator that yields client sockets from the provided
+    listening socket until there are none left or an unrecoverable
+    error occurs.
+
+    @param listener: The listening socket.
+    @type listener: L{socket.socket}
+
+    @param reservedFD: A reserved file descriptor that can be used to
+        recover from C{EMFILE} on UNIX-like systems.
+    @type reservedFD: L{_IFileDescriptorReservation}
+
+    @return: A generator that yields C{(socket, addr)} tuples from
+        L{socket.accept}
+    """
+
+    while True:
+        try:
+            client, address = listener.accept()
+        except socket.error as e:
+            if e.args[0] in (EWOULDBLOCK, EAGAIN):
+                # No more clients.
+                return
+            elif e.args[0] == EPERM:
+                # Netfilter on Linux may have rejected the
+                # connection, but we get told to try to accept()
+                # anyway.
+                continue
+            elif e.args[0] == EMFILE and reservedFD.available():
+                # Linux and other UNIX-like operating systems return
+                # EMFILE when a process has reached its soft limit of
+                # file descriptors.  The reserved file descriptor is
+                # available, so it can be released to free up a
+                # descriptor for use by listener.accept()'s clients.
+                # Each client socket will be closed until the listener
+                # returns EAGAIN.
+                with reservedFD:
+                    log.msg("EMFILE encountered;"
+                            " releasing reserved file descriptor.")
+                    clientsToClose = _accept(listener, reservedFD)
+                    for clientToClose, closedAddr in clientsToClose:
+                        clientToClose.close()
+                        log.msg("EMFILE recovery:"
+                                " Closed socket from %r"
+                                " and reopening reserve file descriptor"
+                                % (closedAddr,))
+                    # All pending client connections have been closed.
+                    # Return control back to the reactor.
+                    return
+            elif e.args[0] in _ACCEPT_ERRORS:
+                log.msg("Could not accept new connection (%s)" % (
+                    errorcode[e.args[0]],))
+                return
+            else:
+                raise
+        else:
+            yield client, address
 
 
 
@@ -1401,64 +1316,28 @@ class Port(base.BasePort, _SocketCloser):
                 # win32 event loop breaks if we do more than one accept()
                 # in an iteration of the event loop.
                 numAccepts = 1
-            i = 0
-            while i < numAccepts:
-                # we need this so we can deal with a factory's buildProtocol
-                # calling our loseConnection
-                if self.disconnecting:
-                    return
-                try:
-                    skt, addr = self.socket.accept()
-                except socket.error as e:
-                    if e.args[0] in (EWOULDBLOCK, EAGAIN):
-                        self.numberAccepts = i
-                        break
-                    elif e.args[0] == EPERM:
-                        # Netfilter on Linux may have rejected the
-                        # connection, but we get told to try to accept()
-                        # anyway.
-                        continue
-                    elif e.args[0] == EMFILE and _reservedFD.available():
-                        # Linux and other UNIX-like operating systems
-                        # return EMFILE when a process has reached its
-                        # soft limit of file descriptors.
-                        log.msg(
-                            "EMFILE encountered;"
-                            " releasing reserved file descriptor.")
-                        _reservedFD.release()
-                        # Ensure that we have one more iteration
-                        # available after this.
-                        if i == (numAccepts - 1):
-                            numAccepts += 1
-                        continue
-                    elif e.args[0] in _ACCEPT_ERRORS:
-                        log.msg("Could not accept new connection (%s)" % (
-                            errorcode[e.args[0]],))
-                        break
-                    raise
 
-                i += 1
+            accepted = 0
+            attempts = range(1, numAccepts + 1)
+            clients = _accept(self.socket, _reservedFD)
+            # Limit the infinite stream of clients with the attempts
+            # iterator
+            for accepted, (skt, addr) in izip(attempts, clients):
+                fdesc._setCloseOnExec(skt.fileno())
+                protocol = self.factory.buildProtocol(self._buildAddr(addr))
+                if protocol is None:
+                    skt.close()
+                    continue
+                s = self.sessionno
+                self.sessionno = s + 1
+                transport = self.transport(
+                    skt, protocol, addr, self, s, self.reactor)
+                protocol.makeConnection(transport)
 
-                if _reservedFD.maybeCloseForReserved(skt):
-                    log.msg(
-                        "EMFILE recovery:"
-                        " Closing socket from %r"
-                        " and reopening reserve file descriptor"
-                        % (addr,))
-                else:
-                    fdesc._setCloseOnExec(skt.fileno())
-                    protocol = self.factory.buildProtocol(
-                        self._buildAddr(addr))
-                    if protocol is None:
-                        skt.close()
-                        continue
-                    s = self.sessionno
-                    self.sessionno = s+1
-                    transport = self.transport(
-                        skt, protocol, addr, self, s, self.reactor)
-                    protocol.makeConnection(transport)
-            else:
+            if not accepted:
                 self.numberAccepts = self.numberAccepts+20
+            else:
+                self.numberAccepts = accepted
         except BaseException:
             # Note that in TLS mode, this will possibly catch SSL.Errors
             # raised by self.socket.accept()
