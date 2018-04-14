@@ -1,0 +1,2 @@
+Traceback generated for twisted.internet.defer.inlineCallbacks now correctly include the whole stack when going through try/finally (before it only contained stack up to the try/finally block).
+
