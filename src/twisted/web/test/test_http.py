@@ -3745,3 +3745,38 @@ class ChannelProductionTests(unittest.TestCase):
         clock.advance(1)
         self.assertIs(transport.producer, None)
         self.assertIs(transport.streaming, None)
+
+
+
+class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{HTTPChannel} sanitizes its output.
+    """
+
+    def test_writeHeadersSanitizesLinearWhitespace(self):
+        """
+        L{HTTPChannel.writeHeaders} removes linear whitespace from the
+        list of header names and values it receives.
+        """
+        for component in bytesLinearWhitespaceComponents:
+            transport = StringTransport()
+            channel = http.HTTPChannel()
+            channel.makeConnection(transport)
+
+            channel.writeHeaders(
+                version=b"HTTP/1.1",
+                code=b"200",
+                reason=b"OK",
+                headers=[(component, component)])
+
+            sanitizedHeaderLine = b": ".join([
+                sanitizedBytes, sanitizedBytes,
+            ]) + b'\r\n'
+
+            self.assertEqual(
+                transport.value(),
+                b"\r\n".join([
+                    b"HTTP/1.1 200 OK",
+                    sanitizedHeaderLine,
+                    b'',
+                ]))

@@ -2323,10 +2323,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param headers: The headers to write to the transport.
         @type headers: L{twisted.web.http_headers.Headers}
         """
+        sanitizedHeaders = Headers()
+        for name, value in headers:
+            sanitizedHeaders.addRawHeader(name, value)
+
         responseLine = version + b" " + code + b" " + reason + b"\r\n"
         headerSequence = [responseLine]
         headerSequence.extend(
-            name + b': ' + value + b"\r\n" for name, value in headers
+            name + b': ' + value + b"\r\n"
+            for name, values in sanitizedHeaders.getAllRawHeaders()
+            for value in values
         )
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
