@@ -17,6 +17,7 @@ from twisted.web.test.requesthelper import (
 )
 
 
+
 def assertSanitized(testCase, components, expected):
     """
     Assert that the components are sanitized to the expected value as
@@ -47,7 +48,7 @@ def assertSanitized(testCase, components, expected):
 
         for header in headers:
             testCase.assertEqual(list(header.getAllRawHeaders()),
-                             [(expected, [expected])])
+                                 [(expected, [expected])])
             testCase.assertEqual(header.getRawHeaders(expected), [expected])
 
 

@@ -2490,7 +2490,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"Domain=.example.com; Path=/; Max-Age=31536000; "
             b"Comment=test; Secure; HttpOnly")
 
-        self._checkCookie(expectedCookieValue,
+        self._checkCookie(
+            expectedCookieValue,
             b"foo", b"bar", expires=b"Fri, 31 Dec 9999 23:59:59 GMT",
             domain=b".example.com", path=b"/", max_age=b"31536000",
             comment=b"test", secure=True, httpOnly=True)
