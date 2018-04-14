@@ -2491,25 +2491,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             comment=b"test", secure=True, httpOnly=True)
 
 
-    def test_addCookieNonStringArgument(self):
-        """
-        L{http.Request.addCookie} will raise a L{DeprecationWarning} if
-        non-string (not L{bytes} or L{unicode}) arguments are given, and will
-        call C{str()} on it to preserve past behaviour.
-        """
-        expectedCookieValue = b"foo=10"
-
-        self._checkCookie(expectedCookieValue, b"foo", 10)
-
-        warnings = self.flushWarnings([self._checkCookie])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Passing non-bytes or non-unicode cookie arguments is "
-            "deprecated since Twisted 16.1.")
-
-
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
@@ -2531,38 +2512,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             [(b"HTTP/1.0 200 OK",
               b"Test: lemur",
               b"Hello")])
-
-
-    def test_nonByteHeaderValue(self):
-        """
-        L{http.Request.write} casts non-bytes header value to bytes
-        transparently.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        trans = StringTransport()
-
-        channel.transport = trans
-
-        req.setResponseCode(200)
-        req.clientproto = b"HTTP/1.0"
-        req.responseHeaders.setRawHeaders(b"test", [10])
-        req.write(b'Hello')
-
-        self.assertResponseEquals(
-            trans.value(),
-            [(b"HTTP/1.0 200 OK",
-              b"Test: 10",
-              b"Hello")])
-
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_nonByteHeaderValue])
-        self.assertEqual(1, len(warnings))
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Passing non-bytes header values is deprecated since "
-            "Twisted 12.3. Pass only bytes instead.")
 
 
     def test_firstWriteHTTP11Chunked(self):

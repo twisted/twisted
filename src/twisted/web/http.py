@@ -1080,13 +1080,6 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
-                    if not isinstance(value, bytes):
-                        warnings.warn(
-                            "Passing non-bytes header values is deprecated "
-                            "since Twisted 12.3. Pass only bytes instead.",
-                            category=DeprecationWarning, stacklevel=2)
-                        # Backward compatible cast for non-bytes values
-                        value = networkString('%s' % (value,))
                     headers.append((name, value))
 
             for cookie in self.cookies:
@@ -1163,17 +1156,8 @@ class Request:
 
             if isinstance(val, bytes):
                 return val
-            elif isinstance(val, unicode):
+            else:
                 return val.encode('utf8')
-
-            # Not bytes or unicode, relying on string conversion legacy
-            # str() it, and warn, it's the best we can do
-            warnings.warn(
-                "Passing non-bytes or non-unicode cookie arguments is "
-                "deprecated since Twisted 16.1.",
-                category=DeprecationWarning, stacklevel=3)
-
-            return str(val).encode('utf8')
 
         cookie = _ensureBytes(k) + b"=" + _ensureBytes(v)
         if expires is not None:
