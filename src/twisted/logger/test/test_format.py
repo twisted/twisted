@@ -450,15 +450,17 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         """
         An event with a C{log_failure} key will have a traceback appended.
         """
-        f = Failure(CapturedError("This is a fake error"))
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
         event = {
             "log_format": u"This is a test log message"
         }
         event["log_failure"] = f
         eventText = formatEventWithTraceback(event)
-        self.assertIsInstance(eventText, unicode)
-        self.assertIn('Traceback', eventText)
-        self.assertIn(u'This is a fake error', eventText)
+        self.assertIn(unicode(f.getTraceback()), eventText)
         self.assertIn(u'This is a test log message', eventText)
 
 
@@ -467,14 +469,16 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         An event with an empty C{log_format} key appends a traceback from
         the accompanying failure.
         """
-        f = Failure(CapturedError("This is a fake error"))
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
         event = {
             "log_format": u""
         }
         event["log_failure"] = f
         eventText = formatEventWithTraceback(event)
-        self.assertIsInstance(eventText, unicode)
-        self.assertIn('Traceback', eventText)
+        self.assertIn(unicode(f.getTraceback()), eventText)
         self.assertIn(u'This is a fake error', eventText)
 
 
