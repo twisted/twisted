@@ -1267,9 +1267,9 @@ class IReactorTime(Interface):
         """
         Retrieve all currently scheduled delayed calls.
 
-        @return: A tuple of all L{IDelayedCall} providers representing all
+        @return: A list of L{IDelayedCall} providers representing all
                  currently scheduled calls. This is everything that has been
-                 returned by C{callLater} but not yet called or canceled.
+                 returned by C{callLater} but not yet called or cancelled.
         """
 
 
