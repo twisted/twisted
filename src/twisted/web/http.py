@@ -528,7 +528,10 @@ class HTTPClient(basic.LineReceiver):
         if not isinstance(value, bytes):
             # XXX Deprecate this case
             value = networkString(str(value))
-        self.transport.writeSequence([name, b': ', value, b'\r\n'])
+        santizedName = _sanitizeLinearWhitespace(name)
+        santizedValue = _sanitizeLinearWhitespace(value)
+        self.transport.writeSequence(
+            [santizedName, b': ', santizedValue, b'\r\n'])
 
     def endHeaders(self):
         self.transport.write(b'\r\n')

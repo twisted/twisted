@@ -3780,3 +3780,25 @@ class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
                     sanitizedHeaderLine,
                     b'',
                 ]))
+
+
+
+class HTTPClientSanitizationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{http.HTTPClient} sanitizes its output.
+    """
+
+    def test_sendHeaderSanitizesLinearWhitespace(self):
+        """
+        L{HTTPClient.sendHeader} replaces linear whitespace in its
+        header keys and values with a single space.
+        """
+        for component in bytesLinearWhitespaceComponents:
+            transport = StringTransport()
+            client = http.HTTPClient()
+            client.makeConnection(transport)
+            client.sendHeader(component, component)
+            self.assertEqual(
+                transport.value().splitlines(),
+                [b": ".join([sanitizedBytes, sanitizedBytes])]
+            )
