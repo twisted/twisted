@@ -443,7 +443,7 @@ class CapturedError(Exception):
 class FormatEventWithTracebackTests(unittest.TestCase):
     """
     Tests for L{formatEventWithTraceback}, all of which ensure that the
-    returned type is a UTF-8.
+    returned type is UTF-8 decoded text.
     """
 
     def test_formatEventWithTraceback(self):
