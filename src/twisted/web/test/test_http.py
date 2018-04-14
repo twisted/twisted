@@ -2523,6 +2523,23 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                                   **{argument: component})
 
 
+    def test_addCookieSameSite(self):
+        """
+        L{http.Request.setCookie} supports a C{samesite} argument.
+        """
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="Lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=strict", b"foo", b"bar", samesite="strict")
+
+        self.assertRaises(
+            ValueError,
+            self._checkCookie,
+            b"", b"foo", b"bar", samesite="anything-else")
+
+
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
