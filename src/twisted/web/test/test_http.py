@@ -34,7 +34,12 @@ from twisted.protocols import loopback
 from twisted.test.proto_helpers import (StringTransport, NonStreamingProducer,
                                         EventLoggingObserver)
 from twisted.test.test_internet import DummyProducer
-from twisted.web.test.requesthelper import DummyChannel
+from twisted.web.test.requesthelper import (
+    DummyChannel,
+    bytesLinearWhitespaceComponents,
+    sanitizedBytes,
+    textLinearWhitespaceComponents,
+)
 
 from zope.interface import directlyProvides, providedBy
 from twisted.logger import globalLogPublisher
@@ -2489,6 +2494,32 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"foo", b"bar", expires=b"Fri, 31 Dec 9999 23:59:59 GMT",
             domain=b".example.com", path=b"/", max_age=b"31536000",
             comment=b"test", secure=True, httpOnly=True)
+
+
+    def test_addCookieSanitizesLinearWhitespace(self):
+        """
+        L{http.Request.addCookie} will raise a L{ValueError} when
+        given a key or value that contains a newline.
+        """
+        def cookieValue(key):
+            return b'='.join([key, sanitizedBytes])
+
+        arguments = [('expires', b'Expires'),
+                     ('domain', b'Domain'),
+                     ('path', b'Path'),
+                     ('max_age', b'Max-Age'),
+                     ('comment', b'Comment')]
+
+        components = (textLinearWhitespaceComponents +
+                      bytesLinearWhitespaceComponents)
+        for component in components:
+            self._checkCookie(cookieValue(sanitizedBytes),
+                              component, component)
+            for argument, header in arguments:
+                expected = b"; ".join([cookieValue(sanitizedBytes),
+                                       cookieValue(header)])
+                self._checkCookie(expected, component, component,
+                                  **{argument: component})
 
 
     def test_firstWrite(self):

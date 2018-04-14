@@ -105,7 +105,7 @@ from twisted.protocols import policies, basic
 
 from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
-from twisted.web.http_headers import Headers
+from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
 
 try:
     from twisted.web._http2 import H2Connection
@@ -1159,17 +1159,25 @@ class Request:
             else:
                 return val.encode('utf8')
 
-        cookie = _ensureBytes(k) + b"=" + _ensureBytes(v)
+        cookie = (
+            _sanitizeLinearWhitespace(_ensureBytes(k)) +
+            b"=" +
+            _sanitizeLinearWhitespace(_ensureBytes(v)))
         if expires is not None:
-            cookie = cookie + b"; Expires=" + _ensureBytes(expires)
+            cookie = cookie + b"; Expires=" + _sanitizeLinearWhitespace(
+                _ensureBytes(expires))
         if domain is not None:
-            cookie = cookie + b"; Domain=" + _ensureBytes(domain)
+            cookie = cookie + b"; Domain=" + _sanitizeLinearWhitespace(
+                _ensureBytes(domain))
         if path is not None:
-            cookie = cookie + b"; Path=" + _ensureBytes(path)
+            cookie = cookie + b"; Path=" + _sanitizeLinearWhitespace(
+                _ensureBytes(path))
         if max_age is not None:
-            cookie = cookie + b"; Max-Age=" + _ensureBytes(max_age)
+            cookie = cookie + b"; Max-Age=" + _sanitizeLinearWhitespace(
+                _ensureBytes(max_age))
         if comment is not None:
-            cookie = cookie + b"; Comment=" + _ensureBytes(comment)
+            cookie = cookie + b"; Comment=" + _sanitizeLinearWhitespace(
+                _ensureBytes(comment))
         if secure:
             cookie = cookie + b"; Secure"
         if httpOnly:
