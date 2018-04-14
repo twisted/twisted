@@ -15,6 +15,7 @@ except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
 from io import BytesIO
+from itertools import cycle
 from zope.interface import provider
 from zope.interface.verify import verifyObject
 
@@ -2497,13 +2498,13 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             comment=b"test", secure=True, httpOnly=True)
 
 
-    def test_addCookieSanitizesLinearWhitespace(self):
+    def test_addCookieSanitization(self):
         """
-        L{http.Request.addCookie} will raise a L{ValueError} when
-        given a key or value that contains a newline.
+        L{http.Request.addCookie} replaces linear whitespace and
+        semicolons with single spaces.
         """
-        def cookieValue(key):
-            return b'='.join([key, sanitizedBytes])
+        def cookieValue(key, value):
+            return b'='.join([key, value])
 
         arguments = [('expires', b'Expires'),
                      ('domain', b'Domain'),
@@ -2511,16 +2512,26 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                      ('max_age', b'Max-Age'),
                      ('comment', b'Comment')]
 
-        components = (textLinearWhitespaceComponents +
-                      bytesLinearWhitespaceComponents)
-        for component in components:
-            self._checkCookie(cookieValue(sanitizedBytes),
-                              component, component)
-            for argument, header in arguments:
-                expected = b"; ".join([cookieValue(sanitizedBytes),
-                                       cookieValue(header)])
-                self._checkCookie(expected, component, component,
-                                  **{argument: component})
+        inputsAndOutputs = list(
+            zip(textLinearWhitespaceComponents +
+                bytesLinearWhitespaceComponents,
+                cycle([sanitizedBytes])))
+
+        inputsAndOutputs = [
+            ["Foo; bar", b"Foo  bar"],
+            [b"Foo; bar", b"Foo  bar"],
+        ]
+
+        for inputValue, outputValue in inputsAndOutputs:
+            self._checkCookie(cookieValue(outputValue, outputValue),
+                              inputValue, inputValue)
+            for argument, parameter in arguments:
+                expected = b"; ".join(
+                    [cookieValue(outputValue, outputValue),
+                     cookieValue(parameter, outputValue)
+                    ])
+                self._checkCookie(expected, inputValue, inputValue,
+                                  **{argument: inputValue})
 
 
     def test_addCookieSameSite(self):

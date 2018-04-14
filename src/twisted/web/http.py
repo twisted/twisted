@@ -1156,7 +1156,12 @@ class Request:
         """
         def _ensureBytes(val):
             """
-            Ensure that C{val} is bytes, encoding using UTF-8 if needed.
+            Ensure that C{val} is bytes, encoding using UTF-8 if
+            needed.
+
+            @param val: L{bytes} or L{unicode}
+
+            @return: L{bytes}
             """
             if val is None:
                 # It's None, so we don't want to touch it
@@ -1167,25 +1172,31 @@ class Request:
             else:
                 return val.encode('utf8')
 
+
+        def _sanitize(val):
+            """
+            Replace linear whitespace (C{\r}, C{\n}, C{\r\n}) and
+            semicolons C{;} in C{val} with a single space.
+
+            @param val: L{bytes}
+            @return: L{bytes}
+            """
+            return _sanitizeLinearWhitespace(val).replace(b';', b' ')
+
         cookie = (
-            _sanitizeLinearWhitespace(_ensureBytes(k)) +
+            _sanitize(_ensureBytes(k)) +
             b"=" +
-            _sanitizeLinearWhitespace(_ensureBytes(v)))
+            _sanitize(_ensureBytes(v)))
         if expires is not None:
-            cookie = cookie + b"; Expires=" + _sanitizeLinearWhitespace(
-                _ensureBytes(expires))
+            cookie = cookie + b"; Expires=" + _sanitize(_ensureBytes(expires))
         if domain is not None:
-            cookie = cookie + b"; Domain=" + _sanitizeLinearWhitespace(
-                _ensureBytes(domain))
+            cookie = cookie + b"; Domain=" + _sanitize(_ensureBytes(domain))
         if path is not None:
-            cookie = cookie + b"; Path=" + _sanitizeLinearWhitespace(
-                _ensureBytes(path))
+            cookie = cookie + b"; Path=" + _sanitize(_ensureBytes(path))
         if max_age is not None:
-            cookie = cookie + b"; Max-Age=" + _sanitizeLinearWhitespace(
-                _ensureBytes(max_age))
+            cookie = cookie + b"; Max-Age=" + _sanitize(_ensureBytes(max_age))
         if comment is not None:
-            cookie = cookie + b"; Comment=" + _sanitizeLinearWhitespace(
-                _ensureBytes(comment))
+            cookie = cookie + b"; Comment=" + _sanitize(_ensureBytes(comment))
         if secure:
             cookie = cookie + b"; Secure"
         if httpOnly:
