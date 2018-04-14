@@ -29,6 +29,20 @@ from twisted.web._responses import FOUND
 
 
 
+textLinearWhitespaceComponents = [
+    u"Foo%sbar" % (lw,) for lw in
+    [u'\r', u'\n', u'\r\n']
+]
+
+sanitizedText = "Foo bar"
+bytesLinearWhitespaceComponents = [
+    component.encode('ascii') for component in
+    textLinearWhitespaceComponents
+]
+sanitizedBytes = sanitizedText.encode('ascii')
+
+
+
 @implementer(IAddress)
 class NullAddress(object):
     """
