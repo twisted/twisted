@@ -536,7 +536,7 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         event["log_failure"] = object()
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
-        self.assertIn("(UNABLE TO OBTAIN TRACEBACK FROM EVENT)", eventText)
+        self.assertIn(u"(unable to obtain traceback from event)", eventText)
 
 
     def test_formatEventNonCritical(self):
