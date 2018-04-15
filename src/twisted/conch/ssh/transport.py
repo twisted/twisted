@@ -967,7 +967,7 @@ class SSHTransportBase(protocol.Protocol):
         @type packet: L{bytes}
         @param packet: The message data.
         """
-        alwaysDisplay = bool(packet[0])
+        alwaysDisplay = bool(ord(packet[0:1]))
         message, lang, foo = getNS(packet[1:], 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 
