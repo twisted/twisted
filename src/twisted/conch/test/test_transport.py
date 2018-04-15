@@ -7,8 +7,10 @@ Tests for ssh/transport.py and the classes therein.
 
 from __future__ import absolute_import, division
 
-import struct
 import binascii
+import re
+import string
+import struct
 
 from twisted.python.reflect import requireModule
 
@@ -44,6 +46,7 @@ else:
         def NS(self, arg): return b''
 
 from hashlib import md5, sha1, sha256, sha384, sha512
+from twisted import __version__ as twisted_version
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
@@ -456,11 +459,25 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     def test_sendVersion(self):
         """
         Test that the first thing sent over the connection is the version
-        string.
+        string.  The 'softwareversion' part must consist of printable
+        US-ASCII characters, with the exception of whitespace characters and
+        the minus sign.
+
+        RFC 4253, section 4.2.
         """
         # the other setup was done in the setup method
-        self.assertEqual(self.transport.value().split(b'\r\n', 1)[0],
-                         b"SSH-2.0-Twisted")
+        version = self.transport.value().split(b'\r\n', 1)[0]
+        self.assertEqual(version,
+                         b"SSH-2.0-Twisted_" + twisted_version.encode('ascii'))
+        softwareVersion = version.decode('ascii')[len('SSH-2.0-'):]
+        # This is an inefficient regex, but it's simple to build.
+        softwareVersionRegex = (
+            r'^(' +
+            '|'.join(
+                re.escape(c) for c in string.printable
+                if c != '-' and not c.isspace()) +
+            r')*$')
+        self.assertRegex(softwareVersion, softwareVersionRegex)
 
 
     def test_sendPacketPlain(self):
