@@ -1022,8 +1022,7 @@ class _FileDescriptorReservation(object):
 @implementer(_IFileDescriptorReservation)
 class _NullFileDescriptorReservation(object):
     """
-    A null implementation of L{_IFileDescriptorReservation}.  It is
-    never available and its L{maybeCloseForReserved} never closes files.
+    A null implementation of L{_IFileDescriptorReservation}.
     """
 
     def available(self):
@@ -1099,7 +1098,7 @@ def _accept(listener, reservedFD):
     @type reservedFD: L{_IFileDescriptorReservation}
 
     @return: A generator that yields C{(socket, addr)} tuples from
-        L{socket.accept}
+        L{socket.socket.accept}
     """
 
     while True:
