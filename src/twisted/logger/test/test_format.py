@@ -487,17 +487,41 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         An event with an unformattable value in the C{log_format} key still
         has a traceback appended.
         """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": "{evil()}",
+            "evil": lambda: 1 / 0,
+        }
+        event["log_failure"] = f
+        eventText = formatEventWithTraceback(event)
+        self.assertIsInstance(eventText, unicode)
+        self.assertIn(unicode(f.getTraceback()), eventText)
+        self.assertIn(u'This is a fake error', eventText)
+
+    def test_formatUnformattableErrorWithTraceback(self):
+        """
+        An event with an unformattable value in the C{log_format} key, that
+        throws an exception when __repr__ is invoked still has a traceback appended.
+        """
+        try:
+            raise CapturedError("This is a fake error")
+        except CapturedError:
+            f = Failure()
+
         event = {
             "log_format": "{evil()}",
             "evil": lambda: 1 / 0,
             Unformattable(): "gurk",
         }
-        f = Failure(CapturedError("This is a fake error"))
         event["log_failure"] = f
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
         self.assertIn(u'MESSAGE LOST', eventText)
-        self.assertIn(u'Traceback', eventText)
+        self.assertIn(unicode(f.getTraceback()), eventText)
         self.assertIn(u'This is a fake error', eventText)
 
 
