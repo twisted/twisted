@@ -313,7 +313,7 @@ def formatEventWithTraceback(event):
     except KeyError:
         return eventText
     except Exception as e:
-        traceback = u"(unable to obtain traceback from event):" + unicode(e) + u"\n"
+        traceback = u"(unable to obtain traceback from event):" + unicode(e)
 
     eventText = u"\n".join((eventText, traceback))
     return eventText
