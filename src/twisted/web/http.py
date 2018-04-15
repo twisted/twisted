@@ -1112,7 +1112,8 @@ class Request:
                 self.channel.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
-                  max_age=None, comment=None, secure=None, httpOnly=False):
+                  max_age=None, comment=None, secure=None, httpOnly=False,
+                  samesite=None):
         """
         Set an outgoing HTTP cookie.
 
@@ -1149,6 +1150,10 @@ class Request:
         @param httpOnly: direct browser not to expose cookies through channels
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
+
+        @param samesite: direct browsers not to send this cookie on
+            cross-origin requests
+        @type samesite: L{bytes} or L{unicode}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
@@ -1190,6 +1195,12 @@ class Request:
             cookie = cookie + b"; Secure"
         if httpOnly:
             cookie = cookie + b"; HttpOnly"
+        if samesite:
+            samesite = _ensureBytes(samesite).lower()
+            if samesite not in [b"lax", b"strict"]:
+                raise ValueError(
+                    "Invalid value for samesite: " + repr(samesite))
+            cookie += b"; SameSite=" + samesite
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
