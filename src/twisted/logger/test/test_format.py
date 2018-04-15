@@ -502,10 +502,12 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         self.assertIn(unicode(f.getTraceback()), eventText)
         self.assertIn(u'This is a fake error', eventText)
 
+
     def test_formatUnformattableErrorWithTraceback(self):
         """
         An event with an unformattable value in the C{log_format} key, that
-        throws an exception when __repr__ is invoked still has a traceback appended.
+        throws an exception when __repr__ is invoked still has a traceback
+        appended.
         """
         try:
             raise CapturedError("This is a fake error")
