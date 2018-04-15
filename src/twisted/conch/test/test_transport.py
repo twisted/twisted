@@ -791,7 +791,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.proto.dispatchMessage(
             transport.MSG_DEBUG,
             b'\x01\x00\x00\x00\x04test\x00\x00\x00\x02en')
-        self.assertEqual(self.proto.debugs, [(True, b'test', b'en')])
+        self.proto.dispatchMessage(
+            transport.MSG_DEBUG,
+            b'\x00\x00\x00\x00\x06silent\x00\x00\x00\x02en')
+        self.assertEqual(
+            self.proto.debugs,
+            [(True, b'test', b'en'), (False, b'silent', b'en')])
 
 
     def test_sendIgnore(self):
