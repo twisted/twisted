@@ -985,7 +985,7 @@ class _FileDescriptorReservation(object):
             self.reserve()
         except Exception:
             self._log.failure(
-                "Could not reserve EMFILE recovery file descriptor.")
+                "Could not re-reserve EMFILE recovery file descriptor.")
 
 
 
