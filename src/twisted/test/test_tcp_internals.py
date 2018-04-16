@@ -169,11 +169,13 @@ class SelectReactorTests(TestCase):
 
             port.doRead()
 
-            expectedFormat = "Could not accept new connection (%s)"
+            expectedFormat = "Could not accept new connection ({acceptError})"
             expectedErrorCode = errno.errorcode[socketErrorNumber]
-            expectedMessage = expectedFormat % (expectedErrorCode,)
             for msg in self.messages:
-                if msg.get('message') == (expectedMessage,):
+                actualFormat = msg.get('log_format')
+                actualErrorCode = msg.get('acceptError')
+                if (actualFormat, actualErrorCode) == (expectedFormat,
+                                                       expectedErrorCode):
                     break
             else:
                 self.fail("Log event for failed accept not found in "

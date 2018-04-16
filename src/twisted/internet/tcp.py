@@ -1054,11 +1054,59 @@ else:
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
-def _accept(listener, reservedFD):
+
+@attr.s
+class _BuffersLogs(object):
+    """
+    A context manager that buffers any log events until after its
+    block exits.
+
+    @ivar _namespace: The namespace of the buffered events.
+    @type _namespace: L{str}.
+
+    @ivar _observer: The observer to which buffered log events will be
+        written
+    @type _observer: L{twisted.logger.ILogObserver}.
+    """
+    _namespace = attr.ib()
+    _observer = attr.ib()
+    _logs = attr.ib(default=attr.Factory(list))
+
+    def __enter__(self):
+        """
+        Enter a log buffering context.
+
+        @return: A logger that buffers log events.
+        @rtype: L{Logger}.
+        """
+        return Logger(namespace=self._namespace, observer=self._logs.append)
+
+
+    def __exit__(self, excValue, excType, traceback):
+        """
+        Exit a log buffering context and log all buffered events to
+        the provided observer.
+
+        @param excType: See L{object.__exit__}
+        @param excValue: See L{object.__exit__}
+        @param traceback: See L{object.__exit__}
+        """
+        for event in self._logs:
+            self._observer(event)
+
+
+
+def _accept(logger, listener, reservedFD):
     """
     Return a generator that yields client sockets from the provided
     listening socket until there are none left or an unrecoverable
     error occurs.
+
+    @param logger: A logger to which C{accept}-related events will be
+        logged.  This should not log to arbitrary observers that might
+        open a file descriptor to avoid claiming the C{EMFILE} file
+        descriptor on UNIX-like systems.
+    @type logger: L{Logger}
 
     @param listener: The listening socket.
     @type listener: L{socket.socket}
@@ -1070,7 +1118,6 @@ def _accept(listener, reservedFD):
     @return: A generator that yields C{(socket, addr)} tuples from
         L{socket.socket.accept}
     """
-
     while True:
         try:
             client, address = listener.accept()
@@ -1091,22 +1138,23 @@ def _accept(listener, reservedFD):
                 # descriptor for use by listener.accept()'s clients.
                 # Each client socket will be closed until the listener
                 # returns EAGAIN.
-                with reservedFD:
-                    log.msg("EMFILE encountered;"
+                logger.info("EMFILE encountered;"
                             " releasing reserved file descriptor.")
-                    clientsToClose = _accept(listener, reservedFD)
-                    for clientToClose, closedAddr in clientsToClose:
+                # The following block should not run arbitrary code
+                # that might acquire its own file descriptor.
+                with reservedFD:
+                    clientsToClose = _accept(logger, listener, reservedFD)
+                    for clientToClose, closedAddress in clientsToClose:
                         clientToClose.close()
-                        log.msg("EMFILE recovery:"
-                                " Closed socket from %r"
-                                " and reopening reserve file descriptor"
-                                % (closedAddr,))
-                    # All pending client connections have been closed.
-                    # Return control back to the reactor.
-                    return
+                        logger.info("EMFILE recovery:"
+                                    " Closed socket from {address}",
+                                    address=closedAddress)
+                    logger.info(
+                        "Re-reserving EMFILE recovery file descriptor.")
+                return
             elif e.args[0] in _ACCEPT_ERRORS:
-                log.msg("Could not accept new connection (%s)" % (
-                    errorcode[e.args[0]],))
+                logger.info("Could not accept new connection ({acceptError})",
+                            acceptError=errorcode[e.args[0]])
                 return
             else:
                 raise
@@ -1171,6 +1219,7 @@ class Port(base.BasePort, _SocketCloser):
 
     addressFamily = socket.AF_INET
     _addressType = address.IPv4Address
+    _logger = Logger()
 
     def __init__(self, port, factory, backlog=50, interface='', reactor=None):
         """Initialize with a numeric port to listen on.
@@ -1286,22 +1335,25 @@ class Port(base.BasePort, _SocketCloser):
                 # in an iteration of the event loop.
                 numAccepts = 1
 
-            accepted = 0
-            attempts = range(1, numAccepts + 1)
-            clients = _accept(self.socket, _reservedFD)
-            # Limit the infinite stream of clients with the attempts
-            # iterator
-            for accepted, (skt, addr) in izip(attempts, clients):
-                fdesc._setCloseOnExec(skt.fileno())
-                protocol = self.factory.buildProtocol(self._buildAddr(addr))
-                if protocol is None:
-                    skt.close()
-                    continue
-                s = self.sessionno
-                self.sessionno = s + 1
-                transport = self.transport(
-                    skt, protocol, addr, self, s, self.reactor)
-                protocol.makeConnection(transport)
+            with _BuffersLogs(self._logger.namespace,
+                              self._logger.observer) as bufferingLogger:
+                accepted = 0
+                attempts = range(1, numAccepts + 1)
+                clients = _accept(bufferingLogger, self.socket, _reservedFD)
+                # Limit the infinite stream of clients with the attempts
+                # iterator
+                for accepted, (skt, addr) in izip(attempts, clients):
+                    fdesc._setCloseOnExec(skt.fileno())
+                    protocol = self.factory.buildProtocol(
+                        self._buildAddr(addr))
+                    if protocol is None:
+                        skt.close()
+                        continue
+                    s = self.sessionno
+                    self.sessionno = s + 1
+                    transport = self.transport(
+                        skt, protocol, addr, self, s, self.reactor)
+                    protocol.makeConnection(transport)
 
             if not accepted:
                 self.numberAccepts = self.numberAccepts+20

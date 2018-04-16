@@ -52,6 +52,7 @@ from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import (
+    _BuffersLogs,
     Connection,
     _FileDescriptorReservation,
     _IFileDescriptorReservation,
@@ -2966,6 +2967,64 @@ class SimpleUtilityTests(TestCase):
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
+
+
+
+class BuffersLogsTests(SynchronousTestCase):
+    """
+    Tests for L{_BuffersLogs}.
+    """
+
+    def setUp(self):
+        self.namespace = "name.space"
+        self.events = []
+        self.logBuffer = _BuffersLogs(self.namespace, self.events.append)
+
+
+    def test_buffersInBlock(self):
+        """
+        The context manager's logger does not log to provided observer
+        inside the block.
+        """
+        with self.logBuffer as logger:
+            logger.info("An event")
+            self.assertFalse(self.events)
+
+
+    def test_flushesOnExit(self):
+        """
+        The context manager flushes its buffered logs when the block
+        terminates without an exception.
+        """
+        with self.logBuffer as logger:
+            logger.info("An event")
+            self.assertFalse(self.events)
+        self.assertEqual(1, len(self.events))
+        [event] = self.events
+        self.assertEqual(event['log_format'], "An event")
+        self.assertEqual(event['log_namespace'], self.namespace)
+
+
+    def test_flushesOnExitWithException(self):
+        """
+        The context manager flushes its buffered logs when the block
+        terminates because of an exception.
+        """
+        class TestException(Exception):
+            """
+            An exception only raised by this test.
+            """
+
+        with self.assertRaises(TestException):
+            with self.logBuffer as logger:
+                logger.info("An event")
+                self.assertFalse(self.events)
+                raise TestException()
+
+        self.assertEqual(1, len(self.events))
+        [event] = self.events
+        self.assertEqual(event['log_format'], "An event")
+        self.assertEqual(event['log_namespace'], self.namespace)
 
 
 
