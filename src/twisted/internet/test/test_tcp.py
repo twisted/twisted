@@ -1141,8 +1141,7 @@ def assertPeerClosedOnEMFILE(
     soft resource limit.
 
     @param testCase: The test case under which to run this assertion.
-    @type testCase: L{trial.unittest.SynchronousTestCase} or
-        L{trial.unittest.TestCase}
+    @type testCase: L{trial.unittest.SynchronousTestCase}
 
     @param exhauster: The file descriptor exhauster.
     @type exhauster: L{_ExhaustsFileDescriptors}
