@@ -960,7 +960,6 @@ class _FileDescriptorReservation(object):
                 if e.errno == EMFILE:
                     self._log.failure(
                         "Could not reserve EMFILE recovery file descriptor.")
-                    self._fileDescriptor = None
                 else:
                     raise
             else:
