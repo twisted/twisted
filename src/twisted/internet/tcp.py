@@ -970,7 +970,7 @@ class _FileDescriptorReservation(object):
         """
         See L{_IFileDescriptorReservation.__enter__}.
         """
-        if not self._fileDescriptor:
+        if self._fileDescriptor is None:
             raise RuntimeError(
                 "No file reserved.  Have you called my reserve method?")
         self._fileDescriptor.close()
