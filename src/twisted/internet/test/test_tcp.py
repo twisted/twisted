@@ -1122,7 +1122,7 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         self.assertEqual(exhauster.count(), 0)
 
         for fd in fileDescriptors:
-            exception = self.assertRaises(OSError, os.close, fd)
+            exception = self.assertRaises(OSError, os.fstat, fd)
             self.assertEqual(exception.errno, errno.EBADF)
 
 
