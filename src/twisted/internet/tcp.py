@@ -856,35 +856,6 @@ class Server(_TLSServerMixin, Connection):
 
 
 
-def _silenceOutputs(outputs):
-    """
-    An L{automat} output collector that returns L{None}.
-
-    @param outputs: An outputs iterator
-
-    @return: L{None}
-    """
-    list(outputs)
-    return None
-
-
-
-def _nthOutput(n):
-    """
-    An L{automat} output collector factory that returns the value of
-    the C{nth} output.
-
-    @param n: An integer representing C{nth} output to return.
-        Counting starts at zero.
-
-    @return: The value of the first output.
-    """
-    def _collectNthOutput(outputs):
-        return list(outputs)[n]
-    return _collectNthOutput
-
-
-
 class _IFileDescriptorReservation(Interface):
     """
     An open file that represents an emergency reservation in the
