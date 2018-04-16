@@ -998,9 +998,9 @@ class _ExhaustsFileDescriptors(object):
                     raise
                 else:
                     self._fileDescriptors.append(fd)
-        except Exception as e:
+        except Exception:
             self.release()
-            raise e
+            raise
         else:
             self._log.info(
                 "EMFILE reached by opening"
@@ -1106,7 +1106,9 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         fileDescriptors = []
         def failsAfterThree():
             if len(fileDescriptors) == 3:
-                raise ValueError
+                raise ValueError(
+                    "test_fileDescriptorsReleasedOnFailure"
+                    " fake open exception")
             else:
                 fd = os.dup(0)
                 fileDescriptors.append(fd)
@@ -3146,7 +3148,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.reservedFD.reserve()
         with self.assertRaises(TestException):
             with self.reservedFD:
-                raise TestException
+                raise TestException()
 
 
     def test_exitSuppressesReservationException(self):
@@ -3168,7 +3170,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         called = [False]
         def failsWithSuppressedExceptionAfterSecondOpen():
             if called[0]:
-                raise SuppressedException
+                raise SuppressedException()
             else:
                 called[0] = True
                 return io.BytesIO()
@@ -3181,7 +3183,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
 
         with self.assertRaises(AllowedException):
             with reservedFD:
-                raise AllowedException
+                raise AllowedException()
 
         errors = self.flushLoggedErrors(SuppressedException)
         self.assertEqual(len(errors), 1)
