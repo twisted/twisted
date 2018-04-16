@@ -971,7 +971,7 @@ class _ExhaustsFileDescriptors(object):
     A class that triggers C{EMFILE} by creating as many file
     descriptors as necessary.
 
-    @param fileDescriptorFactory: A factory that creates a new file
+    @ivar fileDescriptorFactory: A factory that creates a new file
         descriptor.
     @type fileDescriptorFactory: A L{callable} that accepts no
         arguments and returns an integral file descriptor, suitable
