@@ -1355,10 +1355,16 @@ class Port(base.BasePort, _SocketCloser):
                         skt, protocol, addr, self, s, self.reactor)
                     protocol.makeConnection(transport)
 
-            if not accepted:
-                self.numberAccepts = self.numberAccepts+20
+            # Scale our synchronous accept loop according to traffic
+            # Reaching our limit on consecutive accept calls indicates
+            # there might be still more clients to serve the next time
+            # the reactor calls us.  Prepare to accept some more.
+            if accepted == self.numberAccepts:
+                self.numberAccepts += 20
+            # Otherwise, don't attempt to accept any more clients than
+            # we just accepted or any less than 1.
             else:
-                self.numberAccepts = accepted
+                self.numberAccepts = max(1, accepted)
         except BaseException:
             # Note that in TLS mode, this will possibly catch SSL.Errors
             # raised by self.socket.accept()

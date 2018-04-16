@@ -17,8 +17,11 @@ except ImportError:
 from twisted.trial.unittest import TestCase
 
 from twisted.python import log
-from twisted.internet.tcp import ECONNABORTED, ENOMEM, ENFILE, EMFILE, ENOBUFS, EINPROGRESS, Port
-from twisted.internet.protocol import ServerFactory
+from twisted.internet.tcp import (
+    ECONNABORTED, ENOMEM, ENFILE,
+    EMFILE, ENOBUFS, EINPROGRESS, Port,
+)
+from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.python.runtime import platform
 from twisted.internet.defer import maybeDeferred, gatherResults
 from twisted.internet import reactor, interfaces
@@ -244,7 +247,52 @@ class SelectReactorTests(TestCase):
         """
         return self._acceptFailureTest(ENOMEM)
     if platform.getType() == 'win32':
-        test_noMemoryFromAccept.skip = "Windows accept(2) cannot generate ENOMEM"
+        test_noMemoryFromAccept.skip = (
+            "Windows accept(2) cannot generate ENOMEM")
+
+
+    def test_acceptScaling(self):
+        """
+        L{tcp.Port.doRead} increases the number of consecutive
+        C{accept} calls it performs if all of the previous C{accept}
+        calls succeed; otherwise, it reduces the number to the amount
+        of successful calls.
+        """
+        factory = ServerFactory()
+        factory.protocol = Protocol
+        port = self.port(0, factory, interface='127.0.0.1')
+        self.addCleanup(port.stopListening)
+
+        clients = []
+
+        def closeAll():
+            for client in clients:
+                client.close()
+
+        self.addCleanup(closeAll)
+
+        def connect():
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.connect(("127.0.0.1", port.getHost().port))
+            return client
+
+        clients.append(connect())
+        port.numberAccepts = 1
+        port.doRead()
+        self.assertGreater(port.numberAccepts, 1)
+
+        clients.append(connect())
+        port.doRead()
+        # There was only one outstanding client connection, so only
+        # one accept(2) was possible.
+        self.assertEqual(port.numberAccepts, 1)
+
+        port.doRead()
+        # There were no outstanding client connections, so only one
+        # accept should be tried next.
+        self.assertEqual(port.numberAccepts, 1)
+
+
 
 if not interfaces.IReactorFDSet.providedBy(reactor):
     skipMsg = 'This test only applies to reactors that implement IReactorFDset'
