@@ -927,7 +927,7 @@ class _FileDescriptorReservation(object):
     """
     L{_IFileDescriptorReservation} implementation.
 
-    @param fileFactory: A factory that will be called to reserve a
+    @ivar fileFactory: A factory that will be called to reserve a
         file descriptor.
     @type fileFactory: A L{callable} that accepts no arguments and
         returns an object with a C{close} method.
