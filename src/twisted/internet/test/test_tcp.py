@@ -986,8 +986,8 @@ class _ExhaustsFileDescriptors(object):
         """
         Open file descriptors until C{EMFILE} is reached.
         """
-        gc.collect()            # Force a collection to close dangling
-                                # files.
+        # Force a collection to close dangling files.
+        gc.collect()
         try:
             while True:
                 try:
@@ -1094,7 +1094,8 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         """
         self.exhauster.exhaust()
         self.exhauster.release()
-        self.openAFile()        # Does not fail with EMFILE
+        # Does not fail with EMFILE
+        self.openAFile()
 
 
     def test_fileDescriptorsReleasedOnFailure(self):
