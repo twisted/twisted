@@ -1104,6 +1104,7 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         descriptors if an exception occurs during its exhaustion loop.
         """
         fileDescriptors = []
+
         def failsAfterThree():
             if len(fileDescriptors) == 3:
                 raise ValueError(
@@ -1421,8 +1422,8 @@ class ListenTCPMixin(ConnectToTCPListenerMixin):
 
 class SocketTCPMixin(ConnectToTCPListenerMixin):
     """
-    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out listening TCP
-    ports.
+    Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out
+    listening TCP ports.
     """
     def getListeningPort(self, reactor, factory, port=0, interface=''):
         """
@@ -3170,6 +3171,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             """
 
         called = [False]
+
         def failsWithSuppressedExceptionAfterSecondOpen():
             if called[0]:
                 raise SuppressedException()
