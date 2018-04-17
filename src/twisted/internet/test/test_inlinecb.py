@@ -40,12 +40,8 @@ def f(d):
         """, environ)
         d1 = Deferred()
         d2 = environ["f"](d1)
-        returnedResult = [None]
-        def catchResult(result):
-            returnedResult[0] = result
-        d2.addCallback(catchResult)
         d1.callback(None)
-        self.assertEqual(returnedResult[0], 14)
+        self.assertEqual(self.successResultOf(d2), 14)
 
 
 
