@@ -894,7 +894,7 @@ def ensureDeferred(coro):
         react(main)
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
-    @type coro: A Python 3.5+ C{async def} C{coroutine}, a Python 3.3+
+    @type coro: A Python 3.5+ C{async def} C{coroutine}, a Python 3.4+
         C{yield from} using L{types.GeneratorType}, or a L{Deferred}.
 
     @rtype: L{Deferred}
@@ -905,10 +905,6 @@ def ensureDeferred(coro):
         from asyncio import iscoroutine
 
         if iscoroutine(coro) or isinstance(coro, GeneratorType):
-            return _inlineCallbacks(None, coro, Deferred())
-
-    elif version_info >= (3, 3, 0):
-        if isinstance(coro, GeneratorType):
             return _inlineCallbacks(None, coro, Deferred())
 
     if not isinstance(coro, Deferred):
@@ -1509,7 +1505,7 @@ def inlineCallbacks(f):
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
 
-    If you are using Python 3.3 or later, it is possible to use the C{return}
+    If you are using Python 3.4 or later, it is possible to use the C{return}
     statement instead of L{returnValue}::
 
         @inlineCallbacks
