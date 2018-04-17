@@ -1386,14 +1386,14 @@ def _inlineCallbacks(result, g, status):
     Carry out the work of L{inlineCallbacks}.
 
     Iterate the generator produced by an C{@}L{inlineCallbacks}-decorated
-    function, C{g}, C{send()}ing it the results of each value C{yield}ed by that
-    generator, until a L{Deferred} is yielded, at which point a callback is
-    added to that L{Deferred} to call this function again.
+    function, C{g}, C{send()}ing it the results of each value C{yield}ed by
+    that generator, until a L{Deferred} is yielded, at which point a callback
+    is added to that L{Deferred} to call this function again.
 
     @param result: The last result seen by this generator.  Note that this is
         never a L{Deferred} - by the time this function is invoked, the
-        L{Deferred} has been called back and this will be a particular result at
-        a point in its callback chain.
+        L{Deferred} has been called back and this will be a particular result
+        at a point in its callback chain.
 
     @param g: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}

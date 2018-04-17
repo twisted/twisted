@@ -203,6 +203,7 @@ class CancellationTests(TestCase):
     def sampleInlineCB(self, getChildThing=None):
         """
         Generator for testing cascade cancelling cases.
+
         @param getChildThing: Some callable returning L{Deferred} that we
             awaiting (with C{yield})
         """
@@ -221,6 +222,8 @@ class CancellationTests(TestCase):
         """
         A sample function that returns a L{Deferred} that can be fired on
         demand, by L{CancellationTests.thingGotten}.
+
+        @return: L{Deferred} that can be fired on demand.
         """
         self.thingsOutstanding.append(Deferred())
         return self.thingsOutstanding[-1]
@@ -230,6 +233,8 @@ class CancellationTests(TestCase):
         """
         Fire the L{Deferred} returned from the least-recent call to
         L{CancellationTests.getThing}.
+
+        @param result: result object to be used when firing the L{Deferred}.
         """
         self.thingsOutstanding.pop(0).callback(result)
 
@@ -276,7 +281,7 @@ class CancellationTests(TestCase):
         def cancel(it):
             it.errback(TranslateMe())
         a = Deferred(cancel)
-        d = self.sampleInlineCB(lambda : a)
+        d = self.sampleInlineCB(lambda: a)
         d.cancel()
         self.failUnlessFailure(d, TranslateResult)
 
@@ -290,7 +295,7 @@ class CancellationTests(TestCase):
         def cancel(it):
             it.errback(DontFail(4321))
         a = Deferred(cancel)
-        d = self.sampleInlineCB(lambda : a)
+        d = self.sampleInlineCB(lambda: a)
         results = []
         d.addCallback(results.append)
         d.cancel()
@@ -300,9 +305,9 @@ class CancellationTests(TestCase):
     def test_asynchronousCancellation(self):
         """
         When D is cancelled, it won't reach the callbacks added to it by
-        application code until C reaches the point in its callback chain where G
-        awaits it.  Otherwise, application code won't be able to track resource
-        usage that D may be using.
+        application code until C reaches the point in its callback chain where
+        G awaits it.  Otherwise, application code won't be able to track
+        resource usage that D may be using.
         """
         moreDeferred = Deferred()
         def deferMeMore(result):
