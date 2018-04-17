@@ -3,7 +3,9 @@
 
 #
 
-"""HTML pretty-printing for Python source code."""
+"""
+HTML pretty-printing for Python source code.
+"""
 
 from __future__ import print_function
 
@@ -40,8 +42,11 @@ class Options(usage.Options):
         extraActions=[usage.CompleteFiles('*.py', descr='source python file')]
         )
 
+
     def parseArgs(self, filename):
         self['filename'] = filename
+
+
 
 def run():
     options = Options()
@@ -56,16 +61,14 @@ def run():
     else:
         stylesheet = ''
 
-    output = open(filename + '.html', 'w')
-    try:
-        output.write(header % {
+    with open(filename + '.html', 'wb') as output:
+        outHeader = (header % {
             'title': filename,
             'generator': 'htmlizer/%s' % (copyright.longversion,),
             'alternate': alternateLink % {'source': filename},
             'stylesheet': stylesheet
             })
-        htmlizer.filter(open(filename), output,
-                        htmlizer.SmallerHTMLWriter)
-        output.write(footer)
-    finally:
-        output.close()
+        output.write(outHeader.encode("utf-8"))
+        with open(filename, 'rb') as f:
+            htmlizer.filter(f, output, htmlizer.SmallerHTMLWriter)
+        output.write(footer.encode("utf-8"))

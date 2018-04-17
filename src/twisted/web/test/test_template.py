@@ -27,6 +27,8 @@ from twisted.web.test.test_web import DummyRequest
 from twisted.web.server import NOT_DONE_YET
 
 from twisted.python.compat import NativeStringIO as StringIO
+from twisted.logger import globalLogPublisher
+from twisted.test.proto_helpers import EventLoggingObserver
 
 
 _xmlFileSuppress = SUPPRESS(category=DeprecationWarning,
@@ -354,7 +356,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_missingTemplateLoader(self):
         """
-        Rendering a Element without a loader attribute raises the appropriate
+        Rendering an Element without a loader attribute raises the appropriate
         exception.
         """
         return self.assertFlatteningRaises(Element(), MissingTemplateLoader)
@@ -545,7 +547,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_elementContainingDynamicElement(self):
         """
-        Directives in the document factory of a Element returned from a render
+        Directives in the document factory of an Element returned from a render
         method of another Element are satisfied from the correct object: the
         "inner" Element.
         """
@@ -748,6 +750,10 @@ class RenderElementTests(TestCase):
         L{renderElement} will render a traceback when rendering of
         the element fails and our site is configured to display tracebacks.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         self.request.site.displayTracebacks = True
 
         element = FailingElement()
@@ -755,6 +761,9 @@ class RenderElementTests(TestCase):
         d = self.request.notifyFinish()
 
         def check(_):
+            self.assertEquals(1, len(logObserver))
+            f = logObserver[0]["log_failure"]
+            self.assertIsInstance(f.value, FlattenerError)
             flushed = self.flushLoggedErrors(FlattenerError)
             self.assertEqual(len(flushed), 1)
             self.assertEqual(

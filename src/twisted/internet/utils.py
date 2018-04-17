@@ -108,7 +108,7 @@ def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
                  sequence of strings. The first string should B{NOT} be the
                  executable's name.
 
-    @param env: the environment variables to pass to the processs; a
+    @param env: the environment variables to pass to the process; a
                 dictionary of strings.
 
     @param path: the path to run the subprocess in - defaults to the

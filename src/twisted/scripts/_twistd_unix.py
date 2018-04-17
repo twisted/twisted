@@ -6,10 +6,12 @@ from __future__ import absolute_import, division, print_function
 
 import errno
 import os
+import pwd
 import sys
+import traceback
 
 from twisted.python import log, logfile, usage
-from twisted.python.compat import intToBytes
+from twisted.python.compat import (intToBytes, _bytesRepr, _PY3)
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -50,7 +52,10 @@ class ServerOptions(app.ServerOptions):
                      ['chroot', None, None,
                       'Chroot to a supplied directory before running'],
                      ['uid', 'u', None, "The uid to run as.", uidFromString],
-                     ['gid', 'g', None, "The gid to run as.", gidFromString],
+                     ['gid', 'g', None,
+                      "The gid to run as.  If not specified, the default gid "
+                      "associated with the specified --uid is used.",
+                      gidFromString],
                      ['umask', None, None,
                       "The (octal) file creation mask to apply.", _umask],
                     ]
@@ -64,11 +69,14 @@ class ServerOptions(app.ServerOptions):
                     },
         )
 
+
     def opt_version(self):
-        """Print version information and exit.
         """
-        print('twistd (the Twisted daemon) %s' % copyright.version)
-        print(copyright.copyright)
+        Print version information and exit.
+        """
+        print('twistd (the Twisted daemon) {}'.format(copyright.version),
+              file=self.stdout)
+        print(copyright.copyright, file=self.stdout)
         sys.exit()
 
 
@@ -83,26 +91,28 @@ def checkPID(pidfile):
         return
     if os.path.exists(pidfile):
         try:
-            pid = int(open(pidfile).read())
+            with open(pidfile) as f:
+                pid = int(f.read())
         except ValueError:
-            sys.exit('Pidfile %s contains non-numeric value' % pidfile)
+            sys.exit('Pidfile {} contains non-numeric value'.format(pidfile))
         try:
             os.kill(pid, 0)
         except OSError as why:
-            if why[0] == errno.ESRCH:
+            if why.errno == errno.ESRCH:
                 # The pid doesn't exist.
-                log.msg('Removing stale pidfile %s' % pidfile, isError=True)
+                log.msg('Removing stale pidfile {}'.format(pidfile), isError=True)
                 os.remove(pidfile)
             else:
-                sys.exit("Can't check status of PID %s from pidfile %s: %s" %
-                         (pid, pidfile, why[1]))
+                sys.exit(
+                    "Can't check status of PID {} from pidfile {}: {}".format(
+                    pid, pidfile, why))
         else:
             sys.exit("""\
-Another twistd server is running, PID %s\n
+Another twistd server is running, PID {}\n
 This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
-""" %  pid)
+""".format(pid))
 
 
 
@@ -141,8 +151,6 @@ class UnixAppLogger(app.AppLogger):
         @return: An object suitable to be passed to C{log.addObserver}.
         """
         if self._syslog:
-            # FIXME: Requires twisted.python.syslog to be ported to Py3
-            # https://twistedmatrix.com/trac/ticket/7957
             from twisted.python import syslog
             return syslog.SyslogObserver(self._syslogPrefix).emit
 
@@ -197,6 +205,45 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.oldstderr = sys.stderr
 
 
+    def _formatChildException(self, exception):
+        """
+        Format the C{exception} in preparation for writing to the
+        status pipe.  This does the right thing on Python 2 if the
+        exception's message is Unicode, and in all cases limits the
+        length of the message afte* encoding to 100 bytes.
+
+        This means the returned message may be truncated in the middle
+        of a unicode escape.
+
+        @type exception: L{Exception}
+        @param exception: The exception to format.
+
+        @return: The formatted message, suitable for writing to the
+            status pipe.
+        @rtype: L{bytes}
+        """
+        # On Python 2 this will encode Unicode messages with the ascii
+        # codec and the backslashreplace error handler.
+        exceptionLine = traceback.format_exception_only(exception.__class__,
+                                                        exception)[-1]
+        # remove the trailing newline
+        formattedMessage = '1 {}'.format(exceptionLine.strip())
+        # On Python 3, encode the message the same way Python 2's
+        # format_exception_only does
+        if _PY3:
+            formattedMessage = formattedMessage.encode('ascii',
+                                                       'backslashreplace')
+        # By this point, the message has been encoded, if appropriate,
+        # with backslashreplace on both Python 2 and Python 3.
+        # Truncating the encoded message won't make it completely
+        # unreadable, and the reader should print out the repr of the
+        # message it receives anyway.  What it will do, however, is
+        # ensure that only 100 bytes are written to the status pipe,
+        # ensuring that the child doesn't block because the pipe's
+        # full.  This assumes PIPE_BUF > 100!
+        return formattedMessage[:100]
+
+
     def postApplication(self):
         """
         To be called after the application is created: start the application
@@ -208,16 +255,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
         except Exception as ex:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                # Limit the total length to the passed string to 100
-                strippedError = str(ex)[:98]
-                untilConcludes(os.write, statusPipe, "1 %s" % (strippedError,))
+                message = self._formatChildException(ex)
+                untilConcludes(os.write, statusPipe, message)
                 untilConcludes(os.close, statusPipe)
             self.removePID(self.config['pidfile'])
             raise
         else:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                untilConcludes(os.write, statusPipe, "0")
+                untilConcludes(os.write, statusPipe, b"0")
                 untilConcludes(os.close, statusPipe)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
@@ -341,9 +387,10 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @rtype: C{int}
         """
         data = untilConcludes(os.read, readPipe, 100)
-        if data != "0":
-            msg = ("An error has occurred: '%s'\nPlease look at log "
-                   "file for more information.\n" % (data[2:],))
+        dataRepr = _bytesRepr(data[2:])
+        if data != b"0":
+            msg = ("An error has occurred: {}\nPlease look at log "
+                   "file for more information.\n".format(dataRepr))
             untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0
@@ -365,14 +412,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         if uid is not None or gid is not None:
             extra = euid and 'e' or ''
-            desc = '%suid/%sgid %s/%s' % (extra, extra, uid, gid)
+            desc = '{}uid/{}gid {}/{}'.format(extra, extra, uid, gid)
             try:
                 switchUID(uid, gid, euid)
-            except OSError:
-                log.msg('failed to set %s (are you root?) -- exiting.' % desc)
+            except OSError as e:
+                log.msg('failed to set {}: {} (are you root?) -- '
+                        'exiting.'.format(desc, e))
                 sys.exit(1)
             else:
-                log.msg('set %s' % desc)
+                log.msg('set {}'.format(desc))
 
 
     def startApplication(self, application):
@@ -398,6 +446,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
             uid = process.uid
         if gid is None:
             gid = process.gid
+        if uid is not None and gid is None:
+            gid = pwd.getpwuid(uid).pw_gid
 
         self.shedPrivileges(self.config['euid'], uid, gid)
         app.startApplication(application, not self.config['no_save'])

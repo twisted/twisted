@@ -84,6 +84,110 @@ class IResolverSimple(Interface):
 
 
 
+class IHostResolution(Interface):
+    """
+    An L{IHostResolution} represents represents an in-progress recursive query
+    for a DNS name.
+
+    @since: Twisted 17.1.0
+    """
+
+    name = Attribute(
+        """
+        L{unicode}; the name of the host being resolved.
+        """
+    )
+
+    def cancel():
+        """
+        Stop the hostname resolution in progress.
+        """
+
+
+
+class IResolutionReceiver(Interface):
+    """
+    An L{IResolutionReceiver} receives the results of a hostname resolution in
+    progress, initiated by an L{IHostnameResolver}.
+
+    @since: Twisted 17.1.0
+    """
+
+    def resolutionBegan(resolutionInProgress):
+        """
+        A hostname resolution began.
+
+        @param resolutionInProgress: an L{IHostResolution}.
+        """
+
+
+    def addressResolved(address):
+        """
+        An internet address.  This is called when an address for the given name
+        is discovered.  In the current implementation this practically means
+        L{IPv4Address} or L{IPv6Address}, but implementations of this interface
+        should be lenient to other types being passed to this interface as
+        well, for future-proofing.
+
+        @param address: An address object.
+        @type address: L{IAddress}
+        """
+
+
+    def resolutionComplete():
+        """
+        Resolution has completed; no further addresses will be relayed to
+        L{IResolutionReceiver.addressResolved}.
+        """
+
+
+
+class IHostnameResolver(Interface):
+    """
+    An L{IHostnameResolver} can resolve a host name and port number into a
+    series of L{IAddress} objects.
+
+    @since: Twisted 17.1.0
+    """
+
+    def resolveHostName(resolutionReceiver, hostName, portNumber=0,
+                        addressTypes=None, transportSemantics='TCP'):
+        """
+        Initiate a hostname resolution.
+
+        @param resolutionReceiver: an object that will receive each resolved
+            address as it arrives.
+        @type resolutionReceiver: L{IResolutionReceiver}
+
+        @param hostName: The name of the host to resolve.  If this contains
+            non-ASCII code points, they will be converted to IDNA first.
+        @type hostName: L{unicode}
+
+        @param portNumber: The port number that the returned addresses should
+            include.
+        @type portNumber: L{int} greater than or equal to 0 and less than 65536
+
+        @param addressTypes: An iterable of implementors of L{IAddress} that
+            are acceptable values for C{resolutionReceiver} to receive to its
+            L{addressResolved <IResolutionReceiver.addressResolved>}.  In
+            practice, this means an iterable containing
+            L{twisted.internet.address.IPv4Address},
+            L{twisted.internet.address.IPv6Address}, both, or neither.
+        @type addressTypes: L{collections.abc.Iterable} of L{type}
+
+        @param transportSemantics: A string describing the semantics of the
+            transport; either C{'TCP'} for stream-oriented transports or
+            C{'UDP'} for datagram-oriented; see
+            L{twisted.internet.address.IPv6Address.type} and
+            L{twisted.internet.address.IPv4Address.type}.
+        @type transportSemantics: native L{str}
+
+        @return: The resolution in progress.
+        @rtype: L{IResolutionReceiver}
+        """
+
+
+
 class IResolver(IResolverSimple):
     def query(query, timeout=None):
         """
@@ -926,7 +1030,6 @@ class IReactorSocket(Interface):
 
     Some plans for extending this interface exist.  See:
 
-        - U{http://twistedmatrix.com/trac/ticket/5573}: AF_UNIX SOCK_STREAM ports
         - U{http://twistedmatrix.com/trac/ticket/6594}: AF_UNIX SOCK_DGRAM ports
     """
 
@@ -1037,83 +1140,94 @@ class IReactorProcess(Interface):
         """
         Spawn a process, with a process protocol.
 
+        Arguments given to this function that are listed as L{bytes} or
+        L{unicode} may be encoded or decoded depending on the platform and the
+        argument type given.  On UNIX systems (Linux, FreeBSD, macOS) and
+        Python 2 on Windows, L{unicode} arguments will be encoded down to
+        L{bytes} using the encoding given by L{os.getfilesystemencoding}, to be
+        used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
+        arguments will be decoded up to L{unicode} using the encoding given by
+        L{os.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
+        thereafter) and given to Windows's native "wide" APIs.
+
         @type processProtocol: L{IProcessProtocol} provider
-        @param processProtocol: An object which will be notified of all
-            events related to the created process.
+        @param processProtocol: An object which will be notified of all events
+            related to the created process.
 
         @param executable: the file name to spawn - the full path should be
-                           used.
+            used.
+        @type executable: L{bytes} or L{unicode}
 
         @param args: the command line arguments to pass to the process; a
-                     sequence of strings. The first string should be the
-                     executable's name.
+            sequence of strings.  The first string should be the executable's
+            name.
+        @type args: L{list} with L{bytes} or L{unicode} items.
 
-        @type env: a C{dict} mapping C{str} to C{str}, or L{None}.
-        @param env: the environment variables to pass to the child process. The
-                    resulting behavior varies between platforms. If
-                      - C{env} is not set:
-                        - On POSIX: pass an empty environment.
-                        - On Windows: pass C{os.environ}.
-                      - C{env} is L{None}:
-                        - On POSIX: pass C{os.environ}.
-                        - On Windows: pass C{os.environ}.
-                      - C{env} is a C{dict}:
-                        - On POSIX: pass the key/value pairs in C{env} as the
-                          complete environment.
-                        - On Windows: update C{os.environ} with the key/value
-                          pairs in the C{dict} before passing it. As a
-                          consequence of U{bug #1640
-                          <http://twistedmatrix.com/trac/ticket/1640>}, passing
-                          keys with empty values in an effort to unset
-                          environment variables I{won't} unset them.
+        @type env: a L{dict} mapping L{bytes}/L{unicode} keys to
+            L{bytes}/L{unicode} items, or L{None}.
+        @param env: the environment variables to pass to the child process.
+            The resulting behavior varies between platforms.  If:
+
+                - C{env} is not set:
+                  - On POSIX: pass an empty environment.
+                  - On Windows: pass L{os.environ}.
+                - C{env} is L{None}:
+                  - On POSIX: pass L{os.environ}.
+                  - On Windows: pass L{os.environ}.
+                - C{env} is a L{dict}:
+                  - On POSIX: pass the key/value pairs in C{env} as the
+                    complete environment.
+                  - On Windows: update L{os.environ} with the key/value
+                    pairs in the L{dict} before passing it. As a
+                    consequence of U{bug #1640
+                    <http://twistedmatrix.com/trac/ticket/1640>}, passing
+                    keys with empty values in an effort to unset
+                    environment variables I{won't} unset them.
 
         @param path: the path to run the subprocess in - defaults to the
-                     current directory.
+            current directory.
+        @type path: L{bytes} or L{unicode} or L{None}
 
-        @param uid: user ID to run the subprocess as. (Only available on
-                    POSIX systems.)
+        @param uid: user ID to run the subprocess as.  (Only available on POSIX
+            systems.)
 
-        @param gid: group ID to run the subprocess as. (Only available on
-                    POSIX systems.)
+        @param gid: group ID to run the subprocess as.  (Only available on
+            POSIX systems.)
 
         @param usePTY: if true, run this process in a pseudo-terminal.
-                       optionally a tuple of C{(masterfd, slavefd, ttyname)},
-                       in which case use those file descriptors.
-                       (Not available on all systems.)
+            optionally a tuple of C{(masterfd, slavefd, ttyname)}, in which
+            case use those file descriptors.  (Not available on all systems.)
 
         @param childFDs: A dictionary mapping file descriptors in the new child
-                         process to an integer or to the string 'r' or 'w'.
+            process to an integer or to the string 'r' or 'w'.
 
-                         If the value is an integer, it specifies a file
-                         descriptor in the parent process which will be mapped
-                         to a file descriptor (specified by the key) in the
-                         child process.  This is useful for things like inetd
-                         and shell-like file redirection.
+            If the value is an integer, it specifies a file descriptor in the
+            parent process which will be mapped to a file descriptor (specified
+            by the key) in the child process.  This is useful for things like
+            inetd and shell-like file redirection.
 
-                         If it is the string 'r', a pipe will be created and
-                         attached to the child at that file descriptor: the
-                         child will be able to write to that file descriptor
-                         and the parent will receive read notification via the
-                         L{IProcessProtocol.childDataReceived} callback.  This
-                         is useful for the child's stdout and stderr.
+            If it is the string 'r', a pipe will be created and attached to the
+            child at that file descriptor: the child will be able to write to
+            that file descriptor and the parent will receive read notification
+            via the L{IProcessProtocol.childDataReceived} callback.  This is
+            useful for the child's stdout and stderr.
 
-                         If it is the string 'w', similar setup to the previous
-                         case will occur, with the pipe being readable by the
-                         child instead of writeable.  The parent process can
-                         write to that file descriptor using
-                         L{IProcessTransport.writeToChild}.  This is useful for
-                         the child's stdin.
+            If it is the string 'w', similar setup to the previous case will
+            occur, with the pipe being readable by the child instead of
+            writeable.  The parent process can write to that file descriptor
+            using L{IProcessTransport.writeToChild}.  This is useful for the
+            child's stdin.
 
-                         If childFDs is not passed, the default behaviour is to
-                         use a mapping that opens the usual stdin/stdout/stderr
-                         pipes.
+            If childFDs is not passed, the default behaviour is to use a
+            mapping that opens the usual stdin/stdout/stderr pipes.
+        @type childFDs: L{dict} of L{int} to L{int} or L{str}
 
         @see: L{twisted.internet.protocol.ProcessProtocol}
 
         @return: An object which provides L{IProcessTransport}.
 
         @raise OSError: Raised with errno C{EAGAIN} or C{ENOMEM} if there are
-                        insufficient system resources to create a new process.
+            insufficient system resources to create a new process.
         """
 
 class IReactorTime(Interface):
@@ -1153,9 +1267,9 @@ class IReactorTime(Interface):
         """
         Retrieve all currently scheduled delayed calls.
 
-        @return: A tuple of all L{IDelayedCall} providers representing all
+        @return: A list of L{IDelayedCall} providers representing all
                  currently scheduled calls. This is everything that has been
-                 returned by C{callLater} but not yet called or canceled.
+                 returned by C{callLater} but not yet called or cancelled.
         """
 
 
@@ -1413,9 +1527,14 @@ class IReactorCore(Interface):
         """
 
 
+
 class IReactorPluggableResolver(Interface):
     """
-    A reactor with a pluggable name resolver interface.
+    An L{IReactorPluggableResolver} is a reactor which can be customized with
+    an L{IResolverSimple}.  This is a fairly limited interface, that supports
+    only IPv4; you should use L{IReactorPluggableNameResolver} instead.
+
+    @see: L{IReactorPluggableNameResolver}
     """
 
     def installResolver(resolver):
@@ -1426,7 +1545,35 @@ class IReactorPluggableResolver(Interface):
         @param resolver: The new resolver to use.
 
         @return: The previously installed resolver.
+        @rtype: L{IResolverSimple}
         """
+
+
+
+class IReactorPluggableNameResolver(Interface):
+    """
+    An L{IReactorPluggableNameResolver} is a reactor whose name resolver can be
+    set to a user-supplied object.
+    """
+
+    nameResolver = Attribute(
+        """
+        Read-only attribute; the resolver installed with L{installResolver}.
+        An L{IHostnameResolver}.
+        """
+    )
+
+    def installNameResolver(resolver):
+        """
+        Set the internal resolver to use for name lookups.
+
+        @type resolver: An object providing the L{IHostnameResolver} interface.
+        @param resolver: The new resolver to use.
+
+        @return: The previously installed resolver.
+        @rtype: L{IHostnameResolver}
+        """
+
 
 
 class IReactorDaemonize(Interface):
@@ -1744,7 +1891,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an class
+    Typically producing is done by calling the write method of a class
     implementing L{IConsumer}.
     """
 
@@ -1807,11 +1954,13 @@ class IProtocol(Interface):
         callback will be made upon the receipt of each complete protocol
         message.
 
-        @param data: a string of indeterminate length.  Please keep in mind
-            that you will probably need to buffer some data, as partial
-            (or multiple) protocol messages may be received!  I recommend
-            that unit tests for protocols call through to this method with
-            differing chunk sizes, down to one byte at a time.
+        Please keep in mind that you will probably need to buffer some data
+        as partial (or multiple) protocol messages may be received!  We
+        recommend that unit tests for protocols call through to this method
+        with differing chunk sizes, down to one byte at a time.
+
+        @param data: bytes of indeterminate length
+        @type data: L{bytes}
         """
 
     def connectionLost(reason):
@@ -1864,11 +2013,11 @@ class IProcessProtocol(Interface):
         """
         Called when data arrives from the child process.
 
-        @type childFD: C{int}
+        @type childFD: L{int}
         @param childFD: The file descriptor from which the data was
             received.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: The data read from the child's file descriptor.
         """
 
@@ -2043,15 +2192,21 @@ class ITransport(Interface):
         If possible, make sure that it is all written.  No data will
         ever be lost, although (obviously) the connection may be closed
         before it all gets through.
+
+        @type data: L{bytes}
+        @param data: The data to write.
         """
 
     def writeSequence(data):
         """
-        Write a list of strings to the physical connection.
+        Write an iterable of byte strings to the physical connection.
 
         If possible, make sure that all of the data is written to
         the socket at once, without first copying it all into a
-        single string.
+        single byte string.
+
+        @type data: an iterable of L{bytes}
+        @param data: The data to write.
         """
 
     def loseConnection():
@@ -2402,10 +2557,10 @@ class IProcessTransport(ITransport):
         Similar to L{ITransport.write} but also allows the file descriptor in
         the child process which will receive the bytes to be specified.
 
-        @type childFD: C{int}
+        @type childFD: L{int}
         @param childFD: The file descriptor to which to write.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: The bytes to write.
 
         @return: L{None}
@@ -2733,3 +2888,20 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
         @return: a client endpoint
         @rtype: a provider of L{IStreamClientEndpoint}
         """
+
+
+
+class _ISupportsExitSignalCapturing(Interface):
+    """
+    An implementor of L{_ISupportsExitSignalCapturing} will capture the
+    value of any delivered exit signal (SIGINT, SIGTERM, SIGBREAK) for which
+    it has installed a handler.  The caught signal number is made available in
+    the _exitSignal attribute.
+    """
+
+    _exitSignal = Attribute(
+        """
+        C{int} or C{None}, the integer exit signal delivered to the
+        application, or None if no signal was delivered.
+        """
+    )

@@ -1,6 +1,6 @@
 # Do everything properly, and componentize
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
@@ -12,12 +12,12 @@ class IFingerService(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def getUsers():
         """
-        Return a deferred returning a list of strings.
+        Return a deferred returning a L{list} of L{bytes}.
         """
 
 
@@ -30,7 +30,7 @@ class IFingerSetterService(Interface):
 
 
 def catchError(err):
-    return "Internal error in server"
+    return b"Internal error in server"
 
 
 class FingerProtocol(basic.LineReceiver):
@@ -39,7 +39,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -48,12 +48,12 @@ class IFingerFactory(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}
         """
 
     def buildProtocol(addr):
         """
-        Return a protocol returning a string.
+        Return a protocol returning L{bytes}
         """
 
 
@@ -90,12 +90,12 @@ class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def buildProtocol(addr):
         """
-        Return a protocol returning a string.
+        Return a protocol returning L{bytes}.
         """
 
 
@@ -125,7 +125,7 @@ class IRCReplyBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         user = user.split('!')[0]
         if self.nickname.lower() == channel.lower():
-            d = self.factory.getUser(msg)
+            d = self.factory.getUser(msg.encode("ascii"))
             d.addErrback(catchError)
             d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
             d.addCallback(lambda m: self.msg(user, m))
@@ -226,19 +226,19 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def startService(self):
         self._read()
@@ -253,11 +253,12 @@ application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-internet.TCPServer(79, IFingerFactory(f)
+strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(resource.IResource(f))
+strports.service("tcp:8000", server.Site(resource.IResource(f))
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
-internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    i).setServiceParent(serviceCollection)

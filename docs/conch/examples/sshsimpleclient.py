@@ -22,10 +22,10 @@ $ ckeygen -t rsa -f ssh-keys/client_rsa
 
 # Replace this with your username.
 # Default username and password will match the sshsimpleserver.py
-USER = 'user'
+USER = b'user'
 HOST = 'localhost'
 PORT = 5022
-SERVER_FINGERPRINT = 'pu:t:se:rv:er:fi:ng:er:pr:in:t:he:re'
+SERVER_FINGERPRINT = b'55:55:66:24:6b:03:0e:f1:ec:f8:66:c3:51:df:27:4b'
 
 # Path to RSA SSH keys accepted by the server.
 CLIENT_RSA_PUBLIC = 'ssh-keys/client_rsa.pub'
@@ -94,7 +94,7 @@ class SimpleConnection(connection.SSHConnection):
 
 
 class TrueChannel(channel.SSHChannel):
-    name = 'session' # needed for commands
+    name = b'session' # needed for commands
 
     def openFailed(self, reason):
         print('true failed', reason)
@@ -108,7 +108,7 @@ class TrueChannel(channel.SSHChannel):
         self.loseConnection()
 
 class FalseChannel(channel.SSHChannel):
-    name = 'session'
+    name = b'session'
 
     def openFailed(self, reason):
         print('false failed', reason)
@@ -122,18 +122,18 @@ class FalseChannel(channel.SSHChannel):
         self.loseConnection()
 
 class CatChannel(channel.SSHChannel):
-    name = 'session'
+    name = b'session'
 
     def openFailed(self, reason):
         print('echo failed', reason)
 
     def channelOpen(self, ignoredData):
-        self.data = ''
+        self.data = b''
         d = self.conn.sendRequest(self, 'exec', common.NS('cat'), wantReply = 1)
         d.addCallback(self._cbRequest)
 
     def _cbRequest(self, ignored):
-        self.write('hello conch\n')
+        self.write(b'hello conch\n')
         self.conn.sendEOF(self)
 
     def dataReceived(self, data):

@@ -31,7 +31,6 @@ __metaclass__ = type
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
@@ -47,12 +46,14 @@ from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
 from twisted.web.http import _IdentityTransferDecoder, _ChunkedTransferDecoder
+from twisted.logger import Logger
 
 # States HTTPParser can be in
 STATUS = u'STATUS'
 HEADER = u'HEADER'
 BODY = u'BODY'
 DONE = u'DONE'
+_moduleLog = Logger()
 
 
 class BadHeaders(Exception):
@@ -93,8 +94,8 @@ class _WrapperException(Exception):
     L{_WrapperException} is the base exception type for exceptions which
     include one or more other exceptions as the low-level causes.
 
-    @ivar reasons: A list of exceptions.  See subclass documentation for more
-        details.
+    @ivar reasons: A L{list} of one or more L{Failure} instances encountered
+        during an HTTP request.  See subclass documentation for more details.
     """
     def __init__(self, reasons):
         Exception.__init__(self, reasons)
@@ -193,8 +194,10 @@ def _callAppFunction(function):
     try:
         function()
     except:
-        log.err(None, u"Unexpected exception from %s" % (
-                fullyQualifiedName(function),))
+        _moduleLog.failure(
+            u"Unexpected exception from {name}",
+            name=fullyQualifiedName(function)
+        )
 
 
 
@@ -369,6 +372,7 @@ class HTTPClientParser(HTTPParser):
         }
 
     bodyDecoder = None
+    _log = Logger()
 
     def __init__(self, request, finisher):
         self.request = request
@@ -409,21 +413,31 @@ class HTTPClientParser(HTTPParser):
         to keep track of this response's state.
         """
         parts = status.split(b' ', 2)
-        if len(parts) != 3:
+        if len(parts) == 2:
+            # Some broken servers omit the required `phrase` portion of
+            # `status-line`.  One such server identified as
+            # "cloudflare-nginx".  Others fail to identify themselves
+            # entirely.  Fill in an empty phrase for such cases.
+            version, codeBytes = parts
+            phrase = b""
+        elif len(parts) == 3:
+            version, codeBytes, phrase = parts
+        else:
             raise ParseError(u"wrong number of parts", status)
 
         try:
-            statusCode = int(parts[1])
+            statusCode = int(codeBytes)
         except ValueError:
             raise ParseError(u"non-integer status code", status)
 
         self.response = Response._construct(
-            self.parseVersion(parts[0]),
+            self.parseVersion(version),
             statusCode,
-            parts[2],
+            phrase,
             self.headers,
             self.transport,
-            self.request)
+            self.request,
+        )
 
 
     def _finished(self, rest):
@@ -455,6 +469,20 @@ class HTTPClientParser(HTTPParser):
         Figure out how long the response body is going to be by examining
         headers and stuff.
         """
+        if 100 <= self.response.code < 200:
+            # RFC 7231 Section 6.2 says that if we receive a 1XX status code
+            # and aren't expecting it, we MAY ignore it. That's what we're
+            # going to do. We reset the parser here, but we leave
+            # _everReceivedData in its True state because we have, in fact,
+            # received data.
+            self._log.info(
+                "Ignoring unexpected {code} response",
+                code=self.response.code
+            )
+            self.connectionMade()
+            del self.response
+            return
+
         if (self.response.code in self.NO_BODY_CODES
             or self.request.method == b'HEAD'):
             self.response.length = 0
@@ -540,7 +568,7 @@ class HTTPClientParser(HTTPParser):
                 # suite.  Those functions really shouldn't raise exceptions,
                 # but maybe there's some buggy application code somewhere
                 # making things difficult.
-                log.err()
+                self._log.failure('')
         elif self.state != DONE:
             if self._everReceivedData:
                 exceptionClass = ResponseFailed
@@ -566,6 +594,7 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or L{None}.
     @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
+    _log = Logger()
 
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         """
@@ -647,10 +676,13 @@ class Request:
         transport.writeSequence(requestLines)
 
 
-    def _writeToChunked(self, transport):
+    def _writeToBodyProducerChunked(self, transport):
         """
         Write this request to the given transport using chunked
         transfer-encoding to frame the body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(transport, b'Transfer-Encoding: chunked\r\n')
         encoder = ChunkedEncoder(transport)
@@ -671,10 +703,13 @@ class Request:
         return d
 
 
-    def _writeToContentLength(self, transport):
+    def _writeToBodyProducerContentLength(self, transport):
         """
         Write this request to the given transport using content-length to frame
         the body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
         """
         self._writeHeaders(
             transport,
@@ -725,10 +760,13 @@ class Request:
                     # Deferred fired.  This really shouldn't ever happen.
                     # If it does, I goofed.  Log the error anyway, just so
                     # there's a chance someone might notice and complain.
-                    log.err(
-                        err,
-                        u"Buggy state machine in %r/[%d]: "
-                        u"ebConsuming called" % (self, state[0]))
+                    self._log.failure(
+                        u"Buggy state machine in {request}/[{state}]: "
+                        u"ebConsuming called",
+                        failure=err,
+                        request=repr(self),
+                        state=state[0]
+                    )
 
             def cbProducing(result):
                 if state == [None]:
@@ -766,7 +804,7 @@ class Request:
                     # Deferred failed.  It shouldn't have, so it's buggy.
                     # Log the exception in case anyone who can fix the code
                     # is watching.
-                    log.err(err, u"Producer is buggy")
+                    self._log.failure(u"Producer is buggy", failure=err)
 
             consuming.addErrback(ebConsuming)
             producing.addCallbacks(cbProducing, ebProducing)
@@ -784,24 +822,43 @@ class Request:
         return d
 
 
+    def _writeToEmptyBodyContentLength(self, transport):
+        """
+        Write this request to the given transport using content-length to frame
+        the (empty) body.
+
+        @param transport: See L{writeTo}.
+        @return: See L{writeTo}.
+        """
+        self._writeHeaders(transport, b"Content-Length: 0\r\n")
+        return succeed(None)
+
+
     def writeTo(self, transport):
         """
         Format this L{Request} as an HTTP/1.1 request and write it to the given
         transport.  If bodyProducer is not None, it will be associated with an
         L{IConsumer}.
 
+        @param transport: The transport to which to write.
+        @type transport: L{twisted.internet.interfaces.ITransport} provider
+
         @return: A L{Deferred} which fires with L{None} when the request has
             been completely written to the transport or with a L{Failure} if
             there is any problem generating the request bytes.
         """
-        if self.bodyProducer is not None:
-            if self.bodyProducer.length is UNKNOWN_LENGTH:
-                return self._writeToChunked(transport)
+        if self.bodyProducer is None:
+            # If the method semantics anticipate a body, include a
+            # Content-Length even if it is 0.
+            # https://tools.ietf.org/html/rfc7230#section-3.3.2
+            if self.method in (b"PUT", b"POST"):
+                self._writeToEmptyBodyContentLength(transport)
             else:
-                return self._writeToContentLength(transport)
+                self._writeHeaders(transport, None)
+        elif self.bodyProducer.length is UNKNOWN_LENGTH:
+            return self._writeToBodyProducerChunked(transport)
         else:
-            self._writeHeaders(transport, None)
-            return succeed(None)
+            return self._writeToBodyProducerContentLength(transport)
 
 
     def stopWriting(self):
@@ -1041,17 +1098,20 @@ class Response:
         Deliver any buffered data to C{protocol} and prepare to deliver any
         future data to it.  Move to the C{'CONNECTED'} state.
         """
-        # Now that there's a protocol to consume the body, resume the
-        # transport.  It was previously paused by HTTPClientParser to avoid
-        # reading too much data before it could be handled.
-        self._transport.resumeProducing()
-
         protocol.makeConnection(self._transport)
         self._bodyProtocol = protocol
         for data in self._bodyBuffer:
             self._bodyProtocol.dataReceived(data)
         self._bodyBuffer = None
+
         self._state = 'CONNECTED'
+
+        # Now that there's a protocol to consume the body, resume the
+        # transport.  It was previously paused by HTTPClientParser to avoid
+        # reading too much data before it could be handled. We need to do this
+        # after we transition our state as it may recursively lead to more data
+        # being delivered, or even the body completing.
+        self._transport.resumeProducing()
 
 
     def _deliverBody_CONNECTED(self, protocol):
@@ -1260,7 +1320,7 @@ class TransportProxyProducer:
         self._producer = producer
 
 
-    def _stopProxying(self):
+    def stopProxying(self):
         """
         Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
         methods to the underlying L{twisted.internet.interfaces.IPushProducer}
@@ -1294,6 +1354,15 @@ class TransportProxyProducer:
         """
         if self._producer is not None:
             self._producer.pauseProducing()
+
+
+    def loseConnection(self):
+        """
+        Proxy the request to lose the connection to the underlying producer,
+        unless this proxy has been stopped.
+        """
+        if self._producer is not None:
+            self._producer.loseConnection()
 
 
 
@@ -1364,6 +1433,7 @@ class HTTP11ClientProtocol(Protocol):
     _currentRequest = None
     _transportProxy = None
     _responseDeferred = None
+    _log = Logger()
 
 
     def __init__(self, quiescentCallback=lambda c: None):
@@ -1433,8 +1503,12 @@ class HTTP11ClientProtocol(Protocol):
                 self._finishedRequest.errback(
                     Failure(RequestGenerationFailed([err])))
             else:
-                log.err(err, u'Error writing request, but not in valid state '
-                             u'to finalize request: %s' % self._state)
+                self._log.failure(
+                    u'Error writing request, but not in valid state '
+                    u'to finalize request: {state}',
+                    failure=err,
+                    state=self._state
+                )
 
         _requestDeferred.addCallbacks(cbRequestWritten, ebRequestWriting)
 
@@ -1491,7 +1565,7 @@ class HTTP11ClientProtocol(Protocol):
             except:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
-                log.err()
+                self._log.failure('')
                 self.transport.loseConnection()
             self._disconnectParser(reason)
 
@@ -1517,7 +1591,7 @@ class HTTP11ClientProtocol(Protocol):
             # transport.  Stop proxying from the parser's transport to the real
             # transport before telling the parser it's done so that it can't do
             # anything.
-            self._transportProxy._stopProxying()
+            self._transportProxy.stopProxying()
             self._transportProxy = None
             parser.connectionLost(reason)
 

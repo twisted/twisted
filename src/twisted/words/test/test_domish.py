@@ -191,7 +191,7 @@ class ElementTests(unittest.TestCase):
         self.assertRaises(TypeError, element.addContent, b'bytes')
     if not _PY3:
         test_addContentBytes.skip = (
-            "Bytes behavior of addContent only provided on Python 2.")
+            "Bytes behavior of addContent only provided on Python 3.")
 
 
     def test_addContentBytesNonASCII(self):
@@ -408,11 +408,6 @@ class DomishSuxStreamTests(DomishStreamTestsMixin, unittest.TestCase):
     stream implementation.
     """
     streamClass = domish.SuxElementStream
-
-    if _PY3:
-        skip = "twisted.web.sux has not been ported to Python 3, yet."
-    elif domish.SuxElementStream is None:
-        skip = "twisted.web is required for SuxElementStream tests."
 
 
 

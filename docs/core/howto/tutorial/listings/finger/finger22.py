@@ -1,6 +1,6 @@
 # Do everything properly, and componentize
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
@@ -14,12 +14,12 @@ class IFingerService(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def getUsers():
         """
-        Return a deferred returning a list of strings.
+        Return a deferred returning a L{list} of L{bytes}.
         """
 
 
@@ -41,7 +41,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -92,12 +92,12 @@ class IFingerSetterFactory(Interface):
 
     def setUser(user, status):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def buildProtocol(addr):
         """
-        Return a protocol returning a string.
+        Return a protocol returning L{bytes}.
         """
 
 
@@ -127,7 +127,7 @@ class IRCReplyBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         user = user.split('!')[0]
         if self.nickname.lower() == channel.lower():
-            d = self.factory.getUser(msg)
+            d = self.factory.getUser(msg.encode("ascii"))
             d.addErrback(catchError)
             d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
             d.addCallback(lambda m: self.msg(user, m))
@@ -189,7 +189,7 @@ class UserStatusTree(resource.Resource):
             %s
             </ul></body></html>""" % userOutput)
         request.finish()
-        
+
     def render_GET(self, request):
         d = self.service.getUsers()
         d.addCallback(self._cb_render_GET, request)
@@ -216,7 +216,7 @@ class UserStatus(resource.Resource):
         <p>%s</p>
         </body></html>""" % (self.user, self.user, status))
         request.finish()
-    
+
     def render_GET(self, request):
         d = self.service.getUser(self.user)
         d.addCallback(self._cb_render_GET, request)
@@ -276,19 +276,19 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def startService(self):
         self._read()
@@ -299,35 +299,22 @@ class FingerService(service.Service):
         self.call.cancel()
 
 
-class ServerContextFactory:
-
-    def getContext(self):
-        """
-        Create an SSL context.
-
-        This is a sample implementation that loads a certificate from a file
-        called 'server.pem'.
-        """
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file('server.pem')
-        ctx.use_privatekey_file('server.pem')
-        return ctx
-
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-internet.TCPServer(79, IFingerFactory(f)
+strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
 site = server.Site(resource.IResource(f))
-internet.TCPServer(8000, site
+strports.service("tcp:8000", site,
                    ).setServiceParent(serviceCollection)
-internet.SSLServer(443, site, ServerContextFactory()
+strports.service("ssl:port=443:certKey=cert.pem:privateKey=key.pem", site
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
-internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
-internet.TCPServer(8889, pb.PBServerFactory(IPerspectiveFinger(f))
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    i).setServiceParent(serviceCollection)
+strports.service("tcp:8889", pb.PBServerFactory(IPerspectiveFinger(f))
                    ).setServiceParent(serviceCollection)

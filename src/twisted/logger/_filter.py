@@ -10,7 +10,8 @@ from functools import partial
 
 from zope.interface import Interface, implementer
 
-from twisted.python.constants import NamedConstant, Names
+from constantly import NamedConstant, Names
+
 from ._levels import InvalidLogLevelError, LogLevel
 from ._observer import ILogObserver
 

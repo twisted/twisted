@@ -14,6 +14,7 @@ from os.path import expanduser
 
 from zope.interface import Interface, implementer
 
+from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone, ProcessTerminated
@@ -61,9 +62,9 @@ class _ISSHConnectionCreator(Interface):
 
         @param connection: An L{twisted.conch.ssh.transport.SSHServerTransport}
             or L{twisted.conch.ssh.transport.SSHClientTransport} returned by a
-            previous call to C{secureConnection}.  It is no longer needed by the
-            caller of that method and may be closed or otherwise cleaned up as
-            necessary.
+            previous call to C{secureConnection}.  It is no longer needed by
+            the caller of that method and may be closed or otherwise cleaned up
+            as necessary.
 
         @param immediate: If C{True} don't wait for any network communication,
             just close the connection immediately and as aggressively as
@@ -155,7 +156,7 @@ class _CommandChannel(SSHChannel):
         issue an C{"exec"} request to run the command.
         """
         command = self.conn.sendRequest(
-            self, 'exec', NS(self._command), wantReply=True)
+            self, b'exec', NS(self._command), wantReply=True)
         command.addCallbacks(self._execSuccess, self._execFailure)
 
 
@@ -173,8 +174,8 @@ class _CommandChannel(SSHChannel):
     def _execSuccess(self, ignored):
         """
         When the request to execute the command in this channel succeeds, use
-        C{protocolFactory} to build a protocol to handle the command's input and
-        output and connect the protocol to a transport representing those
+        C{protocolFactory} to build a protocol to handle the command's input
+        and output and connect the protocol to a transport representing those
         streams.
 
         Also fire C{commandConnected} with the created protocol after it is
@@ -260,9 +261,9 @@ class _ConnectionReady(SSHConnection):
 
     def serviceStarted(self):
         """
-        When the SSH I{connection} I{service} this object represents is ready to
-        be used, fire the C{connectionReady} L{Deferred} to publish that event
-        to some other interested party.
+        When the SSH I{connection} I{service} this object represents is ready
+        to be used, fire the C{connectionReady} L{Deferred} to publish that
+        event to some other interested party.
 
         """
         self._ready.callback(self)
@@ -289,8 +290,8 @@ class _UserAuth(SSHUserAuthClient):
         delegating to an authentication agent if there is one.
 
         @return: The public part of a key pair that could be used to
-            authenticate with the server, or L{None} if there are no more public
-            keys to try.
+            authenticate with the server, or L{None} if there are no more
+            public keys to try.
         @rtype: L{twisted.conch.ssh.keys.Key} or L{None}
         """
         if self.agent is not None:
@@ -384,8 +385,8 @@ class _UserAuth(SSHUserAuthClient):
 
 class _CommandTransport(SSHClientTransport):
     """
-    L{_CommandTransport} is an SSH client I{transport} which includes a host key
-    verification step before it will proceed to secure the connection.
+    L{_CommandTransport} is an SSH client I{transport} which includes a host
+    key verification step before it will proceed to secure the connection.
 
     L{_CommandTransport} also knows how to set up a connection to an
     authentication agent if it is told where it can connect to one.
@@ -432,7 +433,7 @@ class _CommandTransport(SSHClientTransport):
             L{KnownHostsFile.verifyHostKey}.
         """
         hostname = self.creator.hostname
-        ip = self.transport.getPeer().host
+        ip = networkString(self.transport.getPeer().host)
 
         self._state = b'SECURING'
         d = self.creator.knownHosts.verifyHostKey(
@@ -526,9 +527,9 @@ class SSHCommandClientEndpoint(object):
 
         @param command: The command line to execute on the SSH server.  This
             byte string is interpreted by a shell on the SSH server, so it may
-            have a value like C{"ls /"}.  Take care when trying to run a command
-            like C{"/Volumes/My Stuff/a-program"} - spaces (and other special
-            bytes) may require escaping.
+            have a value like C{"ls /"}.  Take care when trying to run a
+            command like C{"/Volumes/My Stuff/a-program"} - spaces (and other
+            special bytes) may require escaping.
         @type command: L{bytes}
 
         """
@@ -599,10 +600,10 @@ class SSHCommandClientEndpoint(object):
     @classmethod
     def existingConnection(cls, connection, command):
         """
-        Create and return a new endpoint which will try to open a new channel on
-        an existing SSH connection and run a command over it.  It will B{not}
-        close the connection if there is a problem executing the command or
-        after the command finishes.
+        Create and return a new endpoint which will try to open a new channel
+        on an existing SSH connection and run a command over it.  It will
+        B{not} close the connection if there is a problem executing the command
+        or after the command finishes.
 
         @param connection: An existing connection to an SSH server.
         @type connection: L{SSHConnection}
@@ -653,10 +654,11 @@ class SSHCommandClientEndpoint(object):
         @return: See L{SSHCommandClientEndpoint.connect}'s return value.
         """
         commandConnected = Deferred()
+
         def disconnectOnFailure(passthrough):
             # Close the connection immediately in case of cancellation, since
             # that implies user wants it gone immediately (e.g. a timeout):
-            immediate =  passthrough.check(CancelledError)
+            immediate = passthrough.check(CancelledError)
             self._creator.cleanupConnection(connection, immediate)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)
@@ -754,7 +756,7 @@ class _NewConnectionHelper(object):
         For use as the opener argument to L{ConsoleUI}.
         """
         try:
-            return self.tty.open("r+")
+            return self.tty.open("rb+")
         except:
             # Give back a file-like object from which can be read a byte string
             # that KnownHostsFile recognizes as rejecting some option (b"no").
@@ -764,6 +766,7 @@ class _NewConnectionHelper(object):
     @classmethod
     def _knownHosts(cls):
         """
+
         @return: A L{KnownHostsFile} instance pointed at the user's personal
             I{known hosts} file.
         @type: L{KnownHostsFile}
@@ -783,7 +786,8 @@ class _NewConnectionHelper(object):
         protocol = _CommandTransport(self)
         ready = protocol.connectionReady
 
-        sshClient = TCP4ClientEndpoint(self.reactor, self.hostname, self.port)
+        sshClient = TCP4ClientEndpoint(
+            self.reactor, nativeString(self.hostname), self.port)
 
         d = connectProtocol(sshClient, protocol)
         d.addCallback(lambda ignored: ready)
@@ -802,7 +806,7 @@ class _NewConnectionHelper(object):
         @type immediate: L{bool}.
         """
         if immediate:
-            # We're assuming the underlying connection is a ITCPTransport,
+            # We're assuming the underlying connection is an ITCPTransport,
             # which is what the current implementation is restricted to:
             connection.transport.transport.abortConnection()
         else:
@@ -828,6 +832,7 @@ class _ExistingConnectionHelper(object):
 
     def secureConnection(self):
         """
+
         @return: A L{Deferred} that fires synchronously with the
             already-established connection object.
         """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -47,10 +48,11 @@ class FlatFormattingTests(unittest.TestCase):
                 "attribute: {object.attribute} "
                 "numrepr: {number!r} "
                 "numstr: {number!s} "
-                "strrepr: {string!r}"
+                "strrepr: {string!r} "
+                "unistr: {unistr!s}"
             ),
             callme=lambda: next(counter), object=Ephemeral(),
-            number=7, string="hello",
+            number=7, string="hello", unistr=u"ö"
         )
 
         flattenEvent(event1)
@@ -66,7 +68,8 @@ class FlatFormattingTests(unittest.TestCase):
                 "attribute: value "
                 "numrepr: 7 "
                 "numstr: 7 "
-                "strrepr: 'hello'"
+                "strrepr: 'hello' "
+                u"unistr: ö"
             )
         )
 
@@ -299,5 +302,22 @@ class FlatFormattingTests(unittest.TestCase):
                 'a': 'b',
                 'c': 1,
                 'log_format': 'simple message',
+            }
+        )
+
+
+    def test_flattenEventWithNoneFormat(self):
+        """
+        L{flattenEvent} will do nothing to an event with log_format set to
+        None.
+        """
+        inputEvent = {'a': 'b', 'c': 1, 'log_format': None}
+        flattenEvent(inputEvent)
+        self.assertEqual(
+            inputEvent,
+            {
+                'a': 'b',
+                'c': 1,
+                'log_format': None,
             }
         )

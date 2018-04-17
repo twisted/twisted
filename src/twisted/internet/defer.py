@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb -*-
+# -*- test-case-name: twisted.test.test_defer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -21,15 +21,16 @@ from __future__ import division, absolute_import, print_function
 import traceback
 import types
 import warnings
-from sys import exc_info
+from sys import exc_info, version_info
 from functools import wraps
+from incremental import Version
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
 from twisted.python.deprecate import warnAboutFunction, deprecated
-from twisted.python.versions import Version
+from twisted.python._oldstyle import _oldStyle
 
 log = Logger()
 
@@ -47,7 +48,7 @@ class CancelledError(Exception):
 
 class TimeoutError(Exception):
     """
-    This exception is deprecated.
+    This error is raised by default when a L{Deferred} times out.
     """
 
 
@@ -159,6 +160,8 @@ def maybeDeferred(f, *args, **kw):
 
 
 
+@deprecated(Version('Twisted', 17, 1, 0),
+            replacement='twisted.internet.defer.Deferred.addTimeout')
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
 
@@ -193,6 +196,7 @@ _CONTINUE = object()
 
 
 
+@_oldStyle
 class Deferred:
     """
     This is a callback which will be put off until later.
@@ -239,7 +243,7 @@ class Deferred:
     """
 
     called = False
-    paused = 0
+    paused = False
     _debugInfo = None
     _suppressAlreadyCalled = False
 
@@ -338,6 +342,68 @@ class Deferred:
         return self.addCallbacks(callback, callback,
                                  callbackArgs=args, errbackArgs=args,
                                  callbackKeywords=kw, errbackKeywords=kw)
+
+
+    def addTimeout(self, timeout, clock, onTimeoutCancel=None):
+        """
+        Time out this L{Deferred} by scheduling it to be cancelled after
+        C{timeout} seconds.
+
+        The timeout encompasses all the callbacks and errbacks added to this
+        L{defer.Deferred} before the call to L{addTimeout}, and none added
+        after the call.
+
+        If this L{Deferred} gets timed out, it errbacks with a L{TimeoutError},
+        unless a cancelable function was passed to its initialization or unless
+        a different C{onTimeoutCancel} callable is provided.
+
+        @param timeout: number of seconds to wait before timing out this
+            L{Deferred}
+        @type timeout: L{int}
+
+        @param clock: The object which will be used to schedule the timeout.
+        @type clock: L{twisted.internet.interfaces.IReactorTime}
+
+        @param onTimeoutCancel: A callable which is called immediately after
+            this L{Deferred} times out, and not if this L{Deferred} is
+            otherwise cancelled before the timeout. It takes an arbitrary
+            value, which is the value of this L{Deferred} at that exact point
+            in time (probably a L{CancelledError} L{Failure}), and the
+            C{timeout}.  The default callable (if none is provided) will
+            translate a L{CancelledError} L{Failure} into a L{TimeoutError}.
+        @type onTimeoutCancel: L{callable}
+
+        @return: C{self}.
+        @rtype: a L{Deferred}
+
+        @since: 16.5
+        """
+        timedOut = [False]
+
+        def timeItOut():
+            timedOut[0] = True
+            self.cancel()
+
+        delayedCall = clock.callLater(timeout, timeItOut)
+
+        def convertCancelled(value):
+            # if C{deferred} was timed out, call the translation function,
+            # if provdied, otherwise just use L{cancelledToTimedOutError}
+            if timedOut[0]:
+                toCall = onTimeoutCancel or _cancelledToTimedOutError
+                return toCall(value, timeout)
+            return value
+
+        self.addBoth(convertCancelled)
+
+        def cancelTimeout(result):
+            # stop the pending call to cancel the deferred if it's been fired
+            if delayedCall.active():
+                delayedCall.cancel()
+            return result
+
+        self.addBoth(cancelTimeout)
+        return self
 
 
     def chainDeferred(self, d):
@@ -661,7 +727,200 @@ class Deferred:
     __repr__ = __str__
 
 
+    def __iter__(self):
+        return self
 
+
+    def send(self, value=None):
+        if self.paused:
+            # If we're paused, we have no result to give
+            return self
+
+        result = getattr(self, 'result', _NO_RESULT)
+        if result is _NO_RESULT:
+            return self
+        if isinstance(result, failure.Failure):
+            # Clear the failure on debugInfo so it doesn't raise "unhandled
+            # exception"
+            self._debugInfo.failResult = None
+            raise result.value
+        else:
+            raise StopIteration(result)
+
+
+    # For PEP-492 support (async/await)
+    __await__ = __iter__
+    __next__ = send
+
+
+    def asFuture(self, loop):
+        """
+        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+
+        @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
+            its result and its errors, so this method implicitly converts
+            C{self} into a L{Deferred} firing with L{None}, regardless of what
+            its result previously would have been.
+
+        @since: Twisted 17.5.0
+
+        @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
+        @type loop: L{asyncio.AbstractEventLoop} or similar
+
+        @param deferred: The Deferred to adapt.
+        @type deferred: L{Deferred}
+
+        @return: A Future which will fire when the Deferred fires.
+        @rtype: L{asyncio.Future}
+        """
+        try:
+            createFuture = loop.create_future
+        except AttributeError:
+            from asyncio import Future
+            def createFuture():
+                return Future(loop=loop)
+        future = createFuture()
+        def checkCancel(futureAgain):
+            if futureAgain.cancelled():
+                self.cancel()
+        def maybeFail(failure):
+            if not future.cancelled():
+                future.set_exception(failure.value)
+        def maybeSucceed(result):
+            if not future.cancelled():
+                future.set_result(result)
+        self.addCallbacks(maybeSucceed, maybeFail)
+        future.add_done_callback(checkCancel)
+        return future
+
+
+    @classmethod
+    def fromFuture(cls, future):
+        """
+        Adapt an L{asyncio.Future} to a L{Deferred}.
+
+        @note: This creates a L{Deferred} from a L{asyncio.Future}, I{not} from
+            a C{coroutine}; in other words, you will need to call
+            L{asyncio.async}, L{asyncio.ensure_future},
+            L{asyncio.AbstractEventLoop.create_task} or create an
+            L{asyncio.Task} yourself to get from a C{coroutine} to a
+            L{asyncio.Future} if what you have is an awaitable coroutine and
+            not a L{asyncio.Future}.  (The length of this list of techniques is
+            exactly why we have left it to the caller!)
+
+        @since: Twisted 17.5.0
+
+        @param future: The Future to adapt.
+        @type future: L{asyncio.Future}
+
+        @return: A Deferred which will fire when the Future fires.
+        @rtype: L{Deferred}
+        """
+        def adapt(result):
+            try:
+                extracted = result.result()
+            except:
+                extracted = failure.Failure()
+            adapt.actual.callback(extracted)
+        futureCancel = object()
+        def cancel(reself):
+            future.cancel()
+            reself.callback(futureCancel)
+        self = cls(cancel)
+        adapt.actual = self
+        def uncancel(result):
+            if result is futureCancel:
+                adapt.actual = Deferred()
+                return adapt.actual
+            return result
+        self.addCallback(uncancel)
+        future.add_done_callback(adapt)
+        return self
+
+
+
+def _cancelledToTimedOutError(value, timeout):
+    """
+    A default translation function that translates L{Failure}s that are
+    L{CancelledError}s to L{TimeoutError}s.
+
+    @param value: Anything
+    @type value: Anything
+
+    @param timeout: The timeout
+    @type timeout: L{int}
+
+    @rtype: C{value}
+    @raise: L{TimeoutError}
+
+    @since: 16.5
+    """
+    if isinstance(value, failure.Failure):
+        value.trap(CancelledError)
+        raise TimeoutError(timeout, "Deferred")
+    return value
+
+
+
+def ensureDeferred(coro):
+    """
+    Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
+    wrapping it in a L{Deferred} that will fire on success/failure of the
+    coroutine. If a Deferred is passed to this function, it will be returned
+    directly (mimicing C{asyncio}'s C{ensure_future} function).
+
+    Coroutine functions return a coroutine object, similar to how generators
+    work. This function turns that coroutine into a Deferred, meaning that it
+    can be used in regular Twisted code. For example::
+
+        import treq
+        from twisted.internet.defer import ensureDeferred
+        from twisted.internet.task import react
+
+        async def crawl(pages):
+            results = {}
+            for page in pages:
+                results[page] = await treq.content(await treq.get(page))
+            return results
+
+        def main(reactor):
+            pages = [
+                "http://localhost:8080"
+            ]
+            d = ensureDeferred(crawl(pages))
+            d.addCallback(print)
+            return d
+
+        react(main)
+
+    @param coro: The coroutine object to schedule, or a L{Deferred}.
+    @type coro: A Python 3.5+ C{async def} C{coroutine}, a Python 3.3+
+        C{yield from} using L{types.GeneratorType}, or a L{Deferred}.
+
+    @rtype: L{Deferred}
+    """
+    from types import GeneratorType
+
+    if version_info >= (3, 4, 0):
+        from asyncio import iscoroutine
+
+        if iscoroutine(coro) or isinstance(coro, GeneratorType):
+            return _inlineCallbacks(None, coro, Deferred())
+
+    elif version_info >= (3, 3, 0):
+        if isinstance(coro, GeneratorType):
+            return _inlineCallbacks(None, coro, Deferred())
+
+    if not isinstance(coro, Deferred):
+        raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
+
+    # Must be a Deferred
+    return coro
+
+
+
+
+@_oldStyle
 class DebugInfo:
     """
     Deferred debug helper.
@@ -934,7 +1193,7 @@ FAILURE = False
 
 
 ## deferredGenerator
-
+@_oldStyle
 class waitForDeferred:
     """
     See L{deferredGenerator}.
@@ -1469,6 +1728,10 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
     """
 
     def __init__(self, tokens):
+        """
+        @param tokens: initial value of L{tokens} and L{limit}
+        @type tokens: L{int}
+        """
         _ConcurrencyPrimitive.__init__(self)
         if tokens < 1:
             raise ValueError("DeferredSemaphore requires tokens >= 1")
@@ -1721,9 +1984,10 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred",
+           "maybeDeferred", "ensureDeferred",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]
+

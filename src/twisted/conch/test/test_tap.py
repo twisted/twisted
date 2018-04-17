@@ -47,7 +47,7 @@ class MakeServiceTests(TestCase):
     if not unix:
         skip = "can't run on non-posix computers"
 
-    usernamePassword = ('iamuser', 'thisispassword')
+    usernamePassword = (b'iamuser', b'thisispassword')
 
     def setUp(self):
         """
@@ -55,7 +55,7 @@ class MakeServiceTests(TestCase):
         """
         self.filename = self.mktemp()
         with open(self.filename, 'wb+') as f:
-            f.write(':'.join(self.usernamePassword))
+            f.write(b':'.join(self.usernamePassword))
         self.options = tap.Options()
 
 

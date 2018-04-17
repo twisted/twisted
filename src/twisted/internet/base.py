@@ -17,14 +17,23 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
-from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
-from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
-from twisted.internet.interfaces import IConnector, IDelayedCall
+from twisted.internet.interfaces import (
+    IReactorCore, IReactorTime, IReactorThreads, IResolverSimple,
+    IReactorPluggableResolver, IReactorPluggableNameResolver, IConnector,
+    IDelayedCall, _ISupportsExitSignalCapturing
+)
+
 from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.internet._resolver import (
+    GAIResolver as _GAIResolver,
+    ComplexResolverSimplifier as _ComplexResolverSimplifier,
+    SimpleResolverComplexifier as _SimpleResolverComplexifier,
+)
 from twisted.python import log, failure, reflect
 from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
+from twisted.python._oldstyle import _oldStyle
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
@@ -32,6 +41,7 @@ from twisted.python import threadable
 
 
 @implementer(IDelayedCall)
+@_oldStyle
 class DelayedCall:
 
     # enable .debug to record creator call stack, and it will be logged if
@@ -91,7 +101,7 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = bytes(self)
+                self._str = str(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
@@ -279,6 +289,7 @@ class ThreadedResolver(object):
 
 
 @implementer(IResolverSimple)
+@_oldStyle
 class BlockingResolver:
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
@@ -433,7 +444,8 @@ class _ThreePhaseEvent(object):
 
 
 
-@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver)
+@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver,
+             IReactorPluggableNameResolver, _ISupportsExitSignalCapturing)
 class ReactorBase(object):
     """
     Default base class for Reactors.
@@ -461,6 +473,8 @@ class ReactorBase(object):
     @ivar _registerAsIOThread: A flag controlling whether the reactor will
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
+
+    @ivar _exitSignal: See L{_ISupportsExitSignalCapturing._exitSignal}
     """
 
     _registerAsIOThread = True
@@ -469,6 +483,7 @@ class ReactorBase(object):
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
+    _exitSignal = None
 
     __name__ = "twisted.internet.reactor"
 
@@ -484,6 +499,7 @@ class ReactorBase(object):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         self._internalReaders = set()
+        self._nameResolver = None
         self.waker = None
 
         # Arrange for the running attribute to change to True at the right time
@@ -506,11 +522,44 @@ class ReactorBase(object):
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement installWaker")
 
+
     def installResolver(self, resolver):
+        """
+        See L{IReactorPluggableResolver}.
+
+        @param resolver: see L{IReactorPluggableResolver}.
+
+        @return: see L{IReactorPluggableResolver}.
+        """
         assert IResolverSimple.providedBy(resolver)
         oldResolver = self.resolver
         self.resolver = resolver
+        self._nameResolver = _SimpleResolverComplexifier(resolver)
         return oldResolver
+
+
+    def installNameResolver(self, resolver):
+        """
+        See L{IReactorPluggableNameResolver}.
+
+        @param resolver: See L{IReactorPluggableNameResolver}.
+
+        @return: see L{IReactorPluggableNameResolver}.
+        """
+        previousNameResolver = self._nameResolver
+        self._nameResolver = resolver
+        self.resolver = _ComplexResolverSimplifier(resolver)
+        return previousNameResolver
+
+
+    @property
+    def nameResolver(self):
+        """
+        Implementation of read-only
+        L{IReactorPluggableNameResolver.nameResolver}.
+        """
+        return self._nameResolver
+
 
     def wakeUp(self):
         """
@@ -598,22 +647,37 @@ class ReactorBase(object):
             'during', 'startup', self._reallyStartRunning)
 
     def sigInt(self, *args):
-        """Handle a SIGINT interrupt.
+        """
+        Handle a SIGINT interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
+        self._exitSignal = args[0]
+
 
     def sigBreak(self, *args):
-        """Handle a SIGBREAK interrupt.
+        """
+        Handle a SIGBREAK interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
+        self._exitSignal = args[0]
+
 
     def sigTerm(self, *args):
-        """Handle a SIGTERM interrupt.
+        """
+        Handle a SIGTERM interrupt.
+
+        @param args: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
+        self._exitSignal = args[0]
+
 
     def disconnectAll(self):
         """Disconnect every reader, and writer in the system.
@@ -738,11 +802,17 @@ class ReactorBase(object):
 
 
     def getDelayedCalls(self):
-        """Return all the outstanding delayed calls in the system.
+        """
+        Return all the outstanding delayed calls in the system.
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
-        test cases."""
+        test cases.
+
+        @return: A list of outstanding delayed calls.
+        @type: L{list} of L{DelayedCall}
+        """
         return [x for x in (self._pendingTimedCalls + self._newTimedCalls) if not x.cancelled]
+
 
     def _insertNewDelayedCalls(self):
         for call in self._newTimedCalls:
@@ -785,7 +855,8 @@ class ReactorBase(object):
 
 
     def runUntilCurrent(self):
-        """Run all pending timed calls.
+        """
+        Run all pending timed calls.
         """
         if self.threadCallQueue:
             # Keep track of how many calls we actually make, as we're
@@ -853,10 +924,10 @@ class ReactorBase(object):
         Check for valid arguments and environment to spawnProcess.
 
         @return: A two element tuple giving values to use when creating the
-        process.  The first element of the tuple is a C{list} of C{str}
+        process.  The first element of the tuple is a C{list} of C{bytes}
         giving the values for argv of the child process.  The second element
         of the tuple is either L{None} if C{env} was L{None} or a C{dict}
-        mapping C{str} environment keys to C{str} environment values.
+        mapping C{bytes} environment keys to C{bytes} environment values.
         """
         # Any unicode string which Python would successfully implicitly
         # encode to a byte string would have worked before these explicit
@@ -870,32 +941,24 @@ class ReactorBase(object):
         # without ever spawning a child process.  If it succeeds, we'll save
         # the result so that Python doesn't need to do it implicitly later.
         #
-        # For any unicode which we can actually encode, we'll also issue a
-        # deprecation warning, because no one should be passing unicode here
-        # anyway.
-        #
         # -exarkun
-        defaultEncoding = sys.getdefaultencoding()
+
+        defaultEncoding = sys.getfilesystemencoding()
 
         # Common check function
         def argChecker(arg):
             """
-            Return either a str or None.  If the given value is not
-            allowable for some reason, None is returned.  Otherwise, a
-            possibly different object which should be used in place of arg
-            is returned.  This forces unicode encoding to happen now, rather
-            than implicitly later.
+            Return either L{bytes} or L{None}.  If the given value is not
+            allowable for some reason, L{None} is returned.  Otherwise, a
+            possibly different object which should be used in place of arg is
+            returned.  This forces unicode encoding to happen now, rather than
+            implicitly later.
             """
             if isinstance(arg, unicode):
                 try:
                     arg = arg.encode(defaultEncoding)
                 except UnicodeEncodeError:
                     return None
-                warnings.warn(
-                    "Argument strings and environment keys/values passed to "
-                    "reactor.spawnProcess should be str, not unicode.",
-                    category=DeprecationWarning,
-                    stacklevel=4)
             if isinstance(arg, bytes) and b'\0' not in arg:
                 return arg
 
@@ -935,8 +998,9 @@ class ReactorBase(object):
         threadpoolShutdownID = None
 
         def _initThreads(self):
+            self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
-            self.resolver = ThreadedResolver(self)
+
 
         def callFromThread(self, f, *args, **kw):
             """
@@ -999,6 +1063,7 @@ class ReactorBase(object):
             """
             self.getThreadPool().callInThread(_callable, *args, **kwargs)
 
+
         def suggestThreadPoolSize(self, size):
             """
             See L{twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize}.
@@ -1016,6 +1081,7 @@ if platform.supportsThreads():
 
 
 @implementer(IConnector)
+@_oldStyle
 class BaseConnector:
     """Basic implementation of connector.
 

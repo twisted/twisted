@@ -12,12 +12,19 @@ import copy
 import os
 import pickle
 
+try:
+    import asyncio
+except ImportError:
+    asyncio = None
+
 from twisted.application import service, internet, app, reactors
 from twisted.internet import interfaces, defer, protocol, reactor
 from twisted.persisted import sob
+from twisted.plugins import twisted_reactors
 from twisted.protocols import wire, basic
 from twisted.python import usage
 from twisted.python.compat import NativeStringIO
+from twisted.python.runtime import platformType
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial import unittest
@@ -889,3 +896,74 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
                                ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])
         self.assertIn("help-reactors", e.args[0])
+
+
+
+class HelpReactorsTests(unittest.TestCase):
+    """
+    --help-reactors lists the available reactors
+    """
+    def setUp(self):
+        """
+        Get the text from --help-reactors
+        """
+        self.options = app.ReactorSelectionMixin()
+        self.options.messageOutput = NativeStringIO()
+        self.assertRaises(SystemExit, self.options.opt_help_reactors)
+        self.message = self.options.messageOutput.getvalue()
+
+
+    def test_lacksAsyncIO(self):
+        """
+        --help-reactors should NOT display the asyncio reactor on Python < 3.4
+        """
+        self.assertIn(twisted_reactors.asyncio.description, self.message)
+        self.assertIn("!" + twisted_reactors.asyncio.shortName, self.message)
+    if asyncio:
+        test_lacksAsyncIO.skip = "Not applicable, asyncio is available"
+
+
+    def test_hasAsyncIO(self):
+        """
+        --help-reactors should display the asyncio reactor on Python >= 3.4
+        """
+        self.assertIn(twisted_reactors.asyncio.description, self.message)
+        self.assertNotIn(
+            "!" + twisted_reactors.asyncio.shortName, self.message)
+    if not asyncio:
+        test_hasAsyncIO.skip = "asyncio library not available"
+
+
+    def test_iocpWin32(self):
+        """
+        --help-reactors should display the iocp reactor on Windows
+        """
+        self.assertIn(twisted_reactors.iocp.description, self.message)
+        self.assertNotIn("!" + twisted_reactors.iocp.shortName, self.message)
+    if platformType != "win32":
+        test_iocpWin32.skip = "Test only applicable on Windows"
+
+
+    def test_iocpNotWin32(self):
+        """
+        --help-reactors should NOT display the iocp reactor on Windows
+        """
+        self.assertIn(twisted_reactors.iocp.description, self.message)
+        self.assertIn("!" + twisted_reactors.iocp.shortName, self.message)
+    if platformType == "win32":
+        test_iocpNotWin32.skip = "Test only applicable on Windows"
+
+
+    def test_onlySupportedReactors(self):
+        """
+        --help-reactors with only supported reactors
+        """
+        def getReactorTypes():
+            yield twisted_reactors.default
+
+        options = app.ReactorSelectionMixin()
+        options._getReactorTypes = getReactorTypes
+        options.messageOutput = NativeStringIO()
+        self.assertRaises(SystemExit, options.opt_help_reactors)
+        message = options.messageOutput.getvalue()
+        self.assertNotIn("reactors not available", message)

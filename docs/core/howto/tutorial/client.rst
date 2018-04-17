@@ -44,6 +44,13 @@ using the factory directly, it's also more convenient.
 
 
 
+Additionally, because this code now programmatically receives its host and
+port, it's a bit less convenient to use clientFromString. Instead, we move to
+using the specific endpoint we want. In this case, because we're connecting as
+a client over IPv4 using TCP, we want the ``TCP4ClientEndpoint``.
+
+
+
 
 
 

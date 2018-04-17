@@ -104,10 +104,10 @@ Given a file named ``my.py`` with the code:
 
 .. code-block:: python
 
-    from twisted.python.log import FileLogObserver
+    from twisted.logger import textFileLogObserver
 
     def logger():
-        return FileLogObserver(open("/tmp/my.log", "w")).emit
+        return textFileLogObserver(open("/tmp/my.log", "w"))
 
 
 Invoking ``twistd --logger my.logger ...`` will log to a file named ``/tmp/my.log`` (this simple example could easily be replaced with use of the ``--logfile`` parameter to twistd).
@@ -120,12 +120,12 @@ Here is an example of how to use :api:`twisted.python.logfile.DailyLogFile <Dail
 .. code-block:: python
 
     from twisted.application.service import Application
-    from twisted.python.log import ILogObserver, FileLogObserver
+    from twisted.logger import ILogObserver, textFileLogObserver
     from twisted.python.logfile import DailyLogFile
 
     application = Application("myapp")
     logfile = DailyLogFile("my.log", "/tmp")
-    application.setComponent(ILogObserver, FileLogObserver(logfile).emit)
+    application.setComponent(ILogObserver, textFileLogObserver(logfile))
 
 
 Invoking ``twistd -y my.tac`` will create a log file at ``/tmp/my.log``.

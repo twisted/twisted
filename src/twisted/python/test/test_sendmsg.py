@@ -89,6 +89,11 @@ class _FDHolder(object):
                           ResourceWarning)
             self.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
 
 def _makePipe():
@@ -357,9 +362,8 @@ class CModuleSendmsgTests(TestCase):
         If the underlying C{sendmsg} call fails, L{send1msg} raises
         L{socket.error} with its errno set to the underlying errno value.
         """
-        probe = file(devnull)
-        fd = probe.fileno()
-        probe.close()
+        with open(devnull) as probe:
+            fd = probe.fileno()
         exc = self.assertRaises(error, send1msg, fd, "hello, world")
         self.assertEqual(exc.args[0], errno.EBADF)
 
@@ -369,9 +373,8 @@ class CModuleSendmsgTests(TestCase):
         The behavior when the underlying C{sendmsg} call fails is the same
         whether L{send1msg} is passed ancillary data or not.
         """
-        probe = file(devnull)
-        fd = probe.fileno()
-        probe.close()
+        with open(devnull) as probe:
+            fd = probe.fileno()
         exc = self.assertRaises(
             error, send1msg, fd, "hello, world", 0, [(0, 0, "0123")])
         self.assertEqual(exc.args[0], errno.EBADF)
@@ -464,16 +467,32 @@ class CModuleSendmsgTests(TestCase):
         self.addCleanup(pipeOut.close)
         self.addCleanup(pipeIn.close)
 
-        send1msg(
-            self.input.fileno(), "blonk", 0,
-            [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
+        with pipeIn:
+            send1msg(
+                self.input.fileno(), "blonk", 0,
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
 
-        pipeIn.close()
         yield sspp.stopped
         self.assertEqual(read(pipeOut.fileno(), 1024),
                          "Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
         self.assertEqual(read(pipeOut.fileno(), 1024), "")
+
+
+    def test_sendmsgTwoAncillaryDoesNotSegfault(self):
+        """
+        L{sendmsg} with two FDs in two separate ancillary entries
+        does not segfault.
+        """
+        ancillary = [
+            (SOL_SOCKET, SCM_RIGHTS, pack("i", self.input.fileno())),
+            (SOL_SOCKET, SCM_RIGHTS, pack("i", self.output.fileno())),
+        ]
+        try:
+            send1msg(self.input.fileno(), b"some data", 0, ancillary)
+        except error:
+            # Ok as long as it doesn't segfault.
+            pass
 
 
 
@@ -522,9 +541,8 @@ class CModuleRecvmsgTests(TestCase):
         If the underlying C{recvmsg} call fails, L{recv1msg} raises
         L{socket.error} with its errno set to the underlying errno value.
         """
-        probe = file(devnull)
-        fd = probe.fileno()
-        probe.close()
+        with open(devnull) as probe:
+            fd = probe.fileno()
         exc = self.assertRaises(error, recv1msg, fd)
         self.assertEqual(exc.args[0], errno.EBADF)
 
@@ -579,9 +597,8 @@ class CModuleGetSocketFamilyTests(TestCase):
         If the underlying C{getsockname} call fails, L{getsockfam} raises
         L{socket.error} with its errno set to the underlying errno value.
         """
-        probe = file(devnull)
-        fd = probe.fileno()
-        probe.close()
+        with open(devnull) as probe:
+            fd = probe.fileno()
         exc = self.assertRaises(error, getsockfam, fd)
         self.assertEqual(errno.EBADF, exc.args[0])
 
@@ -733,11 +750,11 @@ class SendmsgTests(TestCase):
         self.addCleanup(pipeOut.close)
         self.addCleanup(pipeIn.close)
 
-        sendmsg(
-            self.input, b"blonk",
-            [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
+        with pipeIn:
+            sendmsg(
+                self.input, b"blonk",
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
 
-        pipeIn.close()
         yield sspp.stopped
         self.assertEqual(read(pipeOut.fileno(), 1024),
                          b"Test fixture data: blonk.\n")

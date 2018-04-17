@@ -2,10 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Mail protocol support.
 """
+
+from __future__ import absolute_import, division
 
 from twisted.mail import pop3
 from twisted.mail import smtp
@@ -13,8 +14,6 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
 from twisted.python import log
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
@@ -74,17 +73,19 @@ class DomainDeliveryBase:
         @rtype: L{bytes}
         @return: A received header string.
         """
-        authStr = heloStr = ""
+        authStr = heloStr = b""
         if self.user:
-            authStr = " auth=%s" % (self.user.encode('xtext'),)
+            authStr = b" auth=" + self.user.encode('xtext')
         if helo[0]:
-            heloStr = " helo=%s" % (helo[0],)
-        from_ = "from %s ([%s]%s%s)" % (helo[0], helo[1], heloStr, authStr)
-        by = "by %s with %s (%s)" % (
-            self.host, self.protocolName, longversion
-        )
-        for_ = "for <%s>; %s" % (' '.join(map(str, recipients)), smtp.rfc822date())
-        return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
+            heloStr = b" helo=" + helo[0]
+        fromUser = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
+                 heloStr + authStr)
+        by = (b"by " + self.host + b" with " + self.protocolName +
+              b" (" + longversion.encode("ascii") + b")")
+        forUser = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
+                smtp.rfc822date())
+        return (b"Received: " + fromUser + b"\n\t" + by +
+                b"\n\t" + forUser)
 
 
     def validateTo(self, user):
@@ -131,9 +132,11 @@ class DomainDeliveryBase:
             origination address.
         """
         if not helo:
-            raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
-        if origin.local != '' and origin.domain == '':
-            raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
+            raise smtp.SMTPBadSender(origin, 503,
+                                     "Who are you?  Say HELO first.")
+        if origin.local != b'' and origin.domain == b'':
+            raise smtp.SMTPBadSender(origin, 501,
+                                     "Sender address must contain domain.")
         return origin
 
 
@@ -142,7 +145,7 @@ class SMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an SMTP server.
     """
-    protocolName = 'smtp'
+    protocolName = b'smtp'
 
 
 
@@ -150,65 +153,7 @@ class ESMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an ESMTP server.
     """
-    protocolName = 'esmtp'
-
-
-
-class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
-    """
-    An SMTP server which uses the domains of a mail service.
-    """
-    service = user = None
-
-    def __init__(self, *args, **kw):
-        """
-        Initialize the SMTP server.
-
-        @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{None}, L{IMessageDeliveryFactory}
-            provider or L{None})
-        @param args: Positional arguments for L{SMTP.__init__}
-
-        @type kw: L{dict}
-        @param kw: Keyword arguments for L{SMTP.__init__}.
-        """
-        import warnings
-        warnings.warn(
-            "DomainSMTP is deprecated.  Use IMessageDelivery objects instead.",
-            DeprecationWarning, stacklevel=2,
-        )
-        smtp.SMTP.__init__(self, *args, **kw)
-        if self.delivery is None:
-            self.delivery = self
-
-
-
-class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
-    """
-    An ESMTP server which uses the domains of a mail service.
-    """
-    service = user = None
-
-    def __init__(self, *args, **kw):
-        """
-        Initialize the ESMTP server.
-
-        @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{None}, L{IMessageDeliveryFactory}
-            provider or L{None})
-        @param args: Positional arguments for L{ESMTP.__init__}
-
-        @type kw: L{dict}
-        @param kw: Keyword arguments for L{ESMTP.__init__}.
-        """
-        import warnings
-        warnings.warn(
-            "DomainESMTP is deprecated.  Use IMessageDelivery objects instead.",
-            DeprecationWarning, stacklevel=2,
-        )
-        smtp.ESMTP.__init__(self, *args, **kw)
-        if self.delivery is None:
-            self.delivery = self
+    protocolName = b'esmtp'
 
 
 
@@ -290,7 +235,7 @@ class ESMTPFactory(SMTPFactory):
         """
         SMTPFactory.__init__(self, *args)
         self.challengers = {
-            'CRAM-MD5': CramMD5Credentials
+            b'CRAM-MD5': CramMD5Credentials
         }
 
 
@@ -325,9 +270,9 @@ class VirtualPOP3(pop3.POP3):
     """
     service = None
 
-    domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
-                          # to indicate user@host. '@' doesn't work
-                          # with NS, e.g.
+    domainSpecifier = b'@'  # Gaagh! I hate POP3. No standardized way
+                            # to indicate user@host. '@' doesn't work
+                            # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
         """
@@ -414,9 +359,10 @@ class VirtualPOP3(pop3.POP3):
         try:
             user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
-            domain = ''
+            domain = b''
         if domain not in self.service.domains:
-             raise pop3.POP3Error("no such domain %s" % domain)
+            raise pop3.POP3Error(
+                "no such domain {}".format(domain.decode("utf-8")))
         return user, domain
 
 
@@ -456,48 +402,3 @@ class POP3Factory(protocol.ServerFactory):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.service = self.service
         return p
-
-
-
-# It is useful to know, perhaps, that the required file for this to work can
-# be created thusly:
-#
-# openssl req -x509 -newkey rsa:2048 -keyout file.key -out file.crt \
-# -days 365 -nodes
-#
-# And then cat file.key and file.crt together.  The number of days and bits
-# can be changed, of course.
-#
-class SSLContextFactory:
-    """
-    An SSL context factory.
-
-    @ivar filename: See L{__init__}
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 12, 2, 0),
-        "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
-        "twisted.mail.protocols", "SSLContextFactory")
-
-    def __init__(self, filename):
-        """
-        @type filename: L{bytes}
-        @param filename: The name of a file containing a certificate and
-            private key.
-        """
-        self.filename = filename
-
-
-    def getContext(self):
-        """
-        Create an SSL context.
-
-        @rtype: C{OpenSSL.SSL.Context}
-        @return: An SSL context configured with the certificate and private key
-            from the file.
-        """
-        from OpenSSL import SSL
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file(self.filename)
-        ctx.use_privatekey_file(self.filename)
-        return ctx

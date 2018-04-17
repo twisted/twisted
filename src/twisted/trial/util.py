@@ -51,6 +51,7 @@ class DirtyReactorAggregateError(Exception):
         self.delayedCalls = delayedCalls
         self.selectables = selectables
 
+
     def __str__(self):
         """
         Return a multi-line message describing all of the unclean state.
@@ -161,6 +162,7 @@ class _Janitor(object):
                 # from each other, not methods from each other).
                 reactor._stopThreadPool()
 
+
     def _cleanReactor(self):
         """
         Remove all selectables from the reactor, kill any of them that were
@@ -202,7 +204,7 @@ def excInfoOrFailureToExcInfo(err):
         C{exception_type, exception_object, traceback_object}.
     """
     if isinstance(err, Failure):
-        # Unwrap the Failure into a exc_info tuple.
+        # Unwrap the Failure into an exc_info tuple.
         err = (err.type, err.value, err.getTracebackObject())
     return err
 

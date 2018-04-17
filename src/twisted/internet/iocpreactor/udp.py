@@ -129,13 +129,13 @@ class Port(abstract.FileHandle):
         self.reactor.addActiveHandle(self)
 
 
-    def cbRead(self, rc, bytes, evt):
+    def cbRead(self, rc, data, evt):
         if self.reading:
-            self.handleRead(rc, bytes, evt)
+            self.handleRead(rc, data, evt)
             self.doRead()
 
 
-    def handleRead(self, rc, bytes, evt):
+    def handleRead(self, rc, data, evt):
         if rc in (errno.WSAECONNREFUSED, errno.WSAECONNRESET,
                   ERROR_CONNECTION_REFUSED, ERROR_PORT_UNREACHABLE):
             if self._connectedAddr:
@@ -145,7 +145,7 @@ class Port(abstract.FileHandle):
                     (errno.errorcode.get(rc, 'unknown error'), rc))
         else:
             try:
-                self.protocol.datagramReceived(str(evt.buff[:bytes]),
+                self.protocol.datagramReceived(bytes(evt.buff[:data]),
                     _iocp.makesockaddr(evt.addr_buff))
             except:
                 log.err()
@@ -157,11 +157,11 @@ class Port(abstract.FileHandle):
         evt.buff = buff = self._readBuffers[0]
         evt.addr_buff = addr_buff = self.addressBuffer
         evt.addr_len_buff = addr_len_buff = self.addressLengthBuffer
-        rc, bytes = _iocp.recvfrom(self.getFileHandle(), buff,
+        rc, data = _iocp.recvfrom(self.getFileHandle(), buff,
                                    addr_buff, addr_len_buff, evt)
 
         if rc and rc != ERROR_IO_PENDING:
-            self.handleRead(rc, bytes, evt)
+            self.handleRead(rc, data, evt)
 
 
     def write(self, datagram, addr=None):
@@ -218,7 +218,7 @@ class Port(abstract.FileHandle):
 
 
     def writeSequence(self, seq, addr):
-        self.write("".join(seq), addr)
+        self.write(b"".join(seq), addr)
 
 
     def connect(self, host, port):

@@ -288,10 +288,10 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         UNIXAddress Objects that compare as equal have the same hash value.
         """
         linkName = self.mktemp()
-        self.fd = open(self._socketAddress, 'w')
-        os.symlink(os.path.abspath(self._socketAddress), linkName)
-        self.assertEqual(hash(UNIXAddress(self._socketAddress)),
-                         hash(UNIXAddress(linkName)))
+        with open(self._socketAddress, 'w') as self.fd:
+            os.symlink(os.path.abspath(self._socketAddress), linkName)
+            self.assertEqual(hash(UNIXAddress(self._socketAddress)),
+                            hash(UNIXAddress(linkName)))
     if not unixSkip:
         test_hashOfLinkedFiles.skip = symlinkSkip
 

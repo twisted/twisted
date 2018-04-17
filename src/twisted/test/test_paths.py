@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 import os, time, pickle, errno, stat
 from pprint import pformat
 
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3, long, unicode
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -66,19 +66,14 @@ class AbstractFilePathTests(BytesTestCase):
         self.all = [cmn]
         os.mkdir(cmn)
         self.subdir(b"sub1")
-        f = self.subfile(b"file1")
-        f.write(self.f1content)
-        f.close()
-        f = self.subfile(b"sub1", b"file2")
-        f.write(self.f2content)
-        f.close()
+        with self.subfile(b"file1") as f:
+            f.write(self.f1content)
+        with self.subfile(b"sub1", b"file2") as f:
+            f.write(self.f2content)
         self.subdir(b'sub3')
-        f = self.subfile(b"sub3", b"file3.ext1")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext2")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext3")
-        f.close()
+        self.subfile(b"sub3", b"file3.ext1").close()
+        self.subfile(b"sub3", b"file3.ext2").close()
+        self.subfile(b"sub3", b"file3.ext3").close()
         self.path = filepath.FilePath(cmn)
         self.root = filepath.FilePath(b"/")
 
@@ -262,9 +257,25 @@ class FakeWindowsPath(filepath.FilePath):
         """
         @raise WindowsError: always.
         """
-        raise WindowsError(
-            ERROR_DIRECTORY,
-            "A directory's validness was called into question")
+        if _PY3:
+            # For Python 3.3 and higher, WindowsError is an alias for OSError.
+            # The first argument to the OSError constructor is errno, and the fourth
+            # argument is winerror.
+            # For further details, refer to:
+            # https://docs.python.org/3/library/exceptions.html#OSError
+            #
+            # On Windows, if winerror is set in the constructor,
+            # the errno value in the constructor is ignored, and OSError internally
+            # maps the winerror value to an errno value.
+            raise WindowsError(
+                None,
+                "A directory's validness was called into question",
+                self.path,
+                ERROR_DIRECTORY)
+        else:
+            raise WindowsError(
+                ERROR_DIRECTORY,
+                "A directory's validness was called into question")
 
 
 
@@ -281,6 +292,9 @@ class ListingCompatibilityTests(BytesTestCase):
         fwp = FakeWindowsPath(self.mktemp())
         self.assertRaises(filepath.UnlistableError, fwp.children)
         self.assertRaises(WindowsError, fwp.children)
+
+    if not platform.isWindows():
+        test_windowsErrorExcept.skip = "Only relevant on on Windows."
 
 
     def test_alwaysCatchOSError(self):
@@ -1199,10 +1213,9 @@ class FilePathTests(AbstractFilePathTests):
         Windows platforms.)
         """
         path = filepath.FilePath(self.mktemp())
-        f = path.create()
-        self.assertIn("b", f.mode)
-        f.write(b"\n")
-        f.close()
+        with path.create() as f:
+            self.assertIn("b", f.mode)
+            f.write(b"\n")
         with open(path.path, "rb") as fp:
             read = fp.read()
             self.assertEqual(read, b"\n")
@@ -1225,8 +1238,7 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(f.read(), b'abc\ndef')
 
         # Re-opening that file in write mode should erase whatever was there.
-        f = writer.open('w')
-        f.close()
+        writer.open('w').close()
         with writer.open() as f:
             self.assertEqual(f.read(), b'')
 
@@ -1246,7 +1258,7 @@ class FilePathTests(AbstractFilePathTests):
         with appender.open('r+') as f:
             self.assertEqual(f.read(), b'abcdef')
             # ANSI C *requires* an fseek or an fgetpos between an fread and an
-            # fwrite or an fwrite and a fread.  We can't reliable get Python to
+            # fwrite or an fwrite and an fread.  We can't reliably get Python to
             # invoke fgetpos, so we seek to a 0 byte offset from the current
             # position instead.  Also, Python sucks for making this seek
             # relative to 1 instead of a symbolic constant representing the
@@ -1558,10 +1570,7 @@ class FilePathTests(AbstractFilePathTests):
         Verify that file inode/device/nlinks/uid/gid stats are numbers in
         a POSIX environment
         """
-        if _PY3:
-            numbers = int
-        else:
-            numbers = (int, long)
+        numbers = (int, long)
         c = self.path.child(b'file1')
         for p in self.path, c:
             self.assertIsInstance(p.getInodeNumber(), numbers)

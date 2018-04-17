@@ -21,6 +21,7 @@ from twisted.internet import defer, task
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+from twisted.python.compat import _bytesChr as chr
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.common import NS
@@ -81,7 +82,7 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
         """
         Return 'foo' as the answer to two questions.
         """
-        return defer.succeed((b'foo', b'foo'))
+        return defer.succeed(('foo', 'foo'))
 
 
 
@@ -136,7 +137,7 @@ class FakeTransport(transport.SSHTransportBase):
         """
         A mock service, representing the other service offered by the server.
         """
-        name = 'nancy'
+        name = b'nancy'
 
 
         def serviceStarted(self):
@@ -153,7 +154,7 @@ class FakeTransport(transport.SSHTransportBase):
             """
             Return our fake service.
             """
-            if service == 'none':
+            if service == b'none':
                 return FakeTransport.Service
 
 
@@ -414,6 +415,23 @@ class SSHUserAuthServerTests(unittest.TestCase):
         return d.addCallback(self._checkFailed)
 
 
+    def test_unsupported_publickey(self):
+        """
+        Private key authentication fails when the public key type is
+        unsupported or the public key is corrupt.
+        """
+        blob = keys.Key.fromString(keydata.publicDSA_openssh).blob()
+
+        # Change the blob to a bad type
+        blob = NS(b'ssh-bad-type') + blob[11:]
+
+        packet = (NS(b'foo') + NS(b'none') + NS(b'publickey') + b'\x00'
+                  + NS(b'ssh-rsa') + NS(blob))
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        return d.addCallback(self._checkFailed)
+
+
     def test_ignoreUnknownCredInterfaces(self):
         """
         L{SSHUserAuthServer} sets up
@@ -599,7 +617,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         Test that client is initialized properly.
         """
         self.assertEqual(self.authClient.user, b'foo')
-        self.assertEqual(self.authClient.instance.name, 'nancy')
+        self.assertEqual(self.authClient.instance.name, b'nancy')
         self.assertEqual(self.authClient.transport.packets,
                 [(userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy')
                     + NS(b'none'))])
@@ -699,6 +717,20 @@ class SSHUserAuthClientTests(unittest.TestCase):
         """
         self.authClient.getPassword = lambda: None
         self.assertFalse(self.authClient.tryAuth(b'password'))
+
+
+    def test_keyboardInteractive(self):
+        """
+        Make sure that the client can authenticate with the keyboard
+        interactive method.
+        """
+        self.authClient.ssh_USERAUTH_PK_OK_keyboard_interactive(
+            NS(b'') + NS(b'') + NS(b'') + b'\x00\x00\x00\x01' +
+            NS(b'Password: ') + b'\x00')
+        self.assertEqual(
+            self.authClient.transport.packets[-1],
+            (userauth.MSG_USERAUTH_INFO_RESPONSE,
+             b'\x00\x00\x00\x02' + NS(b'foo') + NS(b'foo')))
 
 
     def test_USERAUTH_PK_OK_unknown_method(self):
@@ -801,7 +833,7 @@ class LoopbackTests(unittest.TestCase):
 
     class Factory:
         class Service:
-            name = 'TestService'
+            name = b'TestService'
 
 
             def serviceStarted(self):
@@ -855,7 +887,7 @@ class LoopbackTests(unittest.TestCase):
         client.serviceStarted()
 
         def check(ignored):
-            self.assertEqual(server.transport.service.name, 'TestService')
+            self.assertEqual(server.transport.service.name, b'TestService')
         return d.addCallback(check)
 
 

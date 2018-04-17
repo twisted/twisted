@@ -48,8 +48,14 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         scriptFile = self.makeSourceFile([
                 "import sys",
-                "for s in 'hello world\\n':",
-                "    sys.stdout.write(s)",
+                "for s in b'hello world\\n':",
+                "    if hasattr(sys.stdout, 'buffer'):",
+                "        # Python 3",
+                "        s = bytes([s])",
+                "        sys.stdout.buffer.write(s)",
+                "    else:",
+                "        # Python 2",
+                "        sys.stdout.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
         return d.addCallback(self.assertEqual, b"hello world\n")
@@ -113,15 +119,25 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         scriptFile = self.makeSourceFile([
             "import sys",
-            "sys.stdout.write('hello world!\\n')",
-            "sys.stderr.write('goodbye world!\\n')",
+            "if hasattr(sys.stdout, 'buffer'):",
+            "    # Python 3",
+            "    sys.stdout.buffer.write(b'hello world!\\n')",
+            "    sys.stderr.buffer.write(b'goodbye world!\\n')",
+            "else:",
+            "    # Python 2",
+            "    sys.stdout.write(b'hello world!\\n')",
+            "    sys.stderr.write(b'goodbye world!\\n')",
             "sys.exit(1)"
             ])
 
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
             self.assertEqual(out, b"hello world!\n")
-            self.assertEqual(err, b"goodbye world!" + os.linesep.encode("ascii"))
+            if _PY3:
+                self.assertEqual(err, b"goodbye world!\n")
+            else:
+                self.assertEqual(err, b"goodbye world!" +
+                                      os.linesep)
             self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
@@ -154,9 +170,6 @@ class ProcessUtilsTests(unittest.TestCase):
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
-
-    if _PY3:
-        test_outputSignal.skip = "Test hangs on Python 3 (#8583)"
     if platform.isWindows():
         test_outputSignal.skip = "Windows doesn't have real signals."
 
@@ -210,7 +223,7 @@ class ProcessUtilsTests(unittest.TestCase):
         scriptFile = self.makeSourceFile([
                 "import os, sys, stat",
                 # Fix the permissions so we can report the working directory.
-                # On OS X (and maybe elsewhere), os.getcwd() fails with EACCES
+                # On macOS (and maybe elsewhere), os.getcwd() fails with EACCES
                 # if +x is missing from the working directory.
                 "os.chmod(%r, stat.S_IXUSR)" % (dir,),
                 "sys.stdout.write(os.getcwd())"])
@@ -226,7 +239,10 @@ class ProcessUtilsTests(unittest.TestCase):
             os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
         os.chmod(dir, 0)
 
-        d = utilFunc(self.exe, ['-u', scriptFile])
+        # Pass in -S so that if run using the coverage .pth trick, it won't be
+        # loaded and cause Coverage to try and get the current working
+        # directory (see the comments above why this can be a problem) on OSX.
+        d = utilFunc(self.exe, ['-S', '-u', scriptFile])
         d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 

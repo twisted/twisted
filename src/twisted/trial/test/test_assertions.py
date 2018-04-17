@@ -21,7 +21,7 @@ from twisted.python.util import FancyEqMixin
 from twisted.python.reflect import (
     prefixedMethods, accumulateMethods, fullyQualifiedName)
 from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version, getVersionString
+from incremental import Version, getVersionString
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, fail, succeed
@@ -896,7 +896,7 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
 
     def test_assertWarnsFilter(self):
         """
-        Test assertWarns on a warning filterd by default.
+        Test assertWarns on a warning filtered by default.
         """
         def deprecated(a):
             warnings.warn("Woo deprecated", category=PendingDeprecationWarning)
@@ -1283,7 +1283,8 @@ class CallDeprecatedTests(unittest.SynchronousTestCase):
         # by callDeprecated.  Flush it now to make sure it did happen and to
         # prevent it from showing up on stdout.
         warningsShown = self.flushWarnings()
-        self.assertEqual(len(warningsShown), 1)
+        self.assertEqual(len(warningsShown), 1,
+            "Unexpected warnings: {}".format(warningsShown))
 
 
     def test_callDeprecationWithMessage(self):

@@ -8,7 +8,7 @@ Tests for L{twisted.web.http_headers}.
 from __future__ import division, absolute_import
 
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, unicode
 from twisted.web.http_headers import Headers
 
 class BytesHeadersTests(TestCase):
@@ -72,6 +72,19 @@ class BytesHeadersTests(TestCase):
         h = Headers()
         default = object()
         self.assertIdentical(h.getRawHeaders(b"test", default), default)
+
+
+    def test_getRawHeadersWithDefaultMatchingValue(self):
+        """
+        If the object passed as the value list to L{Headers.setRawHeaders}
+        is later passed as a default to L{Headers.getRawHeaders}, the
+        result nevertheless contains encoded values.
+        """
+        h = Headers()
+        default = [u"value"]
+        h.setRawHeaders(b"key", default)
+        self.assertIsInstance(h.getRawHeaders(b"key", default)[0], bytes)
+        self.assertEqual(h.getRawHeaders(b"key", default), [b"value"])
 
 
     def test_getRawHeaders(self):
@@ -371,6 +384,25 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
         default = object()
         self.assertIdentical(h.getRawHeaders(u"test", default), default)
+        self.assertIdentical(h.getRawHeaders(u"test", None), None)
+        self.assertEqual(h.getRawHeaders(u"test", [None]), [None])
+        self.assertEqual(
+            h.getRawHeaders(u"test", [u"\N{SNOWMAN}"]),
+            [u"\N{SNOWMAN}"],
+        )
+
+
+    def test_getRawHeadersWithDefaultMatchingValue(self):
+        """
+        If the object passed as the value list to L{Headers.setRawHeaders}
+        is later passed as a default to L{Headers.getRawHeaders}, the
+        result nevertheless contains decoded values.
+        """
+        h = Headers()
+        default = [b"value"]
+        h.setRawHeaders(b"key", default)
+        self.assertIsInstance(h.getRawHeaders(u"key", default)[0], unicode)
+        self.assertEqual(h.getRawHeaders(u"key", default), [u"value"])
 
 
     def test_getRawHeaders(self):

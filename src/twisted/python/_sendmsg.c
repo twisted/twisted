@@ -278,6 +278,14 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
                 PyErr_NoMemory();
                 goto finished;
             }
+            /* From Python 3.5.2 socketmodule.c:3891:
+               Need to zero out the buffer as a workaround for glibc's
+               CMSG_NXTHDR() implementation.  After getting the pointer to
+               the next header, it checks its (uninitialized) cmsg_len
+               member to see if the "message" fits in the buffer, and
+               returns NULL if it doesn't.  Zero-filling the buffer
+               ensures that this doesn't happen. */
+            memset(message_header.msg_control, 0, all_data_len);
         } else {
             message_header.msg_control = NULL;
         }
@@ -291,7 +299,7 @@ static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywd
 
         /* Unpack the tuples into the control message. */
         struct cmsghdr *control_message = CMSG_FIRSTHDR(&message_header);
-        while ( (item = PyIter_Next(iterator)) ) {
+        while ( (item = PyIter_Next(iterator)) && control_message!=NULL ) {
             int type, level;
             Py_ssize_t data_len;
             size_t data_size;

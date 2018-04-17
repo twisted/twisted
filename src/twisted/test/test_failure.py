@@ -13,11 +13,11 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python import reflect
 from twisted.python import failure
 
-from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 
 try:
@@ -59,33 +59,20 @@ class FailureTests(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_trapRaisesCurrentFailure(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the current
-        L{failure.Failure} ie C{self}.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIs(f, untrapped)
-
-
-    if _PY3:
-        test_trapRaisesCurrentFailure.skip = (
-            "In Python3, Failure.trap raises the wrapped Exception "
-            "instead of the original Failure instance.")
-
-
     def test_trapRaisesWrappedException(self):
         """
         If the wrapped C{Exception} is not a subclass of one of the
         expected types, L{failure.Failure.trap} raises the wrapped
         C{Exception}.
         """
+        if not _PY3:
+            raise SkipTest(
+                """
+                Only expected behaviour on Python 3.
+                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
+                """
+            )
+
         exception = ValueError()
         try:
             raise exception
@@ -96,10 +83,27 @@ class FailureTests(SynchronousTestCase):
         self.assertIs(exception, untrapped)
 
 
-    if not _PY3:
-        test_trapRaisesWrappedException.skip = (
-            "In Python2, Failure.trap raises the current Failure instance "
-            "instead of the wrapped Exception.")
+    def test_trapRaisesSelf(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises itself.
+        """
+        if _PY3:
+            raise SkipTest(
+                """
+                Only expected behaviour on Python 2.
+                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
+                """
+            )
+
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+
+        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
+        self.assertIs(f, untrapped)
 
 
     def test_failureValueFromFailure(self):
@@ -287,13 +291,9 @@ class FailureTests(SynchronousTestCase):
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += '%s:%s:%s\n' % (filename, lineno, method)
 
-        if _PY3:
-            zde = "class 'ZeroDivisionError'"
-        else:
-            zde = "type 'exceptions.ZeroDivisionError'"
-
+        zde = repr(ZeroDivisionError)
         self.assertTracebackFormat(tb,
-            "Traceback: <%s>: " % (zde,),
+            "Traceback: %s: " % (zde,),
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
@@ -547,7 +547,7 @@ class FailureTests(SynchronousTestCase):
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
 
-    if not _PY3:
+    if getattr(BaseException, "__traceback__", None) is None:
         test_tracebackFromExceptionInPython3.skip = "Python 3 only."
         test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
 
@@ -558,10 +558,7 @@ class FailureTests(SynchronousTestCase):
         representation of the underlying exception.
         """
         f = getDivisionFailure()
-        if _PY3:
-            typeName = 'builtins.ZeroDivisionError'
-        else:
-            typeName = 'exceptions.ZeroDivisionError'
+        typeName = reflect.fullyQualifiedName(ZeroDivisionError)
         self.assertEqual(
             repr(f),
             '<twisted.python.failure.Failure '
@@ -838,16 +835,10 @@ class DebugModeTests(SynchronousTestCase):
         """
         # Make sure any changes we make are reversed:
         post_mortem = pdb.post_mortem
-        if _PY3:
-            origInit = failure.Failure.__init__
-        else:
-            origInit = failure.Failure.__dict__['__init__']
+        origInit = failure.Failure.__init__
         def restore():
             pdb.post_mortem = post_mortem
-            if _PY3:
-                failure.Failure.__init__ = origInit
-            else:
-                failure.Failure.__dict__['__init__'] = origInit
+            failure.Failure.__init__ = origInit
         self.addCleanup(restore)
 
         self.result = []
@@ -972,14 +963,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         self.assertEqual(len(newFailures), 1)
         self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
-
-    if _PY3:
-        # FIXME: https://twistedmatrix.com/trac/ticket/5949
-        test_findFailureInGenerator.skip = (
-            "Python 3 support to be fixed in #5949")
-        test_failureConstructionFindsOriginalFailure.skip = (
-            "Python 3 support to be fixed in #5949")
-
 
     def test_ambiguousFailureInGenerator(self):
         """

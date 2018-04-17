@@ -52,7 +52,7 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         handshake = self.output[-1]
         self.assertEqual('handshake', handshake.name)
         self.assertEqual('test:component', handshake.uri)
-        self.assertEqual(sha1(b"%s%s" % (b'12345', b'secret')).hexdigest(),
+        self.assertEqual(sha1(b'12345' + b'secret').hexdigest(),
                          unicode(handshake))
 
         # successful authentication
@@ -82,9 +82,9 @@ class ComponentAuthTests(unittest.TestCase):
         xs.dataReceived(b"<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>")
 
         # Calculate what we expect the handshake value to be
-        hv = sha1(b"%s%s" % (b"12345", b"secret")).hexdigest().encode('ascii')
+        hv = sha1(b"12345" + b"secret").hexdigest().encode('ascii')
 
-        self.assertEqual(outlist[1], b"<handshake>%s</handshake>" % (hv))
+        self.assertEqual(outlist[1], b"<handshake>" + hv + b"</handshake>")
 
         xs.dataReceived("<handshake/>")
 

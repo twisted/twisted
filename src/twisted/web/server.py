@@ -3,8 +3,14 @@
 # See LICENSE for details.
 
 """
-This is a web-server which integrates with the twisted.internet
-infrastructure.
+This is a web server which integrates with the twisted.internet infrastructure.
+
+@var NOT_DONE_YET: A token value which L{twisted.web.resource.IResource.render}
+    implementations can return to indicate that the application will later call
+    C{.write} and C{.finish} to complete the request, and that the HTTP
+    connection should be left open.
+@type NOT_DONE_YET: Opaque; do not depend on any particular type for this
+    value.
 """
 
 from __future__ import division, absolute_import
@@ -21,28 +27,24 @@ except ImportError:
             string.decode('charmap'), *args, **kwargs).encode('charmap')
 
 import zlib
+from binascii import hexlify
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
-if _PY3:
-    class Copyable:
-        """
-        Fake mixin, until twisted.spread is ported.
-        """
-else:
-    from twisted.spread.pb import Copyable, ViewPoint
+from twisted.python.compat import networkString, nativeString, intToBytes
+from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
-from twisted.python import log, reflect, failure, components
+from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.compat import escape
+from twisted.logger import Logger
 
 NOT_DONE_YET = 1
 
@@ -93,6 +95,12 @@ class Request(Copyable, http.Request, components.Componentized):
     @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
         value to send in responses if no other value is set.  L{None} disables
         the default.
+
+    @ivar _insecureSession: The L{Session} object representing state that will
+        be transmitted over plain-text HTTP.
+
+    @ivar _secureSession: The L{Session} object representing the state that
+        will be transmitted only over HTTPS.
     """
 
     defaultContentType = b"text/html"
@@ -102,6 +110,7 @@ class Request(Copyable, http.Request, components.Componentized):
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
     _encoder = None
+    _log = Logger()
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -174,6 +183,11 @@ class Request(Copyable, http.Request, components.Componentized):
         self.prepath = []
         self.postpath = list(map(unquote, self.path[1:].split(b'/')))
 
+        # Short-circuit for requests whose path is '*'.
+        if self.path == b'*':
+            self._handleStar()
+            return
+
         try:
             resrc = self.site.getResourceFor(self)
             if resource._IEncodingResource.providedBy(resrc):
@@ -193,11 +207,20 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         if not self.startedWriting:
             # Before doing the first write, check to see if a default
-            # Content-Type header should be supplied.
-            modified = self.code != http.NOT_MODIFIED
+            # Content-Type header should be supplied. We omit it on
+            # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
+            # is a Content-Length header set to 0, as empty bodies don't need
+            # a content-type.
+            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if (modified and contentType is None and
-                self.defaultContentType is not None
+            contentLength = self.responseHeaders.getRawHeaders(
+                b'content-length'
+            )
+            contentLengthZero = contentLength and (contentLength[0] == b'0')
+
+            if (needsCT and contentType is None and
+                self.defaultContentType is not None and
+                not contentLengthZero
                     ):
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])
@@ -239,15 +262,19 @@ class Request(Copyable, http.Request, components.Componentized):
                 # resource doesn't, fake it by giving the resource
                 # a 'GET' request and then return only the headers,
                 # not the body.
-                log.msg("Using GET to fake a HEAD request for %s" %
-                        (resrc,))
+                self._log.info(
+                    "Using GET to fake a HEAD request for {resrc}",
+                    resrc=resrc
+                )
                 self.method = b"GET"
                 self._inFakeHead = True
                 body = resrc.render(self)
 
                 if body is NOT_DONE_YET:
-                    log.msg("Tried to fake a HEAD request for %s, but "
-                            "it got away from me." % resrc)
+                    self._log.info(
+                        "Tried to fake a HEAD request for {resrc}, but "
+                        "it got away from me.", resrc=resrc
+                    )
                     # Oh well, I guess we won't include the content length.
                 else:
                     self.setHeader(b'content-length', intToBytes(len(body)))
@@ -295,10 +322,12 @@ class Request(Copyable, http.Request, components.Componentized):
         if self.method == b"HEAD":
             if len(body) > 0:
                 # This is a Bad Thing (RFC 2616, 9.4)
-                log.msg("Warning: HEAD request %s for resource %s is"
-                        " returning a message body."
-                        "  I think I'll eat it."
-                        % (self, resrc))
+                self._log.info(
+                    "Warning: HEAD request {slf} for resource {resrc} is"
+                    " returning a message body. I think I'll eat it.",
+                    slf=self,
+                    resrc=resrc
+                )
                 self.setHeader(b'content-length',
                                intToBytes(len(body)))
             self.write(b'')
@@ -310,7 +339,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
 
     def processingFailed(self, reason):
-        log.err(reason)
+        """
+        Finish this request with an indication that processing failed and
+        possibly display a traceback.
+
+        @param reason: Reason this request has failed.
+        @type reason: L{twisted.python.failure.Failure}
+
+        @return: The reason passed to this method.
+        @rtype: L{twisted.python.failure.Failure}
+        """
+        self._log.failure('', failure=reason)
         if self.site.displayTracebacks:
             body = (b"<html><head><title>web.Server Traceback"
                     b" (most recent call last)</title></head>"
@@ -386,27 +425,74 @@ class Request(Copyable, http.Request, components.Componentized):
 
     ### these calls remain local
 
-    session = None
+    _secureSession = None
+    _insecureSession = None
+
+    @property
+    def session(self):
+        """
+        If a session has already been created or looked up with
+        L{Request.getSession}, this will return that object.  (This will always
+        be the session that matches the security of the request; so if
+        C{forceNotSecure} is used on a secure request, this will not return
+        that session.)
+
+        @return: the session attribute
+        @rtype: L{Session} or L{None}
+        """
+        if self.isSecure():
+            return self._secureSession
+        else:
+            return self._insecureSession
 
 
-    def getSession(self, sessionInterface=None):
+    def getSession(self, sessionInterface=None, forceNotSecure=False):
+        """
+        Check if there is a session cookie, and if not, create it.
+
+        By default, the cookie with be secure for HTTPS requests and not secure
+        for HTTP requests.  If for some reason you need access to the insecure
+        cookie from a secure request you can set C{forceNotSecure = True}.
+
+        @param forceNotSecure: Should we retrieve a session that will be
+            transmitted over HTTP, even if this L{Request} was delivered over
+            HTTPS?
+        @type forceNotSecure: L{bool}
+        """
+        # Make sure we aren't creating a secure session on a non-secure page
+        secure = self.isSecure() and not forceNotSecure
+
+        if not secure:
+            cookieString = b"TWISTED_SESSION"
+            sessionAttribute = "_insecureSession"
+        else:
+            cookieString = b"TWISTED_SECURE_SESSION"
+            sessionAttribute = "_secureSession"
+
+        session = getattr(self, sessionAttribute)
+
         # Session management
-        if not self.session:
-            cookiename = b"_".join([b'TWISTED_SESSION'] + self.sitepath)
+        if not session:
+            cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
-                    self.session = self.site.getSession(sessionCookie)
+                    session = self.site.getSession(sessionCookie)
                 except KeyError:
                     pass
             # if it still hasn't been set, fix it up.
-            if not self.session:
-                self.session = self.site.makeSession()
-                self.addCookie(cookiename, self.session.uid, path=b'/')
-        self.session.touch()
+            if not session:
+                session = self.site.makeSession()
+                self.addCookie(cookiename, session.uid, path=b"/",
+                               secure=secure)
+
+        session.touch()
+        setattr(self, sessionAttribute, session)
+
         if sessionInterface:
-            return self.session.getComponent(sessionInterface)
-        return self.session
+            return session.getComponent(sessionInterface)
+
+        return session
 
 
     def _prePathURL(self, prepath):
@@ -451,6 +537,27 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         return self.appRootURL
 
+
+    def _handleStar(self):
+        """
+        Handle receiving a request whose path is '*'.
+
+        RFC 7231 defines an OPTIONS * request as being something that a client
+        can send as a low-effort way to probe server capabilities or readiness.
+        Rather than bother the user with this, we simply fast-path it back to
+        an empty 200 OK. Any non-OPTIONS verb gets a 405 Method Not Allowed
+        telling the client they can only use OPTIONS.
+        """
+        if self.method == b'OPTIONS':
+            self.setResponseCode(http.OK)
+        else:
+            self.setResponseCode(http.NOT_ALLOWED)
+            self.setHeader(b'Allow', b'OPTIONS')
+
+        # RFC 7231 says we MUST set content-length 0 when responding to this
+        # with no body.
+        self.setHeader(b'Content-Length', b'0')
+        self.finish()
 
 
 @implementer(iweb._IRequestEncoderFactory)
@@ -634,6 +741,7 @@ class Site(http.HTTPFactory):
     displayTracebacks = True
     sessionFactory = Session
     sessionCheckTime = 1800
+    _entropy = os.urandom
 
     def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
@@ -668,13 +776,8 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
-        from binascii import hexlify
-        from hashlib import md5
-        import random
         self.counter = self.counter + 1
-        return hexlify(md5(networkString(
-                "%s_%s" % (str(random.random()), str(self.counter)))
-                   ).digest())
+        return hexlify(self._entropy(32))
 
 
     def makeSession(self):

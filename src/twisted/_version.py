@@ -1,11 +1,11 @@
-# Copyright (c) Twisted Matrix Laboratories.
-# See LICENSE for details.
-
-# This is an auto-generated file. Do not edit it.
-
 """
 Provides Twisted version information.
 """
 
-from twisted.python import versions
-version = versions.Version('twisted', 16, 3, 0)
+# This file is auto-generated! Do not edit!
+# Use `python -m incremental.update Twisted` to change this file.
+
+from incremental import Version
+
+__version__ = Version('Twisted', 17, 9, 1, dev=0)
+__all__ = ["__version__"]

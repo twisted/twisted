@@ -38,14 +38,15 @@ def outputFromPythonScript(script, *args):
     @rtype: L{bytes}
     """
     with open(devnull, "rb") as nullInput, open(devnull, "wb") as nullError:
-        stdout = Popen(
+        process = Popen(
             [executable, script.path] + list(args),
-            stdout=PIPE, stderr=nullError, stdin=nullInput).stdout.read()
+            stdout=PIPE, stderr=nullError, stdin=nullInput)
+        stdout = process.communicate()[0]
     return stdout
 
 
 
-class ScriptTestsMixin:
+class ScriptTestsMixin(object):
     """
     Mixin for L{TestCase} subclasses which defines a helper function for testing
     a Twisted-using script.

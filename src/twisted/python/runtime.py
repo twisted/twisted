@@ -7,15 +7,9 @@ from __future__ import division, absolute_import
 import os
 import sys
 import time
-import imp
 import warnings
 
-from twisted.python import compat
-
-if compat._PY3:
-    _threadModule = "_thread"
-else:
-    _threadModule = "thread"
+from twisted.python._oldstyle import _oldStyle
 
 
 
@@ -44,6 +38,7 @@ _timeFunctions = {
 
 
 
+@_oldStyle
 class Platform:
     """
     Gives us information about the platform we're running on.
@@ -83,9 +78,9 @@ class Platform:
 
     def isMacOSX(self):
         """
-        Check if current platform is Mac OS X.
+        Check if current platform is macOS.
 
-        @return: C{True} if the current platform has been detected as OS X.
+        @return: C{True} if the current platform has been detected as macOS.
         @rtype: C{bool}
         """
         return self._platform == "darwin"
@@ -207,7 +202,8 @@ class Platform:
         @rtype: C{bool}
         """
         try:
-            return imp.find_module(_threadModule)[0] is None
+            import threading
+            return threading is not None # shh pyflakes
         except ImportError:
             return False
 

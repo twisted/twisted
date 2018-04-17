@@ -19,10 +19,10 @@ __all__ = [
     'RedirectWithNoLocation',
     ]
 
-from collections import Sequence
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString, intToBytes
+from twisted.python.compat import unicode, nativeString, intToBytes, Sequence
+
 
 
 def _codeToMessage(code):
@@ -220,6 +220,10 @@ class UnsupportedMethod(Exception):
             raise TypeError(
                 "First argument must be a sequence of supported methods, "
                 "but my first argument is not a sequence.")
+
+
+    def __str__(self):
+        return "Expected one of %r" % (self.allowedMethods,)
 
 
 

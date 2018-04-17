@@ -6,6 +6,7 @@ Tests for L{twisted.python._inotify}.
 """
 
 from twisted.trial.unittest import TestCase
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 if platform.supportsINotify():
@@ -117,4 +118,4 @@ class INotifyTests(TestCase):
             def inotify_add_watch(self, fd, path, mask):
                 return -1
         self.patch(_inotify, 'libc', libc())
-        self.assertRaises(INotifyError, add, 3, '/foo', 0)
+        self.assertRaises(INotifyError, add, 3, FilePath('/foo'), 0)

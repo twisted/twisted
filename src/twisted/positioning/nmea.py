@@ -23,12 +23,13 @@ from __future__ import absolute_import, division
 
 import operator
 import datetime
+
 from zope.interface import implementer
+from constantly import Values, ValueConstant
 
 from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.constants import Values, ValueConstant
 from twisted.python.compat import reduce, izip, nativeString, iterbytes
 
 
@@ -383,7 +384,7 @@ class NMEASentence(_sentence._BaseSentence):
         position on a plane tangential to the geoid. (HDOP)
     @ivar verticalDilutionOfPrecision: As C{horizontalDilutionOfPrecision},
         but for a position on a plane perpendicular to the geoid. (VDOP)
-    @ivar positionDilutionOfPrecision: Euclidian norm of HDOP and VDOP.
+    @ivar positionDilutionOfPrecision: Euclidean norm of HDOP and VDOP.
     @ivar satellitePRN: The unique identifcation number of a particular
         satellite. Optionally suffixed with C{_N} if multiple satellites are
         referenced in a sentence, where C{N in range(4)}.

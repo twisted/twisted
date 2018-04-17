@@ -12,6 +12,9 @@ to format methods.
 
 import calendar
 
+from twisted.python._oldstyle import _oldStyle
+
+
 class FormException(Exception):
     """An error occurred calling the form method.
     """
@@ -26,6 +29,8 @@ class InputError(FormException):
     """
 
 
+
+@_oldStyle
 class Argument:
     """Base class for form arguments."""
 
@@ -68,14 +73,14 @@ class String(Argument):
     defaultDefault = ''
     min = 0
     max = None
-    
+
     def __init__(self, name, default=None, shortDesc=None,
                  longDesc=None, hints=None, allowNone=1, min=0, max=None):
         Argument.__init__(self, name, default=default, shortDesc=shortDesc,
                           longDesc=longDesc, hints=hints, allowNone=allowNone)
         self.min = min
         self.max = max
-    
+
     def coerce(self, val):
         s = str(val)
         if len(s) < self.min:
@@ -97,7 +102,7 @@ class Password(String):
 
 class VerifiedPassword(String):
     """A string that should be obscured when input and needs verification."""
-    
+
     def coerce(self, vals):
         if len(vals) != 2 or vals[0] != vals[1]:
             raise InputError("Please enter the same password twice.")
@@ -285,12 +290,12 @@ class Date(Argument):
         self.allowNone = allowNone
         if not allowNone:
             self.defaultDefault = (1970, 1, 1)
-    
+
     def coerce(self, args):
         """Return tuple of ints (year, month, day)."""
         if tuple(args) == ("", "", "") and self.allowNone:
             return None
-        
+
         try:
             year, month, day = map(positiveInt, args)
         except ValueError:
@@ -326,13 +331,20 @@ class Submit(Choice):
             return Choice.coerce(self, value)
 
 
+
+@_oldStyle
 class PresentationHint:
     """
     A hint to a particular system.
     """
 
 
+
+@_oldStyle
 class MethodSignature:
+    """
+    A signature of a callable.
+    """
 
     def __init__(self, *sigList):
         """
@@ -348,6 +360,8 @@ class MethodSignature:
         return FormMethod(self, callable, takesRequest)
 
 
+
+@_oldStyle
 class FormMethod:
     """A callable object with a signature."""
 

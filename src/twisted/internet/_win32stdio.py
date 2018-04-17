@@ -4,13 +4,16 @@
 Windows-specific implementation of the L{twisted.internet.stdio} interface.
 """
 
+from __future__ import absolute_import, division
+
 import win32api
-import os, msvcrt
+import os
+import msvcrt
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IHalfCloseableProtocol, ITransport, IAddress
-from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.interfaces import (IHalfCloseableProtocol, ITransport,
+                                         IConsumer, IPushProducer, IAddress)
 
 from twisted.internet import _pollingfile, main
 from twisted.python.failure import Failure
@@ -55,13 +58,16 @@ class StandardIO(_pollingfile._PollingTimer):
 
         self.proto.makeConnection(self)
 
+
     def dataReceived(self, data):
         self.proto.dataReceived(data)
+
 
     def readConnectionLost(self):
         if IHalfCloseableProtocol.providedBy(self.proto):
             self.proto.readConnectionLost()
         self.checkConnLost()
+
 
     def writeConnectionLost(self):
         if IHalfCloseableProtocol.providedBy(self.proto):
@@ -69,6 +75,7 @@ class StandardIO(_pollingfile._PollingTimer):
         self.checkConnLost()
 
     connsLost = 0
+
 
     def checkConnLost(self):
         self.connsLost += 1
@@ -82,16 +89,20 @@ class StandardIO(_pollingfile._PollingTimer):
     def write(self, data):
         self.stdout.write(data)
 
+
     def writeSequence(self, seq):
-        self.stdout.write(''.join(seq))
+        self.stdout.write(b''.join(seq))
+
 
     def loseConnection(self):
         self.disconnecting = True
         self.stdin.close()
         self.stdout.close()
 
+
     def getPeer(self):
         return Win32PipeAddress()
+
 
     def getHost(self):
         return Win32PipeAddress()
@@ -100,6 +111,7 @@ class StandardIO(_pollingfile._PollingTimer):
 
     def registerProducer(self, producer, streaming):
         return self.stdout.registerProducer(producer, streaming)
+
 
     def unregisterProducer(self):
         return self.stdout.unregisterProducer()
@@ -116,6 +128,6 @@ class StandardIO(_pollingfile._PollingTimer):
     def pauseProducing(self):
         self.stdin.pauseProducing()
 
+
     def resumeProducing(self):
         self.stdin.resumeProducing()
-

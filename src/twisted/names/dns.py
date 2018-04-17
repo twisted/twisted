@@ -196,7 +196,7 @@ EBADVERSION = 16
 
 class IRecord(Interface):
     """
-    An single entry in a zone of authority.
+    A single entry in a zone of authority.
     """
 
     TYPE = Attribute("An indicator of what kind of record this is.")
@@ -881,22 +881,26 @@ class RRHeader(tputil.FancyEqMixin):
         @param cls: The query class.
 
         @type ttl: L{int}
-        @param ttl: Time to live for this record.
+        @param ttl: Time to live for this record.  This will be
+            converted to an L{int}.
 
         @type payload: An object implementing C{IEncodable}
         @param payload: A Query Type specific data object.
 
+        @raises TypeError: if the ttl cannot be converted to an L{int}.
         @raises ValueError: if the ttl is negative.
         """
         assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
 
-        if ttl < 0:
+        integralTTL = int(ttl)
+
+        if integralTTL < 0:
             raise ValueError("TTL cannot be negative")
 
         self.name = Name(name)
         self.type = type
         self.cls = cls
-        self.ttl = ttl
+        self.ttl = integralTTL
         self.payload = payload
         self.auth = auth
 
@@ -2036,6 +2040,43 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
+def _getDisplayableArguments(obj, alwaysShow, fieldNames):
+    """
+    Inspect the function signature of C{obj}'s constructor,
+    and get a list of which arguments should be displayed.
+    This is a helper function for C{_compactRepr}.
+
+    @param obj: The instance whose repr is being generated.
+    @param alwaysShow: A L{list} of field names which should always be shown.
+    @param fieldNames: A L{list} of field attribute names which should be shown
+        if they have non-default values.
+    @return: A L{list} of displayable arguments.
+    """
+    displayableArgs = []
+    if _PY3:
+        # Get the argument names and values from the constructor.
+        signature = inspect.signature(obj.__class__.__init__)
+        for name in fieldNames:
+            defaultValue = signature.parameters[name].default
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                displayableArgs.append(' %s=%r' % (name, fieldValue))
+    else:
+        # Get the argument names and values from the constructor.
+        argspec = inspect.getargspec(obj.__class__.__init__)
+        # Reverse the args and defaults to avoid mapping positional arguments
+        # which don't have a default.
+        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        for name in fieldNames:
+            defaultValue = defaults.get(name)
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                displayableArgs.append(' %s=%r' % (name, fieldValue))
+
+    return displayableArgs
+
+
+
 def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
                  sectionNames=None):
     """
@@ -2071,18 +2112,8 @@ def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
         if name in alwaysShow or getattr(obj, name, False) == True:
             setFlags.append(name)
 
-    out = ['<', obj.__class__.__name__]
-
-    # Get the argument names and values from the constructor.
-    argspec = inspect.getargspec(obj.__class__.__init__)
-    # Reverse the args and defaults to avoid mapping positional arguments
-    # which don't have a default.
-    defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-    for name in fieldNames:
-        defaultValue = defaults.get(name)
-        fieldValue = getattr(obj, name, defaultValue)
-        if (name in alwaysShow) or (fieldValue != defaultValue):
-            out.append(' %s=%r' % (name, fieldValue))
+    displayableArgs = _getDisplayableArguments(obj, alwaysShow, fieldNames)
+    out = ['<', obj.__class__.__name__] + displayableArgs
 
     if setFlags:
         out.append(' flags=%s' % (','.join(setFlags),))

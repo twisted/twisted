@@ -8,11 +8,14 @@ clients and servers to forward arbitrary TCP data across the connection.
 Maintainer: Paul Swartz
 """
 
+from __future__ import division, absolute_import
+
 import struct
 
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
+from twisted.python.compat import _PY3, unicode
 
 from twisted.conch.ssh import common, channel
 
@@ -38,7 +41,7 @@ class SSHListenForwardingChannel(channel.SSHChannel):
         if len(self.client.buf)>1:
             b = self.client.buf[1:]
             self.write(b)
-        self.client.buf = ''
+        self.client.buf = b''
 
     def openFailed(self, reason):
         self.closed()
@@ -57,11 +60,11 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
 class SSHListenClientForwardingChannel(SSHListenForwardingChannel):
 
-    name = 'direct-tcpip'
+    name = b'direct-tcpip'
 
 class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
 
-    name = 'forwarded-tcpip'
+    name = b'forwarded-tcpip'
 
 
 
@@ -72,14 +75,14 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
     @ivar hostport: C{(host, port)} requested by client as forwarding
         destination.
-    @type hostport: C{tupple} or a C{sequence}
+    @type hostport: L{tuple} or a C{sequence}
 
     @ivar client: Protocol connected to the forwarding destination.
     @type client: L{protocol.Protocol}
 
     @ivar clientBuf: Data received while forwarding channel is not yet
         connected.
-    @type clientBuf: C{bytes}
+    @type clientBuf: L{bytes}
 
     @var  _reactor: Reactor used for TCP connections.
     @type _reactor: A reactor.
@@ -94,7 +97,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.hostport = hostport
         self.client = None
-        self.clientBuf = ''
+        self.clientBuf = b''
 
 
     def channelOpen(self, specificData):
@@ -123,7 +126,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
             self.clientBuf = None
         if self.client.buf[1:]:
             self.write(self.client.buf[1:])
-        self.client.buf = ''
+        self.client.buf = b''
 
 
     def _close(self, reason):
@@ -171,7 +174,7 @@ class SSHForwardingClient(protocol.Protocol):
 
     def __init__(self, channel):
         self.channel = channel
-        self.buf = '\000'
+        self.buf = b'\000'
 
     def dataReceived(self, data):
         if self.buf:
@@ -197,6 +200,10 @@ def packOpen_direct_tcpip(destination, source):
     """
     (connHost, connPort) = destination
     (origHost, origPort) = source
+    if isinstance(connHost, unicode):
+        connHost = connHost.encode("utf-8")
+    if isinstance(origHost, unicode):
+        origHost = origHost.encode("utf-8")
     conn = common.NS(connHost) + struct.pack('>L', connPort)
     orig = common.NS(origHost) + struct.pack('>L', origPort)
     return conn + orig
@@ -207,8 +214,12 @@ def unpackOpen_direct_tcpip(data):
     """Unpack the data to a usable format.
     """
     connHost, rest = common.getNS(data)
+    if _PY3 and isinstance(connHost, bytes):
+        connHost = connHost.decode("utf-8")
     connPort = int(struct.unpack('>L', rest[:4])[0])
     origHost, rest = common.getNS(rest[4:])
+    if _PY3 and isinstance(origHost, bytes):
+        origHost = origHost.decode("utf-8")
     origPort = int(struct.unpack('>L', rest[:4])[0])
     return (connHost, connPort), (origHost, origPort)
 
@@ -230,6 +241,8 @@ def packGlobal_tcpip_forward(peer):
 
 def unpackGlobal_tcpip_forward(data):
     host, rest = common.getNS(data)
+    if _PY3 and isinstance(host, bytes):
+        host = host.decode("utf-8")
     port = int(struct.unpack('>L', rest[:4])[0])
     return host, port
 

@@ -14,7 +14,7 @@ from hashlib import md5
 
 from zope.interface import Interface, Attribute, implementer
 
-from twisted.python.compat import iteritems
+from twisted.python.compat import iteritems, networkString
 
 
 class ISASLMechanism(Interface):
@@ -82,9 +82,9 @@ class Plain(object):
 
 
     def getInitialResponse(self):
-        return b"%s\x00%s\x00%s" % (self.authzid.encode('utf-8'),
-                                    self.authcid.encode('utf-8'),
-                                    self.password.encode('utf-8'))
+        return (self.authzid.encode('utf-8') + b"\x00" +
+                self.authcid.encode('utf-8') + b"\x00" +
+                self.password.encode('utf-8'))
 
 
 
@@ -211,9 +211,9 @@ class DigestMD5(object):
         for name, value in iteritems(directives):
             if name in (b'username', b'realm', b'cnonce',
                         b'nonce', b'digest-uri', b'authzid', b'cipher'):
-                directive = b'%s="%s"' % (name, value)
+                directive = name + b'=' + value
             else:
-                directive = b'%s=%s' % (name, value)
+                directive = name + b'=' + value
 
             directive_list.append(directive)
 
@@ -236,14 +236,16 @@ class DigestMD5(object):
             return binascii.b2a_hex(n)
 
         def KD(k, s):
-            return H(b'%s:%s' % (k, s))
+            return H(k + b':' + s)
 
-        a1 = b"%s:%s:%s" % (
-            H(b"%s:%s:%s" % (username, realm, password)), nonce, cnonce)
-        a2 = b"AUTHENTICATE:%s" % (uri,)
+        a1 = (H(username + b":" + realm + b":" + password) + b":" +
+              nonce + b":" +
+              cnonce)
+        a2 = b"AUTHENTICATE:" + uri
 
-        response = HEX(KD(HEX(H(a1)), b"%s:%s:%s:%s:%s" % (
-                    nonce, nc, cnonce, b"auth", HEX(H(a2)))))
+        response = HEX(KD(HEX(H(a1)),
+                       nonce + b":" + nc + b":" + cnonce + b":" +
+                       b"auth" + b":" + HEX(H(a2))))
         return response
 
 
@@ -263,7 +265,7 @@ class DigestMD5(object):
             # TODO - add error checking
             raise
 
-        nc = b'%08x' % (1,) # TODO: support subsequent auth.
+        nc = networkString('%08x' % (1,)) # TODO: support subsequent auth.
         cnonce = self._gen_nonce()
         qop = b'auth'
 
@@ -286,6 +288,6 @@ class DigestMD5(object):
 
 
     def _gen_nonce(self):
-        return md5(b"%f:%f:%d" % (random.random(),
-                                  time.time(),
-                                  os.getpid())).hexdigest().encode('ascii')
+        nonceString = "%f:%f:%d" % (random.random(), time.time(), os.getpid())
+        nonceBytes = networkString(nonceString)
+        return md5(nonceBytes).hexdigest().encode('ascii')

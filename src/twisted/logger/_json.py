@@ -7,6 +7,8 @@ Tools for saving and loading log events in a structured format.
 """
 
 import types
+
+from constantly import NamedConstant
 from json import dumps, loads
 from uuid import UUID
 
@@ -14,9 +16,8 @@ from ._flatten import flattenEvent
 from ._file import FileLogObserver
 from ._levels import LogLevel
 from ._logger import Logger
-from twisted.python.constants import NamedConstant
 
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, _PY3
 from twisted.python.failure import Failure
 
 log = Logger()
@@ -52,7 +53,7 @@ def asBytes(obj):
     bytes.  This function converts _all_ native strings within a
     JSON-deserialized object to bytes.
 
-    @param obj: A object to convert to bytes.
+    @param obj: An object to convert to bytes.
     @type obj: L{object}
 
     @return: A string of UTF-8 bytes.
@@ -81,13 +82,17 @@ def failureFromJSON(failureDict):
     @rtype: L{Failure}
     """
     # InstanceType() is only available in Python 2 and lower.
-    # __new__ is only available in Python 3 and higher.
+    # __new__ is only available on new-style classes.
     newFailure = getattr(Failure, "__new__", None)
     if newFailure is None:
-        failureDict = asBytes(failureDict)
         f = types.InstanceType(Failure)
     else:
         f = newFailure(Failure)
+
+    if not _PY3:
+        # Python 2 needs the failure dictionary as purely bytes, not text
+        failureDict = asBytes(failureDict)
+
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
     f.__dict__ = failureDict

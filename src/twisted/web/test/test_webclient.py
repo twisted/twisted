@@ -16,15 +16,15 @@ except ImportError:
     from urllib.parse import urlparse, urljoin
 
 from twisted.python.compat import networkString, nativeString, intToBytes
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data
 from twisted.web.util import Redirect
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
-from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
-from twisted.test.proto_helpers import StringTransport
+from twisted.test.proto_helpers import (
+    StringTransport, waitUntilAllDisconnected, EventLoggingObserver)
 
 try:
     from twisted.internet import ssl
@@ -32,6 +32,10 @@ except:
     ssl = None
 
 from twisted import test
+from twisted.logger import (globalLogPublisher, FilteringLogObserver,
+                            LogLevelFilterPredicate, LogLevel, Logger)
+
+
 serverPEM = FilePath(test.__file__).sibling('server.pem')
 serverPEMPath = serverPEM.asBytesMode().path
 
@@ -253,6 +257,9 @@ class HTTPPageGetterTests(unittest.TestCase):
     Tests for L{HTTPPagerGetter}, the HTTP client protocol implementation
     used to implement L{getPage}.
     """
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def test_earlyHeaders(self):
         """
         When a connection is made, L{HTTPPagerGetter} sends the headers from
@@ -292,6 +299,10 @@ class HTTPPageGetterTests(unittest.TestCase):
 
 
 class WebClientTests(unittest.TestCase):
+    suppress = [util.suppress(category=DeprecationWarning)]
+    _log = Logger()
+
+
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -344,11 +355,13 @@ class WebClientTests(unittest.TestCase):
         # the connection and cleaned up after themselves.
         for n in range(min(len(connections), self.cleanupServerConnections)):
             proto = connections.pop()
-            msg("Closing %r" % (proto,))
-            proto.transport.loseConnection()
-        if connections:
-            msg("Some left-over connections; this test is probably buggy.")
-        return self.port.stopListening()
+            self._log.info("Closing {proto}", proto=proto)
+            proto.transport.abortConnection()
+        d = self.port.stopListening()
+
+        return defer.DeferredList([waitUntilAllDisconnected(
+            reactor, list(self.wrapper.protocols.keys())), d])
+
 
     def getURL(self, path):
         host = "http://127.0.0.1:%d/" % self.portno
@@ -399,22 +412,43 @@ class WebClientTests(unittest.TestCase):
         d.addCallback(cbFailed)
         return d
 
+
     def test_downloadPageLogsFileCloseError(self):
         """
         If there is an exception closing the file being written to after the
         connection is prematurely closed, that exception is logged.
         """
+        exc = IOError(ENOSPC, "No file left on device")
+
         class BrokenFile:
             def write(self, bytes):
                 pass
 
             def close(self):
-                raise IOError(ENOSPC, "No file left on device")
+                raise exc
+
+        logObserver = EventLoggingObserver()
+        filtered = FilteringLogObserver(
+            logObserver,
+            [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
+        )
+        globalLogPublisher.addObserver(filtered)
+        self.addCleanup(lambda: globalLogPublisher.removeObserver(filtered))
 
         d = client.downloadPage(self.getURL("broken"), BrokenFile())
         d = self.assertFailure(d, client.PartialDownloadError)
+
         def cbFailed(ignored):
+            self.assertEquals(1, len(logObserver))
+            event = logObserver[0]
+            f = event["log_failure"]
+            self.assertIsInstance(f.value, IOError)
+            self.assertEquals(
+                f.value.args,
+                exc.args
+            )
             self.assertEqual(len(self.flushLoggedErrors(IOError)), 1)
+
         d.addCallback(cbFailed)
         return d
 
@@ -528,8 +562,7 @@ class WebClientTests(unittest.TestCase):
     def testDownloadPageError3(self):
         # make sure failures in open() are caught too. This is tricky.
         # Might only work on posix.
-        tmpfile = open("unwritable", "wb")
-        tmpfile.close()
+        open("unwritable", "wb").close()
         os.chmod("unwritable", 0) # make it unwritable (to us)
         d = self.assertFailure(
             client.downloadPage(self.getURL("file"), "unwritable"),
@@ -851,6 +884,9 @@ class WebClientSSLTests(WebClientTests):
 
 
 class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def getHTTPS(self, path):
         return networkString("https://127.0.0.1:%d/%s" % (self.tlsPortno, path))
 
@@ -892,6 +928,9 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
 
 
 class CookieTests(unittest.TestCase):
+    suppress = [util.suppress(category=DeprecationWarning)]
+
+
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -944,6 +983,7 @@ class CookieTests(unittest.TestCase):
             b'Set-Cookie: CUSTOMER=WILE_E_COYOTE; path=/; expires=Wednesday, 09-Nov-99 23:12:40 GMT',
             b'Set-Cookie: PART_NUMBER=ROCKET_LAUNCHER_0001; path=/',
             b'Set-Cookie: SHIPPING=FEDEX; path=/foo',
+            b'Set-Cookie: HttpOnly;Secure',
             b'',
             b'body',
             b'more body',
@@ -968,6 +1008,8 @@ class HostHeaderTests(unittest.TestCase):
     Test that L{HTTPClientFactory} includes the port in the host header
     if needed.
     """
+    suppress = [util.suppress(category=DeprecationWarning)]
+
 
     def _getHost(self, bytes):
         """
@@ -1379,3 +1421,101 @@ class URITestsForIPv6(URITests, unittest.TestCase):
         self.assertEqual(uri.host, b"::1")
         self.assertEqual(uri.netloc, b"[::1]:80")
         self.assertEqual(uri.toBytes(), b'http://[::1]:80/index.html')
+
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests that L{client.getPage} and friends are deprecated.
+    """
+
+    def test_getPageDeprecated(self):
+        """
+        L{client.getPage} is deprecated.
+        """
+        port = reactor.listenTCP(
+            0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
+        portno = port.getHost().port
+        self.addCleanup(port.stopListening)
+        url = networkString("http://127.0.0.1:%d" % (portno,))
+
+        d = client.getPage(url)
+        warningInfo = self.flushWarnings([self.test_getPageDeprecated])
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.web.client.getPage was deprecated in "
+            "Twisted 16.7.0; please use https://pypi.org/project/treq/ or twisted.web.client.Agent instead")
+
+        return d.addErrback(lambda _: None)
+
+
+    def test_downloadPageDeprecated(self):
+        """
+        L{client.downloadPage} is deprecated.
+        """
+        port = reactor.listenTCP(
+            0, server.Site(Data(b'', 'text/plain')), interface="127.0.0.1")
+        portno = port.getHost().port
+        self.addCleanup(port.stopListening)
+        url = networkString("http://127.0.0.1:%d" % (portno,))
+
+        path = FilePath(self.mktemp())
+        d = client.downloadPage(url, path.path)
+
+        warningInfo = self.flushWarnings([self.test_downloadPageDeprecated])
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.web.client.downloadPage was deprecated in "
+            "Twisted 16.7.0; please use https://pypi.org/project/treq/ or twisted.web.client.Agent instead")
+
+        return d.addErrback(lambda _: None)
+
+
+    def _testDeprecatedClass(self, klass):
+        """
+        Assert that accessing the given class was deprecated.
+
+        @param klass: The class being deprecated.
+        @type klass: L{str}
+        """
+        getattr(client, klass)
+
+        warningInfo = self.flushWarnings()
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningInfo[0]['message'],
+            "twisted.web.client.{} was deprecated in "
+            "Twisted 16.7.0: please use https://pypi.org/project/treq/ or twisted.web.client.Agent instead".format(klass))
+
+
+    def test_httpPageGetterDeprecated(self):
+        """
+        L{client.HTTPPageGetter} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPPageGetter")
+
+
+    def test_httpPageDownloaderDeprecated(self):
+        """
+        L{client.HTTPPageDownloader} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPPageDownloader")
+
+
+    def test_httpClientFactoryDeprecated(self):
+        """
+        L{client.HTTPClientFactory} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPClientFactory")
+
+
+    def test_httpDownloaderDeprecated(self):
+        """
+        L{client.HTTPDownloader} is deprecated.
+        """
+        self._testDeprecatedClass("HTTPDownloader")

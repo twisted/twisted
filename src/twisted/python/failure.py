@@ -20,8 +20,8 @@ import inspect
 import opcode
 from inspect import getmro
 
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
 from twisted.python import reflect
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
 
 count = 0
 traceupLength = 4
@@ -29,8 +29,11 @@ traceupLength = 4
 class DefaultException(Exception):
     pass
 
+
+
 def format_frames(frames, write, detail="default"):
-    """Format and write frames.
+    """
+    Format and write frames.
 
     @param frames: is a list of frames as used by Failure.frames, with
         each frame being a list of
@@ -56,8 +59,8 @@ def format_frames(frames, write, detail="default"):
             w('%s:%s:%s\n' % (filename, lineno, method))
     elif detail == "default":
         for method, filename, lineno, localVars, globalVars in frames:
-            w( '  File "%s", line %s, in %s\n' % (filename, lineno, method))
-            w( '    %s\n' % linecache.getline(filename, lineno).strip())
+            w('  File "%s", line %s, in %s\n' % (filename, lineno, method))
+            w('    %s\n' % linecache.getline(filename, lineno).strip())
     elif detail == "verbose-vars-not-captured":
         for method, filename, lineno, localVars, globalVars in frames:
             w("%s:%d: %s(...)\n" % (filename, lineno, method))
@@ -68,10 +71,10 @@ def format_frames(frames, write, detail="default"):
             w(' [ Locals ]\n')
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  %s : %s\n" %  (name, repr(val)))
+                w("  %s : %s\n" % (name, repr(val)))
             w(' ( Globals )\n')
             for name, val in globalVars:
-                w("  %s : %s\n" %  (name, repr(val)))
+                w("  %s : %s\n" % (name, repr(val)))
 
 # slyphon: i have a need to check for this value in trial
 #          so I made it a module-level constant
@@ -86,30 +89,43 @@ class NoCurrentExceptionError(Exception):
     """
 
 
-class _Traceback(object):
+
+def _Traceback(frames):
+    """
+    Construct a fake traceback object using a list of frames. Note that
+    although frames generally include locals and globals, this information
+    is not kept by this method, since locals and globals are not used in
+    standard tracebacks.
+
+    @param frames: [(methodname, filename, lineno, locals, globals), ...]
+    """
+    assert len(frames) > 0, "Must pass some frames"
+    # We deliberately avoid using recursion here, as the frames list may be
+    # long.
+    tb = None
+    for frame in reversed(frames):
+        tb = _TracebackFrame(frame, tb)
+    return tb
+
+
+
+class _TracebackFrame(object):
     """
     Fake traceback object which can be passed to functions in the standard
     library L{traceback} module.
     """
 
-    def __init__(self, frames):
+    def __init__(self, frame, tb_next):
         """
-        Construct a fake traceback object using a list of frames. Note that
-        although frames generally include locals and globals, this information
-        is not kept by this object, since locals and globals are not used in
-        standard tracebacks.
-
-        @param frames: [(methodname, filename, lineno, locals, globals), ...]
+        @param frame: (methodname, filename, lineno, locals, globals)
+        @param tb_next: next inner _TracebackFrame object, or None if this
+           is the innermost frame.
         """
-        assert len(frames) > 0, "Must pass some frames"
-        head, frames = frames[0], frames[1:]
-        name, filename, lineno, localz, globalz = head
+        name, filename, lineno, localz, globalz = frame
         self.tb_frame = _Frame(name, filename)
         self.tb_lineno = lineno
-        if len(frames) == 0:
-            self.tb_next = None
-        else:
-            self.tb_next = _Traceback(frames)
+        self.tb_next = tb_next
+
 
 
 class _Frame(object):
@@ -133,6 +149,7 @@ class _Frame(object):
         self.f_locals = {}
 
 
+
 class _Code(object):
     """
     A fake code object, used by L{_Traceback} via L{_Frame}.
@@ -142,7 +159,8 @@ class _Code(object):
         self.co_filename = filename
 
 
-class Failure:
+
+class Failure(BaseException):
     """
     A basic abstraction for an error that has occurred.
 
@@ -164,10 +182,17 @@ class Failure:
     pickled = 0
     stack = None
 
-    # The opcode of "yield" in Python bytecode. We need this in _findFailure in
-    # order to identify whether an exception was thrown by a
-    # throwExceptionIntoGenerator.
-    _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
+    # The opcode of "yield" in Python bytecode. We need this in
+    # _findFailure in order to identify whether an exception was
+    # thrown by a throwExceptionIntoGenerator.
+    # on PY3, b'a'[0] == 97 while in py2 b'a'[0] == b'a' opcodes
+    # are stored in bytes so we need to properly account for this
+    # difference.
+    if _PY3:
+        _yieldOpcode = opcode.opmap["YIELD_VALUE"]
+    else:
+        _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
+
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
                  captureVars=False):
@@ -216,7 +241,8 @@ class Failure:
         elif exc_type is None:
             if isinstance(exc_value, Exception):
                 self.type = exc_value.__class__
-            else: #allow arbitrary objects.
+            else:
+                # Allow arbitrary objects.
                 self.type = type(exc_value)
             self.value = exc_value
         else:
@@ -228,13 +254,14 @@ class Failure:
         if tb is None:
             if exc_tb:
                 tb = exc_tb
-            elif _PY3:
+            elif getattr(self.value, "__traceback__", None):
+                # Python 3
                 tb = self.value.__traceback__
 
         frames = self.frames = []
         stack = self.stack = []
 
-        # added 2003-06-23 by Chris Armstrong. Yes, I actually have a
+        # Added 2003-06-23 by Chris Armstrong. Yes, I actually have a
         # use case where I need this traceback object, and I've made
         # sure that it'll be cleaned up.
         self.tb = tb
@@ -242,7 +269,7 @@ class Failure:
         if tb:
             f = tb.tb_frame
         elif not isinstance(self.value, Failure):
-            # we don't do frame introspection since it's expensive,
+            # We don't do frame introspection since it's expensive,
             # and if we were passed a plain exception with no
             # traceback, it's not useful anyway
             f = stackOffset = None
@@ -313,8 +340,10 @@ class Failure:
         else:
             self.parents = [self.type]
 
+
     def trap(self, *errorTypes):
-        """Trap this failure if its type is in a predetermined list.
+        """
+        Trap this failure if its type is in a predetermined list.
 
         This allows you to trap a Failure in an error callback.  It will be
         automatically re-raised if it is not a type that you expect.
@@ -344,8 +373,10 @@ class Failure:
                 raise self
         return error
 
+
     def check(self, *errorTypes):
-        """Check if this failure's type is in a predetermined list.
+        """
+        Check if this failure's type is in a predetermined list.
 
         @type errorTypes: list of L{Exception} classes or
                           fully-qualified class names.
@@ -359,11 +390,11 @@ class Failure:
                 return error
         return None
 
-
     # It would be nice to use twisted.python.compat.reraise, but that breaks
     # the stack exploration in _findFailure; possibly this can be fixed in
     # #5931.
-    if _PY3:
+    if getattr(BaseException, "with_traceback", None):
+        # Python 3
         def raiseException(self):
             raise self.value.with_traceback(self.tb)
     else:
@@ -386,6 +417,8 @@ class Failure:
         @raise StopIteration: If there are no more values in the generator.
         @raise anything else: Anything that the generator raises.
         """
+        # Note that the actual magic to find the traceback information
+        # is done in _findFailure.
         return g.throw(self.type, self.value, self.tb)
 
 
@@ -411,24 +444,25 @@ class Failure:
         # difficult anyhow, so losing the Failure objects (and thus
         # the tracebacks) here when it is used is not that big a deal.
 
-        # handle raiseException-originated exceptions
+        # Handle raiseException-originated exceptions
         if lastFrame.f_code is cls.raiseException.__code__:
             return lastFrame.f_locals.get('self')
 
-        # handle throwExceptionIntoGenerator-originated exceptions
+        # Handle throwExceptionIntoGenerator-originated exceptions
         # this is tricky, and differs if the exception was caught
         # inside the generator, or above it:
 
-        # it is only really originating from
+        # It is only really originating from
         # throwExceptionIntoGenerator if the bottom of the traceback
         # is a yield.
         # Pyrex and Cython extensions create traceback frames
-        # with no co_code, but they can't yield so we know it's okay to just return here.
+        # with no co_code, but they can't yield so we know it's okay to
+        # just return here.
         if ((not lastFrame.f_code.co_code) or
             lastFrame.f_code.co_code[lastTb.tb_lasti] != cls._yieldOpcode):
             return
 
-        # if the exception was caught above the generator.throw
+        # If the exception was caught above the generator.throw
         # (outside the generator), it will appear in the tb (as the
         # second last item):
         if secondLastTb:
@@ -436,7 +470,7 @@ class Failure:
             if frame.f_code is cls.throwExceptionIntoGenerator.__code__:
                 return frame.f_locals.get('self')
 
-        # if the exception was caught below the generator.throw
+        # If the exception was caught below the generator.throw
         # (inside the generator), it will appear in the frames' linked
         # list, above the top-level traceback item (which must be the
         # generator frame itself, thus its caller is
@@ -452,8 +486,10 @@ class Failure:
                                 reflect.qual(self.type),
                                 self.getErrorMessage())
 
+
     def __str__(self):
         return "[Failure instance: %s]" % self.getBriefTraceback()
+
 
     def __getstate__(self):
         """Avoid pickling objects in the traceback.
@@ -470,7 +506,7 @@ class Failure:
             ] for v in self.frames
         ]
 
-        # added 2003-06-23. See comment above in __init__
+        # Added 2003-06-23. See comment above in __init__
         c['tb'] = None
 
         if self.stack is not None:
@@ -496,7 +532,8 @@ class Failure:
         exception instance to L{None}.
         """
         self.__dict__ = self.__getstate__()
-        if _PY3:
+        if getattr(self.value, "__traceback__", None):
+            # Python 3
             self.value.__traceback__ = None
 
 
@@ -517,24 +554,31 @@ class Failure:
         else:
             return None
 
+
     def getErrorMessage(self):
-        """Get a string of the exception which caused this Failure."""
+        """
+        Get a string of the exception which caused this Failure.
+        """
         if isinstance(self.value, Failure):
             return self.value.getErrorMessage()
         return reflect.safe_str(self.value)
+
 
     def getBriefTraceback(self):
         io = StringIO()
         self.printBriefTraceback(file=io)
         return io.getvalue()
 
+
     def getTraceback(self, elideFrameworkCode=0, detail='default'):
         io = StringIO()
-        self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode, detail=detail)
+        self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode,
+                            detail=detail)
         return io.getvalue()
 
 
-    def printTraceback(self, file=None, elideFrameworkCode=False, detail='default'):
+    def printTraceback(self, file=None, elideFrameworkCode=False,
+                       detail='default'):
         """
         Emulate Python's standard error reporting mechanism.
 
@@ -564,9 +608,9 @@ class Failure:
 
         # Preamble
         if detail == 'verbose':
-            w( '*--- Failure #%d%s---\n' %
-               (self.count,
-                (self.pickled and ' (pickled) ') or ' '))
+            w('*--- Failure #%d%s---\n' %
+              (self.count,
+               (self.pickled and ' (pickled) ') or ' '))
         elif detail == 'brief':
             if self.frames:
                 hasFrames = 'Traceback'
@@ -577,7 +621,7 @@ class Failure:
                     reflect.safe_str(self.type),
                     reflect.safe_str(self.value)))
         else:
-            w( 'Traceback (most recent call last):\n')
+            w('Traceback (most recent call last):\n')
 
         # Frames, formatted in appropriate style
         if self.frames:
@@ -589,12 +633,12 @@ class Failure:
             # Yeah, it's not really a traceback, despite looking like one...
             w("Failure: ")
 
-        # postamble, if any
+        # Postamble, if any
         if not detail == 'brief':
             w("%s: %s\n" % (reflect.qual(self.type),
                             reflect.safe_str(self.value)))
 
-        # chaining
+        # Chaining
         if isinstance(self.value, Failure):
             # TODO: indentation for chained failures?
             file.write(" (chained Failure)\n")
@@ -604,14 +648,18 @@ class Failure:
 
 
     def printBriefTraceback(self, file=None, elideFrameworkCode=0):
-        """Print a traceback as densely as possible.
+        """
+        Print a traceback as densely as possible.
         """
         self.printTraceback(file, elideFrameworkCode, detail='brief')
 
+
     def printDetailedTraceback(self, file=None, elideFrameworkCode=0):
-        """Print a traceback with detailed locals and globals information.
+        """
+        Print a traceback with detailed locals and globals information.
         """
         self.printTraceback(file, elideFrameworkCode, detail='verbose')
+
 
 
 def _safeReprVars(varsDictItems):
@@ -645,12 +693,16 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                 strrepr = str(exc[1])
             except:
                 strrepr = "broken str"
-            print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
+            print("Jumping into debugger for post-mortem of exception '%s':" %
+                  (strrepr,))
             import pdb
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
 
 
+
 def startDebugMode():
-    """Enable debug hooks for Failures."""
+    """
+    Enable debug hooks for Failures.
+    """
     Failure.__init__ = _debuginit

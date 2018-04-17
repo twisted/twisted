@@ -1,5 +1,0 @@
-pip install -e ".[dev]" now works on Python 3,
-but it will not install these modules which do not yet work on Python 3:
- - twistedchecker
- - pydoctor
-

@@ -345,7 +345,7 @@ class ConnectionPool:
         """
         Execute an SQL query and return the result.
 
-        A DB-API cursor will will be invoked with C{cursor.execute(*args,
+        A DB-API cursor which will be invoked with C{cursor.execute(*args,
         **kw)}. The exact nature of the arguments will depend on the specific
         flavor of DB-API being used, but the first argument in C{*args} be an
         SQL statement. The result of a subsequent C{cursor.fetchall()} will be
@@ -366,7 +366,7 @@ class ConnectionPool:
         """
         Execute an SQL query and return L{None}.
 
-        A DB-API cursor will will be invoked with C{cursor.execute(*args,
+        A DB-API cursor which will be invoked with C{cursor.execute(*args,
         **kw)}. The exact nature of the arguments will depend on the specific
         flavor of DB-API being used, but the first argument in C{*args} will be
         an SQL statement. This method will not attempt to fetch any results

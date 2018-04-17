@@ -37,7 +37,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     def __init__(self, *a, **kw):
         usage.Options.__init__(self, *a, **kw)
 
-        # call the default addCheckers (for backwards compatibility) that will
+        # Call the default addCheckers (for backwards compatibility) that will
         # be used if no --auth option is provided - note that conch's
         # UNIXPasswordDatabase is used, instead of twisted.plugins.cred_unix's
         # checker

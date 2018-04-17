@@ -25,10 +25,11 @@ from __future__ import absolute_import, division
 
 import inspect
 import os
+import platform
 import socket
-import string
 import struct
 import sys
+import tokenize
 from types import MethodType as _MethodType
 
 from io import TextIOBase, IOBase
@@ -39,6 +40,36 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+if sys.version_info >= (3, 5, 0):
+    _PY35PLUS = True
+else:
+    _PY35PLUS = False
+
+if platform.python_implementation() == 'PyPy':
+    _PYPY = True
+else:
+    _PYPY = False
+
+
+
+def _shouldEnableNewStyle():
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 
 def currentframe(n=0):
@@ -61,12 +92,27 @@ def currentframe(n=0):
 
 
 def inet_pton(af, addr):
+    """
+    Emulator of L{socket.inet_pton}.
+
+    @param af: An address family to parse; C{socket.AF_INET} or
+        C{socket.AF_INET6}.
+    @type af: L{int}
+
+    @param addr: An address.
+    @type addr: native L{str}
+
+    @return: The binary packed version of the passed address.
+    @rtype: L{bytes}
+    """
+    if not addr:
+        raise ValueError("illegal IP address string passed to inet_pton")
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
     elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        if [x for x in addr if x not in string.hexdigits + ':.']:
-            raise ValueError("Illegal characters: %r" % (''.join(x),))
-
+        if '%' in addr and (addr.count('%') > 1 or addr.index("%") == 0):
+            raise ValueError("illegal IP address string passed to inet_pton")
+        addr = addr.split('%')[0]
         parts = addr.split(':')
         elided = parts.count('')
         ipv4Component = '.' in parts[-1]
@@ -105,6 +151,8 @@ def inet_pton(af, addr):
         return struct.pack('!8H', *parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
+
+
 
 def inet_ntop(af, addr):
     if af == socket.AF_INET:
@@ -187,7 +235,7 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    with open(filename, "rbU") as fin:
+    with open(filename, "rb") as fin:
         source = fin.read()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
@@ -224,6 +272,7 @@ def comparable(klass):
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
         return klass
+
 
     def __eq__(self, other):
         c = self.__cmp__(other)
@@ -443,10 +492,6 @@ if _PY3:
         return ("%d" % i).encode("ascii")
 
 
-    # Ideally we would use memoryview, but it has a number of differences from
-    # the Python 2 buffer() that make that impractical
-    # (http://bugs.python.org/issue15945, incompatibility with pyOpenSSL due to
-    # PyArg_ParseTuple differences.)
     def lazyByteSlice(object, offset=0, size=None):
         """
         Return a copy of the given bytes-like object.
@@ -461,10 +506,11 @@ if _PY3:
         @param size: Optional, if an C{int} is given limit the length of copy
             to this size.
         """
+        view = memoryview(object)
         if size is None:
-            return object[offset:]
+            return view[offset:]
         else:
-            return object[offset:(offset + size)]
+            return view[offset:(offset + size)]
 
 
     def networkString(s):
@@ -478,7 +524,6 @@ else:
 
     def intToBytes(i):
         return b"%d" % i
-
 
     lazyByteSlice = buffer
 
@@ -565,24 +610,30 @@ if _PY3:
     def iteritems(d):
         return d.items()
 
+
     def itervalues(d):
         return d.values()
+
 
     def items(d):
         return list(d.items())
 
+    range = range
     xrange = range
     izip = zip
 else:
     def iteritems(d):
         return d.iteritems()
 
+
     def itervalues(d):
         return d.itervalues()
+
 
     def items(d):
         return d.items()
 
+    range = xrange
     xrange = xrange
     from itertools import izip
     izip # shh pyflakes
@@ -627,6 +678,9 @@ def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
     L{bytes}.
+
+    This function is POSIX only; environment variables are always text strings
+    on Windows.
     """
     if not _PY3:
         # On py2, nothing to do.
@@ -663,7 +717,7 @@ def _constructMethod(cls, name, self):
 
 
 
-from twisted.python.versions import Version
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 from collections import OrderedDict
@@ -714,7 +768,7 @@ def _coercedUnicode(s):
     Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
     instead. This function mimics the behavior for Python 2. It will decode the
     byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
-    passing a byte string. Unicode strings are return as-is.
+    passing a byte string. Unicode strings are returned as-is.
 
     @param s: The string to coerce.
     @type s: L{bytes} or L{unicode}
@@ -734,9 +788,44 @@ def _coercedUnicode(s):
 
 if _PY3:
     unichr = chr
+    raw_input = input
 else:
     unichr = unichr
+    raw_input = raw_input
 
+
+
+def _bytesRepr(bytestring):
+    """
+    Provide a repr for a byte string that begins with 'b' on both
+    Python 2 and 3.
+
+    @param bytestring: The string to repr.
+    @type bytestring: L{bytes}
+
+    @raise TypeError: The input is not L{bytes}.
+
+    @return: The repr with a leading 'b'.
+    @rtype: L{bytes}
+    """
+    if not isinstance(bytestring, bytes):
+        raise TypeError("Expected bytes not %r" % (bytestring,))
+
+    if _PY3:
+        return repr(bytestring)
+    else:
+        return 'b' + repr(bytestring)
+
+
+if _PY3:
+    _tokenize = tokenize.tokenize
+else:
+    _tokenize = tokenize.generate_tokens
+
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 
 __all__ = [
@@ -761,6 +850,7 @@ __all__ = [
     "items",
     "iteritems",
     "itervalues",
+    "range",
     "xrange",
     "urllib_parse",
     "bytesEnviron",
@@ -773,6 +863,10 @@ __all__ = [
     "_b64decodebytes",
     "_bytesChr",
     "_coercedUnicode",
+    "_bytesRepr",
     "intern",
     "unichr",
+    "raw_input",
+    "_tokenize",
+    "Sequence",
 ]

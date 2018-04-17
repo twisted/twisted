@@ -5,8 +5,9 @@ source = twisted
 
 [paths]
 source=
-   twisted
+   src/twisted
    build/*/lib/python*/site-packages/twisted
+   build/*/Lib/site-packages/twisted
    build/pypy*/site-packages/twisted
 
 [report]

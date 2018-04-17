@@ -631,7 +631,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
 
 class FixtureMixin(object):
     """
-    Tests for broken fixture helper methods (e.g. setUp, tearDown).
+    Tests for fixture helper methods (e.g. setUp, tearDown).
     """
     def setUp(self):
         """
@@ -663,6 +663,25 @@ class FixtureMixin(object):
         self.assertEqual(0, self.reporter.successes)
 
 
+    def test_tearDownRunsOnTestFailure(self):
+        """
+        L{SynchronousTestCase.tearDown} runs when a test method fails.
+        """
+        suite = self.loader.loadTestsFromTestCase(
+            self.TestFailureButTearDownRuns)
+
+        case = list(suite)[0]
+        self.assertFalse(case.tornDown)
+
+        suite.run(self.reporter)
+        errors = self.reporter.errors
+        self.assertTrue(len(errors) > 0)
+        self.assertIsInstance(errors[0][1].value, erroneous.FoolishError)
+        self.assertEqual(0, self.reporter.successes)
+
+        self.assertTrue(case.tornDown)
+
+
 
 class SynchronousFixtureTests(FixtureMixin, unittest.SynchronousTestCase):
     """
@@ -674,6 +693,8 @@ class SynchronousFixtureTests(FixtureMixin, unittest.SynchronousTestCase):
         'twisted.trial.test.erroneous.SynchronousTestFailureInSetUp')
     TestFailureInTearDown = namedAny(
         'twisted.trial.test.erroneous.SynchronousTestFailureInTearDown')
+    TestFailureButTearDownRuns = namedAny(
+        'twisted.trial.test.erroneous.SynchronousTestFailureButTearDownRuns')
 
 
 
@@ -687,6 +708,8 @@ class AsynchronousFixtureTests(FixtureMixin, unittest.TestCase):
         'twisted.trial.test.erroneous.AsynchronousTestFailureInSetUp')
     TestFailureInTearDown = namedAny(
         'twisted.trial.test.erroneous.AsynchronousTestFailureInTearDown')
+    TestFailureButTearDownRuns = namedAny(
+        'twisted.trial.test.erroneous.AsynchronousTestFailureButTearDownRuns')
 
 
 
@@ -708,7 +731,7 @@ class AsynchronousSuppressionTests(SuppressionMixin, unittest.TestCase):
 
 
 
-class GCMixin:
+class GCMixin(object):
     """
     I provide a few mock tests that log setUp, tearDown, test execution and
     garbage collection. I'm used to test whether gc.collect gets called.

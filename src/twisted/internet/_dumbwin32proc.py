@@ -6,9 +6,10 @@
 http://isometri.cc/strips/gates_in_the_head
 """
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
+import sys
 
 # Win32 imports
 import win32api
@@ -21,29 +22,52 @@ import win32security
 
 import pywintypes
 
-# security attributes for pipes
+# Security attributes for pipes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
+from twisted.python.compat import items, _PY3
 from twisted.python.win32 import quoteArguments
+from twisted.python.util import _replaceIf
 
 from twisted.internet import error
 
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
 
+
+@_replaceIf(_PY3, getattr(os, 'fsdecode', None))
+def _fsdecode(x):
+    """
+    Decode a string to a L{unicode} representation, passing
+    through existing L{unicode} unchanged.
+
+    @param x: The string to be conditionally decoded.
+    @type x: L{bytes} or L{unicode}
+
+    @return: L{unicode}
+    """
+    if isinstance(x, bytes):
+        return x.decode(sys.getfilesystemencoding())
+    else:
+        return x
+
+
+
 def debug(msg):
-    import sys
     print(msg)
     sys.stdout.flush()
+
+
 
 class _Reaper(_pollingfile._PollableResource):
 
     def __init__(self, proc):
         self.proc = proc
+
 
     def checkWork(self):
         if win32event.WaitForSingleObject(self.proc.hProcess, 0) != win32event.WAIT_OBJECT_0:
@@ -52,6 +76,7 @@ class _Reaper(_pollingfile._PollableResource):
         self.deactivate()
         self.proc.processEnded(exitCode)
         return 0
+
 
 
 def _findShebang(filename):
@@ -75,10 +100,12 @@ def _findShebang(filename):
 
     @return: a str representing another filename.
     """
-    f = open(filename, 'rU')
-    if f.read(2) == '#!':
-        exe = f.readline(1024).strip('\n')
-        return exe
+    with open(filename, 'rU') as f:
+        if f.read(2) == '#!':
+            exe = f.readline(1024).strip('\n')
+            return exe
+
+
 
 def _invalidWin32App(pywinerr):
     """
@@ -97,9 +124,11 @@ def _invalidWin32App(pywinerr):
     return pywinerr.args[0] == 193
 
 
+
 @implementer(IProcessTransport, IConsumer, IProducer)
 class Process(_pollingfile._PollingTimer, BaseProcess):
-    """A process that integrates with the Twisted event loop.
+    """
+    A process that integrates with the Twisted event loop.
 
     If your subprocess is a python program, you need to:
 
@@ -132,7 +161,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         # create the pipes which will connect to the secondary process
         self.hStdoutR, hStdoutW = win32pipe.CreatePipe(sAttrs, 0)
         self.hStderrR, hStderrW = win32pipe.CreatePipe(sAttrs, 0)
-        hStdinR,  self.hStdinW  = win32pipe.CreatePipe(sAttrs, 0)
+        hStdinR, self.hStdinW  = win32pipe.CreatePipe(sAttrs, 0)
 
         win32pipe.SetNamedPipeHandleState(self.hStdinW,
                                           win32pipe.PIPE_NOWAIT,
@@ -170,26 +199,32 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         env = os.environ.copy()
         env.update(environment or {})
+        newenv = {}
+        for key, value in items(env):
+
+            key = _fsdecode(key)
+            value = _fsdecode(value)
+
+            newenv[key] = value
+
+        env = newenv
+
+        # Make sure all the arguments are Unicode.
+        args = [_fsdecode(x) for x in args]
 
         cmdline = quoteArguments(args)
+
+        # The command, too, needs to be Unicode, if it is a value.
+        command = _fsdecode(command) if command else command
+        path = _fsdecode(path) if path else path
+
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
+            flags = win32con.CREATE_NO_WINDOW
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
-                command, cmdline, None, None, 1, 0, env, path, StartupInfo)
+                command, cmdline, None, None, 1, flags, env, path, StartupInfo)
         try:
-            try:
-                doCreate()
-            except TypeError as e:
-                # win32process.CreateProcess cannot deal with mixed
-                # str/unicode environment, so we make it all Unicode
-                if e.args != ('All dictionary items must be strings, or '
-                              'all must be unicode',):
-                    raise
-                newenv = {}
-                for key, value in env.items():
-                    newenv[unicode(key)] = unicode(value)
-                env = newenv
-                doCreate()
+            doCreate()
         except pywintypes.error as pwte:
             if not _invalidWin32App(pwte):
                 # This behavior isn't _really_ documented, but let's make it
@@ -243,7 +278,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         for pipewatcher in self.stdout, self.stderr, self.stdin:
             self._addPollableResource(pipewatcher)
 
-
         # notify protocol
         self.proto.makeConnection(self)
 
@@ -267,7 +301,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{str}
+        @type data: C{bytes}
         """
         self.stdin.write(data)
 
@@ -276,7 +310,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{list} of C{str}
+        @type data: C{list} of C{bytes}
         """
         self.stdin.writeSequence(seq)
 
@@ -293,7 +327,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         @type fd: C{int}
 
         @param data: The bytes to write.
-        @type data: C{str}
+        @type data: C{bytes}
 
         @return: L{None}
 
@@ -316,19 +350,25 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         else:
             raise NotImplementedError("Only standard-IO file descriptors available on win32")
 
+
     def closeStdin(self):
         """Close the process' stdin.
         """
         self.stdin.close()
 
+
     def closeStderr(self):
         self.stderr.close()
+
 
     def closeStdout(self):
         self.stdout.close()
 
+
     def loseConnection(self):
-        """Close the process' stdout, in and err."""
+        """
+        Close the process' stdout, in and err.
+        """
         self.closeStdin()
         self.closeStdout()
         self.closeStderr()
@@ -365,10 +405,10 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
             self.hThread = None
             BaseProcess.maybeCallProcessEnded(self)
 
-
     # IConsumer
     def registerProducer(self, producer, streaming):
         self.stdin.registerProducer(producer, streaming)
+
 
     def unregisterProducer(self):
         self.stdin.unregisterProducer()
@@ -377,11 +417,14 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
     def pauseProducing(self):
         self._pause()
 
+
     def resumeProducing(self):
         self._unpause()
 
+
     def stopProducing(self):
         self.loseConnection()
+
 
     def __repr__(self):
         """

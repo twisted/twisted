@@ -2937,6 +2937,30 @@ class DecimalTests(unittest.TestCase):
 
 
 
+class FloatTests(unittest.TestCase):
+    """
+    Tests for L{amp.Float}.
+    """
+    def test_nonFloat(self):
+        """
+        L{amp.Float.toString} raises L{ValueError} if passed an object which
+        is not a L{float}.
+        """
+        argument = amp.Float()
+        self.assertRaises(ValueError, argument.toString, u"1.234")
+        self.assertRaises(ValueError, argument.toString, b"1.234")
+        self.assertRaises(ValueError, argument.toString, 1234)
+
+
+    def test_float(self):
+        """
+        L{amp.Float.toString} returns a bytestring when it is given a L{float}.
+        """
+        argument = amp.Float()
+        self.assertEqual(argument.toString(1.234), b"1.234")
+
+
+
 class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
     """
     Tests for L{ListOf} combined with L{amp.DateTime}.

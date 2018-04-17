@@ -22,14 +22,12 @@ def zipit(dirname, zfname):
     dirname = _coerceToFilesystemEncoding('', dirname)
     zfname = _coerceToFilesystemEncoding('', zfname)
 
-    zf = zipfile.ZipFile(zfname, "w")
-
-    for root, ignored, files, in os.walk(dirname):
-        for fname in files:
-            fspath = os.path.join(root, fname)
-            arcpath = os.path.join(root, fname)[len(dirname)+1:]
-            zf.write(fspath, arcpath)
-    zf.close()
+    with zipfile.ZipFile(zfname, "w") as zf:
+        for root, ignored, files, in os.walk(dirname):
+            for fname in files:
+                fspath = os.path.join(root, fname)
+                arcpath = os.path.join(root, fname)[len(dirname)+1:]
+                zf.write(fspath, arcpath)
 
 
 

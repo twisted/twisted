@@ -12,7 +12,7 @@ from unicodedata import ucd_3_2_0 as unicodedata
 
 from twisted.python.compat import unichr
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from incremental import Version
 
 from zope.interface import Interface, implementer
 

@@ -22,11 +22,14 @@ from twisted.python.deprecate import (
     getDeprecationWarningString,
     deprecated, _appendToDocstring, _getDeprecationDocstring,
     _fullyQualifiedName as fullyQualifiedName,
-    _passed, _mutuallyExclusiveArguments,
+    _mutuallyExclusiveArguments,
     deprecatedProperty,
+    _passedArgSpec, _passedSignature
 )
 
-from twisted.python.versions import Version
+from twisted.python.compat import _PY3, execfile
+from incremental import Version
+from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 
 from twisted.python.test import deprecatedattributes
@@ -253,7 +256,7 @@ class ImportedModuleAttributeTests(TwistedModulesMixin, SynchronousTestCase):
 
     _packageInit = """\
 from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
+from incremental import Version
 
 deprecatedModuleAttribute(
     Version('Package', 1, 2, 3), 'message', __name__, 'module')
@@ -391,6 +394,12 @@ def callTestFunction():
         self.addCleanup(
             lambda: (sys.modules.clear(), sys.modules.update(modules)))
 
+        # On Windows on Python 3, most FilePath interactions produce
+        # DeprecationWarnings, so flush them here so that they don't interfere
+        # with the tests.
+        if platform.isWindows() and _PY3:
+            self.flushWarnings()
+
 
     def test_warning(self):
         """
@@ -469,7 +478,7 @@ def callTestFunction():
         self.addCleanup(sys.modules.pop, module.__name__)
 
         module.callTestFunction()
-        warningsShown = self.flushWarnings()
+        warningsShown = self.flushWarnings([module.testFunction])
         warnedPath = FilePath(warningsShown[0]["filename"].encode("utf-8"))
         expectedPath = self.package.sibling(
             b'twisted_renamed_helper').child(b'module.py')
@@ -943,17 +952,22 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         Test an invocation of L{passed} with the given function, arguments, and
         keyword arguments.
 
-        @param func: A function whose argspec to pass to L{_passed}.
+        @param func: A function whose argspec will be inspected.
         @type func: A callable.
 
-        @param args: The arguments which could be passed to L{func}.
+        @param args: The arguments which could be passed to C{func}.
 
-        @param kw: The keyword arguments which could be passed to L{func}.
+        @param kw: The keyword arguments which could be passed to C{func}.
 
-        @return: L{_passed}'s return value
+        @return: L{_passedSignature} or L{_passedArgSpec}'s return value
         @rtype: L{dict}
         """
-        return _passed(inspect.getargspec(func), args, kw)
+        if getattr(inspect, "signature", None):
+            # Python 3
+            return _passedSignature(inspect.signature(func), args, kw)
+        else:
+            # Python 2
+            return _passedArgSpec(inspect.getargspec(func), args, kw)
 
 
     def test_passed_simplePositional(self):
@@ -1054,3 +1068,57 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             return a + b
 
         self.assertRaises(TypeError, func, a=3, b=4)
+
+
+    def test_invalidParameterType(self):
+        """
+        Create a fake signature with an invalid parameter
+        type to test error handling.  The valid parameter
+        types are specified in L{inspect.Parameter}.
+        """
+        class FakeSignature:
+            def __init__(self, parameters):
+                self.parameters = parameters
+
+        class FakeParameter:
+            def __init__(self, name, kind):
+                self.name = name
+                self.kind = kind
+
+        def func(a, b):
+            pass
+
+        func(1, 2)
+        parameters = inspect.signature(func).parameters
+        dummyParameters = parameters.copy()
+        dummyParameters['c'] = FakeParameter("fake", "fake")
+        fakeSig = FakeSignature(dummyParameters)
+        self.assertRaises(TypeError, _passedSignature, fakeSig, (1, 2), {})
+    if not getattr(inspect, "signature", None):
+        test_invalidParameterType.skip = "inspect.signature() not available"
+
+
+if sys.version_info >= (3,):
+    _path = FilePath(__file__).parent().child("_deprecatetests.py.3only")
+
+    _g = {}
+    execfile(_path.path, _g)
+
+    KeywordOnlyTests = _g["KeywordOnlyTests"]
+else:
+    from twisted.trial.unittest import TestCase
+
+    class KeywordOnlyTests(TestCase):
+        """
+        A dummy class to show that this test file was discovered but the tests
+        are unable to be ran in this version of Python.
+        """
+        skip = (
+            "keyword only arguments (PEP 3102) are "
+            "only in Python 3 and higher")
+
+        def test_notAvailable(self):
+            """
+            A skipped test to show that this was not ran because the Python is
+            too old.
+            """

@@ -93,8 +93,8 @@ class IQTests(unittest.TestCase):
         self.iq.send()
         idBytes = self.iq['id'].encode('utf-8')
         self.assertIn(self.xmlstream.transport.value(), [
-                      b"<iq type='get' id='%s'/>" % idBytes,
-                      b"<iq id='%s' type='get'/>" % idBytes
+                      b"<iq type='get' id='" + idBytes + b"'/>",
+                      b"<iq id='" + idBytes + b"' type='get'/>"
                       ])
 
 
@@ -1282,7 +1282,7 @@ class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
 
     def setUp(self):
         """
-        Set up a server factory with a authenticator factory function.
+        Set up a server factory with an authenticator factory function.
         """
         class TestAuthenticator(object):
             def __init__(self):

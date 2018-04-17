@@ -7,45 +7,53 @@ Tests for ssh/transport.py and the classes therein.
 
 from __future__ import absolute_import, division
 
-import struct
 import binascii
+import re
+import string
+import struct
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
+from twisted.python.reflect import requireModule
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+pyasn1 = requireModule("pyasn1")
+cryptography = requireModule("cryptography")
 
 if pyasn1 is not None and cryptography is not None:
     dependencySkip = None
-    from twisted.conch.ssh import transport, keys, factory
+    from twisted.conch.ssh import common, transport, keys, factory
     from twisted.conch.test import keydata
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.exceptions import UnsupportedAlgorithm
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
     elif cryptography is None:
         dependencySkip = "can't run without cryptography"
 
+
     class transport: # fictional modules to make classes work
         class SSHTransportBase: pass
         class SSHServerTransport: pass
         class SSHClientTransport: pass
+
+
     class factory:
         class SSHFactory:
             pass
 
-from hashlib import md5, sha1, sha256, sha512
+    class common:
+        @classmethod
+        def NS(self, arg): return b''
 
+from hashlib import md5, sha1, sha256, sha384, sha512
+from twisted import __version__ as twisted_version
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
-from twisted.conch.ssh import address, service, common, _kex
+from twisted.python.compat import iterbytes, _bytesChr as chr
+from twisted.conch.ssh import address, service, _kex
 from twisted.test import proto_helpers
 
 from twisted.conch.error import ConchError
@@ -217,7 +225,7 @@ class MockService(service.SSHService):
     @ivar started: True if this service has been started.
     @ivar stopped: True if this service has been stopped.
     """
-    name = "MockService"
+    name = b"MockService"
     started = False
     stopped = False
     protocolMessages = {0xff: "MSG_TEST", 71: "MSG_fiction"}
@@ -254,7 +262,7 @@ class MockFactory(factory.SSHFactory):
     A mocked-up factory based on twisted.conch.ssh.factory.SSHFactory.
     """
     services = {
-        'ssh-userauth': MockService}
+        b'ssh-userauth': MockService}
 
 
     def getPublicKeys(self):
@@ -285,14 +293,12 @@ class MockFactory(factory.SSHFactory):
             C{(generator, prime)} tuple.
         """
         # In these tests, we hardwire the prime values to those defined by the
-        # diffie-hellman-group1-sha1 key exchange algorithm, to avoid requiring
+        # diffie-hellman-group14-sha1 key exchange algorithm, to avoid requiring
         # a moduli file when running tests.
         # See OpenSSHFactory.getPrimes.
         return {
-            1024: ((2, _kex.getDHGeneratorAndPrime(
-                b'diffie-hellman-group1-sha1')[1]),),
             2048: ((3, _kex.getDHGeneratorAndPrime(
-                b'diffie-hellman-group1-sha1')[1]),),
+                b'diffie-hellman-group14-sha1')[1]),),
             4096: ((5, 7),)}
 
 
@@ -409,6 +415,16 @@ class DHGroupExchangeSHA256Mixin:
 
 
 
+class ECDHMixin:
+    """
+    Mixin for elliptic curve diffie-hellman tests.
+    """
+
+    kexAlgorithm = b'ecdh-sha2-nistp256'
+    hashProcessor = sha256
+
+
+
 class BaseSSHTransportBaseCase:
     """
     Base case for TransportBase tests.
@@ -423,10 +439,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     Test TransportBase. It implements the non-server/client specific
     parts of the SSH transport protocol.
     """
+    if dependencySkip:
+        skip = dependencySkip
 
     _A_KEXINIT_MESSAGE = (
         b"\xAA" * 16 +
-        common.NS(b'diffie-hellman-group1-sha1') +
+        common.NS(b'diffie-hellman-group14-sha1') +
         common.NS(b'ssh-rsa') +
         common.NS(b'aes256-ctr') +
         common.NS(b'aes256-ctr') +
@@ -441,11 +459,25 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     def test_sendVersion(self):
         """
         Test that the first thing sent over the connection is the version
-        string.
+        string.  The 'softwareversion' part must consist of printable
+        US-ASCII characters, with the exception of whitespace characters and
+        the minus sign.
+
+        RFC 4253, section 4.2.
         """
         # the other setup was done in the setup method
-        self.assertEqual(self.transport.value().split(b'\r\n', 1)[0],
-                         b"SSH-2.0-Twisted")
+        version = self.transport.value().split(b'\r\n', 1)[0]
+        self.assertEqual(version,
+                         b"SSH-2.0-Twisted_" + twisted_version.encode('ascii'))
+        softwareVersion = version.decode('ascii')[len('SSH-2.0-'):]
+        # This is an inefficient regex, but it's simple to build.
+        softwareVersionRegex = (
+            r'^(' +
+            '|'.join(
+                re.escape(c) for c in string.printable
+                if c != '-' and not c.isspace()) +
+            r')*$')
+        self.assertRegex(softwareVersion, softwareVersionRegex)
 
 
     def test_sendPacketPlain(self):
@@ -462,7 +494,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.makeConnection(self.transport)
         self.finishKeyExchange(proto)
         self.transport.clear()
-        message = ord(b'A')
+        message = ord('A')
         payload = b'BCDEFG'
         proto.sendPacket(message, payload)
         value = self.transport.value()
@@ -759,7 +791,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.proto.dispatchMessage(
             transport.MSG_DEBUG,
             b'\x01\x00\x00\x00\x04test\x00\x00\x00\x02en')
-        self.assertEqual(self.proto.debugs, [(True, b'test', b'en')])
+        self.proto.dispatchMessage(
+            transport.MSG_DEBUG,
+            b'\x00\x00\x00\x00\x06silent\x00\x00\x00\x02en')
+        self.assertEqual(
+            self.proto.debugs,
+            [(True, b'test', b'en'), (False, b'silent', b'en')])
 
 
     def test_sendIgnore(self):
@@ -939,7 +976,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.transport.loseConnection = stubLoseConnection
         self.proto.loseConnection()
         self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[0][1][3],
+        self.assertEqual(self.packets[0][1][3:4],
                          chr(transport.DISCONNECT_CONNECTION_LOST))
 
 
@@ -954,12 +991,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             def stubLoseConnection():
                 disconnected[0] = True
             self.transport.loseConnection = stubLoseConnection
-            for c in version + b'\r\n':
+            for c in iterbytes(version + b'\r\n'):
                 self.proto.dataReceived(c)
             self.assertTrue(disconnected[0])
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(
-                self.packets[0][1][3],
+                self.packets[0][1][3:4],
                 chr(transport.DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED))
         testBad(b'SSH-1.5-OpenSSH')
         testBad(b'SSH-3.0-Twisted')
@@ -975,7 +1012,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         data = (b"""here's some stuff beforehand
 here's some other stuff
 """ + proto.ourVersionString + b"\r\n")
-        [proto.dataReceived(c) for c in data]
+        [proto.dataReceived(c) for c in iterbytes(data)]
         self.assertTrue(proto.gotVersion)
         self.assertEqual(proto.otherVersionString, proto.ourVersionString)
 
@@ -990,6 +1027,50 @@ here's some other stuff
         proto.dataReceived(b"SSH-1.99-OpenSSH\n")
         self.assertTrue(proto.gotVersion)
         self.assertEqual(proto.otherVersionString, b"SSH-1.99-OpenSSH")
+
+
+    def test_dataReceivedSSHVersionUnixNewline(self):
+        """
+        It can parse the SSH version string even when it ends only in
+        Unix newlines (CR) and does not follows the RFC 4253 to use
+        network newlines (CR LF).
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(proto_helpers.StringTransport())
+
+        sut.dataReceived(
+            b'SSH-2.0-PoorSSHD Some-comment here\n'
+            b'more-data'
+            )
+
+        self.assertTrue(sut.gotVersion)
+        self.assertEqual(
+            sut.otherVersionString,
+            b'SSH-2.0-PoorSSHD Some-comment here')
+
+
+    def test_dataReceivedSSHVersionTrailingSpaces(self):
+        """
+        The trailing spaces from SSH version comment are not removed.
+
+        The SSH version string needs to be kept as received
+        (without CR LF end of line) as they are used in the host
+        authentication process.
+
+        This can happen with a Bitvise SSH server which hides its version.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(proto_helpers.StringTransport())
+
+        sut.dataReceived(
+            b'SSH-2.0-9.99 FlowSsh: Bitvise SSH Server (WinSSHD) \r\n'
+            b'more-data'
+            )
+
+        self.assertTrue(sut.gotVersion)
+        self.assertEqual(
+            sut.otherVersionString,
+            b'SSH-2.0-9.99 FlowSsh: Bitvise SSH Server (WinSSHD) ')
 
 
     def test_supportedVersionsAreAllowed(self):
@@ -1027,7 +1108,7 @@ here's some other stuff
             self.assertIsNone(self.proto.getPacket())
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-            self.assertEqual(self.packets[0][1][3], chr(error))
+            self.assertEqual(self.packets[0][1][3:4], chr(error))
 
         testBad(b'\xff' * 8) # big packet
         testBad(b'\x00\x00\x00\x05\x00BCDE') # length not modulo blocksize
@@ -1056,7 +1137,7 @@ here's some other stuff
         def checkUnimplemented(seqnum=seqnum):
             self.assertEqual(self.packets[0][0],
                              transport.MSG_UNIMPLEMENTED)
-            self.assertEqual(self.packets[0][1][3], chr(seqnum))
+            self.assertEqual(self.packets[0][1][3:4], chr(seqnum))
             self.proto.packets = []
             seqnum += 1
 
@@ -1136,6 +1217,15 @@ class BaseSSHTransportDHGroupExchangeSHA256Tests(
 
 
 
+class BaseSSHTransportEllipticCurveTests(
+        BaseSSHTransportDHGroupExchangeBaseCase, ECDHMixin,
+        TransportTestCase):
+    """
+    ecdh-sha2-nistp256 tests for TransportBase
+    """
+
+
+
 class ServerAndClientSSHTransportBaseCase:
     """
     Tests that need to be run on both the server and the client.
@@ -1148,7 +1238,7 @@ class ServerAndClientSSHTransportBaseCase:
         if kind is None:
             kind = transport.DISCONNECT_PROTOCOL_ERROR
         self.assertEqual(self.packets[-1][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[-1][1][3], chr(kind))
+        self.assertEqual(self.packets[-1][1][3:4], chr(kind))
 
 
     def connectModifiedProtocol(self, protoModification,
@@ -1283,9 +1373,9 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             b'\x00\x00\x99\x99\x99\x99')
 
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
-        # client preference is used.
+        # client preference is used, after skipping diffie-hellman-group1-sha1
         self.assertEqual(self.proto.kexAlg,
-                         b'diffie-hellman-group1-sha1')
+                         b'diffie-hellman-group-exchange-sha1')
         self.assertEqual(self.proto.keyAlg,
                          b'ssh-dss')
         self.assertEqual(self.proto.outgoingCompressionType,
@@ -1410,12 +1500,40 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
              (transport.MSG_NEWKEYS, b'')])
 
 
-    def test_KEXDH_INIT_GROUP1(self):
+    def test_checkBad_KEX_ECDH_INIT_CurveName(self):
         """
-        KEXDH_INIT messages are processed when the
-        diffie-hellman-group1-sha1 key exchange algorithm is requested.
+        Test that if the server receives a KEX_DH_GEX_REQUEST_OLD message
+        and the key exchange algorithm is not set, we raise a ConchError.
         """
-        self.assertKexDHInitResponse(b'diffie-hellman-group1-sha1')
+        self.proto.kexAlg = b'bad-curve'
+        self.proto.keyAlg = b'ssh-rsa'
+        self.assertRaises(UnsupportedAlgorithm,
+                          self.proto._ssh_KEX_ECDH_INIT,
+                          common.NS(b'unused-key'))
+
+
+    def test_checkBad_KEX_INIT_CurveName(self):
+        """
+        Test that if the server received a bad name for a curve
+        we raise an UnsupportedAlgorithm error.
+        """
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b'ecdh-sha2-nistp256') +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+        self.assertRaises(AttributeError)
+        self.assertRaises(UnsupportedAlgorithm)
 
 
     def test_KEXDH_INIT_GROUP14(self):
@@ -1430,7 +1548,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         """
         Test that _keySetup sets up the next encryption keys.
         """
-        self.proto.kexAlg = b'diffie-hellman-group1-sha1'
+        self.proto.kexAlg = b'diffie-hellman-group14-sha1'
         self.proto.nextEncryptions = MockCipher()
         self.simulateKeyExchange(b'AB', b'CD')
         self.assertEqual(self.proto.sessionID, b'CD')
@@ -1438,7 +1556,26 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.sessionID, b'CD')
         self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
         newKeys = [self.proto._getKey(c, b'AB', b'EF')
-                   for c in b'ABCDEF']
+                   for c in iterbytes(b'ABCDEF')]
+        self.assertEqual(
+            self.proto.nextEncryptions.keys,
+            (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
+             newKeys[4]))
+
+
+    def test_ECDH_keySetup(self):
+        """
+        Test that _keySetup sets up the next encryption keys.
+        """
+        self.proto.kexAlg = b'ecdh-sha2-nistp256'
+        self.proto.nextEncryptions = MockCipher()
+        self.simulateKeyExchange(b'AB', b'CD')
+        self.assertEqual(self.proto.sessionID, b'CD')
+        self.simulateKeyExchange(b'AB', b'EF')
+        self.assertEqual(self.proto.sessionID, b'CD')
+        self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
+        newKeys = [self.proto._getKey(c, b'AB', b'EF')
+                   for c in iterbytes(b'ABCDEF')]
         self.assertEqual(
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
@@ -1477,7 +1614,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_SERVICE_REQUEST(common.NS(b'ssh-userauth'))
         self.assertEqual(self.packets, [(transport.MSG_SERVICE_ACCEPT,
                                          common.NS(b'ssh-userauth'))])
-        self.assertEqual(self.proto.service.name, 'MockService')
+        self.assertEqual(self.proto.service.name, b'MockService')
 
 
     def test_disconnectNEWKEYSData(self):
@@ -1513,12 +1650,12 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.proto.supportedPublicKeys = [b'ssh-rsa']
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(b'\x00\x00\x04\x00')
-        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(1024)[0]
+        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(2048)[0]
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dhPrime) + b'\x00\x00\x00\x01\x02')])
-        self.assertEqual(self.proto.g, 2)
+              common.MP(dhPrime) + b'\x00\x00\x00\x01\x03')])
+        self.assertEqual(self.proto.g, 3)
         self.assertEqual(self.proto.p, dhPrime)
 
 
@@ -1543,7 +1680,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST(b'\x00\x00\x04\x00\x00\x00\x08\x00' +
                                           b'\x00\x00\x0c\x00')
-        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(1024)[0]
+        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(2048)[0]
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
@@ -1560,7 +1697,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         """
         self.test_KEX_DH_GEX_REQUEST_OLD()
         e = pow(self.proto.g, 3, self.proto.p)
-        y = common.getMP(b'\x00\x00\x00\x80' + b'\x99' * 128)[0]
+        y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 256)[0]
         f = common._MPpow(self.proto.g, y, self.proto.p)
         sharedSecret = common._MPpow(e, y, self.proto.p)
         h = self.hashProcessor()
@@ -1592,10 +1729,12 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         """
         self.test_KEX_DH_GEX_REQUEST()
         e = pow(self.proto.g, 3, self.proto.p)
-        y = common.getMP(b'\x00\x00\x00\x80' + b'\x99' * 128)[0]
+        y = common.getMP(b'\x00\x00\x01\x00' + b'\x99' * 256)[0]
         f = common._MPpow(self.proto.g, y, self.proto.p)
         sharedSecret = common._MPpow(e, y, self.proto.p)
+
         h = self.hashProcessor()
+
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.proto.factory.publicKeys[b'ssh-rsa'].blob()))
@@ -1748,22 +1887,14 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.assertKexInitResponseForDH(b'diffie-hellman-group14-sha1')
 
 
-    def test_KEXINIT_group1(self):
-        """
-        KEXINIT messages requesting diffie-hellman-group1-sha1 result in
-        KEXDH_INIT responses.
-        """
-        self.assertKexInitResponseForDH(b'diffie-hellman-group1-sha1')
-
-
     def test_KEXINIT_badKexAlg(self):
         """
         Test that the client raises a ConchError if it receives a
         KEXINIT message but doesn't have a key exchange algorithm that we
         understand.
         """
-        self.proto.supportedKeyExchanges = [b'diffie-hellman-group2-sha1']
-        data = self.transport.value().replace(b'group1', b'group2')
+        self.proto.supportedKeyExchanges = [b'diffie-hellman-group24-sha1']
+        data = self.transport.value().replace(b'group14', b'group24')
         self.assertRaises(ConchError, self.proto.dataReceived, data)
 
 
@@ -1771,7 +1902,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that the KEXDH_REPLY message verifies the server.
         """
-        self.test_KEXINIT_group1()
+        self.test_KEXINIT_group14()
 
         sharedSecret = common._MPpow(self.proto.g, self.proto.x,
                                         self.proto.p)
@@ -1803,14 +1934,15 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that _keySetup sets up the next encryption keys.
         """
-        self.proto.kexAlg = b'diffie-hellman-group1-sha1'
+        self.proto.kexAlg = b'diffie-hellman-group14-sha1'
         self.proto.nextEncryptions = MockCipher()
         self.simulateKeyExchange(b'AB', b'CD')
         self.assertEqual(self.proto.sessionID, b'CD')
         self.simulateKeyExchange(b'AB', b'EF')
         self.assertEqual(self.proto.sessionID, b'CD')
         self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
-        newKeys = [self.proto._getKey(c, b'AB', b'EF') for c in b'ABCDEF']
+        newKeys = [self.proto._getKey(c, b'AB', b'EF')
+                   for c in iterbytes(b'ABCDEF')]
         self.assertEqual(self.proto.nextEncryptions.keys,
                           (newKeys[0], newKeys[2], newKeys[1], newKeys[3],
                            newKeys[4], newKeys[5]))
@@ -1874,6 +2006,48 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         self.test_KEXDH_REPLY()
         self.proto._continueKEXDH_REPLY(None, self.blob, 3, b"bad signature")
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
+    def test_disconnectKEX_ECDH_REPLYBadSignature(self):
+        """
+        Test that KEX_ECDH_REPLY disconnects if the signature is bad.
+        """
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b'ecdh-sha2-nistp256') +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+
+        self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
+
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
+                                                    default_backend())
+        self.proto.ecPub = self.proto.ecPriv.public_key()
+
+        # Generate the private key
+        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        # Get the public key
+        thisPub = thisPriv.public_key()
+        encPub = thisPub.public_numbers().encode_point()
+        self.proto.curve = ec.SECP256R1()
+
+        self.proto.kexAlg = b'ecdh-sha2-nistp256'
+
+        self.proto._ssh_KEX_ECDH_REPLY(
+             common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+                       common.NS(encPub) + common.NS(b'bad-signature'))
+
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
 
@@ -1986,6 +2160,48 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
 
+    def test_disconnectKEX_ECDH_REPLYBadSignature(self):
+        """
+        Test that KEX_ECDH_REPLY disconnects if the signature is bad.
+        """
+        kexmsg = (
+            b"\xAA" * 16 +
+            common.NS(b'ecdh-sha2-nistp256') +
+            common.NS(b'ssh-rsa') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'aes256-ctr') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'hmac-sha1') +
+            common.NS(b'none') +
+            common.NS(b'none') +
+            common.NS(b'') +
+            common.NS(b'') +
+            b'\x00' + b'\x00\x00\x00\x00')
+
+        self.proto.ssh_KEXINIT(kexmsg)
+
+        self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
+
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(),
+                                                    default_backend())
+        self.proto.ecPub = self.proto.ecPriv.public_key()
+
+        # Generate the private key
+        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        # Get the public key
+        thisPub = thisPriv.public_key()
+        encPub = thisPub.public_numbers().encode_point()
+        self.proto.curve = ec.SECP256R1()
+
+        self.proto.kexAlg = b'ecdh-sha2-nistp256'
+
+        self.proto._ssh_KEX_ECDH_REPLY(
+            common.NS(MockFactory().getPublicKeys()[b'ssh-rsa'].blob()) +
+            common.NS(encPub) + common.NS(b'bad-signature'))
+
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
 
 class ClientSSHTransportDHGroupExchangeSHA1Tests(
         ClientSSHTransportDHGroupExchangeBaseCase, DHGroupExchangeSHA1Mixin,
@@ -2022,7 +2238,7 @@ class GetMACTests(unittest.TestCase):
         Generate a new shared secret to be used with the tests.
 
         @return: A new secret.
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         return insecureRandom(64)
 
@@ -2035,7 +2251,7 @@ class GetMACTests(unittest.TestCase):
         attribute set to the value of the key supplied.
 
         @param hmacName: Identifier of HMAC algorithm.
-        @type hmacName: C{bytes}
+        @type hmacName: L{bytes}
 
         @param hashProcessor: Callable for the hash algorithm.
         @type hashProcessor: C{callable}
@@ -2052,8 +2268,8 @@ class GetMACTests(unittest.TestCase):
         params = self.ciphers._getMAC(hmacName, secret)
 
         key = secret[:digestSize] + b'\x00' * blockPadSize
-        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in key)
-        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in key)
+        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in iterbytes(key))
+        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in iterbytes(key))
         self.assertEqual(
             (hashProcessor, innerPad, outerPad, digestSize), params)
         self.assertEqual(key, params.key)
@@ -2068,6 +2284,17 @@ class GetMACTests(unittest.TestCase):
         """
         self.assertGetMAC(
             b"hmac-sha2-512", sha512, digestSize=64, blockPadSize=64)
+
+
+    def test_hmacsha2384(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-384"} MAC
+        algorithm name it returns a tuple of (sha384 digest object, inner pad,
+        outer pad, sha384 digest size) with a C{key} attribute set to the
+        value of the key supplied.
+        """
+        self.assertGetMAC(
+            b"hmac-sha2-384", sha384, digestSize=48, blockPadSize=80)
 
 
     def test_hmacsha2256(self):
@@ -2258,6 +2485,8 @@ class TransportLoopbackTests(unittest.TestCase):
         client.receiveError = lambda code, desc: client.errors.append((
                 code, desc))
         client.connectionSecure = lambda: client.loseConnection()
+        server.supportedPublicKeys = list(
+                server.factory.getPublicKeys().keys())
         server = mod(server)
         client = mod(client)
         def check(ignored, server, client):
@@ -2355,10 +2584,10 @@ class RandomNumberTests(unittest.TestCase):
         L{_getRandomNumber} returns an integer constructed directly from the
         bytes returned by the random byte generator passed to it.
         """
-        def random(bytes):
+        def random(data):
             # The number of bytes requested will be the value of each byte
             # we return.
-            return chr(bytes) * bytes
+            return chr(data) * data
         self.assertEqual(
             transport._getRandomNumber(random, 32),
             4 << 24 | 4 << 16 | 4 << 8 | 4)
@@ -2381,8 +2610,8 @@ class RandomNumberTests(unittest.TestCase):
         discarded and another attempt is made to produce a larger value.
         """
         results = [chr(0), chr(1), chr(127)]
-        def random(bytes):
-            return results.pop(0) * bytes
+        def random(data):
+            return results.pop(0) * data
         self.assertEqual(
             transport._generateX(random, 8),
             127)
@@ -2396,8 +2625,8 @@ class RandomNumberTests(unittest.TestCase):
         value.
         """
         results = [chr(255), chr(64)]
-        def random(bytes):
-            return results.pop(0) * bytes
+        def random(data):
+            return results.pop(0) * data
         self.assertEqual(
             transport._generateX(random, 8),
             64)

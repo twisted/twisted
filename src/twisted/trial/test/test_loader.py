@@ -601,8 +601,6 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
 class ZipLoadingTests(LoaderTests):
-    if _PY3:
-        skip = "Not ported."
     def setUp(self):
         from twisted.python.test.test_zippath import zipit
         LoaderTests.setUp(self)

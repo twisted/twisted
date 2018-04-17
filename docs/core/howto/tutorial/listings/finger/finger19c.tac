@@ -1,6 +1,6 @@
 # Do everything properly, and componentize
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer, utils
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, utils, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
@@ -14,12 +14,12 @@ class IFingerService(Interface):
 
     def getUser(user):
         """
-        Return a deferred returning a string.
+        Return a deferred returning L{bytes}.
         """
 
     def getUsers():
         """
-        Return a deferred returning a list of strings.
+        Return a deferred returning a L{list} of L{bytes}.
         """
 
 
@@ -49,7 +49,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.transport.write(value + b'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -240,19 +240,19 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        with open(self.filename) as f:
+        with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(':', 1)
+                user, status = line.split(b':', 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
+        return defer.succeed(self.users.get(user, b"No such user"))
 
     def getUsers(self):
-        return defer.succeed(self.users.keys())
+        return defer.succeed(list(self.users.keys()))
 
     def startService(self):
         self._read()
@@ -273,16 +273,16 @@ class LocalFingerService(service.Service):
         try:
             entry = pwd.getpwnam(user)
         except KeyError:
-            return defer.succeed("No such user")
+            return defer.succeed(b"No such user")
         try:
             f = open(os.path.join(entry[5],'.plan'))
         except (IOError, OSError):
-            return defer.succeed("No such user")
+            return defer.succeed(b"No such user")
         with f:
             data = f.read()
         data = data.strip()
         return defer.succeed(data)
-    
+
     def getUsers(self):
         return defer.succeed([])
 
@@ -290,11 +290,12 @@ class LocalFingerService(service.Service):
 application = service.Application('finger', uid=1, gid=1)
 f = LocalFingerService()
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79, IFingerFactory(f)
+strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(resource.IResource(f))
+strports.service("tcp:8000", server.Site(resource.IResource(f))
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
-internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    i).setServiceParent(serviceCollection)

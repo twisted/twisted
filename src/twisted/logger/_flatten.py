@@ -73,7 +73,7 @@ def flattenEvent(event):
     @param event: A logging event.
     @type event: L{dict}
     """
-    if "log_format" not in event:
+    if event.get("log_format", None) is None:
         return
 
     if "log_flattened" in event:
@@ -111,7 +111,7 @@ def flattenEvent(event):
         if conversion == "r":
             conversionFunction = repr
         else:  # Above: if conversion is not "r", it's "s"
-            conversionFunction = str
+            conversionFunction = unicode
 
         if callit:
             fieldValue = fieldValue()

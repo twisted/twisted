@@ -13,12 +13,13 @@ import socket, sys, traceback, io, codecs
 from twisted.trial import unittest
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
-    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode,
-    unichr,
+    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
+    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
+    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
+    _coercedUnicode, unichr, raw_input, _bytesRepr
 )
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 
 
 
@@ -210,6 +211,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
 
 
     def testPToN(self):
+        """
+        L{twisted.python.compat.inet_pton} parses IPv4 and IPv6 addresses in a
+        manner similar to that of L{socket.inet_pton}.
+        """
         from twisted.python.compat import inet_pton
 
         f = lambda a: inet_pton(socket.AF_INET6, a)
@@ -225,6 +230,10 @@ class IPv6Tests(unittest.SynchronousTestCase):
         self.assertEqual(
             '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
             f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae'))
+        # Scope ID doesn't affect the binary representation.
+        self.assertEqual(
+            '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
+            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae%en0'))
 
         self.assertEqual('\x00' * 14 + '\x00\x01', f('::1'))
         self.assertEqual('\x00' * 12 + '\x01\x02\x03\x04', f('::1.2.3.4'))
@@ -236,7 +245,7 @@ class IPv6Tests(unittest.SynchronousTestCase):
                         '1:::3', ':::', '1:2', '::1.2', '1.2.3.4::',
                         'abcd:1.2.3.4:abcd:abcd:abcd:abcd:abcd',
                         '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
-                        '1.2.3.4']:
+                        '1.2.3.4', '', '%eth0']:
             self.assertRaises(ValueError, f, badaddr)
 
 if _PY3:
@@ -315,6 +324,22 @@ class PY3Tests(unittest.SynchronousTestCase):
         """
         if sys.version.startswith("3."):
             self.assertTrue(_PY3)
+
+
+
+class PYPYTest(unittest.SynchronousTestCase):
+    """
+    Identification of PyPy.
+    """
+
+    def test_PYPY(self):
+        """
+        On PyPy, L{_PYPY} is True.
+        """
+        if 'PyPy' in sys.version:
+            self.assertTrue(_PYPY)
+        else:
+            self.assertFalse(_PYPY)
 
 
 
@@ -754,6 +779,9 @@ class BytesEnvironTests(unittest.TestCase):
 
         self.assertEqual(list(types), [bytes])
 
+    if platform.isWindows():
+        test_alwaysBytes.skip = "Environment vars are always str on Windows."
+
 
 
 class OrderedDictTests(unittest.TestCase):
@@ -845,3 +873,51 @@ class UnichrTests(unittest.TestCase):
         unichar exists and returns a unicode string with the given code point.
         """
         self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
+
+
+class RawInputTests(unittest.TestCase):
+    """
+    Tests for L{raw_input}
+    """
+    def test_raw_input(self):
+        """
+        L{twisted.python.compat.raw_input}
+        """
+        class FakeStdin:
+            def readline(self):
+                return "User input\n"
+
+        class FakeStdout:
+            data = ""
+            def write(self, data):
+                self.data += data
+
+        self.patch(sys, "stdin", FakeStdin())
+        stdout = FakeStdout()
+        self.patch(sys, "stdout", stdout)
+        self.assertEqual(raw_input("Prompt"), "User input")
+        self.assertEqual(stdout.data, "Prompt")
+
+
+
+class FutureBytesReprTests(unittest.TestCase):
+    """
+    Tests for L{twisted.python.compat._bytesRepr}.
+    """
+
+    def test_bytesReprNotBytes(self):
+        """
+        L{twisted.python.compat._bytesRepr} raises a
+        L{TypeError} when called any object that is not an instance of
+        L{bytes}.
+        """
+        exc = self.assertRaises(TypeError, _bytesRepr, ["not bytes"])
+        self.assertEquals(str(exc), "Expected bytes not ['not bytes']")
+
+
+    def test_bytesReprPrefix(self):
+        """
+        L{twisted.python.compat._bytesRepr} always prepends
+        ``b`` to the returned repr on both Python 2 and 3.
+        """
+        self.assertEqual(_bytesRepr(b'\x00'), "b'\\x00'")

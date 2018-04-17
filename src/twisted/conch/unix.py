@@ -29,6 +29,7 @@ from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import components, log
+from twisted.python.compat import _bytesChr as chr, nativeString
 
 try:
     import utmp
@@ -58,11 +59,11 @@ class UnixConchUser(ConchUser):
         self.otherGroups = l
         self.listeners = {}  # Dict mapping (interface, port) -> listener
         self.channelLookup.update(
-                {"session": session.SSHSession,
-                 "direct-tcpip": forwarding.openConnectForwardingClient})
+                {b"session": session.SSHSession,
+                 b"direct-tcpip": forwarding.openConnectForwardingClient})
 
         self.subsystemLookup.update(
-                {"sftp": filetransfer.FileTransferServer})
+                {b"sftp": filetransfer.FileTransferServer})
 
 
     def getUserGroupId(self):
@@ -115,7 +116,7 @@ class UnixConchUser(ConchUser):
 
     def logout(self):
         # Remove all listeners.
-        for listener in self.listeners.itervalues():
+        for listener in self.listeners.values():
             self._runAsUser(listener.stopListening)
         log.msg(
             'avatar %s logging out (%i)'
@@ -370,7 +371,7 @@ class SFTPServerForUnixConchUser:
 
     def _absPath(self, path):
         home = self.avatar.getHomeDir()
-        return os.path.abspath(os.path.join(home, path))
+        return os.path.join(nativeString(home.path), nativeString(path))
 
 
     def gotVersion(self, otherVersion, extData):
@@ -509,7 +510,7 @@ class UnixSFTPDirectory:
         return self
 
 
-    def next(self):
+    def __next__(self):
         try:
             f = self.files.pop(0)
         except IndexError:
@@ -521,6 +522,7 @@ class UnixSFTPDirectory:
             attrs = self.server._getAttrs(s)
             return (f, longname, attrs)
 
+    next = __next__
 
     def close(self):
         self.files = []

@@ -8,7 +8,8 @@ Tests for L{twisted.trial._dist.workertrial}.
 import errno
 import sys
 import os
-from cStringIO import StringIO
+
+from io import BytesIO
 
 from twisted.protocols.amp import AMP
 from twisted.test.proto_helpers import StringTransport
@@ -44,9 +45,9 @@ class WorkerLogObserverTests(TestCase):
                 calls.append((method, kwargs))
 
         observer = WorkerLogObserver(FakeClient())
-        observer.emit({'message': ['Some log']})
+        observer.emit({'message': [b'Some log']})
         self.assertEqual(
-            calls, [(managercommands.TestWrite, {'out': 'Some log'})])
+            calls, [(managercommands.TestWrite, {'out': b'Some log'})])
 
 
 
@@ -56,8 +57,8 @@ class MainTests(TestCase):
     """
 
     def setUp(self):
-        self.readStream = StringIO()
-        self.writeStream = StringIO()
+        self.readStream = BytesIO()
+        self.writeStream = BytesIO()
         self.patch(workertrial, 'startLoggingWithObserver',
                    self.startLoggingWithObserver)
         self.addCleanup(setattr, sys, "argv", sys.argv)
@@ -70,10 +71,10 @@ class MainTests(TestCase):
         the stdin fd and C{self.writeStream} for the stdout fd.
         """
         if fd == _WORKER_AMP_STDIN:
-            self.assertIdentical(None, mode)
+            self.assertIdentical('rb', mode)
             return self.readStream
         elif fd == _WORKER_AMP_STDOUT:
-            self.assertEqual('w', mode)
+            self.assertEqual('wb', mode)
             return self.writeStream
         else:
             raise AssertionError("Unexpected fd %r" % (fd,))
@@ -91,7 +92,7 @@ class MainTests(TestCase):
         If no data is ever written, L{main} exits without writing data out.
         """
         main(self.fdopen)
-        self.assertEqual('', self.writeStream.getvalue())
+        self.assertEqual(b'', self.writeStream.getvalue())
 
 
     def test_forwardCommand(self):
@@ -102,12 +103,12 @@ class MainTests(TestCase):
         client = FakeAMP()
         clientTransport = StringTransport()
         client.makeConnection(clientTransport)
-        client.callRemote(workercommands.Run, testCase="doesntexist")
+        client.callRemote(workercommands.Run, testCase=b"doesntexist")
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
         self.assertIn(
-            "No module named 'doesntexist'", self.writeStream.getvalue())
+            b"No module named 'doesntexist'", self.writeStream.getvalue())
 
 
     def test_readInterrupted(self):
@@ -126,11 +127,11 @@ class MainTests(TestCase):
                     raise IOError(errno.EINTR)
                 else:
                     excInfos.append(sys.exc_info())
-                return ''
+                return b''
 
         self.readStream = FakeStream()
         main(self.fdopen)
-        self.assertEqual('', self.writeStream.getvalue())
+        self.assertEqual(b'', self.writeStream.getvalue())
         self.assertEqual([(None, None, None)], excInfos)
 
 

@@ -55,16 +55,15 @@ class SupportTests(unittest.TestCase):
         try:
             client.connect((localhost, port.getsockname()[1]))
         except error as e:
-            (errnum, message) = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         server = socket(family, SOCK_STREAM)
         self.addCleanup(server.close)
-        buff = array('c', '\0' * 256)
+        buff = array('B', b'\0' * 256)
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
         server.setsockopt(
-            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', server.fileno()))
+            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', port.fileno()))
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
             _iocp.get_accept_addrs(server.fileno(), buff))

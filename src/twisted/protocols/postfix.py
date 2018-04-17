@@ -7,24 +7,47 @@ Postfix mail transport agent related protocols.
 """
 
 import sys
-import UserDict
-import urllib
+try:
+    # Python 2
+    from UserDict import UserDict
+except ImportError:
+    # Python 3
+    from collections import UserDict
+
+try:
+    # Python 2
+    from urllib import quote as _quote, unquote as _unquote
+except ImportError:
+    # Python 3
+    from urllib.parse import quote as _quote, unquote as _unquote
 
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol, defer
 from twisted.python import log
+from twisted.python.compat import unicode
 
 # urllib's quote functions just happen to match
 # the postfix semantics.
 def quote(s):
-    return urllib.quote(s)
+    quoted = _quote(s)
+    if isinstance(quoted, unicode):
+        quoted = quoted.encode("ascii")
+    return quoted
+
+
 
 def unquote(s):
-    return urllib.unquote(s)
+    if isinstance(s, bytes):
+        s = s.decode("ascii")
+    quoted = _unquote(s)
+    return quoted.encode("ascii")
+
+
 
 class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
-    """Postfix mail transport agent TCP map protocol implementation.
+    """
+    Postfix mail transport agent TCP map protocol implementation.
 
     Receive requests for data matching given key via lineReceived,
     asks it's factory for the data with self.factory.get(key), and
@@ -37,14 +60,20 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
     """
 
     timeout = 600
-    delimiter = '\n'
+    delimiter = b'\n'
 
     def connectionMade(self):
         self.setTimeout(self.timeout)
 
-    def sendCode(self, code, message=''):
-        "Send an SMTP-like code with a message."
-        self.sendLine('%3.3d %s' % (code, message or ''))
+
+
+    def sendCode(self, code, message=b''):
+        """
+        Send an SMTP-like code with a message.
+        """
+        self.sendLine(str(code).encode("ascii") + b' ' + message)
+
+
 
     def lineReceived(self, line):
         self.resetTimeout()
@@ -54,25 +83,34 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
             request = line
             params = None
         try:
-            f = getattr(self, 'do_' + request)
+            f = getattr(self, u'do_' + request.decode("ascii"))
         except AttributeError:
-            self.sendCode(400, 'unknown command')
+            self.sendCode(400, b'unknown command')
         else:
             try:
                 f(params)
             except:
-                self.sendCode(400, 'Command %r failed: %s.' % (request, sys.exc_info()[1]))
+                excInfo = str(sys.exc_info()[1]).encode("ascii")
+                self.sendCode(400, b'Command ' + request + b' failed: ' +
+                              excInfo)
+
+
 
     def do_get(self, key):
         if key is None:
-            self.sendCode(400, 'Command %r takes 1 parameters.' % 'get')
+            self.sendCode(400, b"Command 'get' takes 1 parameters.")
         else:
             d = defer.maybeDeferred(self.factory.get, key)
             d.addCallbacks(self._cbGot, self._cbNot)
             d.addErrback(log.err)
 
+
+
     def _cbNot(self, fail):
-        self.sendCode(400, fail.getErrorMessage())
+        msg = fail.getErrorMessage().encode("ascii")
+        self.sendCode(400, msg)
+
+
 
     def _cbGot(self, value):
         if value is None:
@@ -80,26 +118,34 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.sendCode(200, quote(value))
 
+
+
     def do_put(self, keyAndValue):
         if keyAndValue is None:
-            self.sendCode(400, 'Command %r takes 2 parameters.' % 'put')
+            self.sendCode(400, b"Command 'put' takes 2 parameters.")
         else:
             try:
                 key, value = keyAndValue.split(None, 1)
             except ValueError:
-                self.sendCode(400, 'Command %r takes 2 parameters.' % 'put')
+                self.sendCode(400, b"Command 'put' takes 2 parameters.")
             else:
-                self.sendCode(500, 'put is not implemented yet.')
+                self.sendCode(500, b'put is not implemented yet.')
 
 
-class PostfixTCPMapDictServerFactory(protocol.ServerFactory,
-                                     UserDict.UserDict):
-    """An in-memory dictionary factory for PostfixTCPMapServer."""
+
+class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
+    """
+    An in-memory dictionary factory for PostfixTCPMapServer.
+    """
 
     protocol = PostfixTCPMapServer
 
+
+
 class PostfixTCPMapDeferringDictServerFactory(protocol.ServerFactory):
-    """An in-memory dictionary factory for PostfixTCPMapServer."""
+    """
+    An in-memory dictionary factory for PostfixTCPMapServer.
+    """
 
     protocol = PostfixTCPMapServer
 

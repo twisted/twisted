@@ -164,9 +164,6 @@ class _BasicOptions(object):
     """
     Basic options shared between trial and its local workers.
     """
-    synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
-    """ % (os.path.basename(sys.argv[0]),)
-
     longdesc = ("trial loads and executes a suite of unit tests, obtained "
                 "from modules, packages and files listed on the command line.")
 
@@ -215,6 +212,15 @@ class _BasicOptions(object):
         self['tests'] = []
         usage.Options.__init__(self)
 
+    def getSynopsis(self):
+        executableName = reflect.filenameToModuleName(sys.argv[0])
+
+        if executableName.endswith('.__main__'):
+            executableName = '{} -m {}'.format(os.path.basename(sys.executable),
+                                               executableName.replace('.__main__', ''))
+
+        return """%s [options] [[file|package|module|TestCase|testmethod]...]
+        """ % (executableName,)
 
     def coverdir(self):
         """
@@ -398,7 +404,7 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     @type _workerFlags: C{list}
 
     @ivar _workerParameters: List of parameter which are accepted by trial
-        distrubuted workers. This is used by C{_getWorkerArguments} to build
+        distributed workers. This is used by C{_getWorkerArguments} to build
         the command line arguments.
     @type _workerParameters: C{list}
     """
@@ -526,13 +532,12 @@ def _wrappedPdb():
         namedModule('readline')
     except ImportError:
         print("readline module not available")
-        sys.exc_clear()
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
             try:
                 rcFile = open(path, 'r')
             except IOError:
-                sys.exc_clear()
+                pass
             else:
                 with rcFile:
                     dbg.rcLines.extend(rcFile.readlines())

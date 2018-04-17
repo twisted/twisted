@@ -17,7 +17,7 @@ from .._global import globalLogPublisher
 
 class TestLogger(Logger):
     """
-    L{Logger} with an overriden C{emit} method that keeps track of received
+    L{Logger} with an overridden C{emit} method that keeps track of received
     events.
     """
 
@@ -74,6 +74,20 @@ class LoggerTests(unittest.TestCase):
         """
         log = Logger()
         self.assertEqual(log.namespace, __name__)
+
+
+    def test_namespaceOMGItsTooHard(self):
+        """
+        Default namespace is C{"<unknown>"} when a logger is created from a
+        context in which is can't be determined automatically and no namespace
+        was specified.
+        """
+        result = []
+        exec(
+            "result.append(Logger())",
+            dict(Logger=Logger), locals(),
+        )
+        self.assertEqual(result[0].namespace, "<unknown>")
 
 
     def test_namespaceAttribute(self):

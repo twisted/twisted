@@ -14,6 +14,8 @@ import sys
 import os
 import errno
 
+from twisted.python.compat import unicode
+
 
 def _setupPath(environ):
     """
@@ -56,6 +58,8 @@ class WorkerLogObserver(object):
         text = textFromEventDict(eventDict)
         if text is None:
             return
+        if isinstance(text, unicode):
+            text = text.encode("utf-8")
         self.protocol.callRemote(managercommands.TestWrite, out=text)
 
 
@@ -73,8 +77,8 @@ def main(_fdopen=os.fdopen):
     from twisted.trial._dist.worker import WorkerProtocol
     workerProtocol = WorkerProtocol(config['force-gc'])
 
-    protocolIn = _fdopen(_WORKER_AMP_STDIN)
-    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'w')
+    protocolIn = _fdopen(_WORKER_AMP_STDIN, 'rb')
+    protocolOut = _fdopen(_WORKER_AMP_STDOUT, 'wb')
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
@@ -90,7 +94,7 @@ def main(_fdopen=os.fdopen):
                 continue
             else:
                 raise
-        if r == '':
+        if r == b'':
             break
         else:
             workerProtocol.dataReceived(r)

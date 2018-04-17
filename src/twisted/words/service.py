@@ -31,15 +31,15 @@ from time import time, ctime
 
 from zope.interface import implementer
 
-from twisted.words import iwords, ewords
-
-from twisted.python.components import registerAdapter
+from twisted import copyright
 from twisted.cred import portal, credentials, error as ecred
-from twisted.spread import pb
-from twisted.words.protocols import irc
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect
-from twisted import copyright
+from twisted.python.compat import itervalues, unicode
+from twisted.python.components import registerAdapter
+from twisted.spread import pb
+from twisted.words import iwords, ewords
+from twisted.words.protocols import irc
 
 
 @implementer(iwords.IGroup)
@@ -69,7 +69,7 @@ class Group(object):
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
-            for p in self.users.itervalues():
+            for p in itervalues(self.users):
                 if p is not user:
                     d = defer.maybeDeferred(p.userJoined, self, user)
                     d.addErrback(self._ebUserCall, p=p)
@@ -79,14 +79,13 @@ class Group(object):
 
 
     def remove(self, user, reason=None):
-        assert reason is None or isinstance(reason, unicode)
         try:
             del self.users[user.name]
         except KeyError:
             pass
         else:
             removals = []
-            for p in self.users.itervalues():
+            for p in itervalues(self.users):
                 if p is not user:
                     d = defer.maybeDeferred(p.userLeft, self, user, reason)
                     d.addErrback(self._ebUserCall, p=p)
@@ -102,7 +101,7 @@ class Group(object):
     def receive(self, sender, recipient, message):
         assert recipient is self
         receives = []
-        for p in self.users.itervalues():
+        for p in itervalues(self.users):
             if p is not sender:
                 d = defer.maybeDeferred(p.receive, sender, self, message)
                 d.addErrback(self._ebUserCall, p=p)
@@ -114,7 +113,7 @@ class Group(object):
     def setMetadata(self, meta):
         self.meta = meta
         sets = []
-        for p in self.users.itervalues():
+        for p in itervalues(self.users):
             d = defer.maybeDeferred(p.groupMetaUpdate, self, meta)
             d.addErrback(self._ebUserCall, p=p)
             sets.append(d)
@@ -216,7 +215,12 @@ class IRCUser(irc.IRC):
             kw['to'] = self.name.encode(self.encoding)
 
         arglist = [self, command, kw['to']] + list(parameter_list)
-        irc.IRC.sendMessage(*arglist, **kw)
+        arglistUnicode  = []
+        for arg in arglist:
+            if isinstance(arg, bytes):
+                arg = arg.decode("utf-8")
+            arglistUnicode.append(arg)
+        irc.IRC.sendMessage(*arglistUnicode, **kw)
 
 
     # IChatClient implementation
@@ -227,11 +231,10 @@ class IRCUser(irc.IRC):
 
 
     def userLeft(self, group, user, reason=None):
-        assert reason is None or isinstance(reason, unicode)
         self.part(
             "%s!%s@%s" % (user.name, user.name, self.hostname),
             '#' + group.name,
-            (reason or u"leaving").encode(self.encoding, 'replace'))
+            (reason or u"leaving"))
 
 
     def receive(self, sender, recipient, message):
@@ -267,7 +270,8 @@ class IRCUser(irc.IRC):
     password = None
 
     def irc_PASS(self, prefix, params):
-        """Password message -- Register a password.
+        """
+        Password message -- Register a password.
 
         Parameters: <password>
 
@@ -280,7 +284,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_NICK(self, prefix, params):
-        """Nick message -- Set your nickname.
+        """
+        Nick message -- Set your nickname.
 
         Parameters: <nickname>
 
@@ -288,11 +293,12 @@ class IRCUser(irc.IRC):
         """
         nickname = params[0]
         try:
-            nickname = nickname.decode(self.encoding)
+            if isinstance(nickname, bytes):
+                nickname = nickname.decode(self.encoding)
         except UnicodeDecodeError:
             self.privmsg(
                 NICKSERV,
-                nickname,
+                repr(nickname),
                 'Your nickname cannot be decoded. Please use ASCII or UTF-8.')
             self.transport.loseConnection()
             return
@@ -315,7 +321,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_USER(self, prefix, params):
-        """User message -- Set your realname.
+        """
+        User message -- Set your realname.
 
         Parameters: <user> <mode> <unused> <realname>
         """
@@ -326,7 +333,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_NICKSERV_PRIVMSG(self, prefix, params):
-        """Send a (private) message.
+        """
+        Send a (private) message.
 
         Parameters: <msgtarget> <text to be sent>
         """
@@ -416,7 +424,8 @@ class IRCUser(irc.IRC):
     # Great, now that's out of the way, here's some of the interesting
     # bits
     def irc_PING(self, prefix, params):
-        """Ping message
+        """
+        Ping message
 
         Parameters: <server1> [ <server2> ]
         """
@@ -425,7 +434,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_QUIT(self, prefix, params):
-        """Quit
+        """
+        Quit
 
         Parameters: [ <Quit Message> ]
         """
@@ -457,14 +467,17 @@ class IRCUser(irc.IRC):
 
 
     def irc_MODE(self, prefix, params):
-        """User mode message
+        """
+        User mode message
 
         Parameters: <nickname>
         *( ( "+" / "-" ) *( "i" / "w" / "o" / "O" / "r" ) )
 
         """
         try:
-            channelOrUser = params[0].decode(self.encoding)
+            channelOrUser = params[0]
+            if isinstance(channelOrUser, bytes):
+                channelOrUser = channelOrUser.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHNICK, params[0],
@@ -496,7 +509,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_USERHOST(self, prefix, params):
-        """Userhost message
+        """
+        Userhost message
 
         Parameters: <nickname> *( SPACE <nickname> )
 
@@ -506,12 +520,15 @@ class IRCUser(irc.IRC):
 
 
     def irc_PRIVMSG(self, prefix, params):
-        """Send a (private) message.
+        """
+        Send a (private) message.
 
         Parameters: <msgtarget> <text to be sent>
         """
         try:
-            targetName = params[0].decode(self.encoding)
+            targetName = params[0]
+            if isinstance(targetName, bytes):
+                targetName = targetName.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHNICK, params[0],
@@ -537,12 +554,15 @@ class IRCUser(irc.IRC):
 
 
     def irc_JOIN(self, prefix, params):
-        """Join message
+        """
+        Join message
 
         Parameters: ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] )
         """
         try:
-            groupName = params[0].decode(self.encoding)
+            groupName = params[0]
+            if isinstance(groupName, bytes):
+                groupName = groupName.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHCHANNEL, params[0],
@@ -571,12 +591,15 @@ class IRCUser(irc.IRC):
 
 
     def irc_PART(self, prefix, params):
-        """Part message
+        """
+        Part message
 
         Parameters: <channel> *( "," <channel> ) [ <Part Message> ]
         """
         try:
-            groupName = params[0].decode(self.encoding)
+            groupName = params[0]
+            if isinstance(params[0], bytes):
+                groupName = params[0].decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOTONCHANNEL, params[0],
@@ -587,7 +610,9 @@ class IRCUser(irc.IRC):
             groupName = groupName[1:]
 
         if len(params) > 1:
-            reason = params[1].decode('utf-8')
+            reason = params[1]
+            if isinstance(reason, bytes):
+                reason = reason.decode('utf-8')
         else:
             reason = None
 
@@ -607,7 +632,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_NAMES(self, prefix, params):
-        """Names message
+        """
+        Names message
 
         Parameters: [ <channel> *( "," <channel> ) [ <target> ] ]
         """
@@ -615,7 +641,9 @@ class IRCUser(irc.IRC):
         #>> :benford.openprojects.net 353 glyph = #python :Orban ... @glyph ... Zymurgy skreech
         #>> :benford.openprojects.net 366 glyph #python :End of /NAMES list.
         try:
-            channel = params[-1].decode(self.encoding)
+            channel = params[-1]
+            if isinstance(channel, bytes):
+                channel = channel.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHCHANNEL, params[-1],
@@ -643,12 +671,15 @@ class IRCUser(irc.IRC):
 
 
     def irc_TOPIC(self, prefix, params):
-        """Topic message
+        """
+        Topic message
 
         Parameters: <channel> [ <topic> ]
         """
         try:
-            channel = params[0].decode(self.encoding)
+            channel = params[0]
+            if isinstance(params[0], bytes):
+                channel = channel.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHCHANNEL,
@@ -717,7 +748,8 @@ class IRCUser(irc.IRC):
 
 
     def list(self, channels):
-        """Send a group of LIST response lines
+        """
+        Send a group of LIST response lines
 
         @type channel: C{list} of C{(str, int, str)}
         @param channel: Information about the channels being sent:
@@ -729,7 +761,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_LIST(self, prefix, params):
-        """List query
+        """
+        List query
 
         Return information about the indicated channels, or about all
         channels if none are specified.
@@ -743,7 +776,10 @@ class IRCUser(irc.IRC):
         if params:
             # Return information about indicated channels
             try:
-                channels = params[0].decode(self.encoding).split(',')
+                allChannels = params[0]
+                if isinstance(allChannels, bytes):
+                    allChannels = allChannels.decode(self.encoding)
+                channels = allChannels.split(',')
             except UnicodeDecodeError:
                 self.sendMessage(
                     irc.ERR_NOSUCHCHANNEL, params[0],
@@ -783,7 +819,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_WHO(self, prefix, params):
-        """Who query
+        """
+        Who query
 
         Parameters: [ <mask> [ "o" ] ]
         """
@@ -801,7 +838,9 @@ class IRCUser(irc.IRC):
             return
 
         try:
-            channelOrUser = params[0].decode(self.encoding)
+            channelOrUser = params[0]
+            if isinstance(channelOrUser, bytes):
+                channelOrUser = channelOrUser.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.RPL_ENDOFWHO, params[0],
@@ -828,7 +867,8 @@ class IRCUser(irc.IRC):
 
 
     def irc_WHOIS(self, prefix, params):
-        """Whois query
+        """
+        Whois query
 
         Parameters: [ <target> ] <mask> *( "," <mask> )
         """
@@ -848,7 +888,9 @@ class IRCUser(irc.IRC):
                 ":No such nick/channel")
 
         try:
-            user = params[0].decode(self.encoding)
+            user = params[0]
+            if isinstance(user, bytes):
+                user = user.decode(self.encoding)
         except UnicodeDecodeError:
             self.sendMessage(
                 irc.ERR_NOSUCHNICK,
@@ -861,7 +903,8 @@ class IRCUser(irc.IRC):
 
     # Unsupported commands, here for legacy compatibility
     def irc_OPER(self, prefix, params):
-        """Oper message
+        """
+        Oper message
 
         Parameters: <name> <password>
         """
@@ -871,7 +914,7 @@ class IRCUser(irc.IRC):
 class IRCFactory(protocol.ServerFactory):
     """
     IRC server that creates instances of the L{IRCUser} protocol.
-    
+
     @ivar _serverInfo: A dictionary mapping:
         "serviceName" to the name of the server,
         "serviceVersion" to the copyright version,
@@ -895,7 +938,10 @@ class PBMind(pb.Referenceable):
         pass
 
     def jellyFor(self, jellier):
-        return reflect.qual(PBMind), jellier.invoker.registerReference(self)
+        qual = reflect.qual(PBMind)
+        if isinstance(qual, unicode):
+            qual = qual.encode("utf-8")
+        return qual, jellier.invoker.registerReference(self)
 
     def remote_userJoined(self, user, group):
         pass
@@ -936,7 +982,6 @@ class PBMindReference(pb.RemoteReference):
             PBUser(self.realm, self.avatar, user))
 
     def userLeft(self, group, user, reason=None):
-        assert reason is None or isinstance(reason, unicode)
         return self.callRemote(
             'userLeft',
             PBGroup(self.realm, self.avatar, group),
@@ -957,7 +1002,13 @@ class PBGroup(pb.Referenceable):
 
 
     def jellyFor(self, jellier):
-        return reflect.qual(self.__class__), self.group.name.encode('utf-8'), jellier.invoker.registerReference(self)
+        qual = reflect.qual(self.__class__)
+        if isinstance(qual, unicode):
+            qual = qual.encode("utf-8")
+        group = self.group.name
+        if isinstance(group, unicode):
+            group = group.encode("utf-8")
+        return qual, group, jellier.invoker.registerReference(self)
 
 
     def remote_leave(self, reason=None):
@@ -972,7 +1023,9 @@ class PBGroup(pb.Referenceable):
 class PBGroupReference(pb.RemoteReference):
     def unjellyFor(self, unjellier, unjellyList):
         clsName, name, ref = unjellyList
-        self.name = name.decode('utf-8')
+        self.name = name
+        if bytes != str and isinstance(self.name, bytes):
+            self.name = self.name.decode('utf-8')
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
     def leave(self, reason=None):
@@ -999,11 +1052,13 @@ class ChatAvatar(pb.Referenceable):
 
 
     def jellyFor(self, jellier):
-        return reflect.qual(self.__class__), jellier.invoker.registerReference(self)
+        qual = reflect.qual(self.__class__)
+        if isinstance(qual, unicode):
+            qual = qual.encode("utf-8")
+        return qual, jellier.invoker.registerReference(self)
 
 
     def remote_join(self, groupName):
-        assert isinstance(groupName, unicode)
         def cbGroup(group):
             def cbJoin(ignored):
                 return PBGroup(self.avatar.realm, self.avatar, group)
@@ -1053,7 +1108,7 @@ class WordsRealm(object):
 
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        if isinstance(avatarId, str):
+        if isinstance(avatarId, bytes):
             avatarId = avatarId.decode(self._encoding)
 
         def gotAvatar(avatar):
@@ -1085,7 +1140,8 @@ class WordsRealm(object):
 
 
     def addUser(self, user):
-        """Add the given user to this service.
+        """
+        Add the given user to this service.
 
         This is an internal method intended to be overridden by
         L{WordsRealm} subclasses, not called by external code.
@@ -1102,7 +1158,8 @@ class WordsRealm(object):
 
 
     def addGroup(self, group):
-        """Add the given group to this service.
+        """
+        Add the given group to this service.
 
         @type group: L{IGroup}
 
@@ -1116,7 +1173,6 @@ class WordsRealm(object):
 
 
     def getGroup(self, name):
-        assert isinstance(name, unicode)
         if self.createGroupOnRequest:
             def ebGroup(err):
                 err.trap(ewords.DuplicateGroup)
@@ -1126,7 +1182,6 @@ class WordsRealm(object):
 
 
     def getUser(self, name):
-        assert isinstance(name, unicode)
         if self.createUserOnRequest:
             def ebUser(err):
                 err.trap(ewords.DuplicateUser)
@@ -1136,7 +1191,6 @@ class WordsRealm(object):
 
 
     def createUser(self, name):
-        assert isinstance(name, unicode)
         def cbLookup(user):
             return failure.Failure(ewords.DuplicateUser(name))
         def ebLookup(err):
@@ -1151,7 +1205,6 @@ class WordsRealm(object):
 
 
     def createGroup(self, name):
-        assert isinstance(name, unicode)
         def cbLookup(group):
             return failure.Failure(ewords.DuplicateGroup(name))
         def ebLookup(err):
@@ -1173,7 +1226,7 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def itergroups(self):
-        return defer.succeed(self.groups.itervalues())
+        return defer.succeed(itervalues(self.groups))
 
 
     def addUser(self, user):
@@ -1191,7 +1244,6 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def lookupUser(self, name):
-        assert isinstance(name, unicode)
         name = name.lower()
         try:
             user = self.users[name]
@@ -1202,7 +1254,6 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def lookupGroup(self, name):
-        assert isinstance(name, unicode)
         name = name.lower()
         try:
             group = self.groups[name]

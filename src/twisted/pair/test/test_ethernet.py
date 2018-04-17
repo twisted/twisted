@@ -25,17 +25,17 @@ class EthernetTests(unittest.TestCase):
         proto = ethernet.EthernetProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
-            'dest': "123456",
-            'source': "987654",
+            'dest': b"123456",
+            'source': b"987654",
             'protocol': 0x0800,
             }),
 
             ])
         proto.addProto(0x0800, p1)
 
-        proto.datagramReceived("123456987654\x08\x00foobar",
+        proto.datagramReceived(b"123456987654\x08\x00foobar",
                                partial=0)
 
         assert not p1.expecting, \
@@ -46,26 +46,26 @@ class EthernetTests(unittest.TestCase):
         proto = ethernet.EthernetProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
-            'dest': "123456",
-            'source': "987654",
+            'dest': b"123456",
+            'source': b"987654",
             'protocol': 0x0800,
             }),
 
-            ('quux', {
+            (b'quux', {
             'partial': 1,
-            'dest': "012345",
-            'source': "abcdef",
+            'dest': b"012345",
+            'source': b"abcdef",
             'protocol': 0x0800,
             }),
 
             ])
         proto.addProto(0x0800, p1)
 
-        proto.datagramReceived("123456987654\x08\x00foobar",
+        proto.datagramReceived(b"123456987654\x08\x00foobar",
                                partial=0)
-        proto.datagramReceived("012345abcdef\x08\x00quux",
+        proto.datagramReceived(b"012345abcdef\x08\x00quux",
                                partial=1)
 
         assert not p1.expecting, \
@@ -76,10 +76,10 @@ class EthernetTests(unittest.TestCase):
         proto = ethernet.EthernetProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
-            'dest': "123456",
-            'source': "987654",
+            'dest': b"123456",
+            'source': b"987654",
             'protocol': 0x0800,
             }),
 
@@ -87,10 +87,10 @@ class EthernetTests(unittest.TestCase):
 
         p2 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
-            'dest': "123456",
-            'source': "987654",
+            'dest': b"123456",
+            'source': b"987654",
             'protocol': 0x0800,
             }),
 
@@ -99,7 +99,7 @@ class EthernetTests(unittest.TestCase):
         proto.addProto(0x0800, p1)
         proto.addProto(0x0800, p2)
 
-        proto.datagramReceived("123456987654\x08\x00foobar",
+        proto.datagramReceived(b"123456987654\x08\x00foobar",
                                partial=0)
 
         assert not p1.expecting, \
@@ -112,26 +112,26 @@ class EthernetTests(unittest.TestCase):
         p1 = MyProtocol([])
         proto.addProto(0x0801, p1)
 
-        proto.datagramReceived("123456987654\x08\x00foobar",
+        proto.datagramReceived(b"123456987654\x08\x00foobar",
                                partial=0)
-        proto.datagramReceived("012345abcdef\x08\x00quux",
+        proto.datagramReceived(b"012345abcdef\x08\x00quux",
                                partial=1)
 
     def testDemuxing(self):
         proto = ethernet.EthernetProtocol()
         p1 = MyProtocol([
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
-            'dest': "123456",
-            'source': "987654",
+            'dest': b"123456",
+            'source': b"987654",
             'protocol': 0x0800,
             }),
 
-            ('quux', {
+            (b'quux', {
             'partial': 1,
-            'dest': "012345",
-            'source': "abcdef",
+            'dest': b"012345",
+            'source': b"abcdef",
             'protocol': 0x0800,
             }),
 
@@ -140,30 +140,30 @@ class EthernetTests(unittest.TestCase):
 
         p2 = MyProtocol([
 
-            ('quux', {
+            (b'quux', {
             'partial': 1,
-            'dest': "012345",
-            'source': "abcdef",
+            'dest': b"012345",
+            'source': b"abcdef",
             'protocol': 0x0806,
             }),
 
-            ('foobar', {
+            (b'foobar', {
             'partial': 0,
-            'dest': "123456",
-            'source': "987654",
+            'dest': b"123456",
+            'source': b"987654",
             'protocol': 0x0806,
             }),
 
             ])
         proto.addProto(0x0806, p2)
 
-        proto.datagramReceived("123456987654\x08\x00foobar",
+        proto.datagramReceived(b"123456987654\x08\x00foobar",
                                partial=0)
-        proto.datagramReceived("012345abcdef\x08\x06quux",
+        proto.datagramReceived(b"012345abcdef\x08\x06quux",
                                partial=1)
-        proto.datagramReceived("123456987654\x08\x06foobar",
+        proto.datagramReceived(b"123456987654\x08\x06foobar",
                                partial=0)
-        proto.datagramReceived("012345abcdef\x08\x00quux",
+        proto.datagramReceived(b"012345abcdef\x08\x00quux",
                                partial=1)
 
         assert not p1.expecting, \

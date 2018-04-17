@@ -26,7 +26,9 @@ from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, NoProtocol)
+    ConnectionAborted, DNSLookupError, NoProtocol,
+    ConnectBindError,
+)
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
@@ -56,12 +58,16 @@ else:
     from twisted.internet.ssl import ClientContextFactory
     useSSL = True
 
+s = None
 try:
-    socket.socket(socket.AF_INET6, socket.SOCK_STREAM).close()
+    s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    s.bind(('::1', 0))
 except socket.error as e:
     ipv6Skip = str(e)
 else:
     ipv6Skip = None
+if s is not None:
+    s.close()
 
 
 
@@ -604,7 +610,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         L{connectTCP<twisted.internet.interfaces.IReactorTCP.connectTCP>}, if a
         hostname was used.
         """
-        host, port = findFreePort(self.interface, self.family)[:2]
+        host, ignored = findFreePort(self.interface, self.family)[:2]
         reactor = self.buildReactor()
         fakeDomain = self.fakeDomainName
         reactor.installResolver(FakeResolver({fakeDomain: self.interface}))
@@ -626,9 +632,25 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         clientFactory.protocol = CheckAddress
 
         def connectMe():
-            reactor.connectTCP(
-                fakeDomain, server.getHost().port, clientFactory,
-                bindAddress=(self.interface, port))
+            while True:
+                ignored, port = findFreePort(self.interface, self.family)[:2]
+                bindAddress = (self.interface, port)
+                log.msg("Connect attempt with bindAddress {}".format(
+                    bindAddress
+                ))
+                try:
+                    reactor.connectTCP(
+                        fakeDomain,
+                        server.getHost().port,
+                        clientFactory,
+                        bindAddress=bindAddress,
+                    )
+                except ConnectBindError:
+                    continue
+                else:
+                    clientFactory.boundPort = port
+                    break
+
         needsRunningReactor(reactor, connectMe)
 
         self.runReactor(reactor)
@@ -643,7 +665,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         self.assertEqual(
             transportData['host'],
-            self.addressClass('TCP', self.interface, port))
+            self.addressClass('TCP', self.interface, clientFactory.boundPort))
         self.assertEqual(
             transportData['peer'],
             self.addressClass('TCP', self.interface, serverAddress.port))
@@ -1102,8 +1124,7 @@ class TCPPortTestsMixin(object):
         try:
             connect(client, (port.getHost().host, port.getHost().port))
         except socket.error as e:
-            errnum, message = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         self.runReactor(reactor)
 
@@ -1185,8 +1206,7 @@ class TCPPortTestsMixin(object):
         try:
             connect(client, (port.getHost().host, port.getHost().port))
         except socket.error as e:
-            errnum, message = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
         self.runReactor(reactor)
         return factory.address
 
@@ -2290,7 +2310,7 @@ class AbortConnectionMixin(object):
     """
     Unit tests for L{ITransport.abortConnection}.
     """
-    # Override in subclasses, should be a EndpointCreator instance:
+    # Override in subclasses, should be an EndpointCreator instance:
     endpoints = None
 
     def runAbortTest(self, clientClass, serverClass,

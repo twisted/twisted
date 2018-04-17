@@ -205,11 +205,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return self._reads.keys()
+        return list(self._reads.keys())
 
 
     def getWriters(self):
-        return self._writes.keys()
+        return list(self._writes.keys())
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -225,11 +225,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in self._closedAndReading.keys():
+        for reader in list(self._closedAndReading.keys()):
             ranUserCode = True
             self._runAction('doRead', reader)
 
-        for fd in self._writes.keys():
+        for fd in list(self._writes.keys()):
             ranUserCode = True
             log.callWithLogger(fd, self._runWrite, fd)
 
@@ -245,7 +245,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = self._events.keys() or [self.dummyEvent]
+        handles = list(self._events.keys()) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
@@ -422,7 +422,7 @@ class _ThreadedWin32EventsMixin(object):
 def install():
     threadable.init(1)
     r = Win32Reactor()
-    import main
+    from . import main
     main.installReactor(r)
 
 

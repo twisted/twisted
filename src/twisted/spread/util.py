@@ -107,7 +107,7 @@ class Pager:
         (internal) Method called by Broker.
         """
         if not self._stillPaging:
-            self.collector.callRemote("endedPaging")
+            self.collector.callRemote("endedPaging", pbanswer=False)
             if self.callback is not None:
                 self.callback(*self.callbackArgs, **self.callbackKeyword)
         return self._stillPaging
@@ -116,7 +116,7 @@ class Pager:
         """
         (internal) Method called by Broker.
         """
-        self.collector.callRemote("gotPage", self.nextPage())
+        self.collector.callRemote("gotPage", self.nextPage(), pbanswer=False)
 
     def nextPage(self):
         """
@@ -183,7 +183,7 @@ class FilePager(Pager):
             return
         val = self.chunks.pop(0)
         self.producer.resumeProducing()
-        self.collector.callRemote("gotPage", val)
+        self.collector.callRemote("gotPage", val, pbanswer=False)
 
 
 # Utility paging stuff.

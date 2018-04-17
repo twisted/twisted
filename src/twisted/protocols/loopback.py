@@ -271,7 +271,7 @@ def _loopbackAsyncContinue(ignored, server, serverToClient, client,
 
 @implementer(interfaces.ITransport, interfaces.IConsumer)
 class LoopbackRelay:
-    buffer = ''
+    buffer = b''
     shouldLose = 0
     disconnecting = 0
     producer = None
@@ -286,7 +286,7 @@ class LoopbackRelay:
             self.logFile.write("loopback writing %s\n" % repr(data))
 
     def writeSequence(self, iovec):
-        self.write("".join(iovec))
+        self.write(b"".join(iovec))
 
     def clearBuffer(self):
         if self.shouldLose == -1:
@@ -298,7 +298,7 @@ class LoopbackRelay:
             if self.logFile:
                 self.logFile.write("loopback receiving %s\n" % repr(self.buffer))
             buffer = self.buffer
-            self.buffer = ''
+            self.buffer = b''
             self.target.dataReceived(buffer)
         if self.shouldLose == 1:
             self.shouldLose = -1
