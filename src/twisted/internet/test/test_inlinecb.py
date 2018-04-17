@@ -247,8 +247,7 @@ class CancellationTests(TestCase):
         def getChildThing():
             d = Deferred()
             def _eb(result):
-                if result.check(CancelledError):
-                    childResultHolder[0] = 'SUCCESS'
+                childResultHolder[0] = result.check(CancelledError)
                 return result
             d.addErrback(_eb)
             return d
@@ -256,7 +255,9 @@ class CancellationTests(TestCase):
         d.addErrback(lambda result: None)
         d.cancel()
         self.assertEqual(
-            childResultHolder[0], 'SUCCESS', "no cascade cancelling occurs"
+            childResultHolder[0],
+            CancelledError,
+            "no cascade cancelling occurs",
         )
 
 
