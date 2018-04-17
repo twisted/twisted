@@ -1,0 +1,1 @@
+Cancelling an inlineCallbacks will now cascade to it's waited deferreds
