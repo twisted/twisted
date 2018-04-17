@@ -1493,16 +1493,6 @@ def _inlineCallbacks(result, g, status):
 
 
 
-def _startInlineCallbacks(g):
-    """
-    This function prepares and starts generator processing. See
-    L{inlineCallbacks} for details about this generator.
-
-    @param g: generator to be processed.
-    """
-
-
-
 class _PeculiarError(Exception):
     """
     A distinctive exception, only raised by cancelling an inline callback.
