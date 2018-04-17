@@ -905,11 +905,11 @@ def ensureDeferred(coro):
         from asyncio import iscoroutine
 
         if iscoroutine(coro) or isinstance(coro, GeneratorType):
-            return _inlineCallbacks(None, coro, Deferred())
+            return _cancellableInlineCallbacks(coro)
 
     elif version_info >= (3, 3, 0):
         if isinstance(coro, GeneratorType):
-            return _inlineCallbacks(None, coro, Deferred())
+            return _cancellableInlineCallbacks(coro)
 
     if not isinstance(coro, Deferred):
         raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
@@ -1493,6 +1493,25 @@ def _inlineCallbacks(result, g, status):
 
 
 
+def _cancellableInlineCallbacks(g):
+    def cancel(it):
+        it.callbacks, tmp = [], it.callbacks
+        it.addErrback(handleCancel)
+        it.callbacks.extend(tmp)
+        it.errback(_PeculiarError())
+    deferred = Deferred(cancel)
+    status = _CancellationStatus(deferred)
+    def handleCancel(result):
+        result.trap(_PeculiarError)
+        status.deferred = Deferred(cancel)
+        awaited = status.waitingOn
+        awaited.cancel()
+        return status.deferred
+    _inlineCallbacks(None, g, status)
+    return deferred
+
+
+
 class _PeculiarError(Exception):
     """
     A distinctive exception, only raised by cancelling an inline callback.
@@ -1574,23 +1593,8 @@ def inlineCallbacks(f):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen))
-        def cancel(it):
-            it.callbacks, tmp = [], it.callbacks
-            it.addErrback(handleCancel)
-            it.callbacks.extend(tmp)
-            it.errback(_PeculiarError())
-        deferred = Deferred(cancel)
-        status = _CancellationStatus(deferred)
-        def handleCancel(result):
-            result.trap(_PeculiarError)
-            status.deferred = Deferred(cancel)
-            awaited = status.waitingOn
-            awaited.cancel()
-            return status.deferred
-        _inlineCallbacks(None, gen, status)
-        return deferred
+        return _cancellableInlineCallbacks(gen)
     return unwindGenerator
-
 
 
 ## DeferredLock/DeferredQueue
