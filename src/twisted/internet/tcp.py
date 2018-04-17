@@ -1030,6 +1030,33 @@ class _NullFileDescriptorReservation(object):
 
 
 
+# Don't keep a reserve file descriptor for coping with file descriptor
+# exhaustion on Windows.
+
+# WSAEMFILE occurs when a process has run out of memory, not when a
+# specific limit has been reached.  Windows sockets are handles, which
+# differ from UNIX's file descriptors in that they can refer to any
+# "named kernel object", including user interface resources like menu
+# and icons.  The generality of handles results in a much higher limit
+# than UNIX imposes on file descriptors: a single Windows process can
+# allocate up to 16,777,216 handles.  Because they're indexes into a
+# three level table whose upper two layers are allocated from
+# swappable pages, handles compete for heap space with other kernel
+# objects, not with each other.  Closing a given socket handle may not
+# release enough memory to allow the process to make progress.
+#
+# This fundamental difference between file descriptors and handles
+# makes a reserve file descriptor useless on Windows.  Note that other
+# event loops, such as libuv and libevent, also do not special case
+# WSAEMFILE.
+#
+# For an explanation of handles, see the "Object Manager"
+# (pp. 140-175) section of
+#
+# Windows Internals, Part 1: Covering Windows Server 2008 R2 and
+# Windows 7 (6th ed.)
+# Mark E. Russinovich, David A. Solomon, and Alex
+# Ionescu. 2012. Microsoft Press.
 if platformType == 'win32':
     _reservedFD = _NullFileDescriptorReservation()
 else:
