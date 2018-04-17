@@ -1494,6 +1494,14 @@ def _inlineCallbacks(result, g, status):
 
 
 def _cancellableInlineCallbacks(g):
+    """
+    Make an C{@}L{inlineCallbacks} cancellable.
+
+    @param g: a generator object returned by calling a function or method
+        decorated with C{@}L{inlineCallbacks}
+
+    @return: L{Deferred} for the C{@}L{inlineCallbacks} that is cancellable.
+    """
     def cancel(it):
         it.callbacks, tmp = [], it.callbacks
         it.addErrback(handleCancel)
