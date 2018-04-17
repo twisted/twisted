@@ -979,6 +979,7 @@ class _ExhaustsFileDescriptors(object):
     """
     _log = Logger()
     _fileDescriptorFactory = attr.ib(default=lambda: os.dup(0), repr=False)
+    _close = attr.ib(default=os.close, repr=False)
     _fileDescriptors = attr.ib(
         default=attr.Factory(list), init=False, repr=False)
 
@@ -1016,7 +1017,7 @@ class _ExhaustsFileDescriptors(object):
         while self._fileDescriptors:
             fd = self._fileDescriptors.pop()
             try:
-                os.close(fd)
+                self._close(fd)
             except OSError as e:
                 if e.errno == errno.EBADF:
                     continue
@@ -1087,6 +1088,19 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         self.assertEqual(exception.errno, errno.EMFILE)
 
 
+    def test_exhaustRaisesOSError(self):
+        """
+        An L{OSError} raised within
+        L{_ExhaustsFileDescriptors.exhaust} with an C{errno} other
+        than C{EMFILE} is reraised to the caller.
+        """
+        def raiseOSError():
+            raise OSError(errno.EMFILE + 1, "Not EMFILE")
+
+        exhauster = _ExhaustsFileDescriptors(raiseOSError)
+        self.assertRaises(OSError, exhauster.exhaust)
+
+
     def test_release(self):
         """
         L{_ExhaustsFileDescriptors.release} releases all opened
@@ -1125,6 +1139,56 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         for fd in fileDescriptors:
             exception = self.assertRaises(OSError, os.fstat, fd)
             self.assertEqual(exception.errno, errno.EBADF)
+
+
+    def test_releaseIgnoresEBADF(self):
+        """
+        L{_ExhaustsFileDescriptors.release} continues to close opened
+        file descriptors even when closing one fails with C{EBADF}.
+        """
+        fileDescriptors = []
+
+        def recordFileDescriptors():
+            fd = os.dup(0)
+            fileDescriptors.append(fd)
+            return fd
+
+        exhauster = _ExhaustsFileDescriptors(recordFileDescriptors)
+        self.addCleanup(exhauster.release)
+
+        exhauster.exhaust()
+        self.assertGreater(exhauster.count(), 0)
+
+        os.close(fileDescriptors[0])
+
+        exhauster.release()
+        self.assertEqual(exhauster.count(), 0)
+
+
+    def test_releaseRaisesOSError(self):
+        """
+        An L{OSError} raised within
+        L{_ExhaustsFileDescriptors.release} with an C{errno} other than
+        C{EBADF} is reraised to the caller.
+        """
+        fakeFileDescriptors = []
+
+        def opensThree():
+            if len(fakeFileDescriptors) == 3:
+                raise OSError(errno.EMFILE, "Too many files")
+            fakeFileDescriptors.append(-1)
+            return fakeFileDescriptors[-1]
+
+        def failingClose(fd):
+            raise OSError(11, "test_releaseRaisesOSError fake OSError")
+
+        exhauster = _ExhaustsFileDescriptors(opensThree,
+                                             close=failingClose)
+
+        self.assertEqual(exhauster.count(), 0)
+        exhauster.exhaust()
+        self.assertGreater(exhauster.count(), 0)
+        self.assertRaises(OSError, exhauster.release)
 
 
 
