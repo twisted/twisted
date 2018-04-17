@@ -1597,7 +1597,7 @@ def inlineCallbacks(f):
             awaited = status.waitingOn
             awaited.cancel()
             return status.deferred
-        _startInlineCallbacks(None, gen, status)
+        _inlineCallbacks(None, gen, status)
         return deferred
     return unwindGenerator
 
@@ -1989,5 +1989,6 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
+           "CancelledError",
           ]
 
