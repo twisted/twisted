@@ -16,7 +16,7 @@ except ImportError:
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import log
+from twisted.python import compat, log
 from twisted.internet.tcp import (
     _ACCEPT_ERRORS, ECONNABORTED, EPERM, ENOMEM, ENFILE,
     EAGAIN, EMFILE, ENOBUFS, EINPROGRESS, EWOULDBLOCK, Port,
@@ -322,15 +322,22 @@ class SelectReactorTests(TestCase):
         # successfully.
         self.assertEquals(port.numberAccepts, 1)
 
+    if platform.getType() == 'win32':
+        test_permissionFailure.skip = (
+            "Windows accept(2) cannot generate EPERM")
+
 
     def test_unknownSocketErrorRaise(self):
         """
         A C{socket.error} raised by C{accept(2)} whose C{errno} is
         unknown to the recovery logic is logged.
         """
+        knownErrors = list(_ACCEPT_ERRORS)
+        knownErrors.extend([EAGAIN, EPERM, EWOULDBLOCK])
+        # Windows has object()s stubs for some errnos.
         unknownAcceptError = max(
-            list(_ACCEPT_ERRORS)
-            + [EAGAIN, EMFILE, EWOULDBLOCK]
+            error for error in knownErrors
+            if isinstance(error, (int, compat.long))
         ) + 1
 
         class FakeSocketWithUnknownAcceptError(object):
