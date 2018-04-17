@@ -18,8 +18,8 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python import log
 from twisted.internet.tcp import (
-    ECONNABORTED, ENOMEM, ENFILE,
-    EMFILE, ENOBUFS, EINPROGRESS, Port,
+    _ACCEPT_ERRORS, ECONNABORTED, EPERM, ENOMEM, ENFILE,
+    EAGAIN, EMFILE, ENOBUFS, EINPROGRESS, EWOULDBLOCK, Port,
 )
 from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.python.runtime import platform
@@ -166,25 +166,21 @@ class SelectReactorTests(TestCase):
 
         factory = ServerFactory()
         port = self.port(0, factory, interface='127.0.0.1')
-        originalSocket = port.socket
-        try:
-            port.socket = FakeSocket()
+        self.patch(port, "socket", FakeSocket())
 
-            port.doRead()
+        port.doRead()
 
-            expectedFormat = "Could not accept new connection ({acceptError})"
-            expectedErrorCode = errno.errorcode[socketErrorNumber]
-            for msg in self.messages:
-                actualFormat = msg.get('log_format')
-                actualErrorCode = msg.get('acceptError')
-                if (actualFormat, actualErrorCode) == (expectedFormat,
-                                                       expectedErrorCode):
-                    break
-            else:
-                self.fail("Log event for failed accept not found in "
-                          "%r" % (self.messages,))
-        finally:
-            port.socket = originalSocket
+        expectedFormat = "Could not accept new connection ({acceptError})"
+        expectedErrorCode = errno.errorcode[socketErrorNumber]
+        for msg in self.messages:
+            actualFormat = msg.get('log_format')
+            actualErrorCode = msg.get('acceptError')
+            if (actualFormat, actualErrorCode) == (expectedFormat,
+                                                   expectedErrorCode):
+                break
+        else:
+            self.fail("Log event for failed accept not found in "
+                      "%r" % (self.messages,))
 
 
     def test_tooManyFilesFromAccept(self):
@@ -291,6 +287,71 @@ class SelectReactorTests(TestCase):
         # There were no outstanding client connections, so only one
         # accept should be tried next.
         self.assertEqual(port.numberAccepts, 1)
+
+
+    def test_permissionFailure(self):
+        """
+        C{accept(2)} returning C{EPERM} is treated as a transient
+        failure and the call retried no more than the maximum number
+        of consecutive C{accept(2)} calls.
+        """
+        maximumNumberOfAccepts = 123
+        acceptCalls = [0]
+
+        class FakeSocketWithAcceptLimit(object):
+            """
+            Pretend to be a socket in an overloaded system whose
+            C{accept} method can only be called
+            C{maximumNumberOfAccepts} times.
+            """
+            def accept(oself):
+                acceptCalls[0] += 1
+                if acceptCalls[0] > maximumNumberOfAccepts:
+                    self.fail("Maximum number of accept calls exceeded.")
+                raise socket.error(EPERM, os.strerror(EPERM))
+
+        factory = ServerFactory()
+        port = self.port(0, factory, interface='127.0.0.1')
+        port.numberAccepts = 123
+        self.patch(port, "socket", FakeSocketWithAcceptLimit())
+
+        # This should not loop infinitely.
+        port.doRead()
+
+        # This is scaled down to 1 because no accept(2)s returned
+        # successfully.
+        self.assertEquals(port.numberAccepts, 1)
+
+
+    def test_unknownSocketErrorRaise(self):
+        """
+        A C{socket.error} raised by C{accept(2)} whose C{errno} is
+        unknown to the recovery logic is logged.
+        """
+        unknownAcceptError = max(
+            list(_ACCEPT_ERRORS)
+            + [EAGAIN, EMFILE, EWOULDBLOCK]
+        ) + 1
+
+        class FakeSocketWithUnknownAcceptError(object):
+            """
+            Pretend to be a socket in an overloaded system whose
+            C{accept} method can only be called
+            C{maximumNumberOfAccepts} times.
+            """
+            def accept(oself):
+                raise socket.error(unknownAcceptError,
+                                   "unknown socket error message")
+
+        factory = ServerFactory()
+        port = self.port(0, factory, interface='127.0.0.1')
+        self.patch(port, "socket", FakeSocketWithUnknownAcceptError())
+
+        port.doRead()
+
+        failures = self.flushLoggedErrors(socket.error)
+        self.assertEqual(1, len(failures))
+        self.assertEqual(failures[0].value.args[0], unknownAcceptError)
 
 
 

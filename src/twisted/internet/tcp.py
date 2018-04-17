@@ -21,7 +21,7 @@ import attr
 from zope.interface import Interface, implementer
 
 from twisted.logger import Logger
-from twisted.python.compat import izip, lazyByteSlice, unicode
+from twisted.python.compat import lazyByteSlice, unicode
 from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
@@ -1123,7 +1123,7 @@ class _BuffersLogs(object):
 
 
 
-def _accept(logger, listener, reservedFD):
+def _accept(logger, accepts, listener, reservedFD):
     """
     Return a generator that yields client sockets from the provided
     listening socket until there are none left or an unrecoverable
@@ -1135,6 +1135,10 @@ def _accept(logger, listener, reservedFD):
         descriptor on UNIX-like systems.
     @type logger: L{Logger}
 
+    @param accepts: An iterable iterated over to limit the number
+        consecutive C{accept}s.
+    @type accepts: An iterable.
+
     @param listener: The listening socket.
     @type listener: L{socket.socket}
 
@@ -1145,7 +1149,7 @@ def _accept(logger, listener, reservedFD):
     @return: A generator that yields C{(socket, addr)} tuples from
         L{socket.socket.accept}
     """
-    while True:
+    for _ in accepts:
         try:
             client, address = listener.accept()
         except socket.error as e:
@@ -1170,7 +1174,8 @@ def _accept(logger, listener, reservedFD):
                 # The following block should not run arbitrary code
                 # that might acquire its own file descriptor.
                 with reservedFD:
-                    clientsToClose = _accept(logger, listener, reservedFD)
+                    clientsToClose = _accept(
+                        logger, accepts, listener, reservedFD)
                     for clientToClose, closedAddress in clientsToClose:
                         clientToClose.close()
                         logger.info("EMFILE recovery:"
@@ -1365,11 +1370,11 @@ class Port(base.BasePort, _SocketCloser):
             with _BuffersLogs(self._logger.namespace,
                               self._logger.observer) as bufferingLogger:
                 accepted = 0
-                attempts = range(1, numAccepts + 1)
-                clients = _accept(bufferingLogger, self.socket, _reservedFD)
-                # Limit the infinite stream of clients with the attempts
-                # iterator
-                for accepted, (skt, addr) in izip(attempts, clients):
+                clients = _accept(bufferingLogger,
+                                  range(numAccepts),
+                                  self.socket,
+                                  _reservedFD)
+                for accepted, (skt, addr) in enumerate(clients, 1):
                     fdesc._setCloseOnExec(skt.fileno())
                     protocol = self.factory.buildProtocol(
                         self._buildAddr(addr))
