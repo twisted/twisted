@@ -212,7 +212,7 @@ class CancellationTests(TestCase):
             x = yield getChildThing()
         except TranslateMe:
             raise TranslateResult()
-        except DontFail, df:
+        except DontFail as df:
             x = df.actualValue - 2
         returnValue(x + 1)
 
