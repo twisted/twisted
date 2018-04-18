@@ -172,15 +172,14 @@ class SelectReactorTests(TestCase):
 
         expectedFormat = "Could not accept new connection ({acceptError})"
         expectedErrorCode = errno.errorcode[socketErrorNumber]
-        for msg in self.messages:
-            actualFormat = msg.get('log_format')
-            actualErrorCode = msg.get('acceptError')
-            if (actualFormat, actualErrorCode) == (expectedFormat,
-                                                   expectedErrorCode):
-                break
-        else:
-            self.fail("Log event for failed accept not found in "
-                      "%r" % (self.messages,))
+        matchingMessages = [
+            (msg.get('log_format') == expectedFormat
+             and msg.get('acceptError') == expectedErrorCode)
+            for msg in self.messages
+        ]
+        self.assertGreater(len(matchingMessages), 0,
+                           "Log event for failed accept not found in "
+                           "%r" % (self.messages,))
 
 
     def test_tooManyFilesFromAccept(self):
