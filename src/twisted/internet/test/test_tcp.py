@@ -1251,8 +1251,7 @@ def assertPeerClosedOnEMFILE(
 
     def stopReactorAndCloseFileDescriptors(result):
         exhauster.release()
-        if reactor.running:
-            reactor.stop()
+        reactor.stop()
         return result
 
     clientFactory.deferred.addBoth(stopReactorAndCloseFileDescriptors)
