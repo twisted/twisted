@@ -309,6 +309,17 @@ class SelectReactorTests(TestCase):
                     self.fail("Maximum number of accept calls exceeded.")
                 raise socket.error(EPERM, os.strerror(EPERM))
 
+        # Verify that FakeSocketWithAcceptLimit.accept() fails the
+        # test if the number of accept calls exceeds the maximum.
+        for _ in range(maximumNumberOfAccepts):
+            self.assertRaises(socket.error,
+                              FakeSocketWithAcceptLimit().accept)
+
+        self.assertRaises(self.failureException,
+                          FakeSocketWithAcceptLimit().accept)
+
+        acceptCalls = [0]
+
         factory = ServerFactory()
         port = self.port(0, factory, interface='127.0.0.1')
         port.numberAccepts = 123
