@@ -876,7 +876,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         request.setHost(b'example.com', 80)
         self.assertEqual(request.URL(),
-            DecodedURL(hyperlinkURL.from_text('http://example.com/foo/bar')))
+            DecodedURL(hyperlinkURL.from_text(u'http://example.com/foo/bar')))
 
 
     def test_DecodedURLQuoting(self):
@@ -889,7 +889,7 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
         self.assertEqual(request.URL(),
-            DecodedURL(hyperlinkURL.from_text('http://example.com/foo%2Fbar')))
+            DecodedURL(hyperlinkURL.from_text(u'http://example.com/foo%2Fbar')))
 
 
 
