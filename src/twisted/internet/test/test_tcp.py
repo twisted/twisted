@@ -3182,12 +3182,9 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         A reservation without an open file used as a context manager
         raises a L{RuntimeError}.
         """
-        sideEffect = False
         with self.assertRaises(RuntimeError):
             with self.reservedFD:
-                sideEffect = True
-        self.assertFalse(sideEffect)
-
+                """This string cannot raise an exception."""
 
     def test_enterClosesFileExitOpensFile(self):
         """
