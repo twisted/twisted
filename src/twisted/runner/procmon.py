@@ -21,16 +21,17 @@ class _Process(object):
     @ivar args: command-line arguments (including name of command as first one)
     @type args: C{list}
 
-    @ivar uid: user-id to run process as, or None
+    @ivar uid: user-id to run process as, or None (which means inherit uid)
     @type uid: C{int}
 
-    @ivar gid: group-id to run process as, or None
+    @ivar gid: group-id to run process as, or None (which means inherit gid)
     @type gid: C{int}
 
     @ivar env: environment for process
     @type env: C{dict}
 
-    @ivar cwd: initial working directory for process
+    @ivar cwd: initial working directory for process or None
+               (which means inherit cwd)
     @type cwd: C{str}
     """
 
@@ -162,7 +163,7 @@ class ProcessMonitor(service.Service):
         self.restart = {}
 
 
-    @deprecate.deprecatedProperty(incremental.Version("Twisted", 17, 10, 0))
+    @deprecate.deprecatedProperty(incremental.Version("Twisted", "NEXT", 0, 0))
     def processes(self):
         """
         Processes as dict of tuples
@@ -241,7 +242,7 @@ class ProcessMonitor(service.Service):
         Start all monitored processes.
         """
         service.Service.startService(self)
-        for name in self._processes:
+        for name in list(self._processes):
             self.startProcess(name)
 
 
@@ -252,11 +253,11 @@ class ProcessMonitor(service.Service):
         service.Service.stopService(self)
 
         # Cancel any outstanding restarts
-        for name, delayedCall in self.restart.items():
+        for name, delayedCall in list(self.restart.items()):
             if delayedCall.active():
                 delayedCall.cancel()
 
-        for name in self._processes:
+        for name in list(self._processes):
             self.stopProcess(name)
 
 
