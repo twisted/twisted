@@ -1,0 +1,1 @@
+RSA keys replaced with 2048bit ones in twisted.conch.test.keydata in order to be compatible with OpenSSH 7.6.

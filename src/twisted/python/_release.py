@@ -35,6 +35,7 @@ intersphinxURLs = [
     u"https://python-hyper.org/h2/en/stable/objects.inv",
     u"https://python-hyper.org/priority/en/stable/objects.inv",
     u"https://zopeinterface.readthedocs.io/en/latest/objects.inv",
+    u"https://automat.readthedocs.io/en/latest/objects.inv",
 ]
 
 
