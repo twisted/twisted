@@ -309,6 +309,8 @@ EXAMPLE_NET_IP = '127.0.0.8'
 EXAMPLE_ORG_IP = '127.0.0.9'
 FOO_LOCAL_IP = '127.0.0.10'
 FOO_COM_IP = '127.0.0.11'
+HOSTNAME_IP = '127.0.0.12'
+HOSTNAME_V6_IP = '::12'
 
 class FakeReactorAndConnectMixin:
     """
@@ -333,6 +335,8 @@ class FakeReactorAndConnectMixin:
             u'example.org': [EXAMPLE_ORG_IP],
             u'foo': [FOO_LOCAL_IP],
             u'foo.com': [FOO_COM_IP],
+            u'127.0.0.7': ['127.0.0.7'],
+            u'::7': ['::7'],
         })
 
         # Lots of tests were written expecting MemoryReactorClock and the
@@ -763,11 +767,28 @@ class IntegrationTestingMixin(object):
         self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
 
 
+    def test_integrationTestIPv4URI(self):
+        """
+        L{Agent} works over IPv4 when URI is an IPv4 address.
+        """
+        self.todo = 'service_identity does not support IP address validation yet'
+        self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
+
+
     def test_integrationTestIPv6(self):
         """
         L{Agent} works over IPv6.
         """
         self.integrationTest(b'ipv6.example.com', EXAMPLE_COM_V6_IP,
+                             IPv6Address)
+
+
+    def test_integrationTestIPv6URI(self):
+        """
+        L{Agent} works over IPv6 when URI is an IPv6 address.
+        """
+        self.todo = 'service_identity does not support IP address validation yet'
+        self.integrationTest(b'[::7]', '::7',
                              IPv6Address)
 
 
@@ -1481,7 +1502,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        authority, server = certificatesForAuthorityAndServer(hostName
+        certHostName = hostName.strip('[]')
+        authority, server = certificatesForAuthorityAndServer(certHostName
                                                               .decode('ascii'))
         def tlsify(serverFactory):
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)

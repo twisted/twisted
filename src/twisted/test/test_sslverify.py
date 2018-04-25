@@ -21,6 +21,8 @@ skipNPN = None
 skipALPN = None
 
 if requireModule("OpenSSL"):
+    import ipaddress
+
     from twisted.internet import ssl
 
     from OpenSSL import SSL
@@ -165,10 +167,12 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         L{sslverify.PrivateCertificate})
     """
     commonNameForCA = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example CA')]
+        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example CA'),
+         x509.NameAttribute(NameOID.DOMAIN_COMPONENT, serviceIdentity)]
     )
     commonNameForServer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example Server')]
+        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example Server'),
+         x509.NameAttribute(NameOID.DOMAIN_COMPONENT, serviceIdentity)]
     )
     oneDay = datetime.timedelta(1, 0, 0)
     privateKeyForCA = rsa.generate_private_key(
@@ -193,12 +197,21 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
             backend=default_backend()
         )
     )
+
     privateKeyForServer = rsa.generate_private_key(
         public_exponent=65537,
         key_size=4096,
         backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
+
+    try:
+        ipAddress = ipaddress.ip_address(serviceIdentity)
+    except ValueError:
+        subjectAlternativeNames = [x509.DNSName(serviceIdentity)]
+    else:
+        subjectAlternativeNames = [x509.IPAddress(ipAddress)]
+
     serverCertificate = (
         x509.CertificateBuilder()
         .subject_name(commonNameForServer)
@@ -212,7 +225,7 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         )
         .add_extension(
             x509.SubjectAlternativeName(
-                [x509.DNSName(serviceIdentity)]
+                subjectAlternativeNames
             ),
             critical=True,
         )

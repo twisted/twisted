@@ -14,10 +14,10 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
-
 
 
 
@@ -1108,7 +1108,6 @@ def _tolerateErrors(wrapped):
     return infoCallback
 
 
-
 @implementer(IOpenSSLClientConnectionCreator)
 class ClientTLSOptions(object):
     """
@@ -1150,7 +1149,14 @@ class ClientTLSOptions(object):
         """
         self._ctx = ctx
         self._hostname = hostname
-        self._hostnameBytes = _idnaBytes(hostname)
+
+        if isIPAddress(hostname) or isIPv6Address(hostname):
+            self._hostnameBytes = hostname.encode('ascii')
+            self._hostname_is_ip_address = True
+        else:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._hostname_is_ip_address = False
+
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
@@ -1195,7 +1201,8 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        if where & SSL.SSL_CB_HANDSHAKE_START:
+        # Literal IPv4 and IPv6 addresses are not permitted as host names according to the RFCs.
+        if where & SSL.SSL_CB_HANDSHAKE_START and not self._hostname_is_ip_address:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
