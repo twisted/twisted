@@ -30,10 +30,10 @@ class Options(usage.Options):
     optParameters = [["logfile", "l", None,
                       "Path to web CLF (Combined Log Format) log file."],
                      ["certificate", "c", "server.pem",
-                      "(DEPRECATED: use --http) "
+                      "(DEPRECATED: use --listen) "
                       "SSL certificate to use for HTTPS. "],
                      ["privkey", "k", "server.pem",
-                      "(DEPRECATED: use --http) "
+                      "(DEPRECATED: use --listen) "
                       "SSL certificate to use for HTTPS."],
                      ]
 
@@ -47,8 +47,8 @@ class Options(usage.Options):
         "personal", "",
         "Instead of generating a webserver, generate a "
         "ResourcePublisher which listens on  the port given by "
-        "--http, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
-        "if --http is not specified."])
+        "--listen, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
+        "if --listen is not specified."])
 
     compData = usage.Completions(
                    optActions={"logfile" : usage.CompleteFiles("*.log"),
@@ -71,7 +71,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     def opt_port(self, port):
         """
-        (DEPRECATED: use --http)
+        (DEPRECATED: use --listen)
         Strports description of port to start the server on
         """
         msg = deprecate.getDeprecationWarningString(
@@ -83,7 +83,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     def opt_https(self, port):
         """
-        (DEPRECATED: use --http)
+        (DEPRECATED: use --listen)
         Port to listen on for Secure HTTP.
         """
         msg = deprecate.getDeprecationWarningString(
