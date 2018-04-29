@@ -99,6 +99,8 @@ When we run some code, we often want to know what its result was.  For this, Twi
 
 To get a result from some blocking code back into the reactor thread, we can use :api:`twisted.internet.threads.deferToThread <deferToThread>` to execute it instead of callFromThread.
 
+::
+
     from __future__ import print_function
     from twisted.internet import reactor, threads
 

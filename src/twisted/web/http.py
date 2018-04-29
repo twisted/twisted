@@ -720,6 +720,13 @@ class Request:
         """
         self.notifications = []
         self.channel = channel
+
+        # Cache the client and server information, we'll need this
+        # later to be serialized and sent with the request so CGIs
+        # will work remotely
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
+
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
@@ -850,11 +857,6 @@ class Request:
         else:
             self.path, argstring = x
             self.args = parse_qs(argstring, 1)
-
-        # cache the client and server information, we'll need this later to be
-        # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.getPeer()
-        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
@@ -1110,7 +1112,8 @@ class Request:
                 self.channel.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
-                  max_age=None, comment=None, secure=None, httpOnly=False):
+                  max_age=None, comment=None, secure=None, httpOnly=False,
+                  samesite=None):
         """
         Set an outgoing HTTP cookie.
 
@@ -1147,6 +1150,10 @@ class Request:
         @param httpOnly: direct browser not to expose cookies through channels
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
+
+        @param samesite: direct browsers not to send this cookie on
+            cross-origin requests
+        @type samesite: L{bytes} or L{unicode}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
@@ -1188,6 +1195,12 @@ class Request:
             cookie = cookie + b"; Secure"
         if httpOnly:
             cookie = cookie + b"; HttpOnly"
+        if samesite:
+            samesite = _ensureBytes(samesite).lower()
+            if samesite not in [b"lax", b"strict"]:
+                raise ValueError(
+                    "Invalid value for samesite: " + repr(samesite))
+            cookie += b"; SameSite=" + samesite
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
@@ -1386,10 +1399,26 @@ class Request:
         @returns: the client IP address
         @rtype: C{str}
         """
-        if isinstance(self.client, address.IPv4Address):
+        if isinstance(self.client, (address.IPv4Address, address.IPv6Address)):
             return self.client.host
         else:
             return None
+
+
+    def getClientAddress(self):
+        """
+        Return the address of the client who submitted this request.
+
+        This may not be a network address (e.g., a server listening on
+        a UNIX domain socket will cause this to return
+        L{UNIXAddress}).  Callers must check the type of the returned
+        address.
+
+        @return: the client's address.
+        @rtype: L{IAddress}
+        """
+        return self.client
+
 
     def isSecure(self):
         """
@@ -1466,17 +1495,6 @@ class Request:
         return self.password
 
 
-    def getClient(self):
-        """
-        Get the client's IP address, if it has one.  No attempt is made to
-        resolve the address to a hostname.
-
-        @return: The same value as C{getClientIP}.
-        @rtype: L{bytes}
-        """
-        return self.getClientIP()
-
-
     def connectionLost(self, reason):
         """
         There is no longer a connection for this request to respond over.
@@ -1550,10 +1568,10 @@ class Request:
 
 
 
-Request.getClient = deprecated(
-    Version("Twisted", 15, 0, 0),
-    "Twisted Names to resolve hostnames")(Request.getClient)
-
+Request.getClientIP = deprecated(
+    Version('Twisted', 18, 4, 0),
+    replacement="getClientAddress",
+)(Request.getClientIP)
 
 Request.noLongerQueued = deprecated(
     Version("Twisted", 16, 3, 0))(Request.noLongerQueued)

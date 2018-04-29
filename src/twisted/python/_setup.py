@@ -65,7 +65,6 @@ on event-based network programming and multiprotocol integration.
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
@@ -107,7 +106,7 @@ _EXTRA_OPTIONS = dict(
     macos=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
-    windows=['pypiwin32'],
+    windows=['pywin32'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
@@ -142,19 +141,13 @@ _CONSOLE_SCRIPTS = [
     "ckeygen = twisted.conch.scripts.ckeygen:run",
     "cftp = twisted.conch.scripts.cftp:run",
     "conch = twisted.conch.scripts.conch:run",
+    "mailmail = twisted.mail.scripts.mailmail:run",
     "pyhtmlizer = twisted.scripts.htmlizer:run",
     "tkconch = twisted.conch.scripts.tkconch:run",
     "trial = twisted.scripts.trial:run",
     "twist = twisted.application.twist._twist:Twist.main",
     "twistd = twisted.scripts.twistd:run",
     ]
-# Scripts provided by Twisted on Python 2 only.
-_CONSOLE_SCRIPTS_PY2 = [
-    "mailmail = twisted.mail.scripts.mailmail:run",
-    ]
-
-if not _PY3:
-    _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS + _CONSOLE_SCRIPTS_PY2
 
 
 
@@ -198,11 +191,26 @@ _EXTENSIONS = [
 
 
 
+def _checkPythonVersion():
+    """
+    Fail if we detect a version of Python we don't support.
+    """
+    version = getattr(sys, "version_info", (0,))
+    if version < (2, 7):
+        raise ImportError("Twisted requires Python 2.7 or later.")
+    elif version >= (3, 0) and version < (3, 4):
+        raise ImportError("Twisted on Python 3 requires Python 3.4 or later.")
+
+
+
 def getSetupArgs(extensions=_EXTENSIONS):
     """
+
     @return: The keyword arguments to be used the the setup method.
     @rtype: L{dict}
     """
+    _checkPythonVersion()
+
     arguments = STATIC_PACKAGE_METADATA.copy()
 
     # This is a workaround for distutils behavior; ext_modules isn't
@@ -230,6 +238,7 @@ def getSetupArgs(extensions=_EXTENSIONS):
         "incremental >= 16.10.1",
         "Automat >= 0.3.0",
         "hyperlink >= 17.1.1",
+        "attrs >= 17.4.0",
     ]
 
     arguments.update(dict(
@@ -242,6 +251,9 @@ def getSetupArgs(extensions=_EXTENSIONS):
         },
         cmdclass=command_classes,
         include_package_data=True,
+        exclude_package_data={
+            "": ["*.c", "*.h", "*.pxi", "*.pyx", "build.bat"],
+        },
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
         package_dir={"": "src"},
@@ -341,8 +353,8 @@ class build_ext_twisted(build_ext.build_ext, object):
         Check if the given header can be included by trying to compile a file
         that contains only an #include line.
         """
-        self.compiler.announce("checking for %s ..." % header_name, 0)
-        return self._compile_helper("#include <%s>\n" % header_name)
+        self.compiler.announce("checking for {} ...".format(header_name), 0)
+        return self._compile_helper("#include <{}>\n".format(header_name))
 
 
 
@@ -372,11 +384,9 @@ notPortedModules = [
     "twisted.mail.pb",
     "twisted.mail.relaymanager",
     "twisted.mail.scripts.__init__",
-    "twisted.mail.scripts.mailmail",
     "twisted.mail.tap",
     "twisted.mail.test.test_bounce",
     "twisted.mail.test.test_mail",
-    "twisted.mail.test.test_mailmail",
     "twisted.mail.test.test_options",
     "twisted.mail.test.test_scripts",
     "twisted.news.__init__",

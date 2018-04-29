@@ -129,6 +129,8 @@ class RequestMixin:
         Create a L{DummyRequest} (change me to create a
         L{twisted.web.http.Request} instead).
         """
+        if clientAddress is None:
+            clientAddress = IPv4Address("TCP", "localhost", 1234)
         request = DummyRequest(b'/')
         request.method = method
         request.client = clientAddress
@@ -222,7 +224,7 @@ class DigestAuthTests(RequestMixin, unittest.TestCase):
 
 
 
-class UnauthorizedResourceTests(unittest.TestCase):
+class UnauthorizedResourceTests(RequestMixin, unittest.TestCase):
     """
     Tests for L{UnauthorizedResource}.
     """
@@ -258,7 +260,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         I{WWW-Authenticate} header and puts a simple unauthorized message
         into the response body.
         """
-        request = DummyRequest([b''])
+        request = self.makeRequest()
         self._unauthorizedRenderTest(request)
         self.assertEqual(b'Unauthorized', b''.join(request.written))
 
@@ -269,8 +271,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         is like its handling of a I{GET} request, but no response body is
         written.
         """
-        request = DummyRequest([b''])
-        request.method = b'HEAD'
+        request = self.makeRequest(method=b'HEAD')
         self._unauthorizedRenderTest(request)
         self.assertEqual(b'', b''.join(request.written))
 
@@ -283,24 +284,29 @@ class UnauthorizedResourceTests(unittest.TestCase):
         """
         resource = UnauthorizedResource([
                 BasicCredentialFactory('example\\"foo')])
-        request = DummyRequest([b''])
+        request = self.makeRequest()
         request.render(resource)
         self.assertEqual(
             request.responseHeaders.getRawHeaders(b'www-authenticate'),
             [b'basic realm="example\\\\\\"foo"'])
 
+
     def test_renderQuotesDigest(self):
         """
-        The digest value must be correctly quoted.
-        It is a byte string in python3, so we must make sure the proper conversion is done
+        The digest value included in the I{WWW-Authenticate} header
+        set in the response when L{UnauthorizedResource} is rendered
+        has quotes and backslashes escaped.
         """
         resource = UnauthorizedResource([
                 digest.DigestCredentialFactory(b'md5', b'example\\"foo')])
-        request = DummyRequest([b''])
+        request = self.makeRequest()
         request.render(resource)
-        auth_header = request.responseHeaders.getRawHeaders(b'www-authenticate')[0]
-        self.assertIn(b'realm="example\\\\\\"foo"', auth_header)
-        self.assertIn(b'hm="md5', auth_header)
+        authHeader = request.responseHeaders.getRawHeaders(
+            b'www-authenticate'
+        )[0]
+        self.assertIn(b'realm="example\\\\\\"foo"', authHeader)
+        self.assertIn(b'hm="md5', authHeader)
+
 
 
 implementer(portal.IRealm)
