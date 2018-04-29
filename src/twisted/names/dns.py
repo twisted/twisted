@@ -2117,6 +2117,10 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type originalID: L{int}
     @ivar originalID: A message ID.
 
+    @type error: L{int}
+    @ivar error: An error code (extended C{RCODE}) carried
+          in exceptional cases.
+
     @type otherData: L{bytes}
     @ivar otherData: Other data carried in exceptional cases.
 
@@ -2132,12 +2136,17 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     def __init__(self, algorithm=None, time=None,
                  fudge=5, MAC=None, originalID=0,
                  error=OK, otherData=b'', ttl=0):
+        # All of our init arguments have to have defaults, because of
+        # the way IEncodable and Message.parseRecords() work, but for
+        # some of our arguments there is no reasonable default; we use
+        # invalid values here to prevent a user of this class from
+        # relying on what's really an internal implementation detail.
         self.algorithm = None if algorithm is None else Name(algorithm)
-        self.time = None if time is None else int(time)
+        self.time = time
         self.fudge = str2time(fudge)
         self.MAC = MAC
-        self.originalID = int(originalID)
-        self.error = int(error)
+        self.originalID = originalID
+        self.error = error
         self.otherData = otherData
         self.ttl = ttl
 
