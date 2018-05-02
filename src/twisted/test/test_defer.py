@@ -11,9 +11,9 @@ import warnings
 import gc, traceback
 import re
 
-from twisted.python.compat import _PY3, _PY34PLUS
+from twisted.python.compat import _PY3
 
-if _PY34PLUS:
+if _PY3:
     from asyncio import new_event_loop, Future, CancelledError
     asyncSkip = None
 else:
