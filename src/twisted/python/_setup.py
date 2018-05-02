@@ -106,7 +106,7 @@ _EXTRA_OPTIONS = dict(
     macos=['pyobjc-core',
          'pyobjc-framework-CFNetwork',
          'pyobjc-framework-Cocoa'],
-    windows=['pypiwin32'],
+    windows=['pywin32'],
     http2=['h2 >= 3.0, < 4.0',
            'priority >= 1.1.0, < 2.0'],
 )
