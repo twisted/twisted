@@ -3425,7 +3425,7 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                 "category": DeprecationWarning,
                 "message": (
                     "twisted.web.http.Request.getClientIP was deprecated "
-                    "in Twisted NEXT; please use getClientAddress instead")},
+                    "in Twisted 18.4.0; please use getClientAddress instead")},
                          sub(["category", "message"], warnings[0]))
 
 
