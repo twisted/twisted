@@ -155,6 +155,28 @@ class StaticFileTests(TestCase):
         self.assertEqual(child.path, base.path)
 
 
+    def test_emptyChildUnicodeParent(self):
+        """
+        The C{u''} child of a L{File} which corresponds to a directory
+        whose path is text is a L{DirectoryLister} that renders to a
+        binary listing.
+
+        @see: U{https://twistedmatrix.com/trac/ticket/9438}
+        """
+        textBase = FilePath(self.mktemp()).asTextMode()
+        textBase.makedirs()
+        textBase.child(u"text-file").open('w').close()
+        textFile = static.File(textBase.path)
+
+        request = DummyRequest([b''])
+        child = resource.getChildForRequest(textFile, request)
+        self.assertIsInstance(child, static.DirectoryLister)
+        self.assertEqual(child.path, textBase.asBytesMode().path)
+
+        response = child.render(request)
+        self.assertIsInstance(response, bytes)
+
+
     def test_securityViolationNotFound(self):
         """
         If a request is made which encounters a L{File} before a final segment
