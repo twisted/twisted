@@ -1266,7 +1266,7 @@ def assertPeerClosedOnEMFILE(
     testCase.assertNoResult(clientFactory.failDeferred)
     testCase.successResultOf(clientFactory.deferred)
     testCase.assertRaises(
-        testCase.lostConnectionReason,
+        (ConnectionDone, ConnectionLost),
         clientFactory.lostReason.raiseException,
     )
 
@@ -1357,7 +1357,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
-    lostConnectionReason = ConnectionDone
 
     def test_startedListeningLogMessage(self):
         """
