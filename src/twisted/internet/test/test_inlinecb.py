@@ -19,7 +19,7 @@ from twisted.internet.defer import Deferred, returnValue, inlineCallbacks
 
 class StopIterationReturnTests(TestCase):
     """
-    On Python 3.3 and newer generator functions may use the C{return} statement
+    On Python 3.4 and newer generator functions may use the C{return} statement
     with a value, which is attached to the L{StopIteration} exception that is
     raised.
 
@@ -45,8 +45,8 @@ def f(d):
 
 
 
-if sys.version_info < (3, 3):
-    StopIterationReturnTests.skip = "Test requires Python 3.3 or greater"
+if sys.version_info < (3, 4):
+    StopIterationReturnTests.skip = "Test requires Python 3.4 or greater"
 
 
 

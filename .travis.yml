@@ -33,26 +33,13 @@ matrix:
       env: TOXENV=py35-alldeps-withcov-posix,codecov-publish
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish
-    # For now all non-trial tests are in a single job to reduce the time spent
-    # on starting separate jobs.
-    - python: 2.7
-      env: TOXENV=narrativedocs,apidocs,pyflakes,newsfragment,manifest-checker
-    - python: 3.6
-      env: TOXENV=pyflakes3
-    # Twistedchecker is running as a separate job so that we can ignore if it
-    # fails. This needs to be on Python 3.5 for the moment, due to astroid
-    # changes.
     - python: 3.5
       env: TOXENV=txchecker-travis-required
-    - python: 3.5
-      env: TOXENV=txchecker-travis-all
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish DISABLE_IPV6=yes
       sudo: true
-  allow_failures:
-    - env: TOXENV=txchecker-travis-all
 
 
 addons:

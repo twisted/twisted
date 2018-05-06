@@ -10,13 +10,12 @@ from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
 from io import BytesIO
-from collections import Sequence
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode, intToBytes
+from twisted.python.compat import unicode, intToBytes, Sequence
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector,
@@ -289,7 +288,8 @@ class StringTransport:
 
 class StringTransportWithDisconnection(StringTransport):
     """
-    A L{StringTransport} which can be disconnected.
+    A L{StringTransport} which on disconnection will trigger the connection
+    lost on the attached protocol.
     """
 
     def loseConnection(self):
