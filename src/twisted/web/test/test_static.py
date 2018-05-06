@@ -20,7 +20,7 @@ from zope.interface.verify import verifyObject
 from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.python import log
+from twisted.python import compat, log
 from twisted.python.compat import intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
@@ -171,10 +171,16 @@ class StaticFileTests(TestCase):
         request = DummyRequest([b''])
         child = resource.getChildForRequest(textFile, request)
         self.assertIsInstance(child, static.DirectoryLister)
-        self.assertEqual(child.path, textBase.asBytesMode().path)
+
+        nativePath = compat.nativeString(textBase.path)
+        self.assertEqual(child.path, nativePath)
 
         response = child.render(request)
         self.assertIsInstance(response, bytes)
+    if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
+        test_emptyChildUnicodeParent.skip = (
+            "Cannot write unicode filenames with file system encoding of"
+            " %s" % (sys.getfilesystemencoding(),))
 
 
     def test_securityViolationNotFound(self):
