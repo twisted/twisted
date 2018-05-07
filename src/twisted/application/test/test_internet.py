@@ -1033,47 +1033,47 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIsNone(self.successResultOf(secondStopDeferred))
 
 
-    def test_onNewConnectionCalledWhenServiceStarts(self):
+    def test_prepareConnectionCalledWhenServiceStarts(self):
         """
-        The C{onNewConnection} callable is called when the
+        The C{prepareConnection} callable is called when the
         L{ClientService.startService} is called.
         """
         newConnections = [0]
-        def onNewConnection(_proto):
+        def prepareConnection(_proto):
             newConnections[0] += 1
 
-        cq, service = self.makeReconnector(onNewConnection=onNewConnection)
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection)
         self.assertEqual(newConnections[0], 1)
 
 
-    def test_onNewConnectionCalledWithProtocol(self):
+    def test_prepareConnectionCalledWithProtocol(self):
         """
-        The C{onNewConnection} callable is passed the connected protocol
+        The C{prepareConnection} callable is passed the connected protocol
         instance.
         """
         newProtocols = []
-        def onNewConnection(proto):
+        def prepareConnection(proto):
             newProtocols.append(proto)
 
         cq, service = self.makeReconnector(
-            onNewConnection=onNewConnection,
+            prepareConnection=prepareConnection,
         )
         self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
 
 
-    def test_onNewConnectionReturningADeferred(self):
+    def test_prepareConnectionReturningADeferred(self):
         """
-        The C{onNewConnection} callable returns a deferred and calls to
+        The C{prepareConnection} callable returns a deferred and calls to
         L{ClientService.whenConnected} wait until it fires.
         """
         newProtocols = []
         newProtocolDeferred = Deferred()
 
-        def onNewConnection(proto):
+        def prepareConnection(proto):
             newProtocols.append(proto)
             return newProtocolDeferred
 
-        cq, service = self.makeReconnector(onNewConnection=onNewConnection)
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection)
 
         whenConnectedDeferred = service.whenConnected()
         self.assertNoResult(whenConnectedDeferred)
@@ -1084,17 +1084,17 @@ class ClientServiceTests(SynchronousTestCase):
                              self.successResultOf(whenConnectedDeferred))
 
 
-    def test_onNewConnectionThrows(self):
+    def test_prepareConnectionThrows(self):
         """
-        The connection attempt counts as a failure when the C{onNewConnection}
+        The connection attempt counts as a failure when the C{prepareConnection}
         callable throws.
         """
         clock = Clock()
 
-        def onNewConnection(_proto):
+        def prepareConnection(_proto):
             raise IndentationError()
 
-        cq, service = self.makeReconnector(onNewConnection=onNewConnection,
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
                                            clock=clock)
 
         whenConnectedDeferred = service.whenConnected(failAfterFailures=2)

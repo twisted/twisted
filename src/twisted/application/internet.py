@@ -549,7 +549,7 @@ class _ClientMachine(object):
     _machine = MethodicalMachine()
 
     def __init__(self, endpoint, factory, retryPolicy, clock,
-                 onNewConnection, log):
+                 prepareConnection, log):
         """
         @see: L{ClientService.__init__}
 
@@ -567,7 +567,7 @@ class _ClientMachine(object):
         self._factory = factory
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
-        self._onNewConnection = onNewConnection
+        self._prepareConnection = prepareConnection
         self._connectionInProgress = succeed(None)
 
         self._awaitingConnected = []
@@ -635,14 +635,14 @@ class _ClientMachine(object):
 
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
-            .addCallback(self._runOnNewConnection)
+            .addCallback(self._runPrepareConnection)
             .addCallback(self._connectionMade)
             .addErrback(self._connectionFailed))
 
 
-    def _runOnNewConnection(self, protocol):
+    def _runPrepareConnection(self, protocol):
         """
-        Run any C{onNewConnection} callback with the connected protocol,
+        Run any C{prepareConnection} callback with the connected protocol,
         ignoring its return value but propagating any failure.
 
         @param protocol: The protocol of the connection.
@@ -651,15 +651,15 @@ class _ClientMachine(object):
         @return: Either:
 
             - A L{Deferred} that succeeds with the protocol when the
-              C{onNewConnection} callback has executed successfully.
+              C{prepareConnection} callback has executed successfully.
 
-            - A L{Deferred} that fails when the C{onNewConnection} callback
+            - A L{Deferred} that fails when the C{prepareConnection} callback
               throws or returns a failed L{Deferred}.
 
-            - The protocol, when no C{onNewConnection} callback is defined.
+            - The protocol, when no C{prepareConnection} callback is defined.
         """
-        if self._onNewConnection:
-            return (maybeDeferred(self._onNewConnection, protocol)
+        if self._prepareConnection:
+            return (maybeDeferred(self._prepareConnection, protocol)
                     .addCallback(lambda _: protocol))
         return protocol
 
@@ -1038,7 +1038,7 @@ class ClientService(service.Service, object):
     _log = Logger()
 
     def __init__(self, endpoint, factory, retryPolicy=None, clock=None,
-                 onNewConnection=None):
+                 prepareConnection=None):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -1059,19 +1059,30 @@ class ClientService(service.Service, object):
             reactor) will be restored when deserialized.
         @type clock: L{IReactorTime}
 
-        @param onNewConnection: A single argument L{callable} that may return a
-            L{Deferred} or L{None}. It will be called with the L{protocol
-            <interfaces.IProtocol>} after a new connection is made. Should it
-            raise an exception or the L{Deferred} fail, the connection attempt
-            is treated as a failure.
-        @type onNewConnection: L{callable}
+        @param prepareConnection: A single argument L{callable} that may return
+            a L{Deferred}. It will be called once with the L{protocol
+            <interfaces.IProtocol>} each time a new connection is made.  It may
+            call methods on the protocol to prepare it for use (e.g.
+            authenticate) or validate it (check its health).
+
+            The L{prepareConnection} callable may raise an exception or return
+            a L{Deferred} which fails to reject the connection.  A rejected
+            connection is not used to resolve an L{Deferred} returned by
+            L{whenConnected}.  Instead, L{ClientService} continues as if the
+            connection attempt were a failure (incrementing the counter passed
+            to L{retryPolicy}).
+
+            L{Deferred}s returned by L{whenConnected} will not resolve until
+            any L{Deferred} returned by the L{prepareConnection} callable
+            resolves. Otherwise its successful return value is ignored.
+        @type prepareConnection: L{callable}
         """
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
 
         self._machine = _ClientMachine(
             endpoint, factory, retryPolicy, clock,
-            onNewConnection=onNewConnection, log=self._log,
+            prepareConnection=prepareConnection, log=self._log,
         )
 
 
