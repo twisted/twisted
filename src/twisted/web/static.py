@@ -51,6 +51,14 @@ class Data(resource.Resource):
     """
 
     def __init__(self, data, type):
+        """
+        @param data: The bytes that make up this data resource.
+        @type data: L{bytes}
+
+        @param type: A native string giving the Internet media type for this
+            content.
+        @type type: L{str}
+        """
         resource.Resource.__init__(self)
         self.data = data
         self.type = type
