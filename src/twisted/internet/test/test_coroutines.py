@@ -8,7 +8,7 @@ includes keywords not valid in Pythons before 3.5.
 
 from __future__ import absolute_import, division
 
-from twisted.python.compat import _PY35PLUS, _PY34PLUS, execfile
+from twisted.python.compat import _PY35PLUS, _PY3, execfile
 from twisted.python.filepath import FilePath
 
 
@@ -35,7 +35,7 @@ else:
             """
 
 
-if _PY34PLUS:
+if _PY3:
     _path = FilePath(__file__).parent().child("_yieldfromtests.py.3only")
 
     _g = {}
@@ -49,7 +49,7 @@ else:
         A dummy class to show that this test file was discovered but the tests
         are unable to be ran in this version of Python.
         """
-        skip = "yield from is not available before Python 3.2"
+        skip = "yield from is not available before Python 3"
 
         def test_notAvailable(self):
             """

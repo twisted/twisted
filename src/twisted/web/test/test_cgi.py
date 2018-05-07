@@ -11,7 +11,7 @@ import json
 from io import BytesIO
 
 from twisted.trial import unittest
-from twisted.internet import reactor, interfaces, error
+from twisted.internet import address, reactor, interfaces, error
 from twisted.python import util, failure, log
 from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
 from twisted.web import client, twcgi, server, resource, http_headers
@@ -351,6 +351,7 @@ class CGITests(unittest.TestCase):
 
         fakeReactor = FakeReactor()
         request = DummyRequest(['a', 'b'])
+        request.client = address.IPv4Address('TCP', '127.0.0.1', 12345)
         resource = twcgi.FilteredScript("dummy-file", reactor=fakeReactor)
         _render(resource, request)
 
@@ -387,6 +388,7 @@ class CGIScriptTests(unittest.TestCase):
         _reactor = FakeReactor()
         resource = twcgi.CGIScript(self.mktemp(), reactor=_reactor)
         request = DummyRequest(['a', 'b'])
+        request.client = address.IPv4Address('TCP', '127.0.0.1', 12345)
         _render(resource, request)
 
         self.assertEqual(_reactor.process_env["PATH_INFO"],

@@ -363,6 +363,7 @@ class Port(_UNIXPort, tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
+        tcp._reservedFD.reserve()
         log.msg("%s starting on %r" % (
             self._getLogPrefix(self.factory),
             _coerceToFilesystemEncoding('', self.port)))

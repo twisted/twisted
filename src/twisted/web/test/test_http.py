@@ -27,6 +27,7 @@ from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
+from twisted.internet import address
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost, ConnectionDone
 from twisted.protocols import loopback
@@ -1328,11 +1329,11 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
         """
         Test that the L{HTTPChannel} correctly chunks responses when needed.
         """
-        channel = http.HTTPChannel()
-        req = http.Request(channel, False)
         trans = StringTransport()
+        channel = http.HTTPChannel()
+        channel.makeConnection(trans)
 
-        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -2509,6 +2510,23 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             "deprecated since Twisted 16.1.")
 
 
+    def test_addCookieSameSite(self):
+        """
+        L{http.Request.setCookie} supports a C{samesite} argument.
+        """
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="Lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=strict", b"foo", b"bar", samesite="strict")
+
+        self.assertRaises(
+            ValueError,
+            self._checkCookie,
+            b"", b"foo", b"bar", samesite="anything-else")
+
+
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
@@ -3138,6 +3156,46 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.flushLoggedErrors(RuntimeError)
 
 
+    def test_getClientIPWithIPv4(self):
+        """
+        L{http.Request.getClientIP} returns the host part of the
+        client's address when connected over IPv4.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12344)))
+        self.assertEqual(request.getClientIP(), "127.0.0.1")
+
+
+    def test_getClientIPWithIPv6(self):
+        """
+        L{http.Request.getClientIP} returns the host part of the
+        client's address when connected over IPv6.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "::1", 12344)))
+        self.assertEqual(request.getClientIP(), "::1")
+
+
+    def test_getClientIPWithNonTCPPeer(self):
+        """
+        L{http.Request.getClientIP} returns L{None} for the client's
+        IP address when connected over a non-TCP transport.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.UNIXAddress("/path/to/socket")))
+        self.assertEqual(request.getClientIP(), None)
+
+
+    def test_getClientAddress(self):
+        """
+        L{http.Request.getClientAddress} returns the client's address
+        as an L{IAddress} provider.
+        """
+        client = address.UNIXAddress("/path/to/socket")
+        request = http.Request(DummyChannel(peer=client))
+        self.assertIs(request.getClientAddress(), client)
+
+
 
 class MultilineHeadersTests(unittest.TestCase):
     """
@@ -3347,26 +3405,27 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
     """
     Tests for deprecated attributes of L{twisted.web.http.Request}.
     """
-    def test_getClient(self):
-        """
-        L{Request.getClient} is deprecated in favor of resolving the hostname
-        in application code.
-        """
-        channel = DummyChannel()
-        request = http.Request(channel, True)
-        request.gotLength(123)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
-        expected = channel.transport.getPeer().host
-        self.assertEqual(expected, request.getClient())
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_getClient])
 
+    def test_getClientIP(self):
+        """
+        L{Request.getClientIP} is deprecated in favor of
+        L{Request.getClientAddress}.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12345)))
+        request.gotLength(0)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        request.getClientIP()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClientIP])
+
+        self.assertEqual(1, len(warnings))
         self.assertEqual({
                 "category": DeprecationWarning,
                 "message": (
-                    "twisted.web.http.Request.getClient was deprecated "
-                    "in Twisted 15.0.0; please use Twisted Names to "
-                    "resolve hostnames instead")},
+                    "twisted.web.http.Request.getClientIP was deprecated "
+                    "in Twisted 18.4.0; please use getClientAddress instead")},
                          sub(["category", "message"], warnings[0]))
 
 
