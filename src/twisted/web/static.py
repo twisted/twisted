@@ -277,8 +277,8 @@ class File(resource.Resource, filepath.FilePath):
         Return a resource that generates an HTML listing of the
         directory this path represents.
 
-        @return: A L{resource.Resource} that renders the directory to
-            HTML.
+        @return: A resource that renders the directory to HTML.
+        @rtype: L{DirectoryLister}
         """
         if _PY3:
             path = self.path

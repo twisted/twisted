@@ -177,10 +177,6 @@ class StaticFileTests(TestCase):
 
         response = child.render(request)
         self.assertIsInstance(response, bytes)
-    if sys.getfilesystemencoding().lower() not in ('utf-8', 'mcbs'):
-        test_emptyChildUnicodeParent.skip = (
-            "Cannot write unicode filenames with file system encoding of"
-            " %s" % (sys.getfilesystemencoding(),))
 
 
     def test_securityViolationNotFound(self):
