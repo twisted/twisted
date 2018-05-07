@@ -33,7 +33,7 @@ from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted, DNSLookupError, NoProtocol,
-    ConnectBindError,
+    ConnectBindError, ConnectionClosed,
 )
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
@@ -1266,7 +1266,7 @@ def assertPeerClosedOnEMFILE(
     testCase.assertNoResult(clientFactory.failDeferred)
     testCase.successResultOf(clientFactory.deferred)
     testCase.assertRaises(
-        (ConnectionDone, ConnectionLost),
+        ConnectionClosed,
         clientFactory.lostReason.raiseException,
     )
 
