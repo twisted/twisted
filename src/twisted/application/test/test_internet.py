@@ -1035,8 +1035,8 @@ class ClientServiceTests(SynchronousTestCase):
 
     def test_prepareConnectionCalledWhenServiceStarts(self):
         """
-        The C{prepareConnection} callable is called when the
-        L{ClientService.startService} is called.
+        The C{prepareConnection} callable is called after
+        L{ClientService.startService} once the connection is made.
         """
         newConnections = [0]
         def prepareConnection(_proto):
@@ -1059,6 +1059,22 @@ class ClientServiceTests(SynchronousTestCase):
             prepareConnection=prepareConnection,
         )
         self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
+
+
+    def test_prepareConnectionCalledOnReconnect(self):
+        """
+        The C{prepareConnection} callback is invoked each time a connection is
+        made, including on reconnection.
+        """
+        # TODO
+
+
+    def test_prepareConnectionReturnValueIgnored(self):
+        """
+        The C{prepareConnection} return value is ignored when it does not
+        indicate a failure.
+        """
+        # TODO
 
 
     def test_prepareConnectionReturningADeferred(self):
