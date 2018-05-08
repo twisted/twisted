@@ -1038,12 +1038,13 @@ class ClientServiceTests(SynchronousTestCase):
         The C{prepareConnection} callable is called after
         L{ClientService.startService} once the connection is made.
         """
-        newConnections = [0]
+        prepares = [0]
         def prepareConnection(_proto):
-            newConnections[0] += 1
+            prepares[0] += 1
 
-        cq, service = self.makeReconnector(prepareConnection=prepareConnection)
-        self.assertEqual(newConnections[0], 1)
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           startService=True)
+        self.assertEqual(1, prepares[0])
 
 
     def test_prepareConnectionCalledWithProtocol(self):
@@ -1061,20 +1062,71 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
 
 
+    def test_prepareConnectionCalledAfterConnectionMade(self):
+        """
+        The C{prepareConnection} callback is invoked only once a connection is
+        made.
+        """
+        prepares = [0]
+        def prepareConnection(_proto):
+            prepares[0] += 1
+
+        clock = Clock()
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           fireImmediately=False,
+                                           clock=clock)
+
+        cq.connectQueue[0].errback(Exception('connection attempt failed'))
+        self.assertEqual(0, prepares[0])  # Not called yet.
+
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        cq.connectQueue[1].callback(None)
+
+        self.assertEqual(1, prepares[0])  # Was called.
+
+
     def test_prepareConnectionCalledOnReconnect(self):
         """
         The C{prepareConnection} callback is invoked each time a connection is
         made, including on reconnection.
         """
-        # TODO
+        prepares = [0]
+        def prepareConnection(_proto):
+            prepares[0] += 1
+
+        clock = Clock()
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
+                                           clock=clock)
+
+        self.assertEqual(1, prepares[0])  # Called once.
+
+        # Protocol disconnects.
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+
+        self.assertEqual(2, prepares[0])  # Called again.
 
 
     def test_prepareConnectionReturnValueIgnored(self):
         """
         The C{prepareConnection} return value is ignored when it does not
-        indicate a failure.
+        indicate a failure. Even though the callback participates in the
+        internal new-connection L{Deferred} chain for error propagation
+        purposes, any successful result does not affect the ultimate return
+        value.
         """
-        # TODO
+        sentinel = object()
+
+        def prepareConnection(proto):
+            """
+            L{prepareConnection} which returns a sentinel object.
+            """
+            return sentinel
+
+        cq, service = self.makeReconnector(prepareConnection=prepareConnection)
+
+        result = self.successResultOf(service.whenConnected())
+        self.assertNotIdentical(sentinel, result)
 
 
     def test_prepareConnectionReturningADeferred(self):
