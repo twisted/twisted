@@ -1119,12 +1119,10 @@ class ClientServiceTests(SynchronousTestCase):
         purposes, any successful result does not affect the ultimate return
         value.
         """
+        # Sentinel object returned by prepareConnection.
         sentinel = object()
 
         def prepareConnection(proto):
-            """
-            L{prepareConnection} which returns a sentinel object.
-            """
             return sentinel
 
         cq, service = self.makeReconnector(prepareConnection=prepareConnection)
