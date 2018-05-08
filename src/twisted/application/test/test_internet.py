@@ -1039,6 +1039,7 @@ class ClientServiceTests(SynchronousTestCase):
         L{ClientService.startService} once the connection is made.
         """
         prepares = [0]
+
         def prepareConnection(_proto):
             prepares[0] += 1
 
@@ -1053,6 +1054,7 @@ class ClientServiceTests(SynchronousTestCase):
         instance.
         """
         newProtocols = []
+
         def prepareConnection(proto):
             newProtocols.append(proto)
 
@@ -1068,6 +1070,7 @@ class ClientServiceTests(SynchronousTestCase):
         made.
         """
         prepares = [0]
+
         def prepareConnection(_proto):
             prepares[0] += 1
 
@@ -1091,6 +1094,7 @@ class ClientServiceTests(SynchronousTestCase):
         made, including on reconnection.
         """
         prepares = [0]
+
         def prepareConnection(_proto):
             prepares[0] += 1
 
@@ -1154,8 +1158,8 @@ class ClientServiceTests(SynchronousTestCase):
 
     def test_prepareConnectionThrows(self):
         """
-        The connection attempt counts as a failure when the C{prepareConnection}
-        callable throws.
+        The connection attempt counts as a failure when the
+        C{prepareConnection} callable throws.
         """
         clock = Clock()
 
