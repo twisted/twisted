@@ -1065,15 +1065,15 @@ class ClientService(service.Service, object):
             call methods on the protocol to prepare it for use (e.g.
             authenticate) or validate it (check its health).
 
-            The L{prepareConnection} callable may raise an exception or return
+            The C{prepareConnection} callable may raise an exception or return
             a L{Deferred} which fails to reject the connection.  A rejected
             connection is not used to resolve an L{Deferred} returned by
             L{whenConnected}.  Instead, L{ClientService} continues as if the
             connection attempt were a failure (incrementing the counter passed
-            to L{retryPolicy}).
+            to C{retryPolicy}).
 
             L{Deferred}s returned by L{whenConnected} will not resolve until
-            any L{Deferred} returned by the L{prepareConnection} callable
+            any L{Deferred} returned by the C{prepareConnection} callable
             resolves. Otherwise its successful return value is ignored.
         @type prepareConnection: L{callable}
         """
