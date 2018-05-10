@@ -261,17 +261,17 @@ class CancellationTests(SynchronousTestCase):
         )
 
 
-    def test_trapChildCancelledErrorOnCascadeCancelling(self):
+    def test_errbackCancelledErrorOnCancel(self):
         """
         When C{D} cancelled, CancelledError from cascade cancelled C{C} will be
         trapped
         """
         d = self.sampleInlineCB()
-        d.addErrback(lambda fail: None)
         d.cancel()
-        errors = self.flushLoggedErrors(CancelledError)
-        self.assertEquals(len(errors), 0, "CancelledError not trapped")
-
+        self.assertRaises(
+            CancelledError,
+            self.failureResultOf(d).raiseException,
+        )
 
     def test_errorToErrorTranslation(self):
         """
