@@ -273,6 +273,7 @@ class CancellationTests(SynchronousTestCase):
             self.failureResultOf(d).raiseException,
         )
 
+
     def test_errorToErrorTranslation(self):
         """
         When C{D} is cancelled, and C raises a particular type of error, C{G}
