@@ -18,6 +18,7 @@ Maintainer: Glyph Lefkowitz
 
 from __future__ import division, absolute_import, print_function
 
+import attr
 import traceback
 import types
 import warnings
@@ -1360,6 +1361,7 @@ def returnValue(val):
 
 
 
+@attr.s
 class _CancellationStatus(object):
     """
     Cancellation status of an L{inlineCallbacks} invocation.
@@ -1371,9 +1373,8 @@ class _CancellationStatus(object):
         invocation has finished.
     """
 
-    def __init__(self, deferred):
-        self.waitingOn = None
-        self.deferred = deferred
+    deferred = attr.ib()
+    waitingOn = attr.ib(default=None)
 
 
 
@@ -1531,9 +1532,6 @@ def inlineCallbacks(f):
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
             print(thing)  # the result! hoorj!
-
-    WARNING: this syntax was introduced in Python 2.5, so this example will not
-    work in Python 2.4 and earlier!
 
     When you call anything that results in a L{Deferred}, you can simply yield it;
     your generator will automatically be resumed when the Deferred's result is
