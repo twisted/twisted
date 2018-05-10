@@ -175,7 +175,7 @@ class DontFail(Exception):
 
 
 
-class CancellationTests(TestCase):
+class CancellationTests(SynchronousTestCase):
     """
     Tests for cancellation of L{Deferred}s returned by L{inlineCallbacks}.
     For each of these tests, let:
@@ -284,7 +284,10 @@ class CancellationTests(TestCase):
         a = Deferred(cancel)
         d = self.sampleInlineCB(lambda: a)
         d.cancel()
-        self.failUnlessFailure(d, TranslatedError)
+        self.assertRaises(
+            TranslatedError,
+            self.failureResultOf(d).raiseException,
+        )
 
 
     def test_errorToSuccessTranslation(self):
