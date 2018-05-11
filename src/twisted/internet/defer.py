@@ -1503,12 +1503,23 @@ def _cancellableInlineCallbacks(g):
         it.callbacks, tmp = [], it.callbacks
         it.addErrback(handleCancel)
         it.callbacks.extend(tmp)
-        it.errback(_PeculiarError())
+        it.errback(_InternalInlineCallbacksCancelledError())
     deferred = Deferred(cancel)
     status = _CancellationStatus(deferred)
     def handleCancel(result):
-        result.trap(_PeculiarError)
+        """
+        Propogate the cancellation of an C{@}L{inlineCallbacks} to the
+        L{Deferred} it is waiting on.
+
+        :param result: An L{_InternalInlineCallbacksCancelledError} from
+            C{cancel()}.
+        :return: A new L{Deferred} that the C{@}L{inlineCallback} generator
+            can callback or errback through.
+        """
+        result.trap(_InternalInlineCallbacksCancelledError)
         status.deferred = Deferred(cancel)
+        # We would only end up here if the inlineCallback is waiting on
+        # another Deferred.  It needs to be cancelled.
         awaited = status.waitingOn
         awaited.cancel()
         return status.deferred
@@ -1517,10 +1528,12 @@ def _cancellableInlineCallbacks(g):
 
 
 
-class _PeculiarError(Exception):
+class _InternalInlineCallbacksCancelledError(Exception):
     """
-    A distinctive exception, only raised by cancelling an inline callback.
+    A unique exception used only in L{_cancellableInlineCallbacks} to verify
+    that an L{inlineCallbacks} is being cancelled as expected.
     """
+
 
 
 def inlineCallbacks(f):
