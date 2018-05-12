@@ -263,8 +263,8 @@ class CancellationTests(SynchronousTestCase):
 
     def test_errbackCancelledErrorOnCancel(self):
         """
-        When C{D} cancelled, CancelledError from cascade cancelled C{C} will be
-        trapped
+        When C{D} cancelled, CancelledError from C{C} will be errbacked
+        through C{D}.
         """
         d = self.sampleInlineCB()
         d.cancel()

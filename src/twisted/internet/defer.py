@@ -1508,12 +1508,12 @@ def _cancellableInlineCallbacks(g):
     status = _CancellationStatus(deferred)
     def handleCancel(result):
         """
-        Propogate the cancellation of an C{@}L{inlineCallbacks} to the
+        Propagate the cancellation of an C{@}L{inlineCallbacks} to the
         L{Deferred} it is waiting on.
 
-        :param result: An L{_InternalInlineCallbacksCancelledError} from
+        @param result: An L{_InternalInlineCallbacksCancelledError} from
             C{cancel()}.
-        :return: A new L{Deferred} that the C{@}L{inlineCallback} generator
+        @return: A new L{Deferred} that the C{@}L{inlineCallback} generator
             can callback or errback through.
         """
         result.trap(_InternalInlineCallbacksCancelledError)
@@ -1582,19 +1582,18 @@ def inlineCallbacks(f):
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
 
-    If you are using Python 3.4 or later, it is possible to use the C{return}
-    statement instead of L{returnValue}::
+    It is possible to use the C{return} statement instead of L{returnValue}::
 
         @inlineCallbacks
         def loadData(url):
             response = yield makeRequest(url)
             return json.loads(response)
+
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
     reaching its end, a C{return} statement, or by calling L{returnValue}).
-    This will cause any L{Deferred} being awaited upon in a C{yield} statement
-    to be cancelled, with whatever effects would result from that (often a
-    C{CancelledError} being raised from the C{yield}, but not always).
+    A C{CancelledError} will be raised from the C{yielde}ed L{Deferred} that
+    has been cancelled if that C{Deferred} does not otherwise suppress it.
     """
     @wraps(f)
     def unwindGenerator(*args, **kwargs):
