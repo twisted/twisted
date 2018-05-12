@@ -1,1 +1,1 @@
-Cancelling an inlineCallbacks will now cascade to it's waited deferreds
+Cancelling a Deferred returned by twisted.internet.defer.inlineCallbacks now cancels the Deferred it is waiting on.
