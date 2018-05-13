@@ -1,1 +1,0 @@
-The new twisted.iweb.IRequest.getClientAddress returns the IAddress provider representing the client's address.  Callers should check the type of the returned value before using it.

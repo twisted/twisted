@@ -1,5 +1,5 @@
-Twisted 17.9.0
-==============
+Twisted
+=======
 
 |pypi|_
 |coverage|_
@@ -7,18 +7,13 @@ Twisted 17.9.0
 |appveyor|_
 |circleci|_
 
-.. code::
-
-    <lukasa> It's midday here and frankly lunchtime is a perfect time to have a few moments of existential horror
-    <exarkun> or, in the immortal words of robin williams, goooooood mooooooorning #twisted-dev
-
-For information on what's new in Twisted 17.9.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on what's new in Twisted 18.4.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
 -------------
 
-Twisted is an event-based framework for internet applications, supporting Python 2.7 and Python 3.3+.
+Twisted is an event-based framework for internet applications, supporting Python 2.7 and Python 3.4+.
 It includes modules for many different purposes, including the following:
 
 - ``twisted.web``: HTTP clients and servers, HTML templating, and a WSGI server
@@ -79,7 +74,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2017 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2018 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
