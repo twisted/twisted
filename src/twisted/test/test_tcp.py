@@ -1362,9 +1362,16 @@ class LargeBufferWriterProtocol(protocol.Protocol):
 
     def connectionMade(self):
         # write 60MB
-        self.transport.write(b'X'*self.factory.len)
-        self.factory.done = 1
-        self.transport.loseConnection()
+        self.transport.write(b'X'*(self.factory.len-1))
+
+        def finish():
+            self.transport.write(b'X')
+            self.factory.done = 1
+            self.transport.loseConnection()
+
+        reactor.callLater(0.001, finish)
+
+
 
 class LargeBufferReaderProtocol(protocol.Protocol):
     def dataReceived(self, data):
@@ -1422,8 +1429,11 @@ class LargeBufferTests(unittest.TestCase):
         d = defer.gatherResults([wrappedF.deferred, wrappedClientF.deferred])
         def check(ignored):
             self.assertTrue(f.done, "writer didn't finish, it probably died")
-            self.assertTrue(clientF.len == self.datalen,
+            self.assertTrue(clientF.len >= self.datalen,
                             "client didn't receive all the data it expected "
+                            "(%d != %d)" % (clientF.len, self.datalen))
+            self.assertTrue(clientF.len <= self.datalen,
+                            "client did receive more data than it expected "
                             "(%d != %d)" % (clientF.len, self.datalen))
             self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
