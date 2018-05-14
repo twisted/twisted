@@ -1818,20 +1818,20 @@ abasdfg
         """
         When the multipart processing fails the client gets a 400 Bad Request.
         """
-        # The parsing failure is simulated by having a Content-Length that
-        # doesn't fit in a ssize_t.
+        # The parsing failure is having a UTF-8 boundary -- the spec
+        # says it must be ASCII.
         req = b'''\
 POST / HTTP/1.0
-Content-Type: multipart/form-data; boundary=AaB03x
+Content-Type: multipart/form-data; boundary=\xe2\x98\x83
 Content-Length: 103
 
---AaB03x
+--\xe2\x98\x83
 Content-Type: text/plain
 Content-Length: 999999999999999999999999999999999999999999999999999999999999999
 Content-Transfer-Encoding: quoted-printable
 
 abasdfg
---AaB03x--
+--\xe2\x98\x83--
 '''
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(
