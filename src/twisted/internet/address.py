@@ -108,8 +108,7 @@ class UNIXAddress(object):
     @type name: C{bytes}
     """
 
-    name = attr.ib(converter=lambda x: _asFilesystemBytes(x)
-                   if x is not None else None)
+    name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
 
     if getattr(os.path, 'samefile', None) is not None:
         def __eq__(self, other):
