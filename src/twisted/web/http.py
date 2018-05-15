@@ -884,16 +884,17 @@ class Request:
                         cgiArgs = cgi.parse_multipart(self.content, pdict)
 
                     if not _PY37PLUS and _PY3:
-                        # parse_multipart on Python 3 decodes the header bytes
-                        # as iso-8859-1 and returns a str key -- we want bytes
-                        # so encode it back
+                        # The parse_multipart function on Python 3
+                        # decodes the header bytes as iso-8859-1 and
+                        # returns a str key -- we want bytes so encode
+                        # it back
                         self.args.update({x.encode('iso-8859-1'): y
                                           for x, y in cgiArgs.items()})
                     elif _PY37PLUS:
-                        # parse_multipart on Python 3.7 decodes the
-                        # header bytes as iso-8859-1 and decodes the
-                        # body bytes as utf8 with surrogateescape --
-                        # we want bytes
+                        # The parse_multipart function on Python 3.7+
+                        # decodes the header bytes as iso-8859-1 and
+                        # decodes the body bytes as utf8 with
+                        # surrogateescape -- we want bytes
                         self.args.update({
                             x.encode('iso-8859-1'): \
                             [z.encode('utf8', "surrogateescape") for z in y]
