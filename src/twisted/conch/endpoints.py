@@ -12,8 +12,11 @@ __all__ = [
 from struct import unpack
 from os.path import expanduser
 
+import signal
+
 from zope.interface import Interface, implementer
 
+from twisted.logger import Logger
 from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
@@ -24,7 +27,7 @@ from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 
 from twisted.conch.ssh.keys import Key
-from twisted.conch.ssh.common import NS
+from twisted.conch.ssh.common import getNS, NS
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
@@ -116,6 +119,7 @@ class _CommandChannel(SSHChannel):
         which is hooked up to the running command's input and output streams.
     """
     name = b'session'
+    _log = Logger()
 
     def __init__(self, creator, command, protocolFactory, commandConnected):
         """
@@ -226,8 +230,23 @@ class _CommandChannel(SSHChannel):
             signal of the command.
         @type data: L{bytes}
         """
-        (signal,) = unpack('>L', data)
-        self._reason = ProcessTerminated(None, signal, None)
+        shortSignalName, data = getNS(data)
+        coreDumped, data = bool(ord(data[0:1])), data[1:]
+        errorMessage, data = getNS(data)
+        languageTag, data = getNS(data)
+        signalName = "SIG%s" % (nativeString(shortSignalName),)
+        signalID = getattr(signal, signalName, -1)
+        self._log.info(
+            "Process exited with signal {shortSignalName!r};"
+            " core dumped: {coreDumped};"
+            " error message: {errorMessage};"
+            " language: {languageTag!r}",
+            shortSignalName=shortSignalName,
+            coreDumped=coreDumped,
+            errorMessage=errorMessage.decode('utf-8'),
+            languageTag=languageTag,
+        )
+        self._reason = ProcessTerminated(None, signalID, None)
 
 
     def closed(self):
