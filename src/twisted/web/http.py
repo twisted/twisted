@@ -897,7 +897,8 @@ class Request:
                         # surrogateescape -- we want bytes
                         self.args.update({
                             x.encode('iso-8859-1'): \
-                            [z.encode('utf8', "surrogateescape") for z in y]
+                            [z.encode('utf8', "surrogateescape")
+                             if isinstance(z, str) else z for z in y]
                             for x, y in cgiArgs.items()})
 
                     else:
