@@ -18,17 +18,9 @@ from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
 
 
-_IPAddress = attr.make_class("_IPAddress", {
-    "type": attr.ib(validator=attr.validators.in_(["TCP", "UDP"])),
-    "host": attr.ib(),
-    "port": attr.ib()
-})
-
-
-
 @implementer(IAddress)
 @attr.s(hash=True)
-class IPv4Address(_IPAddress):
+class IPv4Address(object):
     """
     An L{IPv4Address} represents the address of an IPv4 socket endpoint.
 
@@ -42,12 +34,15 @@ class IPv4Address(_IPAddress):
     @ivar port: An integer representing the port number.
     @type port: C{int}
     """
+    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
+    host = attr.ib()
+    port = attr.ib()
 
 
 
 @implementer(IAddress)
 @attr.s(hash=True)
-class IPv6Address(_IPAddress):
+class IPv6Address(object):
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
 
@@ -69,7 +64,9 @@ class IPv6Address(_IPAddress):
         interface traffic destined for this address must be transmitted over.
     @type scopeID: L{int}
     """
-
+    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
+    host = attr.ib()
+    port = attr.ib()
     flowInfo = attr.ib(default=0)
     scopeID = attr.ib(default=0)
 
