@@ -1,0 +1,1 @@
+twisted.web.static.File renders directory listings on Python 2, including those with text paths.
