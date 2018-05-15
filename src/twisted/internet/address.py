@@ -137,6 +137,10 @@ class UNIXAddress(object):
             return self.name == other.name
 
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
     def __repr__(self):
         name = self.name
         if name:
