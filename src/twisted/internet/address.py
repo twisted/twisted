@@ -120,7 +120,10 @@ class UNIXAddress(object):
             Overriding C{attrs} to ensure the os level samefile
             check is done if the name attributes do not match.
             """
-            res = self.name == other.name
+            if isinstance(other, self.__class__):
+                res = self.name == other.name
+            else:
+                return False
             if not res and self.name and other.name:
                 try:
                     return os.path.samefile(self.name, other.name)
