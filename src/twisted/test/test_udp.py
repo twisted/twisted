@@ -310,6 +310,9 @@ class UDPTests(unittest.TestCase):
         d.addCallback(cbFinished)
         return d
 
+    if os.environ.get("INFRASTRUCTURE") == "MSVSHOSTED":
+        test_connectionRefused.skip = "Hangs on MSVS Hosted due to firewall"
+
 
     def test_badConnect(self):
         """
