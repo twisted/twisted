@@ -1873,9 +1873,9 @@ abasdfg
 
     def test_multipartFileData(self):
         """
-        If the request has a Content-Type of C{multipart/form-data}, and the
-        form data is parseable, the form arguments will be added to the
-        request's args.
+        If the request has a Content-Type of C{multipart/form-data},
+        and the form data is parseable and contains files, the file
+        portions will be added to the request's args.
         """
         processed = []
         class MyRequest(http.Request):
@@ -1899,7 +1899,6 @@ Content-Length: ''' + str(len(body.replace(b"\n", b"\r\n"))) + '''
 
 
 '''
-        print(str(len(body)))
         channel = self.runRequest(req.encode('ascii') + body, MyRequest,
                                   success=False)
         self.assertEqual(channel.transport.value(),
