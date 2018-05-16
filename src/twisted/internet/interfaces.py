@@ -1855,7 +1855,9 @@ class IConsumer(Interface):
 
         For L{IPushProducer} providers, C{pauseProducing} will be called
         whenever the write buffer fills up and C{resumeProducing} will only be
-        called when it empties.
+        called when it empties.  The consumer will only call C{resumeProducing}
+        to balance a previous C{pauseProducing} call; the producer is assumed to
+        start in an un-paused state.
 
         @type producer: L{IProducer} provider
 
