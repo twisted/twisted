@@ -120,6 +120,19 @@ class WriterTests(unittest.TestCase):
         manhole.lastColorizedLine("class foo:")
 
 
+    def test_unicode(self):
+        """
+        Colorize a Unicode string.
+        """
+        manhole.lastColorizedLine(u"\u0438")
+
+
+    def test_bytes(self):
+        """
+        Colorize a UTF-8 string.
+        """
+        manhole.lastColorizedLine(b"\xd0\xb8")
+
 
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
