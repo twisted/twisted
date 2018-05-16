@@ -24,6 +24,9 @@ class TokenPrinter:
     encoding = b"utf-8"
 
     def __init__(self, writer):
+        """
+        @param writer: A file-like object, opened in bytes mode.
+        """
         self.writer = writer
 
 
