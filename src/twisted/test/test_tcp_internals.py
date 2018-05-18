@@ -287,6 +287,9 @@ class SelectReactorTests(TestCase):
         # accept should be tried next.
         self.assertEqual(port.numberAccepts, 1)
 
+    if os.environ.get("INFRASTRUCTURE") == "MSTS":
+        test_acceptScaling.skip = "Fails on MSTS Hosted (firewall?)"
+
 
     def test_permissionFailure(self):
         """
