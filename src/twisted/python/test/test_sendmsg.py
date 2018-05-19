@@ -693,7 +693,7 @@ class SendmsgTests(TestCase):
         """
         L{sendmsg} returns the number of bytes which it was able to send.
         """
-        message = b"x" * 1024 * 1024 * 8
+        message = b"x" * 1024 * 1024 * 16
         self.input.setblocking(False)
         sent = sendmsg(self.input, message)
         # Sanity check - make sure the amount of data we sent was less than the
