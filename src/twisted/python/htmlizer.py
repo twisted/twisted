@@ -21,7 +21,7 @@ class TokenPrinter:
 
     currentCol, currentLine = 0, 1
     lastIdentifier = parameters = 0
-    encoding = b"utf-8"
+    encoding = "utf-8"
 
     def __init__(self, writer):
         """
@@ -62,7 +62,7 @@ class TokenPrinter:
         self.currentLine += token.count(b'\n')
         if self.currentLine != erow:
             self.currentCol = 0
-        self.lastIdentifier = token in ('def', 'class')
+        self.lastIdentifier = token in (b'def', b'class')
         if token == b':':
             self.parameters = 0
 
