@@ -136,6 +136,30 @@ def formatTime(when, timeFormat=timeFormatRFC3339, default=u"-"):
 
 
 
+def formatFailureTraceback(failure):
+    """
+    Format a failure traceback, assuming UTF-8 and using a replacement
+    strategy for errors.  Every effort is made to provide a usable
+    traceback, but should not that not be possible, a message and the
+    captured exception are logged.
+
+    @param failure: The failure to retrieve a traceback from.
+    @type failure: L{twisted.python.failure.Failure}
+
+    @return: The formatted traceback.
+    @rtype: L
+    """
+    try:
+        traceback = failure.getTraceback()
+        if isinstance(traceback, bytes):
+            traceback = traceback.decode('utf-8', errors='replace')
+    except Exception as e:
+        traceback = u"(unable to obtain traceback from event):" + unicode(e)
+
+    return traceback
+
+
+
 def formatEventAsClassicLogText(event, formatTime=formatTime):
     """
     Format an event as a line of human-readable text for, e.g. traditional log
@@ -306,14 +330,7 @@ def formatEventWithTraceback(event):
     @rtype: L{unicode}
     """
     eventText = formatEvent(event)
-    try:
-        traceback = event["log_failure"].getTraceback()
-        if isinstance(traceback, bytes):
-            traceback = traceback.decode('utf-8')
-    except KeyError:
-        return eventText
-    except Exception as e:
-        traceback = u"(unable to obtain traceback from event):" + unicode(e)
-
-    eventText = u"\n".join((eventText, traceback))
+    if 'log_failure' in event:
+        traceback = formatFailureTraceback(event['log_failure'])
+        eventText = u"\n".join((eventText, traceback))
     return eventText

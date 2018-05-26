@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -551,3 +552,47 @@ class FormatEventWithTracebackTests(unittest.TestCase):
         eventText = formatEventWithTraceback(event)
         self.assertIsInstance(eventText, unicode)
         self.assertIn(u'This is a test log message', eventText)
+
+
+    def test_formatTracebackMultibyte(self):
+        """
+        An exception message with multibyte characters is properly handled.
+        """
+        try:
+            raise CapturedError('€')
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": u"This is a test log message"
+        }
+        event["log_failure"] = f
+        eventText = formatEventWithTraceback(event)
+        self.assertIn(u'€', eventText)
+        self.assertIn(u'Traceback', eventText)
+
+
+    def test_formatTracebackHandlesUTF8DecodeFailure(self):
+        """
+        An error raised attempting to decode the UTF still produces a
+        valid log message.
+        """
+        try:
+            # 'test' in utf-16
+            raise CapturedError(b'\xff\xfet\x00e\x00s\x00t\x00')
+        except CapturedError:
+            f = Failure()
+
+        event = {
+            "log_format": u"This is a test log message"
+        }
+        event["log_failure"] = f
+        eventText = formatEventWithTraceback(event)
+        self.assertIn(u'Traceback', eventText)
+        if not _PY3:
+            self.assertIn(u'\ufffd\ufffdt\x00e\x00s\x00t\x00', eventText)
+        else:
+            self.assertIn(
+                r"CapturedError(b'\xff\xfet\x00e\x00s\x00t\x00')",
+                eventText
+            )
