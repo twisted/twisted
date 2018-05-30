@@ -24,10 +24,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.bytes import ensureBytes
-from twisted.python.compat import iterbytes, _bytesChr as chr
+from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
@@ -458,7 +458,7 @@ class SSHTransportBase(protocol.Protocol):
         exchange completes, another attempt is made to send these messages.
     """
     protocolVersion = b'2.0'
-    version = b'Twisted'
+    version = b'Twisted_' + twisted_version.encode('ascii')
     comment = b''
     ourVersionString = (b'SSH-' + protocolVersion + b'-' + version + b' '
             + comment).strip()
@@ -661,7 +661,7 @@ class SSHTransportBase(protocol.Protocol):
         if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                ensureBytes('bad packet length {}'.format(packetLen)))
+                networkString('bad packet length {}'.format(packetLen)))
             return
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
@@ -670,7 +670,7 @@ class SSHTransportBase(protocol.Protocol):
         if (packetLen + 4) % bs != 0:
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                ensureBytes(
+                networkString(
                     'bad packet mod (%i%%%i == %i)' % (
                         packetLen + 4, bs, (packetLen + 4) % bs)))
             return
@@ -968,7 +968,7 @@ class SSHTransportBase(protocol.Protocol):
         @type packet: L{bytes}
         @param packet: The message data.
         """
-        alwaysDisplay = bool(packet[0])
+        alwaysDisplay = bool(ord(packet[0:1]))
         message, lang, foo = getNS(packet[1:], 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 

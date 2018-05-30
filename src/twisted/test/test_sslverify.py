@@ -24,7 +24,7 @@ if requireModule("OpenSSL"):
     from twisted.internet import ssl
 
     from OpenSSL import SSL
-    from OpenSSL.crypto import get_elliptic_curve
+    from OpenSSL.crypto import get_elliptic_curves
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
 
@@ -461,6 +461,8 @@ class FakeContext(object):
     @ivar _dhFilename: Set by L{load_tmp_dh}.
 
     @ivar _defaultVerifyPathsSet: Set by L{set_default_verify_paths}
+
+    @ivar _ecCurve: Set by L{set_tmp_ecdh}
     """
     _options = 0
 
@@ -468,6 +470,7 @@ class FakeContext(object):
         self._method = method
         self._extraCertChain = []
         self._defaultVerifyPathsSet = False
+        self._ecCurve = None
 
 
     def set_options(self, options):
@@ -526,6 +529,16 @@ class FakeContext(object):
         self._defaultVerifyPathsSet = True
 
 
+    def set_tmp_ecdh(self, curve):
+        """
+        Set an ECDH curve.  Should only be called by OpenSSL 1.0.1
+        code.
+
+        @param curve: See L{OpenSSL.SSL.Context.set_tmp_ecdh}
+        """
+        self._ecCurve = curve
+
+
 
 class ClientOptionsTests(unittest.SynchronousTestCase):
     """
@@ -569,17 +582,39 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
 
 
 
-class OpenSSLOptionsTests(unittest.TestCase):
+class FakeChooseDiffieHellmanEllipticCurve(object):
+    """
+    A fake implementation of L{_ChooseDiffieHellmanEllipticCurve}
+    """
+
+    def __init__(self, versionNumber, openSSLlib, openSSLcrypto):
+        """
+        A no-op constructor.
+        """
+
+
+    def configureECDHCurve(self, ctx):
+        """
+        A null configuration.
+
+        @param ctx: An L{OpenSSL.SSL.Context} that would be
+            configured.
+        """
+
+
+
+class OpenSSLOptionsTestsMixin(object):
+    """
+    A mixin for L{OpenSSLOptions} test cases creates client and server
+    certificates, signs them with a CA, and provides a L{loopback}
+    that creates TLS a connections with them.
+    """
     if skipSSL:
         skip = skipSSL
 
     serverPort = clientConn = None
     onServerLost = onClientLost = None
 
-    sKey = None
-    sCert = None
-    cKey = None
-    cCert = None
 
     def setUp(self):
         """
@@ -615,6 +650,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
         return defer.DeferredList(L, consumeErrors=True)
 
+
     def loopback(self, serverCertOpts, clientCertOpts,
                  onServerLost=None, onClientLost=None, onData=None):
         if onServerLost is None:
@@ -636,6 +672,22 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.serverPort = reactor.listenSSL(0, serverFactory, serverCertOpts)
         self.clientConn = reactor.connectSSL('127.0.0.1',
                 self.serverPort.getHost().port, clientFactory, clientCertOpts)
+
+
+
+class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, unittest.TestCase):
+    """
+    Tests for L{sslverify.OpenSSLOptions}.
+    """
+
+    def setUp(self):
+        """
+        Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
+        L{sslverify._ChooseDiffieHellmanEllipticCurve}.
+        """
+        super(OpenSSLOptionsTests, self).setUp()
+        self.patch(sslverify, "_ChooseDiffieHellmanEllipticCurve",
+                   FakeChooseDiffieHellmanEllipticCurve)
 
 
     def test_constructorWithOnlyPrivateKey(self):
@@ -1236,58 +1288,6 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
 
 
-    def test_ecDoesNotBreakConstructor(self):
-        """
-        Missing ECC does not break the constructor and sets C{_ecCurve} to
-        L{None}.
-        """
-        def missing(self, name):
-            raise ValueError("unknown curve", name)
-        self.patch(
-            sslverify.OpenSSLCertificateOptions, "_getEllipticCurve", missing)
-
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-        )
-        self.assertIsNone(opts._ecCurve)
-
-
-    def test_ecNeverBreaksGetContext(self):
-        """
-        ECDHE support is best effort only and errors are ignored.
-        """
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-        )
-        opts._ecCurve = object()
-        ctx = opts.getContext()
-        self.assertIsInstance(ctx, SSL.Context)
-
-
-    def test_ecSuccessWithRealBindings(self):
-        """
-        Integration test that checks the positive code path to ensure that we
-        use the API properly.
-        """
-        try:
-            defaultCurve = get_elliptic_curve(
-                sslverify._defaultCurveName)
-        except NotImplementedError:
-            raise unittest.SkipTest(
-                "Underlying pyOpenSSL is not based on cryptography."
-            )
-        opts = sslverify.OpenSSLCertificateOptions(
-            privateKey=self.sKey,
-            certificate=self.sCert,
-        )
-        self.assertEqual(defaultCurve, opts._ecCurve)
-        # Exercise positive code path.  getContext swallows errors so we do it
-        # explicitly by hand.
-        opts.getContext().set_tmp_ecdh(opts._ecCurve)
-
-
     def test_abbreviatingDistinguishedNames(self):
         """
         Check that abbreviations used in certificates correctly map to
@@ -1608,6 +1608,37 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
 
 
+class OpenSSLOptionsECDHIntegrationTests(
+        OpenSSLOptionsTestsMixin, unittest.TestCase):
+    """
+    ECDH-related integration tests for L{OpenSSLOptions}.
+    """
+
+    def test_ellipticCurveDiffieHellman(self):
+        """
+        Connections use ECDH when OpenSSL supports it.
+        """
+        if not get_elliptic_curves():
+            raise unittest.SkipTest("OpenSSL does not support ECDH.")
+
+        onData = defer.Deferred()
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, requireCertificate=False),
+                      sslverify.OpenSSLCertificateOptions(
+                          requireCertificate=False),
+                      onData=onData)
+
+        @onData.addCallback
+        def assertECDH(_):
+            self.assertEqual(len(self.clientConn.factory.protocols), 1)
+            [clientProtocol] = self.clientConn.factory.protocols
+            cipher = clientProtocol.getHandle().get_cipher_name()
+            self.assertIn(u"ECDH", cipher)
+
+        return onData
+
+
+
 class DeprecationTests(unittest.SynchronousTestCase):
     """
     Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
@@ -1642,6 +1673,15 @@ class TrustRootTests(unittest.TestCase):
     """
     if skipSSL:
         skip = skipSSL
+
+
+    def setUp(self):
+        """
+        Patch L{sslverify._ChooseDiffieHellmanEllipticCurve}.
+        """
+        self.patch(sslverify, "_ChooseDiffieHellmanEllipticCurve",
+                   FakeChooseDiffieHellmanEllipticCurve)
+
 
     def test_caCertsPlatformDefaults(self):
         """
@@ -2733,25 +2773,28 @@ class DiffieHellmanParametersTests(unittest.TestCase):
 
 
 
-class FakeECKey(object):
+class FakeLibState(object):
     """
-    An introspectable fake of a key.
+    State for L{FakeLib}
 
-    @ivar _nid: A free form nid.
+    @param setECDHAutoRaises: An exception
+        L{FakeLib.SSL_CTX_set_ecdh_auto} should raise; if L{None},
+        nothing is raised.
+
+    @ivar ecdhContexts: A list of SSL contexts with which
+        L{FakeLib.SSL_CTX_set_ecdh_auto} was called
+    @type ecdhContexts: L{list} of L{OpenSSL.SSL.Context}s
+
+    @ivar ecdhValues: A list of boolean values with which
+        L{FakeLib.SSL_CTX_set_ecdh_auto} was called
+    @type ecdhValues: L{list} of L{boolean}s
     """
-    def __init__(self, nid):
-        self._nid = nid
+    __slots__ = ("setECDHAutoRaises", "ecdhContexts", "ecdhValues")
 
-
-
-class FakeNID(object):
-    """
-    An introspectable fake of a NID.
-
-    @ivar _snName: A free form sn name.
-    """
-    def __init__(self, snName):
-        self._snName = snName
+    def __init__(self, setECDHAutoRaises):
+        self.setECDHAutoRaises = setECDHAutoRaises
+        self.ecdhContexts = []
+        self.ecdhValues = []
 
 
 
@@ -2759,119 +2802,350 @@ class FakeLib(object):
     """
     An introspectable fake of cryptography's lib object.
 
-    @ivar _createdKey: A set of keys that have been created by this instance.
-    @type _createdKey: L{set} of L{FakeKey}
-
-    @cvar NID_undef: A symbolic constant for undefined NIDs.
-    @type NID_undef: L{FakeNID}
+    @param state: A L{FakeLibState} instance that contains this fake's
+        state.
     """
-    NID_undef = FakeNID("undef")
-
-    def __init__(self):
-        self._createdKeys = set()
+    def __init__(self, state):
+        self._state = state
 
 
-    def OBJ_sn2nid(self, snName):
+    def SSL_CTX_set_ecdh_auto(self, ctx, value):
         """
-        Create a L{FakeNID} with C{snName} and return it.
+        Record the context and value under in the C{_state} instance
+        variable.
 
-        @param snName: a free form name that gets passed to the constructor
-            of L{FakeNID}.
+        @see: L{FakeLibState}
 
-        @return: a new L{FakeNID}.
-        @rtype: L{FakeNID}.
+        @param ctx: An SSL context.
+        @type ctx: L{OpenSSL.SSL.Context}
+
+        @param value: A boolean value
+        @type value: L{bool}
         """
-        return FakeNID(snName)
-
-
-    def EC_KEY_new_by_curve_name(self, nid):
-        """
-        Create a L{FakeECKey}, save it to C{_createdKeys} and return it.
-
-        @param nid: an arbitrary object that is passed to the constructor of
-            L{FakeECKey}.
-
-        @return: a new L{FakeECKey}
-        @rtype: L{FakeECKey}
-        """
-        key = FakeECKey(nid)
-        self._createdKeys.add(key)
-        return key
-
-
-    def EC_KEY_free(self, key):
-        """
-        Remove C{key} from C{_createdKey}.
-
-        @param key: a key object to be freed; i.e. removed from
-            C{_createdKeys}.
-
-        @raises ValueError: If C{key} is not in C{_createdKeys} and thus not
-            created by us.
-        """
-        try:
-            self._createdKeys.remove(key)
-        except KeyError:
-            raise ValueError("Unallocated EC key attempted to free.")
-
-
-    def SSL_CTX_set_tmp_ecdh(self, ffiContext, key):
-        """
-        Does not do anything.
-
-        @param ffiContext: ignored
-        @param key: ignored
-        """
+        self._state.ecdhContexts.append(ctx)
+        self._state.ecdhValues.append(value)
+        if self._state.setECDHAutoRaises is not None:
+            raise self._state.setECDHAutoRaises
 
 
 
 class FakeLibTests(unittest.TestCase):
     """
-    Tests for FakeLib
+    Tests for L{FakeLib}.
     """
-    def test_objSn2Nid(self):
+
+    def test_SSL_CTX_set_ecdh_auto(self):
         """
-        Returns a L{FakeNID} with correct name.
+        L{FakeLib.SSL_CTX_set_ecdh_auto} records context and value it
+        was called with.
         """
-        nid = FakeNID("test")
-        self.assertEqual("test", nid._snName)
+        state = FakeLibState(setECDHAutoRaises=None)
+        lib = FakeLib(state)
+        self.assertNot(state.ecdhContexts)
+        self.assertNot(state.ecdhValues)
+
+        context, value = "CONTEXT", True
+        lib.SSL_CTX_set_ecdh_auto(context, value)
+        self.assertEqual(state.ecdhContexts, [context])
+        self.assertEqual(state.ecdhValues, [True])
 
 
-    def test_emptyKeys(self):
+    def test_SSL_CTX_set_ecdh_autoRaises(self):
         """
-        A new L{FakeLib} has an empty set for created keys.
+        L{FakeLib.SSL_CTX_set_ecdh_auto} raises the exception provided
+        by its state, while still recording its arguments.
         """
-        self.assertEqual(set(), FakeLib()._createdKeys)
+        state = FakeLibState(setECDHAutoRaises=ValueError)
+        lib = FakeLib(state)
+        self.assertNot(state.ecdhContexts)
+        self.assertNot(state.ecdhValues)
 
-
-    def test_newKey(self):
-        """
-        If a new key is created, it's added to C{_createdKeys}.
-        """
-        lib = FakeLib()
-        key = lib.EC_KEY_new_by_curve_name(FakeNID("name"))
-        self.assertEqual(set([key]), lib._createdKeys)
-
-
-    def test_freeUnknownKey(self):
-        """
-        Raise L{ValueError} if an unknown key is attempted to be freed.
-        """
-        key = FakeECKey(object())
+        context, value = "CONTEXT", True
         self.assertRaises(
-            ValueError,
-            FakeLib().EC_KEY_free, key
+            ValueError, lib.SSL_CTX_set_ecdh_auto, context, value
+        )
+        self.assertEqual(state.ecdhContexts, [context])
+        self.assertEqual(state.ecdhValues, [True])
+
+
+
+class FakeCryptoState(object):
+    """
+    State for L{FakeCrypto}
+
+    @param getEllipticCurveRaises: What
+        L{FakeCrypto.get_elliptic_curve} should raise; L{None} and it
+        won't raise anything
+
+    @param getEllipticCurveReturns: What
+        L{FakeCrypto.get_elliptic_curve} should return.
+
+    @ivar getEllipticCurveCalls: The arguments with which
+        L{FakeCrypto.get_elliptic_curve} has been called.
+    @type getEllipticCurveCalls: L{list}
+    """
+    __slots__ = (
+        "getEllipticCurveRaises",
+        "getEllipticCurveReturns",
+        "getEllipticCurveCalls",
+    )
+
+    def __init__(
+            self,
+            getEllipticCurveRaises,
+            getEllipticCurveReturns,
+    ):
+        self.getEllipticCurveRaises = getEllipticCurveRaises
+        self.getEllipticCurveReturns = getEllipticCurveReturns
+        self.getEllipticCurveCalls = []
+
+
+
+class FakeCrypto(object):
+    """
+    An introspectable fake of pyOpenSSL's L{OpenSSL.crypto} module.
+
+    @ivar state: A L{FakeCryptoState} instance
+    """
+
+    def __init__(self, state):
+        self._state = state
+
+
+    def get_elliptic_curve(self, curve):
+        """
+        A fake that records the curve with which it was called.
+
+        @param curve: see L{crypto.get_elliptic_curve}
+
+        @return: see L{FakeCryptoState.getEllipticCurveReturns}
+        @raises: see L{FakeCryptoState.getEllipticCurveRaises}
+        """
+        self._state.getEllipticCurveCalls.append(curve)
+        if self._state.getEllipticCurveRaises is not None:
+            raise self._state.getEllipticCurveRaises
+        return self._state.getEllipticCurveReturns
+
+
+
+class FakeCryptoTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{FakeCrypto}.
+    """
+
+    def test_get_elliptic_curveRecordsArgument(self):
+        """
+        L{FakeCrypto.test_get_elliptic_curve} records the curve with
+        which it was called.
+        """
+        state = FakeCryptoState(
+            getEllipticCurveRaises=None,
+            getEllipticCurveReturns=None,
+        )
+        crypto = FakeCrypto(state)
+        crypto.get_elliptic_curve("a curve name")
+        self.assertEqual(state.getEllipticCurveCalls, ["a curve name"])
+
+
+    def test_get_elliptic_curveReturns(self):
+        """
+        L{FakeCrypto.test_get_elliptic_curve} returns the value
+        specified by its state object and records what it was called
+        with.
+        """
+        returnValue = "object"
+        state = FakeCryptoState(
+            getEllipticCurveRaises=None,
+            getEllipticCurveReturns=returnValue,
+        )
+        crypto = FakeCrypto(state)
+        self.assertIs(
+            crypto.get_elliptic_curve("another curve name"),
+            returnValue,
+        )
+        self.assertEqual(
+            state.getEllipticCurveCalls,
+            ["another curve name"]
         )
 
 
-    def test_freeKnownKey(self):
+    def test_get_elliptic_curveRaises(self):
         """
-        Freeing an allocated key removes it from C{_createdKeys}.
+        L{FakeCrypto.test_get_elliptic_curve} raises the exception
+        specified by its state object.
         """
-        lib = FakeLib()
-        key = lib.EC_KEY_new_by_curve_name(FakeNID("name"))
-        lib.EC_KEY_free(key)
-        self.assertEqual(set(), lib._createdKeys)
+        state = FakeCryptoState(
+            getEllipticCurveRaises=ValueError,
+            getEllipticCurveReturns=None
+        )
+        crypto = FakeCrypto(state)
+        self.assertRaises(
+            ValueError,
+            crypto.get_elliptic_curve, "yet another curve name",
+        )
+        self.assertEqual(
+            state.getEllipticCurveCalls,
+            ["yet another curve name"],
+        )
+
+
+
+class ChooseDiffieHellmanEllipticCurveTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{sslverify._ChooseDiffieHellmanEllipticCurve}.
+
+    @cvar OPENSSL_110: A version number for OpenSSL 1.1.0
+
+    @cvar OPENSSL_102: A version number for OpenSSL 1.0.2
+
+    @cvar OPENSSL_101: A version number for OpenSSL 1.0.1
+
+    @see:
+        U{https://wiki.openssl.org/index.php/Manual:OPENSSL_VERSION_NUMBER(3)}
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    OPENSSL_110 = 0x1010007f
+    OPENSSL_102 = 0x100020ef
+    OPENSSL_101 = 0x1000114f
+
+
+    def setUp(self):
+        self.libState = FakeLibState(setECDHAutoRaises=False)
+        self.lib = FakeLib(self.libState)
+
+        self.cryptoState = FakeCryptoState(
+            getEllipticCurveReturns=None,
+            getEllipticCurveRaises=None
+        )
+        self.crypto = FakeCrypto(self.cryptoState)
+        self.context = FakeContext(SSL.SSLv23_METHOD)
+
+
+    def test_openSSL110(self):
+        """
+        No configuration of contexts occurs under OpenSSL 1.1.0 and
+        later, because they create contexts with secure ECDH curves.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/9210}
+        """
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_110,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertFalse(self.cryptoState.getEllipticCurveCalls)
+        self.assertIsNone(self.context._ecCurve)
+
+
+    def test_openSSL102(self):
+        """
+        OpenSSL 1.0.2 does not set ECDH curves by default, but
+        C{SSL_CTX_set_ecdh_auto} requests that a context choose a
+        secure set curves automatically.
+        """
+        context = SSL.Context(SSL.SSLv23_METHOD)
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_102,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(context)
+
+        self.assertEqual(self.libState.ecdhContexts, [context._context])
+        self.assertEqual(self.libState.ecdhValues, [True])
+        self.assertFalse(self.cryptoState.getEllipticCurveCalls)
+        self.assertIsNone(self.context._ecCurve)
+
+
+    def test_openSSL102SetECDHAutoRaises(self):
+        """
+        An exception raised by C{SSL_CTX_set_ecdh_auto} under OpenSSL
+        1.0.2 is suppressed because ECDH is best-effort.
+        """
+        self.libState.setECDHAutoRaises = BaseException
+        context = SSL.Context(SSL.SSLv23_METHOD)
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_102,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(context)
+
+        self.assertEqual(self.libState.ecdhContexts, [context._context])
+        self.assertEqual(self.libState.ecdhValues, [True])
+        self.assertFalse(self.cryptoState.getEllipticCurveCalls)
+
+
+    def test_openSSL101(self):
+        """
+        OpenSSL 1.0.1 does not set ECDH curves by default, nor does
+        it expose L{SSL_CTX_set_ecdh_auto}.  Instead, a single ECDH
+        curve can be set with L{OpenSSL.SSL.Context.set_tmp_ecdh}.
+        """
+        self.cryptoState.getEllipticCurveReturns = curve = "curve object"
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_101,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertEqual(
+            self.cryptoState.getEllipticCurveCalls,
+            [sslverify._defaultCurveName],
+        )
+        self.assertIs(self.context._ecCurve, curve)
+
+
+    def test_openSSL101SetECDHRaises(self):
+        """
+        An exception raised by L{OpenSSL.SSL.Context.set_tmp_ecdh}
+        under OpenSSL 1.0.1 is suppressed because ECHDE is best-effort.
+        """
+        def set_tmp_ecdh(ctx):
+            raise BaseException
+
+        self.context.set_tmp_ecdh = set_tmp_ecdh
+
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_101,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertEqual(
+            self.cryptoState.getEllipticCurveCalls,
+            [sslverify._defaultCurveName],
+        )
+
+
+    def test_openSSL101NoECC(self):
+        """
+        Contexts created under an OpenSSL 1.0.1 that doesn't support
+        ECC have no configuration applied.
+        """
+        self.cryptoState.getEllipticCurveRaises = ValueError
+        chooser = sslverify._ChooseDiffieHellmanEllipticCurve(
+            self.OPENSSL_101,
+            openSSLlib=self.lib,
+            openSSLcrypto=self.crypto,
+        )
+        chooser.configureECDHCurve(self.context)
+
+        self.assertFalse(self.libState.ecdhContexts)
+        self.assertFalse(self.libState.ecdhValues)
+        self.assertIsNone(self.context._ecCurve)
 
 
 

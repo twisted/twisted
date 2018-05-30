@@ -16,8 +16,7 @@ from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
-from twisted.python.bytes import ensureBytes
-from twisted.python.compat import ioType, unicode
+from twisted.python.compat import ioType, networkString, unicode
 
 import os
 import sys
@@ -465,7 +464,7 @@ class SSHSession(channel.SSHChannel):
                 channels = self.conn.channels.keys()
                 channels.sort()
                 for channelId in channels:
-                    self.stdio.write(ensureBytes('  #{} {}\r\n'.format(
+                    self.stdio.write(networkString('  #{} {}\r\n'.format(
                                      channelId,
                                      self.conn.channels[channelId])))
                 return

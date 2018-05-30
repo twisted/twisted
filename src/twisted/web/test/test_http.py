@@ -1329,11 +1329,11 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
         """
         Test that the L{HTTPChannel} correctly chunks responses when needed.
         """
-        channel = http.HTTPChannel()
-        req = http.Request(channel, False)
         trans = StringTransport()
+        channel = http.HTTPChannel()
+        channel.makeConnection(trans)
 
-        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -1818,20 +1818,20 @@ abasdfg
         """
         When the multipart processing fails the client gets a 400 Bad Request.
         """
-        # The parsing failure is simulated by having a Content-Length that
-        # doesn't fit in a ssize_t.
+        # The parsing failure is having a UTF-8 boundary -- the spec
+        # says it must be ASCII.
         req = b'''\
 POST / HTTP/1.0
-Content-Type: multipart/form-data; boundary=AaB03x
+Content-Type: multipart/form-data; boundary=\xe2\x98\x83
 Content-Length: 103
 
---AaB03x
+--\xe2\x98\x83
 Content-Type: text/plain
 Content-Length: 999999999999999999999999999999999999999999999999999999999999999
 Content-Transfer-Encoding: quoted-printable
 
 abasdfg
---AaB03x--
+--\xe2\x98\x83--
 '''
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(
@@ -1869,6 +1869,42 @@ abasdfg
                          b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+
+
+    def test_multipartFileData(self):
+        """
+        If the request has a Content-Type of C{multipart/form-data},
+        and the form data is parseable and contains files, the file
+        portions will be added to the request's args.
+        """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+
+        body = b"""-----------------------------738837029596785559389649595
+Content-Disposition: form-data; name="uploadedfile"; filename="test"
+Content-Type: application/octet-stream
+
+abasdfg
+-----------------------------738837029596785559389649595--
+"""
+
+        req = '''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=---------------------------738837029596785559389649595
+Content-Length: ''' + str(len(body.replace(b"\n", b"\r\n"))) + '''
+
+
+'''
+        channel = self.runRequest(req.encode('ascii') + body, MyRequest,
+                                  success=False)
+        self.assertEqual(channel.transport.value(),
+                         b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
 
 
     def test_chunkedEncoding(self):
@@ -2510,6 +2546,23 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             "deprecated since Twisted 16.1.")
 
 
+    def test_addCookieSameSite(self):
+        """
+        L{http.Request.setCookie} supports a C{samesite} argument.
+        """
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="Lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=strict", b"foo", b"bar", samesite="strict")
+
+        self.assertRaises(
+            ValueError,
+            self._checkCookie,
+            b"", b"foo", b"bar", samesite="anything-else")
+
+
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
@@ -3146,8 +3199,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         request = http.Request(
             DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12344)))
-        request.gotLength(0)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
         self.assertEqual(request.getClientIP(), "127.0.0.1")
 
 
@@ -3158,8 +3209,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         request = http.Request(
             DummyChannel(peer=address.IPv6Address("TCP", "::1", 12344)))
-        request.gotLength(0)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
         self.assertEqual(request.getClientIP(), "::1")
 
 
@@ -3170,9 +3219,17 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         request = http.Request(
             DummyChannel(peer=address.UNIXAddress("/path/to/socket")))
-        request.gotLength(0)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
         self.assertEqual(request.getClientIP(), None)
+
+
+    def test_getClientAddress(self):
+        """
+        L{http.Request.getClientAddress} returns the client's address
+        as an L{IAddress} provider.
+        """
+        client = address.UNIXAddress("/path/to/socket")
+        request = http.Request(DummyChannel(peer=client))
+        self.assertIs(request.getClientAddress(), client)
 
 
 
@@ -3384,6 +3441,29 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
     """
     Tests for deprecated attributes of L{twisted.web.http.Request}.
     """
+
+    def test_getClientIP(self):
+        """
+        L{Request.getClientIP} is deprecated in favor of
+        L{Request.getClientAddress}.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12345)))
+        request.gotLength(0)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        request.getClientIP()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClientIP])
+
+        self.assertEqual(1, len(warnings))
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.getClientIP was deprecated "
+                    "in Twisted 18.4.0; please use getClientAddress instead")},
+                         sub(["category", "message"], warnings[0]))
+
 
     def test_noLongerQueued(self):
         """
