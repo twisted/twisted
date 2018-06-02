@@ -189,7 +189,7 @@ def changePassPhrase(options):
             'Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename'])
-    except keys.EncryptedKeyError as e:
+    except keys.EncryptedKeyError:
         # Raised if password not supplied for an encrypted key
         if not options.get('pass'):
             options['pass'] = getpass.getpass('Enter old passphrase: ')
