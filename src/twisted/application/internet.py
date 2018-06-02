@@ -1077,8 +1077,10 @@ class ClientService(service.Service, object):
             fire. Otherwise its successful return value is consumed, but
             ignored.
 
-            @since: Twisted NEXT
+            Present Since Twisted NEXT
+
         @type prepareConnection: L{callable}
+
         """
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
