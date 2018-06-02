@@ -1,0 +1,1 @@
+twisted.logger.LogBeginner's default critical observer now prints tracebacks for new and legacy log system events through the use of a new formatEventWithTraceback API.  This API also does not raise an error for non-ascii encoded data in Python2, it attempts as well as possible to format the traceback.
