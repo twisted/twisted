@@ -1,1 +1,0 @@
-twisted.logger.LogBeginner's default critical observer now prints tracebacks for new and legacy log system events.
