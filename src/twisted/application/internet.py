@@ -1067,14 +1067,17 @@ class ClientService(service.Service, object):
 
             The C{prepareConnection} callable may raise an exception or return
             a L{Deferred} which fails to reject the connection.  A rejected
-            connection is not used to resolve an L{Deferred} returned by
-            L{whenConnected}.  Instead, L{ClientService} continues as if the
-            connection attempt were a failure (incrementing the counter passed
-            to C{retryPolicy}).
+            connection is not used to fire an L{Deferred} returned by
+            L{whenConnected}.  Instead, L{ClientService} handles the failure
+            and continues as if the connection attempt were a failure
+            (incrementing the counter passed to C{retryPolicy}).
 
-            L{Deferred}s returned by L{whenConnected} will not resolve until
+            L{Deferred}s returned by L{whenConnected} will not fire until
             any L{Deferred} returned by the C{prepareConnection} callable
-            resolves. Otherwise its successful return value is ignored.
+            fire. Otherwise its successful return value is consumed, but
+            ignored.
+
+            @since: Twisted NEXT
         @type prepareConnection: L{callable}
         """
         clock = _maybeGlobalReactor(clock)
