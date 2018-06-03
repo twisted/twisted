@@ -1589,7 +1589,7 @@ class Request:
         """
         A C{Request} is hashable so that it can be used as a mapping key.
 
-        @return A C{int} based on the instance's identity.
+        @return: A C{int} based on the instance's identity.
         """
         return id(self)
 
