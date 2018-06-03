@@ -328,6 +328,8 @@ def formatEventWithTraceback(event):
 
     @return: A formatted string with a traceback if applicable.
     @rtype: L{unicode}
+
+    @since: Twisted NEXT
     """
     eventText = formatEvent(event)
     if 'log_failure' in event:
