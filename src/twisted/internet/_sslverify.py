@@ -9,7 +9,7 @@ import itertools
 import warnings
 
 from constantly import Names, NamedConstant
-from hashlib import md5
+from hashlib import md5, sha256
 
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
@@ -1684,9 +1684,9 @@ class OpenSSLCertificateOptions(object):
 
         if self.enableSessions:
             name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
-            sessionName = md5(networkString(name)).hexdigest()
+            sessionName = sha256(networkString(name)).digest()
 
-            ctx.set_session_id(sessionName.encode('ascii'))
+            ctx.set_session_id(sessionName)
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
