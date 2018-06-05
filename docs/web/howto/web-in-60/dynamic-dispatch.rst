@@ -62,7 +62,7 @@ for the year passed to its initializer:
         def render_GET(self, request):
             cal = calendar(self.year)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + "</pre>")
+                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + b"</pre>")
 
 
 
@@ -138,7 +138,7 @@ basically like ``Calendar.getChild`` . Here's the full example code:
         def render_GET(self, request):
             cal = calendar(self.year)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + "</pre>")
+                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + b"</pre>")
 
 
     class Calendar(Resource):
