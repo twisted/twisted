@@ -201,6 +201,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     headertext = b''
     errortext = b''
     _log = Logger()
+    _requestFinished = False
 
     # Remotely relay producer interface.
 
@@ -230,6 +231,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
 
     def __init__(self, request):
         self.request = request
+        self.request.notifyFinish().addBoth(self._finished)
 
 
     def connectionMade(self):
@@ -317,5 +319,16 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
                     "CGI Script Error",
                     "Premature end of script headers.").render(self.request))
+        if self._requestFinished:
+            return
+
         self.request.unregisterProducer()
         self.request.finish()
+
+
+    def _finished(self, ignored):
+        """
+        Record the end of the response generation for the request being
+        serviced.
+        """
+        self._requestFinished = True
