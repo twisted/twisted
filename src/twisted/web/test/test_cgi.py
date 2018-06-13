@@ -12,11 +12,12 @@ from io import BytesIO
 
 from twisted.trial import unittest
 from twisted.internet import address, reactor, interfaces, error
+from twisted.internet.error import ConnectionLost
 from twisted.python import util, failure, log
 from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
-from twisted.web import client, twcgi, server, resource, http_headers
+from twisted.web import client, http, twcgi, server, resource, http_headers
 from twisted.web.test._util import _render
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.requesthelper import DummyRequest, DummyChannel
 
 DUMMY_CGI = '''\
 print("Header: OK")
@@ -448,6 +449,14 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
+
+
+    def test_connectionLost(self):
+        d = DummyChannel()
+        request = http.Request(d, True)
+        protocol = twcgi.CGIProcessProtocol(request)
+        request.connectionLost(failure.Failure(ConnectionLost("Connection done")))
+        protocol.processEnded(failure.Failure(error.ProcessTerminated()))
 
 
 

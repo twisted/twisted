@@ -312,18 +312,19 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if self.errortext:
             self._log.error("Errors from CGI {uri}: {errorText}",
                 uri=self.request.uri, errorText=self.errortext)
+
         if self.handling_headers:
             self._log.error("Premature end of headers in {uri}: {headerText}",
                 uri=self.request.uri, headerText=self.headertext)
-            self.request.write(
-                resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                    "CGI Script Error",
-                    "Premature end of script headers.").render(self.request))
-        if self._requestFinished:
-            return
+            if not self._requestFinished:
+                self.request.write(
+                    resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
+                        "CGI Script Error",
+                        "Premature end of script headers.").render(self.request))
 
-        self.request.unregisterProducer()
-        self.request.finish()
+        if not self._requestFinished:
+            self.request.unregisterProducer()
+            self.request.finish()
 
 
     def _finished(self, ignored):

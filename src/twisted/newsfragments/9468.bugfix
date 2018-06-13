@@ -1,0 +1,1 @@
+twisted.web.twcgi.CGIProcessProtocol.processEnded(...) now handles an already-finished request, for example when request.connectionLost(...) was called previously.
