@@ -447,7 +447,9 @@ class CGIProcessProtocolTests(unittest.TestCase):
         """
         request = DummyRequest([''])
         protocol = twcgi.CGIProcessProtocol(request)
-        protocol.processEnded(failure.Failure(error.ProcessTerminated()))
+        protocol.processEnded(
+            failure.Failure(error.ProcessTerminated())
+        )
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
 
 

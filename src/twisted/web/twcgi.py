@@ -319,8 +319,8 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
             if not self._requestFinished:
                 self.request.write(
                     resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                        "CGI Script Error",
-                        "Premature end of script headers.").render(self.request))
+                        "CGI Script Error", "Premature end of script headers."
+                    ).render(self.request))
 
         if not self._requestFinished:
             self.request.unregisterProducer()
