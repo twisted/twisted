@@ -452,6 +452,10 @@ class CGIProcessProtocolTests(unittest.TestCase):
 
 
     def test_connectionLost(self):
+        """
+        Ensure that the CGI process ends cleanly when the request connection
+        is lost.
+        """
         d = DummyChannel()
         request = http.Request(d, True)
         protocol = twcgi.CGIProcessProtocol(request)
