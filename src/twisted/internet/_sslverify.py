@@ -1108,6 +1108,7 @@ def _tolerateErrors(wrapped):
     return infoCallback
 
 
+
 @implementer(IOpenSSLClientConnectionCreator)
 class ClientTLSOptions(object):
     """
