@@ -344,8 +344,37 @@ Versioning
 ----------
 
 The API documentation should be marked up with version information.
-When a new API is added the class should be marked with the epytext ``@since:`` field including the version number when the change was introduced.
-This version number should be in the form ``x.y`` (for example, ``@since: 15.1``).
+When a new API is added the class should be marked with the epytext `@since: field <http://epydoc.sourceforge.net/manual-fields.html#status>`_ to include the version number when the change was introduced.
+The placeholder string ``Twisted NEXT`` will be `replaced at release time <https://github.com/twisted/incremental#updating>`_ with the appropriate version number.
+For example:
+
+.. code-block:: python
+
+    def bar2baz():
+        """
+        Bazify a bar.
+
+        @since: Twisted NEXT
+        """
+
+The ``@since`` tag cannot be applied to arguments.
+When adding a new argument, indicate the version of introduction on a separate line.
+For example, if the ``swizzle`` keyword argument is added after the release of the above function in Twisted 18.5.0:
+
+.. code-block:: python
+
+    def bar2baz(swizzle=False):
+        """
+        Bazify a bar, with optional swizzling.
+
+        @param swizzle: Activate swizzling.
+
+            Present Since Twisted NEXT
+
+        @type swizzle: L{bool}
+
+        @since: Twisted 18.5.0
+        """
 
 
 Scripts
