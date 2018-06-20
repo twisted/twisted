@@ -771,7 +771,6 @@ class IntegrationTestingMixin(object):
         """
         L{Agent} works over IPv4 when URI is an IPv4 address.
         """
-        self.todo = 'service_identity does not support IP address validation yet'
         self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
 
 
@@ -787,9 +786,7 @@ class IntegrationTestingMixin(object):
         """
         L{Agent} works over IPv6 when URI is an IPv6 address.
         """
-        self.todo = 'service_identity does not support IP address validation yet'
-        self.integrationTest(b'[::7]', '::7',
-                             IPv6Address)
+        self.integrationTest(b'[::7]', '::7', IPv6Address)
 
 
     def integrationTest(self, hostName, expectedAddress, addressType,
@@ -848,8 +845,13 @@ class IntegrationTestingMixin(object):
         pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
+        try:
+            self.assertNoResult(deferred)
+        except self.failureException:
+            self.flushLoggedErrors()
+            raise
         lines = accumulator.currentProtocol.data.split(b"\r\n")
-        self.assertTrue(lines[0].startswith(b"GET / HTTP"))
+        self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])
         headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
         self.assertEqual(headers[b'Host'], hostName)
         self.assertNoResult(deferred)
@@ -1497,12 +1499,30 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         connection = creator.clientConnectionForTLS(None)
         self.assertIs(trustRoot.context, connection.get_context())
 
+    def test_integrationTestIPv4URI(self):
+        """
+        L{Agent} works over IPv4 when URI is an IPv4 address.
+        """
+        super(AgentHTTPSTests, self).test_integrationTestIPv4URI()
+    test_integrationTestIPv4URI.todo = (
+        'service_identity does not support IP address validation yet'
+    )
+
+    def test_integrationTestIPv6URI(self):
+        """
+        L{Agent} works over IPv6 when URI is an IPv6 address.
+        """
+        super(AgentHTTPSTests, self).test_integrationTestIPv6URI()
+    test_integrationTestIPv6URI.todo = (
+        'service_identity does not support IP address validation yet'
+    )
+
 
     def integrationTest(self, hostName, expectedAddress, addressType):
         """
         Wrap L{AgentTestsMixin.integrationTest} with TLS.
         """
-        certHostName = hostName.strip('[]')
+        certHostName = hostName.strip(b'[]')
         authority, server = certificatesForAuthorityAndServer(certHostName
                                                               .decode('ascii'))
         def tlsify(serverFactory):

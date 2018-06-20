@@ -1136,6 +1136,10 @@ class ClientTLSOptions(object):
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
+
+    @ivar _sendSNI: Whether or not to send the SNI with the handshake. Will be
+        False if _hostname is an ip address or True if _hostname is a DNSName
+    @type _sendSNI: L{bool}
     """
 
     def __init__(self, hostname, ctx):
@@ -1153,10 +1157,10 @@ class ClientTLSOptions(object):
 
         if isIPAddress(hostname) or isIPv6Address(hostname):
             self._hostnameBytes = hostname.encode('ascii')
-            self._hostname_is_ip_address = True
+            self._sendSNI = False
         else:
             self._hostnameBytes = _idnaBytes(hostname)
-            self._hostname_is_ip_address = False
+            self._sendSNI = True
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
@@ -1203,7 +1207,7 @@ class ClientTLSOptions(object):
         @type ret: ignored
         """
         # Literal IPv4 and IPv6 addresses are not permitted as host names according to the RFCs.
-        if where & SSL.SSL_CB_HANDSHAKE_START and not self._hostname_is_ip_address:
+        if where & SSL.SSL_CB_HANDSHAKE_START and self._sendSNI:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
             try:
