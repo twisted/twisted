@@ -563,8 +563,8 @@ class Deferred:
             if self._debugInfo is None:
                 self._debugInfo = DebugInfo()
             self._debugInfo.invoker = traceback.format_stack()[:-2]
-        self.called = True
         self.result = result
+        self.called = True
         self._runCallbacks()
 
 
