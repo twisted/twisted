@@ -351,7 +351,7 @@ a couple of things are happening here:
 
     .. versionadded:: 15.0
 
-    On Python 3.3 and above, instead of writing ``returnValue(json.loads(responseBody))`` you can instead write ``return json.loads(responseBody)``.
+    On Python 3, instead of writing ``returnValue(json.loads(responseBody))`` you can instead write ``return json.loads(responseBody)``.
     This can be a significant readability advantage, but unfortunately if you need compatibility with Python 2, this isn't an option.
 
 Both versions of ``getUsers`` present exactly the same API to their callers: both return a ``Deferred`` that fires with the parsed JSON body of the request.

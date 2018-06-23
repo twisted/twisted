@@ -18,7 +18,7 @@ from twisted.internet.test.test_serialport import DoNothing
 try:
     from twisted.internet import serialport
     import serial
-except ImportError as e:
+except ImportError:
     serialport = None
     serial = None
 
