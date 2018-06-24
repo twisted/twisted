@@ -1,0 +1,1 @@
+twisted.internet.address.IPv4Address._bwHack and twisted.internet.address.UNIXAddress._bwHack, as well as the parameters to the constructors, deprecated since Twisted 11.0, have been removed.
