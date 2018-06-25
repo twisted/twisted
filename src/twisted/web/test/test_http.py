@@ -1819,20 +1819,20 @@ abasdfg
         """
         When the multipart processing fails the client gets a 400 Bad Request.
         """
-        # The parsing failure is simulated by having a Content-Length that
-        # doesn't fit in a ssize_t.
+        # The parsing failure is having a UTF-8 boundary -- the spec
+        # says it must be ASCII.
         req = b'''\
 POST / HTTP/1.0
-Content-Type: multipart/form-data; boundary=AaB03x
+Content-Type: multipart/form-data; boundary=\xe2\x98\x83
 Content-Length: 103
 
---AaB03x
+--\xe2\x98\x83
 Content-Type: text/plain
 Content-Length: 999999999999999999999999999999999999999999999999999999999999999
 Content-Transfer-Encoding: quoted-printable
 
 abasdfg
---AaB03x--
+--\xe2\x98\x83--
 '''
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(
@@ -1870,6 +1870,42 @@ abasdfg
                          b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+
+
+    def test_multipartFileData(self):
+        """
+        If the request has a Content-Type of C{multipart/form-data},
+        and the form data is parseable and contains files, the file
+        portions will be added to the request's args.
+        """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+
+        body = b"""-----------------------------738837029596785559389649595
+Content-Disposition: form-data; name="uploadedfile"; filename="test"
+Content-Type: application/octet-stream
+
+abasdfg
+-----------------------------738837029596785559389649595--
+"""
+
+        req = '''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=---------------------------738837029596785559389649595
+Content-Length: ''' + str(len(body.replace(b"\n", b"\r\n"))) + '''
+
+
+'''
+        channel = self.runRequest(req.encode('ascii') + body, MyRequest,
+                                  success=False)
+        self.assertEqual(channel.transport.value(),
+                         b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
 
 
     def test_chunkedEncoding(self):
@@ -2509,6 +2545,23 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             warnings[0]['message'],
             "Passing non-bytes or non-unicode cookie arguments is "
             "deprecated since Twisted 16.1.")
+
+
+    def test_addCookieSameSite(self):
+        """
+        L{http.Request.setCookie} supports a C{samesite} argument.
+        """
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="Lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=strict", b"foo", b"bar", samesite="strict")
+
+        self.assertRaises(
+            ValueError,
+            self._checkCookie,
+            b"", b"foo", b"bar", samesite="anything-else")
 
 
     def test_firstWrite(self):
@@ -3470,7 +3523,7 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                 "category": DeprecationWarning,
                 "message": (
                     "twisted.web.http.Request.getClientIP was deprecated "
-                    "in Twisted NEXT; please use getClientAddress instead")},
+                    "in Twisted 18.4.0; please use getClientAddress instead")},
                          sub(["category", "message"], warnings[0]))
 
 

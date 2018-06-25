@@ -45,6 +45,11 @@ if sys.version_info >= (3, 5, 0):
 else:
     _PY35PLUS = False
 
+if sys.version_info >= (3, 7, 0):
+    _PY37PLUS = True
+else:
+    _PY37PLUS = False
+
 if platform.python_implementation() == 'PyPy':
     _PYPY = True
 else:

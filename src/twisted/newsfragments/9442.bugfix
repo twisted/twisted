@@ -1,0 +1,1 @@
+twisted.python.htmlizer.TokenPrinter now explicitly works on bytestrings.
