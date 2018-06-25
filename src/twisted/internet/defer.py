@@ -259,6 +259,8 @@ class Deferred:
 
     _chainedTo = None
 
+    _asyncio_future_blocking = True
+
     def __init__(self, canceller=None):
         """
         Initialize a L{Deferred}.
@@ -1999,4 +2001,3 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
            "CancelledError",
           ]
-
