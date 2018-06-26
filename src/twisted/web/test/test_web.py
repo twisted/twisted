@@ -1513,7 +1513,6 @@ class CombinedLogFormatterTests(unittest.TestCase):
 
 
 
-
 class ProxiedLogFormatterTests(unittest.TestCase):
     """
     Tests for L{twisted.web.http.proxiedLogFormatter}.
