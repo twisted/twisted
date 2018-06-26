@@ -2639,6 +2639,7 @@ def combinedLogFormatter(timestamp, request):
     return line
 
 
+
 @implementer(interfaces.IAddress)
 class _XForwardedForAddress(object):
     """
@@ -2652,6 +2653,7 @@ class _XForwardedForAddress(object):
     """
     def __init__(self, host):
         self.host = host
+
 
 
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
