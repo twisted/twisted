@@ -24,6 +24,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
 from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
@@ -457,7 +458,7 @@ class SSHTransportBase(protocol.Protocol):
         exchange completes, another attempt is made to send these messages.
     """
     protocolVersion = b'2.0'
-    version = b'Twisted'
+    version = b'Twisted_' + twisted_version.encode('ascii')
     comment = b''
     ourVersionString = (b'SSH-' + protocolVersion + b'-' + version + b' '
             + comment).strip()
@@ -967,7 +968,7 @@ class SSHTransportBase(protocol.Protocol):
         @type packet: L{bytes}
         @param packet: The message data.
         """
-        alwaysDisplay = bool(packet[0])
+        alwaysDisplay = bool(ord(packet[0:1]))
         message, lang, foo = getNS(packet[1:], 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 

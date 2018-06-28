@@ -1,1 +1,0 @@
-twisted.web.http.Request.getClientIP now returns the host part of the client's address when connected over IPv6.
