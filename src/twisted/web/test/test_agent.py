@@ -1501,6 +1501,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         connection = creator.clientConnectionForTLS(None)
         self.assertIs(trustRoot.context, connection.get_context())
 
+
     def test_integrationTestIPv4URI(self):
         """
         L{Agent} works over IPv4 when URI is an IPv4 address.
@@ -1509,6 +1510,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
     test_integrationTestIPv4URI.todo = (
         'service_identity does not support IP address validation yet'
     )
+
 
     def test_integrationTestIPv6URI(self):
         """
