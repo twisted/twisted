@@ -309,8 +309,6 @@ EXAMPLE_NET_IP = '127.0.0.8'
 EXAMPLE_ORG_IP = '127.0.0.9'
 FOO_LOCAL_IP = '127.0.0.10'
 FOO_COM_IP = '127.0.0.11'
-HOSTNAME_IP = '127.0.0.12'
-HOSTNAME_V6_IP = '::12'
 
 class FakeReactorAndConnectMixin:
     """
@@ -848,7 +846,11 @@ class IntegrationTestingMixin(object):
         try:
             self.assertNoResult(deferred)
         except self.failureException:
-            self.flushLoggedErrors()
+            # Until the TODO's are resolved we need to call flushLoggedErrors
+            # so the AgentHTTPSTests.test_integrationTestIPv4URI and
+            # AgentHTTPSTests.test_integrationTestIPv6URI tests will fail as
+            # TODO rather than ERROR.
+            self.flushLoggedErrors(ValueError)
             raise
         lines = accumulator.currentProtocol.data.split(b"\r\n")
         self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])

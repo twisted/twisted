@@ -1137,8 +1137,9 @@ class ClientTLSOptions(object):
         encoding.  ASCII values, however, will always work.
     @type _hostnameASCII: L{unicode}
 
-    @ivar _sendSNI: Whether or not to send the SNI with the handshake. Will be
-        False if _hostname is an ip address or True if _hostname is a DNSName
+    @ivar _sendSNI: Whether or not to send the SNI with the handshake.
+        Will be L{False} if C{_hostname} is an IP address or L{True} if
+        C{_hostname} is a DNSName
     @type _sendSNI: L{bool}
     """
 
