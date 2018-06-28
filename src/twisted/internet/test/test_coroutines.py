@@ -15,7 +15,7 @@ from twisted.python.filepath import FilePath
 if _PY35PLUS:
     _path = FilePath(__file__).parent().child("_awaittests.py.3only")
 
-    _g = {"__name__": "twisted.internet.test.test_coroutines.3-only.awaittests"}
+    _g = {"__name__": __name__ + ".3-only.awaittests"}
     execfile(_path.path, _g)
     AwaitTests = _g["AwaitTests"]
 else:
@@ -38,7 +38,7 @@ else:
 if _PY3:
     _path = FilePath(__file__).parent().child("_yieldfromtests.py.3only")
 
-    _g = {"__name__": "twisted.internet.test.test_coroutines.3-only.yieldfromtests"}
+    _g = {"__name__": __name__ + ".3-only.yieldfromtests"}
     execfile(_path.path, _g)
     YieldFromTests = _g["YieldFromTests"]
 else:
