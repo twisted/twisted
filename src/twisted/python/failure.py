@@ -476,6 +476,7 @@ class Failure(BaseException):
         """)
 
 
+    @_extraneous
     def throwExceptionIntoGenerator(self, g):
         """
         Throw the original exception into the given generator,
