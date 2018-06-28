@@ -1207,7 +1207,8 @@ class ClientTLSOptions(object):
         @param ret: ignored
         @type ret: ignored
         """
-        # Literal IPv4 and IPv6 addresses are not permitted as host names according to the RFCs.
+        # Literal IPv4 and IPv6 addresses are not permitted
+        # as host names according to the RFCs
         if where & SSL.SSL_CB_HANDSHAKE_START and self._sendSNI:
             connection.set_tlsext_host_name(self._hostnameBytes)
         elif where & SSL.SSL_CB_HANDSHAKE_DONE:
