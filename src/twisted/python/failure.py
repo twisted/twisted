@@ -14,6 +14,7 @@ See L{Failure}.
 from __future__ import division, absolute_import, print_function
 
 # System Imports
+import copy
 import sys
 import linecache
 import inspect
@@ -249,7 +250,33 @@ class Failure(BaseException):
             self.type = exc_type
             self.value = exc_value
         if isinstance(self.value, Failure):
-            self.__dict__ = self.value.__dict__
+            # Copy all infos from that failure (including self.frames).
+            self.__dict__ = copy.copy(self.value.__dict__)
+
+            # If we are re-throwing a Failure, we merge the stack-trace stored
+            # in the failure with the current exception's stack.
+            # This integrated with throwExceptionIntoGenerator and allows
+            # to provide full stack trace, even if we go through several layers
+            # of inlineCallbacks.
+            _, _, tb = sys.exc_info()
+            frames = []
+            while tb is not None:
+                f = tb.tb_frame
+                if f.f_code is self.throwExceptionIntoGenerator.__code__:
+                    # We just drop everything above throwExceptionIntoGenerator
+                    # as this is just implementation details, and only add
+                    # noise to those stack traces.
+                    frames = []
+                else:
+                    frames.append((
+                        f.f_code.co_name,
+                        f.f_code.co_filename,
+                        tb.tb_lineno, (), ()
+                        ))
+                tb = tb.tb_next
+            # Merging current stack with stack stored in the Failure.
+            frames.extend(self.frames)
+            self.frames = frames
             return
         if tb is None:
             if exc_tb:
