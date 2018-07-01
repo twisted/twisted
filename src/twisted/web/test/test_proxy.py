@@ -39,7 +39,13 @@ class ReverseProxyResourceTests(TestCase):
         self.addCleanup(channel.connectionLost, None)
 
         channel.dataReceived(
-            b"GET %s HTTP/1.1\r\nAccept: text/html\r\n\r\n" % uri)
+            b'\r\n'.join([
+                b'GET %s HTTP/1.1' % uri,
+                b'Accept: text/html',
+                b'',
+                b'',
+            ])
+        )
 
         [(host, port, factory, _timeout, _bind_addr)] = reactor.tcpClients
         # Check that one connection has been created, to the good host/port
