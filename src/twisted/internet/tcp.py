@@ -103,9 +103,9 @@ _portNameType = (str, unicode)
 def _getrealname(addr):
     """
     Return a 2-tuple of socket IP and port for IPv4 and a 4-tuple of
-    socket IP, port, flowInfo, and scopeID for IPv6.  This return a
-    valid scopeID, which getaddrinfo does not return from Python 3.7
-    onwards.
+    socket IP, port, flowInfo, and scopeID for IPv6.  For IPv6, it
+    returns the interface portion (the part after the %) as a part of
+    the IPv6 address, which Python 3.7+ does not include.
 
     @param addr: A 2-tuple for IPv4 information or a 4-tuple for IPv6
         information.
