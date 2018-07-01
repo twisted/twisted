@@ -14,6 +14,6 @@ from twisted.internet import reactor
 from twisted.web import proxy
 
 
-factory = proxy.ReverseProxyFactory(b'www.asdf.com', 80)
+factory = proxy.ReverseProxyFactory('www.asdf.com', 80)
 reactor.listenTCP(8080, factory)
 reactor.run()
