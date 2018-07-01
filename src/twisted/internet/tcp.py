@@ -1419,7 +1419,8 @@ class Port(base.BasePort, _SocketCloser):
                         # IPv6, make sure we get the scopeID if it
                         # exists
                         host = socket.getnameinfo(
-                            addr, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
+                            addr,
+                            socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
                         addr = tuple([host[0]] + list(addr[1:]))
 
                     protocol = self.factory.buildProtocol(
