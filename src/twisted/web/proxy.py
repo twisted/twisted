@@ -248,7 +248,7 @@ class ReverseProxyResource(Resource):
     def __init__(self, host, port, path, reactor=reactor):
         """
         @param host: the host of the web server to proxy.
-        @type host: C{bytes}
+        @type host: C{str}
 
         @param port: the port of the web server to proxy.
         @type port: C{port}
@@ -288,8 +288,8 @@ class ReverseProxyResource(Resource):
         if self.port == 80:
             host = self.host
         else:
-            host = self.host + u":" + str(self.port)
-        request.requestHeaders.setRawHeaders(b"host", [host])
+            host = u"%s:%d" % (self.host, self.port)
+        request.requestHeaders.setRawHeaders(b"host", [host.encode('ascii')])
         request.content.seek(0, 0)
         qs = urllib_parse.urlparse(request.uri)[4]
         if qs:
