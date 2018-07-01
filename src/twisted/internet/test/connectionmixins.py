@@ -48,7 +48,8 @@ def findFreePort(interface='127.0.0.1', family=socket.AF_INET,
         probe.bind(addr)
         if family == socket.AF_INET6:
             sockname = probe.getsockname()
-            hostname = socket.getnameinfo(sockname, socket.NI_NUMERICHOST)[0]
+            hostname = socket.getnameinfo(
+                sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
             return (hostname, sockname[1])
         else:
             return probe.getsockname()
