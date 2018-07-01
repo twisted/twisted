@@ -1,0 +1,2 @@
+twisted.web.proxy.ReverseProxyResource fixed documentation,
+example snippet and bug instantiating child resources
