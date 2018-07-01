@@ -1,0 +1,2 @@
+twisted.web.proxy.ReverseProxyRequest fixed factory property access.
+Contributed example snippet and a reverse proxy server factory
