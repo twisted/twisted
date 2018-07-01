@@ -248,7 +248,7 @@ class ReverseProxyResource(Resource):
     def __init__(self, host, port, path, reactor=reactor):
         """
         @param host: the host of the web server to proxy.
-        @type host: C{str}
+        @type host: C{bytes}
 
         @param port: the port of the web server to proxy.
         @type port: C{port}
@@ -259,7 +259,7 @@ class ReverseProxyResource(Resource):
             be proxied to B{/foo/bar}.  Any required encoding of special
             characters (such as " " or "/") should have been done already.
 
-        @type path: C{str}
+        @type path: C{bytes}
         """
         Resource.__init__(self)
         self.host = host
@@ -289,7 +289,7 @@ class ReverseProxyResource(Resource):
             host = self.host
         else:
             host = self.host + u":" + str(self.port)
-        request.requestHeaders.setRawHeaders(b"host", [host.encode('ascii')])
+        request.requestHeaders.setRawHeaders(b"host", [host])
         request.content.seek(0, 0)
         qs = urllib_parse.urlparse(request.uri)[4]
         if qs:
