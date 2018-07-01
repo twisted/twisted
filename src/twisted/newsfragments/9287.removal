@@ -1,1 +1,0 @@
-Deprecate direct introspection of ProcMon's processes: processes should not be directly accessed or pickled.
