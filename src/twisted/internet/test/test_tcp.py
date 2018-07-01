@@ -682,10 +682,10 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             transportData['instance'].addr,
             id(transportData['instance']))
 
-        boundPort = socket.getaddrinfo(
-            self.interface, clientFactory.boundPort)[0][-1]
-        serverPort = socket.getaddrinfo(
-            self.interface, serverAddress.port)[0][-1]
+        boundPort = [host] + list(socket.getaddrinfo(
+            self.interface, clientFactory.boundPort)[0][-1][1:])
+        serverPort = [host] + list(socket.getaddrinfo(
+            self.interface, serverAddress.port)[0][-1][1:])
 
         self.assertEqual(
             transportData['host'],
