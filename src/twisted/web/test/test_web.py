@@ -911,6 +911,25 @@ class GzipEncoderTests(unittest.TestCase):
                           zlib.decompress(body, 16 + zlib.MAX_WBITS))
 
 
+    def test_whitespaceInAcceptEncoding(self):
+        """
+        If the client request passes a I{Accept-Encoding} header which mentions
+        gzip, with whitespace inbetween the encoding name and the commas,
+        L{server._GzipEncoder} automatically compresses the data.
+        """
+        request = server.Request(self.channel, False)
+        request.gotLength(0)
+        request.requestHeaders.setRawHeaders(b"Accept-Encoding",
+                                             [b"deflate, gzip"])
+        request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
+        data = self.channel.transport.written.getvalue()
+        self.assertNotIn(b"Content-Length", data)
+        self.assertIn(b"Content-Encoding: gzip\r\n", data)
+        body = data[data.find(b"\r\n\r\n") + 4:]
+        self.assertEqual(b"Some data",
+                          zlib.decompress(body, 16 + zlib.MAX_WBITS))
+
+
     def test_nonEncoding(self):
         """
         L{server.GzipEncoderFactory} doesn't return a L{server._GzipEncoder} if
