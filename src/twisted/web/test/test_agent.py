@@ -765,9 +765,9 @@ class IntegrationTestingMixin(object):
         self.integrationTest(b'example.com', EXAMPLE_COM_IP, IPv4Address)
 
 
-    def test_integrationTestIPv4URI(self):
+    def test_integrationTestIPv4Address(self):
         """
-        L{Agent} works over IPv4 when URI is an IPv4 address.
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
         """
         self.integrationTest(b'127.0.0.7', '127.0.0.7', IPv4Address)
 
@@ -780,9 +780,9 @@ class IntegrationTestingMixin(object):
                              IPv6Address)
 
 
-    def test_integrationTestIPv6URI(self):
+    def test_integrationTestIPv6Address(self):
         """
-        L{Agent} works over IPv6 when URI is an IPv6 address.
+        L{Agent} works over IPv6 when hostname is an IPv6 address.
         """
         self.integrationTest(b'[::7]', '::7', IPv6Address)
 
@@ -843,15 +843,7 @@ class IntegrationTestingMixin(object):
         pump = IOPump(clientProtocol, wrapper,
                       clientTransport, serverTransport, False)
         pump.flush()
-        try:
-            self.assertNoResult(deferred)
-        except self.failureException:
-            # Until the TODO's are resolved we need to call flushLoggedErrors
-            # so the AgentHTTPSTests.test_integrationTestIPv4URI and
-            # AgentHTTPSTests.test_integrationTestIPv6URI tests will fail as
-            # TODO rather than ERROR.
-            self.flushLoggedErrors(ValueError)
-            raise
+        self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
         self.assertTrue(lines[0].startswith(b"GET / HTTP"), lines[0])
         headers = dict([line.split(b": ", 1) for line in lines[1:] if line])
@@ -1502,22 +1494,22 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin,
         self.assertIs(trustRoot.context, connection.get_context())
 
 
-    def test_integrationTestIPv4URI(self):
+    def test_integrationTestIPv4Address(self):
         """
-        L{Agent} works over IPv4 when URI is an IPv4 address.
+        L{Agent} works over IPv4 when hostname is an IPv4 address.
         """
-        super(AgentHTTPSTests, self).test_integrationTestIPv4URI()
-    test_integrationTestIPv4URI.todo = (
+        super(AgentHTTPSTests, self).test_integrationTestIPv4Address()
+    test_integrationTestIPv4Address.skip = (
         'service_identity does not support IP address validation yet'
     )
 
 
-    def test_integrationTestIPv6URI(self):
+    def test_integrationTestIPv6Address(self):
         """
-        L{Agent} works over IPv6 when URI is an IPv6 address.
+        L{Agent} works over IPv6 when the hostname is an IPv6 address.
         """
-        super(AgentHTTPSTests, self).test_integrationTestIPv6URI()
-    test_integrationTestIPv6URI.todo = (
+        super(AgentHTTPSTests, self).test_integrationTestIPv6Address()
+    test_integrationTestIPv6Address.skip = (
         'service_identity does not support IP address validation yet'
     )
 
