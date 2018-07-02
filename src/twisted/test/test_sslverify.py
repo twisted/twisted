@@ -592,6 +592,21 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         self.assertEqual(str(error), expectedText)
 
 
+    def test_dNSNameHostname(self):
+        options = sslverify.optionsForClientTLS(u'example.com')
+        self.assertTrue(options._sendSNI)
+
+
+    def test_IPv4AddressHostname(self):
+        options = sslverify.optionsForClientTLS(u'127.0.0.1')
+        self.assertFalse(options._sendSNI)
+
+
+    def test_IPv6AddressHostname(self):
+        options = sslverify.optionsForClientTLS(u'::1')
+        self.assertFalse(options._sendSNI)
+
+
 
 class FakeChooseDiffieHellmanEllipticCurve(object):
     """
