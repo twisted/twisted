@@ -167,12 +167,10 @@ def certificatesForAuthorityAndServer(serviceIdentity=u'example.com'):
         L{sslverify.PrivateCertificate})
     """
     commonNameForCA = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example CA'),
-         x509.NameAttribute(NameOID.DOMAIN_COMPONENT, serviceIdentity)]
+        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example CA')]
     )
     commonNameForServer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example Server'),
-         x509.NameAttribute(NameOID.DOMAIN_COMPONENT, serviceIdentity)]
+        [x509.NameAttribute(NameOID.COMMON_NAME, u'Testing Example Server')]
     )
     oneDay = datetime.timedelta(1, 0, 0)
     privateKeyForCA = rsa.generate_private_key(
