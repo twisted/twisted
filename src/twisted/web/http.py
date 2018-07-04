@@ -1423,6 +1423,8 @@ class Request:
         """
         Return the IP address of the client who submitted this request.
 
+        This method is B{deprecated}.  Use L{getClientAddress} instead.
+
         @returns: the client IP address
         @rtype: C{str}
         """
@@ -1440,6 +1442,8 @@ class Request:
         a UNIX domain socket will cause this to return
         L{UNIXAddress}).  Callers must check the type of the returned
         address.
+
+        @since: 18.4
 
         @return: the client's address.
         @rtype: L{IAddress}
