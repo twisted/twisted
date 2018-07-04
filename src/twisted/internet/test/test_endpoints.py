@@ -49,9 +49,17 @@ from twisted.python.components import proxyForInterface
 from twisted.internet.abstract import isIPv6Address
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
+noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
+    "key.pem.no_trailing_newline")
+noTrailingNewlineCertPemPath = getModule("twisted.test").filePath.sibling(
+    "cert.pem.no_trailing_newline")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
 chainPath = casPath.child("chain.pem")
 escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
+escapedNoTrailingNewlineKeyPEMPathName = endpoints.quoteStringArgument(
+    noTrailingNewlineKeyPemPath.path)
+escapedNoTrailingNewlineCertPEMPathName = endpoints.quoteStringArgument(
+    noTrailingNewlineCertPemPath.path)
 escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
 escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
@@ -2469,6 +2477,77 @@ class HostnameEndpointIDNATests(unittest.SynchronousTestCase):
 
 
 
+class HostnameEndpointReprTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{HostnameEndpoint}'s string representation.
+    """
+    def test_allASCII(self):
+        """
+        The string representation of L{HostnameEndpoint} includes the host and
+        port passed to the constructor.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            'example.com', 80,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint example.com:80>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_idnaHostname(self):
+        """
+        When IDN is passed to the L{HostnameEndpoint} constructor the string
+        representation includes the punycode version of the host.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            u'b\xfccher.ch', 443,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint xn--bcher-kva.ch:443>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_hostIPv6Address(self):
+        """
+        When the host passed to L{HostnameEndpoint} is an IPv6 address it is
+        wrapped in brackets in the string representation, like in a URI. This
+        prevents the colon separating the host from the port from being
+        ambiguous.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'::1', 22,
+        )
+
+        rep = repr(endpoint)
+
+        self.assertEqual("<HostnameEndpoint [::1]:22>", rep)
+        self.assertIs(str, type(rep))
+
+
+    def test_badEncoding(self):
+        """
+        When a bad hostname is passed to L{HostnameEndpoint}, the string
+        representation displays invalid characters in backslash-escaped form.
+        """
+        endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(Clock(), []),
+            b'\xff-garbage-\xff', 80
+        )
+
+        self.assertEqual(
+            '<HostnameEndpoint \\xff-garbage-\\xff:80>',
+            repr(endpoint),
+        )
+
+
+
 class HostnameEndpointsGAIFailureTests(unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns no address.
@@ -3114,11 +3193,37 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
+    def test_sslNoTrailingNewlinePem(self):
+        """
+        Lack of a trailing newline in key and cert .pem files should not
+        generate an exception.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:1234:backlog=12:privateKey=%s:"
+            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            % (
+                escapedNoTrailingNewlineKeyPEMPathName,
+                escapedNoTrailingNewlineCertPEMPathName,
+            )
+        )
+        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+        self.assertIs(server._reactor, reactor)
+        self.assertEqual(server._port, 1234)
+        self.assertEqual(server._backlog, 12)
+        self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
     if skipSSL:
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
+        test_sslNoTrailingNewlinePem.skip = skipSSL
 
 
     def test_unix(self):

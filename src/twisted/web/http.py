@@ -90,9 +90,11 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, intToBytes, networkString, nativeString, _PY37PLUS)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
+from twisted.logger import Logger
+from twisted.python.failure import Failure
 from incremental import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, protocol, address
@@ -470,6 +472,15 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
+    def __hash__():
+        """
+        Generate a hash value for the request.
+
+        @return: The request's hash value.
+        @rtype: L{int}
+        """
+
+
 
 class StringTransport:
     """
@@ -678,6 +689,9 @@ class Request:
         which this request was received is closed and which is C{True} after
         that.
     @type _disconnected: C{bool}
+
+    @ivar _log: A logger instance for request related messages.
+    @type _log: L{twisted.logger.Logger}
     """
     producer = None
     finished = 0
@@ -696,6 +710,7 @@ class Request:
     content = None
     _forceSSL = 0
     _disconnected = False
+    _log = Logger()
 
     def __init__(self, channel, queued=_QUEUED_SENTINEL):
         """
@@ -705,6 +720,13 @@ class Request:
         """
         self.notifications = []
         self.channel = channel
+
+        # Cache the client and server information, we'll need this
+        # later to be serialized and sent with the request so CGIs
+        # will work remotely
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
+
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
@@ -722,7 +744,14 @@ class Request:
         Called when have finished responding and are no longer queued.
         """
         if self.producer:
-            log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
+            self._log.failure(
+                '',
+                Failure(
+                    RuntimeError(
+                        "Producer was not unregistered for %s" % (self.uri,)
+                    )
+                )
+            )
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
@@ -829,38 +858,60 @@ class Request:
             self.path, argstring = x
             self.args = parse_qs(argstring, 1)
 
-        # cache the client and server information, we'll need this later to be
-        # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.getPeer()
-        self.host = self.channel.getHost()
-
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
+        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
 
-        if self.method == b"POST" and ctype:
+        if clength is not None:
+            clength = clength[0]
+
+        if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    cgiArgs = cgi.parse_multipart(self.content, pdict)
+                    if _PY37PLUS:
+                        cgiArgs = cgi.parse_multipart(
+                            self.content, pdict, encoding='utf8',
+                            errors="surrogateescape")
+                    else:
+                        cgiArgs = cgi.parse_multipart(self.content, pdict)
 
-                    if _PY3:
-                        # parse_multipart on Python 3 decodes the header bytes
-                        # as iso-8859-1 and returns a str key -- we want bytes
-                        # so encode it back
+                    if not _PY37PLUS and _PY3:
+                        # The parse_multipart function on Python 3
+                        # decodes the header bytes as iso-8859-1 and
+                        # returns a str key -- we want bytes so encode
+                        # it back
                         self.args.update({x.encode('iso-8859-1'): y
                                           for x, y in cgiArgs.items()})
+                    elif _PY37PLUS:
+                        # The parse_multipart function on Python 3.7+
+                        # decodes the header bytes as iso-8859-1 and
+                        # decodes the body bytes as utf8 with
+                        # surrogateescape -- we want bytes
+                        self.args.update({
+                            x.encode('iso-8859-1'): \
+                            [z.encode('utf8', "surrogateescape")
+                             if isinstance(z, str) else z for z in y]
+                            for x, y in cgiArgs.items()})
+
                     else:
                         self.args.update(cgiArgs)
-                except:
-                    # It was a bad request.
+                except Exception as e:
+                    # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
-                    return
+                    if isinstance(e, (TypeError, ValueError, KeyError)):
+                        return
+                    else:
+                        # If it's not a userspace error from CGI, reraise
+                        raise
+
             self.content.seek(0, 0)
 
         self.process()
@@ -943,8 +994,37 @@ class Request:
         """
         Notify when the response to this request has finished.
 
-        @rtype: L{Deferred}
+        @note: There are some caveats around the reliability of the delivery of
+            this notification.
 
+                1. If this L{Request}'s channel is paused, the notification
+                   will not be delivered.  This can happen in one of two ways;
+                   either you can call C{request.transport.pauseProducing}
+                   yourself, or,
+
+                2. In order to deliver this notification promptly when a client
+                   disconnects, the reactor must continue reading from the
+                   transport, so that it can tell when the underlying network
+                   connection has gone away.  Twisted Web will only keep
+                   reading up until a finite (small) maximum buffer size before
+                   it gives up and pauses the transport itself.  If this
+                   occurs, you will not discover that the connection has gone
+                   away until a timeout fires or until the application attempts
+                   to send some data via L{Request.write}.
+
+                3. It is theoretically impossible to distinguish between
+                   successfully I{sending} a response and the peer successfully
+                   I{receiving} it.  There are several networking edge cases
+                   where the L{Deferred}s returned by C{notifyFinish} will
+                   indicate success, but the data will never be received.
+                   There are also edge cases where the connection will appear
+                   to fail, but in reality the response was delivered.  As a
+                   result, the information provided by the result of the
+                   L{Deferred}s returned by this method should be treated as a
+                   guess; do not make critical decisions in your applications
+                   based upon it.
+
+        @rtype: L{Deferred}
         @return: A L{Deferred} which will be triggered when the request is
             finished -- with a L{None} value if the request finishes
             successfully or with an error if the request is interrupted by an
@@ -1013,8 +1093,10 @@ class Request:
 
             if self.lastModified is not None:
                 if self.responseHeaders.hasHeader(b'last-modified'):
-                    log.msg("Warning: last-modified specified both in"
-                            " header list and lastModified attribute.")
+                    self._log.info(
+                        "Warning: last-modified specified both in"
+                        " header list and lastModified attribute."
+                    )
                 else:
                     self.responseHeaders.setRawHeaders(
                         b'last-modified',
@@ -1057,7 +1139,8 @@ class Request:
                 self.channel.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
-                  max_age=None, comment=None, secure=None, httpOnly=False):
+                  max_age=None, comment=None, secure=None, httpOnly=False,
+                  samesite=None):
         """
         Set an outgoing HTTP cookie.
 
@@ -1094,6 +1177,10 @@ class Request:
         @param httpOnly: direct browser not to expose cookies through channels
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
+
+        @param samesite: direct browsers not to send this cookie on
+            cross-origin requests
+        @type samesite: L{bytes} or L{unicode}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
@@ -1135,6 +1222,12 @@ class Request:
             cookie = cookie + b"; Secure"
         if httpOnly:
             cookie = cookie + b"; HttpOnly"
+        if samesite:
+            samesite = _ensureBytes(samesite).lower()
+            if samesite not in [b"lax", b"strict"]:
+                raise ValueError(
+                    "Invalid value for samesite: " + repr(samesite))
+            cookie += b"; SameSite=" + samesite
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
@@ -1330,13 +1423,33 @@ class Request:
         """
         Return the IP address of the client who submitted this request.
 
+        This method is B{deprecated}.  Use L{getClientAddress} instead.
+
         @returns: the client IP address
         @rtype: C{str}
         """
-        if isinstance(self.client, address.IPv4Address):
+        if isinstance(self.client, (address.IPv4Address, address.IPv6Address)):
             return self.client.host
         else:
             return None
+
+
+    def getClientAddress(self):
+        """
+        Return the address of the client who submitted this request.
+
+        This may not be a network address (e.g., a server listening on
+        a UNIX domain socket will cause this to return
+        L{UNIXAddress}).  Callers must check the type of the returned
+        address.
+
+        @since: 18.4
+
+        @return: the client's address.
+        @rtype: L{IAddress}
+        """
+        return self.client
+
 
     def isSecure(self):
         """
@@ -1375,7 +1488,7 @@ class Request:
         except (binascii.Error, ValueError):
             self.user = self.password = ""
         except:
-            log.err()
+            self._log.failure('')
             self.user = self.password = ""
 
 
@@ -1411,17 +1524,6 @@ class Request:
             pass
         self._authorize()
         return self.password
-
-
-    def getClient(self):
-        """
-        Get the client's IP address, if it has one.  No attempt is made to
-        resolve the address to a hostname.
-
-        @return: The same value as C{getClientIP}.
-        @rtype: L{bytes}
-        """
-        return self.getClientIP()
 
 
     def connectionLost(self, reason):
@@ -1487,11 +1589,20 @@ class Request:
         return NotImplemented
 
 
+    def __hash__(self):
+        """
+        A C{Request} is hashable so that it can be used as a mapping key.
 
-Request.getClient = deprecated(
-    Version("Twisted", 15, 0, 0),
-    "Twisted Names to resolve hostnames")(Request.getClient)
+        @return A C{int} based on the instance's identity.
+        """
+        return id(self)
 
+
+
+Request.getClientIP = deprecated(
+    Version('Twisted', 18, 4, 0),
+    replacement="getClientAddress",
+)(Request.getClientIP)
 
 Request.noLongerQueued = deprecated(
     Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
@@ -1784,7 +1895,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     A receiver for HTTP requests.
 
     The L{HTTPChannel} provides L{interfaces.ITransport} and
-    L{interfaces.IConsumer} to the L{Request} objects it creates. It also
+    L{interfaces.IConsumer} to the L{Request} objects it creates.  It also
     implements L{interfaces.IPushProducer} to C{self.transport}, allowing the
     transport to pause it.
 
@@ -1814,7 +1925,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar _networkProducer: Either the transport, if it provides
         L{interfaces.IPushProducer}, or a null implementation of
-        L{interfaces.IPushProducer}. Used to attempt to prevent the transport
+        L{interfaces.IPushProducer}.  Used to attempt to prevent the transport
         from producing excess data when we're responding to a request.
     @type _networkProducer: L{interfaces.IPushProducer}
 
@@ -1828,9 +1939,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         behaviour (where we literally just set the L{Request} object as the
         producer on the transport) is because we want to be able to exert
         backpressure on the client to prevent it from sending in arbitrarily
-        many requests without ever reading responses. Essentially, if the
+        many requests without ever reading responses.  Essentially, if the
         client never reads our responses we will eventually stop reading its
         requests.
+
     @type _requestProducer: L{interfaces.IPushProducer}
 
     @ivar _requestProducerStreaming: A boolean that tracks whether the producer
@@ -1839,20 +1951,48 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     @type _requestProducerStreaming: L{bool} or L{None}
 
     @ivar _waitingForTransport: A boolean that tracks whether the transport has
-        asked us to stop producing. This is used to keep track of what we're
+        asked us to stop producing.  This is used to keep track of what we're
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
     @type _waitingForTransport: L{bool}
 
     @ivar abortTimeout: The number of seconds to wait after we attempt to shut
-        the transport down cleanly to give up and forcibly terminate it. This
+        the transport down cleanly to give up and forcibly terminate it.  This
         is only used when we time a connection out, to prevent errors causing
-        the FD to get leaked. If this is L{None}, we will wait forever.
+        the FD to get leaked.  If this is L{None}, we will wait forever.
     @type abortTimeout: L{int}
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
     @type _abortingCall: L{twisted.internet.base.DelayedCall}
+
+    @ivar _optimisticEagerReadSize: When a resource takes a long time to answer
+        a request (via L{twisted.web.server.NOT_DONE_YET}, hopefully one day by
+        a L{Deferred}), we would like to be able to let that resource know
+        about the underlying transport disappearing as promptly as possible,
+        via L{Request.notifyFinish}, and therefore via
+        C{self.requests[...].connectionLost()} on this L{HTTPChannel}.
+
+        However, in order to simplify application logic, we implement
+        head-of-line blocking, and do not relay pipelined requests to the
+        application until the previous request has been answered.  This means
+        that said application cannot dispose of any entity-body that comes in
+        from those subsequent requests, which may be arbitrarily large, and it
+        may need to be buffered in memory.
+
+        To implement this tradeoff between prompt notification when possible
+        (in the most frequent case of non-pipelined requests) and correct
+        behavior when not (say, if a client sends a very long-running GET
+        request followed by a PUT request with a very large body) we will
+        continue reading pipelined requests into C{self._dataBuffer} up to a
+        given limit.
+
+        C{_optimisticEagerReadSize} is the number of bytes we will accept from
+        the client and buffer before pausing the transport.
+
+        This behavior has been in place since Twisted 17.9.0 .
+
+    @type _optimisticEagerReadSize: L{int}
     """
 
     maxHeaders = 500
@@ -1875,6 +2015,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducerStreaming = None
     _waitingForTransport = False
     _abortingCall = None
+    _optimisticEagerReadSize = 0x4000
+    _log = Logger()
 
     def __init__(self):
         # the request queue
@@ -1902,13 +2044,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._receivedHeaderSize += len(line)
         if (self._receivedHeaderSize > self.totalHeadersSize):
             self._respondToBadRequestAndDisconnect()
-            return
-
-        # If we're currently handling a request, buffer this data. We shouldn't
-        # have received it (we've paused the transport), but let's be cautious.
-        if self._handlingRequest:
-            self._dataBuffer.append(line)
-            self._dataBuffer.append(b'\r\n')
             return
 
         if self.__first_line:
@@ -2048,22 +2183,33 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
-        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
-        if not self._waitingForTransport:
-            self._networkProducer.pauseProducing()
-
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
 
-    def rawDataReceived(self, data):
-        self.resetTimeout()
-
-        # If we're currently handling a request, buffer this data. We shouldn't
-        # have received it (we've paused the transport), but let's be cautious.
+    def dataReceived(self, data):
+        """
+        Data was received from the network.  Process it.
+        """
+        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
+            if (
+                    (sum(map(len, self._dataBuffer)) >
+                     self._optimisticEagerReadSize)
+                    and not self._waitingForTransport
+            ):
+                # If we received more data than a small limit while processing
+                # the head-of-line request, apply TCP backpressure to our peer
+                # to get them to stop sending more request data until we're
+                # ready.  See docstring for _optimisticEagerReadSize above.
+                self._networkProducer.pauseProducing()
             return
+        return basic.LineReceiver.dataReceived(self, data)
+
+
+    def rawDataReceived(self, data):
+        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
@@ -2155,7 +2301,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def timeoutConnection(self):
-        log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        self._log.info(
+            "Timing out client: {peer}",
+            peer=str(self.transport.getPeer())
+        )
         if self.abortTimeout is not None:
             # We use self.callLater because that's what TimeoutMixin does.
             self._abortingCall = self.callLater(
@@ -2171,8 +2320,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         on extremely bad connections or when clients are maliciously attempting
         to keep connections open.
         """
-        log.msg(
-            "Forcibly timing out client: %s" % (str(self.transport.getPeer()),)
+        self._log.info(
+            "Forcibly timing out client: {peer}",
+            peer=str(self.transport.getPeer())
         )
         # We want to lose track of the _abortingCall so that no-one tries to
         # cancel it.
@@ -2469,12 +2619,18 @@ def combinedLogFormatter(timestamp, request):
 
     @see: L{IAccessLogFormatter}
     """
+    clientAddr = request.getClientAddress()
+    if isinstance(clientAddr, (address.IPv4Address, address.IPv6Address,
+                               _XForwardedForAddress)):
+        ip = clientAddr.host
+    else:
+        ip = b'-'
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
     line = (
         u'"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
         u'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
-            ip=_escape(request.getClientIP() or b"-"),
+            ip=_escape(ip),
             timestamp=timestamp,
             method=_escape(request.method),
             uri=_escape(request.uri),
@@ -2488,19 +2644,39 @@ def combinedLogFormatter(timestamp, request):
 
 
 
+@implementer(interfaces.IAddress)
+class _XForwardedForAddress(object):
+    """
+    L{IAddress} which represents the client IP to log for a request, as gleaned
+    from an X-Forwarded-For header.
+
+    @ivar host: An IP address or C{b"-"}.
+    @type host: L{bytes}
+
+    @see: L{proxiedLogFormatter}
+    """
+    def __init__(self, host):
+        self.host = host
+
+
+
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientIP}.
     """
-    def getClientIP(self):
+    def getClientAddress(self):
         """
-        @return: The client address (the first address) in the value of the
-            I{X-Forwarded-For header}.  If the header is not present, return
-            C{b"-"}.
+        The client address (the first address) in the value of the
+        I{X-Forwarded-For header}.  If the header is not present, the IP is
+        considered to be C{b"-"}.
+
+        @return: L{_XForwardedForAddress} which wraps the client address as
+            expected by L{combinedLogFormatter}.
         """
-        return self._request.requestHeaders.getRawHeaders(
+        host = self._request.requestHeaders.getRawHeaders(
             b"x-forwarded-for", [b"-"])[0].split(b",")[0].strip()
+        return _XForwardedForAddress(host)
 
     # These are missing from the interface.  Forward them manually.
     @property

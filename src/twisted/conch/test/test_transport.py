@@ -7,22 +7,19 @@ Tests for ssh/transport.py and the classes therein.
 
 from __future__ import absolute_import, division
 
-import struct
 import binascii
+import re
+import string
+import struct
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
+from twisted.python.reflect import requireModule
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
+pyasn1 = requireModule("pyasn1")
+cryptography = requireModule("cryptography")
 
 if pyasn1 is not None and cryptography is not None:
     dependencySkip = None
-    from twisted.conch.ssh import transport, keys, factory
+    from twisted.conch.ssh import common, transport, keys, factory
     from twisted.conch.test import keydata
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -44,15 +41,19 @@ else:
         class SSHFactory:
             pass
 
-from hashlib import md5, sha1, sha256, sha384, sha512
+    class common:
+        @classmethod
+        def NS(self, arg): return b''
 
+from hashlib import md5, sha1, sha256, sha384, sha512
+from twisted import __version__ as twisted_version
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
 from twisted.python.compat import iterbytes, _bytesChr as chr
-from twisted.conch.ssh import address, service, common, _kex
+from twisted.conch.ssh import address, service, _kex
 from twisted.test import proto_helpers
 
 from twisted.conch.error import ConchError
@@ -438,6 +439,8 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     Test TransportBase. It implements the non-server/client specific
     parts of the SSH transport protocol.
     """
+    if dependencySkip:
+        skip = dependencySkip
 
     _A_KEXINIT_MESSAGE = (
         b"\xAA" * 16 +
@@ -456,11 +459,25 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     def test_sendVersion(self):
         """
         Test that the first thing sent over the connection is the version
-        string.
+        string.  The 'softwareversion' part must consist of printable
+        US-ASCII characters, with the exception of whitespace characters and
+        the minus sign.
+
+        RFC 4253, section 4.2.
         """
         # the other setup was done in the setup method
-        self.assertEqual(self.transport.value().split(b'\r\n', 1)[0],
-                         b"SSH-2.0-Twisted")
+        version = self.transport.value().split(b'\r\n', 1)[0]
+        self.assertEqual(version,
+                         b"SSH-2.0-Twisted_" + twisted_version.encode('ascii'))
+        softwareVersion = version.decode('ascii')[len('SSH-2.0-'):]
+        # This is an inefficient regex, but it's simple to build.
+        softwareVersionRegex = (
+            r'^(' +
+            '|'.join(
+                re.escape(c) for c in string.printable
+                if c != '-' and not c.isspace()) +
+            r')*$')
+        self.assertRegex(softwareVersion, softwareVersionRegex)
 
 
     def test_sendPacketPlain(self):
@@ -774,7 +791,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.proto.dispatchMessage(
             transport.MSG_DEBUG,
             b'\x01\x00\x00\x00\x04test\x00\x00\x00\x02en')
-        self.assertEqual(self.proto.debugs, [(True, b'test', b'en')])
+        self.proto.dispatchMessage(
+            transport.MSG_DEBUG,
+            b'\x00\x00\x00\x00\x06silent\x00\x00\x00\x02en')
+        self.assertEqual(
+            self.proto.debugs,
+            [(True, b'test', b'en'), (False, b'silent', b'en')])
 
 
     def test_sendIgnore(self):
@@ -1005,6 +1027,50 @@ here's some other stuff
         proto.dataReceived(b"SSH-1.99-OpenSSH\n")
         self.assertTrue(proto.gotVersion)
         self.assertEqual(proto.otherVersionString, b"SSH-1.99-OpenSSH")
+
+
+    def test_dataReceivedSSHVersionUnixNewline(self):
+        """
+        It can parse the SSH version string even when it ends only in
+        Unix newlines (CR) and does not follows the RFC 4253 to use
+        network newlines (CR LF).
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(proto_helpers.StringTransport())
+
+        sut.dataReceived(
+            b'SSH-2.0-PoorSSHD Some-comment here\n'
+            b'more-data'
+            )
+
+        self.assertTrue(sut.gotVersion)
+        self.assertEqual(
+            sut.otherVersionString,
+            b'SSH-2.0-PoorSSHD Some-comment here')
+
+
+    def test_dataReceivedSSHVersionTrailingSpaces(self):
+        """
+        The trailing spaces from SSH version comment are not removed.
+
+        The SSH version string needs to be kept as received
+        (without CR LF end of line) as they are used in the host
+        authentication process.
+
+        This can happen with a Bitvise SSH server which hides its version.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(proto_helpers.StringTransport())
+
+        sut.dataReceived(
+            b'SSH-2.0-9.99 FlowSsh: Bitvise SSH Server (WinSSHD) \r\n'
+            b'more-data'
+            )
+
+        self.assertTrue(sut.gotVersion)
+        self.assertEqual(
+            sut.otherVersionString,
+            b'SSH-2.0-9.99 FlowSsh: Bitvise SSH Server (WinSSHD) ')
 
 
     def test_supportedVersionsAreAllowed(self):

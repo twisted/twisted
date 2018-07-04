@@ -13,11 +13,11 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import NativeStringIO, _PY3, _shouldEnableNewStyle
+from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python import reflect
 from twisted.python import failure
 
-from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 
 try:
@@ -59,33 +59,20 @@ class FailureTests(SynchronousTestCase):
         self.assertEqual(f.type, NotImplementedError)
 
 
-    def test_trapRaisesCurrentFailure(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the current
-        L{failure.Failure} ie C{self}.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIs(f, untrapped)
-
-    if _shouldEnableNewStyle:
-        test_trapRaisesCurrentFailure.skip = (
-            "In Python 3, or with new-style classes enabled on Python 2, "
-            "Failure.trap raises the wrapped Exception "
-            "instead of the original Failure instance.")
-
-
     def test_trapRaisesWrappedException(self):
         """
         If the wrapped C{Exception} is not a subclass of one of the
         expected types, L{failure.Failure.trap} raises the wrapped
         C{Exception}.
         """
+        if not _PY3:
+            raise SkipTest(
+                """
+                Only expected behaviour on Python 3.
+                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
+                """
+            )
+
         exception = ValueError()
         try:
             raise exception
@@ -95,10 +82,28 @@ class FailureTests(SynchronousTestCase):
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
 
-    if not _shouldEnableNewStyle:
-        test_trapRaisesWrappedException.skip = (
-            "In Python2 with old-style classes, Failure.trap raises the "
-            "current Failure instance instead of the wrapped Exception.")
+
+    def test_trapRaisesSelf(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises itself.
+        """
+        if _PY3:
+            raise SkipTest(
+                """
+                Only expected behaviour on Python 2.
+                @see U{http://twisted.readthedocs.io/en/latest/core/howto/python3.html#twisted-python-failure}
+                """
+            )
+
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+
+        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
+        self.assertIs(f, untrapped)
 
 
     def test_failureValueFromFailure(self):
@@ -717,6 +722,8 @@ class FindFailureTests(SynchronousTestCase):
         handler that is handling an exception raised by
         raiseException, the new Failure should be chained to that
         original Failure.
+        Means the new failure should still show the same origin frame,
+        but with different complete stack trace (as not thrown at same place).
         """
         f = getDivisionFailure()
         f.cleanFailure()
@@ -724,7 +731,10 @@ class FindFailureTests(SynchronousTestCase):
             f.raiseException()
         except:
             newF = failure.Failure()
-            self.assertEqual(f.getTraceback(), newF.getTraceback())
+            tb = f.getTraceback().splitlines()
+            new_tb = newF.getTraceback().splitlines()
+            self.assertNotEqual(tb, new_tb)
+            self.assertEqual(tb[-3:], new_tb[-3:])
         else:
             self.fail("No exception raised from raiseException!?")
 
@@ -830,16 +840,10 @@ class DebugModeTests(SynchronousTestCase):
         """
         # Make sure any changes we make are reversed:
         post_mortem = pdb.post_mortem
-        if _shouldEnableNewStyle:
-            origInit = failure.Failure.__init__
-        else:
-            origInit = failure.Failure.__dict__['__init__']
+        origInit = failure.Failure.__init__
         def restore():
             pdb.post_mortem = post_mortem
-            if _shouldEnableNewStyle:
-                failure.Failure.__init__ = origInit
-            else:
-                failure.Failure.__dict__['__init__'] = origInit
+            failure.Failure.__init__ = origInit
         self.addCleanup(restore)
 
         self.result = []
@@ -948,6 +952,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         f.cleanFailure()
+        original_failure_str = f.getTraceback()
 
         newFailures = []
 
@@ -963,15 +968,15 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self._throwIntoGenerator(f, g)
 
         self.assertEqual(len(newFailures), 1)
-        self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
 
-    if _PY3:
-        # FIXME: https://twistedmatrix.com/trac/ticket/5949
-        test_findFailureInGenerator.skip = (
-            "Python 3 support to be fixed in #5949")
-        test_failureConstructionFindsOriginalFailure.skip = (
-            "Python 3 support to be fixed in #5949")
+        # The original failure should not be changed.
+        self.assertEqual(original_failure_str, f.getTraceback())
 
+        # The new failure should be different and contain stack info for
+        # our generator.
+        self.assertNotEqual(newFailures[0].getTraceback(), f.getTraceback())
+        self.assertIn("generator", newFailures[0].getTraceback())
+        self.assertNotIn("generator", f.getTraceback())
 
     def test_ambiguousFailureInGenerator(self):
         """

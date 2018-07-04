@@ -10,12 +10,9 @@ from __future__ import absolute_import, division
 
 import binascii
 import itertools
-import warnings
 
 from hashlib import md5, sha256
 import base64
-
-from incremental import Version
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -47,7 +44,6 @@ from twisted.python.compat import (
     iterbytes, long, izip, nativeString, unicode, _PY3,
     _b64decodebytes as decodebytes, _b64encodebytes as encodebytes)
 from twisted.python.constants import NamedConstant, Names
-from twisted.python.deprecate import deprecated, getDeprecationWarningString
 
 # Curve lookup table
 _curveTable = {
@@ -114,9 +110,6 @@ class Key(object):
     create or verify a signature.  To generate a string that can be stored
     on disk, use the toString method.  If you have a private key, but want
     the string representation of the public key, use Key.public().toString().
-
-    @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey} object
-        that operations are performed with.
     """
 
     @classmethod
@@ -718,16 +711,7 @@ class Key(object):
         @param keyObject: Low level key.
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
-        # Avoid importing PyCrypto if at all possible
-        if keyObject.__class__.__module__.startswith('Crypto.PublicKey'):
-            warningString = getDeprecationWarningString(
-                Key,
-                Version("Twisted", 16, 0, 0),
-                replacement='passing a cryptography key object')
-            warnings.warn(warningString, DeprecationWarning, stacklevel=2)
-            self.keyObject = keyObject
-        else:
-            self._keyObject = keyObject
+        self._keyObject = keyObject
 
     def __eq__(self, other):
         """
@@ -787,100 +771,6 @@ class Key(object):
                     lines.append('\t' + o)
             lines[-1] = lines[-1] + '>'
             return '\n'.join(lines)
-
-    @property
-    @deprecated(Version('Twisted', 16, 0, 0))
-    def keyObject(self):
-        """
-        A C{Crypto.PublicKey} object similar to this key.
-
-        As PyCrypto is no longer used for the underlying operations, this
-        property should be avoided.
-        """
-        # Lazy import to have PyCrypto as a soft dependency.
-        from Crypto.PublicKey import DSA, RSA
-
-        keyObject = None
-        keyType = self.type()
-        keyData = self.data()
-        isPublic = self.isPublic()
-
-        if keyType == 'RSA':
-            if isPublic:
-                keyObject = RSA.construct((
-                    keyData['n'],
-                    long(keyData['e']),
-                ))
-            else:
-                keyObject = RSA.construct((
-                    keyData['n'],
-                    long(keyData['e']),
-                    keyData['d'],
-                    keyData['p'],
-                    keyData['q'],
-                    keyData['u'],
-                ))
-        elif keyType == 'DSA':
-            if isPublic:
-                keyObject = DSA.construct((
-                    keyData['y'],
-                    keyData['g'],
-                    keyData['p'],
-                    keyData['q'],
-                ))
-            else:
-                keyObject = DSA.construct((
-                    keyData['y'],
-                    keyData['g'],
-                    keyData['p'],
-                    keyData['q'],
-                    keyData['x'],
-                ))
-        else:
-            raise BadKeyError('Unsupported key type.')
-
-        return keyObject
-
-    @keyObject.setter
-    @deprecated(Version('Twisted', 16, 0, 0))
-    def keyObject(self, value):
-        # Lazy import to have PyCrypto as a soft dependency.
-        from Crypto.PublicKey import DSA, RSA
-
-        if isinstance(value, RSA._RSAobj):
-            rawKey = value.key
-            if rawKey.has_private():
-                newKey = self._fromRSAComponents(
-                    e=rawKey.e,
-                    n=rawKey.n,
-                    p=rawKey.p,
-                    q=rawKey.q,
-                    d=rawKey.d,
-                    u=rawKey.u,
-                )
-            else:
-                newKey = self._fromRSAComponents(e=rawKey.e, n=rawKey.n)
-        elif isinstance(value, DSA._DSAobj):
-            rawKey = value.key
-            if rawKey.has_private():
-                newKey = self._fromDSAComponents(
-                    y=rawKey.y,
-                    p=rawKey.p,
-                    q=rawKey.q,
-                    g=rawKey.g,
-                    x=rawKey.x,
-                )
-            else:
-                newKey = self._fromDSAComponents(
-                    y=rawKey.y,
-                    p=rawKey.p,
-                    q=rawKey.q,
-                    g=rawKey.g,
-                )
-        else:
-            raise BadKeyError('PyCrypto key type not supported.')
-
-        self._keyObject = newKey._keyObject
 
     def isPublic(self):
         """
@@ -1336,16 +1226,12 @@ class Key(object):
         """
         keyType = self.type()
         if keyType == 'RSA':
-            signer = self._keyObject.signer(
-                padding.PKCS1v15(), hashes.SHA1())
-            signer.update(data)
-            ret = common.NS(signer.finalize())
+            sig = self._keyObject.sign(data, padding.PKCS1v15(), hashes.SHA1())
+            ret = common.NS(sig)
 
         elif keyType == 'DSA':
-            signer = self._keyObject.signer(hashes.SHA1())
-            signer.update(data)
-            signature = signer.finalize()
-            (r, s) = decode_dss_signature(signature)
+            sig = self._keyObject.sign(data, hashes.SHA1())
+            (r, s) = decode_dss_signature(sig)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
@@ -1361,9 +1247,7 @@ class Key(object):
                 hashSize = hashes.SHA384()
             else:
                 hashSize = hashes.SHA512()
-            signer = self._keyObject.signer(ec.ECDSA(hashSize))
-            signer.update(data)
-            signature = signer.finalize()
+            signature = self._keyObject.sign(data, ec.ECDSA(hashSize))
             (r, s) = decode_dss_signature(signature)
 
             rb = int_to_bytes(r)
@@ -1418,8 +1302,9 @@ class Key(object):
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
-            verifier = k.verifier(
+            args = (
                 common.getNS(signature)[0],
+                data,
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
@@ -1431,8 +1316,7 @@ class Key(object):
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
-            verifier = k.verifier(
-                signature, hashes.SHA1())
+            args = (signature, data, hashes.SHA1())
 
         elif keyType == 'EC':  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
@@ -1452,38 +1336,14 @@ class Key(object):
                 hashSize = hashes.SHA384()
             else:
                 hashSize = hashes.SHA512()
-            verifier = k.verifier(signature, ec.ECDSA(hashSize))
+            args = (signature, data, ec.ECDSA(hashSize))
 
-        verifier.update(data)
         try:
-            verifier.verify()
+            k.verify(*args)
         except InvalidSignature:
             return False
         else:
             return True
-
-
-@deprecated(Version("Twisted", 15, 5, 0))
-def objectType(obj):
-    """
-    DEPRECATED. Return the SSH key type corresponding to a
-    C{Crypto.PublicKey.pubkey.pubkey} object.
-
-    @param obj: Key for which the type is returned.
-    @type obj: C{Crypto.PublicKey.pubkey.pubkey}
-
-    @return: Return the SSH key type corresponding to a PyCrypto object.
-    @rtype: L{str}
-    """
-    keyDataMapping = {
-        ('n', 'e', 'd', 'p', 'q'): b'ssh-rsa',
-        ('n', 'e', 'd', 'p', 'q', 'u'): b'ssh-rsa',
-        ('y', 'g', 'p', 'q', 'x'): b'ssh-dss'
-    }
-    try:
-        return keyDataMapping[tuple(obj.keydata)]
-    except (KeyError, AttributeError):
-        raise BadKeyError("invalid key object", obj)
 
 
 def _getPersistentRSAKey(location, keySize=4096):
@@ -1531,8 +1391,3 @@ def _getPersistentRSAKey(location, keySize=4096):
             backend=default_backend()
         )
         return Key(privateKey)
-
-
-if _PY3:
-    # The objectType function is deprecated and not being ported to Python 3.
-    del objectType

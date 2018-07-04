@@ -18,12 +18,14 @@ from twisted.python.threadpool import ThreadPool
 from twisted.python.usage import UsageError
 from twisted.spread.pb import PBServerFactory
 from twisted.trial.unittest import TestCase
+from twisted.web import demo
 from twisted.web.distrib import ResourcePublisher, UserDirectory
 from twisted.web.script import PythonScript
 from twisted.web.server import Site
 from twisted.web.static import Data, File
 from twisted.web.tap import Options, makeService
-from twisted.web.tap import makePersonalServerFactory
+from twisted.web.tap import makePersonalServerFactory, _AddHeadersResource
+from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.twcgi import CGIScript
 from twisted.web.wsgi import WSGIResource
 
@@ -165,9 +167,8 @@ class ServiceTests(TestCase):
         options.parseOptions(['--personal'])
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
-        self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
-            ('UNIX', (path, None)))
+        self.assertEqual(options['ports'][0],
+                         'unix:{}'.format(path))
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
@@ -182,8 +183,18 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            endpoints._parseServer(options['port'], None)[:2],
+            endpoints._parseServer(options['ports'][0], None)[:2],
             ('TCP', (8080, None)))
+
+
+    def test_twoPorts(self):
+        """
+        If the I{--http} option is given twice, there are two listeners
+        """
+        options = Options()
+        options.parseOptions(['--listen', 'tcp:8001', '--listen', 'tcp:8002'])
+        self.assertIn('8001', options['ports'][0])
+        self.assertIn('8002', options['ports'][1])
 
 
     def test_wsgi(self):
@@ -246,7 +257,51 @@ class ServiceTests(TestCase):
 
         options.parseOptions(['--https=443'])
 
-        self.assertEqual('443', options['https'])
+        self.assertIn('ssl', options['ports'][0])
+        self.assertIn('443', options['ports'][0])
 
     if requireModule('OpenSSL.SSL') is None:
         test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'
+
+
+    def test_add_header_parsing(self):
+        """
+        When --add-header is specific, the value is parsed.
+        """
+        options = Options()
+        options.parseOptions(
+            ['--add-header', 'K1: V1', '--add-header', 'K2: V2']
+        )
+        self.assertEqual(options['extraHeaders'], [('K1', 'V1'), ('K2', 'V2')])
+
+
+    def test_add_header_resource(self):
+        """
+        When --add-header is specified, the resource is a composition that adds
+        headers.
+        """
+        options = Options()
+        options.parseOptions(
+            ['--add-header', 'K1: V1', '--add-header', 'K2: V2']
+        )
+        service = makeService(options)
+        resource = service.services[0].factory.resource
+        self.assertIsInstance(resource, _AddHeadersResource)
+        self.assertEqual(resource._headers, [('K1', 'V1'), ('K2', 'V2')])
+        self.assertIsInstance(resource._originalResource, demo.Test)
+
+
+
+class AddHeadersResourceTests(TestCase):
+    def test_getChildWithDefault(self):
+        """
+        When getChildWithDefault is invoked, it adds the headers to the
+        response.
+        """
+        resource = _AddHeadersResource(
+            demo.Test(), [("K1", "V1"), ("K2", "V2"), ("K1", "V3")])
+        request = DummyRequest([])
+        resource.getChildWithDefault("", request)
+        self.assertEqual(
+            request.responseHeaders.getRawHeaders("K1"), ["V1", "V3"])
+        self.assertEqual(request.responseHeaders.getRawHeaders("K2"), ["V2"])

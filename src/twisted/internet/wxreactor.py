@@ -43,7 +43,7 @@ class ProcessEventsTimer(wxTimer):
     """
     Timer that tells wx to process pending events.
 
-    This is necessary on OS X, probably due to a bug in wx, if we want
+    This is necessary on macOS, probably due to a bug in wx, if we want
     wxCallAfters to be handled when modal dialogs, menus, etc.  are open.
     """
     def __init__(self, wxapp):
@@ -142,7 +142,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         self.addSystemEventTrigger("after", "shutdown",
                                    lambda: self._postQueue.put(None))
 
-        # On Mac OS X, work around wx bug by starting timer to ensure
+        # On macOS, work around wx bug by starting timer to ensure
         # wxCallAfter calls are always processed. We don't wake up as
         # often as we could since that uses too much CPU.
         if runtime.platform.isMacOSX():

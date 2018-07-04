@@ -33,7 +33,7 @@ class RemoteCalculationClient(basic.LineReceiver):
         d = defer.Deferred()
         callID = self.callLater(self.timeOut, self._cancel, d)
         self.results.append((d, callID))
-        line = "%s %d %d" % (op, a, b)
+        line = u"{} {} {}".format(op, a, b).encode('utf-8')
         self.sendLine(line)
         return d
 

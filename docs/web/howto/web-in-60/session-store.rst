@@ -127,8 +127,10 @@ example above:
             session = request.getSession()
             counter = ICounter(session)
             counter.value += 1
-            return "Visit #%d for you!" % (counter.value,)
-
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"Visit #" + str(counter.value).encode("utf-8") +
+                    b" for you!")
 
 
 
@@ -171,8 +173,11 @@ based on this example:
             session = request.getSession()
             counter = ICounter(session)
             counter.value += 1
-            return "Visit #%d for you!" % (counter.value,)
-    
+            return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    b"<title></title></head><body>"
+                    b"Visit #" + str(counter.value).encode("utf-8") +
+                    b" for you!")
+
     resource = CounterResource()
 
 

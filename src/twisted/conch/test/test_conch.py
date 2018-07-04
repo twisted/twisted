@@ -7,10 +7,18 @@ import subprocess
 from itertools import count
 
 from zope.interface import implementer
+from twisted.python.reflect import requireModule
+
+cryptography = requireModule("cryptography")
 
 from twisted.conch.error import ConchError
-from twisted.conch.avatar import ConchUser
-from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+if cryptography:
+    from twisted.conch.avatar import ConchUser
+    from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
+else:
+    from twisted.conch.interfaces import ISession
+    class ConchUser: pass
+
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready

@@ -27,14 +27,17 @@ from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
+from twisted.internet import address
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost, ConnectionDone
 from twisted.protocols import loopback
-from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
+from twisted.test.proto_helpers import (StringTransport, NonStreamingProducer,
+                                        EventLoggingObserver)
 from twisted.test.test_internet import DummyProducer
 from twisted.web.test.requesthelper import DummyChannel
 
 from zope.interface import directlyProvides, providedBy
+from twisted.logger import globalLogPublisher
 
 
 
@@ -314,6 +317,10 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         If a timed out transport doesn't close after 15 seconds, the
         L{HTTPChannel} will forcibly close it.
         """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
         clock = Clock()
         transport = StringTransport()
         factory = http.HTTPFactory()
@@ -328,6 +335,9 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertIn("Timing out client: {peer}", event["log_format"])
 
         # Watch the transport get force-closed.
         clock.advance(14)
@@ -336,6 +346,12 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(1)
         self.assertTrue(transport.disconnecting)
         self.assertTrue(transport.disconnected)
+        self.assertEquals(2, len(logObserver))
+        event = logObserver[1]
+        self.assertEquals(
+            "Forcibly timing out client: {peer}",
+            event["log_format"]
+        )
 
 
     def test_transportNotAbortedAfterConnectionLost(self):
@@ -602,6 +618,27 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
 
         value = b.value()
         self.assertResponseEquals(value, self.expectedResponses)
+
+
+    def test_pipeliningReadLimit(self):
+        """
+        When pipelined requests are received, we will optimistically continue
+        receiving data up to a specified limit, then pause the transport.
+
+        @see: L{http.HTTPChannel._optimisticEagerReadSize}
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandlerProxy
+        a.makeConnection(b)
+        underLimit = a._optimisticEagerReadSize // len(self.requests)
+        for x in range(1, underLimit + 1):
+            a.dataReceived(self.requests)
+            self.assertEqual(b.producerState, 'producing',
+                             'state was {state!r} after {x} iterations'
+                             .format(state=b.producerState, x=x))
+        a.dataReceived(self.requests)
+        self.assertEquals(b.producerState, 'paused')
 
 
 
@@ -1292,11 +1329,11 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
         """
         Test that the L{HTTPChannel} correctly chunks responses when needed.
         """
-        channel = http.HTTPChannel()
-        req = http.Request(channel, False)
         trans = StringTransport()
+        channel = http.HTTPChannel()
+        channel.makeConnection(trans)
 
-        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -1781,20 +1818,20 @@ abasdfg
         """
         When the multipart processing fails the client gets a 400 Bad Request.
         """
-        # The parsing failure is simulated by having a Content-Length that
-        # doesn't fit in a ssize_t.
+        # The parsing failure is having a UTF-8 boundary -- the spec
+        # says it must be ASCII.
         req = b'''\
 POST / HTTP/1.0
-Content-Type: multipart/form-data; boundary=AaB03x
+Content-Type: multipart/form-data; boundary=\xe2\x98\x83
 Content-Length: 103
 
---AaB03x
+--\xe2\x98\x83
 Content-Type: text/plain
 Content-Length: 999999999999999999999999999999999999999999999999999999999999999
 Content-Transfer-Encoding: quoted-printable
 
 abasdfg
---AaB03x--
+--\xe2\x98\x83--
 '''
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(
@@ -1832,6 +1869,42 @@ abasdfg
                          b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+
+
+    def test_multipartFileData(self):
+        """
+        If the request has a Content-Type of C{multipart/form-data},
+        and the form data is parseable and contains files, the file
+        portions will be added to the request's args.
+        """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+
+        body = b"""-----------------------------738837029596785559389649595
+Content-Disposition: form-data; name="uploadedfile"; filename="test"
+Content-Type: application/octet-stream
+
+abasdfg
+-----------------------------738837029596785559389649595--
+"""
+
+        req = '''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=---------------------------738837029596785559389649595
+Content-Length: ''' + str(len(body.replace(b"\n", b"\r\n"))) + '''
+
+
+'''
+        channel = self.runRequest(req.encode('ascii') + body, MyRequest,
+                                  success=False)
+        self.assertEqual(channel.transport.value(),
+                         b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
 
 
     def test_chunkedEncoding(self):
@@ -1912,6 +1985,36 @@ Hello,
             channel.transport.value(),
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
+
+
+    def test_basicAuthException(self):
+        """
+        A L{Request} that throws an exception processing basic authorization
+        logs an error and uses an empty username and password.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        requests = []
+        class Request(http.Request):
+            def process(self):
+                self.credentials = (self.getUser(), self.getPassword())
+                requests.append(self)
+
+        u = b"foo"
+        p = b"bar"
+        s = base64.encodestring(b":".join((u, p))).strip()
+        f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
+        self.patch(base64, 'decodestring', lambda x: [])
+        self.runRequest(f, Request, 0)
+        req = requests.pop()
+        self.assertEqual(('', ''), req.credentials)
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, AttributeError)
+        self.flushLoggedErrors(AttributeError)
 
 
 
@@ -2443,6 +2546,23 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             "deprecated since Twisted 16.1.")
 
 
+    def test_addCookieSameSite(self):
+        """
+        L{http.Request.setCookie} supports a C{samesite} argument.
+        """
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="Lax")
+        self._checkCookie(
+            b"foo=bar; SameSite=strict", b"foo", b"bar", samesite="strict")
+
+        self.assertRaises(
+            ValueError,
+            self._checkCookie,
+            b"", b"foo", b"bar", samesite="anything-else")
+
+
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
@@ -2547,7 +2667,47 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             [(b"HTTP/1.0 200 OK",
               b"Test: lemur",
               b"Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT",
+              b"Hello")]
+        )
+
+
+    def test_lastModifiedAlreadyWritten(self):
+        """
+        If the last-modified header already exists in the L{http.Request}
+        response headers, the lastModified attribute is ignored and a message
+        is logged.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        trans = StringTransport()
+
+        channel.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = b"HTTP/1.0"
+        req.lastModified = 1000000000
+        req.responseHeaders.setRawHeaders(
+            b"last-modified",
+            [b"Thu, 01 Jan 1970 00:00:00 GMT"]
+        )
+        req.write(b'Hello')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [(b"HTTP/1.0 200 OK",
+              b"Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT",
               b"Hello")])
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        self.assertEquals(
+            "Warning: last-modified specified both in"
+            " header list and lastModified attribute.",
+            event["log_format"]
+        )
 
 
     def test_receivedCookiesDefault(self):
@@ -2917,10 +3077,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory.startFactory()
         factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
+        proto._channel._optimisticEagerReadSize = 0
 
         val = [
             b"GET /path HTTP/1.1\r\n",
-            b"Connection: close\r\n",
             b"\r\n\r\n"
         ]
 
@@ -2932,6 +3092,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
+        proto.dataReceived(b'GET ') # just a few extra bytes to exhaust the
+                                    # optimistic buffer size
         self.assertEqual(trans.producerState, 'paused')
         proto._channel.requests[0].finish()
         self.assertEqual(trans.producerState, 'producing')
@@ -2961,6 +3123,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         self.assertNotEqual(req, http.Request(DummyChannel(), False))
+
+
+    def test_hashable(self):
+        """
+        A L{http.Request} is hashable.
+        """
+        req = http.Request(DummyChannel(), False)
+        hash(req)
 
 
     def test_eqWithNonRequest(self):
@@ -3001,6 +3171,65 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
         self.assertNotEqual(req, _NotARequest())
         self.assertEqual(eqCalls, [req])
+
+
+    def test_finishProducerStillRegistered(self):
+        """
+        A RuntimeError is logged if a producer is still registered
+        when an L{http.Request} is finished.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+        request = http.Request(DummyChannel(), False)
+        request.registerProducer(DummyProducer(), True)
+        request.finish()
+        self.assertEquals(1, len(logObserver))
+        event = logObserver[0]
+        f = event["log_failure"]
+        self.assertIsInstance(f.value, RuntimeError)
+        self.flushLoggedErrors(RuntimeError)
+
+
+    def test_getClientIPWithIPv4(self):
+        """
+        L{http.Request.getClientIP} returns the host part of the
+        client's address when connected over IPv4.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12344)))
+        self.assertEqual(request.getClientIP(), "127.0.0.1")
+
+
+    def test_getClientIPWithIPv6(self):
+        """
+        L{http.Request.getClientIP} returns the host part of the
+        client's address when connected over IPv6.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "::1", 12344)))
+        self.assertEqual(request.getClientIP(), "::1")
+
+
+    def test_getClientIPWithNonTCPPeer(self):
+        """
+        L{http.Request.getClientIP} returns L{None} for the client's
+        IP address when connected over a non-TCP transport.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.UNIXAddress("/path/to/socket")))
+        self.assertEqual(request.getClientIP(), None)
+
+
+    def test_getClientAddress(self):
+        """
+        L{http.Request.getClientAddress} returns the client's address
+        as an L{IAddress} provider.
+        """
+        client = address.UNIXAddress("/path/to/socket")
+        request = http.Request(DummyChannel(peer=client))
+        self.assertIs(request.getClientAddress(), client)
 
 
 
@@ -3212,26 +3441,27 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
     """
     Tests for deprecated attributes of L{twisted.web.http.Request}.
     """
-    def test_getClient(self):
-        """
-        L{Request.getClient} is deprecated in favor of resolving the hostname
-        in application code.
-        """
-        channel = DummyChannel()
-        request = http.Request(channel, True)
-        request.gotLength(123)
-        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
-        expected = channel.transport.getPeer().host
-        self.assertEqual(expected, request.getClient())
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_getClient])
 
+    def test_getClientIP(self):
+        """
+        L{Request.getClientIP} is deprecated in favor of
+        L{Request.getClientAddress}.
+        """
+        request = http.Request(
+            DummyChannel(peer=address.IPv6Address("TCP", "127.0.0.1", 12345)))
+        request.gotLength(0)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        request.getClientIP()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClientIP])
+
+        self.assertEqual(1, len(warnings))
         self.assertEqual({
                 "category": DeprecationWarning,
                 "message": (
-                    "twisted.web.http.Request.getClient was deprecated "
-                    "in Twisted 15.0.0; please use Twisted Names to "
-                    "resolve hostnames instead")},
+                    "twisted.web.http.Request.getClientIP was deprecated "
+                    "in Twisted 18.4.0; please use getClientAddress instead")},
                          sub(["category", "message"], warnings[0]))
 
 
@@ -3407,9 +3637,12 @@ class ChannelProductionTests(unittest.TestCase):
         channel, transport = self.buildChannelAndTransport(
             StringTransport(), DelayedHTTPHandler
         )
+        channel._optimisticEagerReadSize = 0
 
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
+        # A little extra data to pause the transport.
+        channel.dataReceived(b'123')
         request = channel.requests[0].original
 
         # Register a dummy producer.
@@ -3449,8 +3682,12 @@ class ChannelProductionTests(unittest.TestCase):
             StringTransport(), DelayedHTTPHandler
         )
 
+        channel._optimisticEagerReadSize = 0
+
         # Feed a request in to spawn a Request object, then grab it.
         channel.dataReceived(self.request)
+        channel.dataReceived(b'extra') # exceed buffer size to pause the
+                                       # transport.
         request = channel.requests[0].original
 
         # Register a dummy producer.

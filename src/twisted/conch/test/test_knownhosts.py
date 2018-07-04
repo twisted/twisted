@@ -10,7 +10,16 @@ from __future__ import absolute_import, division
 import os
 from binascii import Error as BinasciiError, b2a_base64, a2b_base64
 
+from zope.interface.verify import verifyObject
+
+from twisted.python.compat import networkString
 from twisted.python.reflect import requireModule
+from twisted.python.filepath import FilePath
+from twisted.trial.unittest import TestCase
+from twisted.internet.defer import Deferred
+from twisted.conch.interfaces import IKnownHostEntry
+from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
+from twisted.test.testutils import ComparisonTestsMixin
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.keys import Key, BadKeyError
@@ -21,41 +30,33 @@ if requireModule('cryptography') and requireModule('pyasn1'):
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
 
-from zope.interface.verify import verifyObject
 
-from twisted.python.filepath import FilePath
-from twisted.python.compat import networkString
-from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred
-from twisted.conch.interfaces import IKnownHostEntry
-from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.test.testutils import ComparisonTestsMixin
 
 
 sampleEncodedKey = (
-    b'AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y'
-    b'tNvue4Riqv/SVkPRNwMb7eWH29SviXaBxUhYyzKkDoNUq3rTNnH1Vnif6d6X4JCrUb5d3W+Dm'
-    b'YClyJrZ5HgD/hUpdSkTRqdbQ2TrvSAxRacj+vHHT4F4dm1bJSewm3B2D8HVOoi/CbVh3dsIiC'
-    b'dp8VltdZx4qYVfYe2LwVINCbAa3d3tj9ma7RVfw3OH2Mfb+toLd1N5tBQFb7oqTt2nC6I/6Bd'
-    b'4JwPUld+IEitw/suElq/AIJVQXXujeyiZlea90HE65U2mF1ytr17HTAIT2ySokJWyuBANGACk'
-    b'6iIaw==')
+   b'AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y'
+   b'tNvue4Riqv/SVkPRNwMb7eWH29SviXaBxUhYyzKkDoNUq3rTNnH1Vnif6d6X4JCrUb5d3W+Dm'
+   b'YClyJrZ5HgD/hUpdSkTRqdbQ2TrvSAxRacj+vHHT4F4dm1bJSewm3B2D8HVOoi/CbVh3dsIiC'
+   b'dp8VltdZx4qYVfYe2LwVINCbAa3d3tj9ma7RVfw3OH2Mfb+toLd1N5tBQFb7oqTt2nC6I/6Bd'
+   b'4JwPUld+IEitw/suElq/AIJVQXXujeyiZlea90HE65U2mF1ytr17HTAIT2ySokJWyuBANGACk'
+   b'6iIaw==')
 
 otherSampleEncodedKey = (
-    b'AAAAB3NzaC1yc2EAAAABIwAAAIEAwaeCZd3UCuPXhX39+/p9qO028jTF76DMVd9mPvYVDVXuf'
-    b'WckKZauF7+0b7qm+ChT7kan6BzRVo4++gCVNfAlMzLysSt3ylmOR48tFpAfygg9UCX3DjHz0E'
-    b'lOOUKh3iifc9aUShD0OPaK3pR5JJ8jfiBfzSYWt/hDi/iZ4igsSs8=')
+   b'AAAAB3NzaC1yc2EAAAABIwAAAIEAwaeCZd3UCuPXhX39+/p9qO028jTF76DMVd9mPvYVDVXuf'
+   b'WckKZauF7+0b7qm+ChT7kan6BzRVo4++gCVNfAlMzLysSt3ylmOR48tFpAfygg9UCX3DjHz0E'
+   b'lOOUKh3iifc9aUShD0OPaK3pR5JJ8jfiBfzSYWt/hDi/iZ4igsSs8=')
 
 thirdSampleEncodedKey = (
-    b'AAAAB3NzaC1yc2EAAAABIwAAAQEAl/TQakPkePlnwCBRPitIVUTg6Z8VzN1en+DGkyo/evkmLw'
-    b'7o4NWR5qbysk9A9jXW332nxnEuAnbcCam9SHe1su1liVfyIK0+3bdn0YRB0sXIbNEtMs2LtCho'
-    b'/aV3cXPS+Cf1yut3wvIpaRnAzXxuKPCTXQ7/y0IXa8TwkRBH58OJa3RqfQ/NsSp5SAfdsrHyH2'
-    b'aitiVKm2jfbTKzSEqOQG/zq4J9GXTkq61gZugory/Tvl5/yPgSnOR6C9jVOMHf27ZPoRtyj9SY'
-    b'343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ'
-    b'==')
+  b'AAAAB3NzaC1yc2EAAAABIwAAAQEAl/TQakPkePlnwCBRPitIVUTg6Z8VzN1en+DGkyo/evkmLw'
+  b'7o4NWR5qbysk9A9jXW332nxnEuAnbcCam9SHe1su1liVfyIK0+3bdn0YRB0sXIbNEtMs2LtCho'
+  b'/aV3cXPS+Cf1yut3wvIpaRnAzXxuKPCTXQ7/y0IXa8TwkRBH58OJa3RqfQ/NsSp5SAfdsrHyH2'
+  b'aitiVKm2jfbTKzSEqOQG/zq4J9GXTkq61gZugory/Tvl5/yPgSnOR6C9jVOMHf27ZPoRtyj9SY'
+  b'343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ'
+  b'==')
 
 ecdsaSampleEncodedKey = (
-    b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60'
-    b'SMMfdKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
+   b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60'
+   b'SMMfdKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
 
 sampleKey = a2b_base64(sampleEncodedKey)
 otherSampleKey = a2b_base64(otherSampleEncodedKey)
@@ -1192,13 +1193,14 @@ class DefaultAPITests(TestCase):
     point between the code in the rest of conch and L{KnownHostsFile}.
     """
 
-    def patchedOpen(self, fname, mode):
+    def patchedOpen(self, fname, mode, **kwargs):
         """
         The patched version of 'open'; this returns a L{FakeFile} that the
         instantiated L{ConsoleUI} can use.
         """
         self.assertEqual(fname, "/dev/tty")
         self.assertEqual(mode, "r+b")
+        self.assertEqual(kwargs['buffering'], 0)
         return self.fakeFile
 
 

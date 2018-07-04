@@ -20,7 +20,8 @@ from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.compat import cookielib, intToBytes
 from twisted.python.components import proxyForInterface
-from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
+from twisted.test.proto_helpers import (StringTransport, MemoryReactorClock,
+                                        EventLoggingObserver)
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.error import ConnectionLost
@@ -50,6 +51,7 @@ from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.test.iosim import IOPump, FakeTransport
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.web.error import SchemeNotSupported
+from twisted.logger import globalLogPublisher
 
 try:
     from twisted.internet import ssl
@@ -348,7 +350,10 @@ class FakeReactorAndConnectMixin:
         def __init__(self, endpoint, testCase):
             self.endpoint = endpoint
             self.testCase = testCase
-            self.factory = _HTTP11ClientFactory(lambda p: None)
+            def nothing():
+                """this function does nothing"""
+            self.factory = _HTTP11ClientFactory(nothing,
+                                                repr(self.endpoint))
             self.protocol = StubHTTPProtocol()
             self.factory.buildProtocol = lambda addr: self.protocol
 
@@ -408,7 +413,7 @@ class DummyFactory(Factory):
     """
     Create C{StubHTTPProtocol} instances.
     """
-    def __init__(self, quiescentCallback):
+    def __init__(self, quiescentCallback, metadata):
         pass
 
     protocol = StubHTTPProtocol
@@ -619,14 +624,25 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         # By default state is QUIESCENT
         self.assertEqual(protocol.state, "QUIESCENT")
 
+        logObserver = EventLoggingObserver.createWithCleanup(
+            self,
+            globalLogPublisher
+        )
+
         protocol.state = "NOTQUIESCENT"
         self.pool._putConnection(("http", b"example.com", 80), protocol)
-        exc, = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(1, len(logObserver))
+
+        event = logObserver[0]
+        f = event["log_failure"]
+
+        self.assertIsInstance(f.value, RuntimeError)
         self.assertEqual(
-            exc.value.args[0],
+            f.getErrorMessage(),
             "BUG: Non-quiescent protocol added to connection pool.")
         self.assertIdentical(None, self.pool._connections.get(
                 ("http", b"example.com", 80)))
+        self.flushLoggedErrors(RuntimeError)
 
 
     def test_getUsesQuiescentCallback(self):

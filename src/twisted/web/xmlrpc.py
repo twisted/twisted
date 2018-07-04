@@ -26,7 +26,8 @@ else:
 # Sibling Imports
 from twisted.web import resource, server, http
 from twisted.internet import defer, protocol, reactor
-from twisted.python import log, reflect, failure
+from twisted.python import reflect, failure
+from twisted.logger import Logger
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001
@@ -125,6 +126,7 @@ class XMLRPC(resource.Resource):
     isLeaf = 1
     separator = '.'
     allowedMethods = (b'POST',)
+    _log = Logger()
 
     def __init__(self, allowNone=False, useDateTime=False):
         resource.Resource.__init__(self)
@@ -199,14 +201,14 @@ class XMLRPC(resource.Resource):
                 b"content-length", intToBytes(len(content)))
             request.write(content)
         except:
-            log.err()
+            self._log.failure('')
         request.finish()
 
 
     def _ebRender(self, failure):
         if isinstance(failure.value, Fault):
             return failure.value
-        log.err(failure)
+        self._log.failure('', failure)
         return Fault(self.FAILURE, "error")
 
 

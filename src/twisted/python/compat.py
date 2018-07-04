@@ -40,39 +40,22 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
-if sys.version_info >= (3, 4, 0):
-    _PY34PLUS = True
-else:
-    _PY34PLUS = False
-
 if sys.version_info >= (3, 5, 0):
     _PY35PLUS = True
 else:
     _PY35PLUS = False
+
+if sys.version_info >= (3, 7, 0):
+    _PY37PLUS = True
+else:
+    _PY37PLUS = False
 
 if platform.python_implementation() == 'PyPy':
     _PYPY = True
 else:
     _PYPY = False
 
-def _shouldEnableNewStyle():
-    """
-    Returns whether or not we should enable the new-style conversion of
-    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
-    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
-    values and everything else as a truthy value.
 
-    @rtype: L{bool}
-    """
-    value = os.environ.get('TWISTED_NEWSTYLE', '')
-
-    if value in ['', 'no', 'false', 'False', '0']:
-        return False
-    else:
-        return True
-
-
-_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
 
 def _shouldEnableNewStyle():
     """
@@ -173,6 +156,8 @@ def inet_pton(af, addr):
         return struct.pack('!8H', *parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
+
+
 
 def inet_ntop(af, addr):
     if af == socket.AF_INET:
@@ -292,6 +277,7 @@ def comparable(klass):
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
         return klass
+
 
     def __eq__(self, other):
         c = self.__cmp__(other)
@@ -511,10 +497,6 @@ if _PY3:
         return ("%d" % i).encode("ascii")
 
 
-    # Ideally we would use memoryview, but it has a number of differences from
-    # the Python 2 buffer() that make that impractical
-    # (http://bugs.python.org/issue15945, incompatibility with pyOpenSSL due to
-    # PyArg_ParseTuple differences.)
     def lazyByteSlice(object, offset=0, size=None):
         """
         Return a copy of the given bytes-like object.
@@ -529,10 +511,11 @@ if _PY3:
         @param size: Optional, if an C{int} is given limit the length of copy
             to this size.
         """
+        view = memoryview(object)
         if size is None:
-            return object[offset:]
+            return view[offset:]
         else:
-            return object[offset:(offset + size)]
+            return view[offset:(offset + size)]
 
 
     def networkString(s):
@@ -546,7 +529,6 @@ else:
 
     def intToBytes(i):
         return b"%d" % i
-
 
     lazyByteSlice = buffer
 
@@ -633,8 +615,10 @@ if _PY3:
     def iteritems(d):
         return d.items()
 
+
     def itervalues(d):
         return d.values()
+
 
     def items(d):
         return list(d.items())
@@ -646,8 +630,10 @@ else:
     def iteritems(d):
         return d.iteritems()
 
+
     def itervalues(d):
         return d.itervalues()
+
 
     def items(d):
         return d.items()
@@ -841,6 +827,10 @@ if _PY3:
 else:
     _tokenize = tokenize.generate_tokens
 
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 
 __all__ = [
@@ -882,5 +872,6 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_tokenize"
+    "_tokenize",
+    "Sequence",
 ]

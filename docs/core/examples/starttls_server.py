@@ -6,10 +6,10 @@ from twisted.python.modules import getModule
 
 class TLSServer(LineReceiver):
     def lineReceived(self, line):
-        print("received: " + line)
-        if line == "STARTTLS":
+        print("received: ", line)
+        if line == b"STARTTLS":
             print("-- Switching to TLS")
-            self.sendLine('READY')
+            self.sendLine(b'READY')
             self.transport.startTLS(self.factory.options)
 
 def main(reactor):
