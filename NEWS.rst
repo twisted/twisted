@@ -3,6 +3,45 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 18.7.0rc2 (2018-07-06)
+==============================
+
+No significant changes.
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Misc
+~~~~
+
+- #9479, #9480
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
 Twisted 18.7.0rc1 (2018-07-01)
 ==============================
 
