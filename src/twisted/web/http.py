@@ -1140,7 +1140,7 @@ class Request:
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
                   max_age=None, comment=None, secure=None, httpOnly=False,
-                  samesite=None):
+                  sameSite=None):
         """
         Set an outgoing HTTP cookie.
 
@@ -1178,12 +1178,15 @@ class Request:
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
 
-        @param samesite: direct browsers not to send this cookie on
-            cross-origin requests
-        @type samesite: L{bytes} or L{unicode}
+        @param sameSite: One of L{None} (default), C{'lax'} or C{'strict'}.
+            Direct browsers not to send this cookie on cross-origin requests.
+            Please see:
+            U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
+        @type sameSite: L{None}, L{bytes} or L{unicode}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
+            L{ValueError} if the value for C{sameSite} is not supported.
         """
         def _ensureBytes(val):
             """
@@ -1222,12 +1225,12 @@ class Request:
             cookie = cookie + b"; Secure"
         if httpOnly:
             cookie = cookie + b"; HttpOnly"
-        if samesite:
-            samesite = _ensureBytes(samesite).lower()
-            if samesite not in [b"lax", b"strict"]:
+        if sameSite:
+            sameSite = _ensureBytes(sameSite).lower()
+            if sameSite not in [b"lax", b"strict"]:
                 raise ValueError(
-                    "Invalid value for samesite: " + repr(samesite))
-            cookie += b"; SameSite=" + samesite
+                    "Invalid value for sameSite: " + repr(sameSite))
+            cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
@@ -1423,6 +1426,8 @@ class Request:
         """
         Return the IP address of the client who submitted this request.
 
+        This method is B{deprecated}.  Use L{getClientAddress} instead.
+
         @returns: the client IP address
         @rtype: C{str}
         """
@@ -1440,6 +1445,8 @@ class Request:
         a UNIX domain socket will cause this to return
         L{UNIXAddress}).  Callers must check the type of the returned
         address.
+
+        @since: 18.4
 
         @return: the client's address.
         @rtype: L{IAddress}
