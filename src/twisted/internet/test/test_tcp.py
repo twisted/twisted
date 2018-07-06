@@ -33,7 +33,7 @@ from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted, DNSLookupError, NoProtocol,
-    ConnectBindError,
+    ConnectBindError, ConnectionClosed,
 )
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
@@ -652,8 +652,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         def connectMe():
             while True:
-                ignored, port = findFreePort(self.interface, self.family)[:2]
-                bindAddress = (self.interface, port)
+                port = findFreePort(self.interface, self.family)
+                bindAddress = (self.interface, port[1])
                 log.msg("Connect attempt with bindAddress {}".format(
                     bindAddress
                 ))
@@ -667,7 +667,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
                 except ConnectBindError:
                     continue
                 else:
-                    clientFactory.boundPort = port
+                    clientFactory.boundPort = port[1]
                     break
 
         needsRunningReactor(reactor, connectMe)
@@ -682,12 +682,17 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             transportData['instance'].addr,
             id(transportData['instance']))
 
+        boundPort = [host] + list(socket.getaddrinfo(
+            self.interface, clientFactory.boundPort)[0][-1][1:])
+        serverPort = [host] + list(socket.getaddrinfo(
+            self.interface, serverAddress.port)[0][-1][1:])
+
         self.assertEqual(
             transportData['host'],
-            self.addressClass('TCP', self.interface, clientFactory.boundPort))
+            self.addressClass('TCP', *boundPort))
         self.assertEqual(
             transportData['peer'],
-            self.addressClass('TCP', self.interface, serverAddress.port))
+            self.addressClass('TCP', *serverPort))
         self.assertEqual(
             repr(transportData['instance']), transportRepr)
 
@@ -1266,7 +1271,7 @@ def assertPeerClosedOnEMFILE(
     testCase.assertNoResult(clientFactory.failDeferred)
     testCase.successResultOf(clientFactory.deferred)
     testCase.assertRaises(
-        testCase.lostConnectionReason,
+        ConnectionClosed,
         clientFactory.lostReason.raiseException,
     )
 
@@ -1357,7 +1362,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
-    lostConnectionReason = ConnectionDone
 
     def test_startedListeningLogMessage(self):
         """
@@ -1646,8 +1650,12 @@ class TCPPortTestsMixin(object):
         interface = '::1'
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         observedAddress = self._buildProtocolAddressTest(client, interface)
+
+        peer = client.getsockname()
+        hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
+
         self.assertEqual(
-            IPv6Address('TCP', *client.getsockname()[:2]), observedAddress)
+            IPv6Address('TCP', hostname, peer[1]), observedAddress)
     if ipv6Skip:
         test_buildProtocolIPv6Address.skip = ipv6Skip
 
@@ -1661,8 +1669,12 @@ class TCPPortTestsMixin(object):
         interface = getLinkLocalIPv6Address()
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         observedAddress = self._buildProtocolAddressTest(client, interface)
+
+        peer = client.getsockname()
+        hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
+
         self.assertEqual(
-            IPv6Address('TCP', *client.getsockname()[:2]), observedAddress)
+            IPv6Address('TCP', hostname, *peer[1:]), observedAddress)
     if ipv6Skip:
         test_buildProtocolIPv6AddressScopeID.skip = ipv6Skip
 
@@ -1729,8 +1741,12 @@ class TCPPortTestsMixin(object):
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         hostAddress = self._serverGetConnectionAddressTest(
             client, interface, 'getHost')
+
+        peer = client.getpeername()
+        hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
+
         self.assertEqual(
-            IPv6Address('TCP', *client.getpeername()[:2]), hostAddress)
+            IPv6Address('TCP', hostname, *peer[1:]), hostAddress)
     if ipv6Skip:
         test_serverGetHostOnIPv6.skip = ipv6Skip
 
@@ -1746,8 +1762,12 @@ class TCPPortTestsMixin(object):
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         hostAddress = self._serverGetConnectionAddressTest(
             client, interface, 'getHost')
+
+        peer = client.getpeername()
+        hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
+
         self.assertEqual(
-            IPv6Address('TCP', *client.getpeername()[:2]), hostAddress)
+            IPv6Address('TCP', hostname, *peer[1:]), hostAddress)
     if ipv6Skip:
         test_serverGetHostOnIPv6ScopeID.skip = ipv6Skip
 
@@ -1776,8 +1796,12 @@ class TCPPortTestsMixin(object):
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         peerAddress = self._serverGetConnectionAddressTest(
             client, interface, 'getPeer')
+
+        peer = client.getsockname()
+        hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
+
         self.assertEqual(
-            IPv6Address('TCP', *client.getsockname()[:2]), peerAddress)
+            IPv6Address('TCP', hostname, *peer[1:]), peerAddress)
     if ipv6Skip:
         test_serverGetPeerOnIPv6.skip = ipv6Skip
 
@@ -1793,8 +1817,12 @@ class TCPPortTestsMixin(object):
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         peerAddress = self._serverGetConnectionAddressTest(
             client, interface, 'getPeer')
+
+        peer = client.getsockname()
+        hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
+
         self.assertEqual(
-            IPv6Address('TCP', *client.getsockname()[:2]), peerAddress)
+            IPv6Address('TCP', hostname, *peer[1:]), peerAddress)
     if ipv6Skip:
         test_serverGetPeerOnIPv6ScopeID.skip = ipv6Skip
 
