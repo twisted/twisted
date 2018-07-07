@@ -98,26 +98,29 @@ class IRequest(Interface):
         """
 
 
+    def getClientAddress():
+        """
+        Return the address of the client who submitted this request.
+
+        The address may not be a network address.  Callers must check
+        its type before using it.
+
+        @since: 18.4
+
+        @return: the client's address.
+        @rtype: an L{IAddress} provider.
+        """
+
+
     def getClientIP():
         """
         Return the IP address of the client who submitted this request.
 
+        This method is B{deprecated}.  See L{getClientAddress} instead.
+
         @returns: the client IP address or L{None} if the request was submitted
             over a transport where IP addresses do not make sense.
         @rtype: L{str} or L{None}
-        """
-
-
-    def getClient():
-        """
-        Return the hostname of the IP address of the client who submitted this
-        request, if possible.
-
-        This method is B{deprecated}.  See L{getClientIP} instead.
-
-        @rtype: L{None} or L{str}
-        @return: The canonical hostname of the client, as determined by
-            performing a name lookup on the IP address of the client.
         """
 
 

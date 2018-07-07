@@ -7,6 +7,8 @@ Tests for L{twisted.protocols.tls}.
 
 from __future__ import division, absolute_import
 
+import gc
+
 from zope.interface.verify import verifyObject
 from zope.interface import Interface, directlyProvides, implementer
 
@@ -42,7 +44,12 @@ from twisted.internet.interfaces import (
 
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
+from twisted.internet.protocol import (
+    ClientFactory,
+    Factory,
+    Protocol,
+    ServerFactory,
+    )
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
 from twisted.trial.unittest import TestCase, SynchronousTestCase
@@ -307,8 +314,9 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
         """
         client, server, pump = handshakingClientAndServer(b"untrustworthy",
                                                           True)
+        wrappedServerProtocol = server.wrappedProtocol
         pump.flush()
-        self.assertEqual(server.wrappedProtocol.received, [])
+        self.assertEqual(wrappedServerProtocol.received, [])
 
 
 
@@ -919,6 +927,36 @@ class TLSMemoryBIOTests(TestCase):
         return disconnectDeferred
 
 
+    def test_loseConnectionAfterConnectionLost(self):
+        """
+        If TLSMemoryBIOProtocol.loseConnection is called after connectionLost,
+        it does nothing.
+        """
+        tlsClient, tlsServer, handshakeDeferred, disconnectDeferred = (
+            self.handshakeProtocols())
+
+        # Make sure connectionLost calls _shutdownTLS, but loseConnection
+        # doesnt call it for the second time.
+        calls = []
+        def _shutdownTLS(shutdown=tlsClient._shutdownTLS):
+            calls.append(1)
+            return shutdown()
+        tlsServer._shutdownTLS = _shutdownTLS
+        tlsServer.write(b'x')
+        tlsClient.loseConnection()
+
+        def disconnected(_):
+            # At this point tlsServer.connectionLost is already called
+            self.assertEqual(calls, [1])
+
+            # This call should do nothing
+            tlsServer.loseConnection()
+            self.assertEqual(calls, [1])
+
+        disconnectDeferred.addCallback(disconnected)
+        return disconnectDeferred
+
+
     def test_unexpectedEOF(self):
         """
         Unexpected disconnects get converted to ConnectionLost errors.
@@ -975,6 +1013,56 @@ class TLSMemoryBIOTests(TestCase):
             self.assertTrue(reason[0].check(Error), reason[0])
         disconnectDeferred.addCallback(disconnected)
         return disconnectDeferred
+
+
+    def test_noCircularReferences(self):
+        """
+        TLSMemoryBIOProtocol doesn't leave circular references that keep
+        it in memory after connection is closed.
+        """
+        def nObjectsOfType(type):
+            """
+            Return the number of instances of a given type in memory.
+
+            @param type: Type whose instances to find.
+
+            @return: The number of instances found.
+            """
+            return sum(1 for x in gc.get_objects() if isinstance(x, type))
+
+        self.addCleanup(gc.enable)
+        gc.disable()
+
+        class CloserProtocol(Protocol):
+            def dataReceived(self, data):
+                self.transport.loseConnection()
+
+
+        class GreeterProtocol(Protocol):
+            def connectionMade(self):
+                self.transport.write(b'hello')
+
+        origTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
+        origServerProtos = nObjectsOfType(CloserProtocol)
+
+        authCert, serverCert = certificatesForAuthorityAndServer()
+        serverFactory = TLSMemoryBIOFactory(
+            serverCert.options(), False,
+            Factory.forProtocol(CloserProtocol)
+        )
+        clientFactory = TLSMemoryBIOFactory(
+            optionsForClientTLS(u'example.com', trustRoot=authCert), True,
+            Factory.forProtocol(GreeterProtocol)
+        )
+        loopbackAsync(
+            TLSMemoryBIOProtocol(serverFactory, CloserProtocol()),
+            TLSMemoryBIOProtocol(clientFactory, GreeterProtocol())
+        )
+
+        newTLSProtos = nObjectsOfType(TLSMemoryBIOProtocol)
+        newServerProtos = nObjectsOfType(CloserProtocol)
+        self.assertEqual(newTLSProtos, origTLSProtos)
+        self.assertEqual(newServerProtos, origServerProtos)
 
 
 
