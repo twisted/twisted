@@ -24,12 +24,13 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from twisted import __version__ as twisted_version
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
+from twisted.python.compat import iterbytes, _bytesChr as chr, networkString
 
 # This import is needed if SHA256 hashing is used.
-#from twisted.python.compat import nativeString
+# from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
@@ -457,7 +458,7 @@ class SSHTransportBase(protocol.Protocol):
         exchange completes, another attempt is made to send these messages.
     """
     protocolVersion = b'2.0'
-    version = b'Twisted'
+    version = b'Twisted_' + twisted_version.encode('ascii')
     comment = b''
     ourVersionString = (b'SSH-' + protocolVersion + b'-' + version + b' '
             + comment).strip()
@@ -657,10 +658,10 @@ class SSHTransportBase(protocol.Protocol):
             first = self.first
             del self.first
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
-        if packetLen > 1048576: # 1024 ** 2
+        if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString('bad packet length %s' % (packetLen,)))
+                networkString('bad packet length {}'.format(packetLen)))
             return
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
@@ -671,7 +672,7 @@ class SSHTransportBase(protocol.Protocol):
                 DISCONNECT_PROTOCOL_ERROR,
                 networkString(
                     'bad packet mod (%i%%%i == %i)' % (
-                        packetLen + 4, bs,(packetLen + 4) % bs)))
+                        packetLen + 4, bs, (packetLen + 4) % bs)))
             return
         encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
         packet = first + self.currentEncryptions.decrypt(encData[bs:])
@@ -725,11 +726,18 @@ class SSHTransportBase(protocol.Protocol):
         if not self.gotVersion:
             if self.buf.find(b'\n', self.buf.find(b'SSH-')) == -1:
                 return
+
+            # RFC 4253 section 4.2 ask for strict `\r\n` line ending.
+            # Here we are a bit more relaxed and accept implementations ending
+            # only in '\n'.
+            # https://tools.ietf.org/html/rfc4253#section-4.2
             lines = self.buf.split(b'\n')
             for p in lines:
                 if p.startswith(b'SSH-'):
                     self.gotVersion = True
-                    self.otherVersionString = p.strip()
+                    # Since the line was split on '\n' and most of the time
+                    # it uses '\r\n' we may get an extra '\r'.
+                    self.otherVersionString = p.rstrip(b'\r')
                     remoteVersion = p.split(b'-')[1]
                     if remoteVersion not in self.supportedVersions:
                         self._unsupportedVersionReceived(remoteVersion)
@@ -960,7 +968,7 @@ class SSHTransportBase(protocol.Protocol):
         @type packet: L{bytes}
         @param packet: The message data.
         """
-        alwaysDisplay = bool(packet[0])
+        alwaysDisplay = bool(ord(packet[0:1]))
         message, lang, foo = getNS(packet[1:], 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 

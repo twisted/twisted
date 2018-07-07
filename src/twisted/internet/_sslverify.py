@@ -12,6 +12,7 @@ from constantly import Names, NamedConstant
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
+from OpenSSL._util import lib as pyOpenSSLlib
 
 from twisted.python import log
 from twisted.python._oldstyle import _oldStyle
@@ -1048,7 +1049,7 @@ def platformTrust():
               <https://launchpad.net/ubuntu/+source/ca-certificates>} package
               installed,
 
-            - Mac OS X when using the system-installed version of OpenSSL (i.e.
+            - macOS when using the system-installed version of OpenSSL (i.e.
               I{not} one installed via MacPorts or Homebrew),
 
             - any build of OpenSSL which has had certificate authority
@@ -1062,7 +1063,7 @@ def platformTrust():
         Hopefully soon, this API will be updated to use more sophisticated
         trust-root discovery mechanisms.  Until then, you can follow tickets in
         the Twisted tracker for progress on this implementation on U{Microsoft
-        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
+        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{macOS
         <https://twistedmatrix.com/trac/ticket/6372>}, and U{a fallback for
         other platforms which do not have native trust management tools
         <https://twistedmatrix.com/trac/ticket/6934>}.
@@ -1318,7 +1319,6 @@ class OpenSSLCertificateOptions(object):
     _OP_NO_TLSv1_3 = _tlsDisableFlags[TLSVersion.TLSv1_3]
 
     _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
-
 
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
@@ -1591,10 +1591,11 @@ class OpenSSLCertificateOptions(object):
             self._options |= SSL.OP_NO_TICKET
         self.dhParameters = dhParameters
 
-        try:
-            self._ecCurve = _OpenSSLECCurve(_defaultCurveName)
-        except NotImplementedError:
-            self._ecCurve = None
+        self._ecChooser = _ChooseDiffieHellmanEllipticCurve(
+            SSL.OPENSSL_VERSION_NUMBER,
+            openSSLlib=pyOpenSSLlib,
+            openSSLcrypto=crypto,
+        )
 
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
@@ -1691,11 +1692,7 @@ class OpenSSLCertificateOptions(object):
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
         ctx.set_cipher_list(self._cipherString.encode('ascii'))
 
-        if self._ecCurve is not None:
-            try:
-                self._ecCurve.addECKeyToContext(ctx)
-            except BaseException:
-                pass  # ECDHE support is best effort only.
+        self._ecChooser.configureECDHCurve(ctx)
 
         if self._acceptableProtocols:
             # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
@@ -1711,75 +1708,6 @@ OpenSSLCertificateOptions.__getstate__ = deprecated(
 OpenSSLCertificateOptions.__setstate__ = deprecated(
         Version("Twisted", 15, 0, 0),
         "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
-
-
-
-class _OpenSSLECCurve(FancyEqMixin, object):
-    """
-    A private representation of an OpenSSL ECC curve.
-    """
-    compareAttributes = ("snName", )
-
-    def __init__(self, snName):
-        """
-        @param snName: The name of the curve as used by C{OBJ_sn2nid}.
-        @param snName: L{unicode}
-
-        @raises NotImplementedError: If ECC support is not available.
-        @raises ValueError: If C{snName} is not a supported curve.
-        """
-        self.snName = nativeString(snName)
-
-        # As soon as pyOpenSSL supports ECDHE directly, attempt to use its
-        # APIs first.  See #7033.
-
-        # If pyOpenSSL is based on cryptography.io (0.14+), we use its
-        # bindings directly to set the ECDHE curve.
-        try:
-            binding = self._getBinding()
-            self._lib = binding.lib
-            self._ffi = binding.ffi
-            self._nid = self._lib.OBJ_sn2nid(self.snName.encode('ascii'))
-            if self._nid == self._lib.NID_undef:
-                raise ValueError("Unknown ECC curve.")
-        except AttributeError:
-            raise NotImplementedError(
-                "This version of pyOpenSSL does not support ECC."
-            )
-
-
-    def _getBinding(self):
-        """
-        Attempt to get cryptography's binding instance.
-
-        @raises NotImplementedError: If underlying pyOpenSSL is not based on
-            cryptography.
-
-        @return: cryptograpy bindings.
-        @rtype: C{cryptography.hazmat.bindings.openssl.Binding}
-        """
-        try:
-            from OpenSSL._util import binding
-            return binding
-        except ImportError:
-            raise NotImplementedError(
-                "This version of pyOpenSSL does not support ECC."
-            )
-
-
-    def addECKeyToContext(self, context):
-        """
-        Add a temporary EC key to C{context}.
-
-        @param context: The context to add a key to.
-        @type context: L{OpenSSL.SSL.Context}
-        """
-        ecKey = self._lib.EC_KEY_new_by_curve_name(self._nid)
-        if ecKey == self._ffi.NULL:
-            raise EnvironmentError("EC key creation failed.")
-
-        self._lib.SSL_CTX_set_tmp_ecdh(context._context, ecKey)
-        self._lib.EC_KEY_free(ecKey)
 
 
 
@@ -1904,6 +1832,103 @@ defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "!aNULL:!MD5:!DSS"
 )
 _defaultCurveName = u"prime256v1"
+
+
+
+class _ChooseDiffieHellmanEllipticCurve(object):
+    """
+    Chooses the best elliptic curve for Elliptic Curve Diffie-Hellman
+    key exchange, and provides a C{configureECDHCurve} method to set
+    the curve, when appropriate, on a new L{OpenSSL.SSL.Context}.
+
+    The C{configureECDHCurve} method will be set to one of the
+    following based on the provided OpenSSL version and configuration:
+
+        - L{_configureOpenSSL110}
+
+        - L{_configureOpenSSL102}
+
+        - L{_configureOpenSSL101}
+
+        - L{_configureOpenSSL101NoCurves}.
+
+    @param openSSLVersion: The OpenSSL version number.
+    @type openSSLVersion: L{int}
+
+    @see: L{OpenSSL.SSL.OPENSSL_VERSION_NUMBER}
+
+    @param openSSLlib: The OpenSSL C{cffi} library module.
+    @param openSSLlib: The OpenSSL L{crypto} module.
+
+    @see: L{crypto}
+    """
+
+    def __init__(self, openSSLVersion, openSSLlib, openSSLcrypto):
+        self._openSSLlib = openSSLlib
+        self._openSSLcrypto = openSSLcrypto
+        if openSSLVersion >= 0x10100000:
+            self.configureECDHCurve = self._configureOpenSSL110
+        elif openSSLVersion >= 0x10002000:
+            self.configureECDHCurve = self._configureOpenSSL102
+        else:
+            try:
+                self._ecCurve = openSSLcrypto.get_elliptic_curve(
+                    _defaultCurveName)
+            except ValueError:
+                # The get_elliptic_curve method raises a ValueError
+                # when the curve does not exist.
+                self.configureECDHCurve = self._configureOpenSSL101NoCurves
+            else:
+                self.configureECDHCurve = self._configureOpenSSL101
+
+
+    def _configureOpenSSL110(self, ctx):
+        """
+        OpenSSL 1.1.0 Contexts are preconfigured with an optimal set
+        of ECDH curves.  This method does nothing.
+
+        @param ctx: L{OpenSSL.SSL.Context}
+        """
+
+
+    def _configureOpenSSL102(self, ctx):
+        """
+        Have the context automatically choose elliptic curves for
+        ECDH.  Run on OpenSSL 1.0.2 and OpenSSL 1.1.0+, but only has
+        an effect on OpenSSL 1.0.2.
+
+        @param ctx: The context which .
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        ctxPtr = ctx._context
+        try:
+            self._openSSLlib.SSL_CTX_set_ecdh_auto(ctxPtr, True)
+        except:
+            pass
+
+
+    def _configureOpenSSL101(self, ctx):
+        """
+        Set the default elliptic curve for ECDH on the context.  Only
+        run on OpenSSL 1.0.1.
+
+        @param ctx: The context on which to set the ECDH curve.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        try:
+            ctx.set_tmp_ecdh(self._ecCurve)
+        except:
+            pass
+
+
+    def _configureOpenSSL101NoCurves(self, ctx):
+        """
+        No elliptic curves are available on OpenSSL 1.0.1. We can't
+        set anything, so do nothing.
+
+        @param ctx: The context on which to set the ECDH curve.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
 
 
 

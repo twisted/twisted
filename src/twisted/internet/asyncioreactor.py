@@ -20,7 +20,7 @@ from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
 
 try:
-    from asyncio import new_event_loop
+    from asyncio import get_event_loop
 except ImportError:
     raise ImportError("Requires asyncio.")
 
@@ -59,7 +59,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def __init__(self, eventloop=None):
 
         if eventloop is None:
-            eventloop = new_event_loop()
+            eventloop = get_event_loop()
 
         self._asyncioEventloop = eventloop
         self._writers = {}

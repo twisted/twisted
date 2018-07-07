@@ -11,9 +11,9 @@ import warnings
 import gc, traceback
 import re
 
-from twisted.python.compat import _PY3, _PY34PLUS
+from twisted.python.compat import _PY3
 
-if _PY34PLUS:
+if _PY3:
     from asyncio import new_event_loop, Future, CancelledError
     asyncSkip = None
 else:
@@ -1415,19 +1415,19 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         newFailure = self.failureResultOf(d)
         tb = traceback.extract_tb(newFailure.getTracebackObject())
 
-        self.assertEqual(len(tb), 2)
+        if _PY3:
+            self.assertEqual(len(tb), 3)
+            self.assertIn('test_defer', tb[2][0])
+            self.assertEqual('getDivisionFailure', tb[2][2])
+            self.assertEqual('1/0', tb[2][3])
+        else:
+            self.assertEqual(len(tb), 2)
+            self.assertIn('test_defer', tb[1][0])
+            self.assertEqual('getDivisionFailure', tb[1][2])
+            self.assertEqual('1/0', tb[1][3])
         self.assertIn('test_defer', tb[0][0])
         self.assertEqual('test_inlineCallbacksTracebacks', tb[0][2])
         self.assertEqual('f.raiseException()', tb[0][3])
-        self.assertIn('test_defer', tb[1][0])
-        self.assertEqual('getDivisionFailure', tb[1][2])
-        self.assertEqual('1/0', tb[1][3])
-
-
-    if _PY3:
-        # FIXME: https://twistedmatrix.com/trac/ticket/5949
-        test_inlineCallbacksTracebacks.skip = (
-            "Python 3 support to be fixed in #5949")
 
 
 
