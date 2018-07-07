@@ -90,7 +90,7 @@ from zope.interface import Attribute, Interface, implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString)
+    _PY3, long, unicode, intToBytes, networkString, nativeString, _PY37PLUS)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.logger import Logger
@@ -861,30 +861,57 @@ class Request:
         # Argument processing
         args = self.args
         ctype = self.requestHeaders.getRawHeaders(b'content-type')
+        clength = self.requestHeaders.getRawHeaders(b'content-length')
         if ctype is not None:
             ctype = ctype[0]
 
-        if self.method == b"POST" and ctype:
+        if clength is not None:
+            clength = clength[0]
+
+        if self.method == b"POST" and ctype and clength:
             mfd = b'multipart/form-data'
             key, pdict = _parseHeader(ctype)
+            pdict["CONTENT-LENGTH"] = clength
             if key == b'application/x-www-form-urlencoded':
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    cgiArgs = cgi.parse_multipart(self.content, pdict)
+                    if _PY37PLUS:
+                        cgiArgs = cgi.parse_multipart(
+                            self.content, pdict, encoding='utf8',
+                            errors="surrogateescape")
+                    else:
+                        cgiArgs = cgi.parse_multipart(self.content, pdict)
 
-                    if _PY3:
-                        # parse_multipart on Python 3 decodes the header bytes
-                        # as iso-8859-1 and returns a str key -- we want bytes
-                        # so encode it back
+                    if not _PY37PLUS and _PY3:
+                        # The parse_multipart function on Python 3
+                        # decodes the header bytes as iso-8859-1 and
+                        # returns a str key -- we want bytes so encode
+                        # it back
                         self.args.update({x.encode('iso-8859-1'): y
                                           for x, y in cgiArgs.items()})
+                    elif _PY37PLUS:
+                        # The parse_multipart function on Python 3.7+
+                        # decodes the header bytes as iso-8859-1 and
+                        # decodes the body bytes as utf8 with
+                        # surrogateescape -- we want bytes
+                        self.args.update({
+                            x.encode('iso-8859-1'): \
+                            [z.encode('utf8', "surrogateescape")
+                             if isinstance(z, str) else z for z in y]
+                            for x, y in cgiArgs.items()})
+
                     else:
                         self.args.update(cgiArgs)
-                except:
-                    # It was a bad request.
+                except Exception as e:
+                    # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
-                    return
+                    if isinstance(e, (TypeError, ValueError, KeyError)):
+                        return
+                    else:
+                        # If it's not a userspace error from CGI, reraise
+                        raise
+
             self.content.seek(0, 0)
 
         self.process()
@@ -1113,7 +1140,7 @@ class Request:
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
                   max_age=None, comment=None, secure=None, httpOnly=False,
-                  samesite=None):
+                  sameSite=None):
         """
         Set an outgoing HTTP cookie.
 
@@ -1151,12 +1178,15 @@ class Request:
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
 
-        @param samesite: direct browsers not to send this cookie on
-            cross-origin requests
-        @type samesite: L{bytes} or L{unicode}
+        @param sameSite: One of L{None} (default), C{'lax'} or C{'strict'}.
+            Direct browsers not to send this cookie on cross-origin requests.
+            Please see:
+            U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
+        @type sameSite: L{None}, L{bytes} or L{unicode}
 
         @raises: L{DeprecationWarning} if an argument is not L{bytes} or
             L{unicode}.
+            L{ValueError} if the value for C{sameSite} is not supported.
         """
         def _ensureBytes(val):
             """
@@ -1195,12 +1225,12 @@ class Request:
             cookie = cookie + b"; Secure"
         if httpOnly:
             cookie = cookie + b"; HttpOnly"
-        if samesite:
-            samesite = _ensureBytes(samesite).lower()
-            if samesite not in [b"lax", b"strict"]:
+        if sameSite:
+            sameSite = _ensureBytes(sameSite).lower()
+            if sameSite not in [b"lax", b"strict"]:
                 raise ValueError(
-                    "Invalid value for samesite: " + repr(samesite))
-            cookie += b"; SameSite=" + samesite
+                    "Invalid value for sameSite: " + repr(sameSite))
+            cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
@@ -1396,6 +1426,8 @@ class Request:
         """
         Return the IP address of the client who submitted this request.
 
+        This method is B{deprecated}.  Use L{getClientAddress} instead.
+
         @returns: the client IP address
         @rtype: C{str}
         """
@@ -1413,6 +1445,8 @@ class Request:
         a UNIX domain socket will cause this to return
         L{UNIXAddress}).  Callers must check the type of the returned
         address.
+
+        @since: 18.4
 
         @return: the client's address.
         @rtype: L{IAddress}
@@ -1569,7 +1603,7 @@ class Request:
 
 
 Request.getClientIP = deprecated(
-    Version("Twisted", "NEXT", 0, 0),
+    Version('Twisted', 18, 4, 0),
     replacement="getClientAddress",
 )(Request.getClientIP)
 
@@ -2588,12 +2622,18 @@ def combinedLogFormatter(timestamp, request):
 
     @see: L{IAccessLogFormatter}
     """
+    clientAddr = request.getClientAddress()
+    if isinstance(clientAddr, (address.IPv4Address, address.IPv6Address,
+                               _XForwardedForAddress)):
+        ip = clientAddr.host
+    else:
+        ip = b'-'
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
     line = (
         u'"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
         u'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
-            ip=_escape(request.getClientIP() or b"-"),
+            ip=_escape(ip),
             timestamp=timestamp,
             method=_escape(request.method),
             uri=_escape(request.uri),
@@ -2607,19 +2647,39 @@ def combinedLogFormatter(timestamp, request):
 
 
 
+@implementer(interfaces.IAddress)
+class _XForwardedForAddress(object):
+    """
+    L{IAddress} which represents the client IP to log for a request, as gleaned
+    from an X-Forwarded-For header.
+
+    @ivar host: An IP address or C{b"-"}.
+    @type host: L{bytes}
+
+    @see: L{proxiedLogFormatter}
+    """
+    def __init__(self, host):
+        self.host = host
+
+
+
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientIP}.
     """
-    def getClientIP(self):
+    def getClientAddress(self):
         """
-        @return: The client address (the first address) in the value of the
-            I{X-Forwarded-For header}.  If the header is not present, return
-            C{b"-"}.
+        The client address (the first address) in the value of the
+        I{X-Forwarded-For header}.  If the header is not present, the IP is
+        considered to be C{b"-"}.
+
+        @return: L{_XForwardedForAddress} which wraps the client address as
+            expected by L{combinedLogFormatter}.
         """
-        return self._request.requestHeaders.getRawHeaders(
+        host = self._request.requestHeaders.getRawHeaders(
             b"x-forwarded-for", [b"-"])[0].split(b",")[0].strip()
+        return _XForwardedForAddress(host)
 
     # These are missing from the interface.  Forward them manually.
     @property

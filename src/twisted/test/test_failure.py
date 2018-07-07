@@ -722,6 +722,8 @@ class FindFailureTests(SynchronousTestCase):
         handler that is handling an exception raised by
         raiseException, the new Failure should be chained to that
         original Failure.
+        Means the new failure should still show the same origin frame,
+        but with different complete stack trace (as not thrown at same place).
         """
         f = getDivisionFailure()
         f.cleanFailure()
@@ -729,7 +731,10 @@ class FindFailureTests(SynchronousTestCase):
             f.raiseException()
         except:
             newF = failure.Failure()
-            self.assertEqual(f.getTraceback(), newF.getTraceback())
+            tb = f.getTraceback().splitlines()
+            new_tb = newF.getTraceback().splitlines()
+            self.assertNotEqual(tb, new_tb)
+            self.assertEqual(tb[-3:], new_tb[-3:])
         else:
             self.fail("No exception raised from raiseException!?")
 
@@ -947,6 +952,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         f.cleanFailure()
+        original_failure_str = f.getTraceback()
 
         newFailures = []
 
@@ -962,7 +968,15 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self._throwIntoGenerator(f, g)
 
         self.assertEqual(len(newFailures), 1)
-        self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
+
+        # The original failure should not be changed.
+        self.assertEqual(original_failure_str, f.getTraceback())
+
+        # The new failure should be different and contain stack info for
+        # our generator.
+        self.assertNotEqual(newFailures[0].getTraceback(), f.getTraceback())
+        self.assertIn("generator", newFailures[0].getTraceback())
+        self.assertNotIn("generator", f.getTraceback())
 
     def test_ambiguousFailureInGenerator(self):
         """
