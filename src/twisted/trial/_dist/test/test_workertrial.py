@@ -45,9 +45,9 @@ class WorkerLogObserverTests(TestCase):
                 calls.append((method, kwargs))
 
         observer = WorkerLogObserver(FakeClient())
-        observer.emit({'message': [b'Some log']})
+        observer.emit({'message': ['Some log']})
         self.assertEqual(
-            calls, [(managercommands.TestWrite, {'out': b'Some log'})])
+            calls, [(managercommands.TestWrite, {'out': 'Some log'})])
 
 
 
@@ -103,7 +103,7 @@ class MainTests(TestCase):
         client = FakeAMP()
         clientTransport = StringTransport()
         client.makeConnection(clientTransport)
-        client.callRemote(workercommands.Run, testCase=b"doesntexist")
+        client.callRemote(workercommands.Run, testCase="doesntexist")
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
