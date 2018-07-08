@@ -17,6 +17,7 @@ from __future__ import division, absolute_import
 
 import copy
 import os
+import re
 try:
     from urllib import quote
 except ImportError:
@@ -568,7 +569,7 @@ class GzipEncoderFactory(object):
 
     @since: 12.3
     """
-
+    _gzipCheckRegex = re.compile(br'(:?^|[\s,])gzip(:?$|[\s,])')
     compressLevel = 9
 
     def encoderForRequest(self, request):
@@ -576,18 +577,17 @@ class GzipEncoderFactory(object):
         Check the headers if the client accepts gzip encoding, and encodes the
         request if so.
         """
-        acceptHeaders = request.requestHeaders.getRawHeaders(
-            'accept-encoding', [])
-        supported = ','.join(acceptHeaders).split(',')
-        if 'gzip' in supported:
+        acceptHeaders = b','.join(
+            request.requestHeaders.getRawHeaders(b'accept-encoding', []))
+        if self._gzipCheckRegex.search(acceptHeaders):
             encoding = request.responseHeaders.getRawHeaders(
-                'content-encoding')
+                b'content-encoding')
             if encoding:
-                encoding = '%s,gzip' % ','.join(encoding)
+                encoding = b','.join(encoding + [b'gzip'])
             else:
-                encoding = 'gzip'
+                encoding = b'gzip'
 
-            request.responseHeaders.setRawHeaders('content-encoding',
+            request.responseHeaders.setRawHeaders(b'content-encoding',
                                                   [encoding])
             return _GzipEncoder(self.compressLevel, request)
 

@@ -7,8 +7,6 @@ Test for distributed trial worker side.
 
 import os
 
-from io import BytesIO
-
 from zope.interface.verify import verifyObject
 
 from twisted.trial.reporter import TestResult
@@ -24,11 +22,11 @@ from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import fail, succeed
 from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone
-from twisted.python.compat import unicode
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.protocols.amp import AMP
-
+from twisted.python.compat import NativeStringIO
+from io import BytesIO
 
 
 class FakeAMP(AMP):
@@ -60,7 +58,7 @@ class WorkerProtocolTests(TestCase):
         Calling the L{workercommands.Run} command on the client returns a
         response with C{success} sets to C{True}.
         """
-        d = self.client.callRemote(workercommands.Run, testCase=b"doesntexist")
+        d = self.client.callRemote(workercommands.Run, testCase="doesntexist")
 
         def check(result):
             self.assertTrue(result['success'])
@@ -99,7 +97,7 @@ class LocalWorkerAMPTests(TestCase):
         self.worker.makeConnection(self.workerTransport)
 
         config = trial.Options()
-        self.testName = b"twisted.doesnexist"
+        self.testName = "twisted.doesnexist"
         config['tests'].append(self.testName)
         self.testCase = trial._getSuite(config)._tests.pop()
 
@@ -138,8 +136,8 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddExpectedFailure,
-                                   testName=self.testName, error=b'error',
-                                   todo=b'todoReason')
+                                   testName=self.testName, error='error',
+                                   todo='todoReason')
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -154,8 +152,8 @@ class LocalWorkerAMPTests(TestCase):
         results = []
         errorClass = fullyQualifiedName(ValueError)
         d = self.worker.callRemote(managercommands.AddError,
-                                   testName=self.testName, error=b'error',
-                                   errorClass=errorClass.encode("ascii"),
+                                   testName=self.testName, error='error',
+                                   errorClass=errorClass,
                                    frames=[])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
@@ -172,15 +170,15 @@ class LocalWorkerAMPTests(TestCase):
         results = []
         errorClass = fullyQualifiedName(ValueError)
         d = self.worker.callRemote(managercommands.AddError,
-                                   testName=self.testName, error=b'error',
-                                   errorClass=errorClass.encode("ascii"),
-                                   frames=[b"file.py", b"invalid code", b"3"])
+                                   testName=self.testName, error='error',
+                                   errorClass=errorClass,
+                                   frames=["file.py", "invalid code", "3"])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
         self.assertEqual(self.testCase, self.result.errors[0][0])
         self.assertEqual(
-            [(b'file.py', b'invalid code', 3, [], [])],
+            [('file.py', 'invalid code', 3, [], [])],
             self.result.errors[0][1].frames)
         self.assertTrue(results)
 
@@ -192,8 +190,8 @@ class LocalWorkerAMPTests(TestCase):
         results = []
         failClass = fullyQualifiedName(RuntimeError)
         d = self.worker.callRemote(managercommands.AddFailure,
-                                   testName=self.testName, fail=b'fail',
-                                   failClass=failClass.encode("ascii"),
+                                   testName=self.testName, fail='fail',
+                                   failClass=failClass,
                                    frames=[])
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
@@ -209,7 +207,7 @@ class LocalWorkerAMPTests(TestCase):
         results = []
 
         d = self.worker.callRemote(managercommands.AddSkip,
-                                   testName=self.testName, reason=b'reason')
+                                   testName=self.testName, reason='reason')
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -225,7 +223,7 @@ class LocalWorkerAMPTests(TestCase):
 
         d = self.worker.callRemote(managercommands.AddUnexpectedSuccess,
                                    testName=self.testName,
-                                   todo=b'todo')
+                                   todo='todo')
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
@@ -239,18 +237,16 @@ class LocalWorkerAMPTests(TestCase):
         stream.
         """
         results = []
-        stream = BytesIO()
+        stream = NativeStringIO()
         self.managerAMP.setTestStream(stream)
 
         command = managercommands.TestWrite
-        if isinstance(command, unicode):
-            command = command.encode("utf-8")
         d = self.worker.callRemote(command,
-                                   out=b"Some output")
+                                   out="Some output")
         d.addCallback(lambda result: results.append(result['success']))
         self.pumpTransports()
 
-        self.assertEqual(b"Some output\n", stream.getvalue())
+        self.assertEqual("Some output\n", stream.getvalue())
         self.assertTrue(results)
 
 
