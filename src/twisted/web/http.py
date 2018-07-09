@@ -2953,12 +2953,21 @@ class HTTPFactory(protocol.ServerFactory):
     def __init__(self, logPath=None, timeout=_REQUEST_TIMEOUT,
                  logFormatter=None, reactor=None):
         """
+        @param logPath: File path to which access log messages will be written
+            or C{None} to disable logging.
+        @type logPath: L{str} or L{bytes}
+
+        @param timeout: The initial value of L{timeOut}, which defines the idle
+            connection timeout in seconds, or C{None} to disable the idle
+            timeout.
+        @type timeout: L{float}
+
         @param logFormatter: An object to format requests into log lines for
-            the access log.
+            the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to compute logging
-            timestamps.
+        @param reactor: A L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps.
         """
         if not reactor:
             from twisted.internet import reactor
