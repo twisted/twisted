@@ -105,6 +105,8 @@ class IRequest(Interface):
         The address may not be a network address.  Callers must check
         its type before using it.
 
+        @since: 18.4
+
         @return: the client's address.
         @rtype: an L{IAddress} provider.
         """

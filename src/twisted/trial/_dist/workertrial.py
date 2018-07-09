@@ -14,7 +14,6 @@ import sys
 import os
 import errno
 
-from twisted.python.compat import unicode
 
 
 def _setupPath(environ):
@@ -58,8 +57,6 @@ class WorkerLogObserver(object):
         text = textFromEventDict(eventDict)
         if text is None:
             return
-        if isinstance(text, unicode):
-            text = text.encode("utf-8")
         self.protocol.callRemote(managercommands.TestWrite, out=text)
 
 
