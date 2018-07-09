@@ -791,7 +791,10 @@ class Key(object):
         @rtype: L{Key}
         @return: A public key.
         """
-        return Key(self._keyObject.public_key())
+        if self.isPublic():
+            return self
+        else:
+            return Key(self._keyObject.public_key())
 
     def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
