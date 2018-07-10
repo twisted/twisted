@@ -410,7 +410,7 @@ class CModuleSendmsgTests(TestCase):
 
     test_shortsend.skip = (
         'Intermittently fails (due to kernel buffer sizing?).'
-        ' See #9485 and #9452.'
+        ' See issues 9485 and 9452.'
     )
 
 
