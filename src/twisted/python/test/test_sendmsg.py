@@ -408,6 +408,11 @@ class CModuleSendmsgTests(TestCase):
         received = recv1msg(self.output.fileno(), 0, len(message))
         self.assertEqual(len(received[0]), sent)
 
+    test_shortsend.skip = (
+        'Intermittently fails (due to kernel buffer sizing?).'
+        ' See #9485 and #9452.'
+    )
+
 
     def test_roundtripEmptyAncillary(self):
         """
