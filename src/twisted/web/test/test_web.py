@@ -811,9 +811,6 @@ class RequestTests(unittest.TestCase):
             @param uid: A unique identifier for the session.
             @type uid: C{bytes}
 
-            @param site: The site on which the session is created.
-            @type site: L{server.Site}
-
             @return: A newly created session.
             @rtype: L{server.Session}
             """
