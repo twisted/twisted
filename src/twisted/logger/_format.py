@@ -34,27 +34,12 @@ def formatEvent(event):
     @return: A formatted string.
     @rtype: L{unicode}
     """
-    try:
-        if "log_flattened" in event:
-            return flatFormat(event)
-
-        format = event.get("log_format", None)
-        if format is None:
-            return u""
-
-        # Make sure format is unicode.
-        if isinstance(format, bytes):
-            # If we get bytes, assume it's UTF-8 bytes
-            format = format.decode("utf-8")
-        elif not isinstance(format, unicode):
-            raise TypeError(
-                "Log format must be unicode or bytes, not {0!r}".format(format)
-            )
-
-        return formatWithCall(format, event)
-
-    except Exception as e:
-        return formatUnformattableEvent(event, e)
+    return eventAsText(
+        event,
+        includeTraceback=False,
+        includeTimestamp=False,
+        includeSystem=False,
+    )[:-1]
 
 
 
@@ -187,45 +172,11 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     @return: A formatted event, or L{None} if no output is appropriate.
     @rtype: L{unicode} or L{None}
     """
-    eventText = formatEvent(event)
-
-    if "log_failure" in event:
-        try:
-            traceback = event["log_failure"].getTraceback()
-        except:
-            traceback = u"(UNABLE TO OBTAIN TRACEBACK FROM EVENT)\n"
-        eventText = u"\n".join((eventText, traceback))
-
+    eventText = eventAsText(event, formatTime=formatTime)
     if not eventText:
         return None
-
-    eventText = eventText.replace(u"\n", u"\n\t")
-    timeStamp = formatTime(event.get("log_time", None))
-
-    system = event.get("log_system", None)
-
-    if system is None:
-        level = event.get("log_level", None)
-        if level is None:
-            levelName = u"-"
-        else:
-            levelName = level.name
-
-        system = u"{namespace}#{level}".format(
-            namespace=event.get("log_namespace", u"-"),
-            level=levelName,
-        )
-    else:
-        try:
-            system = unicode(system)
-        except Exception:
-            system = u"UNFORMATTABLE"
-
-    return u"{timeStamp} [{system}] {event}\n".format(
-        timeStamp=timeStamp,
-        system=system,
-        event=eventText,
-    )
+    eventText = eventText[:-1].replace(u"\n", u"\n\t")
+    return eventText + u"\n"
 
 
 
