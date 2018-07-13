@@ -286,8 +286,7 @@ class ConnectionPool:
             C{func(Transaction(...), *args, **kw)}, or a
             L{twisted.python.failure.Failure}.
         """
-        from twisted.internet import reactor
-        return threads.deferToThreadPool(reactor, self.threadpool,
+        return threads.deferToThreadPool(self._reactor, self.threadpool,
                                          self._runWithConnection,
                                          func, *args, **kw)
 
@@ -335,8 +334,7 @@ class ConnectionPool:
             C{interaction(Transaction(...), *args, **kw)}, or a
             L{twisted.python.failure.Failure}.
         """
-        from twisted.internet import reactor
-        return threads.deferToThreadPool(reactor, self.threadpool,
+        return threads.deferToThreadPool(self._reactor, self.threadpool,
                                          self._runInteraction,
                                          interaction, *args, **kw)
 
