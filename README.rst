@@ -7,7 +7,7 @@ Twisted
 |appveyor|_
 |circleci|_
 
-For information on what's new in Twisted 18.4.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
+For information on what's new in Twisted 18.7.0, see the `NEWS <NEWS.rst>`_ file that comes with the distribution.
 
 
 What is this?
