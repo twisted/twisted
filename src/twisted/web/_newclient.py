@@ -1320,7 +1320,7 @@ class TransportProxyProducer:
         self._producer = producer
 
 
-    def _stopProxying(self):
+    def stopProxying(self):
         """
         Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
         methods to the underlying L{twisted.internet.interfaces.IPushProducer}
@@ -1354,6 +1354,15 @@ class TransportProxyProducer:
         """
         if self._producer is not None:
             self._producer.pauseProducing()
+
+
+    def loseConnection(self):
+        """
+        Proxy the request to lose the connection to the underlying producer,
+        unless this proxy has been stopped.
+        """
+        if self._producer is not None:
+            self._producer.loseConnection()
 
 
 
@@ -1582,7 +1591,7 @@ class HTTP11ClientProtocol(Protocol):
             # transport.  Stop proxying from the parser's transport to the real
             # transport before telling the parser it's done so that it can't do
             # anything.
-            self._transportProxy._stopProxying()
+            self._transportProxy.stopProxying()
             self._transportProxy = None
             parser.connectionLost(reason)
 

@@ -51,6 +51,14 @@ class Data(resource.Resource):
     """
 
     def __init__(self, data, type):
+        """
+        @param data: The bytes that make up this data resource.
+        @type data: L{bytes}
+
+        @param type: A native string giving the Internet media type for this
+            content.
+        @type type: L{str}
+        """
         resource.Resource.__init__(self)
         self.data = data
         self.type = type
@@ -263,9 +271,31 @@ class File(resource.Resource, filepath.FilePath):
     childNotFound = resource.NoResource("File not found.")
     forbidden = resource.ForbiddenResource()
 
+
     def directoryListing(self):
-        return DirectoryLister(self.path,
-                               self.listNames(),
+        """
+        Return a resource that generates an HTML listing of the
+        directory this path represents.
+
+        @return: A resource that renders the directory to HTML.
+        @rtype: L{DirectoryLister}
+        """
+        if _PY3:
+            path = self.path
+            names = self.listNames()
+        else:
+            # DirectoryLister works in terms of native strings, so on
+            # Python 2, ensure we have a bytes paths for this
+            # directory and its contents.  We use the asBytesMode
+            # method inherited from FilePath to ensure consistent
+            # encoding of the actual path.  This returns a FilePath
+            # instance even when called on subclasses, however, so we
+            # have to create a new File instance.
+            nativeStringPath = self.createSimilarFile(self.asBytesMode().path)
+            path = nativeStringPath.path
+            names = nativeStringPath.listNames()
+        return DirectoryLister(path,
+                               names,
                                self.contentTypes,
                                self.contentEncodings,
                                self.defaultType)

@@ -8,14 +8,13 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 __metaclass__ = type
 
-from collections import Sequence
 from sys import exc_info
 from warnings import warn
 
 from zope.interface import implementer
 
 from twisted.internet.threads import blockingCallFromThread
-from twisted.python.compat import reraise
+from twisted.python.compat import reraise, Sequence
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
@@ -300,7 +299,7 @@ class _WSGIResponse:
         # *both* Python 2 and Python 3, so says PEP-3333.
         self.environ = {
             'REQUEST_METHOD': _wsgiString(request.method),
-            'REMOTE_ADDR': _wsgiString(request.getClientIP()),
+            'REMOTE_ADDR': _wsgiString(request.getClientAddress().host),
             'SCRIPT_NAME': _wsgiString(scriptName),
             'PATH_INFO': _wsgiString(pathInfo),
             'QUERY_STRING': _wsgiString(queryString),

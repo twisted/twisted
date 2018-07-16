@@ -173,7 +173,7 @@ class IHostnameResolver(Interface):
             practice, this means an iterable containing
             L{twisted.internet.address.IPv4Address},
             L{twisted.internet.address.IPv6Address}, both, or neither.
-        @type addressTypes: L{collections.Iterable} of L{type}
+        @type addressTypes: L{collections.abc.Iterable} of L{type}
 
         @param transportSemantics: A string describing the semantics of the
             transport; either C{'TCP'} for stream-oriented transports or
@@ -1267,9 +1267,9 @@ class IReactorTime(Interface):
         """
         Retrieve all currently scheduled delayed calls.
 
-        @return: A tuple of all L{IDelayedCall} providers representing all
+        @return: A list of L{IDelayedCall} providers representing all
                  currently scheduled calls. This is everything that has been
-                 returned by C{callLater} but not yet called or canceled.
+                 returned by C{callLater} but not yet called or cancelled.
         """
 
 
