@@ -228,6 +228,11 @@ class ZshArgumentsGenerator(object):
     Generate a call to the zsh _arguments completion function
     based on data in a usage.Options instance
 
+    The first three instance variables are populated based on constructor
+    arguments. The remaining non-constructor variables are populated by this
+    class with data gathered from the C{Options} instance passed in, and its
+    base classes.
+
     @type options: L{twisted.python.usage.Options}
     @ivar options: The L{twisted.python.usage.Options} instance to generate for
 
@@ -237,10 +242,6 @@ class ZshArgumentsGenerator(object):
     @type file: C{file}
     @ivar file: The C{file} to write the completion function to.  The C{file}
         must have L{bytes} I/O semantics.
-
-    The following non-constructor variables are populated by this class
-    with data gathered from the C{Options} instance passed in, and its
-    base classes.
 
     @type descriptions: C{dict}
     @ivar descriptions: A dict mapping long option names to alternate

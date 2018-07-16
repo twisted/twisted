@@ -48,7 +48,7 @@ from twisted.application import service
 from twisted.internet import task
 from twisted.python.failure import Failure
 from twisted.internet.defer import (
-    CancelledError, Deferred, succeed, fail
+    CancelledError, Deferred, succeed, fail, maybeDeferred
 )
 
 from automat import MethodicalMachine
@@ -548,7 +548,8 @@ class _ClientMachine(object):
 
     _machine = MethodicalMachine()
 
-    def __init__(self, endpoint, factory, retryPolicy, clock, log):
+    def __init__(self, endpoint, factory, retryPolicy, clock,
+                 prepareConnection, log):
         """
         @see: L{ClientService.__init__}
 
@@ -566,6 +567,7 @@ class _ClientMachine(object):
         self._factory = factory
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
+        self._prepareConnection = prepareConnection
         self._connectionInProgress = succeed(None)
 
         self._awaitingConnected = []
@@ -633,8 +635,33 @@ class _ClientMachine(object):
 
         self._connectionInProgress = (
             self._endpoint.connect(factoryProxy)
+            .addCallback(self._runPrepareConnection)
             .addCallback(self._connectionMade)
             .addErrback(self._connectionFailed))
+
+
+    def _runPrepareConnection(self, protocol):
+        """
+        Run any C{prepareConnection} callback with the connected protocol,
+        ignoring its return value but propagating any failure.
+
+        @param protocol: The protocol of the connection.
+        @type protocol: L{IProtocol}
+
+        @return: Either:
+
+            - A L{Deferred} that succeeds with the protocol when the
+              C{prepareConnection} callback has executed successfully.
+
+            - A L{Deferred} that fails when the C{prepareConnection} callback
+              throws or returns a failed L{Deferred}.
+
+            - The protocol, when no C{prepareConnection} callback is defined.
+        """
+        if self._prepareConnection:
+            return (maybeDeferred(self._prepareConnection, protocol)
+                    .addCallback(lambda _: protocol))
+        return protocol
 
 
     @_machine.output()
@@ -1009,7 +1036,9 @@ class ClientService(service.Service, object):
     """
 
     _log = Logger()
-    def __init__(self, endpoint, factory, retryPolicy=None, clock=None):
+
+    def __init__(self, endpoint, factory, retryPolicy=None, clock=None,
+                 prepareConnection=None):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -1029,13 +1058,36 @@ class ClientService(service.Service, object):
             this attribute will not be serialized, and the default value (the
             reactor) will be restored when deserialized.
         @type clock: L{IReactorTime}
+
+        @param prepareConnection: A single argument L{callable} that may return
+            a L{Deferred}. It will be called once with the L{protocol
+            <interfaces.IProtocol>} each time a new connection is made.  It may
+            call methods on the protocol to prepare it for use (e.g.
+            authenticate) or validate it (check its health).
+
+            The C{prepareConnection} callable may raise an exception or return
+            a L{Deferred} which fails to reject the connection.  A rejected
+            connection is not used to fire an L{Deferred} returned by
+            L{whenConnected}.  Instead, L{ClientService} handles the failure
+            and continues as if the connection attempt were a failure
+            (incrementing the counter passed to C{retryPolicy}).
+
+            L{Deferred}s returned by L{whenConnected} will not fire until
+            any L{Deferred} returned by the C{prepareConnection} callable
+            fire. Otherwise its successful return value is consumed, but
+            ignored.
+
+            Present Since Twisted 18.7.0
+
+        @type prepareConnection: L{callable}
+
         """
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
 
         self._machine = _ClientMachine(
             endpoint, factory, retryPolicy, clock,
-            log=self._log,
+            prepareConnection=prepareConnection, log=self._log,
         )
 
 
