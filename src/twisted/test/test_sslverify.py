@@ -593,16 +593,28 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
 
 
     def test_dNSNameHostname(self):
+        """
+        If you pass a dNSName to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be True
+        """
         options = sslverify.optionsForClientTLS(u'example.com')
         self.assertTrue(options._sendSNI)
 
 
     def test_IPv4AddressHostname(self):
+        """
+        If you pass an IPv4 address to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be False
+        """
         options = sslverify.optionsForClientTLS(u'127.0.0.1')
         self.assertFalse(options._sendSNI)
 
 
     def test_IPv6AddressHostname(self):
+        """
+        If you pass an IPv6 address to L{sslverify.optionsForClientTLS}
+        L{_sendSNI} will be False
+        """
         options = sslverify.optionsForClientTLS(u'::1')
         self.assertFalse(options._sendSNI)
 
