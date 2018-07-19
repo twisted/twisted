@@ -2548,19 +2548,19 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_addCookieSameSite(self):
         """
-        L{http.Request.setCookie} supports a C{samesite} argument.
+        L{http.Request.setCookie} supports a C{sameSite} argument.
         """
         self._checkCookie(
-            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="lax")
+            b"foo=bar; SameSite=lax", b"foo", b"bar", sameSite="lax")
         self._checkCookie(
-            b"foo=bar; SameSite=lax", b"foo", b"bar", samesite="Lax")
+            b"foo=bar; SameSite=lax", b"foo", b"bar", sameSite="Lax")
         self._checkCookie(
-            b"foo=bar; SameSite=strict", b"foo", b"bar", samesite="strict")
+            b"foo=bar; SameSite=strict", b"foo", b"bar", sameSite="strict")
 
         self.assertRaises(
             ValueError,
             self._checkCookie,
-            b"", b"foo", b"bar", samesite="anything-else")
+            b"", b"foo", b"bar", sameSite="anything-else")
 
 
     def test_firstWrite(self):

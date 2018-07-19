@@ -732,6 +732,7 @@ class Deferred:
         return self
 
 
+    @failure._extraneous
     def send(self, value=None):
         if self.paused:
             # If we're paused, we have no result to give
@@ -744,6 +745,7 @@ class Deferred:
             # Clear the failure on debugInfo so it doesn't raise "unhandled
             # exception"
             self._debugInfo.failResult = None
+            result.value.__failure__ = result
             raise result.value
         else:
             raise StopIteration(result)
@@ -1378,6 +1380,7 @@ class _CancellationStatus(object):
 
 
 
+@failure._extraneous
 def _inlineCallbacks(result, g, status):
     """
     Carry out the work of L{inlineCallbacks}.

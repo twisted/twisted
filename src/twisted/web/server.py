@@ -17,6 +17,7 @@ from __future__ import division, absolute_import
 
 import copy
 import os
+import re
 try:
     from urllib import quote
 except ImportError:
@@ -34,6 +35,7 @@ from zope.interface import implementer
 from twisted.python.compat import networkString, nativeString, intToBytes
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
 from twisted.python import reflect, failure, components
@@ -471,8 +473,17 @@ class Request(Copyable, http.Request, components.Componentized):
 
         session = getattr(self, sessionAttribute)
 
-        # Session management
-        if not session:
+        if session is not None:
+            # We have a previously created session.
+            try:
+                # Refresh the session, to keep it alive.
+                session.touch()
+            except (AlreadyCalled, AlreadyCancelled):
+                # Session has already expired.
+                session = None
+
+        if session is None:
+            # No session was created yet for this request.
             cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
@@ -486,7 +497,6 @@ class Request(Copyable, http.Request, components.Componentized):
                 self.addCookie(cookiename, session.uid, path=b"/",
                                secure=secure)
 
-        session.touch()
         setattr(self, sessionAttribute, session)
 
         if sessionInterface:
@@ -568,7 +578,7 @@ class GzipEncoderFactory(object):
 
     @since: 12.3
     """
-
+    _gzipCheckRegex = re.compile(br'(:?^|[\s,])gzip(:?$|[\s,])')
     compressLevel = 9
 
     def encoderForRequest(self, request):
@@ -576,18 +586,17 @@ class GzipEncoderFactory(object):
         Check the headers if the client accepts gzip encoding, and encodes the
         request if so.
         """
-        acceptHeaders = request.requestHeaders.getRawHeaders(
-            'accept-encoding', [])
-        supported = ','.join(acceptHeaders).split(',')
-        if 'gzip' in supported:
+        acceptHeaders = b','.join(
+            request.requestHeaders.getRawHeaders(b'accept-encoding', []))
+        if self._gzipCheckRegex.search(acceptHeaders):
             encoding = request.responseHeaders.getRawHeaders(
-                'content-encoding')
+                b'content-encoding')
             if encoding:
-                encoding = '%s,gzip' % ','.join(encoding)
+                encoding = b','.join(encoding + [b'gzip'])
             else:
-                encoding = 'gzip'
+                encoding = b'gzip'
 
-            request.responseHeaders.setRawHeaders('content-encoding',
+            request.responseHeaders.setRawHeaders(b'content-encoding',
                                                   [encoding])
             return _GzipEncoder(self.compressLevel, request)
 

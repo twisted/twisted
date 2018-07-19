@@ -31,6 +31,7 @@ import struct
 import sys
 import tokenize
 from types import MethodType as _MethodType
+import warnings
 
 from io import TextIOBase, IOBase
 
@@ -833,6 +834,35 @@ except ImportError:
     from collections import Sequence
 
 
+
+def _get_async_param(isAsync=None, **kwargs):
+    """
+    Provide a backwards-compatible way to get async param value that does not
+    cause a syntax error under Python 3.7.
+
+    @param isAsync: isAsync param value (should default to None)
+    @type isAsync: L{bool}
+
+    @param kwargs: keyword arguments of the caller (only async is allowed)
+    @type kwargs: L{dict}
+
+    @raise TypeError: Both isAsync and async specified.
+
+    @return: Final isAsync param value
+    @rtype: L{bool}
+    """
+    if 'async' in kwargs:
+        warnings.warn(
+            "'async' keyword argument is deprecated, please use isAsync",
+            DeprecationWarning, stacklevel=2)
+    if isAsync is None and 'async' in kwargs:
+        isAsync = kwargs.pop('async')
+    if kwargs:
+        raise TypeError
+    return bool(isAsync)
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -873,5 +903,6 @@ __all__ = [
     "unichr",
     "raw_input",
     "_tokenize",
+    "_get_async_param",
     "Sequence",
 ]
