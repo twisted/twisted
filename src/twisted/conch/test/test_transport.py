@@ -296,11 +296,10 @@ class MockFactory(factory.SSHFactory):
         # diffie-hellman-group14-sha1 key exchange algorithm, to avoid requiring
         # a moduli file when running tests.
         # See OpenSSHFactory.getPrimes.
+        group14 = _kex.getDHGeneratorAndPrime(b'diffie-hellman-group14-sha1')
         return {
-            2048: ((3, _kex.getDHGeneratorAndPrime(
-                b'diffie-hellman-group14-sha1')[1]),),
+            2048: (group14,),
             4096: ((5, 7),)}
-
 
 
 class MockOldFactoryPublicKeys(MockFactory):
@@ -1654,8 +1653,8 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dhPrime) + b'\x00\x00\x00\x01\x03')])
-        self.assertEqual(self.proto.g, 3)
+              common.MP(dhPrime) + b'\x00\x00\x00\x01\x02')])
+        self.assertEqual(self.proto.g, 2)
         self.assertEqual(self.proto.p, dhPrime)
 
 
@@ -1684,8 +1683,8 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dhPrime) + b'\x00\x00\x00\x01\x03')])
-        self.assertEqual(self.proto.g, 3)
+              common.MP(dhPrime) + b'\x00\x00\x00\x01\x02')])
+        self.assertEqual(self.proto.g, 2)
         self.assertEqual(self.proto.p, dhPrime)
 
 
