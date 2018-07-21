@@ -273,7 +273,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u"XYZZY", log_time=t)
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"2013-09-24T11:40:47+0000 [-#-] XYZZY\n",
+            u"2013-09-24T11:40:47+0000 [-\x23-] XYZZY\n",
         )
 
 
@@ -286,7 +286,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u"XYZZY", log_time=12345)
         self.assertEqual(
             formatEventAsClassicLogText(event, formatTime=formatTime),
-            u"__12345__ [-#-] XYZZY\n",
+            u"__12345__ [-\x23-] XYZZY\n",
         )
 
 
@@ -297,7 +297,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u"XYZZY", log_namespace="my.namespace")
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [my.namespace#-] XYZZY\n",
+            u"- [my.namespace\x23-] XYZZY\n",
         )
 
 
@@ -308,7 +308,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u"XYZZY", log_level=LogLevel.warn)
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [-#warn] XYZZY\n",
+            u"- [-\x23warn] XYZZY\n",
         )
 
 
@@ -357,7 +357,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u"id:{id}", id="123")
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u"- [-#-] id:123\n",
+            u"- [-\x23-] id:123\n",
         )
 
 
@@ -390,7 +390,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         event = dict(log_format=u'XYZZY\nA hollow voice says:\n"Plugh"')
         self.assertEqual(
             formatEventAsClassicLogText(event),
-            u'- [-#-] XYZZY\n\tA hollow voice says:\n\t"Plugh"\n',
+            u'- [-\x23-] XYZZY\n\tA hollow voice says:\n\t"Plugh"\n',
         )
 
 
@@ -720,7 +720,7 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[-#-] ABCD\n",
+            u"[-\x23-] ABCD\n",
         )
 
 
@@ -750,7 +750,7 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[test#info] ABCD\n",
+            u"[test\x23info] ABCD\n",
         )
 
 
@@ -779,5 +779,5 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[-#info] ABCD\n",
+            u"[-\x23info] ABCD\n",
         )
