@@ -401,16 +401,21 @@ def eventAsText(
     if not eventText:
         return eventText
 
-    logText = u""
+    timeStamp = u""
     if includeTimestamp:
-        logText += u"{timeStamp} ".format(
-            timeStamp=formatTime(event.get("log_time", None))
-        )
+        timeStamp = u"".join([formatTime(event.get("log_time", None)), " "])
 
+    system = u""
     if includeSystem:
-        system = _formatSystem(event)
-        logText += u"[{system}] ".format(system=system)
+        system = u"".join([
+            u"[",
+            _formatSystem(event),
+            u"]",
+            u" "
+        ])
 
-    logText += u"{eventText}".format(eventText=eventText)
-
-    return logText
+    return u"{timeStamp}{system}{eventText}".format(
+        timeStamp=timeStamp,
+        system=system,
+        eventText=eventText,
+    )
