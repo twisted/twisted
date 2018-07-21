@@ -655,7 +655,7 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[fake_system] ABCD\n",
+            u"[fake_system] ABCD",
         )
 
 
@@ -692,7 +692,7 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"2013-09-24T11:40:47+0000 ABCD\n",
+            u"2013-09-24T11:40:47+0000 ABCD",
         )
 
 
@@ -720,7 +720,7 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[-\x23-] ABCD\n",
+            u"[-\x23-] ABCD",
         )
 
 
@@ -750,7 +750,7 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[test\x23info] ABCD\n",
+            u"[test\x23info] ABCD",
         )
 
 
@@ -779,5 +779,5 @@ class EventAsTextTests(unittest.TestCase):
         )
         self.assertEqual(
             eventText,
-            u"[-\x23info] ABCD\n",
+            u"[-\x23info] ABCD",
         )

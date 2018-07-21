@@ -107,7 +107,7 @@ class LogBeginner(object):
                         event,
                         includeTimestamp=False,
                         includeSystem=False,
-                    )
+                    ) + '\n'
                 ),
                 [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
             )

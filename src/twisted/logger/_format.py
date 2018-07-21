@@ -39,7 +39,7 @@ def formatEvent(event):
         includeTraceback=False,
         includeTimestamp=False,
         includeSystem=False,
-    )[:-1]
+    )
 
 
 
@@ -175,7 +175,7 @@ def formatEventAsClassicLogText(event, formatTime=formatTime):
     eventText = eventAsText(event, formatTime=formatTime)
     if not eventText:
         return None
-    eventText = eventText[:-1].replace(u"\n", u"\n\t")
+    eventText = eventText.replace(u"\n", u"\n\t")
     return eventText + u"\n"
 
 
@@ -413,4 +413,4 @@ def eventAsText(
 
     logText += u"{eventText}".format(eventText=eventText)
 
-    return logText + u"\n"
+    return logText
