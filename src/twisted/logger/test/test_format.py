@@ -629,6 +629,7 @@ class EventAsTextTests(unittest.TestCase):
                 eventText
             )
 
+
     def test_eventAsTextSystemOnly(self):
         """
         If includeSystem is specified as the only option no timestamp or
@@ -656,6 +657,7 @@ class EventAsTextTests(unittest.TestCase):
             eventText,
             u"[fake_system] ABCD\n",
         )
+
 
     def test_eventAsTextTimestampOnly(self):
         """
@@ -693,6 +695,7 @@ class EventAsTextTests(unittest.TestCase):
             u"2013-09-24T11:40:47+0000 ABCD\n",
         )
 
+
     def test_eventAsTextSystemMissing(self):
         """
         If includeSystem is specified with a missing system [-#-]
@@ -719,6 +722,7 @@ class EventAsTextTests(unittest.TestCase):
             eventText,
             u"[-#-] ABCD\n",
         )
+
 
     def test_eventAsTextSystemMissingNamespaceAndLevel(self):
         """
@@ -748,6 +752,7 @@ class EventAsTextTests(unittest.TestCase):
             eventText,
             u"[test#info] ABCD\n",
         )
+
 
     def test_eventAsTextSystemMissingLevelOnly(self):
         """
