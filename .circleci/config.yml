@@ -44,11 +44,6 @@ jobs:
           when: always
           command: |
             tox -r -e manifest-checker
-      - run:
-          name: Check lint diff with trunk.
-          when: always
-          command: |
-            tox -r -e lint
 
   #
   # Documentation tests are slow so we execute them in a separate job.
