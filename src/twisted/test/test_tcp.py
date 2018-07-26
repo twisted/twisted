@@ -1364,7 +1364,7 @@ class LargeBufferWriterProtocol(protocol.Protocol):
         # write 60MB
         self.transport.write(b'X'*(self.factory.len-1))
 
-        def finish():
+        def finish():   # write last byte separately to check issue #9446
             self.transport.write(b'X')
             self.factory.done = 1
             self.transport.loseConnection()
