@@ -5,7 +5,6 @@
 
 from __future__ import division, absolute_import
 
-import itertools
 import warnings
 
 from constantly import Names, NamedConstant
@@ -177,15 +176,6 @@ from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
 from twisted.python.deprecate import deprecated
-
-
-def _sessionCounter(counter=itertools.count()):
-    """
-    Private - shared between all OpenSSLCertificateOptions, counts up to
-    provide a unique session id for each context.
-    """
-    return next(counter)
-
 
 
 class ProtocolNegotiationSupport(Flags):
