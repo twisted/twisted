@@ -9,12 +9,13 @@ import itertools
 import warnings
 
 from constantly import Names, NamedConstant
-from hashlib import md5, sha256
+from hashlib import md5
 
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
 
 from twisted.python import log
+from twisted.python.randbytes import secureRandom
 from twisted.python._oldstyle import _oldStyle
 from ._idna import _idnaBytes
 
@@ -1683,9 +1684,9 @@ class OpenSSLCertificateOptions(object):
             ctx.set_verify_depth(self.verifyDepth)
 
         if self.enableSessions:
-            name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
-            sessionName = sha256(networkString(name)).digest()
-
+            # 32 bytes is the maximum length supported
+            # Unfortunately pyOpenSSL doesn't provide SSL_MAX_SESSION_ID_LENGTH
+            sessionName = secureRandom(32)
             ctx.set_session_id(sessionName)
 
         if self.dhParameters:

@@ -1,1 +1,1 @@
-twisted.internet.ssl.CertificateOptions now uses SHA256 instead of MD5 for ssl session identifier generation by default.
+twisted.internet.ssl.CertificateOptions now uses 32 random bytes instead of an MD5 hash for the ssl session identifier context.
