@@ -801,9 +801,9 @@ class Server(_TLSServerMixin, Connection):
 
     _addressType = address.IPv4Address
 
-    def __init__(self, sock, protocol, client, server, sessionno, reactor):
+    def __init__(self, sock, protocol, client, server, sessionno, reactor=None):
         """
-        Server(sock, protocol, client, server, sessionno)
+        Server(sock, protocol, client, server, sessionno, reactor=None)
 
         Initialize it with a socket, a protocol, a descriptor for my peer (a
         tuple of host, port describing the other end of the connection), an
