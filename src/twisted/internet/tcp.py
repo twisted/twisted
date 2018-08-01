@@ -801,7 +801,8 @@ class Server(_TLSServerMixin, Connection):
 
     _addressType = address.IPv4Address
 
-    def __init__(self, sock, protocol, client, server, sessionno, reactor=None):
+    def __init__(self, sock, protocol, client, server, sessionno,
+                 reactor=None):
         """
         Server(sock, protocol, client, server, sessionno, reactor=None)
 
