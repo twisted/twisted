@@ -501,7 +501,8 @@ class DatagramPort(_UNIXPort, udp.Port):
         self.fileno = self.socket.fileno
 
     def write(self, datagram, address):
-        """Write a datagram."""
+        """Write a datagram.
+           raises socket.error EAGAIN"""
         try:
             return self.socket.sendto(datagram, address)
         except socket.error as se:
@@ -510,11 +511,6 @@ class DatagramPort(_UNIXPort, udp.Port):
                 return self.write(datagram, address)
             elif no == EMSGSIZE:
                 raise error.MessageLengthError("message too long")
-            elif no == EAGAIN:
-                # oh, well, drop the data. The only difference from UDP
-                # is that UDP won't ever notice.
-                # TODO: add TCP-like buffering
-                pass
             else:
                 raise
 
