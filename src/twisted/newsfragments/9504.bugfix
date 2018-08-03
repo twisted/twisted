@@ -1,0 +1,2 @@
+class twisted.internet.unix.DatagramPort() no longer ignores EAGAIN errors in write()
+as this prevents an application from knowing that it needs to retransmit the datagram.
