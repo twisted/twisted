@@ -502,7 +502,7 @@ class DatagramPort(_UNIXPort, udp.Port):
 
     def write(self, datagram, address):
         """Write a datagram.
-           raises socket.error EAGAIN
+           @raise socket.error: when socket is full with arg[0] == EAGAIN
         """
         try:
             return self.socket.sendto(datagram, address)
