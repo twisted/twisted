@@ -202,7 +202,7 @@ Format strings
 ~~~~~~~~~~~~~~
 
 
-Format strings provide observers with a standard way to format an event as text suitable for a human being to read, via the function :api:`twisted.logger.formatEvent <formatEvent>` .
+Format strings provide observers with a standard way to format an event as text suitable for a human being to read.  Formatting is accomplished using the functions :api:`twisted.logger.formatEvent <formatEvent>` and :api:`twisted.logger.formatEventWithTracebck <formatEventWithTraceback>`.  The latter should be preferred unless potential traceback information in the event is not important.
 When writing a format string, take care to present it in a manner which would make as much sense as possible to a human reader.
 Particularly, format strings need not be written with an eye towards parseability or machine-readability.
 If you want to save your log events along with their structure and then analyze them later, see the next section, on :ref:`"saving events for later" <core-howto-logger-saving-events-for-later>` .
