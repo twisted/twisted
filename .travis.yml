@@ -34,7 +34,7 @@ matrix:
     - python: 3.6
       env: TOXENV=py36-alldeps-withcov-posix,codecov-publish
     - python: 3.5
-      env: TOXENV=txchecker-travis-required
+      env: TOXENV=lint
     # We need a builder without IPv6. This is going to be slower than all the
     # others, but that's ok.
     - python: 3.6
