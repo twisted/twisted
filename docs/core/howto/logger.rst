@@ -325,7 +325,7 @@ That interface simply describes a 1-argument callable that takes a ``dict`` , so
 
     @provider(ILogObserver)
     def simpleObserver(event):
-        print(eventAsText(event))
+        print(eventAsText(event), end=u'')
 
 The :api:`twisted.logger.eventAsText <eventAsText>` function returns a textual (``unicode`` ) representation of the event.
 
