@@ -517,13 +517,14 @@ class CheckNewsfragmentScript(object):
         if len(args) != 1:
             sys.exit("Must specify one argument: the Twisted checkout")
 
+        encoding = sys.stdout.encoding or 'ascii'
         location = os.path.abspath(args[0])
 
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
-                            cwd=location).decode(sys.stdout.encoding).strip()
+                            cwd=location).decode(encoding).strip()
 
         r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location).decode(sys.stdout.encoding).strip()
+                       cwd=location).decode(encoding).strip()
 
         if not r:
             self._print(

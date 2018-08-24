@@ -41,7 +41,7 @@ class _Process(object):
     env = attr.ib(default=attr.Factory(dict))
     cwd = attr.ib(default=None)
 
-    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
+    @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
     def toTuple(self):
         """
         Convert process to tuple.
@@ -163,7 +163,7 @@ class ProcessMonitor(service.Service):
         self.restart = {}
 
 
-    @deprecate.deprecatedProperty(incremental.Version("Twisted", "NEXT", 0, 0))
+    @deprecate.deprecatedProperty(incremental.Version('Twisted', 18, 7, 0))
     def processes(self):
         """
         Processes as dict of tuples
@@ -174,7 +174,7 @@ class ProcessMonitor(service.Service):
                 for name, process in self._processes.items()}
 
 
-    @deprecate.deprecated(incremental.Version("Twisted", "NEXT", 0, 0))
+    @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
         del dct['_reactor']

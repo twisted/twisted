@@ -1,1 +1,0 @@
-twisted.web.server.GzipEncoderFactory would sometimes fail to gzip requests if the Accept-Encoding header contained whitespace between the comma-separated acceptable encodings. It now trims whitespace before checking if gzip is an acceptable encoding.
