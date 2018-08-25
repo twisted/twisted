@@ -76,7 +76,7 @@ Indentation is 4 spaces per indent.
 Tabs are not allowed.
 It is preferred that every block appears on a new line, so that control structure indentation is always visible.
 
-Lines are flowed at 79 columns.
+Lines are flowed at 89 columns.
 They must not have trailing whitespace.
 Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed.
 To handle long import lines, please wrap them inside parentheses:
@@ -87,7 +87,6 @@ To handle long import lines, please wrap them inside parentheses:
                                    qux, quux, quuux)
 
 
-Top-level classes and functions must be separated with 3 blank lines, and class-level functions with 2 blank lines.
 The control-L (i.e. ``^L``) form feed character must not be used.
 
 
