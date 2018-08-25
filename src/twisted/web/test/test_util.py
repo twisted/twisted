@@ -73,6 +73,7 @@ class FailureElementTests(TestCase):
         def lineNumberProbeAlsoBroken():
             message = "This is a problem"
             raise Exception(message)
+            # This is a comment
 
         # Figure out the line number from which the exception will be raised.
         self.base = lineNumberProbeAlsoBroken.__code__.co_firstlineno + 1
@@ -121,8 +122,7 @@ class FailureElementTests(TestCase):
         source = [
             u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}message = ' u'"This is a problem"',
             u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}raise Exception(message)',
-            u'# Figure out the line number from which the exception will be '
-            u'raised.',
+            u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}# This is a comment',
         ]
         d = flattenString(None, element)
         if _PY3:
